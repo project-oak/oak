@@ -18,19 +18,24 @@
 
 use crate::{
     auth::oidc_utils::ClientInfo,
+    metrics::Metrics,
     node::{
         grpc::{codec::VecCodec, to_tonic_status},
         ConfigurationError, Node,
     },
     runtime::{ChannelHalfDirection, RuntimeProxy},
 };
+use futures_util::stream;
 use hyper::service::Service;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use oak_abi::{
     label::Label,
-    proto::oak::{
-        application::GrpcServerConfiguration,
-        encap::{GrpcRequest, GrpcResponse},
+    proto::{
+        google::rpc,
+        oak::{
+            application::GrpcServerConfiguration,
+            encap::{GrpcRequest, GrpcResponse},
+        },
     },
     ChannelReadStatus, OakStatus,
 };
@@ -43,7 +48,7 @@ use tokio::sync::oneshot;
 use tonic::{
     codegen::BoxFuture,
     metadata::MetadataMap,
-    server::{Grpc, UnaryService},
+    server::{Grpc, ServerStreamingService},
     transport::{Identity, NamedService},
 };
 
@@ -288,7 +293,7 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
         let future = async move {
             debug!("Processing HTTP/2 request: {:?}", request);
             let mut grpc_service = Grpc::new(VecCodec::default());
-            let response = grpc_service.unary(grpc_handler, request).await;
+            let response = grpc_service.server_streaming(grpc_handler, request).await;
             debug!("Sending HTTP/2 response: {:?}", response);
             let stc = format!("{}", response.status());
             metrics_data
@@ -368,26 +373,23 @@ struct GrpcInvocationHandler {
     method_name: String,
 }
 
-impl UnaryService<Vec<u8>> for GrpcInvocationHandler {
+impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
     type Response = Vec<u8>;
-    type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+    type ResponseStream = std::pin::Pin<
+        Box<dyn futures_core::Stream<Item = Result<Self::Response, tonic::Status>> + Send + Sync>,
+    >;
+    type Future = BoxFuture<tonic::Response<Self::ResponseStream>, tonic::Status>;
 
     fn call(&mut self, request: tonic::Request<Vec<u8>>) -> Self::Future {
         let handler = self.clone();
-
-        let metrics_data = handler.runtime.metrics_data();
+        let metrics_data = self.runtime.metrics_data();
+        // Build a future of type `Future<Output = Result<Self::ResponseStream, tonic::Status>>`
         let future = async move {
             metrics_data
                 .grpc_server_metrics
                 .grpc_server_started_total
                 .with_label_values(&[&handler.method_name])
                 .inc();
-            let timer = metrics_data
-                .grpc_server_metrics
-                .grpc_server_handled_latency_seconds
-                .with_label_values(&[&handler.method_name])
-                .start_timer();
-
             let oak_label = get_oak_label(request.metadata())?;
             info!(
                 "handling gRPC request; peer address: {}, method: {}, request size: {} bytes, label: {:?}",
@@ -397,7 +399,6 @@ impl UnaryService<Vec<u8>> for GrpcInvocationHandler {
                 request.get_ref().len(),
                 oak_label
             );
-
             // Create an encapsulated gRPC request.
             // TODO(#97): Add client-streaming support.
             let grpc_request = GrpcRequest {
@@ -407,36 +408,29 @@ impl UnaryService<Vec<u8>> for GrpcInvocationHandler {
             };
 
             // Inject the encapsulated gRPC request into the Oak Application.
+            debug!("inject encapsulated request into Oak Node");
             let response_iter = handler
-                .inject_grpc_request(grpc_request, &oak_label)
+                .inject_grpc_request(grpc_request, &oak_label, metrics_data.clone())
                 .map_err(|()| tonic::Status::new(tonic::Code::Internal, ""))?;
 
-            // Iterate over the encapsulated gRPC responses read back from the Oak Application.
-            // TODO(#954): support server-streaming methods
-            let mut retval = Err(tonic::Status::new(tonic::Code::Internal, ""));
-            for response in response_iter {
-                metrics_data
-                    .grpc_server_metrics
-                    .grpc_response_size_bytes
-                    .with_label_values(&[&handler.method_name])
-                    .observe(response.rsp_msg.len() as f64);
-
-                debug!("Sending gRPC response: {:?}", response);
-                retval = match response.status {
-                    None => Ok(tonic::Response::new(response.rsp_msg)),
-                    Some(status) if status.code == oak_abi::proto::google::rpc::Code::Ok as i32 => {
-                        Ok(tonic::Response::new(response.rsp_msg))
-                    }
+            // First convert the `Iterator<Item = GrpcResponse>` to an
+            // `Iterator<Item = Result<Vec<u8>, tonic::Status>`.
+            let result_iter = response_iter.map(|response| {
+                debug!("Returning gRPC response: {:?}", response);
+                match response.status {
+                    None => Ok(response.rsp_msg),
+                    Some(status) if status.code == rpc::Code::Ok as i32 => Ok(response.rsp_msg),
                     Some(status) => Err(to_tonic_status(status)),
-                };
-
-                if response.last {
-                    break;
                 }
-            }
+            });
 
-            timer.observe_duration();
-            retval
+            // Now convert this to a streaming future of type
+            // `Stream<Item = Result<Vec<u8>, tonic::Status>`
+            // and then wrap it in Pin<Box<.>> to build a `Self::ResponseStream`.
+            let result_stream: Self::ResponseStream = Box::pin(stream::iter(result_iter));
+
+            // Finally, ensure this block returns an `Ok(tonic::Response<Self::ResponseStream>)`.
+            Ok(tonic::Response::new(result_stream))
         };
 
         Box::pin(future)
@@ -462,6 +456,7 @@ impl GrpcInvocationHandler {
         &self,
         request: GrpcRequest,
         label: &Label,
+        metrics_data: Metrics,
     ) -> Result<GrpcResponseIterator, ()> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
 
@@ -533,25 +528,67 @@ impl GrpcInvocationHandler {
             );
         }
 
-        Ok(GrpcResponseIterator {
-            runtime: self.runtime.clone(),
+        Ok(GrpcResponseIterator::new(
+            self.runtime.clone(),
             response_reader,
-        })
+            metrics_data,
+            self.method_name.clone(),
+        ))
     }
 }
 
 struct GrpcResponseIterator {
     runtime: RuntimeProxy,
     response_reader: oak_abi::Handle,
+    metrics_data: Metrics,
+    method_name: String,
+    // The lifetime of the timer matches the lifetime of the iterator,
+    // updating the request-timer metric when the iterator is dropped.
+    _timer: prometheus::HistogramTimer,
+    done: bool,
+}
+
+impl GrpcResponseIterator {
+    fn new(
+        runtime: RuntimeProxy,
+        response_reader: oak_abi::Handle,
+        metrics_data: Metrics,
+        method_name: String,
+    ) -> Self {
+        trace!(
+            "Create new GrpcResponseIterator for '{}', reading from {}",
+            method_name,
+            response_reader
+        );
+        let timer = metrics_data
+            .grpc_server_metrics
+            .grpc_server_handled_latency_seconds
+            .with_label_values(&[&method_name])
+            .start_timer();
+        GrpcResponseIterator {
+            runtime,
+            response_reader,
+            metrics_data,
+            method_name,
+            _timer: timer,
+            done: false,
+        }
+    }
 }
 
 /// Manual implementation of the `Drop` trait to ensure the response channel
 /// is always closed.
 impl Drop for GrpcResponseIterator {
     fn drop(&mut self) {
+        trace!(
+            "Dropping GrpcResponseIterator for '{}': close channel {}",
+            self.method_name,
+            self.response_reader
+        );
         if let Err(err) = self.runtime.channel_close(self.response_reader) {
             error!("Failed to close gRPC response reader channel: {:?}", err);
         }
+        // Note that dropping self.timer will record the duration.
     }
 }
 
@@ -560,6 +597,9 @@ impl Iterator for GrpcResponseIterator {
 
     /// Read a single encapsulated gRPC response from the provided channel.
     fn next(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
+        }
         let read_status = self
             .runtime
             .wait_on_channels(&[self.response_reader])
@@ -571,7 +611,32 @@ impl Iterator for GrpcResponseIterator {
         if read_status[0] == ChannelReadStatus::ReadReady {
             match self.runtime.channel_read(self.response_reader) {
                 Ok(Some(msg)) => match GrpcResponse::decode(msg.data.as_slice()) {
-                    Ok(grpc_rsp) => Some(grpc_rsp),
+                    Ok(grpc_rsp) => {
+                        self.metrics_data
+                            .grpc_server_metrics
+                            .grpc_response_size_bytes
+                            .with_label_values(&[&self.method_name])
+                            .observe(grpc_rsp.rsp_msg.len() as f64);
+                        if grpc_rsp.last {
+                            // The Node has definitively marked this as the last response for this
+                            // invocation; keep track of this and don't bother attempting to read
+                            // from the response channel next time around.
+                            //
+                            // Note that the reverse isn't always true: the final response for a
+                            // server-streaming method might *not* have last=true; in that case the
+                            // next attempt to read from the response channel will find a closed
+                            // channel, and so we treat that as the end of the method invocation
+                            // (below).
+                            self.done = true;
+                        }
+                        trace!(
+                            "Return response of size {}, status={:?} last={}",
+                            grpc_rsp.rsp_msg.len(),
+                            grpc_rsp.status,
+                            grpc_rsp.last
+                        );
+                        Some(grpc_rsp)
+                    }
                     Err(err) => {
                         error!("Couldn't parse the GrpcResponse message: {}", err);
                         None
