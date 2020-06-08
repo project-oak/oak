@@ -5,8 +5,8 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "${SCRIPTS_DIR}/common"
 
 server="base"
-application="rust"
-client="cpp"
+application_language="rust"
+client_language="cpp"
 buildargs=""
 serverargs=""
 while getopts "s:a:c:de:vh" opt; do
@@ -34,9 +34,9 @@ Options:
 Options after -- will be passed to the example client program."
       exit 0;;
     a)
-      language="${OPTARG}";;
+      application_language="${OPTARG}";;
     c)
-      client="${OPTARG}";;
+      client_language="${OPTARG}";;
     s)
       case "${OPTARG}" in
         base|logless|none)
@@ -65,13 +65,13 @@ fi
 
 
 if [[ "${server}" != "none" ]]; then
-  "${SCRIPTS_DIR}/build_example" ${buildargs} -a "${application}" -e "${EXAMPLE}"
+  "${SCRIPTS_DIR}/build_example" ${buildargs} -a "${application_language}" -e "${EXAMPLE}"
 
   # Run a server in the background.
   # The server is being built before running, so the build process will not happen in the
   # background.
   "${SCRIPTS_DIR}/build_server" -s "${server}"
-  "${SCRIPTS_DIR}/run_server" ${serverargs} -s "${server}" -a "${application}" -e "${EXAMPLE}" &
+  "${SCRIPTS_DIR}/run_server" ${serverargs} -s "${server}" -a "${application_language}" -e "${EXAMPLE}" &
   readonly SERVER_PID=$!
   to_kill+=("${SERVER_PID}")
 
@@ -98,11 +98,11 @@ fi
 readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
 
 # Run the application client.
-case "${client}" in
+case "${client_language}" in
   rust)
-    # Rust example parameters only support `-` as a delimeter, and C++ ones only `_`.
+    # Rust example parameters only support `-` as a delimiter, and C++ ones only `_`.
     cargo run --release --target=x86_64-unknown-linux-musl --manifest-path="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/rust/Cargo.toml" -- \
-      "--grpc-client-root-tls-certificate=${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
+      --grpc-client-root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
       "${CLIENT_ARGS[@]-}"
     ;;
   cpp)

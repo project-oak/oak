@@ -2146,7 +2146,6 @@ dependencies = [
 name = "trusted_information_retrieval_client"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "env_logger",
  "log",
  "oak_abi",

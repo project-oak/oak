@@ -4,7 +4,7 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-language="rust"
+application_language="rust"
 server="base"
 while getopts "s:a:l:f:e:c:vh" opt; do
   case "${opt}" in
@@ -27,7 +27,7 @@ Either the -f APPLICATION or the -e EXAMPLE option is required.
   -h    Print Help (this message) and exit"
       exit 0;;
     a)
-      application="${OPTARG}";;
+      application_language="${OPTARG}";;
     s)
       case "${OPTARG}" in
         base|logless)
@@ -62,7 +62,7 @@ fi
 
 if [[ -n ${EXAMPLE+x} ]]; then
   # Determine expected configuration file from example name and language variant.
-  case "${application}" in
+  case "${application_language}" in
     rust)
       readonly APPLICATION_FILE="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
     cpp)
@@ -73,7 +73,7 @@ if [[ -n ${EXAMPLE+x} ]]; then
         readonly APPLICATION_FILE="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
       fi;;
     *)
-      echo "Invalid example variant: ${application}"
+      echo "Invalid example variant: ${application_language}"
       exit 1;;
   esac
 

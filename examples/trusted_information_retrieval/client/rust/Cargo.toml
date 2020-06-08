@@ -6,7 +6,6 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "*"
 env_logger = "*"
 log = "*"
 oak_abi = "=0.1.0"
