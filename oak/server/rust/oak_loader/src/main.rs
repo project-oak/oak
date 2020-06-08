@@ -34,10 +34,12 @@ use oak_abi::{
     Handle,
 };
 use oak_runtime::{
-    auth::oidc_utils::parse_client_info_json, config::configure_and_run, io::Sender, RuntimeProxy,
+    auth::oidc_utils::parse_client_info_json,
+    config::{configure_and_run, load_certificate},
+    io::Sender,
+    RuntimeProxy,
 };
 use prost::Message;
-use rustls::internal::pemfile;
 use std::{
     collections::HashMap,
     fs::{read_to_string, File},
@@ -48,7 +50,7 @@ use std::{
     },
 };
 use structopt::StructOpt;
-use tonic::transport::{Certificate, Identity};
+use tonic::transport::Identity;
 
 #[cfg(test)]
 mod tests;
@@ -159,16 +161,6 @@ fn send_config_map(
     })
 }
 
-/// Load a PEM encoded TLS certificate, performing (minimal) validation.
-fn load_certificate(certificate: &str) -> anyhow::Result<Certificate> {
-    let mut cursor = std::io::Cursor::new(certificate);
-    // `rustls` doesn't specify certificate parsing errors:
-    // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
-    pemfile::certs(&mut cursor).map_err(|()| anyhow!("could not parse TLS certificate"))?;
-
-    Ok(Certificate::from_pem(certificate))
-}
-
 /// Main execution point for the Oak loader.
 fn main() -> anyhow::Result<()> {
     if cfg!(feature = "oak_debug") {
@@ -222,7 +214,10 @@ fn main() -> anyhow::Result<()> {
             grpc_tls_certificate,
             grpc_tls_private_key,
         )),
-        grpc_client_root_tls_certificate: Some(load_certificate(&root_tls_certificate)?),
+        grpc_client_root_tls_certificate: Some(
+            load_certificate(&root_tls_certificate)
+                .map_err(|()| anyhow!("could not parse TLS certificate"))?,
+        ),
         oidc_client_info,
     };
 
