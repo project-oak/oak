@@ -169,6 +169,7 @@ where
 {
     compile_protos_with(
         prost_build::Config::new().out_dir(out_dir),
+        true,
         inputs,
         includes,
     );
@@ -178,11 +179,22 @@ pub fn compile_protos<P>(inputs: &[P], includes: &[P])
 where
     P: AsRef<std::path::Path>,
 {
-    compile_protos_with(&mut prost_build::Config::new(), inputs, includes);
+    compile_protos_with(&mut prost_build::Config::new(), true, inputs, includes);
 }
 
-fn compile_protos_with<P>(prost_config: &mut prost_build::Config, inputs: &[P], includes: &[P])
+pub fn compile_protos_without_services<P>(inputs: &[P], includes: &[P])
 where
+    P: AsRef<std::path::Path>,
+{
+    compile_protos_with(&mut prost_build::Config::new(), false, inputs, includes);
+}
+
+fn compile_protos_with<P>(
+    prost_config: &mut prost_build::Config,
+    generate_services: bool,
+    inputs: &[P],
+    includes: &[P],
+) where
     P: AsRef<std::path::Path>,
 {
     for input in inputs {
@@ -190,8 +202,10 @@ where
         // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
         println!("cargo:rerun-if-changed={}", input.as_ref().display());
     }
+    if generate_services {
+        prost_config.service_generator(Box::new(OakServiceGenerator));
+    }
     prost_config
-        .service_generator(Box::new(OakServiceGenerator))
         // We require label-related types to be comparable and hashable so that they can be used in
         // hash-based collections.
         .type_attribute(".oak.label", "#[derive(Eq, Hash)]")

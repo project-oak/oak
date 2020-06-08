@@ -27,6 +27,7 @@ package(
 proto_library(
     name = "application_proto",
     srcs = ["application.proto"],
+    deps = ["@com_google_protobuf//:wrappers_proto"],
 )
 
 cc_proto_library(

@@ -38,4 +38,8 @@ pub mod oak {
     pub mod log {
         include!(concat!(env!("OUT_DIR"), "/oak.log.rs"));
     }
+
+    pub mod roughtime {
+        include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
+    }
 }

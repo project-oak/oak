@@ -229,6 +229,16 @@ impl RoughtimeClient {
 }
 
 impl RoughtimeServer {
+    /// Creates a new instance.
+    pub fn new(name: &str, host: &str, port: u16, public_key_base64: &str) -> Self {
+        RoughtimeServer {
+            name: name.to_owned(),
+            host: host.to_owned(),
+            port,
+            public_key_base64: public_key_base64.to_owned(),
+        }
+    }
+
     /// Sends a request to a Roughtime server using UDP.
     async fn send_roughtime_request(
         &self,

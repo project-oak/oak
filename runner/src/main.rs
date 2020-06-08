@@ -85,7 +85,6 @@ fn run_examples(opt: &RunExamples) -> Step {
                 Example {
                     name: "abitest".to_string(),
                     rust_module_names: vec!["module_0".to_string(), "module_1".to_string()],
-                    // TODO(#730): reinstate Roughtime tests when Rust runtime supports them.
                     // TODO(#1040): reinstate storage tests when Rust runtime supports them.
                     // TODO(#953): reinstate gRPC server server-streaming tests when Rust runtime
                     // supports them.
@@ -94,8 +93,7 @@ fn run_examples(opt: &RunExamples) -> Step {
                             .to_string(),
                         "--private_key=../../../../../../../../examples/certs/local/local.key"
                             .to_string(),
-                        "--test_exclude=(Roughtime|Storage|GrpcServerServerStreamingMethod)"
-                            .to_string(),
+                        "--test_exclude=(Storage|GrpcServerServerStreamingMethod)".to_string(),
                     ],
                 },
                 Example {
