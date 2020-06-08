@@ -421,6 +421,13 @@ impl WasmInterface {
     }
 
     /// Corresponds to the host ABI function [`wait_on_channels`](https://github.com/project-oak/oak/blob/master/docs/abi.md#wait_on_channels).
+    ///
+    /// May return the following error statuses:
+    /// - `Err(OakStatus::ErrTerminated)`: if [`Runtime`] is terminating. In this case, read
+    ///   statuses in `status_buff` do not reflect the actual read statuses.
+    /// - `Err(OakStatus::ErrInvalidArgs)`: if cannot parse `status_buff` into channel handles.
+    ///
+    /// [`Runtime`]: crate::runtime::Runtime
     fn wait_on_channels(
         &mut self,
         status_buff: AbiPointer,
@@ -435,7 +442,10 @@ impl WasmInterface {
 
         let handles_raw: Vec<u8> = self
             .get_memory()
-            .get(status_buff, handles_count as usize * 9)
+            .get(
+                status_buff,
+                handles_count as usize * oak_abi::SPACE_BYTES_PER_HANDLE,
+            )
             .map_err(|err| {
                 error!(
                     "{}: wait_on_channels(): Unable to read handles from guest memory: {:?}",

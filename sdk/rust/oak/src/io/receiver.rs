@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{io::Decodable, OakError, OakStatus, ReadHandle};
+use crate::{io::Decodable, ChannelReadStatus, OakError, OakStatus, ReadHandle};
 use serde::{Deserialize, Serialize};
 
 /// Wrapper for a handle to the read half of a channel, allowing to receive data that can be decoded
@@ -66,14 +66,34 @@ impl<T: Decodable> Receiver<T> {
     }
 
     /// Wait for a value to be available from this receiver.
+    ///
+    /// Returns [`ChannelReadStatus`] of the wrapped handle, or `Err(OakStatus::ErrTerminated)` if
+    /// the Oak Runtime is terminating,
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn wait(&self) -> Result<(), OakStatus> {
+    pub fn wait(&self) -> Result<ChannelReadStatus, OakStatus> {
         // TODO(#500): Consider creating the handle notification space once and for all in `new`.
         let read_handles = vec![self.handle];
         let mut space = crate::new_handle_space(&read_handles);
         crate::prep_handle_space(&mut space);
         let status =
             unsafe { oak_abi::wait_on_channels(space.as_mut_ptr(), read_handles.len() as u32) };
-        crate::result_from_status(status as i32, ())
+
+        match crate::result_from_status(status as i32, ()) {
+            Ok(()) => space
+                .get(oak_abi::SPACE_BYTES_PER_HANDLE - 1)
+                .cloned()
+                .map(i32::from)
+                .and_then(ChannelReadStatus::from_i32)
+                .ok_or_else(|| {
+                    panic!(
+                        "wait_on_channels always yields a valid channel read status if the returned status is not Err(OakStatus::ErrTerminated)."
+                    )
+                }),
+            Err(OakStatus::ErrTerminated) => Err(OakStatus::ErrTerminated),
+            Err(OakStatus::ErrInvalidArgs) => {
+                panic!("Indicates that `space` is corrupted. This should never happen.")
+            }
+            _ => panic!("Other `OakStatus` error codes never happen."),
+        }
     }
 }
