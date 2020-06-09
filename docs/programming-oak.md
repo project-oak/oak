@@ -269,7 +269,7 @@ All these steps are implemented as a part of the
 The Oak Application is then loaded using the Oak Runner:
 
 ```bash
-./scripts/run_server -a "${PWD}/config.bin"
+./scripts/run_server -f "${PWD}/config.bin"
 ```
 
 The Oak Runner will launch an [Oak Runtime](concepts.md#oak-runtime), and this

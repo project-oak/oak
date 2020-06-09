@@ -2143,6 +2143,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "trusted_information_retrieval_client"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "oak_abi",
+ "oak_utils",
+ "prost",
+ "structopt",
+ "tokio",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
 name = "try-lock"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

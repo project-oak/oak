@@ -4,21 +4,25 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-language="rust"
+application_language="rust"
+client_language="cpp"
 compilation_mode='fastbuild'
 docker_config=''
-while getopts "e:l:di:h" opt; do
+while getopts "e:a:c:di:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-l rust|cpp] [-i base|logless] [-d] -e EXAMPLE
+      echo -e "Usage: ${0} [-h] [-a rust|cpp] [-c rust|cpp] [-i base|logless] [-d] -e EXAMPLE
 
 Build the given example Oak Application and client.
 
 Options:
   -e    Example application name (required)
-  -l    Example application variant:
+  -a    Example application variant:
           - rust (used by default)
           - cpp
+  -c    Example client variant:
+          - rust
+          - cpp (used by default)
   -d    Build C++ code for example using debug mode
   -i    This flag enables packaging the application into a Docker image,
         and specifies the version of the Oak server, used by the application:
@@ -28,8 +32,10 @@ Options:
       exit 0;;
     e)
       readonly EXAMPLE="${OPTARG}";;
-    l)
-      language="${OPTARG}";;
+    a)
+      application_language="${OPTARG}";;
+    c)
+      client_language="${OPTARG}";;
     d)
       compilation_mode='dbg';;
     i)
@@ -45,7 +51,7 @@ if [[ -z "${EXAMPLE+z}" ]]; then
   exit 1
 fi
 
-case "${language}" in
+case "${application_language}" in
   rust)
     for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do
       # Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it
@@ -78,7 +84,7 @@ case "${language}" in
     fi
     ;;
   *)
-    echo "Invalid example variant: ${language}"
+    echo "Invalid example application variant: ${application_language}"
     exit 1;;
 esac
 
@@ -96,11 +102,21 @@ if [[ -n "${docker_config}" ]]; then
   fi
 fi
 
-bazel_build_flags+=(
-  '--symlink_prefix=bazel-client-'
-  "--compilation_mode=${compilation_mode}"
-)
+case "${client_language}" in
+  rust)
+    cargo build --release "--manifest-path=./examples/${EXAMPLE}/client/rust/Cargo.toml"
+    ;;
+  cpp)
+    bazel_build_flags+=(
+      '--symlink_prefix=bazel-client-'
+      "--compilation_mode=${compilation_mode}"
+    )
 
-# Build the client with a different output_base so that we don't lose incremental state.
-# See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:all"
+    # Build the client with a different output_base so that we don't lose incremental state.
+    # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
+    bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:all"
+    ;;
+  *)
+    echo "Invalid example client variant: ${client_language}"
+    exit 1;;
+esac

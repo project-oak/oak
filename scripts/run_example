@@ -4,14 +4,15 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-language="rust"
 server="base"
+application_language="rust"
+client_language="cpp"
 buildargs=""
 serverargs=""
-while getopts "s:l:de:vh" opt; do
+while getopts "s:a:c:de:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s base|logless|none] [-l rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s base|logless|none] [-a rust|cpp] [-c rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
@@ -22,15 +23,20 @@ Options:
           - logless: base version of the server with debug logging compiled out
           - none: run an application client without a server
   -d    Build C++ code for example using debug mode
-  -l    Example application variant:
+  -a    Example application variant:
           - rust (used by default)
           - cpp
+  -c    Example client variant:
+          - rust
+          - cpp (used by default)
   -v    Enable verbose/debug output for the server
   -h    Print Help (this message) and exit
 Options after -- will be passed to the example client program."
       exit 0;;
-    l)
-      language="${OPTARG}";;
+    a)
+      application_language="${OPTARG}";;
+    c)
+      client_language="${OPTARG}";;
     s)
       case "${OPTARG}" in
         base|logless|none)
@@ -59,13 +65,13 @@ fi
 
 
 if [[ "${server}" != "none" ]]; then
-  "${SCRIPTS_DIR}/build_example" ${buildargs} -l "${language}" -e "${EXAMPLE}"
+  "${SCRIPTS_DIR}/build_example" ${buildargs} -a "${application_language}" -e "${EXAMPLE}"
 
   # Run a server in the background.
   # The server is being built before running, so the build process will not happen in the
   # background.
   "${SCRIPTS_DIR}/build_server" -s "${server}"
-  "${SCRIPTS_DIR}/run_server" ${serverargs} -s "${server}" -l "${language}" -e "${EXAMPLE}" &
+  "${SCRIPTS_DIR}/run_server" ${serverargs} -s "${server}" -a "${application_language}" -e "${EXAMPLE}" &
   readonly SERVER_PID=$!
   to_kill+=("${SERVER_PID}")
 
@@ -76,11 +82,6 @@ if [[ "${EXAMPLE}" == 'abitest' ]]; then
   # TODO(#1040): reinstate storage tests when Rust runtime supports them.
   # TODO(#953): reinstate gRPC server server-streaming tests when Rust runtime supports them.
   readonly ADDITIONAL_ARGS=('--test_exclude=(Storage|GrpcServerServerStreamingMethod)')
-elif [[ "${EXAMPLE}" == 'aggregator' ]]; then
-  readonly ADDITIONAL_ARGS=(
-    '--bucket=test'
-    '--data=1:10,2:20,3:30'
-  )
 else
   readonly ADDITIONAL_ARGS=()
 fi
@@ -94,12 +95,21 @@ else
   readonly TLS_ARGS=("--ca_cert=${SCRIPTS_DIR}/../examples/certs/local/ca.pem")
 fi
 
+readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
+
 # Run the application client.
-if [ $# -eq 0 ]; then
-  "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}"
-else
-  readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
-  "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
-fi
+case "${client_language}" in
+  rust)
+    cargo run --release --target=x86_64-unknown-linux-musl --manifest-path="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/rust/Cargo.toml" -- \
+      --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
+      "${CLIENT_ARGS[@]-}"
+    ;;
+  cpp)
+    "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
+    ;;
+  *)
+    echo "Invalid example client variant: ${client_language}"
+    exit 1;;
+esac
 
 kill_bg_pids

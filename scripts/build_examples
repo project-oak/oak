@@ -8,6 +8,6 @@ source "$SCRIPTS_DIR/common"
 for language in rust cpp; do
   examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq)"
   for example in ${examples}; do
-    "${SCRIPTS_DIR}/build_example" -l "${language}" -e "${example}"
+    "${SCRIPTS_DIR}/build_example" -a "${language}" -e "${example}"
   done
 done

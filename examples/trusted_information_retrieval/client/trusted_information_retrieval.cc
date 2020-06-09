@@ -26,9 +26,9 @@
 #include "oak/client/application_client.h"
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
-ABSL_FLAG(std::vector<std::string>, location, std::vector<std::string>{},
-          "Requested location (latitude and longitude separated by comma)");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(float, latitude, float{}, "Requested location's latitude in degrees (WGS84)");
+ABSL_FLAG(float, longitude, float{}, "Requested location's longitude in degrees (WGS84)");
 
 using ::oak::examples::trusted_information_retrieval::ListPointsOfInterestRequest;
 using ::oak::examples::trusted_information_retrieval::ListPointsOfInterestResponse;
@@ -73,17 +73,15 @@ int main(int argc, char** argv) {
   }
 
   // Parse arguments.
-  auto location = absl::GetFlag(FLAGS_location);
-  if (location.size() != 2) {
-    LOG(FATAL) << "Incorrect number of coordinates: " << location.size() << " (expected 2)";
+  float latitude = absl::GetFlag(FLAGS_latitude);
+  if (latitude < -90.0 || latitude > 90.0) {
+    LOG(FATAL) << "Latitude must be a valid floating point number >=-90 and <= 90, found "
+               << latitude;
   }
-  float latitude;
-  if (!absl::SimpleAtof(location.front(), &latitude) && latitude >= -90.0 && latitude <= 90.0) {
-    LOG(FATAL) << "Latitude must be a valid floating point number >=-90 and <= 90.";
-  }
-  float longitude;
-  if (!absl::SimpleAtof(location.back(), &longitude) && longitude >= -180.0 && longitude <= 180.0) {
-    LOG(FATAL) << "Longitude must be a valid floating point number >= -180 and <= 180.";
+  float longitude = absl::GetFlag(FLAGS_longitude);
+  if (longitude < -180.0 || longitude > 180.0) {
+    LOG(FATAL) << "Longitude must be a valid floating point number >= -180 and <= 180, found "
+               << longitude;
   }
 
   // Get nearest point of interest from the server.

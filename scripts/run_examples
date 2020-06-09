@@ -5,21 +5,21 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "${SCRIPTS_DIR}/common"
 
 server="base"
-languages="rust"
-while getopts "s:l:h" opt; do
+application_language="rust"
+while getopts "s:a:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|logless] [-l rust|cpp]
+      echo -e "Usage: ${0} [-s base|logless] [-a rust|cpp]
   -s    Server type used to run examples:
           - base: base version of the server (default)
           - logless: base version of the server with debug logging compiled out
-  -l    Run examples implemented in which language:
+  -a    Example application variant:
           - rust (default)
           - cpp
   -h    Print Help (this message) and exit"
       exit 0;;
-    l)
-      languages="${OPTARG}";;
+    a)
+      application_language="${OPTARG}";;
     s)
       case "${OPTARG}" in
         base|logless)
@@ -35,15 +35,15 @@ while getopts "s:l:h" opt; do
 done
 
 # Run all examples.
-for language in ${languages}; do
-  examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${language}"'$' | cut -d'/' -f2 | uniq)"
-  for example in ${examples}; do
-    if [[ "${example}" == "chat" ]]; then
-        "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e chat -- --test
-    elif [[ "${example}" == "trusted_information_retrieval" ]]; then
-        "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e trusted_information_retrieval -- --location 0.0,0.0
-    else
-        "${SCRIPTS_DIR}/run_example" -s "${server}" -l "${language}" -e "${example}"
-    fi
-  done
+examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${application_language}"'$' | cut -d'/' -f2 | uniq)"
+for example in ${examples}; do
+  if [[ "${example}" == 'aggregator' ]]; then
+      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -e aggregator -- --bucket=test --data=1:10,2:20,3:30
+  elif [[ "${example}" == 'chat' ]]; then
+      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -e chat -- --test
+  elif [[ "${example}" == 'trusted_information_retrieval' ]]; then
+      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c rust -e trusted_information_retrieval -- --latitude 0.0 --longitude 0.0
+  else
+      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -e "${example}"
+  fi
 done

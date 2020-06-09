@@ -88,7 +88,7 @@ steps:
     waitFor: ['run_examples']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'base', '-l', 'cpp']
+    args: ['./scripts/run_examples', '-s', 'base', '-a', 'cpp']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_experimental

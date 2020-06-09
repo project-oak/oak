@@ -4,30 +4,30 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-language="rust"
+application_language="rust"
 server="base"
-while getopts "s:a:l:e:c:vh" opt; do
+while getopts "s:a:l:f:e:c:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|logless] [-l rust|cpp] (-a APPLICATION | -e EXAMPLE) [-c OIDC_CLIENT] [-v]
+      echo -e "Usage: ${0} [-s base|logless] [-a rust|cpp] (-f APPLICATION | -e EXAMPLE) [-c OIDC_CLIENT] [-v]
 
 Run a particular Oak Application in the Oak Runtime.
-Either the -a APPLICATION or the -e EXAMPLE option is required.
+Either the -f APPLICATION or the -e EXAMPLE option is required.
 
-  -a    Path to a serialized application configuration file
+  -f    Path to a serialized application configuration file
   -e    Example application name
   -s    Server type:
           - base: base version of the server
           - logless: base version of the server with debug logging compiled out
-  -l    Example application variant (if -e specified):
+  -a    Example application variant (if -e specified):
           - rust (used by default)
           - cpp
   -c    Path to the downloaded JSON-encoded OpenID Connect client identity file
   -v    Enable verbose/debug output
   -h    Print Help (this message) and exit"
       exit 0;;
-    l)
-      language="${OPTARG}";;
+    a)
+      application_language="${OPTARG}";;
     s)
       case "${OPTARG}" in
         base|logless)
@@ -36,8 +36,8 @@ Either the -a APPLICATION or the -e EXAMPLE option is required.
           echo "Invalid server type: ${OPTARG}"
           exit 1;;
       esac;;
-    a)
-      readonly APPLICATION="${OPTARG}";;
+    f)
+      readonly APPLICATION_FILE="${OPTARG}";;
     e)
       readonly EXAMPLE="${OPTARG}";;
     c)
@@ -62,18 +62,18 @@ fi
 
 if [[ -n ${EXAMPLE+x} ]]; then
   # Determine expected configuration file from example name and language variant.
-  case "${language}" in
+  case "${application_language}" in
     rust)
-      readonly APPLICATION="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
+      readonly APPLICATION_FILE="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
     cpp)
       # TensorFlow example is compiled with Emscripten and other examples with Clang.
       if [[ "${EXAMPLE}" == "tensorflow" ]]; then
-        readonly APPLICATION="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
+        readonly APPLICATION_FILE="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
       else
-        readonly APPLICATION="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
+        readonly APPLICATION_FILE="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
       fi;;
     *)
-      echo "Invalid example variant: ${language}"
+      echo "Invalid example variant: ${application_language}"
       exit 1;;
   esac
 
@@ -84,8 +84,8 @@ if [[ -n ${EXAMPLE+x} ]]; then
   fi
 fi
 
-if [[ -z "${APPLICATION+z}" ]]; then
-  echo "Missing required option: -a APPLICATION or -e EXAMPLE"
+if [[ -z "${APPLICATION_FILE+z}" ]]; then
+  echo "Missing required option: -f APPLICATION or -e EXAMPLE"
   exit 1
 fi
 
@@ -94,5 +94,5 @@ fi
 # Launching the server requires a `--application=<dir>/config.bin` flag.
 # `exec` is necessary for the `run_example` script to be able to get a PID of a background server.
 exec cargo run "${cargo_build_flags[@]}" --package=oak_loader -- \
-    --application="${APPLICATION}" \
+    --application="${APPLICATION_FILE}" \
     "${additional_args[@]}"
