@@ -1,3 +1,5 @@
+[workspace]
+
 [package]
 name = "oak_abi"
 version = "0.1.0"

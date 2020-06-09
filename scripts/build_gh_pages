@@ -33,11 +33,11 @@ fi
 readonly TARGET_ABS_PATH="$(realpath "${TARGET_DIR}")"
 
 # All the dirs that we want to generate docs for.
-declare -ar SOURCE_PATHS=("." "oak_abi" "oak_utils")
-declare -ar TARGET_SUBDIRS=("oak" "oak_abi" "oak_utils")
+declare -ar SOURCE_PATHS=("." "oak_abi" "oak_utils" "sdk" "runner")
+declare -ar TARGET_SUBDIRS=("oak" "oak_abi" "oak_utils" "sdk" "runner")
 
 # Titles used in the top-level index.html files. 
-declare -ar PAGE_TITLES=("SDK" "ABI" "Utils")
+declare -ar PAGE_TITLES=("Runtime" "ABI" "Utils" "SDK" "Runner")
 
 readonly LEN=${#SOURCE_PATHS[@]}
 
@@ -78,10 +78,10 @@ cat <<-END > "${TARGET_ABS_PATH}/index.html"
   <!DOCTYPE html>
   <html>
     <head>
-      <meta http-equiv="Refresh" content="0; url=./oak/doc/oak/index.html" />
+      <meta http-equiv="Refresh" content="0; url=./sdk/doc/oak/index.html" />
     </head>
     <body>
-      <p><a href="./oak/doc/oak/index.html">Oak SDK main page</a></p>
+      <p><a href="./sdk/doc/oak/index.html">Oak SDK main page</a></p>
     </body>
   </html>
 END

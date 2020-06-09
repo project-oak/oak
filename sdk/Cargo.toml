@@ -1,6 +1,5 @@
 [workspace]
-members = ["oak/server/rust/oak_loader", "oak/server/rust/oak_runtime"]
-exclude = ["third_party/expect", "third_party/roughenough"]
+members = ["rust/oak", "rust/oak_tests"]
 
 # Patch dependencies on oak crates so that they refer to the versions within this same repository.
 #
@@ -9,9 +8,10 @@ exclude = ["third_party/expect", "third_party/roughenough"]
 # > explicit about the dependency relationships between the crates.
 [patch.crates-io]
 # Oak.
-oak_abi = { path = "oak_abi" }
-oak_loader = { path = "oak/server/rust/oak_loader" }
-oak_runtime = { path = "oak/server/rust/oak_runtime" }
-oak_utils = { path = "oak_utils" }
+oak = { path = "rust/oak" }
+oak_abi = { path = "../oak_abi" }
+oak_runtime = { path = "../oak/server/rust/oak_runtime" }
+oak_tests = { path = "rust/oak_tests" }
+oak_utils = { path = "../oak_utils" }
 # Third party.
-roughenough = { path = "third_party/roughenough" }
+roughenough = { path = "../third_party/roughenough" }
