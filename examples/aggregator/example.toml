@@ -1,10 +1,10 @@
 name = "aggregator"
 
-[modules.module]
-build_system = "Cargo"
-cargo_manifest = "examples/aggregator/module/rust/Cargo.toml"
+[modules]
+module = { Cargo = { cargo_manifest = "examples/aggregator/module/rust/Cargo.toml" } }
 
-[clients.cpp]
-build_system = "Bazel"
-bazel_target = "//examples/aggregator/client:client"
-additional_args = ["--bucket=test", "--data=1:10,2:20,3:30"]
+[clients]
+cpp = { Bazel = { bazel_target = "//examples/aggregator/client:client" }, additional_args = [
+    "--bucket=test",
+    "--data=1:10,2:20,3:30"
+] }

@@ -264,18 +264,9 @@ struct Example {
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct Target {
-    build_system: BuildSystem,
-    #[serde(default)]
-    bazel_target: String,
-    #[serde(default)]
-    cargo_manifest: String,
-}
-
-#[derive(serde::Deserialize, Debug)]
-enum BuildSystem {
-    Bazel,
-    Cargo,
+enum Target {
+    Bazel { bazel_target: String },
+    Cargo { cargo_manifest: String },
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -296,9 +287,11 @@ fn run_example(example: &Example) -> Step {
                 steps: example
                     .modules
                     .iter()
-                    .map(|(name, target)| match target.build_system {
-                        BuildSystem::Cargo => build_wasm_module(name, &target.cargo_manifest),
-                        BuildSystem::Bazel => todo!(),
+                    .map(|(name, target)| match target {
+                        Target::Cargo { cargo_manifest } => {
+                            build_wasm_module(name, &cargo_manifest)
+                        }
+                        Target::Bazel { .. } => todo!(),
                     })
                     .collect(),
             },
@@ -314,10 +307,7 @@ fn run_example(example: &Example) -> Step {
                     steps: example
                         .clients
                         .iter()
-                        .map(|(name, client)| match client.target.build_system {
-                            BuildSystem::Cargo => todo!(),
-                            BuildSystem::Bazel => run_client(name, &client),
-                        })
+                        .map(|(name, client)| run_client(name, &client))
                         .collect(),
                 }),
             },
@@ -326,22 +316,25 @@ fn run_example(example: &Example) -> Step {
 }
 
 fn run_client(name: &str, client: &Client) -> Step {
-    Step::Single {
-        name: format!("bazel:{}:{}", name, client.target.bazel_target),
-        command: Cmd::new(
-            "bazel",
-            vec![
+    match &client.target {
+        Target::Cargo { .. } => todo!(),
+        Target::Bazel { bazel_target } => Step::Single {
+            name: format!("bazel:{}:{}", name, bazel_target),
+            command: Cmd::new(
+                "bazel",
                 vec![
-                    "run".to_string(),
-                    "--".to_string(),
-                    client.target.bazel_target.to_string(),
-                    "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
-                ],
-                client.additional_args.clone(),
-            ]
-            .iter()
-            .flatten(),
-        ),
+                    vec![
+                        "run".to_string(),
+                        "--".to_string(),
+                        bazel_target.to_string(),
+                        "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
+                    ],
+                    client.additional_args.clone(),
+                ]
+                .iter()
+                .flatten(),
+            ),
+        },
     }
 }
 
