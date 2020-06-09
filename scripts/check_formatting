@@ -17,7 +17,8 @@ find . \
     -not \( -path ./cargo -prune \) -and \
     -not \( -path ./target -prune \) -and \
     -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./third_party -prune \) \
+    -not \( -path ./third_party -prune \) -and \
+    -not \( -path '*/node_modules' -prune \) \
     \( -type f -name BUILD -or -name WORKSPACE -or -name '*.bzl' \) \
   \) -exec buildifier -lint=warn -mode=check {} +
 
@@ -29,7 +30,8 @@ readonly MISSING_LICENSES=$(find . \
     -not \( -path ./cargo -prune \) -and \
     -not \( -path ./target -prune \) -and \
     -not \( -path ./examples/target -prune \) -and \
-    -not \( -path ./third_party -prune \) \
+    -not \( -path ./third_party -prune \) -and \
+    -not \( -path '*/node_modules' -prune \) \
     \( -type f -name BUILD \) \
   \) -exec grep --files-without-match '^    licenses = \["notice"\],$' {} +)
 if [[ -n "$MISSING_LICENSES" ]] ; then
@@ -44,7 +46,9 @@ find scripts -type f -exec shellcheck {} +
 # Exit codes:
 #  - 1 there are files to be formatted.
 #  - 0 everything looks fine.
-./third_party/run-clang-format/run-clang-format.py -r oak examples
+./third_party/run-clang-format/run-clang-format.py -r \
+    --exclude '*/node_modules' \
+    oak examples
 
 # Fortunately, rustfmt has the --check option that will make it exit with 1
 # if formatting has to be applied.
@@ -58,7 +62,8 @@ find . \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path '*/target' -prune \) -and \
-    -not \( -path ./third_party -prune \) \
+    -not \( -path ./third_party -prune \) -and \
+    -not \( -path '*/node_modules' -prune \) \
     \( -type f -name '*Dockerfile' \) \
   \) -exec hadolint {} +
 
@@ -68,7 +73,8 @@ find . \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path '*/target' -prune \) -and \
-    -not \( -path ./third_party -prune \) \
+    -not \( -path ./third_party -prune \) -and \
+    -not \( -path '*/node_modules' -prune \) \
     \( -type f -name '*.md' -or -name '*.yaml' -or -name '*.toml' \) \
   \) -exec prettier --check {} +
 
@@ -78,7 +84,8 @@ find . \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path '*/target' -prune \) -and \
-    -not \( -path ./third_party -prune \) \
+    -not \( -path ./third_party -prune \) -and \
+    -not \( -path '*/node_modules' -prune \) \
     \( -type f -name '*.md' \) \
   \) -exec markdownlint {} +
 
@@ -91,7 +98,8 @@ find . \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path '*/target' -prune \) -and \
-    -not \( -path ./third_party -prune \) \
+    -not \( -path ./third_party -prune \) -and \
+    -not \( -path '*/node_modules' -prune \) \
     \( -type f -name '*.md' \) \
   \) -exec liche --document-root=. --exclude='(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates)' {} +
 
@@ -101,7 +109,8 @@ find . \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path ./cargo -prune \) -and \
     -not \( -path '*/target' -prune \) -and \
-    -not \( -path ./third_party -prune \) \
+    -not \( -path ./third_party -prune \) -and \
+    -not \( -path '*/node_modules' -prune \) \
     \( -type f \( -name '*.rs' -o -name '*.cc' \) \) \
   \) -exec ./scripts/check_license {} +
 
@@ -110,7 +119,8 @@ find . \
     -not \( -path ./bazel-cache -prune \) -and \
     -not \( -path ./cargo-cache -prune \) -and \
     -not \( -path '*/target' -prune \) -and \
-    -not \( -path ./third_party -prune \) \
+    -not \( -path ./third_party -prune \) -and \
+    -not \( -path '*/node_modules' -prune \) \
     \( -type f \( -name '*.rs' -o -name '*.cc' -o -name '*.proto' -o -name '*.h' \) \) \
   \) -exec ./scripts/check_todo {} +
 
