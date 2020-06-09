@@ -67,4 +67,9 @@ service OakABITestService {
   rpc ServerStreamingMethod(GrpcTestRequest) returns (stream GrpcTestResponse);
   rpc ClientStreamingMethod(stream GrpcTestRequest) returns (GrpcTestResponse);
   rpc BidiStreamingMethod(stream GrpcTestRequest) returns (stream GrpcTestResponse);
+
+  // The following methods perform an operation that takes some time server-side;
+  // this allows testing of parallel requests.
+  rpc SlowUnaryMethod(GrpcTestRequest) returns (GrpcTestResponse);
+  rpc SlowStreamingMethod(GrpcTestRequest) returns (stream GrpcTestResponse);
 }

@@ -16,6 +16,8 @@
 
 #include "examples/abitest/client/grpc_test_server.h"
 
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "glog/logging.h"
 
 using ::oak::examples::abitest::GrpcTestRequest;
@@ -94,6 +96,34 @@ grpc::Status GrpcTestServer::BidiStreamingMethod(
     stream->Write(rsp);
   }
   LOG(INFO) << "BidiStreamingMethod -> OK";
+  return grpc::Status::OK;
+}
+
+grpc::Status GrpcTestServer::SlowUnaryMethod(grpc::ServerContext* context,
+                                             const GrpcTestRequest* req, GrpcTestResponse* rsp) {
+  LOG(INFO) << "UnaryMethod ...";
+  absl::SleepFor(absl::Seconds(5));
+  rsp->set_text("sloow");
+  LOG(INFO) << "UnaryMethod ... -> Ok('" << rsp->text() << "')";
+  return grpc::Status::OK;
+}
+
+grpc::Status GrpcTestServer::SlowStreamingMethod(grpc::ServerContext* context,
+                                                 const GrpcTestRequest* req,
+                                                 grpc::ServerWriter<GrpcTestResponse>* writer) {
+  // Write two responses to exercise streaming.
+  GrpcTestResponse rsp;
+  rsp.set_text("sloow");
+  LOG(INFO) << "ServerStreamingMethod...";
+  absl::SleepFor(absl::Seconds(3));
+  writer->Write(rsp);
+  LOG(INFO) << "ServerStreamingMethod... -> '" << req->ok_text() << "'";
+
+  LOG(INFO) << "ServerStreamingMethod...";
+  absl::SleepFor(absl::Seconds(3));
+  writer->Write(rsp);
+  LOG(INFO) << "ServerStreamingMethod... -> '" << req->ok_text() << "'";
+  LOG(INFO) << "ServerStreamingMethod -> OK";
   return grpc::Status::OK;
 }
 

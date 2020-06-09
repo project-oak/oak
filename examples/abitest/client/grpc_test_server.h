@@ -49,6 +49,14 @@ class GrpcTestServer final : public ::oak::examples::abitest::OakABITestService:
       ::grpc::ServerContext* context,
       grpc::ServerReaderWriter<oak::examples::abitest::GrpcTestResponse,
                                oak::examples::abitest::GrpcTestRequest>* stream) override;
+
+  grpc::Status SlowUnaryMethod(grpc::ServerContext* context,
+                               const oak::examples::abitest::GrpcTestRequest* req,
+                               oak::examples::abitest::GrpcTestResponse* rsp) override;
+
+  grpc::Status SlowStreamingMethod(
+      grpc::ServerContext* context, const oak::examples::abitest::GrpcTestRequest* req,
+      grpc::ServerWriter<oak::examples::abitest::GrpcTestResponse>* writer) override;
 };
 
 }  // namespace test

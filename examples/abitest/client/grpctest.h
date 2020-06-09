@@ -35,5 +35,7 @@ bool test_client_streaming_method_ok(oak::examples::abitest::OakABITestService::
 bool test_client_streaming_method_err(oak::examples::abitest::OakABITestService::Stub* stub);
 bool test_bidi_streaming_method_ok(oak::examples::abitest::OakABITestService::Stub* stub);
 bool test_bidi_streaming_method_err(oak::examples::abitest::OakABITestService::Stub* stub);
+bool test_slow_unary_method(oak::examples::abitest::OakABITestService::Stub* stub);
+bool test_slow_streaming_method(oak::examples::abitest::OakABITestService::Stub* stub);
 
 #endif  // EXAMPLES_ABITEST_CLIENT_GRPCTEST_H

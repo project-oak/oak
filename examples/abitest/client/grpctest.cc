@@ -16,6 +16,12 @@
 
 #include "examples/abitest/client/grpctest.h"
 
+#include <thread>
+#include <vector>
+
+#include "absl/synchronization/mutex.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 
@@ -34,6 +40,8 @@ const std::map<std::string, GrpcTestFn> grpc_tests = {
     {"DISABLED_GrpcServerClientStreamingMethodErr", test_client_streaming_method_err},
     {"DISABLED_GrpcServerBidiStreamingMethodOK", test_bidi_streaming_method_ok},
     {"DISABLED_GrpcServerBidiStreamingMethodErr", test_bidi_streaming_method_err},
+    {"GrpcServerUnaryMethodSlow", test_slow_unary_method},
+    {"GrpcServerServerStreamingMethodSlow", test_slow_streaming_method},
 };
 
 bool test_unary_method_ok(OakABITestService::Stub* stub) {
@@ -180,4 +188,70 @@ bool test_bidi_streaming_method_err(OakABITestService::Stub* stub) {
     return false;
   }
   return true;
+}
+
+bool approximately_equal(absl::Duration left, absl::Duration right) {
+  double l = absl::ToDoubleMilliseconds(left);
+  double r = absl::ToDoubleMilliseconds(right);
+  return (l*0.8 < r && r <  l*1.2);
+}
+
+bool test_slow_unary_method(OakABITestService::Stub* stub) {
+  bool success = true;
+  absl::Mutex mu;
+
+  std::vector<std::thread> threads;
+  for (int ii = 0; ii < 3; ii++) {
+    threads.push_back(std::thread([stub, ii, &success, &mu]() {
+      LOG(INFO) << "Invoke slow method " << ii;
+      grpc::ClientContext context;
+      GrpcTestRequest req;
+      req.set_ok_text("test");
+      GrpcTestResponse rsp;
+      absl::Time start = absl::Now();
+      grpc::Status status = stub->SlowUnaryMethod(&context, req, &rsp);
+      absl::Duration duration = (absl::Now() - start);
+      LOG(INFO) << "Slow method " << ii << " took " << duration;
+      if (!approximately_equal(duration, absl::Seconds(5))) {
+        LOG(ERROR) << "Slow method took " << duration << ", expected ~5s";
+        absl::MutexLock with(&mu);
+        success = false;
+      }
+    }));
+  }
+  for (auto& t : threads) {
+    t.join();
+  }
+  return success;
+}
+
+bool test_slow_streaming_method(OakABITestService::Stub* stub) {
+  grpc::ClientContext context;
+  GrpcTestRequest req;
+  req.set_ok_text("test");
+
+  absl::Time start = absl::Now();
+  auto reader = stub->SlowStreamingMethod(&context, req);
+  if (reader == nullptr) {
+    LOG(FATAL) << "Could not get response reader";
+  }
+  bool success = true;
+  int count = 0;
+  GrpcTestResponse rsp;
+  absl::Time prev = start;
+  while (reader->Read(&rsp)) {
+    absl::Time now = absl::Now();
+    absl::Duration total_duration = (now - start);
+    absl::Duration duration = (now - prev);
+    prev = now;
+    count++;
+    LOG(INFO) << "Response " << count << " received after " << total_duration
+              << " since initial request, " << duration << " since previous activity";
+    if (!approximately_equal(duration, absl::Seconds(5))) {
+      LOG(ERROR) << "Slow method took " << duration << ", expected ~5s";
+      success = false;
+    }
+  }
+  grpc::Status status = reader->Finish();
+  return success && status.ok();
 }

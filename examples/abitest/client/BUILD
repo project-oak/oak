@@ -34,6 +34,7 @@ cc_binary(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@cpp_httplib//:httplib",
     ],
@@ -47,6 +48,8 @@ cc_library(
         "//examples/abitest/proto:abitest_cc_grpc",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
     ],
 )
 
@@ -58,5 +61,6 @@ cc_library(
         "//examples/abitest/proto:abitest_cc_grpc",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/time",
     ],
 )
