@@ -24,6 +24,8 @@ mkdir -p './cargo-cache'
 docker build \
   --cache-from="$DOCKER_IMAGE_NAME:latest" \
   --tag="$DOCKER_IMAGE_NAME:latest" \
+  --build-arg DOCKER_UID="$DOCKER_UID" \
+  --build-arg DOCKER_GID="$DOCKER_GID" \
   . 1>&2
 
 docker_run_flags=(
@@ -33,7 +35,7 @@ docker_run_flags=(
   "--env=USER=$DOCKER_USER"
   '--env=BAZEL_REMOTE_CACHE_ENABLED'
   '--env=BAZEL_GOOGLE_CREDENTIALS'
-  "--volume=$PWD/bazel-cache:/.cache/bazel"
+  "--volume=$PWD/bazel-cache:/home/docker_runner/.cache/bazel"
   "--volume=$PWD/cargo-cache:/usr/local/cargo/registry"
   "--volume=$PWD:/opt/my-project"
   '--workdir=/opt/my-project'

@@ -196,3 +196,11 @@ RUN rustup component add \
 
 RUN cargo install cargo-deadlinks
 RUN cargo install cargo-deny
+
+ARG DOCKER_UID
+ARG DOCKER_GID
+RUN if [ ${DOCKER_GID:-0} -ne 0 ] ; then groupadd -g ${DOCKER_GID} docker_runner; fi \
+  && if [ ${DOCKER_UID:-0} -ne 0 ] ; then \
+  useradd --uid ${DOCKER_UID} --gid ${DOCKER_GID} docker_runner --home-dir /home/docker_runner --create-home \
+  && chown -R ${DOCKER_UID}:${DOCKER_GID} /home/docker_runner \
+  ;fi \
