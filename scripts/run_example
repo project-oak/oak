@@ -100,9 +100,8 @@ readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
 # Run the application client.
 case "${client_language}" in
   rust)
-    # Rust example parameters only support `-` as a delimiter, and C++ ones only `_`.
     cargo run --release --target=x86_64-unknown-linux-musl --manifest-path="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/rust/Cargo.toml" -- \
-      --grpc-client-root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
+      --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
       "${CLIENT_ARGS[@]-}"
     ;;
   cpp)

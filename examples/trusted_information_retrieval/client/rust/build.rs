@@ -17,6 +17,7 @@
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // TODO(#1120): Add Rust client library function for building Protobuf.
     let proto_path = Path::new("../../../../examples/trusted_information_retrieval/proto");
     let file_path = proto_path.join("trusted_information_retrieval.proto");
 

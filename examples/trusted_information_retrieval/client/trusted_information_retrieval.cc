@@ -27,8 +27,8 @@
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
-ABSL_FLAG(float, latitude, float{}, "Requested location's latitude (WGS84)");
-ABSL_FLAG(float, longitude, float{}, "Requested location's longitude (WGS84)");
+ABSL_FLAG(float, latitude, float{}, "Requested location's latitude in degrees (WGS84)");
+ABSL_FLAG(float, longitude, float{}, "Requested location's longitude in degrees (WGS84)");
 
 using ::oak::examples::trusted_information_retrieval::ListPointsOfInterestRequest;
 using ::oak::examples::trusted_information_retrieval::ListPointsOfInterestResponse;

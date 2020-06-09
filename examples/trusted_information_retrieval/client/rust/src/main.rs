@@ -47,10 +47,10 @@ pub struct Opt {
         long,
         help = "PEM encoded X.509 TLS root certificate file used by gRPC client"
     )]
-    grpc_client_root_tls_certificate: String,
-    #[structopt(long, help = "Requested location's latitude (WGS84)")]
+    root_tls_certificate: String,
+    #[structopt(long, help = "Requested location's latitude in degrees (WGS84)")]
     latitude: f32,
-    #[structopt(long, help = "Requested location's longitude (WGS84)")]
+    #[structopt(long, help = "Requested location's longitude in degrees (WGS84)")]
     longitude: f32,
 }
 
@@ -64,18 +64,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
 
     let uri = opt.uri.parse().expect("Error parsing URI");
-    let root_certificate = tokio::fs::read(&opt.grpc_client_root_tls_certificate)
+    let root_tls_certificate = tokio::fs::read(&opt.root_tls_certificate)
         .await
         .expect("Could not load certificate file");
     let latitude = opt.latitude;
-    if opt.latitude < -90.0 || opt.latitude > 90.0 {
+    if latitude < -90.0 || latitude > 90.0 {
         panic!(
             "Latitude must be a valid floating point number >=-90 and <= 90, found {}",
             latitude
         );
     }
     let longitude = opt.longitude;
-    if opt.longitude < -180.0 || opt.longitude > 180.0 {
+    if longitude < -180.0 || longitude > 180.0 {
         panic!(
             "Longitude must be a valid floating point number >= -180 and <= 180, found {}",
             longitude
@@ -83,7 +83,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     info!("Connecting to Oak Application: {:?}", uri);
-    let tls_config = ClientTlsConfig::new().ca_certificate(Certificate::from_pem(root_certificate));
+    let tls_config =
+        ClientTlsConfig::new().ca_certificate(Certificate::from_pem(root_tls_certificate));
     let channel = Channel::builder(uri)
         .tls_config(tls_config)
         .connect()
