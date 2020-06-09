@@ -94,7 +94,7 @@ else
   readonly TLS_ARGS=("--ca_cert=${SCRIPTS_DIR}/../examples/certs/local/ca.pem")
 fi
 
-readonly CLIENT_ARGS=("${@}")  # Choose client args provided after '--'.
+readonly CLIENT_ARGS=("${@-}")  # Choose client args provided after '--'.
 
 # Run the application client.
 case "${client_language}" in
