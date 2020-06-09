@@ -262,6 +262,10 @@
 <span id="262">262</span>
 <span id="263">263</span>
 <span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -291,7 +295,7 @@
 <span class="doccomment">//!     --root-tls-certificate=&lt;CERTIFICATE_PATH&gt;</span>
 <span class="doccomment">//! ```</span>
 
-<span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
@@ -375,9 +379,7 @@
     <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">anyhow</span>::<span class="ident">Error</span>;
     <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="self">Self</span>::<span class="prelude-val">Err</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">parts</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">split</span>(<span class="string">&#39;=&#39;</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-        <span class="kw">if</span> <span class="ident">parts</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;could not parse config entry: {}&quot;</span>, <span class="ident">v</span>));
-        }
+        <span class="ident">anyhow</span>::<span class="macro">ensure</span><span class="macro">!</span>(<span class="ident">parts</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span>, <span class="string">&quot;could not parse config entry: {}&quot;</span>, <span class="ident">v</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">ConfigEntry</span> {
             <span class="ident">key</span>: <span class="ident">parts</span>[<span class="number">0</span>].<span class="ident">to_string</span>(),
             <span class="ident">filename</span>: <span class="ident">parts</span>[<span class="number">1</span>].<span class="ident">to_string</span>(),
@@ -387,11 +389,11 @@
 
 <span class="doccomment">/// Read the contents of a file.</span>
 <span class="kw">fn</span> <span class="ident">read_file</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">filename</span>)
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;Failed to open file &lt;{}&gt;: {:?}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span>
+        <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">filename</span>).<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Failed to open file &lt;{}&gt;&quot;</span>, <span class="ident">filename</span>))<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
     <span class="ident">file</span>.<span class="ident">read_to_end</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>)
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;Failed to read file &lt;{}&gt;: {:?}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>))<span class="question-mark">?</span>;
+        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Failed to read file &lt;{}&gt;&quot;</span>, <span class="ident">filename</span>))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="ident">buffer</span>)
 }
 
@@ -400,9 +402,11 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_config_map</span>(<span class="ident">config_entries</span>: <span class="kw-2">&amp;</span>[<span class="ident">ConfigEntry</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ConfigMap</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file_map</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
     <span class="kw">for</span> <span class="ident">config_entry</span> <span class="kw">in</span> <span class="ident">config_entries</span> {
-        <span class="kw">if</span> <span class="ident">file_map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">config_entry</span>.<span class="ident">key</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;duplicate config entry key: {}&quot;</span>, <span class="ident">config_entry</span>.<span class="ident">key</span>));
-        }
+        <span class="ident">anyhow</span>::<span class="macro">ensure</span><span class="macro">!</span>(
+            <span class="op">!</span><span class="ident">file_map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">config_entry</span>.<span class="ident">key</span>),
+            <span class="string">&quot;duplicate config entry key: {}&quot;</span>,
+            <span class="ident">config_entry</span>.<span class="ident">key</span>
+        );
         <span class="ident">file_map</span>.<span class="ident">insert</span>(
             <span class="ident">config_entry</span>.<span class="ident">key</span>.<span class="ident">to_string</span>(),
             <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">config_entry</span>.<span class="ident">filename</span>)<span class="question-mark">?</span>,
@@ -418,12 +422,9 @@
     <span class="ident">handle</span>: <span class="ident">Handle</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="ident">Sender</span>::<span class="ident">new</span>(<span class="ident">handle</span>);
-    <span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">config_map</span>, <span class="ident">runtime</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> {
-        <span class="macro">anyhow</span><span class="macro">!</span>(
-            <span class="string">&quot;could not send configuration map to the initial Node: {:?}&quot;</span>,
-            <span class="ident">status</span>
-        )
-    })
+    <span class="ident">sender</span>
+        .<span class="ident">send</span>(<span class="ident">config_map</span>, <span class="ident">runtime</span>)
+        .<span class="ident">context</span>(<span class="string">&quot;could not send configuration map to the initial Node&quot;</span>)
 }
 
 <span class="doccomment">/// Main execution point for the Oak loader.</span>
@@ -436,15 +437,17 @@
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt</span>::<span class="ident">from_args</span>();
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;parsed opts: {:?}&quot;</span>, <span class="ident">opt</span>);
 
-    <span class="kw">let</span> <span class="ident">config_map</span> <span class="op">=</span> <span class="ident">parse_config_map</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">config_files</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">config_map</span> <span class="op">=</span> <span class="ident">parse_config_map</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">config_files</span>).<span class="ident">context</span>(<span class="string">&quot;could not parse config map&quot;</span>)<span class="question-mark">?</span>;
     <span class="comment">// We only log the keys here, since the values may be secret.</span>
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;parsed config map entries: {:?}&quot;</span>, <span class="ident">config_map</span>.<span class="ident">items</span>.<span class="ident">keys</span>());
     <span class="comment">// TODO(#689): Pass the `config_map` object to the Runtime instance, and make it available to</span>
     <span class="comment">// the running Oak Application.</span>
 
     <span class="comment">// Load application configuration.</span>
-    <span class="kw">let</span> <span class="ident">app_config_data</span> <span class="op">=</span> <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">application</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">application_configuration</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="ident">app_config_data</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">app_config_data</span> <span class="op">=</span>
+        <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">application</span>).<span class="ident">context</span>(<span class="string">&quot;could not read application configuration&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">application_configuration</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="ident">app_config_data</span>.<span class="ident">as_ref</span>())
+        .<span class="ident">context</span>(<span class="string">&quot;could not parse application configuration&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Create Runtime config.</span>
     <span class="kw">let</span> <span class="ident">runtime_configuration</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
@@ -461,12 +464,16 @@
     };
 
     <span class="comment">// Create the overall gRPC configuration.</span>
-    <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">root_tls_certificate</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">root_tls_certificate</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span>
+        <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span>).<span class="ident">context</span>(<span class="string">&quot;could not read gRPC TLS private key&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span>
+        <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span>).<span class="ident">context</span>(<span class="string">&quot;could not read gRPC TLS certificate&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">root_tls_certificate</span> <span class="op">=</span>
+        <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">root_tls_certificate</span>).<span class="ident">context</span>(<span class="string">&quot;could not read root TLS certificate&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">oidc_client_info</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">oidc_client</span> {
         <span class="prelude-val">Some</span>(<span class="ident">oidc_client</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">oidc_file</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="ident">oidc_client</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">oidc_file</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="ident">oidc_client</span>)
+                .<span class="ident">context</span>(<span class="string">&quot;could not read OpenID Connect client configuration file&quot;</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Some</span>(
                 <span class="ident">parse_client_info_json</span>(<span class="kw-2">&amp;</span><span class="ident">oidc_file</span>)
                     .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;Failed to parse json: {:?}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>,
@@ -493,7 +500,7 @@
         <span class="ident">runtime_configuration</span>,
         <span class="ident">grpc_configuration</span>,
     )
-    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;could not start runtime, status: {:?}&quot;</span>, <span class="ident">status</span>))<span class="question-mark">?</span>;
+    .<span class="ident">context</span>(<span class="string">&quot;could not start Runtime&quot;</span>)<span class="question-mark">?</span>;
     <span class="macro">info</span><span class="macro">!</span>(
         <span class="string">&quot;initial node {:?} with write handle {:?}&quot;</span>,
         <span class="ident">runtime</span>.<span class="ident">node_id</span>, <span class="ident">initial_handle</span>
@@ -509,7 +516,8 @@
     }
 
     <span class="kw">let</span> <span class="ident">done</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>));
-    <span class="ident">signal_hook</span>::<span class="ident">flag</span>::<span class="ident">register</span>(<span class="ident">signal_hook</span>::<span class="ident">SIGINT</span>, <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">done</span>))<span class="question-mark">?</span>;
+    <span class="ident">signal_hook</span>::<span class="ident">flag</span>::<span class="ident">register</span>(<span class="ident">signal_hook</span>::<span class="ident">SIGINT</span>, <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">done</span>))
+        .<span class="ident">context</span>(<span class="string">&quot;could not register signal handler&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// The Runtime kicks off its own threads for the initial Node and any subsequently created</span>
     <span class="comment">// Nodes, so just block the current thread until a signal arrives.</span>
