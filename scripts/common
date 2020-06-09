@@ -10,6 +10,9 @@ set -o pipefail
 # https://docs.rs/env_logger
 export RUST_LOG="${RUST_LOG:-info}"
 
+# Reduce build nondeterminism by remapping paths so that they don't include local segments.
+export RUSTFLAGS="--remap-path-prefix=$PWD=/ ${RUSTFLAGS:-}"
+
 # See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
 readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
 readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
