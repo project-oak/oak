@@ -108,6 +108,9 @@ case "${client_language}" in
   cpp)
     "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
     ;;
+  *)
+    echo "Invalid example client variant: ${client_language}"
+    exit 1;;
 esac
 
 kill_bg_pids

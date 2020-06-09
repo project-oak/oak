@@ -4,8 +4,8 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-application="rust"
-client="cpp"
+application_language="rust"
+client_language="cpp"
 compilation_mode='fastbuild'
 docker_config=''
 while getopts "e:a:c:di:h" opt; do
@@ -33,9 +33,9 @@ Options:
     e)
       readonly EXAMPLE="${OPTARG}";;
     a)
-      application="${OPTARG}";;
+      application_language="${OPTARG}";;
     c)
-      client="${OPTARG}";;
+      client_language="${OPTARG}";;
     d)
       compilation_mode='dbg';;
     i)
@@ -51,7 +51,7 @@ if [[ -z "${EXAMPLE+z}" ]]; then
   exit 1
 fi
 
-case "${application}" in
+case "${application_language}" in
   rust)
     for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do
       # Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it
@@ -84,7 +84,7 @@ case "${application}" in
     fi
     ;;
   *)
-    echo "Invalid example variant: ${language}"
+    echo "Invalid example application variant: ${application_language}"
     exit 1;;
 esac
 
@@ -102,7 +102,7 @@ if [[ -n "${docker_config}" ]]; then
   fi
 fi
 
-case "${client}" in
+case "${client_language}" in
   rust)
     cargo build --release "--manifest-path=./examples/${EXAMPLE}/client/rust/Cargo.toml"
     ;;
@@ -116,4 +116,7 @@ case "${client}" in
     # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
     bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:all"
     ;;
+  *)
+    echo "Invalid example client variant: ${client_language}"
+    exit 1;;
 esac
