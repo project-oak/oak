@@ -23,6 +23,14 @@ pub mod proto;
 
 pub use proto::oak::{ChannelReadStatus, OakStatus};
 
+impl std::fmt::Display for OakStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for OakStatus {}
+
 /// Handle used to identify read or write channel halves.
 ///
 /// These handles are used for all host function calls.

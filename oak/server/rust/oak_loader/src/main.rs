@@ -26,7 +26,7 @@
 //!     --root-tls-certificate=<CERTIFICATE_PATH>
 //! ```
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use core::str::FromStr;
 use log::{debug, error, info};
 use oak_abi::{
@@ -110,9 +110,7 @@ impl FromStr for ConfigEntry {
     type Err = anyhow::Error;
     fn from_str(v: &str) -> Result<Self, Self::Err> {
         let parts = v.split('=').collect::<Vec<_>>();
-        if parts.len() != 2 {
-            return Err(anyhow!("could not parse config entry: {}", v));
-        }
+        anyhow::ensure!(parts.len() == 2, "could not parse config entry: {}", v);
         Ok(ConfigEntry {
             key: parts[0].to_string(),
             filename: parts[1].to_string(),
@@ -122,11 +120,11 @@ impl FromStr for ConfigEntry {
 
 /// Read the contents of a file.
 fn read_file(filename: &str) -> anyhow::Result<Vec<u8>> {
-    let mut file = File::open(filename)
-        .map_err(|error| anyhow!("Failed to open file <{}>: {:?}", filename, error))?;
+    let mut file =
+        File::open(filename).with_context(|| format!("Failed to open file <{}>", filename))?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)
-        .map_err(|error| anyhow!("Failed to read file <{}>: {:?}", filename, error))?;
+        .with_context(|| format!("Failed to read file <{}>", filename))?;
     Ok(buffer)
 }
 
@@ -135,9 +133,11 @@ fn read_file(filename: &str) -> anyhow::Result<Vec<u8>> {
 pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<ConfigMap> {
     let mut file_map = HashMap::new();
     for config_entry in config_entries {
-        if file_map.contains_key(&config_entry.key) {
-            return Err(anyhow!("duplicate config entry key: {}", config_entry.key));
-        }
+        anyhow::ensure!(
+            !file_map.contains_key(&config_entry.key),
+            "duplicate config entry key: {}",
+            config_entry.key
+        );
         file_map.insert(
             config_entry.key.to_string(),
             read_file(&config_entry.filename)?,
@@ -153,12 +153,9 @@ fn send_config_map(
     handle: Handle,
 ) -> anyhow::Result<()> {
     let sender = Sender::new(handle);
-    sender.send(config_map, runtime).map_err(|status| {
-        anyhow!(
-            "could not send configuration map to the initial Node: {:?}",
-            status
-        )
-    })
+    sender
+        .send(config_map, runtime)
+        .context("could not send configuration map to the initial Node")
 }
 
 /// Main execution point for the Oak loader.
@@ -171,15 +168,17 @@ fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
     debug!("parsed opts: {:?}", opt);
 
-    let config_map = parse_config_map(&opt.config_files)?;
+    let config_map = parse_config_map(&opt.config_files).context("could not parse config map")?;
     // We only log the keys here, since the values may be secret.
     debug!("parsed config map entries: {:?}", config_map.items.keys());
     // TODO(#689): Pass the `config_map` object to the Runtime instance, and make it available to
     // the running Oak Application.
 
     // Load application configuration.
-    let app_config_data = read_file(&opt.application)?;
-    let application_configuration = ApplicationConfiguration::decode(app_config_data.as_ref())?;
+    let app_config_data =
+        read_file(&opt.application).context("could not read application configuration")?;
+    let application_configuration = ApplicationConfiguration::decode(app_config_data.as_ref())
+        .context("could not parse application configuration")?;
 
     // Create Runtime config.
     let runtime_configuration = oak_runtime::RuntimeConfiguration {
@@ -196,12 +195,16 @@ fn main() -> anyhow::Result<()> {
     };
 
     // Create the overall gRPC configuration.
-    let grpc_tls_private_key = read_to_string(&opt.grpc_tls_private_key)?;
-    let grpc_tls_certificate = read_to_string(&opt.grpc_tls_certificate)?;
-    let root_tls_certificate = read_to_string(&opt.root_tls_certificate)?;
+    let grpc_tls_private_key =
+        read_to_string(&opt.grpc_tls_private_key).context("could not read gRPC TLS private key")?;
+    let grpc_tls_certificate =
+        read_to_string(&opt.grpc_tls_certificate).context("could not read gRPC TLS certificate")?;
+    let root_tls_certificate =
+        read_to_string(&opt.root_tls_certificate).context("could not read root TLS certificate")?;
     let oidc_client_info = match opt.oidc_client {
         Some(oidc_client) => {
-            let oidc_file = read_to_string(oidc_client)?;
+            let oidc_file = read_to_string(oidc_client)
+                .context("could not read OpenID Connect client configuration file")?;
             Some(
                 parse_client_info_json(&oidc_file)
                     .map_err(|error| anyhow!("Failed to parse json: {:?}", error))?,
@@ -228,7 +231,7 @@ fn main() -> anyhow::Result<()> {
         runtime_configuration,
         grpc_configuration,
     )
-    .map_err(|status| anyhow!("could not start runtime, status: {:?}", status))?;
+    .context("could not start Runtime")?;
     info!(
         "initial node {:?} with write handle {:?}",
         runtime.node_id, initial_handle
@@ -244,7 +247,8 @@ fn main() -> anyhow::Result<()> {
     }
 
     let done = Arc::new(AtomicBool::new(false));
-    signal_hook::flag::register(signal_hook::SIGINT, Arc::clone(&done))?;
+    signal_hook::flag::register(signal_hook::SIGINT, Arc::clone(&done))
+        .context("could not register signal handler")?;
 
     // The Runtime kicks off its own threads for the initial Node and any subsequently created
     // Nodes, so just block the current thread until a signal arrives.
