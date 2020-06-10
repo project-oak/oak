@@ -43,10 +43,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let run = move || {
         let steps = match opt.cmd {
-            Command::BuildExamples(ref opt) => build_examples(&opt),
             Command::RunExamples(ref opt) => run_examples(&opt),
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::RunTests => run_tests(),
+            Command::Format => format(),
+            Command::RunCi => run_ci(),
         };
         // TODO(#396): Add support for running individual commands via command line flags.
         run_step(&Context::root(&opt), &steps)
@@ -68,16 +69,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut watcher: notify::RecommendedWatcher =
             notify::Watcher::new_immediate(move |res: notify::Result<notify::Event>| match res {
                 Ok(event) => {
-                    modified_files_clone.lock().unwrap().extend(event.paths);
+                    modified_files_clone.lock().unwrap().extend(
+                        event
+                            .paths
+                            .iter()
+                            .filter(|path| !is_ignored_path(path))
+                            .cloned(),
+                    );
                 }
                 Err(err) => panic!("watch error: {:?}", err),
             })?;
         watcher.watch(".", notify::RecursiveMode::Recursive)?;
 
+        run();
+
         spinner = Some(new_spinner());
         loop {
             std::thread::sleep(std::time::Duration::from_millis(1_000));
-            let mut modified_files = modified_files.lock().unwrap();
+
+            // Take the list of modified files out of the mutex and avoid holding the lock guard.
+            let modified_files = std::mem::take(&mut *modified_files.lock().unwrap());
+
             if modified_files.is_empty() {
                 continue;
             } else {
@@ -89,7 +101,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 for path in modified_files.iter() {
                     eprintln!("{}", format!("- {:?}", path).purple());
                 }
-                modified_files.clear();
                 eprintln!();
                 run();
                 eprintln!();
@@ -105,28 +116,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-fn build_examples(opt: &BuildExamples) -> Step {
-    match opt.application_variant.as_str() {
-        "rust" => Step::Multiple {
-            name: "root".to_string(),
-            steps: examples()
-                .filter(is_cargo_toml_file)
-                .filter(|entry| {
-                    // Exclude Cargo.toml files of targets that are not meant to be compiled to
-                    // Wasm (e.g. auxiliary binaries).
-                    (*entry != PathBuf::from("./examples/aggregator/backend/Cargo.toml"))
-                        && (*entry != PathBuf::from("./examples/authentication/server/Cargo.toml"))
-                        && (*entry != PathBuf::from("./examples/authentication/client/Cargo.toml"))
-                })
-                .map(to_string)
-                .map(|entry| build_wasm_module("example", &entry))
-                .collect(),
-        },
-        "cpp" => unimplemented!("C++ examples not implemented yet"),
-        v => panic!("unknown variant: {}", v),
-    }
 }
 
 fn run_examples(opt: &RunExamples) -> Step {
@@ -146,7 +135,11 @@ fn run_examples(opt: &RunExamples) -> Step {
             /// top-level method first.
             steps: examples
                 .iter()
-                .map(|example| run_example(example))
+                .filter(|example| match &opt.example_name {
+                    Some(example_name) => &example.name == example_name,
+                    None => true,
+                })
+                .map(|example| run_example(opt, example))
                 .collect(),
         },
         "cpp" => unimplemented!("C++ examples not implemented yet"),
@@ -252,28 +245,46 @@ fn build_server(opt: &BuildServer) -> Step {
 
 fn run_tests() -> Step {
     Step::Multiple {
-        name: "root".to_string(),
+        name: "tests".to_string(),
         steps: vec![
-            run_buildifier(),
-            run_prettier(),
-            run_embedmd(),
-            run_cargo_fmt(),
-            run_cargo_test(),
-            run_cargo_doc_test(),
+            run_buildifier(FormatMode::Check),
+            run_prettier(FormatMode::Check),
+            run_markdownlint(FormatMode::Check),
+            run_liche(),
+            run_cargo_fmt(FormatMode::Check),
             run_cargo_clippy(),
+            run_cargo_test(),
             run_bazel_build(),
             run_bazel_test(),
         ],
     }
 }
 
-/// Returns all the files and directories under the examples directory.
-fn examples() -> impl Iterator<Item = PathBuf> {
-    let walker = walkdir::WalkDir::new("./examples").into_iter();
-    walker
-        .filter_entry(|e| !is_ignored_entry(e))
-        .filter_map(Result::ok)
-        .map(|e| e.into_path())
+fn format() -> Step {
+    Step::Multiple {
+        name: "format".to_string(),
+        steps: vec![
+            run_buildifier(FormatMode::Fix),
+            run_prettier(FormatMode::Fix),
+            run_markdownlint(FormatMode::Fix),
+            run_embedmd(FormatMode::Fix),
+            run_cargo_fmt(FormatMode::Fix),
+        ],
+    }
+}
+
+fn run_ci() -> Step {
+    Step::Multiple {
+        name: "ci".to_string(),
+        steps: vec![
+            run_tests(),
+            run_examples(&RunExamples {
+                application_variant: "rust".to_string(),
+                example_name: None,
+                build_only: false,
+            }),
+        ],
+    }
 }
 
 fn build_example_config(example_name: &str) -> Step {
@@ -331,40 +342,54 @@ struct Client {
     additional_args: Vec<String>,
 }
 
-fn run_example(example: &Example) -> Step {
+fn run_example(opt: &RunExamples, example: &Example) -> Step {
     Step::Multiple {
         name: example.name.to_string(),
         steps: vec![
-            Step::Multiple {
-                name: "build_wasm_modules".to_string(),
-                steps: example
-                    .modules
-                    .iter()
-                    .map(|(name, target)| match target {
-                        Target::Cargo { cargo_manifest } => {
-                            build_wasm_module(name, &cargo_manifest)
-                        }
-                        Target::Bazel { .. } => todo!(),
-                    })
-                    .collect(),
-            },
-            build_example_config(&example.name),
-            Step::WithBackground {
-                name: "run_server".to_string(),
-                background: run_example_server(&format!(
-                    "./bazel-bin/examples/{}/config/config.bin",
-                    example.name
-                )),
-                foreground: Box::new(Step::Multiple {
-                    name: "run_client".to_string(),
+            vec![
+                Step::Multiple {
+                    name: "build_wasm_modules".to_string(),
                     steps: example
-                        .clients
+                        .modules
                         .iter()
-                        .map(|(name, client)| run_client(name, &client))
+                        .map(|(name, target)| match target {
+                            Target::Cargo { cargo_manifest } => {
+                                build_wasm_module(name, &cargo_manifest)
+                            }
+                            Target::Bazel { .. } => todo!(),
+                        })
                         .collect(),
+                },
+                build_example_config(&example.name),
+                // Build the server first so that when running it in the next step it will start up
+                // faster.
+                build_server(&BuildServer {
+                    variant: "rust".to_string(),
                 }),
+            ],
+            if opt.build_only {
+                vec![]
+            } else {
+                vec![Step::WithBackground {
+                    name: "run_server".to_string(),
+                    background: run_example_server(&format!(
+                        "./bazel-bin/examples/{}/config/config.bin",
+                        example.name
+                    )),
+                    foreground: Box::new(Step::Multiple {
+                        name: "run_client".to_string(),
+                        steps: example
+                            .clients
+                            .iter()
+                            .map(|(name, client)| run_client(name, &client))
+                            .collect(),
+                    }),
+                }]
             },
-        ],
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>(),
     }
 }
 
@@ -394,14 +419,20 @@ fn run_client(name: &str, client: &Client) -> Step {
 /// Return whether to ignore the specified path. This is used by the `walker` package to efficiently
 /// avoid descending into blacklisted directories.
 fn is_ignored_path(path: &PathBuf) -> bool {
-    path.starts_with("./bazel-cache")
-        || path.starts_with("./bazel-clang-oak")
-        || path.starts_with("./bazel-client-oak")
-        || path.starts_with("./bazel-oak")
-        || path.starts_with("./cargo-cache")
-        || path.starts_with("./third_party")
-        || path.starts_with("./.git")
-        || path.ends_with("target") // Rust artifacts.
+    let components = path.components().collect::<std::collections::HashSet<_>>();
+    components.contains(&std::path::Component::Normal(".git".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-bin".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-cache".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-clang-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-clang-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-client-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-client-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("cargo-cache".as_ref()))
+        || components.contains(&std::path::Component::Normal("node_modules".as_ref()))
+        || components.contains(&std::path::Component::Normal("target".as_ref())) // Rust artifacts.
+        || components.contains(&std::path::Component::Normal("third_party".as_ref()))
 }
 
 fn is_ignored_entry(entry: &walkdir::DirEntry) -> bool {
@@ -475,7 +506,12 @@ fn is_cargo_workspace_file(path: &PathBuf) -> bool {
     contents.contains("[workspace]")
 }
 
-fn run_buildifier() -> Step {
+enum FormatMode {
+    Check,
+    Fix,
+}
+
+fn run_buildifier(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "buildifier".to_string(),
         steps: source_files()
@@ -483,13 +519,23 @@ fn run_buildifier() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new("buildifier", &["-lint=warn", "-mode=check", &entry]),
+                command: Cmd::new(
+                    "buildifier",
+                    &[
+                        "-lint=warn",
+                        match mode {
+                            FormatMode::Check => "-mode=check",
+                            FormatMode::Fix => "-mode=fix",
+                        },
+                        &entry,
+                    ],
+                ),
             })
             .collect(),
     }
 }
 
-fn run_prettier() -> Step {
+fn run_prettier(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "prettier".to_string(),
         steps: source_files()
@@ -497,13 +543,47 @@ fn run_prettier() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new("prettier", &["--check", &entry]),
+                command: Cmd::new(
+                    "prettier",
+                    &[
+                        match mode {
+                            FormatMode::Check => "--check",
+                            FormatMode::Fix => "--write",
+                        },
+                        &entry,
+                    ],
+                ),
             })
             .collect(),
     }
 }
 
-fn run_embedmd() -> Step {
+fn run_markdownlint(mode: FormatMode) -> Step {
+    Step::Multiple {
+        name: "markdownlint".to_string(),
+        steps: source_files()
+            .filter(is_markdown_file)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new(
+                    "markdownlint",
+                    vec![
+                        match mode {
+                            FormatMode::Check => vec![],
+                            FormatMode::Fix => vec!["--fix"],
+                        },
+                        vec![&entry],
+                    ]
+                    .iter()
+                    .flatten(),
+                ),
+            })
+            .collect(),
+    }
+}
+
+fn run_embedmd(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "embedmd".to_string(),
         steps: source_files()
@@ -511,13 +591,43 @@ fn run_embedmd() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new("embedmd", &["-d", &entry]),
+                command: Cmd::new(
+                    "embedmd",
+                    &[
+                        match mode {
+                            FormatMode::Check => "-d",
+                            FormatMode::Fix => "-w",
+                        },
+                        &entry,
+                    ],
+                ),
             })
             .collect(),
     }
 }
 
-fn run_cargo_fmt() -> Step {
+fn run_liche() -> Step {
+    Step::Multiple {
+        name: "liche".to_string(),
+        steps: source_files()
+            .filter(is_markdown_file)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new("liche", &[
+                    "--document-root=.",
+                    // We exclude the following URLs from the checks:
+                    // - https://groups.google.com/g/project-oak-discuss : not publicly accessible
+                    // - https://crates.io/crates : returns 404 (see https://github.com/raviqqe/liche/issues/39)
+                    "--exclude=(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates)",
+                    &entry,
+                ]),
+            })
+            .collect(),
+    }
+}
+
+fn run_cargo_fmt(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "cargo fmt".to_string(),
         steps: workspace_manifest_files()
@@ -526,13 +636,15 @@ fn run_cargo_fmt() -> Step {
                 name: entry.clone(),
                 command: Cmd::new(
                     "cargo",
-                    &[
-                        "fmt",
-                        "--all",
-                        &format!("--manifest-path={}", &entry),
-                        "--",
-                        "--check",
-                    ],
+                    vec![
+                        vec!["fmt", "--all", &format!("--manifest-path={}", &entry)],
+                        match mode {
+                            FormatMode::Check => vec!["--", "--check"],
+                            FormatMode::Fix => vec![],
+                        },
+                    ]
+                    .iter()
+                    .flatten(),
                 ),
             })
             .collect(),
@@ -546,30 +658,7 @@ fn run_cargo_test() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new(
-                    "cargo",
-                    &[
-                        "test",
-                        "--all-targets",
-                        &format!("--manifest-path={}", &entry),
-                    ],
-                ),
-            })
-            .collect(),
-    }
-}
-
-fn run_cargo_doc_test() -> Step {
-    Step::Multiple {
-        name: "cargo doc test".to_string(),
-        steps: workspace_manifest_files()
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new(
-                    "cargo",
-                    &["test", "--doc", &format!("--manifest-path={}", &entry)],
-                ),
+                command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
             })
             .collect(),
     }
