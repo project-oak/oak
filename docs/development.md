@@ -86,6 +86,14 @@ The key prerequisites for the project are:
     `rustup target add wasm32-unknown-unknown`
   - Install additional tools (e.g. `rustfmt` and `clippy`) as indicated by the
     [`Dockerfile`](/Dockerfile) contents.
+- **Support for [musl](https://musl.libc.org/)** (on Linux): The
+  [Oak Runtime](/docs/concepts.md#oak-runtime) is built as a
+  [fully static binary](https://doc.rust-lang.org/edition-guide/rust-2018/platform-and-target-support/musl-support-for-fully-static-binaries.html),
+  on Linux, which requires:
+  - the Rust `x86_64-unknown-linux-musl` target
+    (`rustup target add x86_64-unknown-linux-musl`)
+  - the [musl-tools](https://packages.debian.org/search?keywords=musl-tools)
+    package to be installed.
 - **Bazel**: The [Bazel build system](https://bazel.build) is used for building
   C++ code and managing its dependencies. These dependencies are listed in the
   top-level [`WORKSPACE`](/WORKSPACE) file; see the
