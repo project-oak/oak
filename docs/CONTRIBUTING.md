@@ -62,6 +62,35 @@ are squashed against the correct commit if necessary.
 
 ## Style Guide
 
+### Logging
+
+When possible, use log levels according to the following guidelines (in
+decreasing order of severity):
+
+- `error`: there is definitely a logic bug somewhere in the code, and someone
+  should look into it; it should not be possible to trigger an `error` log just
+  by manipulating inputs / configuration details
+- `warn`: something went wrong when processing an event or handling data; this
+  may be caused by invalid or malformed inputs
+- `info`: events related to the normal operation of the system; usually at most
+  one such entry should be printed per event (i.e. don't use `info` in a loop or
+  in function calls with large fan-out)
+- `debug`: additional details related to the event being processed, useful to
+  ensure that everything is working as intended (e.g. when looking at execution
+  or test logs)
+- `trace`: very verbose details about the event being processed
+
+Note that logging from the Oak Runtime is different than logging from an Oak
+Application:
+
+- an `error` log emitted directly by the Oak Runtime means that there is a logic
+  error **in the code of the Oak Runtime itself** (i.e. an Oak developer should
+  fix something in the way that the Oak Runtime works)
+- an `error` log emitted by the currently running Oak Application means that
+  there is a logic error **in the code of the Oak Application (usually in the
+  WebAssembly part of it)** (i.e. an developer of the Oak Application should fix
+  something in the source code from which the Oak Application was compiled).
+
 ### Rust
 
 - Make sure code is [`cargo clippy`](https://crates.io/crates/clippy) clean.
