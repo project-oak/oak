@@ -32,4 +32,4 @@ exports_files(srcs = glob(["target/x86_64-unknown-linux-musl/release/*oak_loader
 exports_files(srcs = glob(["examples/target/wasm32-unknown-unknown/release/*.wasm"]))
 
 # These files are necessary for the backend server in the Aggregator example application.
-exports_files(srcs = glob(["target/release/aggregator_*"]))
+exports_files(srcs = glob(["examples/target/x86_64-unknown-linux-musl/release/aggregator_*"]))

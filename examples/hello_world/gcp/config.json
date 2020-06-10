@@ -31,8 +31,7 @@
       "type": "shell",
       "inline": [
         "sudo mkdir /opt/oak", 
-        "sudo cp /tmp/deployment/* /opt/oak/", 
-        "sudo chmod +x /opt/oak/oak_runner"
+        "sudo cp /tmp/deployment/* /opt/oak/"
       ]
     }
   ]

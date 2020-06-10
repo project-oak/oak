@@ -20,7 +20,9 @@ source "$SCRIPTS_DIR/gcp_common"
 #   - Service Account User
 
 # Create a minimal Ubuntu linux image on the GCP project.
-# The image will be named oak-gcp-hello-world.
+# The image will be named oak-gcp-hello-world. 
+# The script fails if an image with the same name exists. 
+# Use `gcloud compute images delete oak-gcp-hello-world` to remove the old image.
 bazel run "${bazel_build_flags[@]}" "//examples/hello_world/gcp:deploy-${IMAGE_NAME}"
 
 # Authenticate as the service account
@@ -37,7 +39,6 @@ gcloud beta compute instances create "${INSTANCE_NAME}" \
   --boot-disk-size=16GB \
   --boot-disk-type=pd-standard \
   --boot-disk-device-name="${DISK_NAME}" \
-  --metadata=startup-script='/opt/oak/oak_runner --application=/opt/oak/config.bin'
 
 # Create a firewall rule to allow access to the hello world VM on port 8080
 gcloud compute firewall-rules create "${FIREWALL_RULE}" \

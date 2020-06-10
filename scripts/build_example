@@ -56,13 +56,13 @@ case "${application_language}" in
     for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do
       # Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it
       # should end with `target` so that it gets automatically ignored by our `.gitignore`.
-      cargo build --release --target-dir=examples/target --target=wasm32-unknown-unknown --manifest-path="${module}"
+      cargo build --release --target=wasm32-unknown-unknown --manifest-path="${module}"
     done
 
     # Serialize application configuration for Rust module.
     if [[ "${EXAMPLE}" == "hello_world" ]]; then
       # `hello_world` example has an optional additional `translator` module.
-      cargo build --release --target-dir=examples/target --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
+      cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
     elif [[ "${EXAMPLE}" == "aggregator" ]]; then
       # `aggregator` example has an additional Backend Docker image
       cargo build --release --target=x86_64-unknown-linux-musl --manifest-path="examples/aggregator/backend/Cargo.toml"

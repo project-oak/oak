@@ -5,6 +5,6 @@ readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${GLOBAL_SCRIPTS_DIR}/common"
 
-exec cargo run --release --package=aggregator_backend \
+exec cargo run --release --manifest-path=examples/aggregator/backend/Cargo.toml -- \
   --grpc-tls-private-key="${GLOBAL_SCRIPTS_DIR}/../examples/certs/local/local.key" \
   --grpc-tls-certificate="${GLOBAL_SCRIPTS_DIR}/../examples/certs/local/local.pem"
