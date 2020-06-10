@@ -505,23 +505,29 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
                         );
                         return;
                     }
-                    ErrBadHandle | ErrChannelClosed | ErrPermissionDenied => {
-                        warn!(
-                            "{:?}: non-transient error waiting for command: {:?}; terminating event loop",
-                            in_channel,
-                            status
-                        );
-                        return;
-                    }
                     _ => {
-                        warn!("{:?}: (possibly) transient error waiting for command: {:?}; continuing event loop", in_channel, status);
-                        continue;
+                        panic!(
+                            "{:?}: received status: {:?}, but Receiver::wait should never return an error other than Err(ErrTerminated)",
+                            in_channel, status
+                        );
                     }
                 }
             }
-            Ok(()) => {
-                trace!("{:?}: wait over", in_channel);
-            }
+            Ok(status) => match status {
+                ChannelReadStatus::ReadReady => trace!("{:?}: wait over", in_channel),
+                ChannelReadStatus::Orphaned
+                | ChannelReadStatus::PermissionDenied
+                | ChannelReadStatus::InvalidChannel => {
+                    warn!(
+                        "{:?}: invalid channel read status: {:?}; terminating event loop",
+                        in_channel, status
+                    );
+                    return;
+                }
+                ChannelReadStatus::NotReady => {
+                    panic!("Receiver::wait should never return Ok(ChannelReadStatus::NotReady)")
+                }
+            },
         }
         match receiver.try_receive() {
             Ok(command) => {

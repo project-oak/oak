@@ -595,23 +595,23 @@ impl Runtime {
             .collect()
     }
 
-    // TODO(#970): Improve the documentation.
-    /// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions:
+    /// Given a slice of `ChannelHalf`s representing channel read handles:
     /// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`
-    ///   status for each channel.
-    /// - If any of the readers is in an erroneous status, e.g. when a channel is orphaned, this
+    ///   status.
+    /// - If any of the channels is in an erroneous status, e.g. when a channel is orphaned, this
     ///   will immediately return with all the channels statuses set in the returned vector.
-    /// - If any of the channels is able to read a message, the corresponding element in the
-    ///   returned vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel
-    ///   has no message available.
-    ///
-    /// In particular, if all channels are in a good status but no messages are available on any of
-    /// the channels (i.e., all channels have status [`ChannelReadStatus::NotReady`]),
-    /// [`Runtime::wait_on_channels`] will continue to block until a message is available on one of
-    /// the channels, or one of the channels is orphaned.
+    /// - If all channels are in a good status but no messages are available on any of the channels
+    ///   (i.e., all channels have status [`ChannelReadStatus::NotReady`]),
+    ///   [`Runtime::wait_on_channels`] blocks until a message is available on one of the channels,
+    ///   or one of the channels is orphaned. In both cases a vector of all the channels statuses
+    ///   will be returned, unless the [`Runtime`] is terminating, in which case
+    ///   `Err(ErrTerminated)` will be returned.
     ///
     /// Invariant: The returned vector of [`ChannelReadStatus`] values will be in 1-1
     /// correspondence with the passed-in vector of [`oak_abi::Handle`]s.
+    ///
+    /// See also the host ABI function
+    /// [`wait_on_channels`](https://github.com/project-oak/oak/blob/master/docs/abi.md#wait_on_channels).
     ///
     /// [`Runtime`]: crate::runtime::Runtime
     fn wait_on_channels(
