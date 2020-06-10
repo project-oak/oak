@@ -120,3 +120,9 @@ case "${client_language}" in
     echo "Invalid example client variant: ${client_language}"
     exit 1;;
 esac
+
+# If a node client exists, install its dependencies
+nodejs_client="./examples/${EXAMPLE}/client/nodejs"
+if [ -d "${nodejs_client}" ]; then
+    npm ci --prefix "${nodejs_client}"
+fi

@@ -60,6 +60,8 @@ RUN curl --location "${bazel_url}" > bazel.deb \
 # Install Node.js and npm.
 RUN curl --location https://deb.nodesource.com/setup_12.x | bash - \
   && apt-get install --no-install-recommends --yes nodejs \
+  && mkdir "/.npm" \
+  && chmod a+rwx "/.npm" \
   && node --version \
   && npm --version
 
