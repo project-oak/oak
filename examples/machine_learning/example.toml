@@ -1,0 +1,7 @@
+name = "machine_learning"
+
+[modules]
+module = { Cargo = { cargo_manifest = "examples/machine_learning/module/rust/Cargo.toml" } }
+
+[clients]
+cpp = { Bazel = { bazel_target = "//examples/machine_learning/client:client" } }

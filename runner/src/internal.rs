@@ -22,6 +22,8 @@ use structopt::StructOpt;
 pub struct Opt {
     #[structopt(long, help = "do not execute commands")]
     dry_run: bool,
+    #[structopt(long, help = "re-run commands on file changes")]
+    pub watch: bool,
     #[structopt(long, help = "print commands")]
     commands: bool,
     #[structopt(long, help = "show logs of commands")]
@@ -89,7 +91,7 @@ impl Context {
     fn child(&self, prefix: &str) -> Self {
         Context {
             opt: self.opt.clone(),
-            prefix: format!("{} ➡ {}", self.prefix, prefix),
+            prefix: format!("{} ❯ {}", self.prefix, prefix),
         }
     }
 }
@@ -234,7 +236,9 @@ pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
                 "{} ⊢ {} (finished) {}",
                 context.prefix, background_command, background_status.value
             );
-            if (background_status.value == StatusResultValue::Error || context.opt.logs)
+            if (background_status.value == StatusResultValue::Error
+                || values.contains(&StatusResultValue::Error)
+                || context.opt.logs)
                 && !background_status.logs.is_empty()
             {
                 eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());

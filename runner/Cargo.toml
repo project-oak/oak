@@ -7,6 +7,10 @@ license = "Apache-2.0"
 
 [dependencies]
 colored = "*"
-walkdir = "*"
-structopt = "*"
 nix = "*"
+notify = "5.0.0-pre.2"
+serde = { version = "*", features = ["derive"] }
+spinners = "*"
+structopt = "*"
+toml = "*"
+walkdir = "*"
