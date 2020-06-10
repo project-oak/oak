@@ -630,6 +630,12 @@
 <span id="630">630</span>
 <span id="631">631</span>
 <span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -1138,23 +1144,29 @@
                         );
                         <span class="kw">return</span>;
                     }
-                    <span class="ident">ErrBadHandle</span> <span class="op">|</span> <span class="ident">ErrChannelClosed</span> <span class="op">|</span> <span class="ident">ErrPermissionDenied</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">warn</span><span class="macro">!</span>(
-                            <span class="string">&quot;{:?}: non-transient error waiting for command: {:?}; terminating event loop&quot;</span>,
-                            <span class="ident">in_channel</span>,
-                            <span class="ident">status</span>
-                        );
-                        <span class="kw">return</span>;
-                    }
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{:?}: (possibly) transient error waiting for command: {:?}; continuing event loop&quot;</span>, <span class="ident">in_channel</span>, <span class="ident">status</span>);
-                        <span class="kw">continue</span>;
+                        <span class="macro">panic</span><span class="macro">!</span>(
+                            <span class="string">&quot;{:?}: received status: {:?}, but Receiver::wait should never return an error other than Err(ErrTerminated)&quot;</span>,
+                            <span class="ident">in_channel</span>, <span class="ident">status</span>
+                        );
                     }
                 }
             }
-            <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: wait over&quot;</span>, <span class="ident">in_channel</span>);
-            }
+            <span class="prelude-val">Ok</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">status</span> {
+                <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: wait over&quot;</span>, <span class="ident">in_channel</span>),
+                <span class="ident">ChannelReadStatus</span>::<span class="ident">Orphaned</span>
+                <span class="op">|</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">PermissionDenied</span>
+                <span class="op">|</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">InvalidChannel</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">warn</span><span class="macro">!</span>(
+                        <span class="string">&quot;{:?}: invalid channel read status: {:?}; terminating event loop&quot;</span>,
+                        <span class="ident">in_channel</span>, <span class="ident">status</span>
+                    );
+                    <span class="kw">return</span>;
+                }
+                <span class="ident">ChannelReadStatus</span>::<span class="ident">NotReady</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Receiver::wait should never return Ok(ChannelReadStatus::NotReady)&quot;</span>)
+                }
+            },
         }
         <span class="kw">match</span> <span class="ident">receiver</span>.<span class="ident">try_receive</span>() {
             <span class="prelude-val">Ok</span>(<span class="ident">command</span>) <span class="op">=</span><span class="op">&gt;</span> {

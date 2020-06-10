@@ -1652,23 +1652,23 @@
             .<span class="ident">collect</span>()
     }
 
-    <span class="comment">// TODO(#970): Improve the documentation.</span>
-    <span class="doccomment">/// Waits on a slice of `ChannelHalf`s, blocking until one of the following conditions:</span>
+    <span class="doccomment">/// Given a slice of `ChannelHalf`s representing channel read handles:</span>
     <span class="doccomment">/// - If the [`Runtime`] is terminating this will return immediately with an `ErrTerminated`</span>
-    <span class="doccomment">///   status for each channel.</span>
-    <span class="doccomment">/// - If any of the readers is in an erroneous status, e.g. when a channel is orphaned, this</span>
+    <span class="doccomment">///   status.</span>
+    <span class="doccomment">/// - If any of the channels is in an erroneous status, e.g. when a channel is orphaned, this</span>
     <span class="doccomment">///   will immediately return with all the channels statuses set in the returned vector.</span>
-    <span class="doccomment">/// - If any of the channels is able to read a message, the corresponding element in the</span>
-    <span class="doccomment">///   returned vector will be set to `Ok(ReadReady)`, with `Ok(NotReady)` signaling the channel</span>
-    <span class="doccomment">///   has no message available.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// In particular, if all channels are in a good status but no messages are available on any of</span>
-    <span class="doccomment">/// the channels (i.e., all channels have status [`ChannelReadStatus::NotReady`]),</span>
-    <span class="doccomment">/// [`Runtime::wait_on_channels`] will continue to block until a message is available on one of</span>
-    <span class="doccomment">/// the channels, or one of the channels is orphaned.</span>
+    <span class="doccomment">/// - If all channels are in a good status but no messages are available on any of the channels</span>
+    <span class="doccomment">///   (i.e., all channels have status [`ChannelReadStatus::NotReady`]),</span>
+    <span class="doccomment">///   [`Runtime::wait_on_channels`] blocks until a message is available on one of the channels,</span>
+    <span class="doccomment">///   or one of the channels is orphaned. In both cases a vector of all the channels statuses</span>
+    <span class="doccomment">///   will be returned, unless the [`Runtime`] is terminating, in which case</span>
+    <span class="doccomment">///   `Err(ErrTerminated)` will be returned.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Invariant: The returned vector of [`ChannelReadStatus`] values will be in 1-1</span>
     <span class="doccomment">/// correspondence with the passed-in vector of [`oak_abi::Handle`]s.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See also the host ABI function</span>
+    <span class="doccomment">/// [`wait_on_channels`](https://github.com/project-oak/oak/blob/master/docs/abi.md#wait_on_channels).</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
     <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(

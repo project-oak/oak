@@ -877,6 +877,16 @@
 <span id="877">877</span>
 <span id="878">878</span>
 <span id="879">879</span>
+<span id="880">880</span>
+<span id="881">881</span>
+<span id="882">882</span>
+<span id="883">883</span>
+<span id="884">884</span>
+<span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
+<span id="888">888</span>
+<span id="889">889</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1301,6 +1311,13 @@
     }
 
     <span class="doccomment">/// Corresponds to the host ABI function [`wait_on_channels`](https://github.com/project-oak/oak/blob/master/docs/abi.md#wait_on_channels).</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// May return the following error statuses:</span>
+    <span class="doccomment">/// - `Err(OakStatus::ErrTerminated)`: if [`Runtime`] is terminating. In this case, read</span>
+    <span class="doccomment">///   statuses in `status_buff` do not reflect the actual read statuses.</span>
+    <span class="doccomment">/// - `Err(OakStatus::ErrInvalidArgs)`: if cannot parse `status_buff` into channel handles.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
     <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">status_buff</span>: <span class="ident">AbiPointer</span>,
@@ -1315,7 +1332,10 @@
 
         <span class="kw">let</span> <span class="ident">handles_raw</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">get_memory</span>()
-            .<span class="ident">get</span>(<span class="ident">status_buff</span>, <span class="ident">handles_count</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">*</span> <span class="number">9</span>)
+            .<span class="ident">get</span>(
+                <span class="ident">status_buff</span>,
+                <span class="ident">handles_count</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">*</span> <span class="ident">oak_abi</span>::<span class="ident">SPACE_BYTES_PER_HANDLE</span>,
+            )
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                 <span class="macro">error</span><span class="macro">!</span>(
                     <span class="string">&quot;{}: wait_on_channels(): Unable to read handles from guest memory: {:?}&quot;</span>,
