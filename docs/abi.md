@@ -95,7 +95,7 @@ encoded in a buffer that holds N contiguous 9-byte chunks, each of which is made
 up of an 8-byte channel handle value (little-endian u64) followed by a single
 channel status byte. Invalid handles will have an `INVALID_CHANNEL`, `ORPHANED`,
 or `PERMISSION_DENIED` status, but `wait_on_channels` return value will only
-fail for internal errors or if _all_ channels are invalid.
+fail for internal errors or if the runtime is terminating.
 
 - `param[0]: usize`: Address of handle status buffer
 - `param[1]: u32`: Count N of handles provided
