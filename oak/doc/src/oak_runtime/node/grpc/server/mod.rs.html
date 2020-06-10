@@ -565,6 +565,104 @@
 <span id="565">565</span>
 <span id="566">566</span>
 <span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -586,19 +684,24 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">auth</span>::<span class="ident">oidc_utils</span>::<span class="ident">ClientInfo</span>,
+    <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
     <span class="ident">node</span>::{
         <span class="ident">grpc</span>::{<span class="ident">codec</span>::<span class="ident">VecCodec</span>, <span class="ident">to_tonic_status</span>},
         <span class="ident">ConfigurationError</span>, <span class="ident">Node</span>,
     },
     <span class="ident">runtime</span>::{<span class="ident">ChannelHalfDirection</span>, <span class="ident">RuntimeProxy</span>},
 };
+<span class="kw">use</span> <span class="ident">futures_util</span>::<span class="ident">stream</span>;
 <span class="kw">use</span> <span class="ident">hyper</span>::<span class="ident">service</span>::<span class="ident">Service</span>;
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
     <span class="ident">label</span>::<span class="ident">Label</span>,
-    <span class="ident">proto</span>::<span class="ident">oak</span>::{
-        <span class="ident">application</span>::<span class="ident">GrpcServerConfiguration</span>,
-        <span class="ident">encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>},
+    <span class="ident">proto</span>::{
+        <span class="ident">google</span>::<span class="ident">rpc</span>,
+        <span class="ident">oak</span>::{
+            <span class="ident">application</span>::<span class="ident">GrpcServerConfiguration</span>,
+            <span class="ident">encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>},
+        },
     },
     <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
 };
@@ -611,7 +714,7 @@
 <span class="kw">use</span> <span class="ident">tonic</span>::{
     <span class="ident">codegen</span>::<span class="ident">BoxFuture</span>,
     <span class="ident">metadata</span>::<span class="ident">MetadataMap</span>,
-    <span class="ident">server</span>::{<span class="ident">Grpc</span>, <span class="ident">UnaryService</span>},
+    <span class="ident">server</span>::{<span class="ident">Grpc</span>, <span class="ident">ServerStreamingService</span>},
     <span class="ident">transport</span>::{<span class="ident">Identity</span>, <span class="ident">NamedService</span>},
 };
 
@@ -664,21 +767,23 @@
         })
     }
 
-    <span class="doccomment">/// Reads an [`oak_abi::Handle`] from a channel specified by `handle`.</span>
-    <span class="doccomment">/// Returns an error if couldn&#39;t read from the channel or if received a wrong number of handles</span>
-    <span class="doccomment">/// (not equal to 1).</span>
-    <span class="kw">fn</span> <span class="ident">get_channel_writer</span>(
+    <span class="doccomment">/// Reads the [`oak_abi::Handle`] for the write half of an invcation from a startup channel.</span>
+    <span class="doccomment">/// Returns an error if the startup channel couldn&#39;t be read, or if the initial message</span>
+    <span class="doccomment">/// is invalid (doesn&#39;t contain exactly one write handle).</span>
+    <span class="kw">fn</span> <span class="ident">get_invocation_channel</span>(
         <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>,
-        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">startup_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">read_status</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="ident">handle</span>]).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t wait on the initial reader handle: {:?}&quot;</span>, <span class="ident">error</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
-        })<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">read_status</span> <span class="op">=</span> <span class="ident">runtime</span>
+            .<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="ident">startup_handle</span>])
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t wait on the initial reader handle: {:?}&quot;</span>, <span class="ident">error</span>);
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
+            })<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">channel_writer</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">read_status</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> {
+        <span class="kw">let</span> <span class="ident">invocation_channel</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">read_status</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> {
             <span class="ident">runtime</span>
-                .<span class="ident">channel_read</span>(<span class="ident">handle</span>)
+                .<span class="ident">channel_read</span>(<span class="ident">startup_handle</span>)
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                     <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read from the initial reader handle {:?}&quot;</span>, <span class="ident">error</span>);
                     <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
@@ -716,8 +821,11 @@
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>)
         }<span class="question-mark">?</span>;
 
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Channel writer received: {:?}&quot;</span>, <span class="ident">channel_writer</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">channel_writer</span>)
+        <span class="macro">info</span><span class="macro">!</span>(
+            <span class="string">&quot;Invocation channel write handle received: {}&quot;</span>,
+            <span class="ident">invocation_channel</span>
+        );
+        <span class="prelude-val">Ok</span>(<span class="ident">invocation_channel</span>)
     }
 }
 
@@ -726,26 +834,31 @@
     <span class="kw">fn</span> <span class="ident">run</span>(
         <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
-        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">startup_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
         <span class="ident">notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) {
-        <span class="comment">// Receive a `channel_writer` handle used to pass handles for temporary channels.</span>
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{}: Waiting for channel writer&quot;</span>, <span class="self">self</span>.<span class="ident">node_name</span>);
-        <span class="kw">let</span> <span class="ident">channel_writer</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">GrpcServerNode</span>::<span class="ident">get_channel_writer</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>, <span class="ident">handle</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">writer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(
-                    <span class="string">&quot;Failed to retrieve invocation channel write handle: {:?}&quot;</span>,
-                    <span class="ident">status</span>
-                );
-                <span class="kw">return</span>;
-            }
-        };
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="ident">handle</span>) {
-            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to close initial inbound channel: {:?}&quot;</span>, <span class="ident">err</span>);
+        <span class="comment">// At start-of-day we need/expect to receive a write handle for an invocation channel</span>
+        <span class="comment">// to use for all subsequent activity.</span>
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{}: Waiting for invocation channel&quot;</span>, <span class="self">self</span>.<span class="ident">node_name</span>);
+        <span class="kw">let</span> <span class="ident">invocation_channel</span> <span class="op">=</span>
+            <span class="kw">match</span> <span class="ident">GrpcServerNode</span>::<span class="ident">get_invocation_channel</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>, <span class="ident">startup_handle</span>) {
+                <span class="prelude-val">Ok</span>(<span class="ident">writer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">error</span><span class="macro">!</span>(
+                        <span class="string">&quot;Failed to retrieve invocation channel write handle: {:?}&quot;</span>,
+                        <span class="ident">status</span>
+                    );
+                    <span class="kw">return</span>;
+                }
+            };
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="ident">startup_handle</span>) {
+            <span class="macro">error</span><span class="macro">!</span>(
+                <span class="string">&quot;Failed to close initial inbound channel {}: {:?}&quot;</span>,
+                <span class="ident">startup_handle</span>, <span class="ident">err</span>
+            );
         }
 
-        <span class="comment">// Handles incoming authentication gRPC requests</span>
+        <span class="comment">// Build a service to process incoming authentication gRPC requests.</span>
         <span class="kw">let</span> <span class="ident">auth_handler</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">oidc_client_info</span> {
             <span class="prelude-val">Some</span>(<span class="ident">auth_config</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">auth</span>::<span class="ident">oidc_service</span>::<span class="ident">build_service</span>(
                 <span class="kw-2">&amp;</span><span class="ident">auth_config</span>.<span class="ident">client_id</span>,
@@ -755,11 +868,10 @@
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">auth</span>::<span class="ident">oidc_service</span>::<span class="ident">build_service</span>(<span class="string">&quot;&quot;</span>, <span class="string">&quot;&quot;</span>),
         };
 
-        <span class="comment">// Handles incoming TLS connections, unpacks HTTP/2 requests and forwards them to</span>
-        <span class="comment">// [`HttpRequestHandler::handle`].</span>
+        <span class="comment">// Build a service to process all other incoming HTTP/2 requests.</span>
         <span class="kw">let</span> <span class="ident">generic_handler</span> <span class="op">=</span> <span class="ident">HttpRequestHandler</span> {
             <span class="ident">runtime</span>,
-            <span class="ident">writer</span>: <span class="ident">channel_writer</span>,
+            <span class="ident">invocation_channel</span>,
         };
 
         <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Server</span>::<span class="ident">builder</span>()
@@ -790,7 +902,7 @@
             .<span class="ident">build</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create Async runtime&quot;</span>);
 
-        <span class="comment">// Start a gRPC server.</span>
+        <span class="comment">// Start the gRPC server.</span>
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;{}: Starting gRPC server pseudo-Node on: {}&quot;</span>,
             <span class="self">self</span>.<span class="ident">node_name</span>, <span class="self">self</span>.<span class="ident">address</span>
@@ -813,10 +925,10 @@
 <span class="doccomment">/// [`HttpRequestHandler`] handles HTTP/2 requests from a client and sends HTTP/2 responses back.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">struct</span> <span class="ident">HttpRequestHandler</span> {
-    <span class="doccomment">/// Reference to a Runtime that corresponds to a node that created a gRPC server pseudo-Node.</span>
+    <span class="doccomment">/// Reference to the Runtime in the context of this gRPC server pseudo-Node.</span>
     <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
     <span class="doccomment">/// Channel handle used for writing gRPC invocations.</span>
-    <span class="ident">writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    <span class="ident">invocation_channel</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
 }
 
 <span class="doccomment">/// Set a mandatory prefix for all gRPC requests processed by a gRPC pseudo-Node.</span>
@@ -834,11 +946,11 @@
     }
 
     <span class="doccomment">/// Decodes an unary gRPC request using a [`VecCodec`] and processes it with</span>
-    <span class="doccomment">/// [`tonic::server::Grpc::unary`] and a [`GrpcRequestHandler`].</span>
+    <span class="doccomment">/// [`tonic::server::Grpc::unary`] and a [`GrpcInvocationHandler`].</span>
     <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">http</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">hyper</span>::<span class="ident">Body</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
-        <span class="kw">let</span> <span class="ident">grpc_handler</span> <span class="op">=</span> <span class="ident">GrpcRequestHandler</span>::<span class="ident">new</span>(
+        <span class="kw">let</span> <span class="ident">grpc_handler</span> <span class="op">=</span> <span class="ident">GrpcInvocationHandler</span>::<span class="ident">new</span>(
             <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>(),
-            <span class="self">self</span>.<span class="ident">writer</span>,
+            <span class="self">self</span>.<span class="ident">invocation_channel</span>,
             <span class="ident">request</span>.<span class="ident">uri</span>().<span class="ident">path</span>().<span class="ident">to_string</span>(),
         );
 
@@ -847,7 +959,7 @@
         <span class="kw">let</span> <span class="ident">future</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Processing HTTP/2 request: {:?}&quot;</span>, <span class="ident">request</span>);
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc_service</span> <span class="op">=</span> <span class="ident">Grpc</span>::<span class="ident">new</span>(<span class="ident">VecCodec</span>::<span class="ident">default</span>());
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">grpc_service</span>.<span class="ident">unary</span>(<span class="ident">grpc_handler</span>, <span class="ident">request</span>).<span class="kw">await</span>;
+            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">grpc_service</span>.<span class="ident">server_streaming</span>(<span class="ident">grpc_handler</span>, <span class="ident">request</span>).<span class="kw">await</span>;
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sending HTTP/2 response: {:?}&quot;</span>, <span class="ident">response</span>);
             <span class="kw">let</span> <span class="ident">stc</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">response</span>.<span class="ident">status</span>());
             <span class="ident">metrics_data</span>
@@ -916,37 +1028,34 @@
     })
 }
 
-<span class="doccomment">/// [`GrpcRequestHandler`] handles gRPC requests and generates gRPC responses.</span>
+<span class="doccomment">/// Handler for an individual gRPC method invocation.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">struct</span> <span class="ident">GrpcRequestHandler</span> {
-    <span class="doccomment">/// Reference to a Runtime that corresponds to the Node that created a gRPC server pseudo-Node.</span>
+<span class="kw">struct</span> <span class="ident">GrpcInvocationHandler</span> {
+    <span class="doccomment">/// Reference to the Runtime in the context of this gRPC server pseudo-Node.</span>
     <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
     <span class="doccomment">/// Channel handle used for writing gRPC invocations.</span>
-    <span class="ident">writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    <span class="doccomment">/// Name of the gRPC method that should be invoked.</span>
+    <span class="ident">invocation_channel</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    <span class="doccomment">/// Name of the gRPC method being invoked.</span>
     <span class="ident">method_name</span>: <span class="ident">String</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">UnaryService</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">GrpcRequestHandler</span> {
+<span class="kw">impl</span> <span class="ident">ServerStreamingService</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">GrpcInvocationHandler</span> {
     <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">Future</span> <span class="op">=</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Response</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">ResponseStream</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">pin</span>::<span class="ident">Pin</span><span class="op">&lt;</span>
+        <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">futures_core</span>::<span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Response</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
+    <span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Future</span> <span class="op">=</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">ResponseStream</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
         <span class="kw">let</span> <span class="ident">handler</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>();
-
-        <span class="kw">let</span> <span class="ident">metrics_data</span> <span class="op">=</span> <span class="ident">handler</span>.<span class="ident">runtime</span>.<span class="ident">metrics_data</span>();
+        <span class="kw">let</span> <span class="ident">metrics_data</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">metrics_data</span>();
+        <span class="comment">// Build a future of type `Future&lt;Output = Result&lt;Self::ResponseStream, tonic::Status&gt;&gt;`</span>
         <span class="kw">let</span> <span class="ident">future</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
             <span class="ident">metrics_data</span>
                 .<span class="ident">grpc_server_metrics</span>
                 .<span class="ident">grpc_server_started_total</span>
                 .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">handler</span>.<span class="ident">method_name</span>])
                 .<span class="ident">inc</span>();
-            <span class="kw">let</span> <span class="ident">timer</span> <span class="op">=</span> <span class="ident">metrics_data</span>
-                .<span class="ident">grpc_server_metrics</span>
-                .<span class="ident">grpc_server_handled_latency_seconds</span>
-                .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">handler</span>.<span class="ident">method_name</span>])
-                .<span class="ident">start_timer</span>();
-
             <span class="kw">let</span> <span class="ident">oak_label</span> <span class="op">=</span> <span class="ident">get_oak_label</span>(<span class="ident">request</span>.<span class="ident">metadata</span>())<span class="question-mark">?</span>;
             <span class="macro">info</span><span class="macro">!</span>(
                 <span class="string">&quot;handling gRPC request; peer address: {}, method: {}, request size: {} bytes, label: {:?}&quot;</span>,
@@ -956,59 +1065,65 @@
                 <span class="ident">request</span>.<span class="ident">get_ref</span>().<span class="ident">len</span>(),
                 <span class="ident">oak_label</span>
             );
-
-            <span class="comment">// Create a gRPC request.</span>
-            <span class="comment">// TODO(#953): Add streaming support.</span>
+            <span class="comment">// Create an encapsulated gRPC request.</span>
+            <span class="comment">// TODO(#97): Add client-streaming support.</span>
             <span class="kw">let</span> <span class="ident">grpc_request</span> <span class="op">=</span> <span class="ident">GrpcRequest</span> {
                 <span class="ident">method_name</span>: <span class="ident">handler</span>.<span class="ident">method_name</span>.<span class="ident">to_string</span>(),
                 <span class="ident">req_msg</span>: <span class="ident">request</span>.<span class="ident">into_inner</span>(),
                 <span class="ident">last</span>: <span class="bool-val">true</span>,
             };
 
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">handler</span>
-                <span class="comment">// Handle a gRPC request and send it into the Runtime.</span>
-                .<span class="ident">handle_grpc_request</span>(<span class="ident">grpc_request</span>, <span class="kw-2">&amp;</span><span class="ident">oak_label</span>)
-                <span class="comment">// Read a gRPC response from the Runtime.</span>
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">response_reader</span><span class="op">|</span> <span class="ident">handler</span>.<span class="ident">handle_grpc_response</span>(<span class="ident">response_reader</span>))
-                <span class="comment">// Convert an error to a gRPC error status without sending clients descriptions for</span>
-                <span class="comment">// internal errors.</span>
-                <span class="comment">// Errors are logged inside inside [`GrpcRequestHandler::handle_grpc_request`] and</span>
-                <span class="comment">// [`GrpcRequestHandler::handle_grpc_response`].</span>
+            <span class="comment">// Inject the encapsulated gRPC request into the Oak Application.</span>
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;inject encapsulated request into Oak Node&quot;</span>);
+            <span class="kw">let</span> <span class="ident">response_iter</span> <span class="op">=</span> <span class="ident">handler</span>
+                .<span class="ident">inject_grpc_request</span>(<span class="ident">grpc_request</span>, <span class="kw-2">&amp;</span><span class="ident">oak_label</span>, <span class="ident">metrics_data</span>.<span class="ident">clone</span>())
                 .<span class="ident">map_err</span>(<span class="op">|</span>()<span class="op">|</span> <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(<span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">Internal</span>, <span class="string">&quot;&quot;</span>))<span class="question-mark">?</span>;
 
-            <span class="comment">// Send a gRPC response back to the client.</span>
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sending gRPC response: {:?}&quot;</span>, <span class="ident">response</span>);
-            <span class="ident">timer</span>.<span class="ident">observe_duration</span>();
-            <span class="kw">match</span> <span class="ident">response</span>.<span class="ident">status</span> {
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">tonic</span>::<span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">response</span>.<span class="ident">rsp_msg</span>)),
-                <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="kw">if</span> <span class="ident">status</span>.<span class="ident">code</span> <span class="op">=</span><span class="op">=</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>::<span class="ident">Code</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">tonic</span>::<span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">response</span>.<span class="ident">rsp_msg</span>))
+            <span class="comment">// First convert the `Iterator&lt;Item = GrpcResponse&gt;` to an</span>
+            <span class="comment">// `Iterator&lt;Item = Result&lt;Vec&lt;u8&gt;, tonic::Status&gt;`.</span>
+            <span class="kw">let</span> <span class="ident">result_iter</span> <span class="op">=</span> <span class="ident">response_iter</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Returning gRPC response: {:?}&quot;</span>, <span class="ident">response</span>);
+                <span class="kw">match</span> <span class="ident">response</span>.<span class="ident">status</span> {
+                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>.<span class="ident">rsp_msg</span>),
+                    <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="kw">if</span> <span class="ident">status</span>.<span class="ident">code</span> <span class="op">=</span><span class="op">=</span> <span class="ident">rpc</span>::<span class="ident">Code</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>.<span class="ident">rsp_msg</span>),
+                    <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">to_tonic_status</span>(<span class="ident">status</span>)),
                 }
-                <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">to_tonic_status</span>(<span class="ident">status</span>)),
-            }
+            });
+
+            <span class="comment">// Now convert this to a streaming future of type</span>
+            <span class="comment">// `Stream&lt;Item = Result&lt;Vec&lt;u8&gt;, tonic::Status&gt;`</span>
+            <span class="comment">// and then wrap it in Pin&lt;Box&lt;.&gt;&gt; to build a `Self::ResponseStream`.</span>
+            <span class="kw">let</span> <span class="ident">result_stream</span>: <span class="self">Self</span>::<span class="ident">ResponseStream</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">stream</span>::<span class="ident">iter</span>(<span class="ident">result_iter</span>));
+
+            <span class="comment">// Finally, ensure this block returns an `Ok(tonic::Response&lt;Self::ResponseStream&gt;)`.</span>
+            <span class="prelude-val">Ok</span>(<span class="ident">tonic</span>::<span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">result_stream</span>))
         };
 
         <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">future</span>)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">GrpcRequestHandler</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">method_name</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">GrpcInvocationHandler</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+        <span class="ident">invocation_channel</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">method_name</span>: <span class="ident">String</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">runtime</span>,
-            <span class="ident">writer</span>,
+            <span class="ident">invocation_channel</span>,
             <span class="ident">method_name</span>,
         }
     }
 
-    <span class="doccomment">/// Handles a gRPC request, forwards it to a temporary channel and sends handles for this</span>
-    <span class="doccomment">/// channel to the [`GrpcRequestHandler::writer`].</span>
-    <span class="doccomment">/// Returns an [`oak_abi::Handle`] for reading a gRPC response from.</span>
-    <span class="kw">fn</span> <span class="ident">handle_grpc_request</span>(
+    <span class="doccomment">/// Send an encapsulated gRPC request into the Oak Application as an invocation.</span>
+    <span class="doccomment">/// Returns an [`oak_abi::Handle`] for reading gRPC response(s) from.</span>
+    <span class="kw">fn</span> <span class="ident">inject_grpc_request</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">request</span>: <span class="ident">GrpcRequest</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span>, ()<span class="op">&gt;</span> {
+        <span class="ident">metrics_data</span>: <span class="ident">Metrics</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GrpcResponseIterator</span>, ()<span class="op">&gt;</span> {
         <span class="comment">// Create a pair of temporary channels to pass the gRPC request and to receive the response.</span>
 
         <span class="comment">// The channel containing the request is created with the label specified by the caller.</span>
@@ -1042,19 +1157,19 @@
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t serialize GrpcRequest message: {}&quot;</span>, <span class="ident">error</span>);
         })<span class="question-mark">?</span>;
 
-        <span class="comment">// Send a message to the temporary channel.</span>
+        <span class="comment">// Put the gRPC request message inside the per-invocation request channel.</span>
         <span class="self">self</span>.<span class="ident">runtime</span>
             .<span class="ident">channel_write</span>(<span class="ident">request_writer</span>, <span class="ident">message</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="macro">error</span><span class="macro">!</span>(
-                    <span class="string">&quot;Couldn&#39;t write message to the temporary channel: {:?}&quot;</span>,
+                    <span class="string">&quot;Couldn&#39;t write message to the gRPC request channel: {:?}&quot;</span>,
                     <span class="ident">error</span>
                 );
             })<span class="question-mark">?</span>;
 
         <span class="comment">// Send an invocation message (with attached handles) to the Oak Node.</span>
         <span class="self">self</span>.<span class="ident">runtime</span>
-            .<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">invocation</span>)
+            .<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">invocation_channel</span>, <span class="ident">invocation</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t write gRPC invocation message: {:?}&quot;</span>, <span class="ident">error</span>);
             })<span class="question-mark">?</span>;
@@ -1079,58 +1194,139 @@
             );
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">response_reader</span>)
+        <span class="prelude-val">Ok</span>(<span class="ident">GrpcResponseIterator</span>::<span class="ident">new</span>(
+            <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>(),
+            <span class="ident">response_reader</span>,
+            <span class="ident">metrics_data</span>,
+            <span class="self">self</span>.<span class="ident">method_name</span>.<span class="ident">clone</span>(),
+        ))
     }
+}
 
-    <span class="doccomment">/// Processes a gRPC response from a channel represented by `response_reader` and returns an</span>
-    <span class="doccomment">/// HTTP response body.</span>
-    <span class="kw">fn</span> <span class="ident">handle_grpc_response</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">response_reader</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GrpcResponse</span>, ()<span class="op">&gt;</span> {
+<span class="kw">struct</span> <span class="ident">GrpcResponseIterator</span> {
+    <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+    <span class="ident">response_reader</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    <span class="ident">metrics_data</span>: <span class="ident">Metrics</span>,
+    <span class="ident">method_name</span>: <span class="ident">String</span>,
+    <span class="comment">// The lifetime of the timer matches the lifetime of the iterator,</span>
+    <span class="comment">// updating the request-timer metric when the iterator is dropped.</span>
+    <span class="ident">_timer</span>: <span class="ident">prometheus</span>::<span class="ident">HistogramTimer</span>,
+    <span class="ident">done</span>: <span class="ident">bool</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">GrpcResponseIterator</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
+        <span class="ident">response_reader</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">metrics_data</span>: <span class="ident">Metrics</span>,
+        <span class="ident">method_name</span>: <span class="ident">String</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="macro">trace</span><span class="macro">!</span>(
+            <span class="string">&quot;Create new GrpcResponseIterator for &#39;{}&#39;, reading from {}&quot;</span>,
+            <span class="ident">method_name</span>,
+            <span class="ident">response_reader</span>
+        );
+        <span class="kw">let</span> <span class="ident">timer</span> <span class="op">=</span> <span class="ident">metrics_data</span>
+            .<span class="ident">grpc_server_metrics</span>
+            .<span class="ident">grpc_server_handled_latency_seconds</span>
+            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">method_name</span>])
+            .<span class="ident">start_timer</span>();
+        <span class="ident">GrpcResponseIterator</span> {
+            <span class="ident">runtime</span>,
+            <span class="ident">response_reader</span>,
+            <span class="ident">metrics_data</span>,
+            <span class="ident">method_name</span>,
+            <span class="ident">_timer</span>: <span class="ident">timer</span>,
+            <span class="ident">done</span>: <span class="bool-val">false</span>,
+        }
+    }
+}
+
+<span class="doccomment">/// Manual implementation of the `Drop` trait to ensure the response channel</span>
+<span class="doccomment">/// is always closed.</span>
+<span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">GrpcResponseIterator</span> {
+    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="macro">trace</span><span class="macro">!</span>(
+            <span class="string">&quot;Dropping GrpcResponseIterator for &#39;{}&#39;: close channel {}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">method_name</span>,
+            <span class="self">self</span>.<span class="ident">response_reader</span>
+        );
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">response_reader</span>) {
+            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to close gRPC response reader channel: {:?}&quot;</span>, <span class="ident">err</span>);
+        }
+        <span class="comment">// Note that dropping self.timer will record the duration.</span>
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">GrpcResponseIterator</span> {
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">GrpcResponse</span>;
+
+    <span class="doccomment">/// Read a single encapsulated gRPC response from the provided channel.</span>
+    <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Item</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">done</span> {
+            <span class="kw">return</span> <span class="prelude-val">None</span>;
+        }
         <span class="kw">let</span> <span class="ident">read_status</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">runtime</span>
-            .<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="ident">response_reader</span>])
+            .<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">response_reader</span>])
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t wait on the temporary gRPC channel: {:?}&quot;</span>, <span class="ident">error</span>);
-            })<span class="question-mark">?</span>;
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t wait on the gRPC response channel: {:?}&quot;</span>, <span class="ident">error</span>);
+            })
+            .<span class="ident">ok</span>()<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">read_status</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> {
-            <span class="self">self</span>.<span class="ident">runtime</span>
-                .<span class="ident">channel_read</span>(<span class="ident">response_reader</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read from the temporary gRPC channel: {:?}&quot;</span>, <span class="ident">error</span>);
-                })
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">message</span><span class="op">|</span> {
-                    <span class="comment">// Return an empty HTTP body if the `message` is None.</span>
-                    <span class="ident">message</span>.<span class="ident">map_or</span>(<span class="macro">vec</span><span class="macro">!</span>[], <span class="op">|</span><span class="ident">m</span><span class="op">|</span> {
-                        <span class="self">self</span>.<span class="ident">runtime</span>
-                            .<span class="ident">metrics_data</span>()
+        <span class="kw">if</span> <span class="ident">read_status</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> {
+            <span class="kw">match</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_read</span>(<span class="self">self</span>.<span class="ident">response_reader</span>) {
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">GrpcResponse</span>::<span class="ident">decode</span>(<span class="ident">msg</span>.<span class="ident">data</span>.<span class="ident">as_slice</span>()) {
+                    <span class="prelude-val">Ok</span>(<span class="ident">grpc_rsp</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="self">self</span>.<span class="ident">metrics_data</span>
                             .<span class="ident">grpc_server_metrics</span>
                             .<span class="ident">grpc_response_size_bytes</span>
                             .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">method_name</span>])
-                            .<span class="ident">observe</span>(<span class="ident">m</span>.<span class="ident">data</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">f64</span>);
-                        <span class="ident">m</span>.<span class="ident">data</span>
-                    })
-                })
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> {
-                    <span class="comment">// Return the serialized message body.</span>
-                    <span class="ident">GrpcResponse</span>::<span class="ident">decode</span>(<span class="ident">response</span>.<span class="ident">as_slice</span>()).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t parse the GrpcResponse message: {}&quot;</span>, <span class="ident">error</span>);
-                    })
-                })
+                            .<span class="ident">observe</span>(<span class="ident">grpc_rsp</span>.<span class="ident">rsp_msg</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">f64</span>);
+                        <span class="kw">if</span> <span class="ident">grpc_rsp</span>.<span class="ident">last</span> {
+                            <span class="comment">// The Node has definitively marked this as the last response for this</span>
+                            <span class="comment">// invocation; keep track of this and don&#39;t bother attempting to read</span>
+                            <span class="comment">// from the response channel next time around.</span>
+                            <span class="comment">//</span>
+                            <span class="comment">// Note that the reverse isn&#39;t always true: the final response for a</span>
+                            <span class="comment">// server-streaming method might *not* have last=true; in that case the</span>
+                            <span class="comment">// next attempt to read from the response channel will find a closed</span>
+                            <span class="comment">// channel, and so we treat that as the end of the method invocation</span>
+                            <span class="comment">// (below).</span>
+                            <span class="self">self</span>.<span class="ident">done</span> <span class="op">=</span> <span class="bool-val">true</span>;
+                        }
+                        <span class="macro">trace</span><span class="macro">!</span>(
+                            <span class="string">&quot;Return response of size {}, status={:?} last={}&quot;</span>,
+                            <span class="ident">grpc_rsp</span>.<span class="ident">rsp_msg</span>.<span class="ident">len</span>(),
+                            <span class="ident">grpc_rsp</span>.<span class="ident">status</span>,
+                            <span class="ident">grpc_rsp</span>.<span class="ident">last</span>
+                        );
+                        <span class="prelude-val">Some</span>(<span class="ident">grpc_rsp</span>)
+                    }
+                    <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t parse the GrpcResponse message: {}&quot;</span>, <span class="ident">err</span>);
+                        <span class="prelude-val">None</span>
+                    }
+                },
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;No message available on gRPC response channel&quot;</span>);
+                    <span class="prelude-val">None</span>
+                }
+                <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read from the gRPC response channel: {:?}&quot;</span>, <span class="ident">status</span>);
+                    <span class="prelude-val">None</span>
+                }
+            }
+        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">read_status</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">Orphaned</span> {
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;gRPC response channel closed&quot;</span>);
+            <span class="prelude-val">None</span>
         } <span class="kw">else</span> {
             <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;Couldn&#39;t read from the temporary gRPC channel: {:?}&quot;</span>,
+                <span class="string">&quot;Couldn&#39;t read from the gRPC response channel: {:?}&quot;</span>,
                 <span class="ident">read_status</span>[<span class="number">0</span>]
             );
-            <span class="prelude-val">Err</span>(())
-        };
-
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="ident">response_reader</span>) {
-            <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;Failed to close response writer channel for invocation: {:?}&quot;</span>,
-                <span class="ident">err</span>
-            );
+            <span class="prelude-val">None</span>
         }
-        <span class="ident">result</span>
     }
 }
 </pre></div>
