@@ -19,7 +19,6 @@ client.sayHello({ greeting: 'Node.js' }, (error, response) => {
     process.exit(1);
   } else {
     console.log(response.reply);
+    process.exit(0);
   }
 });
-
-process.exit(0);
