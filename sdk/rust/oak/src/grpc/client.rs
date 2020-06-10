@@ -46,13 +46,28 @@ impl Client {
             .expect("failed to close channel");
         match status {
             Ok(_) => {
-                info!("Client created for '{:?}'", config);
+                info!(
+                    "Client created for '{:?}', accessible via channel {:?}",
+                    config, invocation_sender.handle
+                );
                 Some(Client { invocation_sender })
             }
             Err(status) => {
                 warn!("failed to create Client for '{:?}': {:?}", config, status);
                 None
             }
+        }
+    }
+}
+
+impl Drop for Client {
+    fn drop(&mut self) {
+        info!("Closing Client channel {:?}", self.invocation_sender.handle);
+        if let Err(status) = self.invocation_sender.close() {
+            warn!(
+                "Failed to close Client channel {:?}: {:?}",
+                self.invocation_sender.handle, status
+            );
         }
     }
 }
