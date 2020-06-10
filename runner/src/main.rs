@@ -53,44 +53,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     if watch {
-        let spinner: Arc<Mutex<Option<spinners::Spinner>>> = Default::default();
+        let mut spinner: Option<spinners::Spinner>;
 
-        let spinner_clone = spinner.clone();
-        let start_spinner = move || {
-            *spinner_clone.lock().unwrap() = Some(spinners::Spinner::new(
+        fn new_spinner() -> spinners::Spinner {
+            spinners::Spinner::new(
                 spinners::Spinners::Pong,
                 "waiting for events".purple().to_string(),
-            ));
-        };
-        let start_spinner_clone = start_spinner.clone();
+            )
+        }
 
-        let stop_spinner = move || {
-            if let Some(sp) = spinner.lock().unwrap().take() {
-                sp.stop()
-            }
-        };
+        let modified_files: Arc<Mutex<Vec<PathBuf>>> = Default::default();
 
+        let modified_files_clone = modified_files.clone();
         let mut watcher: notify::RecommendedWatcher =
             notify::Watcher::new_immediate(move |res: notify::Result<notify::Event>| match res {
                 Ok(event) => {
-                    stop_spinner();
-                    eprintln!();
-                    eprintln!();
-                    eprintln!("{}", "event received; modified files:".purple());
-                    for path in event.paths {
-                        eprintln!("{}", format!("- {:?}", path).purple());
-                    }
-                    eprintln!();
-                    run();
-                    start_spinner();
+                    modified_files_clone.lock().unwrap().extend(event.paths);
                 }
                 Err(err) => panic!("watch error: {:?}", err),
             })?;
         watcher.watch(".", notify::RecursiveMode::Recursive)?;
-        start_spinner_clone();
 
-        // Wait forever.
-        std::thread::park();
+        spinner = Some(new_spinner());
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(1_000));
+            let mut modified_files = modified_files.lock().unwrap();
+            if modified_files.is_empty() {
+                continue;
+            } else {
+                if let Some(spinner) = spinner.take() {
+                    spinner.stop()
+                }
+                eprintln!();
+                eprintln!("{}", "event received; modified files:".purple());
+                for path in modified_files.iter() {
+                    eprintln!("{}", format!("- {:?}", path).purple());
+                }
+                modified_files.clear();
+                eprintln!();
+                run();
+                eprintln!();
+                spinner = Some(new_spinner());
+            }
+        }
     } else {
         let statuses = run();
         // If the overall status value is an error, terminate with a nonzero exit code.
@@ -127,10 +132,9 @@ fn build_examples(opt: &BuildExamples) -> Step {
 fn run_examples(opt: &RunExamples) -> Step {
     let examples: Vec<Example> = example_toml_files()
         .map(|path| {
-            toml::from_str(&read_file(&path)).expect(&format!(
-                "could not parse example manifest file: {:?}",
-                path
-            ))
+            toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
+                panic!("could not parse example manifest file {:?}: {}", path, err)
+            })
         })
         .collect();
     eprintln!("parsed examples manifest files: {:?}", examples);
