@@ -23,10 +23,13 @@
 //! cargo run --package=runner
 //! ```
 
+use colored::*;
+use notify::Watcher;
 use std::{
     collections::HashMap,
     io::Read,
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
 };
 use structopt::StructOpt;
 
@@ -36,18 +39,64 @@ use internal::*;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
 
-    let steps = match opt.cmd {
-        Command::BuildExamples(ref opt) => build_examples(&opt),
-        Command::RunExamples(ref opt) => run_examples(&opt),
-        Command::BuildServer(ref opt) => build_server(&opt),
-        Command::RunTests => run_tests(),
-    };
-    // TODO(#396): Add support for running individual commands via command line flags.
-    let statuses = run_step(&Context::root(&opt), &steps);
+    let watch = opt.watch;
 
-    // If the overall status value is an error, terminate with a nonzero exit code.
-    if statuses.contains(&StatusResultValue::Error) {
-        std::process::exit(1);
+    let run = move || {
+        let steps = match opt.cmd {
+            Command::BuildExamples(ref opt) => build_examples(&opt),
+            Command::RunExamples(ref opt) => run_examples(&opt),
+            Command::BuildServer(ref opt) => build_server(&opt),
+            Command::RunTests => run_tests(),
+        };
+        // TODO(#396): Add support for running individual commands via command line flags.
+        run_step(&Context::root(&opt), &steps)
+    };
+
+    if watch {
+        let spinner: Arc<Mutex<Option<spinners::Spinner>>> = Default::default();
+
+        let spinner_clone = spinner.clone();
+        let start_spinner = move || {
+            *spinner_clone.lock().unwrap() = Some(spinners::Spinner::new(
+                spinners::Spinners::Pong,
+                "waiting for events".purple().to_string(),
+            ));
+        };
+        let start_spinner_clone = start_spinner.clone();
+
+        let stop_spinner = move || {
+            if let Some(sp) = spinner.lock().unwrap().take() {
+                sp.stop()
+            }
+        };
+
+        let mut watcher: notify::RecommendedWatcher =
+            notify::Watcher::new_immediate(move |res: notify::Result<notify::Event>| match res {
+                Ok(event) => {
+                    stop_spinner();
+                    eprintln!();
+                    eprintln!();
+                    eprintln!("{}", "event received; modified files:".purple());
+                    for path in event.paths {
+                        eprintln!("{}", format!("- {:?}", path).purple());
+                    }
+                    eprintln!();
+                    run();
+                    start_spinner();
+                }
+                Err(err) => panic!("watch error: {:?}", err),
+            })?;
+        watcher.watch(".", notify::RecursiveMode::Recursive)?;
+        start_spinner_clone();
+
+        // Wait forever.
+        std::thread::park();
+    } else {
+        let statuses = run();
+        // If the overall status value is an error, terminate with a nonzero exit code.
+        if statuses.contains(&StatusResultValue::Error) {
+            std::process::exit(1);
+        }
     }
 
     Ok(())

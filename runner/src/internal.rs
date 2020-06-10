@@ -22,6 +22,8 @@ use structopt::StructOpt;
 pub struct Opt {
     #[structopt(long, help = "do not execute commands")]
     dry_run: bool,
+    #[structopt(long, help = "re-run commands on file changes")]
+    pub watch: bool,
     #[structopt(long, help = "print commands")]
     commands: bool,
     #[structopt(long, help = "show logs of commands")]
