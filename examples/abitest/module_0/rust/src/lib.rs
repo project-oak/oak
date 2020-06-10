@@ -1069,7 +1069,7 @@ impl FrontendNode {
                 .unwrap();
             space.push(0x00);
             expect_eq!(
-                OakStatus::ErrBadHandle as u32,
+                OakStatus::Ok as u32,
                 oak_abi::wait_on_channels(space.as_mut_ptr(), COUNT as u32)
             );
             expect_eq!(ChannelReadStatus::Orphaned as i32, i32::from(space[8]));
@@ -1097,15 +1097,18 @@ impl FrontendNode {
 
         // Waiting on (just) non-read channel handles should fail immediately.
         expect_eq!(
-            Err(OakStatus::ErrBadHandle),
-            oak::wait_on_channels(&[
+            vec![
+                ChannelReadStatus::InvalidChannel,
+                ChannelReadStatus::InvalidChannel
+            ],
+            status_convert(oak::wait_on_channels(&[
                 oak::ReadHandle {
                     handle: out1.handle
                 },
                 oak::ReadHandle {
                     handle: oak::Handle::from_raw(9_999_999)
                 }
-            ])
+            ]))?
         );
 
         // Set up first channel with a pending message.

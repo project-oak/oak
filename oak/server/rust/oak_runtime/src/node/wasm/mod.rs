@@ -29,7 +29,7 @@ use oak_abi::{
     proto::oak::application::{
         ApplicationConfiguration, NodeConfiguration, WebAssemblyConfiguration,
     },
-    ChannelReadStatus, OakStatus,
+    OakStatus,
 };
 use prost::Message as _;
 use rand::RngCore;
@@ -461,17 +461,7 @@ impl WasmInterface {
                 })?;
         }
 
-        let is_invalid = |&s| {
-            s == ChannelReadStatus::InvalidChannel
-                || s == ChannelReadStatus::Orphaned
-                || s == ChannelReadStatus::PermissionDenied
-        };
-
-        if statuses.iter().all(is_invalid) {
-            Err(OakStatus::ErrBadHandle)
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 }
 
