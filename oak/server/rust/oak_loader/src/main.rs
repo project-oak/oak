@@ -43,6 +43,7 @@ use prost::Message;
 use std::{
     collections::HashMap,
     fs::{read_to_string, File},
+    include_bytes,
     io::Read,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -72,7 +73,7 @@ pub struct Opt {
         long,
         help = "PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service."
     )]
-    root_tls_certificate: String,
+    root_tls_certificate: Option<String>,
     #[structopt(
         long,
         help = "Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
@@ -199,8 +200,14 @@ fn main() -> anyhow::Result<()> {
         read_to_string(&opt.grpc_tls_private_key).context("could not read gRPC TLS private key")?;
     let grpc_tls_certificate =
         read_to_string(&opt.grpc_tls_certificate).context("could not read gRPC TLS certificate")?;
-    let root_tls_certificate =
-        read_to_string(&opt.root_tls_certificate).context("could not read root TLS certificate")?;
+    let root_tls_certificate = match &opt.root_tls_certificate {
+        Some(certificate_path) if cfg!(feature = "oak_debug") => {
+            read_to_string(certificate_path).context("could not read root TLS certificate")?
+        }
+        _ => std::str::from_utf8(include_bytes!("certs/roots.pem"))
+            .context("could not read embedded PEM-encoded root TLS certificates as a UTF8 string")?
+            .to_owned(),
+    };
     let oidc_client_info = match opt.oidc_client {
         Some(oidc_client) => {
             let oidc_file = read_to_string(oidc_client)

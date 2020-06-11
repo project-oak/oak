@@ -123,11 +123,24 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/run_clang_tidy']
 
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: generate_root_ca_certs
+    waitFor: ['git_init']
+    timeout: 5m
+    entrypoint: 'bash'
+    args: ['./scripts/generate_root_ca_certs']
+
   # Check whether any of the previous steps resulted in file diffs that were not checked in or
   # ignored by git.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_check_diff
-    waitFor: ['git_init', 'run_clang_tidy', 'run_examples_cpp']
+    waitFor:
+      [
+        'git_init',
+        'run_clang_tidy',
+        'run_examples_cpp',
+        'generate_root_ca_certs',
+      ]
     timeout: 5m
     entrypoint: 'bash'
     args: ['./scripts/git_check_diff']
