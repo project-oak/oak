@@ -123,6 +123,6 @@ esac
 
 # If a node client exists, install its dependencies
 nodejs_client="./examples/${EXAMPLE}/client/nodejs"
-if [ -d "${nodejs_client}" ]; then
+if [[ -d "${nodejs_client}" ]]; then
     npm ci --prefix "${nodejs_client}"
 fi
