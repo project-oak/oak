@@ -125,6 +125,25 @@ runtime is terminating.
 - `param[1]: u32`: Count N of handles provided
 - `result[0]: u32`: Status of operation
 
+### `wait_on_channels_with_privilege`
+
+Variant of `wait_on_channels` that allows a Node to indicate that subsequent
+read operations will use its downgrade privilege to satisfy
+[information flow control](/docs/concepts.md#information-flow-control) flows-to
+checks. In particular, if there are waited-on channels that can only be read
+from if the caller uses downgrade privilege, then this variant returns those
+channel's read status rather than the `PERMISSION_DENIED` value that would be
+returned by `wait_on_channels`.
+
+The privilege to use is provided as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
+have this privilege, `ERR_INVALID_ARGS` is returned.
+
+- `param[0]` to `param[1]`: As for `wait_on_channels`
+- `param[2]: usize`: Privilege to use in downgrade, as a serialized `Label`
+- `param[3]: usize`: Privilege label size in bytes
+- `result[0]: u32`: Status of operation
+
 ### `channel_read`
 
 Reads a single message and associated channel handles from the specified
