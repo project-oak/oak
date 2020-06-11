@@ -11,7 +11,9 @@ specific entrypoints which form the **Oak ABI**:
 
 These host functions provided by the Oak TCB revolve around the creation of
 other Nodes, and the use of [channels](concepts.md#channels) for inter-node
-communication.
+communication. This communication is further constrained by **flows-to** checks
+based on the [labels](concepts.md#information-flow-control) associated with the
+Nodes and channels.
 
 To communicate with the outside world beyond the Oak system, a Node may also
 create and communicate with [pseudo-Nodes](concepts.md#pseudo-nodes). The
@@ -57,6 +59,27 @@ Three specific sets of integer values are also used in the ABI:
   indicating the readiness status of a particular channel. The possible values
   for this are defined in the `ChannelReadStatus` enum in
   [oak_abi.proto](/oak/proto/oak_abi.proto).
+
+## Protocol Buffer Messages
+
+The host functions described [below](#host-functions) allow opaque blobs of data
+to be exchanged (along with handles to other channels). When communicating with
+the Runtime, these opaque blobs of data are defined to take the form of
+serialized protocol buffer messages:
+
+- The label values included on Node and channel creation operations are in the
+  form of a serialized [`Label`](/oak/proto/label.proto) message.
+- The Node configuration information that is include on `node_create` operations
+  is in the form of a serialized
+  [`NodeConfiguration`](/oak/proto/application.proto) message.
+
+Similarly, messages exchanged with the pseudo-Nodes provided by the Oak system
+are also defined to take the form of serialized protocol buffer messages. These
+include:
+
+- [Structured logging messages](/oak/proto/log.proto).
+- [Encapsulated gRPC requests and responses](/oak/proto/grpc_encap.proto).
+- [Roughtime messages](/oak/proto/roughtime_service.proto).
 
 ## Exported Function
 
@@ -131,10 +154,6 @@ If reading from the specified channel would violate
   of handles retrieved with the message (as a little-endian u32)
 - `result[0]: u32`: Status of operation
 
-Similar to
-[`zx_channel_read`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_read)
-in Fuchsia.
-
 ### `channel_write`
 
 Writes a single message to the specified channel, together with any associated
@@ -151,15 +170,13 @@ If writing to the specified channel would violate
 - `param[4]: u32`: Source handle array count
 - `result[0]: u32`: Status of operation
 
-Similar to
-[`zx_channel_write`](https://fuchsia.dev/fuchsia-src/zircon/syscalls/channel_write)
-in Fuchsia.
-
 ### `channel_create`
 
 Creates a new unidirectional channel assigning the label specified by `param[2]`
 and `param[3]` to the newly created Channel, and returns the channel handles for
 its read and write halves as output parameters in `param[0]` and `param[1]`.
+
+The label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
 
 If creating the specified Channel would violate
 [information flow control](/docs/concepts.md#labels), returns
@@ -169,7 +186,7 @@ If creating the specified Channel would violate
   for the write half of the channel (as a little-endian u64).
 - `param[1]: usize`: Address of an 8-byte location that will receive the handle
   for the read half of the channel (as a little-endian u64).
-- `param[2]: usize`: Source buffer holding label
+- `param[2]: usize`: Source buffer holding serialized `Label`
 - `param[3]: usize`: Label size in bytes
 - `result[0]: u32`: Status of operation
 
@@ -185,19 +202,19 @@ Closes the channel identified by `param[0]`.
 Creates a new Node running the Node configuration identified by `param[0]` and
 `param[1]`, assigning the label specified by `param[2]` and `param[3]` to the
 newly created Node, passing in an initial handle to the read half of a channel
-identified by `param[4]`. The entrypoint name is ignored when creating
-non-WebAssembly Nodes.
+identified by `param[4]`.
 
 The Node configuration is a serialized
-[`NodeConfiguration`](/oak/proto/application.proto) protobuf message.
+[`NodeConfiguration`](/oak/proto/application.proto) protobuf message, and the
+label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
 
 If creating the specified Node would violate
 [information flow control](/docs/concepts.md#labels), returns
 `ERR_PERMISSION_DENIED`.
 
-- `param[0]: usize`: Source buffer holding serialized NodeConfiguration
+- `param[0]: usize`: Source buffer holding serialized `NodeConfiguration`
 - `param[1]: usize`: Serialized NodeConfiguration size in bytes
-- `param[2]: usize`: Source buffer holding label
+- `param[2]: usize`: Source buffer holding serialized `Label`
 - `param[3]: usize`: Label size in bytes
 - `param[4]: usize`: Handle to channel
 - `result[0]: u32`: Status of operation
@@ -209,14 +226,3 @@ Fills a buffer with random bytes.
 - `param[0]: usize`: Destination buffer
 - `param[1]: usize`: Destination buffer size in bytes
 - `result[0]: u32`: Status of operation
-
-## Protocol Buffer Messages
-
-The host functions described in the previous section allow opaque blobs of data
-to be exchanged (along with handles to other channels). When communicating with
-the pseudo-Nodes provided by the Oak system, these opaque blobs of data are
-defined to take the form of serialized protocol buffer messages. These include:
-
-- [Structured logging messages](../oak/proto/log.proto).
-- [Encapsulated gRPC requests and responses](../oak/proto/grpc_encap.proto).
-- [Roughtime messages](../oak/proto/roughtime_service.proto).
