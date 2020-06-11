@@ -12,7 +12,7 @@ serverargs=""
 while getopts "s:a:c:de:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s base|logless|none] [-a rust|cpp|nodejs] [-c rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s base|logless|none] [-a rust|cpp] [-c rust|cpp|nodejs] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
@@ -109,7 +109,7 @@ case "${client_language}" in
     ;;
   nodejs)
     nodejs_client="./examples/${EXAMPLE}/client/nodejs"
-    if [ -d "${nodejs_client}" ]; then
+    if [[ -d "${nodejs_client}" ]]; then
         npm start --prefix "./examples/${EXAMPLE}/client/nodejs"
     else
       echo "The ${EXAMPLE} example does not contain a ${client_language} client."
