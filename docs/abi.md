@@ -155,6 +155,22 @@ If reading from the specified channel would violate
   of handles retrieved with the message (as a little-endian u32)
 - `result[0]: u32`: Status of operation
 
+### `channel_read_with_privilege`
+
+Variant of `channel_read` that allows a Node to perform a read operation that
+requires use of its downgrade privilege to satisfy
+[information flow control](/docs/concepts.md#information-flow-control) flows-to
+checks.
+
+The privilege to use is provided as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
+have this privilege, `ERR_INVALID_ARGS` is returned.
+
+- `param[0]` to `param[6]`: As for `channel_read`
+- `param[7]: usize`: Privilege to use in downgrade, as a serialized `Label`
+- `param[8]: usize`: Privilege label size in bytes
+- `result[0]: u32`: Status of operation
+
 ### `channel_write`
 
 Writes a single message to the specified channel, together with any associated
@@ -169,6 +185,22 @@ If writing to the specified channel would violate
 - `param[2]: usize`: Source buffer size in bytes
 - `param[3]: usize`: Source handle array (of little-endian u64 values)
 - `param[4]: u32`: Source handle array count
+- `result[0]: u32`: Status of operation
+
+### `channel_write_with_privilege`
+
+Variant of `channel_write` that allows a Node to perform a write operation that
+requires use of its downgrade privilege to satisfy
+[information flow control](/docs/concepts.md#information-flow-control) flows-to
+checks.
+
+The privilege to use is provided as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
+have this privilege, `ERR_INVALID_ARGS` is returned.
+
+- `param[0]` to `param[4]`: As for `channel_write`
+- `param[5]: usize`: Privilege to use in downgrade, as a serialized `Label`
+- `param[6]: usize`: Privilege label size in bytes
 - `result[0]: u32`: Status of operation
 
 ### `channel_create`
@@ -189,6 +221,22 @@ If creating the specified Channel would violate
   for the read half of the channel (as a little-endian u64).
 - `param[2]: usize`: Source buffer holding serialized `Label`
 - `param[3]: usize`: Label size in bytes
+- `result[0]: u32`: Status of operation
+
+### `channel_create_with_privilege`
+
+Variant of `channel_create` that allows a Node to perform a channel creation
+operation that requires use of its downgrade privilege to satisfy
+[information flow control](/docs/concepts.md#information-flow-control) flows-to
+checks.
+
+The privilege to use is provided as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
+have this privilege, `ERR_INVALID_ARGS` is returned.
+
+- `param[0]` to `param[3]`: As for `channel_create`
+- `param[4]: usize`: Privilege to use in downgrade, as a serialized `Label`
+- `param[5]: usize`: Privilege label size in bytes
 - `result[0]: u32`: Status of operation
 
 ### `channel_close`
@@ -220,10 +268,75 @@ If creating the specified Node would violate
 - `param[4]: usize`: Handle to channel
 - `result[0]: u32`: Status of operation
 
+### `node_create_with_privilege`
+
+Variant of `node_create` that allows a Node to perform a Node creation operation
+that requires use of its downgrade privilege to satisfy
+[information flow control](/docs/concepts.md#information-flow-control) flows-to
+checks.
+
+The privilege to use is provided as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
+have this privilege, `ERR_INVALID_ARGS` is returned.
+
+- `param[0]` to `param[4]`: As for `node_create`
+- `param[5]: usize`: Privilege to use in downgrade, as a serialized `Label`
+- `param[6]: usize`: Privilege label size in bytes
+- `result[0]: u32`: Status of operation
+
 ### `random_get`
 
 Fills a buffer with random bytes.
 
 - `param[0]: usize`: Destination buffer
 - `param[1]: usize`: Destination buffer size in bytes
+- `result[0]: u32`: Status of operation
+
+### `node_label`
+
+Returns the label for the calling Node, as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message.
+
+If the provided space for label data (`param[0]` and `param[1]`) is not large
+enough, the function returns `BUFFER_TOO_SMALL` and the required size is written
+in the space provided by `param[2]`.
+
+- `param[0]: usize`: Destination buffer
+- `param[1]: usize`: Destination buffer size in bytes
+- `param[2]: usize`: Address of a 4-byte location that will receive the number
+  of bytes in the label (as a little-endian u32) if the provided buffer is not
+  large enough.
+- `result[0]: u32`: Status of operation
+
+### `channel_label`
+
+Returns the label for the specified channel, as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message.
+
+If the provided space for label data (`param[1]` and `param[2]`) is not large
+enough, the function returns `BUFFER_TOO_SMALL` and the required size is written
+in the space provided by `param[3]`.
+
+- `param[0]: u64`: Handle to channel
+- `param[1]: usize`: Destination buffer
+- `param[2]: usize`: Destination buffer size in bytes
+- `param[3]: usize`: Address of a 4-byte location that will receive the number
+  of bytes in the label (as a little-endian u32) if the provided buffer is not
+  large enough.
+- `result[0]: u32`: Status of operation
+
+### `node_privilege`
+
+Returns a label indicating the downgrade privilege of the calling Node, as a
+serialized [`Label`](/oak/proto/label.proto) protobuf message.
+
+If the provided space for label data (`param[0]` and `param[1]`) is not large
+enough, the function returns `BUFFER_TOO_SMALL` and the required size is written
+in the space provided by `param[2]`.
+
+- `param[0]: usize`: Destination buffer
+- `param[1]: usize`: Destination buffer size in bytes
+- `param[2]: usize`: Address of a 4-byte location that will receive the number
+  of bytes in the label (as a little-endian u32) if the provided buffer is not
+  large enough.
 - `result[0]: u32`: Status of operation
