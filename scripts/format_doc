@@ -1,0 +1,12 @@
+#!/bin/bash
+#
+# Perform all Markdown checks / reformats.
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+prettier --write "$@"
+markdownlint --fix "$@"
+liche --document-root=. --exclude='(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates)' "$@"
+embedmd -w "$@"
