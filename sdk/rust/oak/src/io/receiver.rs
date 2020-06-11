@@ -15,6 +15,7 @@
 //
 
 use crate::{io::Decodable, ChannelReadStatus, OakError, OakStatus, ReadHandle};
+use log::error;
 use serde::{Deserialize, Serialize};
 
 /// Wrapper for a handle to the read half of a channel, allowing to receive data that can be decoded
@@ -68,7 +69,7 @@ impl<T: Decodable> Receiver<T> {
     /// Wait for a value to be available from this receiver.
     ///
     /// Returns [`ChannelReadStatus`] of the wrapped handle, or `Err(OakStatus::ErrTerminated)` if
-    /// the Oak Runtime is terminating,
+    /// the Oak Runtime is terminating.
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn wait(&self) -> Result<ChannelReadStatus, OakStatus> {
         // TODO(#500): Consider creating the handle notification space once and for all in `new`.
@@ -85,15 +86,20 @@ impl<T: Decodable> Receiver<T> {
                 .map(i32::from)
                 .and_then(ChannelReadStatus::from_i32)
                 .ok_or_else(|| {
-                    panic!(
-                        "wait_on_channels always yields a valid channel read status if the returned status is not Err(OakStatus::ErrTerminated)."
-                    )
+                    error!(
+                        "Should never get here. `wait_on_channels` always yields a valid `ChannelReadStatus` if the returned status is not Err(OakStatus::ErrTerminated)."
+                    );
+                    OakStatus::ErrInternal
                 }),
             Err(OakStatus::ErrTerminated) => Err(OakStatus::ErrTerminated),
             Err(OakStatus::ErrInvalidArgs) => {
-                panic!("Indicates that `space` is corrupted. This should never happen.")
+                error!("Should never get here. `ErrInvalidArgs` here indicates that `space` is corrupted.");
+                Err(OakStatus::ErrInternal)
             }
-            _ => panic!("Other `OakStatus` error codes never happen."),
+            Err(status) => {
+                error!("Should never get here. `wait_on_channels` should never return {:?}.", status);
+                Err(OakStatus::ErrInternal)
+            }
         }
     }
 }

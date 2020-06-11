@@ -506,10 +506,11 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
                         return;
                     }
                     _ => {
-                        panic!(
-                            "{:?}: received status: {:?}, but Receiver::wait should never return an error other than Err(ErrTerminated)",
+                        error!(
+                            "{:?}: received status: {:?}; but `Receiver::wait` never returns an error other than `ErrTerminated`",
                             in_channel, status
                         );
+                        return;
                     }
                 }
             }
@@ -519,13 +520,16 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
                 | ChannelReadStatus::PermissionDenied
                 | ChannelReadStatus::InvalidChannel => {
                     warn!(
-                        "{:?}: invalid channel read status: {:?}; terminating event loop",
+                        "{:?}: received invalid channel read status: {:?}; terminating event loop",
                         in_channel, status
                     );
                     return;
                 }
                 ChannelReadStatus::NotReady => {
-                    panic!("Receiver::wait should never return Ok(ChannelReadStatus::NotReady)")
+                    error!(
+                        "{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.", 
+                        in_channel);
+                    return;
                 }
             },
         }
