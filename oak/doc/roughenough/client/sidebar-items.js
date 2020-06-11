@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["create_nonce","Creates a 64 byte nonce."],["make_request","Converts a nonce to a Roughtime request."]],"struct":[["ParsedResponse","The parsed data extracted from a Roughtime response."],["ResponseHandler","Decodes, parses and validates Roughtime responses."]]});
