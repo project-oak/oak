@@ -1,24 +1,54 @@
 const fs = require('fs');
-const protoLoader = require('@grpc/proto-loader');
+const protobufjs = require('protobufjs');
 const grpc = require('@grpc/grpc-js');
+const grpcProtoLoader = require('@grpc/proto-loader');
 
 const CERT_PATH = __dirname + '/../../../certs/local/ca.pem';
-const PROTO_PAH = __dirname + '/../../proto/hello_world.proto';
+const SERVICE_PROTO_PAH = __dirname + '/../../proto/hello_world.proto';
+const OAK_LABEL_PROTO_PAH = __dirname + '/../../../../oak/proto/label.proto';
 
-const packageDefinition = protoLoader.loadSync(PROTO_PAH);
-const helloWorldProto = grpc.loadPackageDefinition(packageDefinition).oak
-  .examples.hello_world;
-const credentials = grpc.credentials.createSsl(fs.readFileSync(CERT_PATH));
+// Keep in sync with /oak/server/rust/oak_runtime/src/node/grpc/server/mod.rs.
+const oakLabelGrpcMetadataKey = 'x-oak-label-bin';
 
-// TODO(#1066): Use a more restrictive Label.
-const client = new helloWorldProto.HelloWorld('localhost:8080', credentials);
+async function main() {
+  const [oaklabelDefinition, helloWorldDefinition] = await Promise.all([
+    protobufjs.load(OAK_LABEL_PROTO_PAH),
+    grpcProtoLoader.load(SERVICE_PROTO_PAH),
+  ]);
 
-client.sayHello({ greeting: 'Node.js' }, (error, response) => {
-  if (error) {
-    console.error(error);
-    process.exit(1);
-  } else {
-    console.log(response.reply);
-    process.exit(0);
+  function getGrpcMetadata() {
+    // TODO(#1097): move this into an SDK package to allow re-use.
+    const OakLabel = oaklabelDefinition.lookupType('oak.label.Label');
+
+    // TODO(#1066): Use a more restrictive Label.
+    const publicUntrustedLabel = OakLabel.create({});
+    const encodedLabel = OakLabel.encode(publicUntrustedLabel).finish();
+
+    const metaData = new grpc.Metadata();
+    metaData.add(oakLabelGrpcMetadataKey, encodedLabel);
+
+    return metaData;
   }
-});
+
+  const helloWorldProto = grpc.loadPackageDefinition(helloWorldDefinition).oak
+    .examples.hello_world;
+  const credentials = grpc.credentials.createSsl(fs.readFileSync(CERT_PATH));
+
+  const client = new helloWorldProto.HelloWorld('localhost:8080', credentials);
+
+  client.sayHello(
+    { greeting: 'Node.js' },
+    getGrpcMetadata(),
+    (error, response) => {
+      if (error) {
+        console.error(error);
+        process.exit(1);
+      } else {
+        console.log(response.reply);
+        process.exit(0);
+      }
+    }
+  );
+}
+
+main();

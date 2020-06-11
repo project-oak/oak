@@ -4,7 +4,8 @@
   "main": "index.js",
   "dependencies": {
     "@grpc/grpc-js": "^1.0.3",
-    "@grpc/proto-loader": "^0.5.4"
+    "@grpc/proto-loader": "^0.5.4",
+    "protobufjs": "^6.9.0"
   },
   "scripts": {
     "start": "node index.js"
