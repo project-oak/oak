@@ -12,7 +12,7 @@ serverargs=""
 while getopts "s:a:c:de:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s base|logless|none] [-a rust|cpp] [-c rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s base|logless|none] [-a rust|cpp|nodejs] [-c rust|cpp] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
@@ -29,6 +29,7 @@ Options:
   -c    Example client variant:
           - rust
           - cpp (used by default)
+          - nodejs
   -v    Enable verbose/debug output for the server
   -h    Print Help (this message) and exit
 Options after -- will be passed to the example client program."
@@ -105,6 +106,15 @@ case "${client_language}" in
     ;;
   cpp)
     "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
+    ;;
+  nodejs)
+    nodejs_client="./examples/${EXAMPLE}/client/nodejs"
+    if [ -d "${nodejs_client}" ]; then
+        npm start --prefix "./examples/${EXAMPLE}/client/nodejs"
+    else
+      echo "The ${EXAMPLE} example does not contain a ${client_language} client."
+      exit 1
+    fi
     ;;
   *)
     echo "Invalid example client variant: ${client_language}"
