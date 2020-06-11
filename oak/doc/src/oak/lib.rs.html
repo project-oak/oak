@@ -636,6 +636,10 @@
 <span id="636">636</span>
 <span id="637">637</span>
 <span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -1145,10 +1149,11 @@
                         <span class="kw">return</span>;
                     }
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">panic</span><span class="macro">!</span>(
-                            <span class="string">&quot;{:?}: received status: {:?}, but Receiver::wait should never return an error other than Err(ErrTerminated)&quot;</span>,
+                        <span class="macro">error</span><span class="macro">!</span>(
+                            <span class="string">&quot;{:?}: received status: {:?}; but `Receiver::wait` never returns an error other than `ErrTerminated`&quot;</span>,
                             <span class="ident">in_channel</span>, <span class="ident">status</span>
                         );
+                        <span class="kw">return</span>;
                     }
                 }
             }
@@ -1158,13 +1163,16 @@
                 <span class="op">|</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">PermissionDenied</span>
                 <span class="op">|</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">InvalidChannel</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="macro">warn</span><span class="macro">!</span>(
-                        <span class="string">&quot;{:?}: invalid channel read status: {:?}; terminating event loop&quot;</span>,
+                        <span class="string">&quot;{:?}: received invalid channel read status: {:?}; terminating event loop&quot;</span>,
                         <span class="ident">in_channel</span>, <span class="ident">status</span>
                     );
                     <span class="kw">return</span>;
                 }
                 <span class="ident">ChannelReadStatus</span>::<span class="ident">NotReady</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Receiver::wait should never return Ok(ChannelReadStatus::NotReady)&quot;</span>)
+                    <span class="macro">error</span><span class="macro">!</span>(
+                        <span class="string">&quot;{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.&quot;</span>, 
+                        <span class="ident">in_channel</span>);
+                    <span class="kw">return</span>;
                 }
             },
         }
