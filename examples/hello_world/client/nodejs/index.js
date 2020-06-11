@@ -4,16 +4,16 @@ const grpc = require('@grpc/grpc-js');
 const grpcProtoLoader = require('@grpc/proto-loader');
 
 const CERT_PATH = __dirname + '/../../../certs/local/ca.pem';
-const SERVICE_PROTO_PAH = __dirname + '/../../proto/hello_world.proto';
-const OAK_LABEL_PROTO_PAH = __dirname + '/../../../../oak/proto/label.proto';
+const SERVICE_PROTO_PATH = __dirname + '/../../proto/hello_world.proto';
+const OAK_LABEL_PROTO_PATH = __dirname + '/../../../../oak/proto/label.proto';
 
 // Keep in sync with /oak/server/rust/oak_runtime/src/node/grpc/server/mod.rs.
 const oakLabelGrpcMetadataKey = 'x-oak-label-bin';
 
 async function main() {
   const [oaklabelDefinition, helloWorldDefinition] = await Promise.all([
-    protobufjs.load(OAK_LABEL_PROTO_PAH),
-    grpcProtoLoader.load(SERVICE_PROTO_PAH),
+    protobufjs.load(OAK_LABEL_PROTO_PATH),
+    grpcProtoLoader.load(SERVICE_PROTO_PATH),
   ]);
 
   function getGrpcMetadata() {
