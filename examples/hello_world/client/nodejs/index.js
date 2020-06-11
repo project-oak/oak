@@ -12,6 +12,12 @@ const oakLabelGrpcMetadataKey = 'x-oak-label-bin';
 
 async function main() {
   const [oaklabelDefinition, helloWorldDefinition] = await Promise.all([
+    // We use two different libs with a similar APIs to load proto files,
+    // which due to the design of the `@grpc/grpc-js` lib.
+    // `@grpc/proto-loader` is a wrapper around `protobufjs` that adds
+    // functionality required for working with `grpc-js`, but omits others.
+    // Hence we use grpcProtoLoader for gRPC services, and protobufjs
+    // for all other protos.
     protobufjs.load(OAK_LABEL_PROTO_PATH),
     grpcProtoLoader.load(SERVICE_PROTO_PATH),
   ]);
@@ -36,9 +42,15 @@ async function main() {
 
   const client = new helloWorldProto.HelloWorld('localhost:8080', credentials);
 
+  // For documentation on client calls see the `@grpc/grpc-js` documentation:
+  // https://grpc.github.io/grpc/node/grpc.Client.html#~CallProperties
   client.sayHello(
+    // The arguments passed to the gRPC service. Corresponds to the
+    // `HelloRequest` message type in hello_world.proto file.
     { greeting: 'Node.js' },
+    // The metadata for this gRPC call.
     getGrpcMetadata(),
+    // Callback invoked with the response.
     (error, response) => {
       if (error) {
         console.error(error);
