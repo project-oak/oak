@@ -113,12 +113,13 @@ functions** as
 
 Blocks until data is available for reading from one of the specified channel
 handles, unless any of the channels is invalid, orphaned, or violates the
-[information flow control](/docs/concepts.md#labels). The channel handles are
-encoded in a buffer that holds N contiguous 9-byte chunks, each of which is made
-up of an 8-byte channel handle value (little-endian u64) followed by a single
-channel status byte. Invalid handles will have an `INVALID_CHANNEL`, `ORPHANED`,
-or `PERMISSION_DENIED` status, but `wait_on_channels` return value will only
-fail for internal errors or if the runtime is terminating.
+[information flow control](/docs/concepts.md#information-flow-control). The
+channel handles are encoded in a buffer that holds N contiguous 9-byte chunks,
+each of which is made up of an 8-byte channel handle value (little-endian u64)
+followed by a single channel status byte. Invalid handles will have an
+`INVALID_CHANNEL`, `ORPHANED`, or `PERMISSION_DENIED` status, but
+`wait_on_channels` return value will only fail for internal errors or if the
+runtime is terminating.
 
 - `param[0]: usize`: Address of handle status buffer
 - `param[1]: u32`: Count N of handles provided
@@ -139,7 +140,7 @@ sizes are written in the spaces provided by `param[3]` and `param[6]`.
 If no messages are available on the channel, returns `CHANNEL_EMPTY`.
 
 If reading from the specified channel would violate
-[information flow control](/docs/concepts.md#labels), returns
+[information flow control](/docs/concepts.md#information-flow-control), returns
 `ERR_PERMISSION_DENIED`.
 
 - `param[0]: u64`: Handle to channel receive half
@@ -160,7 +161,7 @@ Writes a single message to the specified channel, together with any associated
 handles.
 
 If writing to the specified channel would violate
-[information flow control](/docs/concepts.md#labels), returns
+[information flow control](/docs/concepts.md#information-flow-control), returns
 `ERR_PERMISSION_DENIED`.
 
 - `param[0]: u64`: Handle to channel send half
@@ -179,7 +180,7 @@ its read and write halves as output parameters in `param[0]` and `param[1]`.
 The label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
 
 If creating the specified Channel would violate
-[information flow control](/docs/concepts.md#labels), returns
+[information flow control](/docs/concepts.md#information-flow-control), returns
 `ERR_PERMISSION_DENIED`.
 
 - `param[0]: usize`: Address of an 8-byte location that will receive the handle
@@ -209,7 +210,7 @@ The Node configuration is a serialized
 label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
 
 If creating the specified Node would violate
-[information flow control](/docs/concepts.md#labels), returns
+[information flow control](/docs/concepts.md#information-flow-control), returns
 `ERR_PERMISSION_DENIED`.
 
 - `param[0]: usize`: Source buffer holding serialized `NodeConfiguration`

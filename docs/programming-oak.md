@@ -288,9 +288,10 @@ Oak Application).
 
 The client connects to the gRPC service, and sends (Application-specific) gRPC
 requests to it, over a channel that has end-to-end encryption into the Runtime
-instance, and also specifies a [Label](/docs/concepts.md#labels) to attach to
-the request, which is used to enforce Information Flow Control within the
-running Oak Application:
+instance, and also specifies a
+[Label](/docs/concepts.md#information-flow-control) to attach to the request,
+which is used to enforce Information Flow Control within the running Oak
+Application:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*Connect to the/ /GetTlsChannelCredentials.*/)
