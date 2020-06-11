@@ -34,24 +34,11 @@ pub struct Opt {
 
 #[derive(StructOpt, Clone)]
 pub enum Command {
-    BuildExamples(BuildExamples),
     RunExamples(RunExamples),
     BuildServer(BuildServer),
+    Format,
     RunTests,
-}
-
-#[derive(StructOpt, Clone)]
-pub struct BuildExamples {
-    #[structopt(long, help = "package application in a Docker image")]
-    docker: bool,
-    #[structopt(long, help = "build in debug mode")]
-    debug: bool,
-    #[structopt(
-        long,
-        help = "application variant: [rust, cpp]",
-        default_value = "rust"
-    )]
-    pub application_variant: String,
+    RunCi,
 }
 
 #[derive(StructOpt, Clone)]
@@ -62,6 +49,11 @@ pub struct RunExamples {
         default_value = "rust"
     )]
     pub application_variant: String,
+    // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
+    #[structopt(long, help = "name of a single example to run")]
+    pub example_name: Option<String>,
+    #[structopt(long, help = "only build the examples, do not run them")]
+    pub build_only: bool,
 }
 
 #[derive(StructOpt, Clone)]
@@ -161,18 +153,16 @@ pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
             let start = Instant::now();
             let running = command.run(&context.opt);
 
-            let command = if context.opt.commands || context.opt.dry_run {
-                format!("[{}]", running.command)
-            } else {
-                "".to_string()
-            };
-            eprintln!("{} ⊢ {} ... ", context.prefix, command);
+            if context.opt.commands || context.opt.dry_run {
+                eprintln!("{} ⊢ [{}] ... ", context.prefix, running.command);
+            }
 
+            eprint!("{} ⊢ ", context.prefix);
             let status = running.wait(&context.opt);
             let end = Instant::now();
             let elapsed = end.duration_since(start);
+            eprintln!("{} [{:.0?}]", status.value, elapsed);
 
-            eprintln!("{} ⊢ {} [{:.0?}]", context.prefix, status.value, elapsed);
             if (status.value == StatusResultValue::Error || context.opt.logs)
                 && !status.logs.is_empty()
             {
