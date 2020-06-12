@@ -6,13 +6,13 @@ source "${SCRIPTS_DIR}/common"
 
 server="base"
 application_language="rust"
-client_language="cpp"
+client_languages="cpp"
 buildargs=""
 serverargs=""
 while getopts "s:a:c:de:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-s base|logless|none] [-a rust|cpp] [-c rust|cpp|nodejs] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
+      echo -e "Usage: ${0} [-h] [-s base|logless|none] [-a rust|cpp] [-c [rust|cpp|nodejs]...] [-d] [-v] -e EXAMPLE [-- CLIENT_ARGS]
 
 Build and run the given example Oak Application and client.
 
@@ -26,7 +26,8 @@ Options:
   -a    Example application variant:
           - rust (used by default)
           - cpp
-  -c    Example client variant:
+  -c    Example client variants. Multiple clients can be specified by space
+        seperating them. Eg -c \"rust cpp nodejs\".
           - rust
           - cpp (used by default)
           - nodejs
@@ -37,7 +38,7 @@ Options after -- will be passed to the example client program."
     a)
       application_language="${OPTARG}";;
     c)
-      client_language="${OPTARG}";;
+      client_languages="${OPTARG}";;
     s)
       case "${OPTARG}" in
         base|logless|none)
@@ -97,28 +98,40 @@ fi
 
 readonly CLIENT_ARGS=("${@-}")  # Choose client args provided after '--'.
 
-# Run the application client.
-case "${client_language}" in
-  rust)
-    cargo run --release --target=x86_64-unknown-linux-musl --manifest-path="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/rust/Cargo.toml" -- \
-      --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
-      "${CLIENT_ARGS[@]-}"
-    ;;
-  cpp)
-    "./bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
-    ;;
-  nodejs)
-    nodejs_client="./examples/${EXAMPLE}/client/nodejs"
-    if [[ -d "${nodejs_client}" ]]; then
-        npm start --prefix "./examples/${EXAMPLE}/client/nodejs"
-    else
-      echo "The ${EXAMPLE} example does not contain a ${client_language} client."
-      exit 1
-    fi
-    ;;
-  *)
-    echo "Invalid example client variant: ${client_language}"
-    exit 1;;
-esac
+# Run the application clients.
+for client_language in $client_languages
+do
+  case "${client_language}" in
+    rust)
+      rust_client_manifest="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/rust/Cargo.toml"
+      if [[ -d "${rust_client_manifest}" ]]; then
+          cargo run --release --target=x86_64-unknown-linux-musl --manifest-path="${rust_client_manifest}" -- \
+            --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
+            "${CLIENT_ARGS[@]-}"
+      else
+        echo "The ${EXAMPLE} example does not contain a ${client_language} client. Skipping this client."
+      fi
+      ;;
+    cpp)
+      cpp_client="./bazel-client-bin/examples/${EXAMPLE}/client/client"
+      if [[ -d "${cpp_client}" ]]; then
+          "${cpp_client}" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
+      else
+        echo "The ${EXAMPLE} example does not contain a ${client_language} client. Skipping this client."
+      fi
+      ;;
+    nodejs)
+      nodejs_client="./examples/${EXAMPLE}/client/nodejs"
+      if [[ -d "${nodejs_client}" ]]; then
+          npm start --prefix "${nodejs_client}"
+      else
+        echo "The ${EXAMPLE} example does not contain a ${client_language} client. Skipping this client."
+      fi
+      ;;
+    *)
+      echo "Invalid example client variant: ${client_language}"
+      exit 1;;
+  esac
+done
 
 kill_bg_pids
