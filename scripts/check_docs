@@ -6,10 +6,6 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# TODO: drop the warning filter when we're using a version of Rust with
-# false positive warning removed (https://github.com/rust-lang/rust/pull/70789)
-export RUSTDOCFLAGS="-A unused_braces"
-
 # All the dirs that we generate docs for
 declare -ar PATHS=("." "oak_abi" "oak_utils")
 
