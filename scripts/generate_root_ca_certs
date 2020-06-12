@@ -7,7 +7,7 @@ source "$SCRIPTS_DIR/common"
 # Commit that updated the certificates for Android 10.
 readonly COMMIT="be85a54767b3559e7bb262e4f1a78e1c5829e478"
 
-readonly DOWNLOAD_DIR="${SCRIPTS_DIR}/../target/tmp"
+readonly DOWNLOAD_DIR="${SCRIPTS_DIR}/../downloads"
 readonly DOWNLOAD_FILE="${DOWNLOAD_DIR}/files.tar.gz"
 readonly EXTRACT_DIR="${DOWNLOAD_DIR}/files"
 readonly TARGET_FILE="${SCRIPTS_DIR}/../oak/server/rust/oak_loader/src/certs/roots.pem"
@@ -31,8 +31,14 @@ tar --extract --gzip --file="${DOWNLOAD_FILE}" --directory="${EXTRACT_DIR}"
 
 files="$(find ./"${EXTRACT_DIR}"/*)"
 
+# Concatenate all the files into a single PEM-encoded file.
+# A PEM file can contain multiple certificates, each with its own header and footer.
+#
+# See: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
 for file in ${files}; do
     # Append the issuer as a comment and the PEM encoded certificate content to the target file.
     { echo "# $(openssl x509 -in "${file}" --noout --issuer)"; \
         openssl x509 -in "${file}"; echo ""; } >> "${TARGET_FILE}"
 done
+
+rm --recursive --force "${DOWNLOAD_DIR}"
