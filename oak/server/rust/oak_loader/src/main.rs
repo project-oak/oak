@@ -26,7 +26,7 @@
 //!     --root-tls-certificate=<CERTIFICATE_PATH>
 //! ```
 
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, bail, Context};
 use core::str::FromStr;
 use log::{debug, error, info};
 use oak_abi::{
@@ -204,6 +204,7 @@ fn main() -> anyhow::Result<()> {
         Some(certificate_path) if cfg!(feature = "oak_debug") => {
             read_to_string(certificate_path).context("could not read root TLS certificate")?
         }
+        Some(_) => bail!("Specifying `root-tls-certificate` requires the `oak_debug` feature."),
         _ => std::str::from_utf8(include_bytes!("certs/roots.pem"))
             .context("could not read embedded PEM-encoded root TLS certificates as a UTF8 string")?
             .to_owned(),
