@@ -252,30 +252,6 @@ http_archive(
     url = "https://github.com/bazelbuild/bazel-skylib/archive/1.0.0.tar.gz",
 )
 
-http_archive(
-    name = "io_bazel_rules_rust",
-    sha256 = "275f0166e61e6cad3e29b0e37c21ecbb66880c049dbeea6e574d74a8ec4775c5",
-    strip_prefix = "rules_rust-e285f2bd8be77712e6b80ccb52918b727d10d70e",
-    urls = [
-        # Master branch as of 2020-04-21.
-        "https://github.com/bazelbuild/rules_rust/archive/e285f2bd8be77712e6b80ccb52918b727d10d70e.tar.gz",
-    ],
-)
-
-load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repository_set")
-load("@io_bazel_rules_rust//:workspace.bzl", "bazel_version")
-
-bazel_version(name = "bazel_version")
-
-# Make sure to update Dockerfile too, e.g. when updating nightly version
-rust_repository_set(
-    name = "rust_linux_x86_64",
-    exec_triple = "x86_64-unknown-linux-gnu",
-    extra_target_triples = ["wasm32-unknown-unknown"],
-    iso_date = "2020-04-17",
-    version = "nightly",
-)
-
 # Bazel rules for Android applications.
 http_archive(
     name = "rules_android",
