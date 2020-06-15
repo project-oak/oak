@@ -14,11 +14,9 @@
 // limitations under the License.
 //
 
-mod proto {
+pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.hello_world.rs"));
 }
-#[cfg(test)]
-mod tests;
 
 use log::info;
 use oak::grpc;

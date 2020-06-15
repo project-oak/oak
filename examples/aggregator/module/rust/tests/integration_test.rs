@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{
+use aggregator::{
     data::SparseVector,
     proto::{Sample, SerializedSparseVector},
     SAMPLE_THRESHOLD,

@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
-use crate::proto::{GetAverageResponse, SubmitSampleRequest};
 use assert_matches::assert_matches;
 use oak::grpc;
+use running_average::proto::{GetAverageResponse, SubmitSampleRequest};
 
 const MODULE_CONFIG_NAME: &str = "running_average";
 

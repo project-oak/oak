@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
-use crate::proto::{GetIntersectionResponse, SubmitSetRequest};
 use assert_matches::assert_matches;
 use oak::grpc;
+use private_set_intersection::proto::{GetIntersectionResponse, SubmitSetRequest};
 use std::{collections::HashSet, iter::FromIterator};
 
 const MODULE_CONFIG_NAME: &str = "private_set_intersection";
