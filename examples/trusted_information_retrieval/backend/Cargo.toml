@@ -1,0 +1,33 @@
+[package]
+name = "trusted_information_retrieval_backend"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+futures = "*"
+futures-core = "*"
+futures-util = "*"
+log = "*"
+prost = "*"
+reqwest = "*"
+serde = { version = "*", features = ["derive"] }
+structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "rt-threaded",
+  "sync",
+  "stream"
+] }
+tonic = { version = "*", features = ["tls"] }
+quick-xml = { version = "*", features = ["serialize"] }
+
+[dev-dependencies]
+assert_matches = "*"
+
+[build-dependencies]
+tonic-build = "*"

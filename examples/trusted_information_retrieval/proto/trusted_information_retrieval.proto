@@ -42,3 +42,35 @@ service TrustedInformationRetrieval {
   // Find the nearest Point Of Interest based on linear search in the database.
   rpc ListPointsOfInterest(ListPointsOfInterestRequest) returns (ListPointsOfInterestResponse);
 }
+
+message DatabaseEntry {
+  uint32 id = 1;
+  string name = 2;
+  string terminal_name = 3;
+  float latitude_degrees = 4;
+  float longitude_degrees = 5;
+  bool installed = 6;
+  bool locked = 7;
+  string install_date = 8;
+  string removal_date = 9;
+  bool temporary = 10;
+  uint32 number_of_bikes = 11;
+  uint32 number_of_empty_docks = 12;
+  uint32 number_of_docks = 13;
+}
+
+message ListDatabaseEntriesRequest {
+  // Offset of the first requested entry in the database.
+  int32 offset = 1;
+  // Number of requested entries.
+  int32 page_size = 2;
+}
+
+message ListDatabaseEntriesResponse {
+  repeated DatabaseEntry entries = 1;
+}
+
+service Database {
+  // Get a subset of entries from the database.
+  rpc ListDatabaseEntries(ListDatabaseEntriesRequest) returns (ListDatabaseEntriesResponse);
+}
