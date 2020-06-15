@@ -466,7 +466,7 @@ crate allows Node gRPC service methods to be tested with the [Oak SDK](sdk.md)
 framework via the Oak Runtime:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/module/rust/src/tests.rs Rust /^.*Test invoking the SayHello Node service method via the Oak runtime.*/ /^}$/)
+[embedmd]:# (../examples/hello_world/module/rust/tests/integration_test.rs Rust /^.*Test invoking the SayHello Node service method via the Oak runtime.*/ /^}$/)
 ```Rust
 // Test invoking the SayHello Node service method via the Oak runtime.
 #[test]

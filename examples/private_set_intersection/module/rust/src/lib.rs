@@ -25,14 +25,12 @@
 //! TODO(#747): Consider stopping accepting contributions after the first client retrieves the
 //! intersection.
 
-mod proto {
+pub mod proto {
     include!(concat!(
         env!("OUT_DIR"),
         "/oak.examples.private_set_intersection.rs"
     ));
 }
-#[cfg(test)]
-mod tests;
 
 use oak::grpc;
 use proto::{

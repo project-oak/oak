@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-use crate::proto::{HelloRequest, HelloResponse};
 use assert_matches::assert_matches;
+use hello_world::proto::{HelloRequest, HelloResponse};
 use oak::grpc;
 
 const MODULE_CONFIG_NAME: &str = "hello_world";

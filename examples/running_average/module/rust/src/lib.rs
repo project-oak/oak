@@ -22,11 +22,9 @@
 //! expressed in base 10, and get back a string representation of the accumulated average value up
 //! to and including the value provided in the request.
 
-mod proto {
+pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.running_average.rs"));
 }
-#[cfg(test)]
-mod tests;
 
 use oak::grpc;
 use proto::{GetAverageResponse, RunningAverage, RunningAverageDispatcher, SubmitSampleRequest};

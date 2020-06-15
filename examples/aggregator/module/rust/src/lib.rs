@@ -22,13 +22,10 @@
 //! Clients invoke the module by providing data samples that contain a bucket ID
 //! and a Sparse Vector - a dictionary with integer keys.
 
-mod data;
-mod proto {
+pub mod data;
+pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.aggregator.rs"));
 }
-
-#[cfg(test)]
-mod tests;
 
 use aggregator_common::ThresholdAggregator;
 use data::SparseVector;
@@ -39,7 +36,7 @@ use proto::{Aggregator, AggregatorClient, AggregatorDispatcher, Sample};
 use std::{collections::HashMap, convert::TryFrom};
 
 /// Currently threshold value is hardcoded.
-const SAMPLE_THRESHOLD: u64 = 5;
+pub const SAMPLE_THRESHOLD: u64 = 5;
 
 /// Oak Node that collects and aggregates data.
 /// Data is collected in the `aggregators` map where keys are buckets and values are instances of a
