@@ -1,20 +1,6 @@
 # Reference: https://cloud.google.com/cloud-build/docs/build-config
 
 steps:
-  # Init .git repository used by check_generated
-  # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
-  - name: 'gcr.io/cloud-builders/git'
-    id: git_init
-    entrypoint: 'bash'
-    waitFor: ['-']
-    timeout: 5m
-    args: ['./scripts/git_init']
-  # Update the git submodules.
-  - name: 'gcr.io/cloud-builders/git'
-    id: update_git_submodules
-    waitFor: ['git_init']
-    timeout: 10m
-    args: ['submodule', 'update', '--init', '--recursive']
   # Pull pre-existing latest Docker image.
   - name: 'gcr.io/cloud-builders/docker'
     id: pull_image
@@ -24,7 +10,7 @@ steps:
   # Build Docker image based on current Dockerfile, if necessary.
   - name: 'gcr.io/cloud-builders/docker'
     id: build_image
-    waitFor: ['pull_image', 'update_git_submodules']
+    waitFor: ['pull_image']
     timeout: 20m
     args:
       [
@@ -36,7 +22,15 @@ steps:
       ]
   # Run next build steps inside the newly created Docker image.
   # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
-  
+  # Init .git repository used by check_generated
+  # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
+  - name: 'gcr.io/oak-ci/oak:latest'
+    id: git_init
+    entrypoint: 'bash'
+    waitFor: ['build_image']
+    timeout: 5m
+    args: ['./scripts/git_init']
+
   # Make sure that the Bazel server is unpacked and initialized, by calling `bazel info` (any other
   # Bazel command would probably do).
   - name: 'gcr.io/oak-ci/oak:latest'
@@ -131,7 +125,7 @@ steps:
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: generate_root_ca_certs
-    waitFor: ['git_init', 'update_git_submodules']
+    waitFor: ['git_init']
     timeout: 5m
     entrypoint: 'bash'
     args: ['./scripts/generate_root_ca_certs']

@@ -4,17 +4,32 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# Git submodule where the Android trusted root certificates are stored.
-readonly SUBMODULE_DIR="${SCRIPTS_DIR}/../ca-certificates"
+# Commit that updated the certificates for Android 10.
+readonly COMMIT="be85a54767b3559e7bb262e4f1a78e1c5829e478"
 
-# Generated file.
+readonly DOWNLOAD_DIR="${SCRIPTS_DIR}/../downloads"
+readonly DOWNLOAD_FILE="${DOWNLOAD_DIR}/files.tar.gz"
+readonly EXTRACT_DIR="${DOWNLOAD_DIR}/files"
 readonly TARGET_FILE="${SCRIPTS_DIR}/../oak/server/rust/oak_loader/src/certs/roots.pem"
+
+if [[ -d "${DOWNLOAD_DIR}" ]]; then
+    rm --recursive --force "${DOWNLOAD_DIR}"
+fi
 
 if [[ -f "${TARGET_FILE}" ]]; then
     rm "${TARGET_FILE}"
 fi
 
-files="$(find ./"${SUBMODULE_DIR}"/files/*)"
+curl \
+    --location "https://android.googlesource.com/platform/system/ca-certificates/+archive/${COMMIT}/files.tar.gz" \
+    --output "${DOWNLOAD_FILE}" \
+    --create-dirs
+
+mkdir "${EXTRACT_DIR}"
+
+tar --extract --gzip --file="${DOWNLOAD_FILE}" --directory="${EXTRACT_DIR}"
+
+files="$(find ./"${EXTRACT_DIR}"/*)"
 
 # Concatenate all the files into a single PEM-encoded file.
 # A PEM file can contain multiple certificates, each with its own header and footer.
@@ -25,3 +40,5 @@ for file in ${files}; do
     { echo "# $(openssl x509 -in "${file}" --noout --issuer)"; \
         openssl x509 -in "${file}"; echo ""; } >> "${TARGET_FILE}"
 done
+
+rm --recursive --force "${DOWNLOAD_DIR}"
