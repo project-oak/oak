@@ -26,8 +26,9 @@ For a new review, the author works on a new branch on their own fork of the
 repository (we don't create additional branches on the main repository).
 
 Once the changes are made locally, the author creates a new commit on their
-newly created branch based on master, then pushes to their own fork, and creates
-a PR from the GitHub UI. The author then selects one or more reviewers.
+newly created branch based on the main branch, then pushes to their own fork,
+and creates a PR from the GitHub UI. The author then selects one or more
+reviewers.
 
 The commit / PR description should follow
 [standard Git commit conventions](https://chris.beams.io/posts/git-commit/).

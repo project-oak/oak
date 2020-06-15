@@ -103,7 +103,7 @@ struct NodeInfo {
     ///
     /// This is set at Node creation time and does not change after that.
     ///
-    /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
+    /// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
     label: Label,
 
     /// The downgrading privilege of this Node.
@@ -120,7 +120,7 @@ struct NodeInfo {
 
 /// The downgrading (declassification + endorsement) privilege associated with a Node instance.
 ///
-/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#downgrades
+/// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#downgrades
 #[derive(Debug, Default, Clone)]
 pub struct NodePrivilege {
     /// Tags that may be declassified (removed from the confidentiality component of a label) by
@@ -611,7 +611,7 @@ impl Runtime {
     /// correspondence with the passed-in vector of [`oak_abi::Handle`]s.
     ///
     /// See also the host ABI function
-    /// [`wait_on_channels`](https://github.com/project-oak/oak/blob/master/docs/abi.md#wait_on_channels).
+    /// [`wait_on_channels`](https://github.com/project-oak/oak/blob/main/docs/abi.md#wait_on_channels).
     ///
     /// [`Runtime`]: crate::runtime::Runtime
     fn wait_on_channels(
@@ -910,7 +910,7 @@ impl Runtime {
     /// Node's handle table and the new handle value is passed to the newly created Node.
     ///
     /// The caller also specifies a [`Label`], which is assigned to the newly created Node. See
-    /// <https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels> for more
+    /// <https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels> for more
     /// information on labels.
     ///
     /// This method is defined on [`Arc`] and not [`Runtime`] itself, so that

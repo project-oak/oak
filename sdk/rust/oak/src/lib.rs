@@ -382,7 +382,7 @@ pub fn node_create(config: &NodeConfiguration, half: ReadHandle) -> Result<(), O
 /// The provided label must be equal or more restrictive than the label of the calling node, i.e.
 /// the label of the calling node must "flow to" the provided label.
 ///
-/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
+/// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
 pub fn node_create_with_label(
     config: &NodeConfiguration,
     label: &Label,
@@ -527,7 +527,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
                 }
                 ChannelReadStatus::NotReady => {
                     error!(
-                        "{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.", 
+                        "{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.",
                         in_channel);
                     return;
                 }

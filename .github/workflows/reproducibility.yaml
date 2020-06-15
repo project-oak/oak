@@ -2,9 +2,9 @@ name: Build Reproducibility Index
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 jobs:
   build_reproducibility_index:

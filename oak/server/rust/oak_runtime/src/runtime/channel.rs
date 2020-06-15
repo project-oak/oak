@@ -66,7 +66,7 @@ pub struct Channel {
     ///
     /// This is set at channel creation time and does not change after that.
     ///
-    /// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels
+    /// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
     pub label: oak_abi::label::Label,
 }
 
