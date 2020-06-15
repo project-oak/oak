@@ -163,39 +163,28 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
     }
 }
 
-pub fn compile_protos_to<P, Q>(inputs: &[P], includes: &[P], out_dir: Q)
-where
-    P: AsRef<std::path::Path>,
-    Q: Into<std::path::PathBuf>,
-{
-    compile_protos_with(
-        prost_build::Config::new().out_dir(out_dir),
-        true,
-        inputs,
-        includes,
-    );
-}
-
+/// Build Rust code corresponding to a set of protocol buffer message and service definitions,
+/// emitting generated code to crate's `OUT_DIR`.  For gRPC service definitions, this
+/// function generates Oak-specific code that is suitable for use inside an Oak Node (i.e.  *not*
+/// code that is suitable for use in a normal application running on the host platform).
 pub fn compile_protos<P>(inputs: &[P], includes: &[P])
 where
     P: AsRef<std::path::Path>,
 {
-    compile_protos_with(&mut prost_build::Config::new(), true, inputs, includes);
+    compile_protos_with(true, inputs, includes);
 }
 
+/// Build Rust code corresponding to a set of protocol buffer messages, skipping any service
+/// definitions, emitting generated code to crate's `OUT_DIR`.
 pub fn compile_protos_without_services<P>(inputs: &[P], includes: &[P])
 where
     P: AsRef<std::path::Path>,
 {
-    compile_protos_with(&mut prost_build::Config::new(), false, inputs, includes);
+    compile_protos_with(false, inputs, includes);
 }
 
-fn compile_protos_with<P>(
-    prost_config: &mut prost_build::Config,
-    generate_services: bool,
-    inputs: &[P],
-    includes: &[P],
-) where
+fn compile_protos_with<P>(generate_services: bool, inputs: &[P], includes: &[P])
+where
     P: AsRef<std::path::Path>,
 {
     for input in inputs {
@@ -203,6 +192,8 @@ fn compile_protos_with<P>(
         // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
         println!("cargo:rerun-if-changed={}", input.as_ref().display());
     }
+
+    let mut prost_config = prost_build::Config::new();
     if generate_services {
         prost_config.service_generator(Box::new(OakServiceGenerator));
     }
