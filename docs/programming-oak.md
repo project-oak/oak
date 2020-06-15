@@ -8,6 +8,7 @@ This document walks through the basics of programming in Oak.
 - [Running an Oak Application](#running-an-oak-application)
   - [Creating a Configuration File](#creating-a-configuration-file)
   - [Starting the Oak Application](#starting-the-oak-application)
+  - [Configuring the Oak Application](#configuring-the-oak-application)
 - [Using an Oak Application from a client](#using-an-oak-application-from-a-client)
 - [gRPC Request Processing Path](#grpc-request-processing-path)
 - [Nodes, Channels and Handles](#nodes-channels-and-handles)
@@ -278,6 +279,21 @@ Assuming everything is correct (e.g. the Nodes all have a main entrypoint and
 only expect to link to the Oak [host functions](abi.md#host-functions)), the Oak
 Runtime opens up the gRPC port specified by the Application Configuration. This
 port is then used by clients to connect to the Oak Application.
+
+### Configuring the Oak Application
+
+The Application configuration [described above](#creating-a-configuration-file)
+gives the configuration of the Application as seen by the Runtime: what Wasm
+modules to load, what entrypoint to invoke. However, the Application may need
+some start-of-day configuration of its own, roughly equivalent to runtime
+options for a normal executable.
+
+Oak supports this using a [`ConfigMap`](/oak/proto/application.proto) message,
+holding arbitrary key:value data for initial configuration. At Application
+start-up, the Oak Runtime sends the serialized form of this message as a single
+message on the initial Node's initial channel (and then closes the channel).
+
+TODO(#1101): describe SDK support for convenient access to `ConfigMap`.
 
 ## Using an Oak Application from a client
 

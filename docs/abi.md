@@ -72,6 +72,8 @@ serialized protocol buffer messages:
 - The Node configuration information that is include on `node_create` operations
   is in the form of a serialized
   [`NodeConfiguration`](/oak/proto/application.proto) message.
+- The sole initial message sent to the first Node of an Oak Application is in
+  the form of a serialized [`ConfigMap`](/oak/proto/application.proto) message.
 
 Similarly, messages exchanged with the pseudo-Nodes provided by the Oak system
 are also defined to take the form of serialized protocol buffer messages. These
@@ -97,8 +99,14 @@ outgoing messages over the write halves of channels. The entrypoint function is
 generally expected to run forever, but may return if the Node choses to
 terminate (whether expectedly or unexpectedly).
 
-Each Oak Application starts with a single initial Oak Node. This Node receives
-an invalid handle as its initial handle, and will typically create a
+Each Oak Application starts with a single initial Oak Node. The Runtime sends a
+single start-of-day configuration message on the initial channel that this Node
+receives (and then the Runtime closes the write half of the channel). This
+configuration message is a serialized `ConfigMap` protocol buffer message,
+intended to hold the Application's initial configurqtion information.
+
+The initial Oak Node may create other Nodes (and the channels used to
+communicate with them), and will typically create a
 [gRPC server pseudo-Node](concepts.md#pseudo-nodes) to allow communication from
 the outside world to happen.
 
