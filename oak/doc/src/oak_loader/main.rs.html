@@ -266,6 +266,27 @@
 <span id="266">266</span>
 <span id="267">267</span>
 <span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -295,7 +316,7 @@
 <span class="doccomment">//!     --root-tls-certificate=&lt;CERTIFICATE_PATH&gt;</span>
 <span class="doccomment">//! ```</span>
 
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">bail</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
@@ -312,6 +333,7 @@
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
     <span class="ident">fs</span>::{<span class="ident">read_to_string</span>, <span class="ident">File</span>},
+    <span class="ident">include_bytes</span>,
     <span class="ident">io</span>::<span class="ident">Read</span>,
     <span class="ident">sync</span>::{
         <span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering</span>},
@@ -337,11 +359,15 @@
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes.&quot;</span>
     )]</span>
     <span class="ident">grpc_tls_certificate</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
-        <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service.&quot;</span>
+    <span class="comment">// Only support `root-tls-certificate` when `oak_debug` is enabled.</span>
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(
+        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>,
+        <span class="ident">structopt</span>(
+            <span class="ident">long</span>,
+            <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service.&quot;</span>
+        )
     )]</span>
-    <span class="ident">root_tls_certificate</span>: <span class="ident">String</span>,
+    <span class="ident">root_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
@@ -427,6 +453,14 @@
         .<span class="ident">context</span>(<span class="string">&quot;could not send configuration map to the initial Node&quot;</span>)
 }
 
+<span class="doccomment">/// Gets the default root TLS certificates from the embedded byte array.</span>
+<span class="kw">fn</span> <span class="ident">get_default_root_tls_certs</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;certs/roots.pem&quot;</span>))
+        .<span class="ident">context</span>(<span class="string">&quot;could not read embedded PEM-encoded root TLS certificates as a UTF8 string&quot;</span>)<span class="question-mark">?</span>
+        .<span class="ident">to_owned</span>();
+    <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+}
+
 <span class="doccomment">/// Main execution point for the Oak loader.</span>
 <span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) {
@@ -468,8 +502,16 @@
         <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span>).<span class="ident">context</span>(<span class="string">&quot;could not read gRPC TLS private key&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span>
         <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span>).<span class="ident">context</span>(<span class="string">&quot;could not read gRPC TLS certificate&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">root_tls_certificate</span> <span class="op">=</span>
-        <span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">root_tls_certificate</span>).<span class="ident">context</span>(<span class="string">&quot;could not read root TLS certificate&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">root_tls_certificate</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">root_tls_certificate</span> {
+        <span class="prelude-val">Some</span>(<span class="ident">certificate_path</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">if</span> <span class="op">!</span><span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) {
+                <span class="comment">// Unreachable: it should not be possible to specify the flag without `oak_debug`.</span>
+                <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;Specifying `root-tls-certificate` requires the `oak_debug` feature.&quot;</span>);
+            };
+            <span class="ident">read_to_string</span>(<span class="ident">certificate_path</span>).<span class="ident">context</span>(<span class="string">&quot;could not read root TLS certificate&quot;</span>)<span class="question-mark">?</span>
+        }
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">get_default_root_tls_certs</span>()<span class="question-mark">?</span>,
+    };
     <span class="kw">let</span> <span class="ident">oidc_client_info</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">oidc_client</span> {
         <span class="prelude-val">Some</span>(<span class="ident">oidc_client</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">oidc_file</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="ident">oidc_client</span>)
