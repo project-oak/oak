@@ -561,7 +561,18 @@ impl Runtime {
         node_id: NodeId,
         label: &Label,
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
+        if self.is_terminating() {
+            return Err(OakStatus::ErrTerminated);
+        }
+
+        // The label (and mere presence) of the newly created Channel is effectively public, so we
+        // must ensure that the label of the calling Node flows to both "public untrusted" and to
+        // the label of the Channel to be created.
+        self.validate_can_write_to_label(node_id, &Label::public_untrusted())?;
+        // We also additionally make sure that the label of the newly created Channel can be written
+        // to by the current Node, since in general this may be lower than "public untrusted".
         self.validate_can_write_to_label(node_id, label)?;
+
         // First get a pair of `ChannelHalf` objects.
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
         let channel = Channel::new(channel_id, label);
@@ -924,10 +935,16 @@ impl Runtime {
         label: &Label,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
-        info!("creating node with config: {:?}", config);
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
         }
+
+        // The label (and mere presence) of the newly created Node is effectively public, so we must
+        // ensure that the label of the calling Node flows to both "public untrusted" and to the
+        // label of the Node to be created.
+        self.validate_can_write_to_label(node_id, &Label::public_untrusted())?;
+        // We also additionally make sure that the label of the newly created Node can be written to
+        // by the current Node, since in general this may be lower than "public untrusted".
         self.validate_can_write_to_label(node_id, label)?;
 
         let reader = self.abi_to_read_half(node_id, initial_handle)?;

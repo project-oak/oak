@@ -211,7 +211,7 @@ Intuitively, data can only flow from `a` to `b` if:
 - `b` is **at least as secret** as `a`
 - `a` is **at least as trusted** as `b`
 
-The least privileged label is usually referred to as "public trusted" (and
+The least privileged label is usually referred to as "public untrusted" (and
 represented as `⊥`, pronounced "bottom"), which corresponds to a Node or Channel
 which has only observed public data, and its inputs are not endorsed with any
 level of integrity; in this label, both confidentiality and integrity components
@@ -252,6 +252,20 @@ It follows that bi-directional communication between Nodes `a` and `b` is only
 allowed (via two uni-directional Channels) if
 `(L_a ⊑ L_b) ∧ (L_b ⊑ L_a) ⇒ L_a = L_b`, i.e. if `a` and `b` have identical
 confidentiality and integrity.
+
+#### Node and Channel Creation
+
+Labels associated with Nodes and Channels are themselves effectively public, in
+the sense that they may be observed from outside the system.
+
+For this reason, when a Node attempts to create a new Node or Channel, an
+additional check that the label of the caller Node "flows to" the "public
+untrusted" label. This prevents the caller node from encoding non-public
+information in the label of the newly created Node or Channel, or even in the
+mere fact that such a Node or Channel exists at all.
+
+This restricts the ability to create new Node and Channels to Nodes that are
+themselves already "public".
 
 #### Downgrades
 
