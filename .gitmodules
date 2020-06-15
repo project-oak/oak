@@ -1,0 +1,3 @@
+[submodule "ca-certificates"]
+	path = ca-certificates
+	url = https://android.googlesource.com/platform/system/ca-certificates
