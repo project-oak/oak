@@ -81,7 +81,7 @@ steps:
     waitFor: ['run_tests_tsan']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'base']
+    args: ['./scripts/run_examples', '-s', 'base', '-c', 'rust cpp nodejs']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_cpp
@@ -89,24 +89,6 @@ steps:
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_examples', '-s', 'base', '-a', 'cpp']
-
-    # TODO(#1145): Integrate examples with multiple clients into our
-    # run_examples script, instead of listing them individually.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_example_hello_world_nodejs
-    waitFor: ['run_examples_cpp']
-    timeout: 15m
-    entrypoint: 'bash'
-    args:
-      [
-        './scripts/run_example',
-        '-s',
-        'base',
-        '-e',
-        'hello_world',
-        '-c',
-        'nodejs',
-      ]
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_experimental
@@ -118,7 +100,7 @@ steps:
   # Run clang-tidy after the examples finish running, since they share the same `output_base`.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_clang_tidy
-    waitFor: ['run_example_hello_world_nodejs']
+    waitFor: ['run_examples_cpp']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/run_clang_tidy']
