@@ -8,5 +8,5 @@ source "$SCRIPTS_DIR/common"
 
 prettier --write "$@"
 markdownlint --fix "$@"
-liche --document-root=. --exclude='(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates)' "$@"
+liche --document-root=. --exclude='(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates|https://www.cs.cornell.edu/andru)' "$@"
 embedmd -w "$@"

@@ -92,6 +92,7 @@ find . \
 # We exclude the following URLs from the checks:
 # - https://groups.google.com/g/project-oak-discuss : not publicly accessible
 # - https://crates.io/crates : returns 404 (see https://github.com/raviqqe/liche/issues/39)
+# - https://www.cs.cornell.edu/andru : returns 404 (hopefully temporarily)
 find . \
   \(  \
     -not \( -path ./.git -prune \) -and \
@@ -101,7 +102,7 @@ find . \
     -not \( -path ./third_party -prune \) -and \
     -not \( -path '*/node_modules' -prune \) \
     \( -type f -name '*.md' \) \
-  \) -exec liche --document-root=. --exclude='(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates)' {} +
+  \) -exec liche --document-root=. --exclude='(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates|https://www.cs.cornell.edu/andru)' {} +
 
 find . \
   \(  \
