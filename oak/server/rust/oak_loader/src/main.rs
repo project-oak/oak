@@ -26,7 +26,7 @@
 //!     --root-tls-certificate=<CERTIFICATE_PATH>
 //! ```
 
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, bail, Context};
 use core::str::FromStr;
 use log::{debug, error, info};
 use oak_abi::{
@@ -43,6 +43,7 @@ use prost::Message;
 use std::{
     collections::HashMap,
     fs::{read_to_string, File},
+    include_bytes,
     io::Read,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -68,11 +69,15 @@ pub struct Opt {
         help = "PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes."
     )]
     grpc_tls_certificate: String,
-    #[structopt(
-        long,
-        help = "PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service."
+    // Only support `root-tls-certificate` when `oak_debug` is enabled.
+    #[cfg_attr(
+        feature = "oak_debug",
+        structopt(
+            long,
+            help = "PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service."
+        )
     )]
-    root_tls_certificate: String,
+    root_tls_certificate: Option<String>,
     #[structopt(
         long,
         help = "Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
@@ -158,6 +163,14 @@ fn send_config_map(
         .context("could not send configuration map to the initial Node")
 }
 
+/// Gets the default root TLS certificates from the embedded byte array.
+fn get_default_root_tls_certs() -> anyhow::Result<String> {
+    let result = std::str::from_utf8(include_bytes!("certs/roots.pem"))
+        .context("could not read embedded PEM-encoded root TLS certificates as a UTF8 string")?
+        .to_owned();
+    Ok(result)
+}
+
 /// Main execution point for the Oak loader.
 fn main() -> anyhow::Result<()> {
     if cfg!(feature = "oak_debug") {
@@ -199,8 +212,16 @@ fn main() -> anyhow::Result<()> {
         read_to_string(&opt.grpc_tls_private_key).context("could not read gRPC TLS private key")?;
     let grpc_tls_certificate =
         read_to_string(&opt.grpc_tls_certificate).context("could not read gRPC TLS certificate")?;
-    let root_tls_certificate =
-        read_to_string(&opt.root_tls_certificate).context("could not read root TLS certificate")?;
+    let root_tls_certificate = match &opt.root_tls_certificate {
+        Some(certificate_path) => {
+            if !cfg!(feature = "oak_debug") {
+                // Unreachable: it should not be possible to specify the flag without `oak_debug`.
+                bail!("Specifying `root-tls-certificate` requires the `oak_debug` feature.");
+            };
+            read_to_string(certificate_path).context("could not read root TLS certificate")?
+        }
+        None => get_default_root_tls_certs()?,
+    };
     let oidc_client_info = match opt.oidc_client {
         Some(oidc_client) => {
             let oidc_file = read_to_string(oidc_client)
