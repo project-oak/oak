@@ -1160,7 +1160,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// This is set at Node creation time and does not change after that.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels</span>
+    <span class="doccomment">/// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels</span>
     <span class="ident">label</span>: <span class="ident">Label</span>,
 
     <span class="doccomment">/// The downgrading privilege of this Node.</span>
@@ -1177,7 +1177,7 @@
 
 <span class="doccomment">/// The downgrading (declassification + endorsement) privilege associated with a Node instance.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#downgrades</span>
+<span class="doccomment">/// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#downgrades</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodePrivilege</span> {
     <span class="doccomment">/// Tags that may be declassified (removed from the confidentiality component of a label) by</span>
@@ -1668,7 +1668,7 @@
     <span class="doccomment">/// correspondence with the passed-in vector of [`oak_abi::Handle`]s.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// See also the host ABI function</span>
-    <span class="doccomment">/// [`wait_on_channels`](https://github.com/project-oak/oak/blob/master/docs/abi.md#wait_on_channels).</span>
+    <span class="doccomment">/// [`wait_on_channels`](https://github.com/project-oak/oak/blob/main/docs/abi.md#wait_on_channels).</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
     <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
@@ -1967,7 +1967,7 @@
     <span class="doccomment">/// Node&#39;s handle table and the new handle value is passed to the newly created Node.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The caller also specifies a [`Label`], which is assigned to the newly created Node. See</span>
-    <span class="doccomment">/// &lt;https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels&gt; for more</span>
+    <span class="doccomment">/// &lt;https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels&gt; for more</span>
     <span class="doccomment">/// information on labels.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// This method is defined on [`Arc`] and not [`Runtime`] itself, so that</span>

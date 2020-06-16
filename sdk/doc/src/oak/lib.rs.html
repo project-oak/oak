@@ -1025,7 +1025,7 @@
 <span class="doccomment">/// The provided label must be equal or more restrictive than the label of the calling node, i.e.</span>
 <span class="doccomment">/// the label of the calling node must &quot;flow to&quot; the provided label.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// See https://github.com/project-oak/oak/blob/master/docs/concepts.md#labels</span>
+<span class="doccomment">/// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_create_with_label</span>(
     <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfiguration</span>,
     <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
@@ -1170,7 +1170,7 @@
                 }
                 <span class="ident">ChannelReadStatus</span>::<span class="ident">NotReady</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="macro">error</span><span class="macro">!</span>(
-                        <span class="string">&quot;{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.&quot;</span>, 
+                        <span class="string">&quot;{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.&quot;</span>,
                         <span class="ident">in_channel</span>);
                     <span class="kw">return</span>;
                 }
