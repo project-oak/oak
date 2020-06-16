@@ -726,7 +726,7 @@
 <span class="doccomment">//! To invoke, run the following command from the root of the repository:</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! cargo run --package=runner</span>
+<span class="doccomment">//! cargo run --manifest-path=runner/Cargo.toml</span>
 <span class="doccomment">//! ```</span>
 
 <span class="kw">use</span> <span class="ident">colored</span>::<span class="kw-2">*</span>;
@@ -916,7 +916,7 @@
                     <span class="string">&quot;build&quot;</span>,
                     <span class="string">&quot;--release&quot;</span>,
                     <span class="string">&quot;--target=x86_64-unknown-linux-musl&quot;</span>,
-                    <span class="string">&quot;--package=oak_loader&quot;</span>,
+                    <span class="string">&quot;--manifest-path=oak/server/rust/oak_loader/Cargo.toml&quot;</span>,
                 ],
             ),
         },
@@ -1013,7 +1013,7 @@
             <span class="string">&quot;run&quot;</span>,
             <span class="string">&quot;--release&quot;</span>,
             <span class="string">&quot;--target=x86_64-unknown-linux-musl&quot;</span>,
-            <span class="string">&quot;--package=oak_loader&quot;</span>,
+            <span class="string">&quot;--manifest-path=oak/server/rust/oak_loader/Cargo.toml&quot;</span>,
             <span class="string">&quot;--&quot;</span>,
             <span class="string">&quot;--grpc-tls-private-key=./examples/certs/local/local.key&quot;</span>,
             <span class="string">&quot;--grpc-tls-certificate=./examples/certs/local/local.pem&quot;</span>,
