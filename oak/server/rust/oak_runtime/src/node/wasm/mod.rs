@@ -830,8 +830,8 @@ impl WasmNode {
 /// module.
 fn wasm_node_privilege(wasm_module_bytes: &[u8]) -> NodePrivilege {
     let mut hasher = sha2::Sha256::new();
-    hasher.input(&wasm_module_bytes);
-    let wasm_module_hash = hasher.result();
+    hasher.update(&wasm_module_bytes);
+    let wasm_module_hash = hasher.finalize();
     debug!("Wasm module SHA-256 hash: {:x}", wasm_module_hash);
     NodePrivilege::new(
         hashset! { oak_abi::label::web_assembly_module_tag(&wasm_module_hash) },
