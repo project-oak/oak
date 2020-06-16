@@ -54,16 +54,25 @@ pub struct RunExamples {
     pub example_name: Option<String>,
     #[structopt(long, help = "only build the examples, do not run them")]
     pub build_only: bool,
+    #[structopt(flatten)]
+    pub build_server: BuildServer,
 }
 
 #[derive(StructOpt, Clone)]
 pub struct BuildServer {
+    #[structopt(long, help = "server variant: [base]", default_value = "base")]
+    pub server_variant: String,
     #[structopt(
         long,
-        help = "server variant: [base, logless, rust, arm, asan, tsan]",
-        default_value = "base"
+        help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
     )]
-    pub variant: String,
+    pub server_rust_toolchain: Option<String>,
+    #[structopt(
+        long,
+        help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl]",
+        default_value = "x86_64-unknown-linux-musl"
+    )]
+    pub server_rust_target: String,
 }
 
 /// Encapsulates all the local state relative to a step, and is propagated to child steps.
