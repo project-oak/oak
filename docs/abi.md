@@ -121,25 +121,20 @@ followed by a single channel status byte. Invalid handles will have an
 `wait_on_channels` return value will only fail for internal errors or if the
 runtime is terminating.
 
-- `param[0]: usize`: Address of handle status buffer
-- `param[1]: u32`: Count N of handles provided
-- `result[0]: u32`: Status of operation
-
-### `wait_on_channels_with_privilege`
-
-Variant of `wait_on_channels` that allows a Node to indicate that subsequent
-read operations will use its downgrade privilege to satisfy
+A non-empty privilege parameter allows a Node to indicate that subsequent read
+operations will use its downgrade privilege to satisfy
 [information flow control](/docs/concepts.md#information-flow-control) flows-to
 checks. In particular, if there are waited-on channels that can only be read
-from if the caller uses downgrade privilege, then this variant returns those
-channel's read status rather than the `PERMISSION_DENIED` value that would be
-returned by `wait_on_channels`.
+from if the caller uses downgrade privilege, then those channel's read status is
+returned, rather than the `PERMISSION_DENIED` value that would be returned if no
+privilege is specified.
 
-The privilege to use is provided as a serialized
+The privilege to use (if any) is provided as a serialized
 [`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
 have this privilege, `ERR_INVALID_ARGS` is returned.
 
-- `param[0]` to `param[1]`: As for `wait_on_channels`
+- `param[0]: usize`: Address of handle status buffer
+- `param[1]: u32`: Count N of handles provided
 - `param[2]: usize`: Privilege to use in downgrade, as a serialized `Label`
 - `param[3]: usize`: Privilege label size in bytes
 - `result[0]: u32`: Status of operation
@@ -156,11 +151,18 @@ data is written to the destination buffers, and the function returns either
 `BUFFER_TOO_SMALL` or `HANDLE_SPACE_TOO_SMALL`; in either case, the required
 sizes are written in the spaces provided by `param[3]` and `param[6]`.
 
-If no messages are available on the channel, returns `CHANNEL_EMPTY`.
-
 If reading from the specified channel would violate
 [information flow control](/docs/concepts.md#information-flow-control), returns
-`ERR_PERMISSION_DENIED`.
+`ERR_PERMISSION_DENIED`. A non-empty privilege parameter allows a Node to
+perform a read operation that requires use of its downgrade privilege to satisfy
+[information flow control](/docs/concepts.md#information-flow-control) flows-to
+checks.
+
+The privilege to use (if any) is provided as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
+have this privilege, `ERR_INVALID_ARGS` is returned.
+
+If no messages are available on the channel, returns `CHANNEL_EMPTY`.
 
 - `param[0]: u64`: Handle to channel receive half
 - `param[1]: usize`: Destination buffer address
@@ -172,20 +174,6 @@ If reading from the specified channel would violate
 - `param[5]: u32`: Destination handle array count
 - `param[6]: usize`: Address of a 4-byte location that will receive the number
   of handles retrieved with the message (as a little-endian u32)
-- `result[0]: u32`: Status of operation
-
-### `channel_read_with_privilege`
-
-Variant of `channel_read` that allows a Node to perform a read operation that
-requires use of its downgrade privilege to satisfy
-[information flow control](/docs/concepts.md#information-flow-control) flows-to
-checks.
-
-The privilege to use is provided as a serialized
-[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
-have this privilege, `ERR_INVALID_ARGS` is returned.
-
-- `param[0]` to `param[6]`: As for `channel_read`
 - `param[7]: usize`: Privilege to use in downgrade, as a serialized `Label`
 - `param[8]: usize`: Privilege label size in bytes
 - `result[0]: u32`: Status of operation
@@ -197,27 +185,20 @@ handles.
 
 If writing to the specified channel would violate
 [information flow control](/docs/concepts.md#information-flow-control), returns
-`ERR_PERMISSION_DENIED`.
+`ERR_PERMISSION_DENIED`. A non-empty privilege parameter allows a Node to
+perform a write operation that requires use of its downgrade privilege to
+satisfy [information flow control](/docs/concepts.md#information-flow-control)
+flows-to checks.
+
+The privilege to use is provided as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
+have this privilege, `ERR_INVALID_ARGS` is returned.
 
 - `param[0]: u64`: Handle to channel send half
 - `param[1]: usize`: Source buffer address holding message
 - `param[2]: usize`: Source buffer size in bytes
 - `param[3]: usize`: Source handle array (of little-endian u64 values)
 - `param[4]: u32`: Source handle array count
-- `result[0]: u32`: Status of operation
-
-### `channel_write_with_privilege`
-
-Variant of `channel_write` that allows a Node to perform a write operation that
-requires use of its downgrade privilege to satisfy
-[information flow control](/docs/concepts.md#information-flow-control) flows-to
-checks.
-
-The privilege to use is provided as a serialized
-[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
-have this privilege, `ERR_INVALID_ARGS` is returned.
-
-- `param[0]` to `param[4]`: As for `channel_write`
 - `param[5]: usize`: Privilege to use in downgrade, as a serialized `Label`
 - `param[6]: usize`: Privilege label size in bytes
 - `result[0]: u32`: Status of operation
@@ -228,11 +209,18 @@ Creates a new unidirectional channel assigning the label specified by `param[2]`
 and `param[3]` to the newly created Channel, and returns the channel handles for
 its read and write halves as output parameters in `param[0]` and `param[1]`.
 
-The label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
-
 If creating the specified Channel would violate
 [information flow control](/docs/concepts.md#information-flow-control), returns
-`ERR_PERMISSION_DENIED`.
+`ERR_PERMISSION_DENIED`. A non-empty privilege parameter allows a Node to
+perform a channel creation operation that requires use of its downgrade
+privilege to satisfy
+[information flow control](/docs/concepts.md#information-flow-control) flows-to
+checks.
+
+The label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
+The privilege to use is provided as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
+have this privilege, `ERR_INVALID_ARGS` is returned.
 
 - `param[0]: usize`: Address of an 8-byte location that will receive the handle
   for the write half of the channel (as a little-endian u64).
@@ -240,20 +228,6 @@ If creating the specified Channel would violate
   for the read half of the channel (as a little-endian u64).
 - `param[2]: usize`: Source buffer holding serialized `Label`
 - `param[3]: usize`: Label size in bytes
-- `result[0]: u32`: Status of operation
-
-### `channel_create_with_privilege`
-
-Variant of `channel_create` that allows a Node to perform a channel creation
-operation that requires use of its downgrade privilege to satisfy
-[information flow control](/docs/concepts.md#information-flow-control) flows-to
-checks.
-
-The privilege to use is provided as a serialized
-[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
-have this privilege, `ERR_INVALID_ARGS` is returned.
-
-- `param[0]` to `param[3]`: As for `channel_create`
 - `param[4]: usize`: Privilege to use in downgrade, as a serialized `Label`
 - `param[5]: usize`: Privilege label size in bytes
 - `result[0]: u32`: Status of operation
@@ -272,33 +246,26 @@ Creates a new Node running the Node configuration identified by `param[0]` and
 newly created Node, passing in an initial handle to the read half of a channel
 identified by `param[4]`.
 
-The Node configuration is a serialized
-[`NodeConfiguration`](/oak/proto/application.proto) protobuf message, and the
-label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
-
 If creating the specified Node would violate
 [information flow control](/docs/concepts.md#information-flow-control), returns
-`ERR_PERMISSION_DENIED`.
+`ERR_PERMISSION_DENIED`. A non-empty privilege parameter allows a Node to
+perform a Node creation operation that requires use of its downgrade privilege
+to satisfy
+[information flow control](/docs/concepts.md#information-flow-control) flows-to
+checks.
+
+The Node configuration is a serialized
+[`NodeConfiguration`](/oak/proto/application.proto) protobuf message, and the
+label is a serialized [`Label`](/oak/proto/label.proto) protobuf message. The
+privilege to use is provided as a serialized [`Label`](/oak/proto/label.proto)
+protobuf message; if the calling Node does not have this privilege,
+`ERR_INVALID_ARGS` is returned.
 
 - `param[0]: usize`: Source buffer holding serialized `NodeConfiguration`
 - `param[1]: usize`: Serialized NodeConfiguration size in bytes
 - `param[2]: usize`: Source buffer holding serialized `Label`
 - `param[3]: usize`: Label size in bytes
 - `param[4]: usize`: Handle to channel
-- `result[0]: u32`: Status of operation
-
-### `node_create_with_privilege`
-
-Variant of `node_create` that allows a Node to perform a Node creation operation
-that requires use of its downgrade privilege to satisfy
-[information flow control](/docs/concepts.md#information-flow-control) flows-to
-checks.
-
-The privilege to use is provided as a serialized
-[`Label`](/oak/proto/label.proto) protobuf message; if the calling Node does not
-have this privilege, `ERR_INVALID_ARGS` is returned.
-
-- `param[0]` to `param[4]`: As for `node_create`
 - `param[5]: usize`: Privilege to use in downgrade, as a serialized `Label`
 - `param[6]: usize`: Privilege label size in bytes
 - `result[0]: u32`: Status of operation
