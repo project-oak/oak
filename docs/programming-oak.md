@@ -122,7 +122,7 @@ Alternatively a Node can implement the
 trait (which provides an automatic implementation of the
 [`Node`](https://project-oak.github.io/oak/sdk/doc/oak/trait.Node.html))
 manually. The
-[machine learning example](https://github.com/project-oak/oak/blob/master/examples/machine_learning/module/rust/src/lib.rs)
+[machine learning example](https://github.com/project-oak/oak/blob/main/examples/machine_learning/module/rust/src/lib.rs)
 demonstrates this.
 
 #### Panic Handling

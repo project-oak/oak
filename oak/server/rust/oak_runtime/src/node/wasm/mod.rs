@@ -105,7 +105,7 @@ impl WasmInterface {
         }
     }
 
-    /// Corresponds to the host ABI function [`node_create`](https://github.com/project-oak/oak/blob/master/docs/abi.md#node_create).
+    /// Corresponds to the host ABI function [`node_create`](https://github.com/project-oak/oak/blob/main/docs/abi.md#node_create).
     #[allow(clippy::too_many_arguments)]
     fn node_create(
         &self,
@@ -176,7 +176,7 @@ impl WasmInterface {
             })
     }
 
-    /// Corresponds to the host ABI function [`random_get`](https://github.com/project-oak/oak/blob/master/docs/abi.md#random_get).
+    /// Corresponds to the host ABI function [`random_get`](https://github.com/project-oak/oak/blob/main/docs/abi.md#random_get).
     fn random_get(&self, dest: AbiPointer, dest_length: AbiPointerOffset) -> Result<(), OakStatus> {
         debug!(
             "{}: random_get({}, {})",
@@ -195,12 +195,12 @@ impl WasmInterface {
         Ok(())
     }
 
-    /// Corresponds to the host ABI function [`channel_close`](https://github.com/project-oak/oak/blob/master/docs/abi.md#channel_close).
+    /// Corresponds to the host ABI function [`channel_close`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_close).
     fn channel_close(&mut self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         self.runtime.channel_close(handle)
     }
 
-    /// Corresponds to the host ABI function [`channel_create`](https://github.com/project-oak/oak/blob/master/docs/abi.md#channel_create).
+    /// Corresponds to the host ABI function [`channel_create`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_create).
     fn channel_create(
         &mut self,
         write_addr: AbiPointer,
@@ -266,7 +266,7 @@ impl WasmInterface {
             })
     }
 
-    /// Corresponds to the host ABI function [`channel_write`](https://github.com/project-oak/oak/blob/master/docs/abi.md#channel_write).
+    /// Corresponds to the host ABI function [`channel_write`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_write).
     fn channel_write(
         &self,
         writer_handle: oak_abi::Handle,
@@ -318,7 +318,7 @@ impl WasmInterface {
         Ok(())
     }
 
-    /// Corresponds to the host ABI function [`channel_read`](https://github.com/project-oak/oak/blob/master/docs/abi.md#channel_read).
+    /// Corresponds to the host ABI function [`channel_read`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_read).
     #[allow(clippy::too_many_arguments)]
     fn channel_read(
         &mut self,
@@ -420,7 +420,7 @@ impl WasmInterface {
         }
     }
 
-    /// Corresponds to the host ABI function [`wait_on_channels`](https://github.com/project-oak/oak/blob/master/docs/abi.md#wait_on_channels).
+    /// Corresponds to the host ABI function [`wait_on_channels`](https://github.com/project-oak/oak/blob/main/docs/abi.md#wait_on_channels).
     ///
     /// May return the following error statuses:
     /// - `Err(OakStatus::ErrTerminated)`: if [`Runtime`] is terminating. In this case, read
