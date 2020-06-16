@@ -13,7 +13,7 @@ source "$SCRIPTS_DIR/common"
 # List of artifacts that are expected to be reproducibly built.
 readonly REPRODUCIBLE_ARTIFACTS=(
   ./examples/target/wasm32-unknown-unknown/release/*.wasm
-  ./target/x86_64-unknown-linux-musl/release/oak_loader
+  ./oak/server/target/x86_64-unknown-linux-musl/release/oak_loader
 )
 
 # Index file containing hashes of the reproducible artifacts, alongside their file names.
