@@ -20,7 +20,7 @@
 //! To invoke, run the following command from the root of the repository:
 //!
 //! ```
-//! cargo run --package=runner
+//! cargo run --manifest-path=runner/Cargo.toml
 //! ```
 
 use colored::*;
@@ -210,7 +210,7 @@ fn build_server(opt: &BuildServer) -> Step {
                     "build",
                     "--release",
                     "--target=x86_64-unknown-linux-musl",
-                    "--package=oak_loader",
+                    "--manifest-path=oak/server/rust/oak_loader/Cargo.toml",
                 ],
             ),
         },
@@ -307,7 +307,7 @@ fn run_example_server(application_file: &str) -> Cmd {
             "run",
             "--release",
             "--target=x86_64-unknown-linux-musl",
-            "--package=oak_loader",
+            "--manifest-path=oak/server/rust/oak_loader/Cargo.toml",
             "--",
             "--grpc-tls-private-key=./examples/certs/local/local.key",
             "--grpc-tls-certificate=./examples/certs/local/local.pem",

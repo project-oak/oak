@@ -26,7 +26,6 @@ assemble_packer(
     name = "assemble-oak-gcp-hello-world",
     config = ":config.json",
     files = {
-        "//oak/server/loader:oak_runner": "oak_runner",
         "//examples/hello_world/config:config.bin": "config.bin",
     },
 )

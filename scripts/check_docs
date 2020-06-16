@@ -6,10 +6,8 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# All the dirs that we generate docs for
-declare -ar PATHS=("." "oak_abi" "oak_utils")
-
-for path in "${PATHS[@]}"; do
+# We will not generate docs for all the workspaces, but we check the docs for all workspaces regardless. 
+for path in "${ALL_CRATES[@]}"; do
   (
     cd "$path"
     DOCS_OUT="$(cargo doc --document-private-items --no-deps 2>&1)"

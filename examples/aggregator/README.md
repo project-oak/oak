@@ -16,7 +16,9 @@ Build and run the Backend with the following command:
 
 ```bash
 export RUST_LOG=info
-cargo run --release --package=aggregator_backend
+cargo run --release --manifest-path=examples/aggregator/backend/Cargo.toml -- \
+  --grpc-tls-private-key="<path-to-grpc-tls-private-key>" \
+  --grpc-tls-certificate="<path-to-grpc-tls-certificate>"
 ```
 
 Backend code is in the `backend` directory.
@@ -36,11 +38,12 @@ Build and run the Aggregator with the following command:
 
 ```bash
 ./scripts/build_example -e aggregator
-./scripts/build_server -s rust
-./bazel-clang-bin/oak/server/loader/oak_runner \
+./scripts/build_server -s base
+cargo run --release --target=x86_64-unknown-linux-musl --manifest-path=oak/server/rust/oak_loader/Cargo.toml -- \
   --application=./bazel-client-bin/examples/aggregator/config/config.bin \
-  --private_key=./examples/certs/local/local.key \
-  --cert_chain=./examples/certs/local/local.pem
+  --grpc-tls-private-key=./examples/certs/local/local.key \
+  --grpc-tls-certificate=./examples/certs/local/local.pem \
+  --root-tls-certificate=./examples/certs/local/ca.pem
 ```
 
 Aggregator code is in `common` and `module` directories (where `common` defines
@@ -104,6 +107,6 @@ Deployment requires Docker images to be uploaded to the
 the following command:
 
 ```bash
-./scripts/build_example -e aggregator -i rust
+./scripts/build_example -e aggregator -i base
 ./examples/aggregator/scripts/docker_push
 ```

@@ -33,7 +33,7 @@ fi
 readonly TARGET_ABS_PATH="$(realpath "${TARGET_DIR}")"
 
 # All the dirs that we want to generate docs for.
-declare -ar SOURCE_PATHS=("." "oak_abi" "oak_utils" "sdk" "runner")
+declare -ar SOURCE_PATHS=("oak/server" "oak_abi" "oak_utils" "sdk" "runner")
 declare -ar TARGET_SUBDIRS=("oak" "oak_abi" "oak_utils" "sdk" "runner")
 
 # Titles used in the top-level index.html files. 

@@ -19,7 +19,7 @@
 //! Invoke with:
 //!
 //! ```shell
-//! cargo run --package=oak_loader -- \
+//! cargo run --manifest-path=oak/server/rust/oak_loader/Cargo.toml -- \
 //!     --application=<APP_CONFIG_PATH> \
 //!     --grpc-tls-private-key=<PRIVATE_KEY_PATH> \
 //!     --grpc-tls-certificate=<CERTIFICATE_PATH> \
