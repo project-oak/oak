@@ -6,3 +6,4 @@ translator = { Cargo = { cargo_manifest = "examples/translator/module/rust/Cargo
 
 [clients]
 cpp = { Bazel = { bazel_target = "//examples/hello_world/client:client" } }
+nodejs = { Npm = { package_directory = "examples/hello_world/client/nodejs" } }

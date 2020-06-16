@@ -331,6 +331,7 @@ struct Example {
 enum Target {
     Bazel { bazel_target: String },
     Cargo { cargo_manifest: String },
+    Npm { package_directory: String },
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -357,6 +358,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                                 build_wasm_module(name, &cargo_manifest)
                             }
                             Target::Bazel { .. } => todo!(),
+                            Target::Npm { .. } => todo!(),
                         })
                         .collect(),
                 },
@@ -412,6 +414,33 @@ fn run_client(name: &str, client: &Client) -> Step {
                 .iter()
                 .flatten(),
             ),
+        },
+        Target::Npm { package_directory } => Step::Multiple {
+            name: format!("npm:{}:{}", name, package_directory),
+            steps: vec![
+                Step::Single {
+                    name: "npm ci".to_string(),
+                    command: Cmd::new(
+                        "npm",
+                        vec![
+                            "ci".to_string(),
+                            "--prefix".to_string(),
+                            package_directory.to_string(),
+                        ],
+                    ),
+                },
+                Step::Single {
+                    name: "npm start".to_string(),
+                    command: Cmd::new(
+                        "npm",
+                        vec![
+                            "start".to_string(),
+                            "--prefix".to_string(),
+                            package_directory.to_string(),
+                        ],
+                    ),
+                },
+            ],
         },
     }
 }
