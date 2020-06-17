@@ -25,13 +25,15 @@
 //! Clients send their location coordinates (latitude and longitude) and the Oak Node returns the
 //! location of the closest Point Of Interest (in our case a bike station).
 
-mod config;
+pub mod config;
 pub mod proto {
     include!(concat!(
         env!("OUT_DIR"),
         "/oak.examples.trusted_information_retrieval.rs"
     ));
 }
+#[cfg(test)]
+mod tests;
 
 use anyhow::{anyhow, Context};
 use config::get_database_url;

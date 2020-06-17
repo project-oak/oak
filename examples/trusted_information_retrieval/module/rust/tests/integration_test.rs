@@ -20,81 +20,22 @@ use oak::grpc;
 use oak_abi::{proto::oak::application::ConfigMap, OakStatus};
 use oak_runtime::io::Encodable;
 use trusted_information_retrieval::proto::{
-    ListPointsOfInterestRequest, ListPointsOfInterestResponse, Location, PointOfInterest,
+    ListPointsOfInterestRequest, ListPointsOfInterestResponse, Location,
 };
 
 const MODULE_CONFIG_NAME: &str = "trusted_information_retrieval";
 
-const XML_DATABASE: &str = r#"<?xml version="1.0" encoding="utf-8"?><stations lastUpdate="1590775020879" version="2.0">
-    <station>
-        <id>1</id>
-        <name>Uninstalled station</name>
-        <terminalName>1</terminalName>
-        <lat>-10.0</lat>
-        <long>-10.0</long>
-        <installed>false</installed>
-        <locked>false</locked>
-        <installDate/>
-        <removalDate/>
-        <temporary>false</temporary>
-        <nbBikes>1</nbBikes>
-        <nbEmptyDocks>1</nbEmptyDocks>
-        <nbDocks>1</nbDocks>
-    </station>
-    <station>
-        <id>2</id>
-        <name>Locked station</name>
-        <terminalName>2</terminalName>
-        <lat>0.0</lat>
-        <long>-10.0</long>
-        <installed>true</installed>
-        <locked>true</locked>
-        <installDate>0</installDate>
-        <removalDate/>
-        <temporary>false</temporary>
-        <nbBikes>1</nbBikes>
-        <nbEmptyDocks>1</nbEmptyDocks>
-        <nbDocks>1</nbDocks>
-    </station>
-    <station>
-        <id>3</id>
-        <name>Opened station 1</name>
-        <terminalName>3</terminalName>
-        <lat>0.0</lat>
-        <long>0.0</long>
-        <installed>true</installed>
-        <locked>false</locked>
-        <installDate>0</installDate>
-        <removalDate/>
-        <temporary>false</temporary>
-        <nbBikes>1</nbBikes>
-        <nbEmptyDocks>1</nbEmptyDocks>
-        <nbDocks>1</nbDocks>
-    </station>
-    <station>
-        <id>4</id>
-        <name>Opened station 2</name>
-        <terminalName>4</terminalName>
-        <lat>10.0</lat>
-        <long>0.0</long>
-        <installed>true</installed>
-        <locked>false</locked>
-        <installDate>0</installDate>
-        <removalDate/>
-        <temporary>false</temporary>
-        <nbBikes>1</nbBikes>
-        <nbEmptyDocks>1</nbEmptyDocks>
-        <nbDocks>1</nbDocks>
-    </station>
-</stations>"#;
+const CONFIG_FILE: &str = r#"
+database_url = "https://localhost:8888"
+"#;
 
-fn send_database(
+fn send_config(
     runtime: &oak_runtime::RuntimeProxy,
     entry_handle: oak_abi::Handle,
-    database: Vec<u8>,
+    config_file: Vec<u8>,
 ) -> Result<(), OakStatus> {
     let config_map = ConfigMap {
-        items: hashmap! {"database".to_string() => database},
+        items: hashmap! {"config".to_string() => config_file},
     };
     runtime.channel_write(entry_handle, config_map.encode()?)
 }
@@ -126,35 +67,11 @@ fn test_trusted_information_retrieval() {
     let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    // Send test database.
     assert_matches!(
-        send_database(&runtime, entry_handle, XML_DATABASE.as_bytes().to_vec(),),
+        send_config(&runtime, entry_handle, CONFIG_FILE.as_bytes().to_vec()),
         Ok(_)
     );
 
     // Test nearest point of interest
-    assert_eq!(
-        submit_sample(&runtime, entry_handle, 4.0, -10.0,),
-        Ok(ListPointsOfInterestResponse {
-            point_of_interest: Some(PointOfInterest {
-                name: "Opened station 1".to_string(),
-                location: Some(Location {
-                    latitude: 0.0,
-                    longitude: 0.0,
-                }),
-            }),
-        }),
-    );
-    assert_eq!(
-        submit_sample(&runtime, entry_handle, 9.0, -10.0,),
-        Ok(ListPointsOfInterestResponse {
-            point_of_interest: Some(PointOfInterest {
-                name: "Opened station 2".to_string(),
-                location: Some(Location {
-                    latitude: 10.0,
-                    longitude: 0.0,
-                }),
-            }),
-        }),
-    );
+    assert_matches!(submit_sample(&runtime, entry_handle, 4.0, -10.0), Err(_));
 }
