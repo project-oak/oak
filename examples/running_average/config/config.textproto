@@ -2,6 +2,6 @@ initial_node_configuration: {
   name: "main"
   wasm_config: {
     wasm_module_name: "app"
-    wasm_entrypoint_name: "grpc_oak_main"
+    wasm_entrypoint_name: "oak_main"
   }
 }

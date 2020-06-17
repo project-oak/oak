@@ -17,6 +17,7 @@ members = [
   "trusted_information_retrieval/client/rust",
   "trusted_information_retrieval/module/rust",
   "private_set_intersection/module/rust",
+  "running_average/grpc",
   "running_average/module/rust",
   "translator/grpc",
   "translator/common",
@@ -38,6 +39,7 @@ oak_utils = { path = "../oak_utils" }
 # Examples.
 abitest_grpc = { path = "abitest/grpc" }
 hello_world_grpc = { path = "hello_world/grpc" }
+running_average_grpc = { path = "running_average/grpc" }
 translator_grpc = { path = "translator/grpc" }
 translator_common = { path = "translator/common" }
 # Third party.

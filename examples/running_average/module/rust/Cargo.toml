@@ -16,9 +16,13 @@ prost = "*"
 [dev-dependencies]
 assert_matches = "*"
 env_logger = "*"
+log = "*"
 oak_abi = "=0.1.0"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
+running_average_grpc = "=0.1.0"
+tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
 oak_utils = "*"
