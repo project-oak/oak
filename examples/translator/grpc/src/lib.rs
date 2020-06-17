@@ -1,5 +1,5 @@
 //
-// Copyright 2019 The Project Oak Authors
+// Copyright 2020 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
 // limitations under the License.
 //
 
-fn main() {
-    // Generate the Oak-specific server and client code for the gRPC service,
-    // along with the Rust types corresponding to the message definitions.
-    oak_utils::compile_protos(
-        &["../proto/translator.proto"],
-        &["../proto", "../third_party"],
-    );
+pub mod proto {
+    tonic::include_proto!("oak.examples.translator");
 }

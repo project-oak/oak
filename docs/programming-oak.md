@@ -519,45 +519,6 @@ This has a little bit of boilerplate to explain:
 - The per-Node thread needs to be stopped at the end of the test
   (`oak_runtime::stop`).
 
-There's also some boilerplate in the source code for the Node itself, to set up
-_two_ alternative entrypoints:
-
-- The "normal" entrypoint (often called `grpc_oak_main`) expects no handle at
-  start-of-day, and instead creates a gRPC server pseudo-Node and uses the
-  associated channel in its event loop.
-- The "test" entrypoint (often called `oak_main`) _does_ expect a valid handle
-  at start-of-day, and it uses this handle in its event loop. This handle
-  identifies a channel where the other end is the test script, allowing test
-  requests to be injected.
-
-<!-- prettier-ignore-start -->
-[embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /^oak::entrypoint!\(oak_main.*/ /}\);$/)
-```Rust
-oak::entrypoint!(oak_main => |in_channel| {
-    oak::logger::init_default();
-    let dispatcher = TranslatorDispatcher::new(Node);
-    oak::run_event_loop(dispatcher, in_channel);
-});
-```
-<!-- prettier-ignore-end -->
-
-<!-- prettier-ignore-start -->
-[embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /^oak::entrypoint!\(grpc_oak_main.*/ /}\);$/)
-```Rust
-oak::entrypoint!(grpc_oak_main => |_in_channel| {
-    oak::logger::init_default();
-    let dispatcher = TranslatorDispatcher::new(Node);
-    let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_event_loop(dispatcher, grpc_channel);
-});
-```
-<!-- prettier-ignore-end -->
-
-This extra complication does allow the Node to be tested in a way that is closer
-to real execution, and (more importantly) allows testing of a Node that makes
-use of the functionality of the Oak Runtime.
-
 ### Testing Multi-Node Applications
 
 It's also possible to test an Oak Application that's built from multiple Nodes,

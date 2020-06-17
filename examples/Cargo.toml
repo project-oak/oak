@@ -16,6 +16,7 @@ members = [
   "trusted_information_retrieval/module/rust",
   "private_set_intersection/module/rust",
   "running_average/module/rust",
+  "translator/grpc",
   "translator/common",
   "translator/module/rust",
 ]
@@ -33,6 +34,7 @@ oak_runtime = { path = "../oak/server/rust/oak_runtime" }
 oak_tests = { path = "../sdk/rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }
 # Examples.
+translator_grpc = { path = "translator/grpc" }
 translator_common = { path = "translator/common" }
 # Third party.
 expect = { path = "../third_party/expect" }
