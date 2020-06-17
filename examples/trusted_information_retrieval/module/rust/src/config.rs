@@ -23,9 +23,7 @@ struct Config {
     database_url: String,
 }
 
-pub fn get_database_url(in_channel: oak::ReadHandle) -> anyhow::Result<String> {
-    let receiver = oak::io::Receiver::new(in_channel);
-    let config_map: ConfigMap = receiver.receive()?;
+pub fn get_database_url(config_map: ConfigMap) -> anyhow::Result<String> {
     let config_file = config_map
         .items
         .get("config")

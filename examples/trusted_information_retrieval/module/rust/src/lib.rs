@@ -198,7 +198,8 @@ impl TrustedInformationRetrieval for TrustedInformationRetrievalNode {
 
 oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
-    let database_url = get_database_url(in_channel).expect("Couldn't load database URL");
+    let config_map = oak::app_config_map(in_channel).expect("Couldn't read config map");
+    let database_url = get_database_url(config_map).expect("Couldn't load database URL");
     let dispatcher = TrustedInformationRetrievalDispatcher::new(TrustedInformationRetrievalNode {
         database_url
     });
