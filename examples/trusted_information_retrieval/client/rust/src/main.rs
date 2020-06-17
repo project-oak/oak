@@ -54,10 +54,6 @@ pub struct Opt {
     longitude: f32,
 }
 
-// Metadata key that is used for storing Oak labels in the gRPC request.
-// https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
-const OAK_LABEL_GRPC_METADATA_KEY: &str = "x-oak-label-bin";
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
@@ -100,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         channel,
         move |mut request: Request<()>| {
             request.metadata_mut().insert_bin(
-                OAK_LABEL_GRPC_METADATA_KEY,
+                oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
                 MetadataValue::from_bytes(label.as_ref()),
             );
             Ok(request)

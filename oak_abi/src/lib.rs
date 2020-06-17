@@ -31,6 +31,14 @@ impl std::fmt::Display for OakStatus {
 
 impl std::error::Error for OakStatus {}
 
+/// The key used for encoded Labels in gRPC metadata.
+///
+/// The `-bin` suffix allows sending binary data for this metadata key, see:
+///  https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
+///
+/// Keep in sync with /oak/common/label.cc.
+pub const OAK_LABEL_GRPC_METADATA_KEY: &str = "x-oak-label-bin";
+
 /// Handle used to identify read or write channel halves.
 ///
 /// These handles are used for all host function calls.
