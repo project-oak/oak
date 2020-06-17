@@ -292,7 +292,17 @@ holding arbitrary key:value data for initial configuration. At Application
 start-up, the Oak Runtime sends the serialized form of this message as a single
 message on the initial Node's initial channel (and then closes the channel).
 
-TODO(#1101): describe SDK support for convenient access to `ConfigMap`.
+The initial Node of an Application can retrieve this configuration with the
+`oak::app_config_map` helper function.
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/trusted_information_retrieval/module/rust/src/lib.rs Rust /oak::entrypoint/ /.*let config_map =.*/)
+```Rust
+oak::entrypoint!(oak_main => |in_channel| {
+    oak::logger::init_default();
+    let config_map = oak::app_config_map(in_channel).expect("Couldn't read config map");
+```
+<!-- prettier-ignore-end -->
 
 ## Using an Oak Application from a client
 
