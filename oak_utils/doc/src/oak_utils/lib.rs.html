@@ -212,6 +212,7 @@
 <span id="212">212</span>
 <span id="213">213</span>
 <span id="214">214</span>
+<span id="215">215</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -343,6 +344,7 @@
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
             <span class="kw">pub</span> <span class="kw">struct</span> #<span class="ident">dispatcher_name</span><span class="op">&lt;</span><span class="ident">T</span>: #<span class="ident">service_name</span><span class="op">&gt;</span>(<span class="ident">T</span>);
 
+            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
             <span class="kw">impl</span> <span class="op">&lt;</span><span class="ident">T</span>: #<span class="ident">service_name</span><span class="op">&gt;</span> #<span class="ident">dispatcher_name</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
                 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">node</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">dispatcher_name</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
                     #<span class="ident">dispatcher_name</span>(<span class="ident">node</span>)
