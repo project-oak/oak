@@ -6,6 +6,7 @@ members = [
   "abitest/module_1/rust",
   "abitest/tests",
   "aggregator/backend",
+  "aggregator/grpc",
   "aggregator/common",
   "aggregator/module/rust",
   "authentication/client",
@@ -39,6 +40,7 @@ oak_tests = { path = "../sdk/rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }
 # Examples.
 abitest_grpc = { path = "abitest/grpc" }
+aggregator_grpc = { path = "aggregator/grpc" }
 hello_world_grpc = { path = "hello_world/grpc" }
 private_set_intersection_grpc = { path = "private_set_intersection/grpc" }
 running_average_grpc = { path = "running_average/grpc" }

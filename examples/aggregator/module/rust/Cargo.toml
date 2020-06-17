@@ -17,11 +17,15 @@ oak_abi = "=0.1.0"
 prost = "*"
 
 [dev-dependencies]
+aggregator_grpc = "=0.1.0"
 assert_matches = "*"
 env_logger = "*"
+log = "*"
+maplit = "*"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
-maplit = "*"
+tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
 oak_utils = "*"
