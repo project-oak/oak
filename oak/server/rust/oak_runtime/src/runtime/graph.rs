@@ -56,17 +56,11 @@ impl HtmlPath for (NodeId, oak_abi::Handle) {
     }
 }
 
-pub trait DotGraph {
-    fn graph(&self) -> String;
-    fn html(&self) -> String;
-    fn html_for_node(&self, id: u64) -> Option<String>;
-    fn html_for_handle(&self, node_id: u64, handle: oak_abi::Handle) -> Option<String>;
-}
-
-impl DotGraph for Runtime {
+// Graph-related methods for the Runtime.
+impl Runtime {
     /// Generate a Graphviz dot graph that shows the current shape of the Nodes and Channels in
-    /// the runtime.
-    fn graph(&self) -> String {
+    /// the `Runtime`.
+    pub fn graph(&self) -> String {
         let mut s = String::new();
         writeln!(&mut s, "digraph Runtime {{").unwrap();
         // Graph nodes for Oak Nodes and ABI handles.
@@ -211,7 +205,7 @@ impl DotGraph for Runtime {
     }
 
     /// Generate an HTML page that describes the internal state of the [`Runtime`].
-    fn html(&self) -> String {
+    pub fn html(&self) -> String {
         let mut s = String::new();
         writeln!(&mut s, "<h2>Nodes</h2>").unwrap();
         writeln!(&mut s, r###"<p><a href="/graph">Show as graph</a><ul>"###).unwrap();
@@ -234,7 +228,7 @@ impl DotGraph for Runtime {
     }
 
     /// Generate an HTML page that describes the internal state of a specific Node.
-    fn html_for_node(&self, id: u64) -> Option<String> {
+    pub(crate) fn html_for_node(&self, id: u64) -> Option<String> {
         let node_id = NodeId(id);
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos.get(&node_id)?;
@@ -266,7 +260,7 @@ impl DotGraph for Runtime {
 
     /// Generate an HTML page that describes the channel accessible via an ABI handle for the
     /// specified Node.
-    fn html_for_handle(&self, node_id: u64, handle: oak_abi::Handle) -> Option<String> {
+    pub(crate) fn html_for_handle(&self, node_id: u64, handle: oak_abi::Handle) -> Option<String> {
         let node_id = NodeId(node_id);
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos.get(&node_id)?;

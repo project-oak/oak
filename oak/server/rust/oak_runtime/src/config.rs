@@ -16,21 +16,36 @@
 
 //! Functionality covering configuration of a Runtime instance.
 
-use crate::{RuntimeConfiguration, RuntimeProxy};
+use crate::{runtime::RuntimeProxy, Runtime, RuntimeConfiguration};
+use log::{error, info};
 use oak_abi::OakStatus;
+use std::sync::Arc;
 use tonic::transport::Certificate;
 
-/// Configures a [`RuntimeProxy`] from the given [`RuntimeConfiguration`] and begins execution.
+/// Configures a [`Runtime`] from the given [`RuntimeConfiguration`] and begins execution.
 ///
 /// Returns a [`RuntimeProxy`] for an initial implicit Node, and a writeable [`oak_abi::Handle`] to
 /// send messages into the Runtime. Creating a new channel and passing the write [`oak_abi::Handle`]
 /// into the runtime will enable messages to be read back out from the [`RuntimeProxy`].
-pub fn configure_and_run(
-    config: RuntimeConfiguration,
-) -> Result<(RuntimeProxy, oak_abi::Handle), OakStatus> {
+pub fn configure_and_run(mut config: RuntimeConfiguration) -> Result<Arc<Runtime>, OakStatus> {
     let proxy = RuntimeProxy::create_runtime(&config.app_config, &config.grpc_config);
+    let config_map = config.config_map.take();
     let handle = proxy.start_runtime(config)?;
-    Ok((proxy, handle))
+
+    if let Some(config_map) = config_map {
+        // Pass in the config map over the initial channel.
+        info!("Send in initial config map");
+        let sender = crate::io::Sender::new(handle);
+        sender.send(config_map, &proxy)?;
+    }
+
+    if let Err(err) = proxy.channel_close(handle) {
+        error!("Failed to close initial handle {:?}: {:?}", handle, err);
+    }
+
+    // Now that the implicit initial Node has been used to inject the
+    // Application's `ConfigMap`, drop all reference to it.
+    Ok(proxy.runtime)
 }
 
 /// Load a PEM encoded TLS certificate, performing (minimal) validation.

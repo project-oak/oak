@@ -53,7 +53,7 @@ fn start_node(wasm_module: Vec<u8>, entrypoint_name: &str) -> Result<(), OakStat
         .expect("could not close channel");
 
     // Ensure that the runtime can terminate correctly, regardless of what the node does.
-    proxy.stop_runtime();
+    proxy.runtime.stop();
 
     result
 }

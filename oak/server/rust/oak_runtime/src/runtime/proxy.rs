@@ -20,10 +20,7 @@
 use crate::{
     message::NodeMessage,
     metrics::Metrics,
-    runtime::{
-        graph::DotGraph, AuxServer, ChannelHalfDirection, NodeId, NodePrivilege, NodeReadStatus,
-        Runtime,
-    },
+    runtime::{AuxServer, ChannelHalfDirection, NodeId, NodePrivilege, NodeReadStatus, Runtime},
     GrpcConfiguration,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
@@ -35,7 +32,6 @@ use oak_abi::{
 };
 use std::{
     collections::HashMap,
-    string::String,
     sync::{Arc, Mutex, RwLock},
 };
 
@@ -54,7 +50,7 @@ use std::{
 /// partially applying the first argument (the stored [`NodeId`]).
 #[derive(Clone)]
 pub struct RuntimeProxy {
-    pub(super) runtime: Arc<Runtime>,
+    pub runtime: Arc<Runtime>,
     pub node_id: NodeId,
 }
 
@@ -155,25 +151,6 @@ impl RuntimeProxy {
         Ok(write_handle)
     }
 
-    /// Generate a Graphviz dot graph that shows the current shape of the Nodes and Channels in
-    /// the runtime.
-    #[cfg(feature = "oak_debug")]
-    pub fn graph_runtime(&self) -> String {
-        self.runtime.graph()
-    }
-
-    /// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.
-    pub fn stop_runtime(&self) {
-        self.runtime.stop()
-    }
-
-    /// Create a RuntimeProxy instance that acts as a proxy for the specified NodeId.
-    pub fn new_for_node(&self, node_id: NodeId) -> Self {
-        RuntimeProxy {
-            runtime: self.runtime.clone(),
-            node_id,
-        }
-    }
     /// See [`Runtime::is_terminating`].
     pub fn is_terminating(&self) -> bool {
         self.runtime.is_terminating()

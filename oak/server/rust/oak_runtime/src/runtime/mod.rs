@@ -326,7 +326,7 @@ impl Runtime {
     }
 
     /// Return the direction of an ABI handle.
-    pub fn abi_direction(
+    pub(crate) fn abi_direction(
         &self,
         node_id: NodeId,
         handle: oak_abi::Handle,
@@ -335,6 +335,7 @@ impl Runtime {
         Ok(half.direction)
     }
 
+    /// Return the accumulated metrics for the `Runtime`.
     pub fn gather_metrics(&self) -> Vec<MetricFamily> {
         self.metrics_data.gather()
     }
@@ -348,7 +349,7 @@ impl Runtime {
     }
 
     /// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.
-    fn stop(&self) {
+    pub fn stop(&self) {
         info!("stopping runtime instance");
 
         // Terminate any running servers.

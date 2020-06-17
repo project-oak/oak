@@ -24,9 +24,8 @@ const MODULE_CONFIG_NAME: &str = "translator";
 async fn test_translate() {
     env_logger::init();
 
-    let (runtime, _entry_handle) =
-        oak_tests::run_single_module(MODULE_CONFIG_NAME, "grpc_oak_main")
-            .expect("Unable to configure runtime with test wasm!");
+    let runtime = oak_tests::run_single_module(MODULE_CONFIG_NAME, "grpc_oak_main")
+        .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
     let mut client = TranslatorClient::with_interceptor(channel, interceptor);
@@ -42,5 +41,5 @@ async fn test_translate() {
     assert_matches!(result, Ok(_));
     assert_eq!("MONDI", result.unwrap().into_inner().translated_text);
 
-    runtime.stop_runtime();
+    runtime.stop();
 }

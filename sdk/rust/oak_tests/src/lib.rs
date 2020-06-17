@@ -20,12 +20,12 @@ use log::{debug, info};
 use oak_abi::{
     label::Label,
     proto::oak::application::{
-        node_configuration::ConfigType, ApplicationConfiguration, NodeConfiguration,
+        node_configuration::ConfigType, ApplicationConfiguration, ConfigMap, NodeConfiguration,
         WebAssemblyConfiguration,
     },
 };
 use prost::Message;
-use std::{collections::HashMap, path::PathBuf, process::Command};
+use std::{collections::HashMap, path::PathBuf, process::Command, sync::Arc};
 use tonic::{
     metadata::MetadataValue,
     transport::{Certificate, Channel, ClientTlsConfig, Identity},
@@ -79,7 +79,7 @@ const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500
 /// the default name "oak_main" for its entrypoint.
 pub fn run_single_module_default(
     module_config_name: &str,
-) -> Result<(oak_runtime::RuntimeProxy, oak_abi::Handle), oak::OakStatus> {
+) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
     run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME)
 }
 
@@ -88,8 +88,19 @@ pub fn run_single_module_default(
 pub fn run_single_module(
     module_config_name: &str,
     entrypoint_name: &str,
-) -> Result<(oak_runtime::RuntimeProxy, oak_abi::Handle), oak::OakStatus> {
-    let combined_config = runtime_config(module_config_name, entrypoint_name);
+) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
+    let combined_config = runtime_config(module_config_name, entrypoint_name, None);
+    oak_runtime::configure_and_run(combined_config)
+}
+
+/// Convenience helper to build and run a single-Node application with the given module name, using
+/// the provided entrypoint name, passing in the provided `ConfigMap` at start-of-day.
+pub fn run_single_module_with_config(
+    module_config_name: &str,
+    entrypoint_name: &str,
+    config_map: ConfigMap,
+) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
+    let combined_config = runtime_config(module_config_name, entrypoint_name, Some(config_map));
     oak_runtime::configure_and_run(combined_config)
 }
 
@@ -98,6 +109,7 @@ pub fn run_single_module(
 pub fn runtime_config(
     module_config_name: &str,
     entrypoint_name: &str,
+    config_map: Option<ConfigMap>,
 ) -> oak_runtime::RuntimeConfiguration {
     let wasm: HashMap<String, Vec<u8>> = [(
         module_config_name.to_owned(),
@@ -111,7 +123,7 @@ pub fn runtime_config(
     .cloned()
     .collect();
 
-    runtime_config_wasm(wasm, module_config_name, entrypoint_name)
+    runtime_config_wasm(wasm, module_config_name, entrypoint_name, config_map)
 }
 
 /// Build the configuration needed to launch a test Runtime instance that runs the given
@@ -120,6 +132,7 @@ pub fn runtime_config_wasm(
     wasm_modules: HashMap<String, Vec<u8>>,
     module_config_name: &str,
     entrypoint_name: &str,
+    config_map: Option<ConfigMap>,
 ) -> oak_runtime::RuntimeConfiguration {
     oak_runtime::RuntimeConfiguration {
         metrics_port: Some(9090),
@@ -144,6 +157,7 @@ pub fn runtime_config_wasm(
                 })),
             }),
         },
+        config_map,
     }
 }
 

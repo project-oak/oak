@@ -23,24 +23,25 @@
 //! be enabled in development, as it destroys the privacy guarantees of the
 //! platform by providing easy channels for the exfiltration of private data.
 
-use oak_abi::proto::oak::application::ApplicationConfiguration;
+use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 
 pub mod auth;
 pub mod config;
-pub mod io;
-pub mod message;
-pub mod metrics;
-pub mod node;
 pub mod proto;
-pub mod runtime;
 pub mod time;
 
+mod io;
+mod message;
+mod metrics;
+mod node;
+mod runtime;
+
 use auth::oidc_utils::ClientInfo;
+use message::NodeMessage;
 use tonic::transport::{Certificate, Identity};
 
 pub use config::configure_and_run;
-pub use message::NodeMessage;
-pub use runtime::{NodeId, RuntimeProxy};
+pub use runtime::Runtime;
 
 /// Configuration options that govern the behaviour of the Runtime and the Oak Application running
 /// inside it.
@@ -54,6 +55,8 @@ pub struct RuntimeConfiguration {
     pub grpc_config: GrpcConfiguration,
     /// Application configuration.
     pub app_config: ApplicationConfiguration,
+    /// Start-of-day configuration to feed to the running Application.
+    pub config_map: Option<ConfigMap>,
 }
 
 /// Configuration options related to gRPC pseudo-Nodes.

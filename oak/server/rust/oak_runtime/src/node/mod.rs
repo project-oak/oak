@@ -59,7 +59,6 @@ pub enum ConfigurationError {
     IncorrectPort,
     IncorrectURI,
     NoHostElement,
-    CertificateParsingError,
     IncorrectWebAssemblyModuleName,
     InvalidNodeConfiguration,
     WasmiModuleInializationError(wasmi::Error),
@@ -80,9 +79,6 @@ impl std::fmt::Display for ConfigurationError {
             ConfigurationError::IncorrectPort => write!(f, "Incorrect port (must be > 1023)"),
             ConfigurationError::IncorrectURI => write!(f, "Incorrect URI"),
             ConfigurationError::NoHostElement => write!(f, "URI doesn't contain the Host element"),
-            ConfigurationError::CertificateParsingError => {
-                write!(f, "Error parsing PEM encoded TLS certificate")
-            }
             ConfigurationError::IncorrectWebAssemblyModuleName => {
                 write!(f, "Incorrect WebAssembly module name")
             }

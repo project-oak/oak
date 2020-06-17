@@ -48,8 +48,9 @@ async fn test_abi() {
         wasm_modules,
         FRONTEND_MODULE_NAME,
         FRONTEND_ENTRYPOINT_NAME,
+        None,
     );
-    let (runtime, _entry_handle) =
+    let runtime =
         oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
@@ -63,9 +64,9 @@ async fn test_abi() {
     let result = client.run_tests(req).await;
     assert_matches!(result, Ok(_));
 
-    info!("Runtime graph at exit is:\n{}", runtime.graph_runtime());
+    info!("Runtime graph at exit is:\n{}", runtime.graph());
 
-    runtime.stop_runtime();
+    runtime.stop();
 
     let mut disabled = 0;
     let mut success = true;
