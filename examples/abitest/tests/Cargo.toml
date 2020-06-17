@@ -18,8 +18,11 @@ prost = "*"
 tonic = { version = "*", features = ["tls"] }
 
 [dev-dependencies]
+abitest_grpc = "=0.1.0"
 assert_matches = "*"
 env_logger = "*"
+log = "*"
 maplit = "*"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
+tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }

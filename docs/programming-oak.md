@@ -137,15 +137,14 @@ method from the Rust standard library:
 [embedmd]:# (../examples/abitest/module_0/rust/src/lib.rs Rust /^#.*no_mangle.*/ /^}/)
 ```Rust
 #[no_mangle]
-pub extern "C" fn frontend_oak_main(in_handle: u64) {
+pub extern "C" fn frontend_oak_main(_in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
         let node = FrontendNode::new();
         let dispatcher = OakAbiTestServiceDispatcher::new(node);
-        let in_channel = ::oak::ReadHandle {
-            handle: ::oak::Handle::from_raw(in_handle),
-        };
-        oak::run_event_loop(dispatcher, in_channel);
+        let grpc_channel =
+            oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
+        oak::run_event_loop(dispatcher, grpc_channel);
     });
 }
 ```
@@ -535,7 +534,7 @@ configure and run the Runtime.
         FRONTEND_MODULE_NAME,
         FRONTEND_ENTRYPOINT_NAME,
     );
-    let (runtime, entry_channel) =
+    let (runtime, _entry_handle) =
         oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
 ```
 <!-- prettier-ignore-end -->

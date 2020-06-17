@@ -14,11 +14,10 @@
 // limitations under the License.
 //
 
-use abitest_0_frontend::proto::{AbiTestRequest, AbiTestResponse};
+use abitest_grpc::proto::{oak_abi_test_service_client::OakAbiTestServiceClient, AbiTestRequest};
 use assert_matches::assert_matches;
 use log::{error, info};
 use maplit::hashmap;
-use oak::grpc;
 use std::collections::HashMap;
 
 // Constants for Node config names that should match those in the textproto
@@ -40,8 +39,8 @@ fn build_wasm() -> std::io::Result<HashMap<String, Vec<u8>>> {
     })
 }
 
-#[test]
-fn test_abi() {
+#[tokio::test(core_threads = 2)]
+async fn test_abi() {
     env_logger::init();
 
     let wasm_modules = build_wasm().expect("failed to build wasm modules");
@@ -50,19 +49,18 @@ fn test_abi() {
         FRONTEND_MODULE_NAME,
         FRONTEND_ENTRYPOINT_NAME,
     );
-    let (runtime, entry_channel) =
+    let (runtime, _entry_handle) =
         oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
+
+    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let mut client = OakAbiTestServiceClient::with_interceptor(channel, interceptor);
 
     // Skip tests that require the existence of an external service.
     let mut req = AbiTestRequest::default();
     req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
 
-    let result: grpc::Result<AbiTestResponse> = oak_tests::grpc_request(
-        &runtime,
-        entry_channel,
-        "/oak.examples.abitest.OakABITestService/RunTests",
-        &req,
-    );
+    info!("Sending request: {:?}", req);
+    let result = client.run_tests(req).await;
     assert_matches!(result, Ok(_));
 
     info!("Runtime graph at exit is:\n{}", runtime.graph_runtime());
@@ -71,7 +69,8 @@ fn test_abi() {
 
     let mut disabled = 0;
     let mut success = true;
-    for result in result.unwrap().results {
+    let results = result.unwrap().into_inner().results;
+    for result in results {
         if result.disabled {
             disabled += 1;
             continue;

@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "abitest/abitest_common",
+  "abitest/grpc",
   "abitest/module_0/rust",
   "abitest/module_1/rust",
   "abitest/tests",
@@ -34,6 +35,7 @@ oak_runtime = { path = "../oak/server/rust/oak_runtime" }
 oak_tests = { path = "../sdk/rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }
 # Examples.
+abitest_grpc = { path = "abitest/grpc" }
 translator_grpc = { path = "translator/grpc" }
 translator_common = { path = "translator/common" }
 # Third party.
