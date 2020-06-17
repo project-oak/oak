@@ -128,6 +128,7 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
             #[allow(dead_code)]
             pub struct #dispatcher_name<T: #service_name>(T);
 
+            #[allow(dead_code)]
             impl <T: #service_name> #dispatcher_name<T> {
                 pub fn new(node: T) -> #dispatcher_name<T> {
                     #dispatcher_name(node)

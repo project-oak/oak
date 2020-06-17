@@ -77,6 +77,17 @@ if [[ "${server}" != "none" ]]; then
   readonly SERVER_PID=$!
   to_kill+=("${SERVER_PID}")
 
+  # Run Backend for specific examples.
+  if [[ "${EXAMPLE}" == 'aggregator' ]] || [[ "${EXAMPLE}" == 'trusted_information_retrieval' ]]; then
+    # Building the Backend first, so it will not be built in the background.
+    cargo build --release --target-dir=examples/target --manifest-path="examples/${EXAMPLE}/backend/Cargo.toml"
+    cargo run --release --target-dir=examples/target --manifest-path="examples/${EXAMPLE}/backend/Cargo.toml" -- \
+      --grpc-tls-private-key="${SCRIPTS_DIR}/../examples/certs/local/local.key" \
+      --grpc-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/local.pem" &
+    readonly BACKEND_PID=$!
+    to_kill+=("${BACKEND_PID}")
+  fi
+
   sleep 3  # Wait for the application to start.
 fi
 

@@ -79,7 +79,7 @@ if [[ -n ${EXAMPLE+x} ]]; then
 
   if [[ "${EXAMPLE}" == "trusted_information_retrieval" ]]; then
     additional_args+=(
-      "--config-files=database=./examples/trusted_information_retrieval/database.xml"
+      "--config-files=config=${SCRIPTS_DIR}/../examples/trusted_information_retrieval/config/config.toml"
     )
   fi
 fi

@@ -9,13 +9,14 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+anyhow = "*"
 itertools = "*"
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
 prost = "*"
 serde = "*"
-quick-xml = { version = "*", features = ["serialize"] }
+toml = "*"
 
 [dev-dependencies]
 assert_matches = "*"
