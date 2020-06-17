@@ -2278,7 +2278,9 @@ dependencies = [
  "oak_runtime",
  "oak_tests",
  "prost",
+ "tokio",
  "translator_common",
+ "translator_grpc",
 ]
 
 [[package]]
@@ -2289,6 +2291,15 @@ dependencies = [
  "oak",
  "oak_utils",
  "prost",
+]
+
+[[package]]
+name = "translator_grpc"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]

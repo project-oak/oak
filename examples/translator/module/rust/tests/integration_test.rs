@@ -15,31 +15,32 @@
 //
 
 use assert_matches::assert_matches;
-use oak::grpc;
-use translator_common::proto::{TranslateRequest, TranslateResponse};
+use log::info;
+use translator_grpc::proto::{translator_client::TranslatorClient, TranslateRequest};
 
 const MODULE_CONFIG_NAME: &str = "translator";
 
-#[test]
-fn test_translate() {
+#[tokio::test(core_threads = 2)]
+async fn test_translate() {
     env_logger::init();
 
-    let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
-        .expect("Unable to configure runtime with test wasm!");
+    let (runtime, _entry_handle) =
+        oak_tests::run_single_module(MODULE_CONFIG_NAME, "grpc_oak_main")
+            .expect("Unable to configure runtime with test wasm!");
+
+    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let mut client = TranslatorClient::with_interceptor(channel, interceptor);
 
     let req = TranslateRequest {
         text: "WORLDS".into(),
         from_lang: "en".into(),
         to_lang: "it".into(),
     };
-    let result: grpc::Result<TranslateResponse> = oak_tests::grpc_request(
-        &runtime,
-        entry_handle,
-        "/oak.examples.translator.Translator/Translate",
-        &req,
-    );
+    info!("Sending request: {:?}", req);
+
+    let result = client.translate(req).await;
     assert_matches!(result, Ok(_));
-    assert_eq!("MONDI", result.unwrap().translated_text);
+    assert_eq!("MONDI", result.unwrap().into_inner().translated_text);
 
     runtime.stop_runtime();
 }
