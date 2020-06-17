@@ -114,7 +114,10 @@ pub fn runtime_configs(
                 })),
             }),
         },
-        oak_runtime::RuntimeConfiguration::default(),
+        oak_runtime::RuntimeConfiguration {
+            metrics_port: Some(9090),
+            introspect_port: Some(1909),
+        },
         oak_runtime::GrpcConfiguration {
             grpc_server_tls_identity: None,
             oidc_client_info: None,
