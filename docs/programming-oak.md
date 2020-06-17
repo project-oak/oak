@@ -566,21 +566,16 @@ by defining an appropriate `ApplicationConfiguration` instance and then
 configure and run the Runtime.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust / +let application_configuration =/ /unable to configure runtime.*/)
+[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust / +let wasm_modules =/ /unable to configure runtime.*/)
 ```Rust
-    let application_configuration = ApplicationConfiguration {
-        wasm_modules: build_wasm().expect("failed to build wasm modules"),
-        initial_node_configuration: Some(oak::node_config::wasm(
-            FRONTEND_MODULE_NAME,
-            FRONTEND_ENTRYPOINT_NAME,
-        )),
-    };
-
-    let (runtime, entry_channel) = oak_runtime::configure_and_run(
-        application_configuration,
-        oak_runtime::RuntimeConfiguration::default(),
-        grpc_configuration,
-    )
-    .expect("unable to configure runtime with test wasm");
+    let wasm_modules = build_wasm().expect("failed to build wasm modules");
+    let (app_config, runtime_config, grpc_config) = oak_tests::runtime_configs_wasm(
+        wasm_modules,
+        FRONTEND_MODULE_NAME,
+        FRONTEND_ENTRYPOINT_NAME,
+    );
+    let (runtime, entry_channel) =
+        oak_runtime::configure_and_run(app_config, runtime_config, grpc_config)
+            .expect("unable to configure runtime with test wasm");
 ```
 <!-- prettier-ignore-end -->
