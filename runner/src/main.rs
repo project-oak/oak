@@ -28,7 +28,7 @@ use notify::Watcher;
 use std::{
     collections::HashMap,
     io::Read,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{Arc, Mutex},
 };
 use structopt::StructOpt;
@@ -162,84 +162,32 @@ fn build_wasm_module(name: &str, manifest_path: &str) -> Step {
     }
 }
 
-fn is_mac_os() -> bool {
-    cfg!(macos)
-}
-
-fn bazel_build_flags() -> Vec<String> {
-    let mut flags = vec![
-        "--remote_cache=https://storage.googleapis.com/oak-bazel-cache".to_string(),
-        "--block_for_lock=false".to_string(),
-        "--show_timestamps".to_string(),
-    ];
-
-    const OAK_REMOTE_CACHE_KEY: &str = "./.oak_remote_cache_key.json";
-    if Path::new(OAK_REMOTE_CACHE_KEY).exists() {
-        flags.push(format!("--google_credentials={}", OAK_REMOTE_CACHE_KEY));
-    } else {
-        flags.push("--remote_upload_local_results=false".to_string());
-    };
-
-    flags
-}
-
-fn as_ref(v: &[String]) -> Vec<&str> {
-    v.iter().map(|x| x.as_ref()).collect()
-}
-
-fn bazel_build(extra_build_flags: &[&str], targets: &[&str]) -> Cmd {
-    let mut flags = Vec::new();
-    flags.push("build");
-
-    let b = bazel_build_flags();
-    flags.extend(as_ref(&b));
-
-    flags.extend(extra_build_flags);
-    flags.push("--");
-    flags.extend(targets);
-    Cmd::new("bazel", &flags)
-}
-
 fn build_server(opt: &BuildServer) -> Step {
-    match opt.variant.as_str() {
-        "rust" => Step::Single {
+    match opt.server_variant.as_str() {
+        "base" => Step::Single {
             name: "build rust server".to_string(),
             command: Cmd::new(
                 "cargo",
-                &[
-                    "build",
-                    "--release",
-                    "--target=x86_64-unknown-linux-musl",
-                    "--manifest-path=oak/server/rust/oak_loader/Cargo.toml",
-                ],
+                vec![
+                    match &opt.server_rust_toolchain {
+                        // This overrides the toolchain used by `rustup` to invoke the actual
+                        // `cargo` binary.
+                        // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
+                        Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
+                        None => vec![],
+                    },
+                    vec![
+                        "build".to_string(),
+                        "--release".to_string(),
+                        format!("--target={}", opt.server_rust_target),
+                        "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
+                    ],
+                ]
+                .iter()
+                .flatten(),
             ),
         },
-        v => {
-            let config = match v {
-                "base" => {
-                    if is_mac_os() {
-                        "darwin"
-                    } else {
-                        "clang"
-                    }
-                }
-                "logless" => "clang-logless",
-                "arm" => "armv8",
-                "asan" => "asan",
-                "tsan" => "tsan",
-                _ => panic!("unknown variant: {}", v),
-            };
-            Step::Single {
-                name: "build cpp server".to_string(),
-                command: bazel_build(
-                    &[&format!("--config={}", config)],
-                    &[
-                        "//oak/server/loader:oak_runner",
-                        "//oak/server/storage:storage_server",
-                    ],
-                ),
-            }
-        }
+        v => panic!("unknown server variant: {}", v),
     }
 }
 
@@ -282,6 +230,11 @@ fn run_ci() -> Step {
                 application_variant: "rust".to_string(),
                 example_name: None,
                 build_only: false,
+                build_server: BuildServer {
+                    server_variant: "base".to_string(),
+                    server_rust_toolchain: None,
+                    server_rust_target: "x86_64-unknown-linux-musl".to_string(),
+                },
             }),
         ],
     }
@@ -300,21 +253,32 @@ fn build_example_config(example_name: &str) -> Step {
     }
 }
 
-fn run_example_server(application_file: &str) -> Cmd {
+fn run_example_server(opt: &BuildServer, application_file: &str) -> Cmd {
     Cmd::new(
         "cargo",
-        &[
-            "run",
-            "--release",
-            "--target=x86_64-unknown-linux-musl",
-            "--manifest-path=oak/server/rust/oak_loader/Cargo.toml",
-            "--",
-            "--grpc-tls-private-key=./examples/certs/local/local.key",
-            "--grpc-tls-certificate=./examples/certs/local/local.pem",
-            "--root-tls-certificate=./examples/certs/local/ca.pem",
-            // TODO(#396): Add `--oidc-client` support.
-            &format!("--application={}", application_file),
-        ],
+        vec![
+            match &opt.server_rust_toolchain {
+                // This overrides the toolchain used by `rustup` to invoke the actual `cargo`
+                // binary.
+                // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
+                Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
+                None => vec![],
+            },
+            vec![
+                "run".to_string(),
+                "--release".to_string(),
+                format!("--target={}", opt.server_rust_target),
+                "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
+                "--".to_string(),
+                "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
+                "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
+                "--root-tls-certificate=./examples/certs/local/ca.pem".to_string(),
+                // TODO(#396): Add `--oidc-client` support.
+                format!("--application={}", application_file),
+            ],
+        ]
+        .iter()
+        .flatten(),
     )
 }
 
@@ -365,19 +329,17 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 build_example_config(&example.name),
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
-                build_server(&BuildServer {
-                    variant: "rust".to_string(),
-                }),
+                build_server(&opt.build_server),
             ],
             if opt.build_only {
                 vec![]
             } else {
                 vec![Step::WithBackground {
                     name: "run_server".to_string(),
-                    background: run_example_server(&format!(
-                        "./bazel-bin/examples/{}/config/config.bin",
-                        example.name
-                    )),
+                    background: run_example_server(
+                        &opt.build_server,
+                        &format!("./bazel-bin/examples/{}/config/config.bin", example.name),
+                    ),
                     foreground: Box::new(Step::Multiple {
                         name: "run_client".to_string(),
                         steps: example
