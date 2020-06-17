@@ -32,14 +32,14 @@ pub fn configure_and_run(mut config: RuntimeConfiguration) -> Result<Arc<Runtime
     let config_map = config.config_map.take();
     let handle = proxy.start_runtime(config)?;
 
-    if let Some(config_map) = config_map {
-        // Pass in the config map over the initial channel.
-        info!("Send in initial config map");
-        let sender = crate::io::Sender::new(handle);
-        sender.send(config_map, &proxy)?;
-    }
+    // Pass in the config map over the initial channel.  For consistency, ensure
+    // that exactly one message is sent over the initial channel whether there's
+    // a config map provided or not.
+    let sender = crate::io::Sender::new(handle);
+    info!("Send in initial config map");
+    sender.send(config_map.unwrap_or_default(), &proxy)?;
 
-    if let Err(err) = proxy.channel_close(handle) {
+    if let Err(err) = sender.close(&proxy) {
         error!("Failed to close initial handle {:?}: {:?}", handle, err);
     }
 
