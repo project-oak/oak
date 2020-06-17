@@ -14,15 +14,11 @@
 // limitations under the License.
 //
 
-use aggregator::{
-    data::SparseVector,
-    proto::{Sample, SerializedSparseVector},
-    SAMPLE_THRESHOLD,
-};
+use aggregator::{data::SparseVector, SAMPLE_THRESHOLD};
 use aggregator_common::Monoid;
+use aggregator_grpc::proto::{aggregator_client::AggregatorClient, Sample, SerializedSparseVector};
 use assert_matches::assert_matches;
 use maplit::hashmap;
-use oak::grpc;
 use std::{
     collections::HashMap,
     convert::{From, TryFrom},
@@ -30,53 +26,44 @@ use std::{
 
 const MODULE_CONFIG_NAME: &str = "aggregator";
 
-fn submit_sample(
-    runtime: &oak_runtime::RuntimeProxy,
-    entry_handle: oak_abi::Handle,
+async fn submit_sample(
+    client: &mut AggregatorClient<tonic::transport::Channel>,
     bucket: &str,
     indices: Vec<u32>,
     values: Vec<f32>,
-) -> grpc::Result<()> {
+) -> Result<tonic::Response<()>, tonic::Status> {
     let req = Sample {
         bucket: bucket.to_string(),
         data: Some(SerializedSparseVector { indices, values }),
     };
-    oak_tests::grpc_request(
-        &runtime,
-        entry_handle,
-        "/oak.examples.aggregator.Aggregator/SubmitSample",
-        &req,
-    )
+    client.submit_sample(req).await
 }
 
-#[test]
-fn test_aggregator() {
+#[tokio::test(core_threads = 2)]
+async fn test_aggregator() {
     env_logger::init();
 
-    let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let (runtime, _entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
+
+    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let mut client = AggregatorClient::with_interceptor(channel, interceptor);
 
     for i in 0..SAMPLE_THRESHOLD as u32 {
         assert_matches!(
             submit_sample(
-                &runtime,
-                entry_handle,
+                &mut client,
                 "test",
                 vec![i, i + 1, i + 2],
                 vec![10.0, 20.0, 30.0]
-            ),
+            )
+            .await,
             Ok(_)
         );
     }
     // After sending the `SAMPLE_THRESHOLD` of samples, it's not possible to use the same `bucket`.
     assert_matches!(
-        submit_sample(
-            &runtime,
-            entry_handle,
-            "test",
-            vec![1, 2, 3],
-            vec![10.0, 20.0, 30.0]
-        ),
+        submit_sample(&mut client, "test", vec![1, 2, 3], vec![10.0, 20.0, 30.0]).await,
         Err(_)
     );
 
@@ -123,6 +110,9 @@ fn test_combine() {
 
 #[test]
 fn test_serialize() {
+    // Use the module-internal version of the protobuf-derived struct.
+    // TODO(#1093): unify the two versions
+    use aggregator::proto::SerializedSparseVector;
     assert_eq!(
         SerializedSparseVector::from(SparseVector::new(hashmap! {1 => 10.0})),
         SerializedSparseVector {

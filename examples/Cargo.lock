@@ -76,6 +76,7 @@ name = "aggregator"
 version = "0.1.0"
 dependencies = [
  "aggregator_common",
+ "aggregator_grpc",
  "assert_matches",
  "env_logger",
  "itertools 0.9.0",
@@ -87,6 +88,8 @@ dependencies = [
  "oak_tests",
  "oak_utils",
  "prost",
+ "tokio",
+ "tonic",
 ]
 
 [[package]]
@@ -107,6 +110,15 @@ dependencies = [
 [[package]]
 name = "aggregator_common"
 version = "0.1.0"
+
+[[package]]
+name = "aggregator_grpc"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tonic",
+ "tonic-build",
+]
 
 [[package]]
 name = "aho-corasick"
