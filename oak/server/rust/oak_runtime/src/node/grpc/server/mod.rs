@@ -54,13 +54,6 @@ use tonic::{
 
 mod auth;
 
-// The `-bin` suffix allows sending binary data for this metadata key.
-//
-// See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
-//
-// Keep in sync with /oak/common/label.cc.
-const OAK_LABEL_GRPC_METADATA_KEY: &str = "x-oak-label-bin";
-
 /// Struct that represents a gRPC server pseudo-Node.
 pub struct GrpcServerNode {
     /// Pseudo-Node name.
@@ -335,7 +328,7 @@ enum OakLabelError {
 ///   once conjunctions are supported
 fn get_oak_label(metadata_map: &MetadataMap) -> Result<Label, OakLabelError> {
     let labels = metadata_map
-        .get_all_bin(OAK_LABEL_GRPC_METADATA_KEY)
+        .get_all_bin(oak_abi::OAK_LABEL_GRPC_METADATA_KEY)
         .iter()
         .collect::<Vec<_>>();
     if labels.is_empty() {
