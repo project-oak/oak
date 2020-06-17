@@ -360,6 +360,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 
 [[package]]
+name = "database_proxy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "env_logger",
+ "log",
+ "oak",
+ "oak_abi",
+ "oak_runtime",
+ "oak_tests",
+ "oak_utils",
+ "prost",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "trusted_information_retrieval_client",
+]
+
+[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2365,8 +2385,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
+ "database_proxy",
  "env_logger",
- "itertools 0.9.0",
  "log",
  "maplit",
  "oak",

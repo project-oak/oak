@@ -20,31 +20,8 @@ package oak.examples.trusted_information_retrieval;
 
 import "google/protobuf/empty.proto";
 
-message Location {
-  float latitude = 1;
-  float longitude = 2;
-}
-
 message PointOfInterest {
-  string name = 1;
-  Location location = 2;
-}
-
-message ListPointsOfInterestRequest {
-  Location location = 1;
-}
-
-message ListPointsOfInterestResponse {
-  PointOfInterest point_of_interest = 2;
-}
-
-service TrustedInformationRetrieval {
-  // Find the nearest Point Of Interest based on linear search in the database.
-  rpc ListPointsOfInterest(ListPointsOfInterestRequest) returns (ListPointsOfInterestResponse);
-}
-
-message DatabaseEntry {
-  uint32 id = 1;
+  string id = 1;
   string name = 2;
   string terminal_name = 3;
   float latitude_degrees = 4;
@@ -59,18 +36,14 @@ message DatabaseEntry {
   uint32 number_of_docks = 13;
 }
 
-message ListDatabaseEntriesRequest {
-  // Offset of the first requested entry in the database.
-  int32 offset = 1;
-  // Number of requested entries.
-  int32 page_size = 2;
+message GetPointOfInterestRequest {
+  string id = 1;
 }
 
-message ListDatabaseEntriesResponse {
-  repeated DatabaseEntry entries = 1;
+message GetPointOfInterestResponse {
+  PointOfInterest point_of_interest = 1;
 }
 
-service Database {
-  // Get a subset of entries from the database.
-  rpc ListDatabaseEntries(ListDatabaseEntriesRequest) returns (ListDatabaseEntriesResponse);
+service TrustedInformationRetrieval {
+  rpc GetPointOfInterest(GetPointOfInterestRequest) returns (GetPointOfInterestResponse);
 }

@@ -17,10 +17,10 @@
 use anyhow::Context;
 use oak_abi::proto::oak::application::ConfigMap;
 
-#[derive(serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Config {
-    database_url: String,
+pub struct Config {
+    pub database_url: String,
 }
 
 pub fn get_database_url(config_map: ConfigMap) -> anyhow::Result<String> {
@@ -30,8 +30,12 @@ pub fn get_database_url(config_map: ConfigMap) -> anyhow::Result<String> {
         .context("`config` argument is not specified")?
         .to_vec();
 
-    let config: Config =
-        toml::from_str(&String::from_utf8(config_file).context("Couldn't convert to string")?)
-            .context("Couldn't parse TOML config file")?;
+    let config = parse_config_file(config_file)?;
     Ok(config.database_url)
+}
+
+pub fn parse_config_file(config_file: Vec<u8>) -> anyhow::Result<Config> {
+    let config_file_string =
+        String::from_utf8(config_file).context("Couldn't convert to string")?;
+    toml::from_str(&config_file_string).context("Couldn't parse TOML config file")
 }

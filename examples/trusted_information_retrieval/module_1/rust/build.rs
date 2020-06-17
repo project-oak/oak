@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    tonic::include_proto!("oak.examples.trusted_information_retrieval");
-    tonic::include_proto!("oak.examples.database");
+fn main() {
+    oak_utils::compile_protos(&["../../proto/database.proto"], &["../../proto"]);
 }

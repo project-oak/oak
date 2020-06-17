@@ -24,6 +24,7 @@
 
 mod database;
 mod proto {
+    tonic::include_proto!("oak.examples.database");
     tonic::include_proto!("oak.examples.trusted_information_retrieval");
 }
 #[cfg(test)]
@@ -31,9 +32,10 @@ mod tests;
 
 use database::load_database;
 use log::{error, info};
+use prost::Message;
 use proto::{
     database_server::{Database, DatabaseServer},
-    DatabaseEntry, ListDatabaseEntriesRequest, ListDatabaseEntriesResponse,
+    DatabaseEntry, ListDatabaseEntriesRequest, ListDatabaseEntriesResponse, PointOfInterest,
 };
 use reqwest::Url;
 use std::sync::Arc;
@@ -63,7 +65,7 @@ pub struct Opt {
 }
 
 pub struct DatabaseService {
-    entries: Arc<Mutex<Vec<DatabaseEntry>>>,
+    entries: Arc<Mutex<Vec<PointOfInterest>>>,
 }
 
 #[tonic::async_trait]
@@ -76,19 +78,35 @@ impl Database for DatabaseService {
         let page_size = request.get_ref().page_size as usize;
         let database_entries = self.entries.lock().await;
 
+        // Copy requested database entries.
+        let requested_entries = if offset + page_size < database_entries.len() {
+            database_entries[offset..offset + page_size].to_vec()
+        } else {
+            database_entries[offset..].to_vec()
+        };
+
         let response = ListDatabaseEntriesResponse {
-            entries: if offset + page_size < database_entries.len() {
-                database_entries[offset..offset + page_size].to_vec()
-            } else {
-                database_entries[offset..].to_vec()
-            },
+            entries: requested_entries
+                .iter()
+                .map(|entry| {
+                    // Serialize database entry in a String.
+                    let mut serialized_entry = Vec::new();
+                    entry.encode(&mut serialized_entry).unwrap();
+                    DatabaseEntry {
+                        key: entry.id.to_string(),
+                        value: String::from_utf8(serialized_entry).unwrap_or_else(|error| {
+                            format!("Data entry cannot be serialized: {:?}", error)
+                        }),
+                    }
+                })
+                .collect(),
         };
         Ok(Response::new(response))
     }
 }
 
 /// Loop for requesting a new database version from `url`.
-async fn update_database_loop(url: Url, database: Arc<Mutex<Vec<DatabaseEntry>>>) {
+async fn update_database_loop(url: Url, database: Arc<Mutex<Vec<PointOfInterest>>>) {
     loop {
         info!("Updating database");
         match load_database(url.clone()).await {

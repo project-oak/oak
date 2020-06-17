@@ -14,7 +14,17 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    tonic::include_proto!("oak.examples.trusted_information_retrieval");
-    tonic::include_proto!("oak.examples.database");
+use crate::config::parse_config_file;
+use assert_matches::assert_matches;
+
+const CONFIG_FILE: &str = r#"
+database_url = "https://localhost:8888"
+"#;
+
+#[test]
+fn test_parse_config() {
+    let config = parse_config_file(CONFIG_FILE.as_bytes().to_vec());
+    assert_matches!(config, Ok(_));
+    let database_url = config.unwrap().database_url;
+    assert_eq!(database_url, "https://localhost:8888");
 }

@@ -44,3 +44,22 @@ cc_grpc_library(
     well_known_protos = True,
     deps = [":trusted_information_retrieval_cc_proto"],
 )
+
+proto_library(
+    name = "database_proto",
+    srcs = ["database.proto"],
+    deps = ["@com_google_protobuf//:empty_proto"],
+)
+
+cc_proto_library(
+    name = "database_cc_proto",
+    deps = [":database_proto"],
+)
+
+cc_grpc_library(
+    name = "database_cc_grpc",
+    srcs = [":database_proto"],
+    grpc_only = True,
+    well_known_protos = True,
+    deps = [":database_cc_proto"],
+)

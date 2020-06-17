@@ -19,7 +19,7 @@ use maplit::hashmap;
 use oak_abi::proto::oak::application::ConfigMap;
 use trusted_information_retrieval_client::proto::{
     trusted_information_retrieval_client::TrustedInformationRetrievalClient,
-    ListPointsOfInterestRequest, ListPointsOfInterestResponse, Location,
+    GetPointOfInterestRequest, GetPointOfInterestResponse,
 };
 
 const MODULE_CONFIG_NAME: &str = "trusted_information_retrieval";
@@ -29,22 +29,16 @@ const CONFIG_FILE: &str = r#"
 database_url = "https://localhost:8888"
 "#;
 
-async fn submit_sample(
+async fn get_point_of_interest(
     client: &mut TrustedInformationRetrievalClient<tonic::transport::Channel>,
-    latitude: f32,
-    longitude: f32,
-) -> Result<tonic::Response<ListPointsOfInterestResponse>, tonic::Status> {
-    let req = ListPointsOfInterestRequest {
-        location: Some(Location {
-            latitude,
-            longitude,
-        }),
-    };
-    client.list_points_of_interest(req).await
+    id: &str,
+) -> Result<tonic::Response<GetPointOfInterestResponse>, tonic::Status> {
+    let request = GetPointOfInterestRequest { id: id.to_string() };
+    client.get_point_of_interest(request).await
 }
 
 #[tokio::test(core_threads = 2)]
-async fn test_trusted_information_retrieval() {
+async fn test_trusted_information_retrieval_for_unavailable_database() {
     env_logger::init();
 
     // Send test database as a start-of-day config map.
@@ -58,8 +52,8 @@ async fn test_trusted_information_retrieval() {
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
     let mut client = TrustedInformationRetrievalClient::with_interceptor(channel, interceptor);
 
-    // Test nearest point of interest
-    assert_matches!(submit_sample(&mut client, 4.0, -10.0).await, Err(_));
+    // Test nearest point of interest.
+    assert_matches!(get_point_of_interest(&mut client, "0").await, Err(_));
 
     runtime.stop();
 }

@@ -27,33 +27,28 @@
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
-ABSL_FLAG(float, latitude, float{}, "Requested location's latitude in degrees (WGS84)");
-ABSL_FLAG(float, longitude, float{}, "Requested location's longitude in degrees (WGS84)");
+ABSL_FLAG(std::string, id, "", "ID of the point of interest");
 
-using ::oak::examples::trusted_information_retrieval::ListPointsOfInterestRequest;
-using ::oak::examples::trusted_information_retrieval::ListPointsOfInterestResponse;
-using ::oak::examples::trusted_information_retrieval::Location;
+using ::oak::examples::trusted_information_retrieval::GetPointOfInterestRequest;
+using ::oak::examples::trusted_information_retrieval::GetPointOfInterestResponse;
 using ::oak::examples::trusted_information_retrieval::PointOfInterest;
 using ::oak::examples::trusted_information_retrieval::TrustedInformationRetrieval;
 
-void get_nearest_point_of_interest(TrustedInformationRetrieval::Stub* stub, float latitude,
-                                   float longitude) {
+void get_point_of_interest(TrustedInformationRetrieval::Stub* stub, std::string id) {
   grpc::ClientContext context;
-  LOG(INFO) << "Getting nearest point of interest:";
-  ListPointsOfInterestRequest request;
-  Location* location = request.mutable_location();
-  location->set_latitude(latitude);
-  location->set_longitude(longitude);
-  ListPointsOfInterestResponse response;
-  grpc::Status status = stub->ListPointsOfInterest(&context, request, &response);
+  LOG(INFO) << "Getting point of interest:";
+  GetPointOfInterestRequest request;
+  request.set_id(id);
+  GetPointOfInterestResponse response;
+  grpc::Status status = stub->GetPointOfInterest(&context, request, &response);
   if (!status.ok()) {
-    LOG(FATAL) << "Could not get nearest point of interest: " << status.error_code() << ": "
+    LOG(FATAL) << "Could not get point of interest: " << status.error_code() << ": "
                << status.error_message();
   }
   LOG(INFO) << "Response:";
   LOG(INFO) << " - name: " << response.point_of_interest().name();
-  LOG(INFO) << " - latitude: " << response.point_of_interest().location().latitude();
-  LOG(INFO) << " - longitude: " << response.point_of_interest().location().longitude();
+  LOG(INFO) << " - latitude: " << response.point_of_interest().latitude_degrees();
+  LOG(INFO) << " - longitude: " << response.point_of_interest().longitude_degrees();
 }
 
 int main(int argc, char** argv) {
@@ -72,20 +67,8 @@ int main(int argc, char** argv) {
     LOG(FATAL) << "Failed to create application stub";
   }
 
-  // Parse arguments.
-  float latitude = absl::GetFlag(FLAGS_latitude);
-  if (latitude < -90.0 || latitude > 90.0) {
-    LOG(FATAL) << "Latitude must be a valid floating point number >=-90 and <= 90, found "
-               << latitude;
-  }
-  float longitude = absl::GetFlag(FLAGS_longitude);
-  if (longitude < -180.0 || longitude > 180.0) {
-    LOG(FATAL) << "Longitude must be a valid floating point number >= -180 and <= 180, found "
-               << longitude;
-  }
-
-  // Get nearest point of interest from the server.
-  get_nearest_point_of_interest(stub.get(), latitude, longitude);
+  // Get point of interest from the server.
+  get_point_of_interest(stub.get(), absl::GetFlag(FLAGS_id));
 
   return EXIT_SUCCESS;
 }
