@@ -4,7 +4,6 @@ members = [
   "abitest/grpc",
   "abitest/module_0/rust",
   "abitest/module_1/rust",
-  "abitest/tests",
   "aggregator/backend",
   "aggregator/grpc",
   "aggregator/common",

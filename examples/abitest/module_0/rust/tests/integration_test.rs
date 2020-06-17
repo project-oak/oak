@@ -22,13 +22,13 @@ use oak_abi::proto::oak::application::ConfigMap;
 use std::collections::HashMap;
 
 // Constants for Node config names that should match those in the textproto
-// config held in ../../client/config.h.
+// config held in ../../../config.
 const FRONTEND_MODULE_NAME: &str = "frontend_module";
 const BACKEND_MODULE_NAME: &str = "backend_module";
 const FRONTEND_ENTRYPOINT_NAME: &str = "frontend_oak_main";
 
-const FRONTEND_MANIFEST: &str = "../module_0/rust/Cargo.toml";
-const BACKEND_MANIFEST: &str = "../module_1/rust/Cargo.toml";
+const FRONTEND_MANIFEST: &str = "../../module_0/rust/Cargo.toml";
+const BACKEND_MANIFEST: &str = "../../module_1/rust/Cargo.toml";
 
 const FRONTEND_WASM_NAME: &str = "abitest_0_frontend.wasm";
 const BACKEND_WASM_NAME: &str = "abitest_1_backend.wasm";
