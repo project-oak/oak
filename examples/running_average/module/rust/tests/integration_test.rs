@@ -15,40 +15,34 @@
 //
 
 use assert_matches::assert_matches;
-use oak::grpc;
-use running_average::proto::{GetAverageResponse, SubmitSampleRequest};
+use running_average_grpc::proto::{
+    running_average_client::RunningAverageClient, SubmitSampleRequest,
+};
 
 const MODULE_CONFIG_NAME: &str = "running_average";
 
-fn submit_sample(runtime: &oak_runtime::RuntimeProxy, entry_handle: oak_abi::Handle, value: u64) {
+async fn submit_sample(client: &mut RunningAverageClient<tonic::transport::Channel>, value: u64) {
     let req = SubmitSampleRequest { value };
-    let result: grpc::Result<()> = oak_tests::grpc_request(
-        &runtime,
-        entry_handle,
-        "/oak.examples.running_average.RunningAverage/SubmitSample",
-        &req,
-    );
+    let result = client.submit_sample(req).await;
     assert_matches!(result, Ok(_));
 }
 
-#[test]
-fn test_running_average() {
+#[tokio::test(core_threads = 2)]
+async fn test_running_average() {
     env_logger::init();
 
-    let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let (runtime, _entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    submit_sample(&runtime, entry_handle, 100);
-    submit_sample(&runtime, entry_handle, 200);
+    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let mut client = RunningAverageClient::with_interceptor(channel, interceptor);
 
-    let result: grpc::Result<GetAverageResponse> = oak_tests::grpc_request(
-        &runtime,
-        entry_handle,
-        "/oak.examples.running_average.RunningAverage/GetAverage",
-        &(),
-    );
+    submit_sample(&mut client, 100).await;
+    submit_sample(&mut client, 200).await;
+
+    let result = client.get_average(()).await;
     assert_matches!(result, Ok(_));
-    assert_eq!(150, result.unwrap().average);
+    assert_eq!(150, result.unwrap().into_inner().average);
 
     runtime.stop_runtime();
 }

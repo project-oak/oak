@@ -1648,6 +1648,18 @@ dependencies = [
  "oak_tests",
  "oak_utils",
  "prost",
+ "running_average_grpc",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
+name = "running_average_grpc"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]
