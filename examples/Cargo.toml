@@ -10,6 +10,7 @@ members = [
   "aggregator/module/rust",
   "authentication/client",
   "chat/module/rust",
+  "hello_world/grpc",
   "hello_world/module/rust",
   "machine_learning/module/rust",
   "trusted_information_retrieval/backend",
@@ -36,6 +37,7 @@ oak_tests = { path = "../sdk/rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }
 # Examples.
 abitest_grpc = { path = "abitest/grpc" }
+hello_world_grpc = { path = "hello_world/grpc" }
 translator_grpc = { path = "translator/grpc" }
 translator_common = { path = "translator/common" }
 # Third party.

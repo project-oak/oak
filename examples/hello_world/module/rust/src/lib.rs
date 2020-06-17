@@ -22,17 +22,7 @@ use log::info;
 use oak::grpc;
 use proto::{HelloRequest, HelloResponse, HelloWorld, HelloWorldDispatcher};
 
-oak::entrypoint!(oak_main => |in_channel| {
-    oak::logger::init_default();
-    let node = Node {
-        translator: grpc::client::Client::new(&oak::node_config::wasm("translator", "oak_main"))
-            .map(translator_common::TranslatorClient),
-    };
-    let dispatcher = HelloWorldDispatcher::new(node);
-    oak::run_event_loop(dispatcher, in_channel);
-});
-
-oak::entrypoint!(grpc_oak_main => |_in_channel| {
+oak::entrypoint!(oak_main => |_in_channel| {
     oak::logger::init_default();
     let node = Node {
         translator: grpc::client::Client::new(&oak::node_config::wasm("translator", "oak_main"))
