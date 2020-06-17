@@ -23,7 +23,7 @@ use oak_abi::proto::oak::application::{
 };
 use prost::Message;
 use std::{collections::HashMap, path::PathBuf, process::Command};
-use tonic::transport::Certificate;
+use tonic::transport::Identity;
 
 // TODO(#544): re-enable unit tests of SDK functionality
 
@@ -119,12 +119,14 @@ pub fn runtime_configs(
             introspect_port: Some(1909),
         },
         oak_runtime::GrpcConfiguration {
-            grpc_server_tls_identity: None,
+            grpc_server_tls_identity: Some(Identity::from_pem(
+                include_str!("../certs/local.pem"),
+                include_str!("../certs/local.key"),
+            )),
+            grpc_client_root_tls_certificate: Some(
+                oak_runtime::config::load_certificate(&include_str!("../certs/ca.pem")).unwrap(),
+            ),
             oidc_client_info: None,
-            // Some of the tests require a gRPC client, so we populate the required certificate with
-            // an invalid value here, even though it will still fail when instantiating the actual
-            // gRPC client.
-            grpc_client_root_tls_certificate: Some(Certificate::from_pem("invalid-cert")),
         },
     )
 }
