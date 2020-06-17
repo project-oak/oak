@@ -19,7 +19,7 @@
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use log::{debug, error, info, trace, warn};
-use oak_abi::proto::oak::application::NodeConfiguration;
+use oak_abi::proto::oak::application::{ConfigMap, NodeConfiguration};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
@@ -458,13 +458,24 @@ pub fn set_panic_hook() {
     }));
 }
 
-/// Trait implemented by all Oak Nodes.
+/// Trait implemented by Oak Nodes that operate on commands.
 ///
 /// It has a single method for handling commands, which are [`Decodable`](crate::io::Decodable)
 /// objects that are received via the single incoming channel handle which is passed in at Node
 /// creation time. The return value is only used for logging in case of failure.
 pub trait Node<T: crate::io::Decodable> {
     fn handle_command(&mut self, command: T) -> Result<(), crate::OakError>;
+}
+
+/// Retrieve the Application's `ConfigMap` from the read handle for the start-of-day
+/// initial channel.
+pub fn app_config_map(initial_handle: ReadHandle) -> Result<ConfigMap, OakError> {
+    let receiver = crate::io::Receiver::new(initial_handle);
+    let result = receiver.receive();
+    if let Err(err) = receiver.close() {
+        error!("Failed to close initial channel: {:?}", err);
+    }
+    result
 }
 
 /// Run an event loop on the provided `node`:
