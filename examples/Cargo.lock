@@ -43,11 +43,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "abitest_grpc"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
 name = "abitest_tests"
 version = "0.1.0"
 dependencies = [
  "abitest_0_frontend",
  "abitest_1_backend",
+ "abitest_grpc",
  "assert_matches",
  "env_logger",
  "log",
@@ -57,6 +67,7 @@ dependencies = [
  "oak_runtime",
  "oak_tests",
  "prost",
+ "tokio",
  "tonic",
 ]
 

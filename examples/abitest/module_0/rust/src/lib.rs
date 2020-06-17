@@ -131,20 +131,7 @@ impl FrontendNode {
 }
 
 #[no_mangle]
-pub extern "C" fn frontend_oak_main(in_handle: u64) {
-    let _ = std::panic::catch_unwind(|| {
-        oak::set_panic_hook();
-        let node = FrontendNode::new();
-        let dispatcher = OakAbiTestServiceDispatcher::new(node);
-        let in_channel = ::oak::ReadHandle {
-            handle: ::oak::Handle::from_raw(in_handle),
-        };
-        oak::run_event_loop(dispatcher, in_channel);
-    });
-}
-
-#[no_mangle]
-pub extern "C" fn grpc_frontend_oak_main(_in_handle: u64) {
+pub extern "C" fn frontend_oak_main(_in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
         let node = FrontendNode::new();
