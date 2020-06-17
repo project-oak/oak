@@ -364,6 +364,15 @@
 <span id="364">364</span>
 <span id="365">365</span>
 <span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -421,16 +430,25 @@
     <span class="kw">pub</span> <span class="ident">example_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;only build the examples, do not run them&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">build_only</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">flatten</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">build_server</span>: <span class="ident">BuildServer</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildServer</span> {
+    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base]&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;base&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">server_variant</span>: <span class="ident">String</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, logless, rust, arm, asan, tsan]&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;base&quot;</span>
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]&quot;</span>
     )]</span>
-    <span class="kw">pub</span> <span class="ident">variant</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">server_rust_toolchain</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(
+        <span class="ident">long</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl]&quot;</span>,
+        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;x86_64-unknown-linux-musl&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">server_rust_target</span>: <span class="ident">String</span>,
 }
 
 <span class="doccomment">/// Encapsulates all the local state relative to a step, and is propagated to child steps.</span>
