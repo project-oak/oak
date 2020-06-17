@@ -34,7 +34,7 @@ extern "C" void process_invocation(const uint8_t* req_buf, uint32_t req_size,
 // method semantics.  The Oak Module needs to provide an implementation
 // of the `process_invocation()` function, which will be called with
 // each incoming request.
-WASM_EXPORT void grpc_oak_main(oak_abi::Handle _handle) {
+WASM_EXPORT void oak_main(oak_abi::Handle _handle) {
   // Create a channel to the gRPC server pseudo-Node.
   oak_abi::Handle write_handle;
   oak_abi::Handle read_handle;

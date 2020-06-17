@@ -232,7 +232,7 @@ initial_node_configuration: {
   name: "main"
   wasm_config: {
     wasm_module_name: "app"
-    wasm_entrypoint_name: "grpc_oak_main"
+    wasm_entrypoint_name: "oak_main"
   }
 }
 ```
@@ -484,24 +484,24 @@ framework via the Oak Runtime:
 [embedmd]:# (../examples/hello_world/module/rust/tests/integration_test.rs Rust /^.*Test invoking the SayHello Node service method via the Oak runtime.*/ /^}$/)
 ```Rust
 // Test invoking the SayHello Node service method via the Oak runtime.
-#[test]
-fn test_say_hello() {
+#[tokio::test(core_threads = 2)]
+async fn test_say_hello() {
     env_logger::init();
 
-    let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let (runtime, _entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
+
+    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let mut client = HelloWorldClient::with_interceptor(channel, interceptor);
 
     let req = HelloRequest {
         greeting: "world".into(),
     };
-    let result: grpc::Result<HelloResponse> = oak_tests::grpc_request(
-        &runtime,
-        entry_handle,
-        "/oak.examples.hello_world.HelloWorld/SayHello",
-        &req,
-    );
+    info!("Sending request: {:?}", req);
+
+    let result = client.say_hello(req).await;
     assert_matches!(result, Ok(_));
-    assert_eq!("HELLO world!", result.unwrap().reply);
+    assert_eq!("HELLO world!", result.unwrap().into_inner().reply);
 
     runtime.stop_runtime();
 }

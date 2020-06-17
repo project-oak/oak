@@ -605,13 +605,24 @@ version = "0.1.0"
 dependencies = [
  "assert_matches",
  "env_logger",
+ "hello_world_grpc",
  "log",
  "oak",
  "oak_runtime",
  "oak_tests",
  "oak_utils",
  "prost",
+ "tokio",
  "translator_common",
+]
+
+[[package]]
+name = "hello_world_grpc"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]

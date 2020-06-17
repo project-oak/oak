@@ -17,8 +17,11 @@ translator_common = "=0.1.0"
 [dev-dependencies]
 assert_matches = "*"
 env_logger = "*"
+hello_world_grpc = "=0.1.0"
+log = "*"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
+tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
 
 [build-dependencies]
 oak_utils = "*"
