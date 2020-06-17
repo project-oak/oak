@@ -533,7 +533,7 @@ configure and run the Runtime.
         wasm_modules,
         FRONTEND_MODULE_NAME,
         FRONTEND_ENTRYPOINT_NAME,
-        None,
+        ConfigMap::default(),
     );
     let runtime =
         oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");

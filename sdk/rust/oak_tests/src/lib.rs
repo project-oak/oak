@@ -89,7 +89,7 @@ pub fn run_single_module(
     module_config_name: &str,
     entrypoint_name: &str,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
-    let combined_config = runtime_config(module_config_name, entrypoint_name, None);
+    let combined_config = runtime_config(module_config_name, entrypoint_name, ConfigMap::default());
     oak_runtime::configure_and_run(combined_config)
 }
 
@@ -100,7 +100,7 @@ pub fn run_single_module_with_config(
     entrypoint_name: &str,
     config_map: ConfigMap,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
-    let combined_config = runtime_config(module_config_name, entrypoint_name, Some(config_map));
+    let combined_config = runtime_config(module_config_name, entrypoint_name, config_map);
     oak_runtime::configure_and_run(combined_config)
 }
 
@@ -109,7 +109,7 @@ pub fn run_single_module_with_config(
 pub fn runtime_config(
     module_config_name: &str,
     entrypoint_name: &str,
-    config_map: Option<ConfigMap>,
+    config_map: ConfigMap,
 ) -> oak_runtime::RuntimeConfiguration {
     let wasm: HashMap<String, Vec<u8>> = [(
         module_config_name.to_owned(),
@@ -132,7 +132,7 @@ pub fn runtime_config_wasm(
     wasm_modules: HashMap<String, Vec<u8>>,
     module_config_name: &str,
     entrypoint_name: &str,
-    config_map: Option<ConfigMap>,
+    config_map: ConfigMap,
 ) -> oak_runtime::RuntimeConfiguration {
     oak_runtime::RuntimeConfiguration {
         metrics_port: Some(9090),

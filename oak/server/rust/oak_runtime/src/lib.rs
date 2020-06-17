@@ -56,7 +56,7 @@ pub struct RuntimeConfiguration {
     /// Application configuration.
     pub app_config: ApplicationConfiguration,
     /// Start-of-day configuration to feed to the running Application.
-    pub config_map: Option<ConfigMap>,
+    pub config_map: ConfigMap,
 }
 
 /// Configuration options related to gRPC pseudo-Nodes.

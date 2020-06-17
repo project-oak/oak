@@ -228,7 +228,7 @@ fn main() -> anyhow::Result<()> {
         },
         grpc_config,
         app_config,
-        config_map: Some(config_map),
+        config_map,
     };
 
     // Start the Runtime from the given config.
