@@ -34,7 +34,7 @@ mod common {
     use maplit::hashmap;
     use oak_abi::{
         proto::oak::application::{
-            node_configuration::ConfigType, ApplicationConfiguration, NodeConfiguration,
+            node_configuration::ConfigType, ApplicationConfiguration, ConfigMap, NodeConfiguration,
             WebAssemblyConfiguration,
         },
         OakStatus,
@@ -74,7 +74,7 @@ mod common {
             introspect_port: None,
             grpc_config: GrpcConfiguration::default(),
             app_config: application_configuration,
-            config_map: None,
+            config_map: ConfigMap::default(),
         })
     }
 

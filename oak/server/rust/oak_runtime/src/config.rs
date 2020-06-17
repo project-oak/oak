@@ -27,19 +27,17 @@ use tonic::transport::Certificate;
 /// Returns a [`RuntimeProxy`] for an initial implicit Node, and a writeable [`oak_abi::Handle`] to
 /// send messages into the Runtime. Creating a new channel and passing the write [`oak_abi::Handle`]
 /// into the runtime will enable messages to be read back out from the [`RuntimeProxy`].
-pub fn configure_and_run(mut config: RuntimeConfiguration) -> Result<Arc<Runtime>, OakStatus> {
+pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, OakStatus> {
     let proxy = RuntimeProxy::create_runtime(&config.app_config, &config.grpc_config);
-    let config_map = config.config_map.take();
+    let config_map = config.config_map.clone();
     let handle = proxy.start_runtime(config)?;
 
-    if let Some(config_map) = config_map {
-        // Pass in the config map over the initial channel.
-        info!("Send in initial config map");
-        let sender = crate::io::Sender::new(handle);
-        sender.send(config_map, &proxy)?;
-    }
+    // Pass in the config map over the initial channel.
+    let sender = crate::io::Sender::new(handle);
+    info!("Send in initial config map");
+    sender.send(config_map, &proxy)?;
 
-    if let Err(err) = proxy.channel_close(handle) {
+    if let Err(err) = sender.close(&proxy) {
         error!("Failed to close initial handle {:?}: {:?}", handle, err);
     }
 

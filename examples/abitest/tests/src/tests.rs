@@ -18,6 +18,7 @@ use abitest_grpc::proto::{oak_abi_test_service_client::OakAbiTestServiceClient, 
 use assert_matches::assert_matches;
 use log::{error, info};
 use maplit::hashmap;
+use oak_abi::proto::oak::application::ConfigMap;
 use std::collections::HashMap;
 
 // Constants for Node config names that should match those in the textproto
@@ -48,7 +49,7 @@ async fn test_abi() {
         wasm_modules,
         FRONTEND_MODULE_NAME,
         FRONTEND_ENTRYPOINT_NAME,
-        None,
+        ConfigMap::default(),
     );
     let runtime =
         oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
