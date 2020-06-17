@@ -5,13 +5,19 @@ name = "abitest_0_frontend"
 version = "0.1.0"
 dependencies = [
  "abitest_common",
+ "abitest_grpc",
+ "assert_matches",
  "byteorder",
  "chrono",
+ "env_logger",
  "expect",
  "hex",
  "log",
+ "maplit",
  "oak",
  "oak_abi",
+ "oak_runtime",
+ "oak_tests",
  "oak_utils",
  "prost",
  "rand 0.7.3",
@@ -19,6 +25,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -49,26 +56,6 @@ dependencies = [
  "prost",
  "tonic",
  "tonic-build",
-]
-
-[[package]]
-name = "abitest_tests"
-version = "0.1.0"
-dependencies = [
- "abitest_0_frontend",
- "abitest_1_backend",
- "abitest_grpc",
- "assert_matches",
- "env_logger",
- "log",
- "maplit",
- "oak",
- "oak_abi",
- "oak_runtime",
- "oak_tests",
- "prost",
- "tokio",
- "tonic",
 ]
 
 [[package]]
