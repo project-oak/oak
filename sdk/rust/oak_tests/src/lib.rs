@@ -56,7 +56,9 @@ pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result
     std::fs::read(module_path)
 }
 
+/// Default entrypoint name for the module under test.
 const DEFAULT_ENTRYPOINT_NAME: &str = "oak_main";
+
 const DEFAULT_MODULE_MANIFEST: &str = "Cargo.toml";
 const MODULE_WASM_SUFFIX: &str = ".wasm";
 
@@ -74,6 +76,21 @@ pub fn run_single_module(
     module_config_name: &str,
     entrypoint_name: &str,
 ) -> Result<(oak_runtime::RuntimeProxy, oak_abi::Handle), oak::OakStatus> {
+    let (app_config, runtime_config, grpc_config) =
+        runtime_configs(module_config_name, entrypoint_name);
+    oak_runtime::configure_and_run(app_config, runtime_config, grpc_config)
+}
+
+/// Build the set of configurations needed to launch a test Runtime instance that
+/// runs a single-Node application with the given module name and entrypoint.
+pub fn runtime_configs(
+    module_config_name: &str,
+    entrypoint_name: &str,
+) -> (
+    ApplicationConfiguration,
+    oak_runtime::RuntimeConfiguration,
+    oak_runtime::GrpcConfiguration,
+) {
     let wasm: HashMap<String, Vec<u8>> = [(
         module_config_name.to_owned(),
         compile_rust_wasm(
@@ -86,19 +103,17 @@ pub fn run_single_module(
     .cloned()
     .collect();
 
-    let application_configuration = ApplicationConfiguration {
-        wasm_modules: wasm,
-        initial_node_configuration: Some(NodeConfiguration {
-            name: "test".to_string(),
-            config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
-                wasm_module_name: module_config_name.to_string(),
-                wasm_entrypoint_name: entrypoint_name.to_string(),
-            })),
-        }),
-    };
-
-    oak_runtime::configure_and_run(
-        application_configuration,
+    (
+        ApplicationConfiguration {
+            wasm_modules: wasm,
+            initial_node_configuration: Some(NodeConfiguration {
+                name: "test".to_string(),
+                config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
+                    wasm_module_name: module_config_name.to_string(),
+                    wasm_entrypoint_name: entrypoint_name.to_string(),
+                })),
+            }),
+        },
         oak_runtime::RuntimeConfiguration::default(),
         oak_runtime::GrpcConfiguration {
             grpc_server_tls_identity: None,
