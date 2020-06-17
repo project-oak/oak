@@ -103,9 +103,23 @@ pub fn runtime_configs(
     .cloned()
     .collect();
 
+    runtime_configs_wasm(wasm, module_config_name, entrypoint_name)
+}
+
+/// Build the set of configurations needed to launch a test Runtime instance that runs the given
+/// collection of Wasm modules, starting with the given module name and entrypoint.
+pub fn runtime_configs_wasm(
+    wasm_modules: HashMap<String, Vec<u8>>,
+    module_config_name: &str,
+    entrypoint_name: &str,
+) -> (
+    ApplicationConfiguration,
+    oak_runtime::RuntimeConfiguration,
+    oak_runtime::GrpcConfiguration,
+) {
     (
         ApplicationConfiguration {
-            wasm_modules: wasm,
+            wasm_modules,
             initial_node_configuration: Some(NodeConfiguration {
                 name: "test".to_string(),
                 config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
