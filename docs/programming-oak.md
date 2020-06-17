@@ -536,7 +536,7 @@ by defining an appropriate `ApplicationConfiguration` instance and then
 configure and run the Runtime.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/tests/src/tests.rs Rust / +let wasm_modules =/ /unable to configure runtime.*/)
+[embedmd]:# (../examples/abitest/module_0/rust/tests/integration_test.rs Rust / +let wasm_modules =/ /unable to configure runtime.*/)
 ```Rust
     let wasm_modules = build_wasm().expect("failed to build wasm modules");
     let config = oak_tests::runtime_config_wasm(
