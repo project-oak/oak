@@ -240,11 +240,6 @@ impl Channel {
         self.writer_count.load(SeqCst) > 0
     }
 
-    /// Determine whether there are any users of the channel.
-    pub fn has_users(&self) -> bool {
-        self.has_readers() || self.has_writers()
-    }
-
     /// Decrement the [`Channel`] writer counter.
     fn dec_writer_count(&self) {
         if self.writer_count.fetch_sub(1, SeqCst) == 0 {

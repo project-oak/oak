@@ -43,7 +43,7 @@ async fn submit_sample(
 async fn test_aggregator() {
     env_logger::init();
 
-    let (runtime, _entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let runtime = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
@@ -67,7 +67,7 @@ async fn test_aggregator() {
         Err(_)
     );
 
-    runtime.stop_runtime();
+    runtime.stop();
 }
 
 #[test]

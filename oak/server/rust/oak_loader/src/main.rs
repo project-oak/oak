@@ -28,16 +28,11 @@
 
 use anyhow::{anyhow, bail, Context};
 use core::str::FromStr;
-use log::{debug, error, info};
-use oak_abi::{
-    proto::oak::application::{ApplicationConfiguration, ConfigMap},
-    Handle,
-};
+use log::{debug, info};
+use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 use oak_runtime::{
     auth::oidc_utils::parse_client_info_json,
     config::{configure_and_run, load_certificate},
-    io::Sender,
-    RuntimeProxy,
 };
 use prost::Message;
 use std::{
@@ -151,18 +146,6 @@ pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<Config
     Ok(ConfigMap { items: file_map })
 }
 
-/// Send configuration map to the initial Oak Node.
-fn send_config_map(
-    config_map: ConfigMap,
-    runtime: &RuntimeProxy,
-    handle: Handle,
-) -> anyhow::Result<()> {
-    let sender = Sender::new(handle);
-    sender
-        .send(config_map, runtime)
-        .context("could not send configuration map to the initial Node")
-}
-
 /// Gets the default root TLS certificates from the embedded byte array.
 fn get_default_root_tls_certs() -> anyhow::Result<String> {
     let result = std::str::from_utf8(include_bytes!("certs/roots.pem"))
@@ -245,25 +228,13 @@ fn main() -> anyhow::Result<()> {
         },
         grpc_config,
         app_config,
+        config_map: Some(config_map),
     };
 
     // Start the Runtime from the given config.
     info!("starting Runtime");
-    let (runtime, initial_handle) =
-        configure_and_run(runtime_configuration).context("could not start Runtime")?;
-    info!(
-        "initial node {:?} with write handle {:?}",
-        runtime.node_id, initial_handle
-    );
-
-    // Pass in the config map over the initial channel.
-    send_config_map(config_map, &runtime, initial_handle)?;
-    if let Err(err) = runtime.channel_close(initial_handle) {
-        error!(
-            "Failed to close initial handle {:?}: {:?}",
-            initial_handle, err
-        );
-    }
+    let runtime = configure_and_run(runtime_configuration).context("could not start Runtime")?;
+    info!("started Runtime");
 
     let done = Arc::new(AtomicBool::new(false));
     signal_hook::flag::register(signal_hook::SIGINT, Arc::clone(&done))
@@ -280,7 +251,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     info!("stop Runtime");
-    runtime.stop_runtime();
+    runtime.stop();
 
     info!("Runtime stopped");
     Ok(())

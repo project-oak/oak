@@ -31,7 +31,7 @@ async fn submit_sample(client: &mut RunningAverageClient<tonic::transport::Chann
 async fn test_running_average() {
     env_logger::init();
 
-    let (runtime, _entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let runtime = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
@@ -44,5 +44,5 @@ async fn test_running_average() {
     assert_matches!(result, Ok(_));
     assert_eq!(150, result.unwrap().into_inner().average);
 
-    runtime.stop_runtime();
+    runtime.stop();
 }

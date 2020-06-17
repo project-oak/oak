@@ -25,7 +25,7 @@ const MODULE_CONFIG_NAME: &str = "hello_world";
 async fn test_say_hello() {
     env_logger::init();
 
-    let (runtime, _entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let runtime = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
@@ -40,5 +40,5 @@ async fn test_say_hello() {
     assert_matches!(result, Ok(_));
     assert_eq!("HELLO world!", result.unwrap().into_inner().reply);
 
-    runtime.stop_runtime();
+    runtime.stop();
 }

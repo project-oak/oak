@@ -16,29 +16,18 @@
 
 use assert_matches::assert_matches;
 use maplit::hashmap;
-use oak_abi::{proto::oak::application::ConfigMap, OakStatus};
-use oak_runtime::io::Encodable;
+use oak_abi::proto::oak::application::ConfigMap;
 use trusted_information_retrieval_client::proto::{
     trusted_information_retrieval_client::TrustedInformationRetrievalClient,
     ListPointsOfInterestRequest, ListPointsOfInterestResponse, Location,
 };
 
 const MODULE_CONFIG_NAME: &str = "trusted_information_retrieval";
+const ENTRYPOINT_NAME: &str = "oak_main";
 
 const CONFIG_FILE: &str = r#"
 database_url = "https://localhost:8888"
 "#;
-
-fn send_config(
-    runtime: &oak_runtime::RuntimeProxy,
-    entry_handle: oak_abi::Handle,
-    config_file: Vec<u8>,
-) -> Result<(), OakStatus> {
-    let config_map = ConfigMap {
-        items: hashmap! {"config".to_string() => config_file},
-    };
-    runtime.channel_write(entry_handle, config_map.encode()?)
-}
 
 async fn submit_sample(
     client: &mut TrustedInformationRetrievalClient<tonic::transport::Channel>,
@@ -58,17 +47,19 @@ async fn submit_sample(
 async fn test_trusted_information_retrieval() {
     env_logger::init();
 
-    let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
-        .expect("Unable to configure runtime with test wasm!");
-
-    assert_matches!(
-        send_config(&runtime, entry_handle, CONFIG_FILE.as_bytes().to_vec()),
-        Ok(_)
-    );
+    // Send test database as a start-of-day config map.
+    let config_map = ConfigMap {
+        items: hashmap! {"config".to_string() => CONFIG_FILE.as_bytes().to_vec()},
+    };
+    let runtime =
+        oak_tests::run_single_module_with_config(MODULE_CONFIG_NAME, ENTRYPOINT_NAME, config_map)
+            .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
     let mut client = TrustedInformationRetrievalClient::with_interceptor(channel, interceptor);
 
     // Test nearest point of interest
     assert_matches!(submit_sample(&mut client, 4.0, -10.0).await, Err(_));
+
+    runtime.stop();
 }

@@ -26,7 +26,7 @@ const MODULE_CONFIG_NAME: &str = "private_set_intersection";
 async fn test_set_intersection() {
     env_logger::init();
 
-    let (runtime, _entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let runtime = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
@@ -50,5 +50,5 @@ async fn test_set_intersection() {
     let want: HashSet<String> = ["b".to_string(), "c".to_string()].iter().cloned().collect();
     assert_eq!(got, want);
 
-    runtime.stop_runtime();
+    runtime.stop();
 }

@@ -39,10 +39,11 @@ mod common {
         },
         OakStatus,
     };
-    use oak_runtime::{config, runtime::RuntimeProxy, GrpcConfiguration};
+    use oak_runtime::{config, GrpcConfiguration, Runtime};
+    use std::sync::Arc;
     use wat::parse_str;
 
-    pub fn start_runtime() -> Result<(RuntimeProxy, oak_abi::Handle), OakStatus> {
+    pub fn start_runtime() -> Result<Arc<Runtime>, OakStatus> {
         let wat = r#"
         (module
             (type (;0;) (func (param i64)))
@@ -73,6 +74,7 @@ mod common {
             introspect_port: None,
             grpc_config: GrpcConfiguration::default(),
             app_config: application_configuration,
+            config_map: None,
         })
     }
 
@@ -104,7 +106,7 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
     init_logging();
 
     // Start the Runtime, including a metrics server.
-    let (runtime, _initial_handle) = common::start_runtime().expect("Starting the Runtime failed!");
+    let runtime = common::start_runtime().expect("Starting the Runtime failed!");
 
     let mut rt = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
     let res = rt
@@ -117,7 +119,7 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
     let value = get_int_metric_value(&res, "runtime_health_check");
     assert_eq!(value, Some(1), "{}", &res);
 
-    runtime.stop_runtime();
+    runtime.stop();
 }
 
 #[test]
