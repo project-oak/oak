@@ -1276,7 +1276,18 @@ dependencies = [
  "oak_runtime",
  "oak_tests",
  "oak_utils",
+ "private_set_intersection_grpc",
  "prost",
+ "tokio",
+]
+
+[[package]]
+name = "private_set_intersection_grpc"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]

@@ -15,49 +15,38 @@
 //
 
 use assert_matches::assert_matches;
-use oak::grpc;
-use private_set_intersection::proto::{GetIntersectionResponse, SubmitSetRequest};
+use private_set_intersection_grpc::proto::{
+    private_set_intersection_client::PrivateSetIntersectionClient, SubmitSetRequest,
+};
 use std::{collections::HashSet, iter::FromIterator};
 
 const MODULE_CONFIG_NAME: &str = "private_set_intersection";
 
-#[test]
-fn test_set_intersection() {
+#[tokio::test(core_threads = 2)]
+async fn test_set_intersection() {
     env_logger::init();
 
-    let (runtime, entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let (runtime, _entry_channel) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
         .expect("Unable to configure runtime with test wasm!");
+
+    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let mut client = PrivateSetIntersectionClient::with_interceptor(channel, interceptor);
 
     let req = SubmitSetRequest {
         values: vec!["a".to_string(), "b".to_string(), "c".to_string()],
     };
-    let result: grpc::Result<()> = oak_tests::grpc_request(
-        &runtime,
-        entry_channel,
-        "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
-        &req,
-    );
+    let result = client.submit_set(req).await;
     assert_matches!(result, Ok(_));
 
     let req = SubmitSetRequest {
         values: vec!["b".to_string(), "c".to_string(), "d".to_string()],
     };
-    let result: grpc::Result<()> = oak_tests::grpc_request(
-        &runtime,
-        entry_channel,
-        "/oak.examples.private_set_intersection.PrivateSetIntersection/SubmitSet",
-        &req,
-    );
+    let result = client.submit_set(req).await;
     assert_matches!(result, Ok(_));
 
-    let result: grpc::Result<GetIntersectionResponse> = oak_tests::grpc_request(
-        &runtime,
-        entry_channel,
-        "/oak.examples.private_set_intersection.PrivateSetIntersection/GetIntersection",
-        &(),
-    );
+    let result = client.get_intersection(()).await;
     assert_matches!(result, Ok(_));
-    let got = HashSet::<String>::from_iter(result.unwrap().values.to_vec());
+    let got = HashSet::<String>::from_iter(result.unwrap().into_inner().values.to_vec());
     let want: HashSet<String> = ["b".to_string(), "c".to_string()].iter().cloned().collect();
     assert_eq!(got, want);
 
