@@ -41,7 +41,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         initial_node_configuration: None,
     };
     info!("Create runtime for test");
-    let proxy = crate::RuntimeProxy::create_runtime(configuration, GrpcConfiguration::default());
+    let proxy = crate::RuntimeProxy::create_runtime(&configuration, &GrpcConfiguration::default());
 
     struct TestNode {
         node_body: Box<NodeBody>,

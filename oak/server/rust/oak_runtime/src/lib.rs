@@ -23,7 +23,7 @@
 //! be enabled in development, as it destroys the privacy guarantees of the
 //! platform by providing easy channels for the exfiltration of private data.
 
-pub mod proto;
+use oak_abi::proto::oak::application::ApplicationConfiguration;
 
 pub mod auth;
 pub mod config;
@@ -31,6 +31,7 @@ pub mod io;
 pub mod message;
 pub mod metrics;
 pub mod node;
+pub mod proto;
 pub mod runtime;
 pub mod time;
 
@@ -41,24 +42,29 @@ pub use config::configure_and_run;
 pub use message::NodeMessage;
 pub use runtime::{NodeId, RuntimeProxy};
 
-/// Configuration options that govern the behaviour of the Runtime itself.
-#[derive(Default, Debug)]
+/// Configuration options that govern the behaviour of the Runtime and the Oak Application running
+/// inside it.
+#[derive(Default, Clone)]
 pub struct RuntimeConfiguration {
     /// Port to run a metrics server on, if provided.
     pub metrics_port: Option<u16>,
     /// Port to run an introspection server on, if provided.
     pub introspect_port: Option<u16>,
+    /// gRPC-specific options.
+    pub grpc_config: GrpcConfiguration,
+    /// Application configuration.
+    pub app_config: ApplicationConfiguration,
 }
 
 /// Configuration options related to gRPC pseudo-Nodes.
 ///
 /// `Debug` is intentionally not implemented in order to avoid accidentally logging secrets.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct GrpcConfiguration {
     /// TLS identity to use for all gRPC Server Nodes.
     pub grpc_server_tls_identity: Option<Identity>,
 
-    /// OpenID Connect Authentiction client information.
+    /// OpenID Connect Authentication client information.
     pub oidc_client_info: Option<ClientInfo>,
 
     /// Root TLS certificate to use for all gRPC Client Nodes.

@@ -76,21 +76,16 @@ pub fn run_single_module(
     module_config_name: &str,
     entrypoint_name: &str,
 ) -> Result<(oak_runtime::RuntimeProxy, oak_abi::Handle), oak::OakStatus> {
-    let (app_config, runtime_config, grpc_config) =
-        runtime_configs(module_config_name, entrypoint_name);
-    oak_runtime::configure_and_run(app_config, runtime_config, grpc_config)
+    let combined_config = runtime_config(module_config_name, entrypoint_name);
+    oak_runtime::configure_and_run(combined_config)
 }
 
-/// Build the set of configurations needed to launch a test Runtime instance that
+/// Build the configuration needed to launch a test Runtime instance that
 /// runs a single-Node application with the given module name and entrypoint.
-pub fn runtime_configs(
+pub fn runtime_config(
     module_config_name: &str,
     entrypoint_name: &str,
-) -> (
-    ApplicationConfiguration,
-    oak_runtime::RuntimeConfiguration,
-    oak_runtime::GrpcConfiguration,
-) {
+) -> oak_runtime::RuntimeConfiguration {
     let wasm: HashMap<String, Vec<u8>> = [(
         module_config_name.to_owned(),
         compile_rust_wasm(
@@ -103,36 +98,20 @@ pub fn runtime_configs(
     .cloned()
     .collect();
 
-    runtime_configs_wasm(wasm, module_config_name, entrypoint_name)
+    runtime_config_wasm(wasm, module_config_name, entrypoint_name)
 }
 
-/// Build the set of configurations needed to launch a test Runtime instance that runs the given
+/// Build the configuration needed to launch a test Runtime instance that runs the given
 /// collection of Wasm modules, starting with the given module name and entrypoint.
-pub fn runtime_configs_wasm(
+pub fn runtime_config_wasm(
     wasm_modules: HashMap<String, Vec<u8>>,
     module_config_name: &str,
     entrypoint_name: &str,
-) -> (
-    ApplicationConfiguration,
-    oak_runtime::RuntimeConfiguration,
-    oak_runtime::GrpcConfiguration,
-) {
-    (
-        ApplicationConfiguration {
-            wasm_modules,
-            initial_node_configuration: Some(NodeConfiguration {
-                name: "test".to_string(),
-                config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
-                    wasm_module_name: module_config_name.to_string(),
-                    wasm_entrypoint_name: entrypoint_name.to_string(),
-                })),
-            }),
-        },
-        oak_runtime::RuntimeConfiguration {
-            metrics_port: Some(9090),
-            introspect_port: Some(1909),
-        },
-        oak_runtime::GrpcConfiguration {
+) -> oak_runtime::RuntimeConfiguration {
+    oak_runtime::RuntimeConfiguration {
+        metrics_port: Some(9090),
+        introspect_port: Some(1909),
+        grpc_config: oak_runtime::GrpcConfiguration {
             grpc_server_tls_identity: Some(Identity::from_pem(
                 include_str!("../certs/local.pem"),
                 include_str!("../certs/local.key"),
@@ -142,7 +121,17 @@ pub fn runtime_configs_wasm(
             ),
             oidc_client_info: None,
         },
-    )
+        app_config: ApplicationConfiguration {
+            wasm_modules,
+            initial_node_configuration: Some(NodeConfiguration {
+                name: "test".to_string(),
+                config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
+                    wasm_module_name: module_config_name.to_string(),
+                    wasm_entrypoint_name: entrypoint_name.to_string(),
+                })),
+            }),
+        },
+    }
 }
 
 /// Inject a gRPC request into an Oak Application under test and return the corresponding

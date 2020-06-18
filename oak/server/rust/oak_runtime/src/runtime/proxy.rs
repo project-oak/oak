@@ -62,21 +62,17 @@ pub struct RuntimeProxy {
 impl RuntimeProxy {
     /// Creates a [`Runtime`] instance with a single initial Node configured, and no channels.
     pub fn create_runtime(
-        application_configuration: ApplicationConfiguration,
-        grpc_configuration: GrpcConfiguration,
+        application_configuration: &ApplicationConfiguration,
+        grpc_configuration: &GrpcConfiguration,
     ) -> RuntimeProxy {
         let runtime = Arc::new(Runtime {
-            application_configuration,
-            grpc_configuration,
+            application_configuration: application_configuration.clone(),
+            grpc_configuration: grpc_configuration.clone(),
             terminating: AtomicBool::new(false),
             next_channel_id: AtomicU64::new(0),
-
             node_infos: RwLock::new(HashMap::new()),
-
             next_node_id: AtomicU64::new(0),
-
             aux_servers: Mutex::new(Vec::new()),
-
             metrics_data: Metrics::new(),
         });
         let proxy = runtime.proxy_for_new_node();
