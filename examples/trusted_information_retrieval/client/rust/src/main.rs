@@ -16,22 +16,18 @@
 
 //! Client for the Trusted Information Retrieval example.
 
-pub mod proto {
-    tonic::include_proto!("oak.examples.trusted_information_retrieval");
-}
-
 use log::info;
 use oak_abi::label::Label;
 use prost::Message;
-use proto::{
-    trusted_information_retrieval_client::TrustedInformationRetrievalClient,
-    ListPointsOfInterestRequest, Location,
-};
 use structopt::StructOpt;
 use tonic::{
     metadata::MetadataValue,
     transport::{Certificate, Channel, ClientTlsConfig},
     Request,
+};
+use trusted_information_retrieval_client::proto::{
+    trusted_information_retrieval_client::TrustedInformationRetrievalClient,
+    ListPointsOfInterestRequest, Location,
 };
 
 #[derive(StructOpt, Clone)]

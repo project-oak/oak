@@ -25,6 +25,9 @@ oak_abi = "=0.1.0"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
 maplit = "*"
+tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+tonic = { version = "*", features = ["tls"] }
+trusted_information_retrieval_client = "=0.1.0"
 
 [build-dependencies]
 oak_utils = "*"

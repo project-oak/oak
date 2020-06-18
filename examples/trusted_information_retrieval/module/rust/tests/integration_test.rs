@@ -16,10 +16,10 @@
 
 use assert_matches::assert_matches;
 use maplit::hashmap;
-use oak::grpc;
 use oak_abi::{proto::oak::application::ConfigMap, OakStatus};
 use oak_runtime::io::Encodable;
-use trusted_information_retrieval::proto::{
+use trusted_information_retrieval_client::proto::{
+    trusted_information_retrieval_client::TrustedInformationRetrievalClient,
     ListPointsOfInterestRequest, ListPointsOfInterestResponse, Location,
 };
 
@@ -40,28 +40,22 @@ fn send_config(
     runtime.channel_write(entry_handle, config_map.encode()?)
 }
 
-fn submit_sample(
-    runtime: &oak_runtime::RuntimeProxy,
-    entry_handle: oak_abi::Handle,
+async fn submit_sample(
+    client: &mut TrustedInformationRetrievalClient<tonic::transport::Channel>,
     latitude: f32,
     longitude: f32,
-) -> grpc::Result<ListPointsOfInterestResponse> {
+) -> Result<tonic::Response<ListPointsOfInterestResponse>, tonic::Status> {
     let req = ListPointsOfInterestRequest {
         location: Some(Location {
             latitude,
             longitude,
         }),
     };
-    oak_tests::grpc_request(
-        &runtime,
-        entry_handle,
-        "/oak.examples.trusted_information_retrieval.TrustedInformationRetrieval/ListPointsOfInterest",
-        &req,
-    )
+    client.list_points_of_interest(req).await
 }
 
-#[test]
-fn test_trusted_information_retrieval() {
+#[tokio::test(core_threads = 2)]
+async fn test_trusted_information_retrieval() {
     env_logger::init();
 
     let (runtime, entry_handle) = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
@@ -72,6 +66,9 @@ fn test_trusted_information_retrieval() {
         Ok(_)
     );
 
+    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let mut client = TrustedInformationRetrievalClient::with_interceptor(channel, interceptor);
+
     // Test nearest point of interest
-    assert_matches!(submit_sample(&runtime, entry_handle, 4.0, -10.0), Err(_));
+    assert_matches!(submit_sample(&mut client, 4.0, -10.0).await, Err(_));
 }

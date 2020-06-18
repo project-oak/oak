@@ -202,15 +202,6 @@ oak::entrypoint!(oak_main => |in_channel| {
     let dispatcher = TrustedInformationRetrievalDispatcher::new(TrustedInformationRetrievalNode {
         database_url
     });
-    oak::run_event_loop(dispatcher, in_channel);
-});
-
-oak::entrypoint!(grpc_oak_main => |in_channel| {
-    oak::logger::init_default();
-    let database_url = get_database_url(in_channel).expect("Couldn't load database URL");
-    let dispatcher = TrustedInformationRetrievalDispatcher::new(TrustedInformationRetrievalNode {
-        database_url
-    });
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("Couldn't create gRPC server pseudo-Node");
     oak::run_event_loop(dispatcher, grpc_channel);
