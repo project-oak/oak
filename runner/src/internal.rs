@@ -15,7 +15,11 @@
 //
 
 use colored::*;
-use std::{collections::HashSet, io::Write, time::Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Write,
+    time::Instant,
+};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -257,6 +261,7 @@ pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
 pub struct Cmd {
     executable: String,
     args: Vec<String>,
+    env: HashMap<String, String>,
 }
 
 impl Cmd {
@@ -268,6 +273,19 @@ impl Cmd {
         Cmd {
             executable: executable.to_string(),
             args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
+            env: HashMap::new(),
+        }
+    }
+
+    pub fn new_with_env<I, S>(executable: &str, args: I, env: &HashMap<String, String>) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        Cmd {
+            executable: executable.to_string(),
+            args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
+            env: env.clone(),
         }
     }
     /// Run the provided command, printing a status message with the current prefix.
@@ -277,6 +295,29 @@ impl Cmd {
         std::io::stderr().flush().expect("could not flush stderr");
         let mut cmd = std::process::Command::new(&self.executable);
         cmd.args(&self.args);
+
+        cmd.env_clear();
+
+        cmd.env("HOME", std::env::var("HOME").unwrap());
+        cmd.env("PATH", std::env::var("PATH").unwrap());
+        if let Ok(v) = std::env::var("USER") {
+            cmd.env("USER", v);
+        }
+
+        cmd.env(
+            "RUST_LOG",
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
+        );
+        cmd.env("RUST_BACKTRACE", "1");
+
+        if let Ok(v) = std::env::var("RUSTUP_HOME") {
+            cmd.env("RUSTUP_HOME", v);
+        }
+        if let Ok(v) = std::env::var("CARGO_HOME") {
+            cmd.env("CARGO_HOME", v);
+        }
+
+        cmd.envs(&self.env);
         let command_string = format!("{:?}", cmd);
         if opt.dry_run {
             Running {
@@ -295,6 +336,8 @@ impl Cmd {
                 std::process::Stdio::inherit()
             } else {
                 std::process::Stdio::piped()
+                // The hello_world example client seems to hang when this is set to piped.
+                // std::process::Stdio::null()
             };
             let child = cmd
                 .stdout(stdout)

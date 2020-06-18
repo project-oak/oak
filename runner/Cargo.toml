@@ -9,6 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 colored = "*"
+maplit = "*"
 nix = "*"
 notify = "5.0.0-pre.2"
 serde = { version = "*", features = ["derive"] }

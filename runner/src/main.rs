@@ -24,6 +24,7 @@
 //! ```
 
 use colored::*;
+use maplit::hashmap;
 use notify::Watcher;
 use std::{
     collections::HashMap,
@@ -36,6 +37,8 @@ use structopt::StructOpt;
 #[macro_use]
 mod internal;
 use internal::*;
+
+const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-unknown-linux-musl";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
@@ -165,8 +168,8 @@ fn build_wasm_module(name: &str, manifest_path: &str) -> Step {
 
 fn build_server(opt: &BuildServer) -> Step {
     match opt.server_variant.as_str() {
-        "base" => Step::Single {
-            name: "build rust server".to_string(),
+        "base" | "logless" => Step::Single {
+            name: format!("build server ({})", opt.server_variant),
             command: Cmd::new(
                 "cargo",
                 spread![
@@ -181,6 +184,11 @@ fn build_server(opt: &BuildServer) -> Step {
                     "--release".to_string(),
                     format!("--target={}", opt.server_rust_target),
                     "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
+                    ...if opt.server_variant == "logless" {
+                        vec!["--no-default-features".to_string()]
+                    } else {
+                        vec![]
+                    },
                 ],
             ),
         },
@@ -192,13 +200,10 @@ fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
         steps: vec![
-            run_buildifier(FormatMode::Check),
-            run_prettier(FormatMode::Check),
-            run_markdownlint(FormatMode::Check),
-            run_liche(),
-            run_cargo_fmt(FormatMode::Check),
-            run_cargo_clippy(),
-            run_cargo_test(),
+            // run_cargo_clippy(),
+            // run_cargo_test(),
+            run_cargo_doc_check(),
+            run_cargo_test_tsan(),
             run_bazel_build(),
             run_bazel_test(),
         ],
@@ -218,10 +223,36 @@ fn format() -> Step {
     }
 }
 
+fn check_format() -> Step {
+    Step::Multiple {
+        name: "format".to_string(),
+        steps: vec![
+            run_buildifier(FormatMode::Check),
+            run_prettier(FormatMode::Check),
+            run_markdownlint(FormatMode::Check),
+            run_embedmd(FormatMode::Check),
+            run_liche(),
+            run_cargo_fmt(FormatMode::Check),
+        ],
+    }
+}
+
 fn run_ci() -> Step {
     Step::Multiple {
         name: "ci".to_string(),
         steps: vec![
+            check_format(),
+            run_cargo_deny(),
+            build_server(&BuildServer {
+                server_variant: "base".to_string(),
+                server_rust_toolchain: None,
+                server_rust_target: DEFAULT_SERVER_RUST_TARGET.to_string(),
+            }),
+            build_server(&BuildServer {
+                server_variant: "logless".to_string(),
+                server_rust_toolchain: None,
+                server_rust_target: DEFAULT_SERVER_RUST_TARGET.to_string(),
+            }),
             run_tests(),
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
@@ -230,7 +261,7 @@ fn run_ci() -> Step {
                 build_server: BuildServer {
                     server_variant: "base".to_string(),
                     server_rust_toolchain: None,
-                    server_rust_target: "x86_64-unknown-linux-musl".to_string(),
+                    server_rust_target: DEFAULT_SERVER_RUST_TARGET.to_string(),
                 },
             }),
         ],
@@ -250,7 +281,11 @@ fn build_example_config(example_name: &str) -> Step {
     }
 }
 
-fn run_example_server(opt: &BuildServer, application_file: &str) -> Cmd {
+fn run_example_server(
+    opt: &BuildServer,
+    example_server: &ExampleServer,
+    application_file: &str,
+) -> Cmd {
     Cmd::new(
         "cargo",
         spread![
@@ -271,6 +306,12 @@ fn run_example_server(opt: &BuildServer, application_file: &str) -> Cmd {
             "--root-tls-certificate=./examples/certs/local/ca.pem".to_string(),
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
+            ...if opt.server_variant == "logless" {
+                vec!["--no-default-features".to_string()]
+            } else {
+                vec![]
+            },
+            ...example_server.additional_args.clone(),
         ],
     )
 }
@@ -279,8 +320,19 @@ fn run_example_server(opt: &BuildServer, application_file: &str) -> Cmd {
 #[serde(deny_unknown_fields)]
 struct Example {
     name: String,
+    #[serde(default)]
+    server: ExampleServer,
+    #[serde(default)]
+    backend: Option<Executable>,
     modules: HashMap<String, Target>,
-    clients: HashMap<String, Client>,
+    clients: HashMap<String, Executable>,
+}
+
+#[derive(serde::Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+struct ExampleServer {
+    #[serde(default)]
+    additional_args: Vec<String>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -293,7 +345,7 @@ enum Target {
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct Client {
+struct Executable {
     #[serde(flatten)]
     target: Target,
     #[serde(default)]
@@ -301,6 +353,30 @@ struct Client {
 }
 
 fn run_example(opt: &RunExamples, example: &Example) -> Step {
+    let run_server = Step::WithBackground {
+        name: "run_server".to_string(),
+        background: run_example_server(
+            &opt.build_server,
+            &example.server,
+            &format!("./examples/bin/{}/config.bin", example.name),
+        ),
+        foreground: Box::new(Step::Multiple {
+            name: "run_client".to_string(),
+            steps: example
+                .clients
+                .iter()
+                .map(|(name, client)| run_client(name, &client))
+                .collect(),
+        }),
+    };
+    let run_background = match &example.backend {
+        Some(backend) => Step::WithBackground {
+            name: "run_backend".to_string(),
+            background: run(&backend),
+            foreground: Box::new(run_server),
+        },
+        None => run_server,
+    };
     Step::Multiple {
         name: example.name.to_string(),
         steps: vec![
@@ -324,24 +400,17 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 // faster.
                 build_server(&opt.build_server),
             ],
+            match &example.backend {
+                Some(backend) => vec![Step::Single {
+                    name: "build backend".to_string(),
+                    command: build(backend),
+                }],
+                None => vec![],
+            },
             if opt.build_only {
                 vec![]
             } else {
-                vec![Step::WithBackground {
-                    name: "run_server".to_string(),
-                    background: run_example_server(
-                        &opt.build_server,
-                        &format!("./examples/{}/bin/config.bin", example.name),
-                    ),
-                    foreground: Box::new(Step::Multiple {
-                        name: "run_client".to_string(),
-                        steps: example
-                            .clients
-                            .iter()
-                            .map(|(name, client)| run_client(name, &client))
-                            .collect(),
-                    }),
-                }]
+                vec![run_background]
             },
         ]
         .into_iter()
@@ -391,8 +460,79 @@ fn run_client(name: &str, client: &Client) -> Step {
                         ],
                     ),
                 },
+fn build(executable: &Executable) -> Cmd {
+    match &executable.target {
+        Target::Cargo { cargo_manifest } => Cmd::new(
+            "cargo",
+            vec![
+                "build".to_string(),
+                "--release".to_string(),
+                format!("--manifest-path={}", cargo_manifest),
             ],
-        },
+        ),
+        Target::Bazel { bazel_target } => {
+            Cmd::new("bazel", vec!["build".to_string(), bazel_target.to_string()])
+        }
+        Target::Npm { package_directory } => Cmd::new(
+            "npm",
+            vec!["ci".to_string(), format!("--prefix={}", package_directory)],
+        ),
+    }
+}
+
+fn run(executable: &Executable) -> Cmd {
+    match &executable.target {
+        Target::Cargo { cargo_manifest } => Cmd::new(
+            "cargo",
+            vec![
+                vec![
+                    "run".to_string(),
+                    "--release".to_string(),
+                    format!("--manifest-path={}", cargo_manifest),
+                    "--".to_string(),
+                ],
+                executable.additional_args.clone(),
+            ]
+            .iter()
+            .flatten(),
+        ),
+        Target::Bazel { bazel_target } => Cmd::new(
+            "bazel",
+            vec![
+                vec![
+                    "run".to_string(),
+                    "--".to_string(),
+                    bazel_target.to_string(),
+                    "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
+                ],
+                executable.additional_args.clone(),
+            ]
+            .iter()
+            .flatten(),
+        ),
+        Target::Npm { package_directory } => Cmd::new(
+            "npm",
+            vec![
+                "start".to_string(),
+                format!("--prefix={}", package_directory),
+            ],
+        ),
+    }
+}
+
+fn run_client(name: &str, executable: &Executable) -> Step {
+    Step::Multiple {
+        name: name.to_string(),
+        steps: vec![
+            Step::Single {
+                name: "build".to_string(),
+                command: build(executable),
+            },
+            Step::Single {
+                name: "run".to_string(),
+                command: run(executable),
+            },
+        ],
     }
 }
 
@@ -447,6 +587,16 @@ fn is_bazel_file(path: &PathBuf) -> bool {
 fn is_markdown_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".md")
+}
+
+fn is_toml_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".toml")
+}
+
+fn is_yaml_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".yaml")
 }
 
 /// Return whether the provided path refers to a `Cargo.toml` file. Note that it does not
@@ -519,7 +669,7 @@ fn run_prettier(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "prettier".to_string(),
         steps: source_files()
-            .filter(is_markdown_file)
+            .filter(|path| is_markdown_file(path) || is_yaml_file(path) || is_toml_file(path))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -642,6 +792,42 @@ fn run_cargo_test() -> Step {
     }
 }
 
+fn run_cargo_doc_check() -> Step {
+    Step::Multiple {
+        name: "cargo test".to_string(),
+        steps: workspace_manifest_files()
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
+            })
+            .collect(),
+    }
+}
+
+fn run_cargo_test_tsan() -> Step {
+    Step::Single {
+        name: "cargo test (tsan)".to_string(),
+        command: Cmd::new_with_env(
+            "cargo",
+            &[
+                "-Zbuild-std",
+                "test",
+                "--manifest-path=./examples/abitest/tests/Cargo.toml",
+                "--target=x86_64-unknown-linux-gnu",
+                "--verbose",
+                "--",
+                "--nocapture",
+            ],
+            &hashmap! {
+                "RUST_BACKTRACE".to_string() => "1".to_string(),
+                "RUSTFLAGS".to_string() => "-Z sanitizer=thread".to_string(),
+                "TSAN_OPTIONS".to_string() => format!("halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress", std::env::current_dir().unwrap().display()),
+            },
+        ),
+    }
+}
+
 fn run_cargo_clippy() -> Step {
     Step::Multiple {
         name: "cargo clippy".to_string(),
@@ -658,6 +844,22 @@ fn run_cargo_clippy() -> Step {
                         "--",
                         "--deny=warnings",
                     ],
+                ),
+            })
+            .collect(),
+    }
+}
+
+fn run_cargo_deny() -> Step {
+    Step::Multiple {
+        name: "cargo deny".to_string(),
+        steps: workspace_manifest_files()
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new(
+                    "cargo",
+                    &["deny", &format!("--manifest-path={}", &entry), "check"],
                 ),
             })
             .collect(),
