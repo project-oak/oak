@@ -116,7 +116,7 @@ do
     cargo)
       rust_client_manifest="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/rust/Cargo.toml"
       if [[ -f "${rust_client_manifest}" ]]; then
-          cargo run --release --target=x86_64-unknown-linux-musl --manifest-path="${rust_client_manifest}" -- \
+          cargo run --release --manifest-path="${rust_client_manifest}" -- \
             --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
             "${CLIENT_ARGS[@]-}"
       else
