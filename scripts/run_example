@@ -115,7 +115,7 @@ do
   case "${client_language}" in
     rust)
       rust_client_manifest="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/rust/Cargo.toml"
-      if [[ -d "${rust_client_manifest}" ]]; then
+      if [[ -f "${rust_client_manifest}" ]]; then
           cargo run --release --target=x86_64-unknown-linux-musl --manifest-path="${rust_client_manifest}" -- \
             --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
             "${CLIENT_ARGS[@]-}"
@@ -125,7 +125,7 @@ do
       ;;
     cpp)
       cpp_client="./bazel-client-bin/examples/${EXAMPLE}/client/client"
-      if [[ -d "${cpp_client}" ]]; then
+      if [[ -f "${cpp_client}" ]]; then
           "${cpp_client}" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
       else
         echo "The ${EXAMPLE} example does not contain a ${client_language} client. Skipping this client."
