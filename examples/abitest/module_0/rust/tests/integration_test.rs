@@ -16,10 +16,14 @@
 
 use abitest_grpc::proto::{oak_abi_test_service_client::OakAbiTestServiceClient, AbiTestRequest};
 use assert_matches::assert_matches;
-use log::{error, info};
+use log::{debug, error, info};
 use maplit::hashmap;
 use oak_abi::proto::oak::application::ConfigMap;
-use std::collections::HashMap;
+use serial_test::serial;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Once},
+};
 
 // Constants for Node config names that should match those in the textproto
 // config held in ../../../config.
@@ -40,9 +44,16 @@ fn build_wasm() -> std::io::Result<HashMap<String, Vec<u8>>> {
     })
 }
 
-#[tokio::test(core_threads = 2)]
-async fn test_abi() {
-    env_logger::init();
+static LOG_INIT_ONCE: Once = Once::new();
+
+async fn setup() -> (
+    Arc<oak_runtime::Runtime>,
+    OakAbiTestServiceClient<tonic::transport::Channel>,
+) {
+    LOG_INIT_ONCE.call_once(|| {
+        // Logger panics if it is initalized more than once.
+        env_logger::init();
+    });
 
     let wasm_modules = build_wasm().expect("failed to build wasm modules");
     let config = oak_tests::runtime_config_wasm(
@@ -55,7 +66,15 @@ async fn test_abi() {
         oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
-    let mut client = OakAbiTestServiceClient::with_interceptor(channel, interceptor);
+    let client = OakAbiTestServiceClient::with_interceptor(channel, interceptor);
+
+    (runtime, client)
+}
+
+#[tokio::test(core_threads = 2)]
+#[serial]
+async fn test_abi() {
+    let (runtime, mut client) = setup().await;
 
     // Skip tests that require the existence of an external service.
     let mut req = AbiTestRequest::default();
@@ -91,4 +110,88 @@ async fn test_abi() {
         info!("YOU HAVE {} DISABLED TESTS", disabled);
     }
     assert_eq!(true, success);
+}
+
+#[tokio::test(core_threads = 2)]
+#[serial]
+async fn test_leaks() {
+    let (runtime, mut client) = setup().await;
+
+    let (before_nodes, before_channels) = runtime.object_counts();
+    info!(
+        "Counts before test: Nodes={}, Channels={}",
+        before_nodes, before_channels
+    );
+
+    // Run tests that are supposed to leave Node/channel counts in a known state.
+    let mut req = AbiTestRequest::default();
+    req.predictable_counts = true;
+
+    debug!("Sending request: {:?}", req);
+    let result = client.run_tests(req).await;
+    assert_matches!(result, Ok(_));
+    let results = result.unwrap().into_inner().results;
+
+    let (after_nodes, after_channels) = runtime.object_counts();
+    info!(
+        "Counts change from test: Nodes={} => {}, Channels={} => {}",
+        before_nodes, after_nodes, before_channels, after_channels
+    );
+
+    // Calculate the expected change in Node and channel counts for
+    // these tests.
+    let mut want_nodes = before_nodes;
+    let mut want_channels = before_channels;
+    for result in &results {
+        assert_eq!(result.predictable_counts, true);
+        if result.disabled {
+            continue;
+        }
+        want_nodes += result.node_change;
+        want_channels += result.channel_change;
+    }
+
+    if after_nodes != want_nodes || after_channels != want_channels {
+        // One of the batch of tests has triggered an unexpected object count.
+        // Repeat the tests one by one to find out which.
+        let mut details = Vec::new();
+        for result in results {
+            if result.disabled {
+                continue;
+            }
+
+            let (before_nodes, before_channels) = runtime.object_counts();
+            let (want_nodes, want_channels) = (
+                before_nodes + result.node_change,
+                before_channels + result.channel_change,
+            );
+
+            let mut req = AbiTestRequest::default();
+            req.include = format!("^{}$", result.name);
+            debug!("Sending request: {:?}", req);
+            let this_result = client.run_tests(req).await;
+            assert_matches!(this_result, Ok(_));
+            let (after_nodes, after_channels) = runtime.object_counts();
+
+            if after_nodes != want_nodes || after_channels != want_channels {
+                details.push(format!(
+                    "[ LEAK ] {} (got {}=>{} nodes, {}=>{} channels, want {}=>{} nodes, {}=>{} channels)",
+                    result.name, before_nodes, after_nodes, before_channels, after_channels,
+                    before_nodes, want_nodes, before_channels, want_channels,
+                ));
+            } else {
+                details.push(format!(
+                    "[ OK ] {} ({}=>{} nodes, {}=>{} channels, as expected)",
+                    result.name, before_nodes, after_nodes, before_channels, after_channels,
+                ));
+            }
+        }
+        for detail in details {
+            info!("{}", detail);
+        }
+        assert_eq!(want_nodes, after_nodes);
+        assert_eq!(want_channels, after_channels);
+    }
+
+    runtime.stop();
 }

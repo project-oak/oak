@@ -36,3 +36,5 @@ maplit = "*"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+tonic = { version = "*", features = ["tls"] }
+serial_test = "*"

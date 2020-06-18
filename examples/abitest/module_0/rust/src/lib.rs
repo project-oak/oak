@@ -145,109 +145,180 @@ pub extern "C" fn frontend_oak_main(_in_handle: u64) {
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 type TestFn = fn(&mut FrontendNode) -> TestResult;
 
+// Expected change in the number of extant Nodes and channels as a result
+// of running a test case.
+#[derive(PartialEq, Copy, Clone)]
+enum Count {
+    Unsure,
+    Unchanged, // For convenience, equivalent to `Delta {nodes:0, channels:0}`
+    Delta { nodes: u32, channels: u32 },
+}
+
 impl OakAbiTestService for FrontendNode {
     fn run_tests(&mut self, req: AbiTestRequest) -> grpc::Result<AbiTestResponse> {
         info!(
             "Run tests matching '{}' except those matching '{}'",
             req.include, req.exclude
         );
+        if req.predictable_counts {
+            info!("Skip tests with unpredictable effects on object counts");
+        }
         let include = regex::Regex::new(&req.include).unwrap();
         let exclude = regex::Regex::new(&req.exclude).unwrap();
         let mut results = Vec::<proto::abi_test_response::TestResult>::new();
 
         // Manual registry of all tests.
-        let mut tests: HashMap<&str, TestFn> = HashMap::new();
-        tests.insert("ChannelCreateRaw", FrontendNode::test_channel_create_raw);
-        tests.insert("ChannelCreate", FrontendNode::test_channel_create);
-        tests.insert("ChannelCloseRaw", FrontendNode::test_channel_close_raw);
-        tests.insert("ChannelClose", FrontendNode::test_channel_close);
-        tests.insert("ChannelReadRaw", FrontendNode::test_channel_read_raw);
-        tests.insert("ChannelRead", FrontendNode::test_channel_read);
-        tests.insert("ChannelReadOrphan", FrontendNode::test_channel_read_orphan);
-        tests.insert("ChannelWriteRaw", FrontendNode::test_channel_write_raw);
-        tests.insert("ChannelWrite", FrontendNode::test_channel_write);
+        let mut tests: HashMap<&str, (TestFn, Count)> = HashMap::new();
+        tests.insert(
+            "ChannelCreateRaw",
+            (Self::test_channel_create_raw, Count::Unchanged),
+        );
+        tests.insert(
+            "ChannelCreate",
+            (Self::test_channel_create, Count::Unchanged),
+        );
+        tests.insert(
+            "ChannelCloseRaw",
+            (Self::test_channel_close_raw, Count::Unchanged),
+        );
+        tests.insert("ChannelClose", (Self::test_channel_close, Count::Unchanged));
+        tests.insert(
+            "ChannelReadRaw",
+            (Self::test_channel_read_raw, Count::Unchanged),
+        );
+        tests.insert("ChannelRead", (Self::test_channel_read, Count::Unchanged));
+        tests.insert(
+            "ChannelReadOrphan",
+            (Self::test_channel_read_orphan, Count::Unchanged),
+        );
+        tests.insert(
+            "ChannelWriteRaw",
+            (Self::test_channel_write_raw, Count::Unchanged),
+        );
+        tests.insert("ChannelWrite", (Self::test_channel_write, Count::Unchanged));
         tests.insert(
             "ChannelWriteHandle",
-            FrontendNode::test_channel_write_handle,
+            (Self::test_channel_write_handle, Count::Unchanged),
         );
         tests.insert(
             "ChannelWriteOrphanEmpty",
-            FrontendNode::test_channel_write_orphan_empty,
+            (Self::test_channel_write_orphan_empty, Count::Unchanged),
         );
         tests.insert(
             "ChannelWriteOrphanFull",
-            FrontendNode::test_channel_write_orphan_full,
+            (Self::test_channel_write_orphan_full, Count::Unchanged),
         );
         tests.insert(
             "ChannelHandleRecovered",
-            FrontendNode::test_channel_handle_recovered,
+            (Self::test_channel_handle_recovered, Count::Unchanged),
         );
-        tests.insert("ChannelChainLost", FrontendNode::test_channel_chain_lost);
+        tests.insert(
+            "ChannelChainLost",
+            (Self::test_channel_chain_lost, Count::Unchanged),
+        );
+        tests.insert(
+            "ChannelChainLeaked",
+            (
+                Self::test_channel_chain_leaked,
+                Count::Delta {
+                    nodes: 0,
+                    channels: 9,
+                },
+            ),
+        );
         tests.insert(
             "ChannelChainRecovered",
-            FrontendNode::test_channel_chain_recovered,
+            (Self::test_channel_chain_recovered, Count::Unchanged),
         );
-        tests.insert("WaitOnChannelsRaw", FrontendNode::test_channel_wait_raw);
-        tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
+        tests.insert(
+            "WaitOnChannelsRaw",
+            (Self::test_channel_wait_raw, Count::Unchanged),
+        );
+        tests.insert(
+            "WaitOnChannels",
+            (Self::test_channel_wait, Count::Unchanged),
+        );
         tests.insert(
             "WaitOnChannelsOrphan",
-            FrontendNode::test_channel_wait_orphan,
+            (Self::test_channel_wait_orphan, Count::Unchanged),
         );
-        tests.insert("NodeCreate", FrontendNode::test_node_create);
-        tests.insert("NodeCreateRaw", FrontendNode::test_node_create_raw);
-        tests.insert("NodePanic", FrontendNode::test_node_panic);
-        tests.insert("RandomGetRaw", FrontendNode::test_random_get_raw);
-        tests.insert("RandomGet", FrontendNode::test_random_get);
-        tests.insert("RandomRng", FrontendNode::test_random_rng);
+        tests.insert("NodeCreate", (Self::test_node_create, Count::Unchanged));
+        tests.insert(
+            "NodeCreateRaw",
+            (Self::test_node_create_raw, Count::Unchanged),
+        );
+        tests.insert("NodePanic", (Self::test_node_panic, Count::Unsure));
+        tests.insert(
+            "RandomGetRaw",
+            (Self::test_random_get_raw, Count::Unchanged),
+        );
+        tests.insert("RandomGet", (Self::test_random_get, Count::Unchanged));
+        tests.insert("RandomRng", (Self::test_random_rng, Count::Unchanged));
         tests.insert(
             "ChannelHandleReuse",
-            FrontendNode::test_channel_handle_reuse,
+            (Self::test_channel_handle_reuse, Count::Unchanged),
         );
-        tests.insert("Log", FrontendNode::test_log);
-        tests.insert("DirectLog", FrontendNode::test_direct_log);
-        tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
-        tests.insert("Storage", FrontendNode::test_storage);
-        tests.insert("AbsentStorage", FrontendNode::test_absent_storage);
-        tests.insert("GrpcServerSecond", FrontendNode::test_grpc_server_second);
+        tests.insert("Log", (Self::test_log, Count::Unchanged));
+        tests.insert("DirectLog", (Self::test_direct_log, Count::Unchanged));
+        tests.insert(
+            "BackendRoundtrip",
+            (Self::test_backend_roundtrip, Count::Unchanged),
+        );
+        tests.insert("Storage", (Self::test_storage, Count::Unsure));
+        tests.insert("AbsentStorage", (Self::test_absent_storage, Count::Unsure));
+        tests.insert(
+            "GrpcServerSecond",
+            (Self::test_grpc_server_second, Count::Unsure),
+        );
         tests.insert(
             "GrpcServerInvalidAddress",
-            FrontendNode::test_grpc_server_invalid_address,
+            (Self::test_grpc_server_invalid_address, Count::Unsure),
         );
         tests.insert(
             "GrpcServerFailNoHandle",
-            FrontendNode::test_grpc_server_fail_no_handle,
+            (Self::test_grpc_server_fail_no_handle, Count::Unchanged),
         );
         tests.insert(
             "GrpcServerFailReadHandle",
-            FrontendNode::test_grpc_server_fail_read_handle,
+            (Self::test_grpc_server_fail_read_handle, Count::Unchanged),
         );
         tests.insert(
             "GrpcServerFailTwoHandles",
-            FrontendNode::test_grpc_server_fail_two_handles,
+            (Self::test_grpc_server_fail_two_handles, Count::Unchanged),
         );
         tests.insert(
             "GrpcClientUnaryMethod",
-            FrontendNode::test_grpc_client_unary_method,
+            (Self::test_grpc_client_unary_method, Count::Unsure),
         );
         tests.insert(
             "GrpcClientServerStreamingMethod",
-            FrontendNode::test_grpc_client_server_streaming_method,
+            (
+                Self::test_grpc_client_server_streaming_method,
+                Count::Unsure,
+            ),
         );
         tests.insert(
             "AbsentGrpcClientUnaryMethod",
-            FrontendNode::test_absent_grpc_client_unary_method,
+            (Self::test_absent_grpc_client_unary_method, Count::Unsure),
         );
         tests.insert(
             "AbsentGrpcClientServerStreamingMethod",
-            FrontendNode::test_absent_grpc_client_server_streaming_method,
+            (
+                Self::test_absent_grpc_client_server_streaming_method,
+                Count::Unsure,
+            ),
         );
-        tests.insert("RoughtimeClient", FrontendNode::test_roughtime_client);
+        tests.insert(
+            "RoughtimeClient",
+            (Self::test_roughtime_client, Count::Unsure),
+        );
         tests.insert(
             "MisconfiguredRoughtimeClient",
-            FrontendNode::test_roughtime_client_misconfig,
+            (Self::test_roughtime_client_misconfig, Count::Unsure),
         );
 
-        for (&name, &testfn) in &tests {
+        for (&name, &info) in &tests {
+            let (testfn, counts) = info;
             if !include.is_match(name) {
                 debug!(
                     "skip test '{}' as not included in '{}' include pattern",
@@ -262,8 +333,28 @@ impl OakAbiTestService for FrontendNode {
                 );
                 continue;
             }
+            if req.predictable_counts && counts == Count::Unsure {
+                debug!(
+                    "skip test '{}' as it has an unpredictable affect on object counts",
+                    name,
+                );
+                continue;
+            }
             let mut result = proto::abi_test_response::TestResult::default();
             result.name = name.to_string();
+            match counts {
+                Count::Unsure => result.predictable_counts = false,
+                Count::Unchanged => {
+                    result.predictable_counts = true;
+                    result.node_change = 0;
+                    result.channel_change = 0;
+                }
+                Count::Delta { nodes, channels } => {
+                    result.predictable_counts = true;
+                    result.node_change = nodes;
+                    result.channel_change = channels;
+                }
+            };
             if name.starts_with("DISABLED_") {
                 debug!("skip test '{}' as marked as disabled", name);
                 result.disabled = true;
@@ -800,6 +891,7 @@ impl FrontendNode {
         // The transferred handle has a new value.
         expect!(handles[0] != in_channel.handle);
 
+        expect_eq!(Ok(()), oak::channel_close(handles[0]));
         expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
         expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
         Ok(())
@@ -888,6 +980,7 @@ impl FrontendNode {
         expect_eq!(8, buffer[0]);
         expect_eq!(0xC, buffer[1]);
 
+        expect_eq!(Ok(()), oak::channel_close(recovered_rh));
         expect_eq!(Ok(()), oak::channel_close(holder_rh.handle));
         Ok(())
     }
@@ -898,6 +991,12 @@ impl FrontendNode {
         // channel deletion inside the Runtime as the only references to inner
         // channels get removed in turn.
         expect_eq!(Ok(()), oak::channel_close(outermost_rh.handle));
+        Ok(())
+    }
+
+    fn test_channel_chain_leaked(&mut self) -> TestResult {
+        let outermost_rh = new_channel_chain(8)?;
+        info!("Deliberately forgetting handle value {:?}", outermost_rh);
         Ok(())
     }
 
@@ -1218,7 +1317,7 @@ impl FrontendNode {
     }
 
     fn test_node_create_raw(&mut self) -> TestResult {
-        let (_, in_channel, _) = channel_create_raw();
+        let (out_handle, in_handle, _) = channel_create_raw();
 
         let valid_label_bytes = Label::public_untrusted().serialize();
 
@@ -1243,7 +1342,7 @@ impl FrontendNode {
                     config_bytes.len(),
                     valid_label_bytes.as_ptr(),
                     valid_label_bytes.len(),
-                    in_channel,
+                    in_handle,
                 )
             });
         }
@@ -1258,7 +1357,7 @@ impl FrontendNode {
                     config_bytes.len(),
                     invalid_proto_bytes.as_ptr(),
                     invalid_proto_bytes.len(),
-                    in_channel,
+                    in_handle,
                 )
             });
         }
@@ -1270,7 +1369,7 @@ impl FrontendNode {
                     1,
                     valid_label_bytes.as_ptr(),
                     valid_label_bytes.len(),
-                    in_channel,
+                    in_handle,
                 )
             });
         }
@@ -1282,11 +1381,16 @@ impl FrontendNode {
                     invalid_proto_bytes.len(),
                     valid_label_bytes.as_ptr(),
                     valid_label_bytes.len(),
-                    in_channel,
+                    in_handle,
                 )
             });
         }
 
+        expect_eq!(Ok(()), oak::channel_close(oak::Handle::from_raw(in_handle)));
+        expect_eq!(
+            Ok(()),
+            oak::channel_close(oak::Handle::from_raw(out_handle))
+        );
         Ok(())
     }
     fn test_node_create(&mut self) -> TestResult {
