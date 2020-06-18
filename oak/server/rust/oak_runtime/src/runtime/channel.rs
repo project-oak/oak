@@ -106,6 +106,30 @@ impl ChannelHalf {
         self.channel.messages.read().unwrap()
     }
 
+    /// Visit all channel halves that are reachable via this `ChannelHalf`, starting with
+    /// `self`. The `visitor` function should return a boolean indicating whether the provided half
+    /// needs to be further explored.  For debugging/introspection purposes.
+    pub fn visit_halves<F>(&self, visitor: &mut F)
+    where
+        F: FnMut(&ChannelHalf) -> bool,
+    {
+        if visitor(self) {
+            let mut to_visit = Vec::new();
+            {
+                let messages = self.get_messages();
+                for msg in messages.iter() {
+                    for half in &msg.channels {
+                        to_visit.push(half.clone())
+                    }
+                }
+            }
+            // Now the lock is not held, let us go and make our visit.
+            for half in to_visit {
+                half.visit_halves(visitor);
+            }
+        }
+    }
+
     /// Wake any threads waiting on the underlying channel.
     pub fn wake_waiters(&self) {
         self.channel.wake_waiters();
