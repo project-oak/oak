@@ -101,7 +101,7 @@ impl GrpcServerNode {
         })
     }
 
-    /// Reads the [`oak_abi::Handle`] for the write half of an invcation from a startup channel.
+    /// Reads the [`oak_abi::Handle`] for the write half of an invocation from a startup channel.
     /// Returns an error if the startup channel couldn't be read, or if the initial message
     /// is invalid (doesn't contain exactly one write handle).
     fn get_invocation_channel(
@@ -617,6 +617,11 @@ impl Iterator for GrpcResponseIterator {
                             .grpc_response_size_bytes
                             .with_label_values(&[&self.method_name])
                             .observe(grpc_rsp.rsp_msg.len() as f64);
+                        self.metrics_data
+                            .grpc_server_metrics
+                            .grpc_server_msg_sent_total
+                            .with_label_values(&[&self.method_name])
+                            .observe(1.0);
                         if grpc_rsp.last {
                             // The Node has definitively marked this as the last response for this
                             // invocation; keep track of this and don't bother attempting to read
