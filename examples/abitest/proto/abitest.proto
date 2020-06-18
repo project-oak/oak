@@ -25,6 +25,9 @@ message ABITestRequest {
   // test run.  Tests are only run if they match include and do not match
   // exclude.
   string exclude = 2;
+  // If true, only run tests that have predictable changes to the Node and
+  // channel count.
+  bool predictable_counts = 3;
 }
 
 message ABITestResponse {
@@ -33,6 +36,11 @@ message ABITestResponse {
     bool success = 2;
     string details = 3;
     bool disabled = 4;
+    // If true, the following two fields indicate the expected changes in Node
+    // and channel counts from running the test.
+    bool predictable_counts = 5;
+    uint32 node_change = 6;
+    uint32 channel_change = 7;
   }
   repeated TestResult results = 1;
 }
