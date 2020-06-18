@@ -16,23 +16,20 @@
 
 //! Functionality covering configuration of a Runtime instance.
 
-use crate::RuntimeProxy;
-use oak_abi::{proto::oak::application::ApplicationConfiguration, OakStatus};
+use crate::{RuntimeConfiguration, RuntimeProxy};
+use oak_abi::OakStatus;
 use tonic::transport::Certificate;
 
-/// Configures a [`RuntimeProxy`] from the given protobuf [`ApplicationConfiguration`] and begins
-/// execution.
+/// Configures a [`RuntimeProxy`] from the given [`RuntimeConfiguration`] and begins execution.
 ///
 /// Returns a [`RuntimeProxy`] for an initial implicit Node, and a writeable [`oak_abi::Handle`] to
 /// send messages into the Runtime. Creating a new channel and passing the write [`oak_abi::Handle`]
 /// into the runtime will enable messages to be read back out from the [`RuntimeProxy`].
 pub fn configure_and_run(
-    application_configuration: ApplicationConfiguration,
-    runtime_configuration: crate::RuntimeConfiguration,
-    grpc_configuration: crate::GrpcConfiguration,
+    config: RuntimeConfiguration,
 ) -> Result<(RuntimeProxy, oak_abi::Handle), OakStatus> {
-    let proxy = RuntimeProxy::create_runtime(application_configuration, grpc_configuration);
-    let handle = proxy.start_runtime(runtime_configuration)?;
+    let proxy = RuntimeProxy::create_runtime(&config.app_config, &config.grpc_config);
+    let handle = proxy.start_runtime(config)?;
     Ok((proxy, handle))
 }
 

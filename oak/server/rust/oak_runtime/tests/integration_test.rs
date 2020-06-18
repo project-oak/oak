@@ -68,14 +68,12 @@ mod common {
         };
 
         info!("Starting the runtime with one node.");
-        config::configure_and_run(
-            application_configuration,
-            oak_runtime::RuntimeConfiguration {
-                metrics_port: Some(crate::METRICS_PORT),
-                introspect_port: None,
-            },
-            GrpcConfiguration::default(),
-        )
+        config::configure_and_run(oak_runtime::RuntimeConfiguration {
+            metrics_port: Some(crate::METRICS_PORT),
+            introspect_port: None,
+            grpc_config: GrpcConfiguration::default(),
+            app_config: application_configuration,
+        })
     }
 
     pub async fn read_metrics() -> Result<String, hyper::error::Error> {

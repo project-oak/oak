@@ -569,13 +569,12 @@ configure and run the Runtime.
 [embedmd]:# (../examples/abitest/tests/src/tests.rs Rust / +let wasm_modules =/ /unable to configure runtime.*/)
 ```Rust
     let wasm_modules = build_wasm().expect("failed to build wasm modules");
-    let (app_config, runtime_config, grpc_config) = oak_tests::runtime_configs_wasm(
+    let config = oak_tests::runtime_config_wasm(
         wasm_modules,
         FRONTEND_MODULE_NAME,
         FRONTEND_ENTRYPOINT_NAME,
     );
     let (runtime, entry_channel) =
-        oak_runtime::configure_and_run(app_config, runtime_config, grpc_config)
-            .expect("unable to configure runtime with test wasm");
+        oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
 ```
 <!-- prettier-ignore-end -->

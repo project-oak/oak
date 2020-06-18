@@ -190,22 +190,8 @@ fn main() -> anyhow::Result<()> {
     // Load application configuration.
     let app_config_data =
         read_file(&opt.application).context("could not read application configuration")?;
-    let application_configuration = ApplicationConfiguration::decode(app_config_data.as_ref())
+    let app_config = ApplicationConfiguration::decode(app_config_data.as_ref())
         .context("could not parse application configuration")?;
-
-    // Create Runtime config.
-    let runtime_configuration = oak_runtime::RuntimeConfiguration {
-        metrics_port: if cfg!(feature = "oak_debug") && !opt.no_metrics {
-            Some(opt.metrics_port)
-        } else {
-            None
-        },
-        introspect_port: if cfg!(feature = "oak_debug") && !opt.no_introspect {
-            Some(opt.introspect_port)
-        } else {
-            None
-        },
-    };
 
     // Create the overall gRPC configuration.
     let grpc_tls_private_key =
@@ -233,7 +219,7 @@ fn main() -> anyhow::Result<()> {
         }
         _ => None,
     };
-    let grpc_configuration = oak_runtime::GrpcConfiguration {
+    let grpc_config = oak_runtime::GrpcConfiguration {
         grpc_server_tls_identity: Some(Identity::from_pem(
             grpc_tls_certificate,
             grpc_tls_private_key,
@@ -245,14 +231,26 @@ fn main() -> anyhow::Result<()> {
         oidc_client_info,
     };
 
+    // Create Runtime config.
+    let runtime_configuration = oak_runtime::RuntimeConfiguration {
+        metrics_port: if cfg!(feature = "oak_debug") && !opt.no_metrics {
+            Some(opt.metrics_port)
+        } else {
+            None
+        },
+        introspect_port: if cfg!(feature = "oak_debug") && !opt.no_introspect {
+            Some(opt.introspect_port)
+        } else {
+            None
+        },
+        grpc_config,
+        app_config,
+    };
+
     // Start the Runtime from the given config.
-    info!("starting Runtime, config {:?}", runtime_configuration);
-    let (runtime, initial_handle) = configure_and_run(
-        application_configuration,
-        runtime_configuration,
-        grpc_configuration,
-    )
-    .context("could not start Runtime")?;
+    info!("starting Runtime");
+    let (runtime, initial_handle) =
+        configure_and_run(runtime_configuration).context("could not start Runtime")?;
     info!(
         "initial node {:?} with write handle {:?}",
         runtime.node_id, initial_handle
