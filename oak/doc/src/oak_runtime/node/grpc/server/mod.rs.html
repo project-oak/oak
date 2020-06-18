@@ -656,13 +656,6 @@
 <span id="656">656</span>
 <span id="657">657</span>
 <span id="658">658</span>
-<span id="659">659</span>
-<span id="660">660</span>
-<span id="661">661</span>
-<span id="662">662</span>
-<span id="663">663</span>
-<span id="664">664</span>
-<span id="665">665</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -719,13 +712,6 @@
 };
 
 <span class="kw">mod</span> <span class="ident">auth</span>;
-
-<span class="comment">// The `-bin` suffix allows sending binary data for this metadata key.</span>
-<span class="comment">//</span>
-<span class="comment">// See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.</span>
-<span class="comment">//</span>
-<span class="comment">// Keep in sync with /oak/common/label.cc.</span>
-<span class="kw">const</span> <span class="ident">OAK_LABEL_GRPC_METADATA_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;x-oak-label-bin&quot;</span>;
 
 <span class="doccomment">/// Struct that represents a gRPC server pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcServerNode</span> {
@@ -1001,7 +987,7 @@
 <span class="doccomment">///   once conjunctions are supported</span>
 <span class="kw">fn</span> <span class="ident">get_oak_label</span>(<span class="ident">metadata_map</span>: <span class="kw-2">&amp;</span><span class="ident">MetadataMap</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakLabelError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">labels</span> <span class="op">=</span> <span class="ident">metadata_map</span>
-        .<span class="ident">get_all_bin</span>(<span class="ident">OAK_LABEL_GRPC_METADATA_KEY</span>)
+        .<span class="ident">get_all_bin</span>(<span class="ident">oak_abi</span>::<span class="ident">OAK_LABEL_GRPC_METADATA_KEY</span>)
         .<span class="ident">iter</span>()
         .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
     <span class="kw">if</span> <span class="ident">labels</span>.<span class="ident">is_empty</span>() {

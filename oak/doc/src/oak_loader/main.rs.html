@@ -285,8 +285,6 @@
 <span id="285">285</span>
 <span id="286">286</span>
 <span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -480,22 +478,8 @@
     <span class="comment">// Load application configuration.</span>
     <span class="kw">let</span> <span class="ident">app_config_data</span> <span class="op">=</span>
         <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">application</span>).<span class="ident">context</span>(<span class="string">&quot;could not read application configuration&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">application_configuration</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="ident">app_config_data</span>.<span class="ident">as_ref</span>())
+    <span class="kw">let</span> <span class="ident">app_config</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span>::<span class="ident">decode</span>(<span class="ident">app_config_data</span>.<span class="ident">as_ref</span>())
         .<span class="ident">context</span>(<span class="string">&quot;could not parse application configuration&quot;</span>)<span class="question-mark">?</span>;
-
-    <span class="comment">// Create Runtime config.</span>
-    <span class="kw">let</span> <span class="ident">runtime_configuration</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
-        <span class="ident">metrics_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_metrics</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">metrics_port</span>)
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        },
-        <span class="ident">introspect_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_introspect</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">introspect_port</span>)
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        },
-    };
 
     <span class="comment">// Create the overall gRPC configuration.</span>
     <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span>
@@ -523,7 +507,7 @@
         }
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
     };
-    <span class="kw">let</span> <span class="ident">grpc_configuration</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span> {
+    <span class="kw">let</span> <span class="ident">grpc_config</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span> {
         <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-val">Some</span>(<span class="ident">Identity</span>::<span class="ident">from_pem</span>(
             <span class="ident">grpc_tls_certificate</span>,
             <span class="ident">grpc_tls_private_key</span>,
@@ -535,14 +519,26 @@
         <span class="ident">oidc_client_info</span>,
     };
 
+    <span class="comment">// Create Runtime config.</span>
+    <span class="kw">let</span> <span class="ident">runtime_configuration</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
+        <span class="ident">metrics_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_metrics</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">metrics_port</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        },
+        <span class="ident">introspect_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>) <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_introspect</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">introspect_port</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        },
+        <span class="ident">grpc_config</span>,
+        <span class="ident">app_config</span>,
+    };
+
     <span class="comment">// Start the Runtime from the given config.</span>
-    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;starting Runtime, config {:?}&quot;</span>, <span class="ident">runtime_configuration</span>);
-    <span class="kw">let</span> (<span class="ident">runtime</span>, <span class="ident">initial_handle</span>) <span class="op">=</span> <span class="ident">configure_and_run</span>(
-        <span class="ident">application_configuration</span>,
-        <span class="ident">runtime_configuration</span>,
-        <span class="ident">grpc_configuration</span>,
-    )
-    .<span class="ident">context</span>(<span class="string">&quot;could not start Runtime&quot;</span>)<span class="question-mark">?</span>;
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;starting Runtime&quot;</span>);
+    <span class="kw">let</span> (<span class="ident">runtime</span>, <span class="ident">initial_handle</span>) <span class="op">=</span>
+        <span class="ident">configure_and_run</span>(<span class="ident">runtime_configuration</span>).<span class="ident">context</span>(<span class="string">&quot;could not start Runtime&quot;</span>)<span class="question-mark">?</span>;
     <span class="macro">info</span><span class="macro">!</span>(
         <span class="string">&quot;initial node {:?} with write handle {:?}&quot;</span>,
         <span class="ident">runtime</span>.<span class="ident">node_id</span>, <span class="ident">initial_handle</span>
