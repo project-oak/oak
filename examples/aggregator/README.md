@@ -110,3 +110,27 @@ the following command:
 ./scripts/build_example -e aggregator -i base
 ./examples/aggregator/scripts/docker_push
 ```
+
+## Monitoring
+
+Run the following command to create a monitoring dashboard with charts showing
+memory and CPU usage, as well as application specific metrics.
+
+```bash
+gcloud monitoring dashboards create --config-from-file=aggregator-dashboard.json
+```
+
+Dashboards can be created and modified using the web interface. The updated
+`json` file can be fetched using the command:
+
+```bash
+gcloud monitoring dashboards describe [DASHBOARD-ID] --format=json > aggregator-dashboard.json
+```
+
+where `DASHBOARD-ID` is of the form
+`projects/121212121212/dashboards/16161616161616167`, and can be found in the
+output from
+
+```bash
+gcloud monitoring dashboards list
+```
