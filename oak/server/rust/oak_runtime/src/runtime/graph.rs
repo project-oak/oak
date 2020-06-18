@@ -16,9 +16,10 @@
 
 /// This module defines a trait and an implementation for representing the [`Runtime`] as
 /// a Graphviz dot graph. This is used in the introspection service.
-use crate::runtime::{ChannelHalfDirection, NodeId, Runtime};
+use crate::runtime::{ChannelHalf, ChannelHalfDirection, NodeId, Runtime};
 use itertools::Itertools;
-use std::{fmt::Write, string::String};
+use log::info;
+use std::{collections::HashSet, fmt::Write, string::String};
 
 /// Trait that gives an identifier for a data structure that is suitable for
 /// use with Graphviz/Dot.
@@ -225,6 +226,49 @@ impl Runtime {
         }
         writeln!(&mut s, "</ul>").unwrap();
         s
+    }
+
+    /// Generate an HTML page that includes the current counts of Nodes and channels.
+    /// May be slow to generate, as it involves exploring reachable channels recursively.
+    pub(crate) fn html_counts(&self) -> String {
+        let (node_count, channel_count) = self.object_counts();
+        format!(
+            "<p>Object Counts: Nodes={} Channels={}",
+            node_count, channel_count,
+        )
+    }
+
+    /// Return counts of the number of Nodes and channels currently in existence.
+    /// May be slow to generate, as it involves exploring reachable channels recursively.
+    pub fn object_counts(&self) -> (u32, u32) {
+        let mut node_count = 0;
+        let mut channel_ids = HashSet::<String>::new();
+        let mut visitor = |half: &ChannelHalf| {
+            let channel_id = half.dot_id();
+            if channel_ids.contains(&channel_id) {
+                false
+            } else {
+                channel_ids.insert(channel_id);
+                // Not seen this ChannelId before, so need to visit its children.
+                true
+            }
+        };
+        {
+            let node_infos = self.node_infos.read().unwrap();
+            for node_id in node_infos.keys().sorted() {
+                node_count += 1;
+                let node_info = node_infos.get(node_id).unwrap();
+                for half in node_info.abi_handles.values() {
+                    half.visit_halves(&mut visitor);
+                }
+            }
+        }
+        info!(
+            "Counted {} nodes and {} channels",
+            node_count,
+            channel_ids.len()
+        );
+        (node_count as u32, channel_ids.len() as u32)
     }
 
     /// Generate an HTML page that describes the internal state of a specific Node.

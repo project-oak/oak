@@ -115,6 +115,11 @@ fn handle_request(
             "Runtime Graph",
             &runtime.graph(),
         ))));
+    } else if path == "/objcount" {
+        return Ok(Response::new(Body::from(html_wrap(
+            "Object Counts",
+            &runtime.html_counts(),
+        ))));
     } else if let Some(node_id) = find_id(path, "node") {
         if let Some(body) = runtime.html_for_node(node_id) {
             return Ok(Response::new(Body::from(html_wrap(
