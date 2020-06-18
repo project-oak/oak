@@ -5,6 +5,14 @@ authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[lib]
+name = "trusted_information_retrieval_client"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tir_client_bin"
+path = "src/main.rs"
+
 [dependencies]
 env_logger = "*"
 log = "*"

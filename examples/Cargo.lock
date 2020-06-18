@@ -2376,7 +2376,10 @@ dependencies = [
  "oak_utils",
  "prost",
  "serde",
+ "tokio",
  "toml",
+ "tonic",
+ "trusted_information_retrieval_client",
 ]
 
 [[package]]
