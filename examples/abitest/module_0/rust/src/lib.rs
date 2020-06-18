@@ -155,56 +155,63 @@ impl OakAbiTestService for FrontendNode {
         let exclude = regex::Regex::new(&req.exclude).unwrap();
         let mut results = Vec::<proto::abi_test_response::TestResult>::new();
 
-        // Manual registry of all tests.
+        // Manual registry of all tests. Tests that include "Idem" in their name
+        // are expected to leave the number of extant Nodes and channels unchanged.
         let mut tests: HashMap<&str, TestFn> = HashMap::new();
-        tests.insert("ChannelCreateRaw", FrontendNode::test_channel_create_raw);
-        tests.insert("ChannelCreate", FrontendNode::test_channel_create);
-        tests.insert("ChannelCloseRaw", FrontendNode::test_channel_close_raw);
-        tests.insert("ChannelClose", FrontendNode::test_channel_close);
-        tests.insert("ChannelReadRaw", FrontendNode::test_channel_read_raw);
-        tests.insert("ChannelRead", FrontendNode::test_channel_read);
-        tests.insert("ChannelReadOrphan", FrontendNode::test_channel_read_orphan);
-        tests.insert("ChannelWriteRaw", FrontendNode::test_channel_write_raw);
-        tests.insert("ChannelWrite", FrontendNode::test_channel_write);
         tests.insert(
-            "ChannelWriteHandle",
+            "ChannelCreateRawIdem",
+            FrontendNode::test_channel_create_raw,
+        );
+        tests.insert("ChannelCreateIdem", FrontendNode::test_channel_create);
+        tests.insert("ChannelCloseRawIdem", FrontendNode::test_channel_close_raw);
+        tests.insert("ChannelCloseIdem", FrontendNode::test_channel_close);
+        tests.insert("ChannelReadRawIdem", FrontendNode::test_channel_read_raw);
+        tests.insert("ChannelReadIdem", FrontendNode::test_channel_read);
+        tests.insert(
+            "ChannelReadOrphanIdem",
+            FrontendNode::test_channel_read_orphan,
+        );
+        tests.insert("ChannelWriteRawIdem", FrontendNode::test_channel_write_raw);
+        tests.insert("ChannelWriteIdem", FrontendNode::test_channel_write);
+        tests.insert(
+            "ChannelWriteHandleIdem",
             FrontendNode::test_channel_write_handle,
         );
         tests.insert(
-            "ChannelWriteOrphanEmpty",
+            "ChannelWriteOrphanEmptyIdem",
             FrontendNode::test_channel_write_orphan_empty,
         );
         tests.insert(
-            "ChannelWriteOrphanFull",
+            "ChannelWriteOrphanFullIdem",
             FrontendNode::test_channel_write_orphan_full,
         );
         tests.insert(
-            "ChannelHandleRecovered",
+            "ChannelHandleRecoveredIdem",
             FrontendNode::test_channel_handle_recovered,
         );
         tests.insert("ChannelChainLost", FrontendNode::test_channel_chain_lost);
         tests.insert(
-            "ChannelChainRecovered",
+            "ChannelChainRecoveredIdem",
             FrontendNode::test_channel_chain_recovered,
         );
-        tests.insert("WaitOnChannelsRaw", FrontendNode::test_channel_wait_raw);
-        tests.insert("WaitOnChannels", FrontendNode::test_channel_wait);
+        tests.insert("WaitOnChannelsRawIdem", FrontendNode::test_channel_wait_raw);
+        tests.insert("WaitOnChannelsIdem", FrontendNode::test_channel_wait);
         tests.insert(
-            "WaitOnChannelsOrphan",
+            "WaitOnChannelsOrphanIdem",
             FrontendNode::test_channel_wait_orphan,
         );
         tests.insert("NodeCreate", FrontendNode::test_node_create);
         tests.insert("NodeCreateRaw", FrontendNode::test_node_create_raw);
         tests.insert("NodePanic", FrontendNode::test_node_panic);
-        tests.insert("RandomGetRaw", FrontendNode::test_random_get_raw);
-        tests.insert("RandomGet", FrontendNode::test_random_get);
-        tests.insert("RandomRng", FrontendNode::test_random_rng);
+        tests.insert("RandomGetRawIdem", FrontendNode::test_random_get_raw);
+        tests.insert("RandomGetIdem", FrontendNode::test_random_get);
+        tests.insert("RandomRngIdem", FrontendNode::test_random_rng);
         tests.insert(
-            "ChannelHandleReuse",
+            "ChannelHandleReuseIdem",
             FrontendNode::test_channel_handle_reuse,
         );
-        tests.insert("Log", FrontendNode::test_log);
-        tests.insert("DirectLog", FrontendNode::test_direct_log);
+        tests.insert("LogIdem", FrontendNode::test_log);
+        tests.insert("DirectLogIdem", FrontendNode::test_direct_log);
         tests.insert("BackendRoundtrip", FrontendNode::test_backend_roundtrip);
         tests.insert("Storage", FrontendNode::test_storage);
         tests.insert("AbsentStorage", FrontendNode::test_absent_storage);
@@ -800,6 +807,7 @@ impl FrontendNode {
         // The transferred handle has a new value.
         expect!(handles[0] != in_channel.handle);
 
+        expect_eq!(Ok(()), oak::channel_close(handles[0]));
         expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
         expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
         Ok(())
@@ -888,6 +896,7 @@ impl FrontendNode {
         expect_eq!(8, buffer[0]);
         expect_eq!(0xC, buffer[1]);
 
+        expect_eq!(Ok(()), oak::channel_close(recovered_rh));
         expect_eq!(Ok(()), oak::channel_close(holder_rh.handle));
         Ok(())
     }

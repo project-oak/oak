@@ -16,9 +16,13 @@
 
 use abitest_grpc::proto::{oak_abi_test_service_client::OakAbiTestServiceClient, AbiTestRequest};
 use assert_matches::assert_matches;
-use log::{error, info};
+use log::{debug, error, info};
 use maplit::hashmap;
-use std::collections::HashMap;
+use serial_test::serial;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Once},
+};
 
 // Constants for Node config names that should match those in the textproto
 // config held in ../../../config.
@@ -39,9 +43,16 @@ fn build_wasm() -> std::io::Result<HashMap<String, Vec<u8>>> {
     })
 }
 
-#[tokio::test(core_threads = 2)]
-async fn test_abi() {
-    env_logger::init();
+static LOG_INIT_ONCE: Once = Once::new();
+
+async fn setup() -> (
+    Arc<oak_runtime::Runtime>,
+    OakAbiTestServiceClient<tonic::transport::Channel>,
+) {
+    LOG_INIT_ONCE.call_once(|| {
+        // Logger panics if it is initalized more than once.
+        env_logger::init();
+    });
 
     let wasm_modules = build_wasm().expect("failed to build wasm modules");
     let config = oak_tests::runtime_config_wasm(
@@ -54,7 +65,15 @@ async fn test_abi() {
         oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
-    let mut client = OakAbiTestServiceClient::with_interceptor(channel, interceptor);
+    let client = OakAbiTestServiceClient::with_interceptor(channel, interceptor);
+
+    (runtime, client)
+}
+
+#[tokio::test(core_threads = 2)]
+#[serial]
+async fn test_abi() {
+    let (runtime, mut client) = setup().await;
 
     // Skip tests that require the existence of an external service.
     let mut req = AbiTestRequest::default();
@@ -90,4 +109,65 @@ async fn test_abi() {
         info!("YOU HAVE {} DISABLED TESTS", disabled);
     }
     assert_eq!(true, success);
+}
+
+#[tokio::test(core_threads = 2)]
+#[serial]
+async fn test_leaks() {
+    let (runtime, mut client) = setup().await;
+
+    let (before_nodes, before_channels) = runtime.object_counts();
+    info!(
+        "Counts before test: Nodes={}, Channels={}",
+        before_nodes, before_channels
+    );
+
+    // Run tests that are supposed to leave Node/channel counts unchanged.
+    let mut req = AbiTestRequest::default();
+    req.include = "Idem".to_string();
+
+    debug!("Sending request: {:?}", req);
+    let result = client.run_tests(req).await;
+    assert_matches!(result, Ok(_));
+    let results = result.unwrap().into_inner().results;
+
+    let (after_nodes, after_channels) = runtime.object_counts();
+    info!(
+        "Counts change from test: Nodes={} => {}, Channels={} => {}",
+        before_nodes, after_nodes, before_channels, after_channels
+    );
+
+    if before_nodes != after_nodes || before_channels != after_channels {
+        // One of the batch of tests has triggered a different object count.
+        // Repeat the tests one by one to find out which.
+        let mut details = Vec::new();
+        for result in results {
+            if result.disabled {
+                continue;
+            }
+
+            let (before_nodes, before_channels) = runtime.object_counts();
+            let mut req = AbiTestRequest::default();
+            req.include = format!("^{}$", result.name);
+            debug!("Sending request: {:?}", req);
+            let this_result = client.run_tests(req).await;
+            assert_matches!(this_result, Ok(_));
+            let (after_nodes, after_channels) = runtime.object_counts();
+
+            if (before_nodes != after_nodes) || (before_channels != after_channels) {
+                details.push(format!(
+                    "[ LEAK ] {} ({}=>{} nodes, {}=>{} channels)",
+                    result.name, before_nodes, after_nodes, before_channels, after_channels,
+                ));
+            } else {
+                details.push(format!("[  OK  ] {}", result.name,));
+            }
+        }
+        for detail in details {
+            info!("{}", detail);
+        }
+        panic!("Leak of Nodes or channels found");
+    }
+
+    runtime.stop();
 }
