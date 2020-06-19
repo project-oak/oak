@@ -75,41 +75,42 @@ async fn setup() -> (
 #[serial]
 async fn test_abi() {
     let (runtime, mut client) = setup().await;
+    {
+        // Skip tests that require the existence of an external service.
+        let mut req = AbiTestRequest::default();
+        req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
 
-    // Skip tests that require the existence of an external service.
-    let mut req = AbiTestRequest::default();
-    req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
+        info!("Sending request: {:?}", req);
+        let result = client.run_tests(req).await;
+        assert_matches!(result, Ok(_));
 
-    info!("Sending request: {:?}", req);
-    let result = client.run_tests(req).await;
-    assert_matches!(result, Ok(_));
+        info!("Runtime graph at exit is:\n{}", runtime.graph());
 
-    info!("Runtime graph at exit is:\n{}", runtime.graph());
-
+        let mut disabled = 0;
+        let mut success = true;
+        let results = result.unwrap().into_inner().results;
+        for result in results {
+            if result.disabled {
+                disabled += 1;
+                continue;
+            }
+            info!(
+                "[ {} ] {}",
+                if result.success { " OK " } else { "FAIL" },
+                result.name
+            );
+            if !result.success {
+                error!("Failure details: {}", result.details);
+                success = false;
+            }
+        }
+        if disabled > 0 {
+            info!("YOU HAVE {} DISABLED TESTS", disabled);
+        }
+        assert_eq!(true, success);
+    } // ensure futures are all dropped
+    drop(client);
     runtime.stop();
-
-    let mut disabled = 0;
-    let mut success = true;
-    let results = result.unwrap().into_inner().results;
-    for result in results {
-        if result.disabled {
-            disabled += 1;
-            continue;
-        }
-        info!(
-            "[ {} ] {}",
-            if result.success { " OK " } else { "FAIL" },
-            result.name
-        );
-        if !result.success {
-            error!("Failure details: {}", result.details);
-            success = false;
-        }
-    }
-    if disabled > 0 {
-        info!("YOU HAVE {} DISABLED TESTS", disabled);
-    }
-    assert_eq!(true, success);
 }
 
 #[tokio::test(core_threads = 2)]
@@ -117,81 +118,84 @@ async fn test_abi() {
 async fn test_leaks() {
     let (runtime, mut client) = setup().await;
 
-    let (before_nodes, before_channels) = runtime.object_counts();
-    info!(
-        "Counts before test: Nodes={}, Channels={}",
-        before_nodes, before_channels
-    );
+    {
+        let (before_nodes, before_channels) = runtime.object_counts();
+        info!(
+            "Counts before test: Nodes={}, Channels={}",
+            before_nodes, before_channels
+        );
 
-    // Run tests that are supposed to leave Node/channel counts in a known state.
-    let mut req = AbiTestRequest::default();
-    req.predictable_counts = true;
+        // Run tests that are supposed to leave Node/channel counts in a known state.
+        let mut req = AbiTestRequest::default();
+        req.predictable_counts = true;
 
-    debug!("Sending request: {:?}", req);
-    let result = client.run_tests(req).await;
-    assert_matches!(result, Ok(_));
-    let results = result.unwrap().into_inner().results;
+        debug!("Sending request: {:?}", req);
+        let result = client.run_tests(req).await;
+        assert_matches!(result, Ok(_));
+        let results = result.unwrap().into_inner().results;
 
-    let (after_nodes, after_channels) = runtime.object_counts();
-    info!(
-        "Counts change from test: Nodes={} => {}, Channels={} => {}",
-        before_nodes, after_nodes, before_channels, after_channels
-    );
+        let (after_nodes, after_channels) = runtime.object_counts();
+        info!(
+            "Counts change from test: Nodes={} => {}, Channels={} => {}",
+            before_nodes, after_nodes, before_channels, after_channels
+        );
 
-    // Calculate the expected change in Node and channel counts for
-    // these tests.
-    let mut want_nodes = before_nodes;
-    let mut want_channels = before_channels;
-    for result in &results {
-        assert_eq!(result.predictable_counts, true);
-        if result.disabled {
-            continue;
-        }
-        want_nodes += result.node_change;
-        want_channels += result.channel_change;
-    }
-
-    if after_nodes != want_nodes || after_channels != want_channels {
-        // One of the batch of tests has triggered an unexpected object count.
-        // Repeat the tests one by one to find out which.
-        let mut details = Vec::new();
-        for result in results {
+        // Calculate the expected change in Node and channel counts for
+        // these tests.
+        let mut want_nodes = before_nodes;
+        let mut want_channels = before_channels;
+        for result in &results {
+            assert_eq!(result.predictable_counts, true);
             if result.disabled {
                 continue;
             }
+            want_nodes += result.node_change;
+            want_channels += result.channel_change;
+        }
 
-            let (before_nodes, before_channels) = runtime.object_counts();
-            let (want_nodes, want_channels) = (
-                before_nodes + result.node_change,
-                before_channels + result.channel_change,
-            );
+        if after_nodes != want_nodes || after_channels != want_channels {
+            // One of the batch of tests has triggered an unexpected object count.
+            // Repeat the tests one by one to find out which.
+            let mut details = Vec::new();
+            for result in results {
+                if result.disabled {
+                    continue;
+                }
 
-            let mut req = AbiTestRequest::default();
-            req.include = format!("^{}$", result.name);
-            debug!("Sending request: {:?}", req);
-            let this_result = client.run_tests(req).await;
-            assert_matches!(this_result, Ok(_));
-            let (after_nodes, after_channels) = runtime.object_counts();
+                let (before_nodes, before_channels) = runtime.object_counts();
+                let (want_nodes, want_channels) = (
+                    before_nodes + result.node_change,
+                    before_channels + result.channel_change,
+                );
 
-            if after_nodes != want_nodes || after_channels != want_channels {
-                details.push(format!(
+                let mut req = AbiTestRequest::default();
+                req.include = format!("^{}$", result.name);
+                debug!("Sending request: {:?}", req);
+                let this_result = client.run_tests(req).await;
+                assert_matches!(this_result, Ok(_));
+                let (after_nodes, after_channels) = runtime.object_counts();
+
+                if after_nodes != want_nodes || after_channels != want_channels {
+                    details.push(format!(
                     "[ LEAK ] {} (got {}=>{} nodes, {}=>{} channels, want {}=>{} nodes, {}=>{} channels)",
                     result.name, before_nodes, after_nodes, before_channels, after_channels,
                     before_nodes, want_nodes, before_channels, want_channels,
                 ));
-            } else {
-                details.push(format!(
-                    "[ OK ] {} ({}=>{} nodes, {}=>{} channels, as expected)",
-                    result.name, before_nodes, after_nodes, before_channels, after_channels,
-                ));
+                } else {
+                    details.push(format!(
+                        "[ OK ] {} ({}=>{} nodes, {}=>{} channels, as expected)",
+                        result.name, before_nodes, after_nodes, before_channels, after_channels,
+                    ));
+                }
+                panic!("Leak of Nodes or channels found");
             }
+            for detail in details {
+                info!("{}", detail);
+            }
+            assert_eq!(want_nodes, after_nodes);
+            assert_eq!(want_channels, after_channels);
         }
-        for detail in details {
-            info!("{}", detail);
-        }
-        assert_eq!(want_nodes, after_nodes);
-        assert_eq!(want_channels, after_channels);
-    }
-
+    } // ensure futures are all dropped
+    drop(client);
     runtime.stop();
 }
