@@ -5,13 +5,13 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "${SCRIPTS_DIR}/common"
 
 application_language="rust"
-client_variant="bazel"
+client_variants="bazel"
 compilation_mode='fastbuild'
 docker_config=''
 while getopts "e:a:c:di:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-a rust|cpp] [-c cargo|bazel] [-i base|logless] [-d] -e EXAMPLE
+      echo -e "Usage: ${0} [-h] [-a rust|cpp] [-c [cargo|bazel|npm]...] [-i base|logless] [-d] -e EXAMPLE
 
 Build the given example Oak Application and client.
 
@@ -20,9 +20,11 @@ Options:
   -a    Example application variant:
           - rust (used by default)
           - cpp
-  -c    Example client variant:
-          - cargo
-          - bazel (used by default)
+  -c    Example client variants. Multiple clients can be specified by space
+        separating them. Eg -c \"cargo bazel npm\".
+        - cargo
+        - bazel (used by default)
+        - npm
   -d    Build C++ code for example using debug mode
   -i    This flag enables packaging the application into a Docker image,
         and specifies the version of the Oak server, used by the application:
@@ -35,7 +37,7 @@ Options:
     a)
       application_language="${OPTARG}";;
     c)
-      client_variant="${OPTARG}";;
+      client_variants="${OPTARG}";;
     d)
       compilation_mode='dbg';;
     i)
@@ -105,27 +107,28 @@ if [[ -n "${docker_config}" ]]; then
   fi
 fi
 
-case "${client_variant}" in
-  cargo)
-    cargo build --release "--manifest-path=./examples/${EXAMPLE}/client/rust/Cargo.toml"
-    ;;
-  bazel)
-    bazel_build_flags+=(
-      '--symlink_prefix=bazel-client-'
-      "--compilation_mode=${compilation_mode}"
-    )
+# Build the application clients.
+for client_variant in $client_variants
+do
+  case "${client_variant}" in
+    cargo)
+      cargo build --release "--manifest-path=./examples/${EXAMPLE}/client/rust/Cargo.toml"
+      ;;
+    bazel)
+      bazel_build_flags+=(
+        '--symlink_prefix=bazel-client-'
+        "--compilation_mode=${compilation_mode}"
+      )
 
-    # Build the client with a different output_base so that we don't lose incremental state.
-    # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
-    bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:all"
-    ;;
-  *)
-    echo "Invalid example client variant: ${client_variant}"
-    exit 1;;
-esac
-
-# If a node client exists, install its dependencies
-nodejs_client="./examples/${EXAMPLE}/client/nodejs"
-if [[ -d "${nodejs_client}" ]]; then
-    npm ci --prefix "${nodejs_client}"
-fi
+      # Build the client with a different output_base so that we don't lose incremental state.
+      # See https://docs.bazel.build/versions/master/command-line-reference.html#flag--output_base.
+      bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:all"
+      ;;
+    npm)
+      npm ci --prefix "./examples/${EXAMPLE}/client/nodejs"
+      ;;
+    *)
+      echo "Invalid example client variant: ${client_variant}"
+      exit 1;;
+  esac
+done
