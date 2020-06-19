@@ -36,7 +36,7 @@ container_image(
         "./aggregator_backend",
     ],
     files = [
-        "//:examples/target/x86_64-unknown-linux-musl/release/aggregator_backend",
+        "//:examples/target/x86_64-unknown-linux-gnu/release/aggregator_backend",
     ],
     ports = [
         "8888/tcp",  # Backend gRPC port.
