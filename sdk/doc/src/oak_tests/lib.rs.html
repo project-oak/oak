@@ -197,42 +197,6 @@
 <span id="197">197</span>
 <span id="198">198</span>
 <span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -253,13 +217,20 @@
 <span class="doccomment">//! Test utilities to help with unit testing of Oak SDK code.</span>
 
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
-    <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">NodeConfiguration</span>,
-    <span class="ident">WebAssemblyConfiguration</span>,
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{
+    <span class="ident">label</span>::<span class="ident">Label</span>,
+    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
+        <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">NodeConfiguration</span>,
+        <span class="ident">WebAssemblyConfiguration</span>,
+    },
 };
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">process</span>::<span class="ident">Command</span>};
-<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Identity</span>;
+<span class="kw">use</span> <span class="ident">tonic</span>::{
+    <span class="ident">metadata</span>::<span class="ident">MetadataValue</span>,
+    <span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>, <span class="ident">Identity</span>},
+    <span class="ident">Request</span>,
+};
 
 <span class="comment">// TODO(#544): re-enable unit tests of SDK functionality</span>
 
@@ -294,9 +265,15 @@
 
 <span class="doccomment">/// Default entrypoint name for the module under test.</span>
 <span class="kw">const</span> <span class="ident">DEFAULT_ENTRYPOINT_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;oak_main&quot;</span>;
+<span class="doccomment">/// Default URI that the tests expect to find a live Runtime at.</span>
+<span class="kw">const</span> <span class="ident">RUNTIME_URI</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;https://localhost:8080&quot;</span>;
 
 <span class="kw">const</span> <span class="ident">DEFAULT_MODULE_MANIFEST</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Cargo.toml&quot;</span>;
 <span class="kw">const</span> <span class="ident">MODULE_WASM_SUFFIX</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;.wasm&quot;</span>;
+
+<span class="comment">// Retry parameters when connecting to a gRPC server.</span>
+<span class="kw">const</span> <span class="ident">RETRY_COUNT</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">360</span>;
+<span class="kw">const</span> <span class="ident">RETRY_INTERVAL</span>: <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">500</span>);
 
 <span class="doccomment">/// Convenience helper to build and run a single-Node Application with the given module name, using</span>
 <span class="doccomment">/// the default name &quot;oak_main&quot; for its entrypoint.</span>
@@ -370,104 +347,55 @@
     }
 }
 
-<span class="doccomment">/// Inject a gRPC request into an Oak Application under test and return the corresponding</span>
-<span class="doccomment">/// response (or error).</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">grpc_request</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span>(
-    <span class="ident">proxy</span>: <span class="kw-2">&amp;</span><span class="ident">oak_runtime</span>::<span class="ident">RuntimeProxy</span>,
-    <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    <span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">req</span>: <span class="kw-2">&amp;</span><span class="ident">R</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">R</span>: <span class="ident">prost</span>::<span class="ident">Message</span>,
-    <span class="ident">Q</span>: <span class="ident">prost</span>::<span class="ident">Message</span> <span class="op">+</span> <span class="ident">Default</span>,
-{
-    <span class="comment">// Put the request in a GrpcRequest wrapper and serialize into a message.</span>
-    <span class="kw">let</span> <span class="ident">grpc_req</span> <span class="op">=</span>
-        <span class="ident">oak_abi</span>::<span class="ident">grpc</span>::<span class="ident">encap_request</span>(<span class="ident">req</span>, <span class="ident">method_name</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to build GrpcRequest&quot;</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">req_msg</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">NodeMessage</span> {
-        <span class="ident">data</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="ident">handles</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-    };
+<span class="doccomment">/// Build a channel and interceptor suitable for building a client that connects</span>
+<span class="doccomment">/// to a Runtime under test.</span>
+<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">channel_and_interceptor</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Channel</span>, <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Interceptor</span><span class="op">&gt;</span>) {
+    <span class="comment">// Build a channel that connects to the Runtime under test.</span>
+    <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="ident">RUNTIME_URI</span>.<span class="ident">parse</span>().<span class="ident">expect</span>(<span class="string">&quot;Error parsing URI&quot;</span>);
+    <span class="kw">let</span> <span class="ident">tls_config</span> <span class="op">=</span> <span class="ident">ClientTlsConfig</span>::<span class="ident">new</span>()
+        .<span class="ident">ca_certificate</span>(<span class="ident">Certificate</span>::<span class="ident">from_pem</span>(<span class="macro">include_str</span><span class="macro">!</span>(<span class="string">&quot;../certs/ca.pem&quot;</span>)));
+    <span class="kw">let</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">Channel</span>::<span class="ident">builder</span>(<span class="ident">uri</span>).<span class="ident">tls_config</span>(<span class="ident">tls_config</span>);
 
-    <span class="ident">grpc_req</span>
-        .<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">req_msg</span>.<span class="ident">data</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;failed to serialize GrpcRequest message&quot;</span>);
-
-    <span class="comment">// Create a new channel to hold the request message.</span>
-    <span class="comment">//</span>
-    <span class="comment">// In most cases we do not care about labels, so we use the least privileged label for this</span>
-    <span class="comment">// channel.</span>
-    <span class="kw">let</span> (<span class="ident">req_write_handle</span>, <span class="ident">req_read_handle</span>) <span class="op">=</span> <span class="ident">proxy</span>
-        .<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">public_untrusted</span>())
-        .<span class="ident">expect</span>(<span class="string">&quot;could not create channel&quot;</span>);
-    <span class="ident">proxy</span>
-        .<span class="ident">channel_write</span>(<span class="ident">req_write_handle</span>, <span class="ident">req_msg</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;could not write message&quot;</span>);
-
-    <span class="comment">// Create a new channel for responses to arrive on and also attach that to the message.</span>
-    <span class="comment">//</span>
-    <span class="comment">// In most cases we do not care about labels, so we use the least privileged label for this</span>
-    <span class="comment">// channel.</span>
-    <span class="kw">let</span> (<span class="ident">rsp_write_handle</span>, <span class="ident">rsp_read_handle</span>) <span class="op">=</span> <span class="ident">proxy</span>
-        .<span class="ident">channel_create</span>(<span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>::<span class="ident">public_untrusted</span>())
-        .<span class="ident">expect</span>(<span class="string">&quot;could not create channel&quot;</span>);
-
-    <span class="comment">// Create a notification message and attach the method-invocation specific channels to it.</span>
-    <span class="kw">let</span> <span class="ident">notify_msg</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">NodeMessage</span> {
-        <span class="ident">data</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="ident">handles</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">req_read_handle</span>, <span class="ident">rsp_write_handle</span>],
-    };
-
-    <span class="comment">// Send the notification message (with attached handles) into the Node under test.</span>
-    <span class="ident">proxy</span>
-        .<span class="ident">channel_write</span>(<span class="ident">handle</span>, <span class="ident">notify_msg</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;could not write message&quot;</span>);
-    <span class="ident">proxy</span>
-        .<span class="ident">channel_close</span>(<span class="ident">req_write_handle</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;failed to close channel&quot;</span>);
-    <span class="ident">proxy</span>
-        .<span class="ident">channel_close</span>(<span class="ident">req_read_handle</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;failed to close channel&quot;</span>);
-    <span class="ident">proxy</span>
-        .<span class="ident">channel_close</span>(<span class="ident">rsp_write_handle</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;failed to close channel&quot;</span>);
-
-    <span class="comment">// Read the serialized, encapsulated response.</span>
+    <span class="comment">// The Runtime may have just been started for a test, and make take some time</span>
+    <span class="comment">// to come fully up, start a gRPC server and accept connections. Allow for</span>
+    <span class="comment">// this by retrying at intervals until the server responds or we hit a retry</span>
+    <span class="comment">// limit.</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">retries</span> <span class="op">=</span> <span class="number">0</span>;
+    <span class="kw">let</span> <span class="ident">channel</span>;
     <span class="kw">loop</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">proxy</span>.<span class="ident">channel_read</span>(<span class="ident">rsp_read_handle</span>) {
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">r</span>,
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;no pending gRPC response message; poll again soon&quot;</span>);
-                <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>));
-                <span class="kw">continue</span>;
+        <span class="kw">match</span> <span class="ident">builder</span>.<span class="ident">connect</span>().<span class="kw">await</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Connected to gRPC server&quot;</span>);
+                <span class="ident">channel</span> <span class="op">=</span> <span class="ident">c</span>;
+                <span class="kw">break</span>;
             }
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;failed to read from response channel: {:?}&quot;</span>, <span class="ident">e</span>);
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">if</span> <span class="ident">retries</span> <span class="op">&lt;</span> <span class="ident">RETRY_COUNT</span> {
+                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Failed to connect, try again momentarily: {:?}&quot;</span>, <span class="ident">err</span>);
+                    <span class="ident">retries</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+                    <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">RETRY_INTERVAL</span>);
+                } <span class="kw">else</span> {
+                    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Failed to connect, last err: {:?}&quot;</span>, <span class="ident">err</span>);
+                }
             }
-        };
-        <span class="ident">proxy</span>
-            .<span class="ident">channel_close</span>(<span class="ident">rsp_read_handle</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;failed to close channel&quot;</span>);
-        <span class="kw">if</span> <span class="ident">rsp</span>.<span class="ident">data</span>.<span class="ident">is_empty</span>() {
-            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;no pending message; poll again soon&quot;</span>);
-            <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>));
-            <span class="kw">continue</span>;
         }
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcResponse</span>::<span class="ident">decode</span>(<span class="ident">rsp</span>.<span class="ident">data</span>.<span class="ident">as_slice</span>())
-            .<span class="ident">expect</span>(<span class="string">&quot;failed to parse GrpcResponse message&quot;</span>);
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">rsp</span>.<span class="ident">last</span> {
-            <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Expected single final response&quot;</span>);
-        }
-
-        <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">rsp</span>.<span class="ident">status</span>.<span class="ident">unwrap_or_default</span>();
-        <span class="kw">if</span> <span class="ident">status</span>.<span class="ident">code</span> <span class="op">!</span><span class="op">=</span> <span class="ident">oak</span>::<span class="ident">grpc</span>::<span class="ident">Code</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>);
-        }
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span>
-            <span class="ident">Q</span>::<span class="ident">decode</span>(<span class="ident">rsp</span>.<span class="ident">rsp_msg</span>.<span class="ident">as_slice</span>()).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse response protobuf message&quot;</span>);
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>);
     }
+
+    <span class="comment">// Build an interceptor that will attach a public-untrusted Oak label to</span>
+    <span class="comment">// every gRPC request.</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">label</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+    <span class="ident">Label</span>::<span class="ident">public_untrusted</span>()
+        .<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">label</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;Error encoding label&quot;</span>);
+    <span class="kw">let</span> <span class="ident">interceptor</span> <span class="op">=</span> <span class="kw">move</span> <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">|</span> {
+        <span class="ident">request</span>.<span class="ident">metadata_mut</span>().<span class="ident">insert_bin</span>(
+            <span class="ident">oak_abi</span>::<span class="ident">OAK_LABEL_GRPC_METADATA_KEY</span>,
+            <span class="ident">MetadataValue</span>::<span class="ident">from_bytes</span>(<span class="ident">label</span>.<span class="ident">as_ref</span>()),
+        );
+        <span class="prelude-val">Ok</span>(<span class="ident">request</span>)
+    };
+
+    (<span class="ident">channel</span>, <span class="ident">interceptor</span>)
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_tests";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
