@@ -145,6 +145,13 @@
 <span id="145">145</span>
 <span id="146">146</span>
 <span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -186,6 +193,8 @@
     <span class="kw">pub</span> <span class="ident">grpc_server_handled_latency_seconds</span>: <span class="ident">HistogramVec</span>,
     <span class="doccomment">/// Histogram of response sizes of RPCs handled by the server.</span>
     <span class="kw">pub</span> <span class="ident">grpc_response_size_bytes</span>: <span class="ident">HistogramVec</span>,
+    <span class="doccomment">/// Total number of stream messages sent by the server.</span>
+    <span class="kw">pub</span> <span class="ident">grpc_server_msg_sent_total</span>: <span class="ident">HistogramVec</span>,
 }
 
 <span class="doccomment">/// Struct that collects all metrics for monitoring the Oak Runtime.</span>
@@ -221,9 +230,9 @@
     <span class="ident">IntCounterVec</span>::<span class="ident">new</span>(<span class="ident">opts</span>, <span class="ident">labels</span>).<span class="ident">unwrap</span>()
 }
 
-<span class="kw">fn</span> <span class="ident">histogram_vec</span>(<span class="ident">metric_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>], <span class="ident">help</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HistogramVec</span> {
+<span class="kw">fn</span> <span class="ident">histogram_vec</span>(<span class="ident">metric_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">labels</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>], <span class="ident">help</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HistogramVec</span> {
     <span class="kw">let</span> <span class="ident">opts</span> <span class="op">=</span> <span class="ident">HistogramOpts</span>::<span class="ident">new</span>(<span class="ident">metric_name</span>, <span class="ident">help</span>);
-    <span class="ident">HistogramVec</span>::<span class="ident">new</span>(<span class="ident">opts</span>, <span class="ident">label</span>).<span class="ident">unwrap</span>()
+    <span class="ident">HistogramVec</span>::<span class="ident">new</span>(<span class="ident">opts</span>, <span class="ident">labels</span>).<span class="ident">unwrap</span>()
 }
 
 <span class="kw">fn</span> <span class="ident">int_gauge</span>(<span class="ident">metric_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">help</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">IntGauge</span> {
@@ -253,6 +262,11 @@
                 <span class="string">&quot;grpc_response_size_bytes&quot;</span>,
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;method_name&quot;</span>],
                 <span class="string">&quot;Histogram of response sizes of RPCs handled by the server.&quot;</span>,
+            )),
+            <span class="ident">grpc_server_msg_sent_total</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">histogram_vec</span>(
+                <span class="string">&quot;grpc_server_msg_sent_total&quot;</span>,
+                <span class="kw-2">&amp;</span>[<span class="string">&quot;method_name&quot;</span>],
+                <span class="string">&quot;Total number of RPC response messages sent by the server.&quot;</span>,
             )),
         }
     }

@@ -656,6 +656,11 @@
 <span id="656">656</span>
 <span id="657">657</span>
 <span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -753,7 +758,7 @@
         })
     }
 
-    <span class="doccomment">/// Reads the [`oak_abi::Handle`] for the write half of an invcation from a startup channel.</span>
+    <span class="doccomment">/// Reads the [`oak_abi::Handle`] for the write half of an invocation from a startup channel.</span>
     <span class="doccomment">/// Returns an error if the startup channel couldn&#39;t be read, or if the initial message</span>
     <span class="doccomment">/// is invalid (doesn&#39;t contain exactly one write handle).</span>
     <span class="kw">fn</span> <span class="ident">get_invocation_channel</span>(
@@ -1269,6 +1274,11 @@
                             .<span class="ident">grpc_response_size_bytes</span>
                             .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">method_name</span>])
                             .<span class="ident">observe</span>(<span class="ident">grpc_rsp</span>.<span class="ident">rsp_msg</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">f64</span>);
+                        <span class="self">self</span>.<span class="ident">metrics_data</span>
+                            .<span class="ident">grpc_server_metrics</span>
+                            .<span class="ident">grpc_server_msg_sent_total</span>
+                            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">method_name</span>])
+                            .<span class="ident">observe</span>(<span class="number">1.0</span>);
                         <span class="kw">if</span> <span class="ident">grpc_rsp</span>.<span class="ident">last</span> {
                             <span class="comment">// The Node has definitively marked this as the last response for this</span>
                             <span class="comment">// invocation; keep track of this and don&#39;t bother attempting to read</span>
