@@ -5,13 +5,13 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "${SCRIPTS_DIR}/common"
 
 application_language="rust"
-client_language="cpp"
+client_variant="bazel"
 compilation_mode='fastbuild'
 docker_config=''
 while getopts "e:a:c:di:h" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-h] [-a rust|cpp] [-c rust|cpp] [-i base|logless] [-d] -e EXAMPLE
+      echo -e "Usage: ${0} [-h] [-a rust|cpp] [-c cargo|bazel] [-i base|logless] [-d] -e EXAMPLE
 
 Build the given example Oak Application and client.
 
@@ -21,8 +21,8 @@ Options:
           - rust (used by default)
           - cpp
   -c    Example client variant:
-          - rust
-          - cpp (used by default)
+          - cargo
+          - bazel (used by default)
   -d    Build C++ code for example using debug mode
   -i    This flag enables packaging the application into a Docker image,
         and specifies the version of the Oak server, used by the application:
@@ -35,7 +35,7 @@ Options:
     a)
       application_language="${OPTARG}";;
     c)
-      client_language="${OPTARG}";;
+      client_variant="${OPTARG}";;
     d)
       compilation_mode='dbg';;
     i)
@@ -105,11 +105,11 @@ if [[ -n "${docker_config}" ]]; then
   fi
 fi
 
-case "${client_language}" in
-  rust)
+case "${client_variant}" in
+  cargo)
     cargo build --release "--manifest-path=./examples/${EXAMPLE}/client/rust/Cargo.toml"
     ;;
-  cpp)
+  bazel)
     bazel_build_flags+=(
       '--symlink_prefix=bazel-client-'
       "--compilation_mode=${compilation_mode}"
@@ -120,7 +120,7 @@ case "${client_language}" in
     bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/client:all"
     ;;
   *)
-    echo "Invalid example client variant: ${client_language}"
+    echo "Invalid example client variant: ${client_variant}"
     exit 1;;
 esac
 

@@ -6,7 +6,7 @@ source "${SCRIPTS_DIR}/common"
 
 server="base"
 application_language="rust"
-client_languages="cpp"
+client_variants="bazel"
 while getopts "s:a:c:h" opt; do
   case "${opt}" in
     h)
@@ -18,16 +18,16 @@ while getopts "s:a:c:h" opt; do
           - rust (default)
           - cpp
   -c    Example client variants. Multiple clients can be specified by space
-        seperating them. Eg -c \"rust cpp nodejs\".
-        - rust
-        - cpp (used by default)
-        - nodejs
+        separating them. Eg -c \"cargo bazel npm\".
+        - cargo
+        - bazel (used by default)
+        - npm
   -h    Print Help (this message) and exit"
       exit 0;;
     a)
       application_language="${OPTARG}";;
     c)
-      client_languages="${OPTARG}";;
+      client_variants="${OPTARG}";;
     s)
       case "${OPTARG}" in
         base|logless)
@@ -46,12 +46,12 @@ done
 examples="$(find examples -mindepth 2 -maxdepth 4 -type d -regex '.*/module.*/'"${application_language}"'$' | cut -d'/' -f2 | uniq)"
 for example in ${examples}; do
   if [[ "${example}" == 'aggregator' ]]; then
-      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "${client_languages}" -e aggregator -- --bucket=test --data=1:10,2:20,3:30
+      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "${client_variants}" -e aggregator -- --bucket=test --data=1:10,2:20,3:30
   elif [[ "${example}" == 'chat' ]]; then
-      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "${client_languages}" -e chat -- --test
+      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "${client_variants}" -e chat -- --test
   elif [[ "${example}" == 'trusted_information_retrieval' ]]; then
-      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "${client_languages}" -e trusted_information_retrieval -- --latitude 0.0 --longitude 0.0
+      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "${client_variants}" -e trusted_information_retrieval -- --latitude 0.0 --longitude 0.0
   else
-      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "${client_languages}" -e "${example}"
+      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "${client_variants}" -e "${example}"
   fi
 done

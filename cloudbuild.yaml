@@ -81,7 +81,7 @@ steps:
     waitFor: ['run_tests_tsan']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'base', '-c', 'rust cpp nodejs']
+    args: ['./scripts/run_examples', '-s', 'base', '-c', 'cargo bazel npm']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: run_examples_cpp
