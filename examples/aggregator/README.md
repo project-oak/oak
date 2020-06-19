@@ -17,8 +17,8 @@ Build and run the Backend with the following command:
 ```bash
 export RUST_LOG=info
 cargo run --release --manifest-path=examples/aggregator/backend/Cargo.toml -- \
-  --grpc-tls-private-key="<path-to-grpc-tls-private-key>" \
-  --grpc-tls-certificate="<path-to-grpc-tls-certificate>"
+  --grpc-tls-private-key=./examples/certs/local/local.key \
+  --grpc-tls-certificate=./examples/certs/local/local.pem
 ```
 
 Backend code is in the `backend` directory.

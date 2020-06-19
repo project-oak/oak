@@ -38,6 +38,8 @@ pub struct GrpcServerMetrics {
     pub grpc_server_handled_latency_seconds: HistogramVec,
     /// Histogram of response sizes of RPCs handled by the server.
     pub grpc_response_size_bytes: HistogramVec,
+    /// Total number of stream messages sent by the server.
+    pub grpc_server_msg_sent_total: HistogramVec,
 }
 
 /// Struct that collects all metrics for monitoring the Oak Runtime.
@@ -73,9 +75,9 @@ fn counter_vec(metric_name: &str, labels: &[&str], help: &str) -> IntCounterVec 
     IntCounterVec::new(opts, labels).unwrap()
 }
 
-fn histogram_vec(metric_name: &str, label: &[&str], help: &str) -> HistogramVec {
+fn histogram_vec(metric_name: &str, labels: &[&str], help: &str) -> HistogramVec {
     let opts = HistogramOpts::new(metric_name, help);
-    HistogramVec::new(opts, label).unwrap()
+    HistogramVec::new(opts, labels).unwrap()
 }
 
 fn int_gauge(metric_name: &str, help: &str) -> IntGauge {
@@ -105,6 +107,11 @@ impl GrpcServerMetrics {
                 "grpc_response_size_bytes",
                 &["method_name"],
                 "Histogram of response sizes of RPCs handled by the server.",
+            )),
+            grpc_server_msg_sent_total: builder.register(histogram_vec(
+                "grpc_server_msg_sent_total",
+                &["method_name"],
+                "Total number of RPC response messages sent by the server.",
             )),
         }
     }
