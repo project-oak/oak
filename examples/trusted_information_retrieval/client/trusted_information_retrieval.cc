@@ -47,7 +47,7 @@ void get_nearest_point_of_interest(TrustedInformationRetrieval::Stub* stub, floa
   ListPointsOfInterestResponse response;
   grpc::Status status = stub->ListPointsOfInterest(&context, request, &response);
   if (!status.ok()) {
-    LOG(ERROR) << "Could not get nearest point of interest: " << status.error_code() << ": "
+    LOG(FATAL) << "Could not get nearest point of interest: " << status.error_code() << ": "
                << status.error_message();
   }
   LOG(INFO) << "Response:";
