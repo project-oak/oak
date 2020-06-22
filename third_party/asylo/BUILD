@@ -28,15 +28,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "status_macros",
-    hdrs = ["status_macros.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@com_google_absl//absl/base:core_headers",
-    ],
-)
-
 # A library for cleanup objects.
 cc_library(
     name = "cleanup",
@@ -51,14 +42,4 @@ cc_test(
         ":cleanup",
         "@gtest//:gtest_main",
     ],
-)
-
-cc_library(
-    name = "cleansing_types",
-    hdrs = [
-        "cleansing_allocator.h",
-        "cleansing_types.h",
-    ],
-    visibility = ["//visibility:public"],
-    deps = ["@boringssl//:crypto"],
 )
