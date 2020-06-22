@@ -42,6 +42,19 @@
 <span id="42">42</span>
 <span id="43">43</span>
 <span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -61,21 +74,34 @@
 
 <span class="doccomment">//! Functionality covering configuration of a Runtime instance.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">RuntimeConfiguration</span>, <span class="ident">RuntimeProxy</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">Runtime</span>, <span class="ident">RuntimeConfiguration</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Certificate</span>;
 
-<span class="doccomment">/// Configures a [`RuntimeProxy`] from the given [`RuntimeConfiguration`] and begins execution.</span>
+<span class="doccomment">/// Configures a [`Runtime`] from the given [`RuntimeConfiguration`] and begins execution.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Returns a [`RuntimeProxy`] for an initial implicit Node, and a writeable [`oak_abi::Handle`] to</span>
 <span class="doccomment">/// send messages into the Runtime. Creating a new channel and passing the write [`oak_abi::Handle`]</span>
 <span class="doccomment">/// into the runtime will enable messages to be read back out from the [`RuntimeProxy`].</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure_and_run</span>(
-    <span class="ident">config</span>: <span class="ident">RuntimeConfiguration</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">RuntimeProxy</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure_and_run</span>(<span class="ident">config</span>: <span class="ident">RuntimeConfiguration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">RuntimeProxy</span>::<span class="ident">create_runtime</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">app_config</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">grpc_config</span>);
+    <span class="kw">let</span> <span class="ident">config_map</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">config_map</span>.<span class="ident">clone</span>();
     <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">proxy</span>.<span class="ident">start_runtime</span>(<span class="ident">config</span>)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>((<span class="ident">proxy</span>, <span class="ident">handle</span>))
+
+    <span class="comment">// Pass in the config map over the initial channel.</span>
+    <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Sender</span>::<span class="ident">new</span>(<span class="ident">handle</span>);
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Send in initial config map&quot;</span>);
+    <span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">config_map</span>, <span class="kw-2">&amp;</span><span class="ident">proxy</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="ident">proxy</span>) {
+        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to close initial handle {:?}: {:?}&quot;</span>, <span class="ident">handle</span>, <span class="ident">err</span>);
+    }
+
+    <span class="comment">// Now that the implicit initial Node has been used to inject the</span>
+    <span class="comment">// Application&#39;s `ConfigMap`, drop all reference to it.</span>
+    <span class="prelude-val">Ok</span>(<span class="ident">proxy</span>.<span class="ident">runtime</span>)
 }
 
 <span class="doccomment">/// Load a PEM encoded TLS certificate, performing (minimal) validation.</span>

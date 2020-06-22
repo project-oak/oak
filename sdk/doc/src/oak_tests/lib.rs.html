@@ -197,6 +197,20 @@
 <span id="197">197</span>
 <span id="198">198</span>
 <span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -220,12 +234,12 @@
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
     <span class="ident">label</span>::<span class="ident">Label</span>,
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
-        <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">NodeConfiguration</span>,
+        <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">ConfigMap</span>, <span class="ident">NodeConfiguration</span>,
         <span class="ident">WebAssemblyConfiguration</span>,
     },
 };
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">process</span>::<span class="ident">Command</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">process</span>::<span class="ident">Command</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 <span class="kw">use</span> <span class="ident">tonic</span>::{
     <span class="ident">metadata</span>::<span class="ident">MetadataValue</span>,
     <span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>, <span class="ident">Identity</span>},
@@ -279,7 +293,7 @@
 <span class="doccomment">/// the default name &quot;oak_main&quot; for its entrypoint.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module_default</span>(
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="ident">run_single_module</span>(<span class="ident">module_config_name</span>, <span class="ident">DEFAULT_ENTRYPOINT_NAME</span>)
 }
 
@@ -288,8 +302,19 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module</span>(
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_runtime</span>::<span class="ident">RuntimeProxy</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span> <span class="ident">runtime_config</span>(<span class="ident">module_config_name</span>, <span class="ident">entrypoint_name</span>);
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span> <span class="ident">runtime_config</span>(<span class="ident">module_config_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">ConfigMap</span>::<span class="ident">default</span>());
+    <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">combined_config</span>)
+}
+
+<span class="doccomment">/// Convenience helper to build and run a single-Node application with the given module name, using</span>
+<span class="doccomment">/// the provided entrypoint name, passing in the provided `ConfigMap` at start-of-day.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module_with_config</span>(
+    <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    <span class="ident">config_map</span>: <span class="ident">ConfigMap</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span> <span class="ident">runtime_config</span>(<span class="ident">module_config_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">config_map</span>);
     <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">combined_config</span>)
 }
 
@@ -298,6 +323,7 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">runtime_config</span>(
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    <span class="ident">config_map</span>: <span class="ident">ConfigMap</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
     <span class="kw">let</span> <span class="ident">wasm</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> [(
         <span class="ident">module_config_name</span>.<span class="ident">to_owned</span>(),
@@ -311,7 +337,7 @@
     .<span class="ident">cloned</span>()
     .<span class="ident">collect</span>();
 
-    <span class="ident">runtime_config_wasm</span>(<span class="ident">wasm</span>, <span class="ident">module_config_name</span>, <span class="ident">entrypoint_name</span>)
+    <span class="ident">runtime_config_wasm</span>(<span class="ident">wasm</span>, <span class="ident">module_config_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">config_map</span>)
 }
 
 <span class="doccomment">/// Build the configuration needed to launch a test Runtime instance that runs the given</span>
@@ -320,6 +346,7 @@
     <span class="ident">wasm_modules</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    <span class="ident">config_map</span>: <span class="ident">ConfigMap</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
     <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
         <span class="ident">metrics_port</span>: <span class="prelude-val">Some</span>(<span class="number">9090</span>),
@@ -344,6 +371,7 @@
                 })),
             }),
         },
+        <span class="ident">config_map</span>,
     }
 }
 

@@ -1054,6 +1054,7 @@
 <span id="1054">1054</span>
 <span id="1055">1055</span>
 <span id="1056">1056</span>
+<span id="1057">1057</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1383,7 +1384,7 @@
     }
 
     <span class="doccomment">/// Return the direction of an ABI handle.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">abi_direction</span>(
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">abi_direction</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
@@ -1392,6 +1393,7 @@
         <span class="prelude-val">Ok</span>(<span class="ident">half</span>.<span class="ident">direction</span>)
     }
 
+    <span class="doccomment">/// Return the accumulated metrics for the `Runtime`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gather_metrics</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MetricFamily</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">metrics_data</span>.<span class="ident">gather</span>()
     }
@@ -1405,7 +1407,7 @@
     }
 
     <span class="doccomment">/// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.</span>
-    <span class="kw">fn</span> <span class="ident">stop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;stopping runtime instance&quot;</span>);
 
         <span class="comment">// Terminate any running servers.</span>

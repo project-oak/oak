@@ -295,11 +295,6 @@
 <span id="295">295</span>
 <span id="296">296</span>
 <span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -541,11 +536,6 @@
     <span class="doccomment">/// Determine whether there are any writers of the channel.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_writers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">writer_count</span>.<span class="ident">load</span>(<span class="ident">SeqCst</span>) <span class="op">&gt;</span> <span class="number">0</span>
-    }
-
-    <span class="doccomment">/// Determine whether there are any users of the channel.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_users</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">has_readers</span>() <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">has_writers</span>()
     }
 
     <span class="doccomment">/// Decrement the [`Channel`] writer counter.</span>

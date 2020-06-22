@@ -288,29 +288,6 @@
 <span id="288">288</span>
 <span id="289">289</span>
 <span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
-<span id="303">303</span>
-<span id="304">304</span>
-<span id="305">305</span>
-<span id="306">306</span>
-<span id="307">307</span>
-<span id="308">308</span>
-<span id="309">309</span>
-<span id="310">310</span>
-<span id="311">311</span>
-<span id="312">312</span>
-<span id="313">313</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -334,10 +311,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">message</span>::<span class="ident">NodeMessage</span>,
     <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
-    <span class="ident">runtime</span>::{
-        <span class="ident">graph</span>::<span class="ident">DotGraph</span>, <span class="ident">AuxServer</span>, <span class="ident">ChannelHalfDirection</span>, <span class="ident">NodeId</span>, <span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>,
-        <span class="ident">Runtime</span>,
-    },
+    <span class="ident">runtime</span>::{<span class="ident">AuxServer</span>, <span class="ident">ChannelHalfDirection</span>, <span class="ident">NodeId</span>, <span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>, <span class="ident">Runtime</span>},
     <span class="ident">GrpcConfiguration</span>,
 };
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>};
@@ -349,7 +323,6 @@
 };
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
-    <span class="ident">string</span>::<span class="ident">String</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>, <span class="ident">RwLock</span>},
 };
 
@@ -368,7 +341,7 @@
 <span class="doccomment">/// partially applying the first argument (the stored [`NodeId`]).</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RuntimeProxy</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
 }
 
@@ -469,25 +442,6 @@
         <span class="prelude-val">Ok</span>(<span class="ident">write_handle</span>)
     }
 
-    <span class="doccomment">/// Generate a Graphviz dot graph that shows the current shape of the Nodes and Channels in</span>
-    <span class="doccomment">/// the runtime.</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">graph_runtime</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">graph</span>()
-    }
-
-    <span class="doccomment">/// Signal termination to a [`Runtime`] and wait for its Node threads to terminate.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop_runtime</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">stop</span>()
-    }
-
-    <span class="doccomment">/// Create a RuntimeProxy instance that acts as a proxy for the specified NodeId.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_for_node</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">RuntimeProxy</span> {
-            <span class="ident">runtime</span>: <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>(),
-            <span class="ident">node_id</span>,
-        }
-    }
     <span class="doccomment">/// See [`Runtime::is_terminating`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_terminating</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">is_terminating</span>()

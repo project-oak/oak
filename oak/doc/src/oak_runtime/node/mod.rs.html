@@ -138,10 +138,6 @@
 <span id="138">138</span>
 <span id="139">139</span>
 <span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -204,7 +200,6 @@
     <span class="ident">IncorrectPort</span>,
     <span class="ident">IncorrectURI</span>,
     <span class="ident">NoHostElement</span>,
-    <span class="ident">CertificateParsingError</span>,
     <span class="ident">IncorrectWebAssemblyModuleName</span>,
     <span class="ident">InvalidNodeConfiguration</span>,
     <span class="ident">WasmiModuleInializationError</span>(<span class="ident">wasmi</span>::<span class="ident">Error</span>),
@@ -225,9 +220,6 @@
             <span class="ident">ConfigurationError</span>::<span class="ident">IncorrectPort</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect port (must be &gt; 1023)&quot;</span>),
             <span class="ident">ConfigurationError</span>::<span class="ident">IncorrectURI</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect URI&quot;</span>),
             <span class="ident">ConfigurationError</span>::<span class="ident">NoHostElement</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;URI doesn&#39;t contain the Host element&quot;</span>),
-            <span class="ident">ConfigurationError</span>::<span class="ident">CertificateParsingError</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Error parsing PEM encoded TLS certificate&quot;</span>)
-            }
             <span class="ident">ConfigurationError</span>::<span class="ident">IncorrectWebAssemblyModuleName</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Incorrect WebAssembly module name&quot;</span>)
             }

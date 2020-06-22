@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["client","gRPC client pseudo-Node functionality."],["invocation","Functionality for handling gRPC method invocations."],["server","gRPC server pseudo-Node functionality."]]});

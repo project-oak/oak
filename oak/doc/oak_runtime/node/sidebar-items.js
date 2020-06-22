@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["ConfigurationError","A enumeration for errors occuring when creating a new [`Node`] instance."]],"fn":[["create_node","Create a new [`Node`] instance based on the provided configuration information."]],"mod":[["grpc","Functionality for gRPC pseudo-Nodes."]],"trait":[["Node","Trait encapsulating execution of a Node or pseudo-Node."]]});
