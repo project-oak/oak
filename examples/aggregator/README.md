@@ -72,13 +72,14 @@ Client code is in the `client` directory.
 
 ## Deployment
 
-The Aggregator example contains a `gcp/pod.yaml` file which is a config for
-Google Cloud deployment.
+The Aggregator example contains a `gcp/deployment.yaml` file which is a config
+for Google Cloud deployment.
 
-An Aggregator deployment consists of a single pod with two running containers
-(an Aggregator Oak application and a Backend server) and a service with a TCP
-Load Balancer and an assigned static IP that listens on the port `8080`.
-Aggregator is deployed using [Kubernetes](https://kubernetes.io/).
+Each pod in an Aggregator deployment consists of two running containers, namely
+an Aggregator Oak application and a Backend server. In addition, the Aggregator
+deployment exposes a service externally with a TCP Load Balancer and an assigned
+static IP that listens on the port `8080`. Aggregator is deployed using
+[Kubernetes](https://kubernetes.io/).
 
 In order to deploy the Aggregator example - first set up Kubernetes:
 
