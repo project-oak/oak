@@ -1,0 +1,24 @@
+{
+  "combiner": "OR",
+  "conditions": [
+    {
+      "conditionAbsent": {
+        "aggregations": [
+          {
+            "alignmentPeriod": "60s",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "perSeriesAligner": "ALIGN_MEAN"
+          }
+        ],
+        "duration": "180s",
+        "filter": "metric.type=\"external.googleapis.com/prometheus/runtime_health_check\" resource.type=\"k8s_container\"",
+        "trigger": {
+          "count": 1
+        }
+      },
+      "displayName": "external/prometheus/runtime_health_check [SUM]"
+    }
+  ],
+  "displayName": "Aggregator uptime alert policy",
+  "enabled": true
+}

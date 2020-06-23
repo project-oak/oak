@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+readonly GLOBAL_ROOT_DIR="${SCRIPTS_DIR}/../../.."
+readonly GLOBAL_SCRIPTS_DIR="${GLOBAL_ROOT_DIR}/scripts/"
+# shellcheck source=scripts/common
+source "${GLOBAL_SCRIPTS_DIR}/common"
+
+# Create monitoring dashboard from file
+gcloud monitoring dashboards create --config-from-file="${GLOBAL_ROOT_DIR}/examples/aggregator/gcp/aggregator-dashboard.json"
+
+# Create alert policy from file
+gcloud alpha monitoring policies create --policy-from-file="${GLOBAL_ROOT_DIR}/examples/aggregator/gcp/aggregator-alert-policy.json"

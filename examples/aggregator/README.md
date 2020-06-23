@@ -114,10 +114,12 @@ the following command:
 ## Monitoring
 
 Run the following command to create a monitoring dashboard with charts showing
-memory and CPU usage, as well as application specific metrics.
+memory and CPU usage, as well as application specific metrics. It also creates a
+simple alert policy to check that at least one instance of the aggregator is
+running.
 
 ```bash
-gcloud monitoring dashboards create --config-from-file=aggregator-dashboard.json
+./examples/aggregator/scripts/monitoring
 ```
 
 Dashboards can be created and modified using the web interface. The updated
