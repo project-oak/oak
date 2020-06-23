@@ -135,7 +135,7 @@ its ephemeral Channel handles.
 
 ### Overview
 
-- Nodes and Channels have **Labels**, fixed at creation time
+- Nodes and Channels each have a **Label**, fixed at creation time
 - The Runtime keeps track of Labels, and enforces flow of data between Nodes and
   Channels based on them
 - Each Label has two **components**: **confidentiality** and **integrity**
