@@ -115,29 +115,16 @@ do
   case "${client_variant}" in
     cargo)
       rust_client_manifest="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/rust/Cargo.toml"
-      if [[ -f "${rust_client_manifest}" ]]; then
           cargo run --release --manifest-path="${rust_client_manifest}" -- \
             --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
             "${CLIENT_ARGS[@]-}"
-      else
-        echo "The ${EXAMPLE} example does not contain a ${client_variant} client. Skipping this client."
-      fi
       ;;
     bazel)
-      build_file="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/BUILD"
-      if [[ -f "${build_file}" ]]; then
           "${SCRIPTS_DIR}/../bazel-client-bin/examples/${EXAMPLE}/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
-      else
-        echo "The ${EXAMPLE} example does not contain a ${client_variant} client. Skipping this client."
-      fi
       ;;
     npm)
       npm_client="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/nodejs"
-      if [[ -d "${npm_client}" ]]; then
           npm start --prefix "${npm_client}"
-      else
-        echo "The ${EXAMPLE} example does not contain a ${client_variant} client. Skipping this client."
-      fi
       ;;
     *)
       echo "Invalid example client variant: ${client_variant}"
