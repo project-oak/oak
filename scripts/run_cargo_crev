@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# Disable logging, or the output will be extremely verbose.
+unset RUST_LOG
+
+# Seed the crev repo with a few initial URLs.
+# These are not considered trusted by default.
+readonly CREV_REPOSITORIES=(
+  https://github.com/dpc/crev-proofs
+  https://github.com/oherrala/crev-proofs
+)
+
+for repository in "${CREV_REPOSITORIES[@]}"; do
+  cargo crev repo fetch url "${repository}"
+done
+
+# Recursively fetch any URL that was referenced by the previous ones.
+cargo crev repo fetch all
+
+(
+  cd ./oak/server
+  # Ignore status code from the verify command.
+  cargo crev crate verify --show-all || true
+)

@@ -41,6 +41,13 @@ steps:
     args: ['info']
 
   - name: 'gcr.io/oak-ci/oak:latest'
+    id: cargo_crev
+    entrypoint: 'bash'
+    waitFor: ['git_init']
+    timeout: 5m
+    args: ['./scripts/run_cargo_crev']
+
+  - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_no_debug
     waitFor: ['bazel_init']
     timeout: 60m
