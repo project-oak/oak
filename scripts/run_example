@@ -67,7 +67,7 @@ fi
 
 
 if [[ "${server}" != "none" ]]; then
-  "${SCRIPTS_DIR}/build_example" ${buildargs} -a "${application_language}" -e "${EXAMPLE}"
+  "${SCRIPTS_DIR}/build_example" ${buildargs} -a "${application_language}" -c "${client_variants}" -e "${EXAMPLE}"
 
   # Run a server in the background.
   # The server is being built before running, so the build process will not happen in the
