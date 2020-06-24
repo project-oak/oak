@@ -1,0 +1,38 @@
+name: Generate/upload coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  upload_coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v2
+
+      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
+      - name: Free disk space
+        run: |
+          df --human-readable
+          sudo swapoff --all
+          sudo rm --force /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls --all --quiet)
+          df --human-readable
+
+      - name: Docker build image
+        timeout-minutes: 30
+        run: |
+          docker pull gcr.io/oak-ci/oak:latest
+          docker build --pull --cache-from=gcr.io/oak-ci/oak:latest --tag=gcr.io/oak-ci/oak:latest .
+
+      - name: Generate coverage data
+        run: ./scripts/docker_run ./scripts/run_tests_coverage
+
+      - name: Upload to codecov.io
+        run: |
+          bash <(curl -s https://codecov.io/bash) -f ./oak/server/target/debug/lcov.info
