@@ -86,6 +86,12 @@ else
   )
 fi
 
+if [[ "${OSTYPE}" == "darwin"*  ]]; then
+  readonly RUST_HOST_TARGET="${RUST_HOST_TARGET:-x86_64-apple-darwin}"
+else
+  readonly RUST_HOST_TARGET="${RUST_HOST_TARGET:-x86_64-unknown-linux-gnu}"
+fi
+
 # kill_pid tries to kill the given pid(s), first softly then more aggressively.
 kill_pid() {
   local pids=( "$@" )

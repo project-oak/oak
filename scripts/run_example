@@ -80,8 +80,8 @@ if [[ "${server}" != "none" ]]; then
   # Run Backend for specific examples.
   if [[ "${EXAMPLE}" == 'aggregator' ]] || [[ "${EXAMPLE}" == 'trusted_information_retrieval' ]]; then
     # Building the Backend first, so it will not be built in the background.
-    cargo build --release --target=x86_64-unknown-linux-gnu --manifest-path="examples/${EXAMPLE}/backend/Cargo.toml"
-    cargo run --release --target=x86_64-unknown-linux-gnu --manifest-path="examples/${EXAMPLE}/backend/Cargo.toml" -- \
+    cargo build --release --target="${RUST_HOST_TARGET}" --manifest-path="examples/${EXAMPLE}/backend/Cargo.toml"
+    cargo run --release --target="${RUST_HOST_TARGET}" --manifest-path="examples/${EXAMPLE}/backend/Cargo.toml" -- \
       --grpc-tls-private-key="${SCRIPTS_DIR}/../examples/certs/local/local.key" \
       --grpc-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/local.pem" &
     readonly BACKEND_PID=$!
