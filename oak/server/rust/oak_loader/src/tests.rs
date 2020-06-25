@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-use super::*;
+use crate::options::{parse_config_map, ConfigEntry};
 use maplit::hashmap;
+use oak_abi::proto::oak::application::ConfigMap;
 
 #[test]
 fn parse_config_entry_ok() {
