@@ -143,12 +143,14 @@ impl DatabaseProxy for DatabaseProxyNode {
 
         requested_entry
             .map(|entry| GetDatabaseEntryResponse { entry: Some(entry) })
-            .ok_or(grpc::build_status(grpc::Code::NotFound, ""))
+            .ok_or_else(|| grpc::build_status(grpc::Code::NotFound, ""))
     }
 }
 
-oak::entrypoint!(database_proxy_main => |in_channel| {
+oak::entrypoint!(database_proxy_main => |_in_channel| {
     oak::logger::init_default();
     let dispatcher = DatabaseProxyDispatcher::new(DatabaseProxyNode::default());
-    oak::run_event_loop(dispatcher, in_channel);
+    let grpc_channel =
+        oak::grpc::server::init("[::]:8080").expect("Couldn't create gRPC server pseudo-Node");
+    oak::run_event_loop(dispatcher, grpc_channel);
 });

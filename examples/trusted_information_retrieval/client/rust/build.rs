@@ -24,7 +24,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Tell cargo to rerun this build script if the proto file has changed.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    println!("cargo:rerun-if-changed={}", trusted_information_retrieval_path.display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        trusted_information_retrieval_path.display()
+    );
     println!("cargo:rerun-if-changed={}", database_path.display());
 
     tonic_build::configure()

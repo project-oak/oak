@@ -47,7 +47,10 @@ async fn test_database_proxy_for_unavailable_database() {
     let mut client = DatabaseProxyClient::with_interceptor(channel, interceptor);
 
     // Test database entry.
-    assert_matches!(get_database_entry(&mut client, "0", DATABASE_URL).await, Err(_));
+    assert_matches!(
+        get_database_entry(&mut client, "0", DATABASE_URL).await,
+        Err(_)
+    );
 
     runtime.stop();
 }
