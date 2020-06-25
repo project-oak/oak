@@ -295,6 +295,30 @@
 <span id="295">295</span>
 <span id="296">296</span>
 <span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -402,6 +426,30 @@
     <span class="doccomment">/// purposes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_messages</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RwLockReadGuard</span><span class="op">&lt;</span><span class="ident">Messages</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>()
+    }
+
+    <span class="doccomment">/// Visit all channel halves that are reachable via this `ChannelHalf`, starting with</span>
+    <span class="doccomment">/// `self`. The `visitor` function should return a boolean indicating whether the provided half</span>
+    <span class="doccomment">/// needs to be further explored.  For debugging/introspection purposes.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">visit_halves</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">visitor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">F</span>)
+    <span class="kw">where</span>
+        <span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>,
+    {
+        <span class="kw">if</span> <span class="ident">visitor</span>(<span class="self">self</span>) {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">to_visit</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+            {
+                <span class="kw">let</span> <span class="ident">messages</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_messages</span>();
+                <span class="kw">for</span> <span class="ident">msg</span> <span class="kw">in</span> <span class="ident">messages</span>.<span class="ident">iter</span>() {
+                    <span class="kw">for</span> <span class="ident">half</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">msg</span>.<span class="ident">channels</span> {
+                        <span class="ident">to_visit</span>.<span class="ident">push</span>(<span class="ident">half</span>.<span class="ident">clone</span>())
+                    }
+                }
+            }
+            <span class="comment">// Now the lock is not held, let us go and make our visit.</span>
+            <span class="kw">for</span> <span class="ident">half</span> <span class="kw">in</span> <span class="ident">to_visit</span> {
+                <span class="ident">half</span>.<span class="ident">visit_halves</span>(<span class="ident">visitor</span>);
+            }
+        }
     }
 
     <span class="doccomment">/// Wake any threads waiting on the underlying channel.</span>
