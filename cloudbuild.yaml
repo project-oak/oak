@@ -41,159 +41,32 @@ steps:
     args: ['info']
 
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: cargo_crev
-    entrypoint: 'bash'
-    waitFor: ['git_init']
-    timeout: 5m
-    args: ['./scripts/run_cargo_crev']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_no_debug
-    waitFor: ['bazel_init']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'logless']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server
-    waitFor: ['build_server_no_debug']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'base']
-
-  # Package the Hello World application in a Docker image.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_docker
-    waitFor: ['build_server']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'base']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_tests
-    waitFor: ['build_server_docker']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/run_tests']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
     id: run_tests_tsan
-    waitFor: ['run_tests']
+    waitFor: ['bazel_init']
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/run_tests_tsan']
 
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_examples
+    id: run_tests_tsan_2
     waitFor: ['run_tests_tsan']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'base']
+    args: ['./scripts/run_tests_tsan']
 
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_examples_cpp
-    waitFor: ['run_examples']
+    id: run_tests_tsan_3
+    waitFor: ['run_tests_tsan_2']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'base', '-a', 'cpp']
+    args: ['./scripts/run_tests_tsan']
 
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_experimental
-    waitFor: ['run_tests']
+    id: run_tests_tsan_4
+    waitFor: ['run_tests_tsan_3']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_experimental']
-
-  # Run clang-tidy after the examples finish running, since they share the same `output_base`.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_clang_tidy
-    waitFor: ['run_examples_cpp']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/run_clang_tidy']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: generate_root_ca_certs
-    waitFor: ['git_init']
-    timeout: 5m
-    entrypoint: 'bash'
-    args: ['./scripts/generate_root_ca_certs']
-
-  # Check whether any of the previous steps resulted in file diffs that were not checked in or
-  # ignored by git.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: git_check_diff
-    waitFor:
-      [
-        'git_init',
-        'run_clang_tidy',
-        'run_examples_cpp',
-        'generate_root_ca_certs',
-      ]
-    timeout: 5m
-    entrypoint: 'bash'
-    args: ['./scripts/git_check_diff']
-
-  # Pull Android Docker image.
-  - name: 'gcr.io/cloud-builders/docker'
-    id: pull_android_image
-    waitFor: ['-']
-    timeout: 10m
-    args: ['pull', 'gcr.io/oak-ci/oak-android:latest']
-  # Build Docker image based for Android SDK.
-  - name: 'gcr.io/cloud-builders/docker'
-    id: build_android_image
-    waitFor: ['pull_android_image']
-    timeout: 60m
-    args:
-      [
-        'build',
-        '--pull',
-        '--cache-from=gcr.io/oak-ci/oak-android:latest',
-        '--tag=gcr.io/oak-ci/oak-android:latest',
-        '--file=android.Dockerfile',
-        '.',
-      ]
-  # Build Android Hello-World application.
-  - name: 'gcr.io/oak-ci/oak-android:latest'
-    id: build_examples_android
-    waitFor: ['build_android_image']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_examples_android']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_formatting
-    waitFor: ['git_check_diff', 'build_android_image']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_formatting']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_cargo_deny
-    waitFor: ['check_formatting']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_cargo_deny']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_docs
-    waitFor: ['check_formatting']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_docs']
-
-# Copy compiled enclave binary to Google Cloud Storage.
-# See:
-# - https://pantheon.corp.google.com/storage/browser/artifacts.oak-ci.appspot.com/test/?project=oak-ci
-# - https://cloud.google.com/cloud-build/docs/configuring-builds/store-images-artifacts#storing_artifacts_in
-# TODO: Finalize artifact location.
-# TODO(#709): get example Docker image working with dev server
-#artifacts:
-#  objects:
-#    location: gs://artifacts.oak-ci.appspot.com/test
-#    paths:
-#      - ./liboak_enclave_unsigned.so
+    args: ['./scripts/run_tests_tsan']
 
 timeout: 2h
 
