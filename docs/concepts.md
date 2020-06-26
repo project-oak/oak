@@ -238,9 +238,9 @@ is `{i_0, i_1}`, then:
 
 In particular:
 
-- A Node with label `L_w` may write to a Channel with Label `L_c` iff
+- A Node with label `L_w` may write to a Channel with Label `L_c` if
   `L_w ⊑ L_c`.
-- A Node with label `L_r` may read from a Channel with Label `L_c` iff
+- A Node with label `L_r` may read from a Channel with Label `L_c` if
   `L_c ⊑ L_r`.
 
 If a Node tries to write to or read from a Channel that it is not allowed to,
