@@ -715,7 +715,20 @@ impl<'a> CodeGenerator<'a> {
         self.buf.push_str("}\n");
     }
 
+    fn resolve_message_type(&self, field: &FieldDescriptorProto) -> Option<String> {
+        let message_type = self.resolve_ident(&field.options.as_ref()?.message_type.as_ref()?);
+        let direction = match field.type_name() {
+            ".oak.handle.Sender" => Some("Sender"),
+            ".oak.handle.Receiver" => Some("Receiver"),
+            _ => None,
+        }?;
+        Some(format!("::oak::io::{}<{}>", direction, message_type))
+    }
+
     fn resolve_type(&self, field: &FieldDescriptorProto) -> String {
+        if let Some(ty) = self.resolve_message_type(field) {
+            return ty;
+        }
         match field.r#type() {
             Type::Float => String::from("f32"),
             Type::Double => String::from("f64"),
