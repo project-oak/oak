@@ -1,0 +1,34 @@
+[package]
+name = "tests"
+version = "0.0.0"
+authors = ["Dan Burkert <dan@danburkert.com>"]
+publish = false
+edition = "2018"
+
+build = "src/build.rs"
+
+[lib]
+doctest = false
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+anyhow = "1"
+bytes = "0.5"
+cfg-if = "0.1"
+prost = { path = ".." }
+prost-types = { path = "../prost-types" }
+protobuf = { path = "../protobuf" }
+
+[dev-dependencies]
+diff = "0.1"
+prost-build = { path = "../prost-build" }
+tempfile = "3"
+
+[build-dependencies]
+cfg-if = "0.1"
+env_logger = { version = "0.7", default-features = false }
+prost-build = { path = "../prost-build" }
+protobuf = { path = "../protobuf" }
