@@ -1,0 +1,51 @@
+From df8d3e37563d373ac38cc90f75f97416ba766b61 Mon Sep 17 00:00:00 2001
+From: Daan de Graaf <daagra@google.com>
+Date: Fri, 27 Mar 2020 14:34:20 +0000
+Subject: [PATCH] Patch prost to generate typesafe Sender and Receiver.
+
+---
+ prost-build/src/code_generator.rs | 13 +++++++++++++
+ prost-types/src/protobuf.rs       |  3 +++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/prost-build/src/code_generator.rs b/prost-build/src/code_generator.rs
+index 7323eb6..f500791 100644
+--- a/prost-build/src/code_generator.rs
++++ b/prost-build/src/code_generator.rs
+@@ -715,7 +715,20 @@ impl<'a> CodeGenerator<'a> {
+         self.buf.push_str("}\n");
+     }
+
++    fn resolve_message_type(&self, field: &FieldDescriptorProto) -> Option<String> {
++        let message_type = self.resolve_ident(&field.options.as_ref()?.message_type.as_ref()?);
++        let direction = match field.type_name() {
++            ".oak.handle.Sender" => Some("Sender"),
++            ".oak.handle.Receiver" => Some("Receiver"),
++            _ => None,
++        }?;
++        Some(format!("::oak::io::{}<{}>", direction, message_type))
++    }
++
+     fn resolve_type(&self, field: &FieldDescriptorProto) -> String {
++        if let Some(ty) = self.resolve_message_type(field) {
++            return ty;
++        }
+         match field.r#type() {
+             Type::Float => String::from("f32"),
+             Type::Double => String::from("f64"),
+diff --git a/prost-types/src/protobuf.rs b/prost-types/src/protobuf.rs
+index 6649f76..0e2edbf 100644
+--- a/prost-types/src/protobuf.rs
++++ b/prost-types/src/protobuf.rs
+@@ -567,6 +567,9 @@ pub struct FieldOptions {
+     /// The parser stores options it doesn't recognize here. See above.
+     #[prost(message, repeated, tag="999")]
+     pub uninterpreted_option: ::prost::alloc::vec::Vec<UninterpretedOption>,
++    /// Oak `message_type` annotation.
++    #[prost(string, optional, tag="79658")]
++    pub message_type: ::core::option::Option<::prost::alloc::string::String>,
+ }
+ /// Nested message and enum types in `FieldOptions`.
+ pub mod field_options {
+--
+2.20.1

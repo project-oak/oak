@@ -1,0 +1,18 @@
+From 46f1d392274af17337232f0b0347303966c8a033 Mon Sep 17 00:00:00 2001
+From: David Drysdale <drysdale@google.com>
+Date: Fri, 26 Jun 2020 11:54:14 +0100
+Subject: [PATCH] Patch prost to allow Cargo.lock files to be committed
+
+---
+ .gitignore | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/.gitignore b/.gitignore
+index a9d37c560c6a..eb5a316cbd19 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,2 +1,1 @@
+ target
+-Cargo.lock
+--
+2.26.2

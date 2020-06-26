@@ -567,6 +567,9 @@ pub struct FieldOptions {
     /// The parser stores options it doesn't recognize here. See above.
     #[prost(message, repeated, tag="999")]
     pub uninterpreted_option: ::prost::alloc::vec::Vec<UninterpretedOption>,
+    /// Oak `message_type` annotation.
+    #[prost(string, optional, tag="79658")]
+    pub message_type: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// Nested message and enum types in `FieldOptions`.
 pub mod field_options {
