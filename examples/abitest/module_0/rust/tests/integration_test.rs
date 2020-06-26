@@ -78,7 +78,6 @@ async fn test_abi() {
     {
         // Skip tests that require the existence of an external service.
         let mut req = AbiTestRequest::default();
-        req.include = "ChannelClose".to_string(); // @@@@@
         req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
 
         info!("Sending request: {:?}", req);
@@ -129,7 +128,6 @@ async fn test_leaks() {
         // Run tests that are supposed to leave Node/channel counts in a known state.
         let mut req = AbiTestRequest::default();
         req.predictable_counts = true;
-        req.include = "ChannelClose".to_string(); // @@@@@
 
         debug!("Sending request: {:?}", req);
         let result = client.run_tests(req).await;
