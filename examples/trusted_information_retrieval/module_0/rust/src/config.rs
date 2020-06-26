@@ -35,7 +35,5 @@ pub fn get_database_url(config_map: ConfigMap) -> anyhow::Result<String> {
 }
 
 pub fn parse_config_file(config_file: Vec<u8>) -> anyhow::Result<Config> {
-    let config_file_string =
-        String::from_utf8(config_file).context("Couldn't convert to string")?;
-    toml::from_str(&config_file_string).context("Couldn't parse TOML config file")
+    toml::from_slice(&config_file).context("Couldn't parse TOML config file")
 }

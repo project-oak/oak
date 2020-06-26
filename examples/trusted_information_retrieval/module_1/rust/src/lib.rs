@@ -84,7 +84,7 @@ impl DatabaseProxyNode {
             &Label::public_untrusted(),
         )
         .map(DatabaseClient)
-        .context("Couldn't create a gRPC client")
+        .context("Couldn't create gRPC client")
     }
 
     /// Load a database subset defined by `offset` and the number of requested elements
@@ -123,7 +123,8 @@ impl DatabaseProxy for DatabaseProxyNode {
             .map_err(|error| {
                 grpc::build_status(
                     grpc::Code::NotFound,
-                    &format!("Database error: {:?}", error)[..],
+                    // &format!("Database error: {:?}", error)[..],
+                    format!("Database error: {:?}", error).as_ref(),
                 )
             })?;
 
@@ -133,7 +134,7 @@ impl DatabaseProxy for DatabaseProxyNode {
                 requested_entry = Some(entry.clone());
             }
 
-            // If the response contains less entries than expected, then it's the last database
+            // If the response contains fewer entries than requested, then it's the last database
             // page.
             if entries.len() < DATABASE_PAGE_SIZE as usize {
                 break;

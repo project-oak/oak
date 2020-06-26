@@ -55,5 +55,13 @@ message ListDatabaseEntriesResponse {
 // Service definition used by the backend database which Oak Node connects to.
 service Database {
   // Get a subset of entries from the database based on the offset and the number of entries.
+  // Database stores entries in an array, and they are not assumed to be sorted by any specific
+  // value.
+  //
+  // Since database entries are stored in an array, requested subsets are defined by the offset in
+  // this array and the page size, which defines the number of requested entries.
+  //
+  // If more entries are requested than available, then the response contains only available
+  // entries.
   rpc ListDatabaseEntries(ListDatabaseEntriesRequest) returns (ListDatabaseEntriesResponse);
 }
