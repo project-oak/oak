@@ -30,16 +30,22 @@ struct MetricsBuilder {
 /// Mostly copied from https://github.com/grpc-ecosystem/java-grpc-prometheus
 #[derive(Clone)]
 pub struct GrpcServerMetrics {
-    /// Total number of RPCs started on the server.
     pub grpc_server_started_total: IntCounterVec,
-    /// Total number of RPCs completed on the server, regardless of success or failure.
     pub grpc_server_handled_total: IntCounterVec,
-    /// Histogram of response latency of RPCs handled by the server, in seconds.
     pub grpc_server_handled_latency_seconds: HistogramVec,
-    /// Histogram of response sizes of RPCs handled by the server.
-    pub grpc_response_size_bytes: HistogramVec,
-    /// Total number of stream messages sent by the server.
+    pub grpc_server_response_size_bytes: HistogramVec,
     pub grpc_server_msg_sent_total: HistogramVec,
+}
+
+/// Mostly copied from https://github.com/grpc-ecosystem/java-grpc-prometheus
+#[derive(Clone)]
+pub struct GrpcClientMetrics {
+    pub grpc_client_started_total: IntCounterVec,
+    pub grpc_client_completed: IntCounterVec,
+    pub grpc_client_completed_latency_seconds: HistogramVec,
+    pub grpc_client_sent_bytes: HistogramVec,
+    pub grpc_client_received_bytes: HistogramVec,
+    pub grpc_client_received_msgs: HistogramVec,
 }
 
 /// Struct that collects all metrics for monitoring the Oak Runtime.
@@ -55,6 +61,7 @@ pub struct Metrics {
     registry: Registry,
     pub runtime_metrics: RuntimeMetrics,
     pub grpc_server_metrics: GrpcServerMetrics,
+    pub grpc_client_metrics: GrpcClientMetrics,
 }
 
 impl MetricsBuilder {
@@ -91,29 +98,102 @@ impl GrpcServerMetrics {
             grpc_server_started_total: builder.register(counter_vec(
                 "grpc_server_started_total",
                 &["method_name"],
-                "Total number of RPCs started on the server.",
+                "Total number of RPCs started on the server, for each method invocation.",
             )),
             grpc_server_handled_total: builder.register(counter_vec(
                 "grpc_server_handled_total",
                 &["method_name", "status_code"],
-                "Total number of RPCs completed on the server, regardless of success or failure.",
+                "Total number of RPCs completed on the server, for each method invocation, regardless of success or failure.",
             )),
             grpc_server_handled_latency_seconds: builder.register(histogram_vec(
                 "grpc_server_handled_latency_seconds",
                 &["method_name"],
-                "Histogram of response latency of RPCs handled by the server.",
+                "Histogram of response latency of RPCs handled by the server, for each method invocation.",
             )),
-            grpc_response_size_bytes: builder.register(histogram_vec(
-                "grpc_response_size_bytes",
+            grpc_server_response_size_bytes: builder.register(histogram_vec(
+                "grpc_server_response_size_bytes",
                 &["method_name"],
-                "Histogram of response sizes of RPCs handled by the server.",
+                "Histogram of RPC response message sizes sent by the server, for each method invocation.",
             )),
             grpc_server_msg_sent_total: builder.register(histogram_vec(
                 "grpc_server_msg_sent_total",
                 &["method_name"],
-                "Total number of RPC response messages sent by the server.",
+                "Histogram of number of RPC response messages sent by the server, for each method invocation.",
             )),
         }
+    }
+}
+
+impl GrpcClientMetrics {
+    fn new(builder: &MetricsBuilder) -> Self {
+        GrpcClientMetrics {
+            grpc_client_started_total: builder.register(counter_vec(
+                "grpc_client_started_total",
+                &["server", "method_name"],
+                "Total number of RPCs started on the client, for each method invocation.",
+            )),
+            grpc_client_completed: builder.register(counter_vec(
+                "grpc_client_completed",
+                &["server", "method_name", "status_code"],
+                "Total number of RPCs completed on the client, for each method invocation, regardless of success or failure.",
+            )),
+            grpc_client_completed_latency_seconds: builder.register(histogram_vec(
+                "grpc_client_completed_latency_seconds",
+                &["server", "method_name"],
+                "Histogram of RPC response latency for completed RPCs, for each method invocation, in seconds.",
+            )),
+            grpc_client_sent_bytes: builder.register(histogram_vec(
+                "grpc_client_sent_bytes",
+                &["server", "method_name"],
+                "Histogram of RPC request sizes sent by the client, for each method invocation.",
+            )),
+            grpc_client_received_bytes: builder.register(histogram_vec(
+                "grpc_client_received_bytes",
+                &["server", "method_name"],
+                "Histogram of RPC response message sizes received by the client, for each method invocation.",
+            )),
+            grpc_client_received_msgs: builder.register(histogram_vec(
+                "grpc_client_received_msgs",
+                &["server", "method_name"],
+                "Histogram of number of RPC response messages received by the client, for each method invocation.",
+            )),
+        }
+    }
+
+    pub fn observe_new_request(&self, server: &str, method_name: &str, msg_len: usize) {
+        self.grpc_client_started_total
+            .with_label_values(&[server, method_name])
+            .inc();
+        self.grpc_client_sent_bytes
+            .with_label_values(&[server, method_name])
+            .observe(msg_len as f64);
+    }
+
+    pub fn observe_new_response_message(&self, server: &str, method_name: &str, msg_len: usize) {
+        self.grpc_client_received_bytes
+            .with_label_values(&[server, method_name])
+            .observe(msg_len as f64);
+    }
+
+    pub fn observe_response_handling_completed(
+        &self,
+        server: &str,
+        method_name: &str,
+        status_code: &str,
+        msg_count: u32,
+    ) {
+        self.grpc_client_received_msgs
+            .with_label_values(&[server, method_name])
+            .observe(msg_count as f64);
+        self.grpc_client_completed
+            .with_label_values(&[server, method_name, status_code])
+            .inc();
+    }
+
+    pub fn start_timer(&self, server: &str, method_name: &str) -> prometheus::HistogramTimer {
+        self.grpc_client_completed_latency_seconds
+            .with_label_values(&[server, method_name])
+            .start_timer()
     }
 }
 
@@ -138,6 +218,7 @@ impl Metrics {
         Self {
             runtime_metrics: RuntimeMetrics::new(&builder),
             grpc_server_metrics: GrpcServerMetrics::new(&builder),
+            grpc_client_metrics: GrpcClientMetrics::new(&builder),
             registry: builder.registry,
         }
     }

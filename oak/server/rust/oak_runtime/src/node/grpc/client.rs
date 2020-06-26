@@ -18,13 +18,14 @@
 
 use crate::{
     io::Receiver,
+    metrics::Metrics,
     node::{
         grpc::{codec::VecCodec, invocation::Invocation},
         ConfigurationError, Node,
     },
     runtime::{NodePrivilege, RuntimeProxy},
 };
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use maplit::hashset;
 use oak_abi::{
     proto::{
@@ -141,9 +142,35 @@ impl GrpcClientNode {
         runtime: &RuntimeProxy,
         invocation: &Invocation,
     ) -> Result<(), OakStatus> {
+        let uri = self.uri.to_string();
+        let record_completion_with_error = |method_name, error_code| {
+            runtime
+                .metrics_data()
+                .grpc_client_metrics
+                .grpc_client_completed
+                .with_label_values(&[&uri, method_name, &format!("{:?}", error_code)])
+                .inc();
+            // In case of an error, update the latency with zero to keep the counts consistent.
+            runtime
+                .metrics_data()
+                .grpc_client_metrics
+                .grpc_client_completed_latency_seconds
+                .with_label_values(&[&uri, method_name])
+                .observe(0_f64);
+        };
+        let send_error = |code, msg| {
+            invocation.send_error(code, msg, runtime);
+            // Update the number of started requests to keep the counts consistent.
+            runtime
+                .metrics_data()
+                .grpc_client_metrics
+                .observe_new_request(&uri, "unknown", 0);
+            record_completion_with_error("unknown", code);
+        };
+
         // Receive a request from the invocation channel.
         let request = invocation.receive_request(&runtime).map_err(|error| {
-            invocation.send_error(rpc::Code::Internal, "Failed to read request", runtime);
+            send_error(rpc::Code::Internal, "Failed to read request");
             error!(
                 "Couldn't read gRPC request from the invocation: {:?}",
                 error
@@ -156,66 +183,48 @@ impl GrpcClientNode {
             // Connect to an external gRPC service.
             self.grpc_client = Some(self.connect().await.map_err(|error| {
                 error!("Couldn't connect to {}: {:?}", self.uri, error);
-                invocation.send_error(rpc::Code::NotFound, "Service connection failed", runtime);
+                send_error(rpc::Code::NotFound, "Service connection failed");
                 OakStatus::ErrInternal
             })?);
         }
         let grpc_client = self.grpc_client.as_mut().unwrap();
         grpc_client.ready().await.map_err(|error| {
             error!("Service was not ready: {}", error);
-            invocation.send_error(rpc::Code::NotFound, "Service not ready", runtime);
+            send_error(rpc::Code::NotFound, "Service not ready");
             OakStatus::ErrInternal
         })?;
 
         let codec = VecCodec::default();
         let path = request.method_name.parse().map_err(|error| {
             error!("Invalid URI {}: {}", request.method_name, error);
-            invocation.send_error(rpc::Code::InvalidArgument, "Invalid URI", runtime);
+            send_error(rpc::Code::InvalidArgument, "Invalid URI");
             OakStatus::ErrInternal
         })?;
+
+        let method_name = request.method_name;
+        runtime
+            .metrics_data()
+            .grpc_client_metrics
+            .observe_new_request(&uri, &method_name, request.req_msg.len());
 
         // Forward the request to the external gRPC service and wait for the response(s).
         let request = tonic::Request::new(request.req_msg);
         let request_stream =
             request.map(|m| futures_util::stream::once(futures_util::future::ready(m)));
-        let mut rsp_stream = match grpc_client.streaming(request_stream, path, codec).await {
+        let rsp_stream = match grpc_client.streaming(request_stream, path, codec).await {
             Ok(rsp_stream) => rsp_stream,
             Err(error) => {
                 error!("Request to remote service failed: {}", error);
-                invocation.send_error(tonic_code_to_grpc(error.code()), error.message(), runtime);
+                let error_code = tonic_code_to_grpc(error.code());
+                invocation.send_error(error_code, error.message(), runtime);
+                record_completion_with_error(&method_name, error_code);
                 return Ok(());
             }
         };
 
-        let body_stream = rsp_stream.get_mut();
-        loop {
-            let message = body_stream.message().await.map_err(|error| {
-                error!("Failed to read response: {}", error);
-                invocation.send_error(rpc::Code::Internal, "Failed to read response", runtime);
-                OakStatus::ErrInternal
-            })?;
-
-            if let Some(message) = message {
-                let encap_rsp = GrpcResponse {
-                    rsp_msg: message,
-                    status: None,
-                    last: false,
-                };
-                // Send the response back to the invocation channel.
-                debug!("Sending gRPC response: {:?}", encap_rsp);
-                invocation
-                    .send_response(encap_rsp, &runtime)
-                    .map_err(|error| {
-                        error!("Couldn't send gRPC response to the invocation: {:?}", error);
-                        error
-                    })?;
-            } else {
-                debug!("No message available, close out method invocation");
-                break;
-            }
-        }
-
-        Ok(())
+        let mut response_handler =
+            ResponseHandler::new(runtime.clone(), rsp_stream, invocation, uri, method_name);
+        response_handler.handle().await
     }
 
     /// Creates a TLS connection to an external gRPC service.
@@ -236,6 +245,131 @@ impl GrpcClientNode {
 
         debug!("Connected to {}", self.uri);
         Ok(tonic::client::Grpc::new(connection))
+    }
+}
+
+struct MetricsRecorder {
+    metrics_data: Metrics,
+    server: String,
+    method_name: String,
+    msg_count: u32,
+    status_code: rpc::Code,
+    _timer: prometheus::HistogramTimer,
+}
+
+impl MetricsRecorder {
+    fn new(runtime: RuntimeProxy, server: String, method_name: String) -> MetricsRecorder {
+        let metrics_data = runtime.metrics_data();
+        let timer = metrics_data
+            .grpc_client_metrics
+            .start_timer(&server, &method_name);
+        MetricsRecorder {
+            metrics_data,
+            server,
+            method_name,
+            msg_count: 0,
+            status_code: rpc::Code::Ok,
+            _timer: timer,
+        }
+    }
+
+    fn update_status_code(&mut self, status_code: rpc::Code) {
+        self.status_code = status_code;
+    }
+
+    fn observe_message_with_len(&mut self, msg_len: usize) {
+        self.msg_count += 1;
+        self.metrics_data
+            .grpc_client_metrics
+            .observe_new_response_message(&self.server, &self.method_name, msg_len);
+    }
+
+    fn observe_completion(&self) {
+        self.metrics_data
+            .grpc_client_metrics
+            .observe_response_handling_completed(
+                &self.server,
+                &self.method_name,
+                &format!("{:?}", self.status_code),
+                self.msg_count,
+            );
+    }
+}
+
+impl Drop for MetricsRecorder {
+    fn drop(&mut self) {
+        trace!(
+            "Dropping MetricsRecorder for '{}:{}'.",
+            self.server,
+            self.method_name,
+        );
+        self.observe_completion();
+        // Note that dropping self._timer will record the duration.
+    }
+}
+
+struct ResponseHandler<'a> {
+    runtime: RuntimeProxy,
+    response_stream: tonic::Response<tonic::Streaming<Vec<u8>>>,
+    invocation: &'a Invocation,
+    // The lifetime of the metrics recorder matches the lifetime of the
+    // response handler, updating the metrics when the handler is dropped.
+    metrics_recorder: MetricsRecorder,
+}
+
+impl<'a> ResponseHandler<'a> {
+    fn new(
+        runtime: RuntimeProxy,
+        response_stream: tonic::Response<tonic::Streaming<Vec<u8>>>,
+        invocation: &'a Invocation,
+        server: String,
+        method_name: String,
+    ) -> Self {
+        let metrics_recorder = MetricsRecorder::new(runtime.clone(), server, method_name);
+        ResponseHandler {
+            runtime,
+            response_stream,
+            invocation,
+            metrics_recorder,
+        }
+    }
+
+    async fn handle(&mut self) -> Result<(), OakStatus> {
+        let body_stream = self.response_stream.get_mut();
+        loop {
+            let metrics_recorder = &mut self.metrics_recorder;
+            let invocation = self.invocation;
+            let runtime = &self.runtime.clone();
+            let message = body_stream.message().await.map_err(|error| {
+                error!("Failed to read response: {}", error);
+                invocation.send_error(rpc::Code::Internal, "Failed to read response", runtime);
+                metrics_recorder.update_status_code(rpc::Code::Internal);
+                OakStatus::ErrInternal
+            })?;
+
+            if let Some(message) = message {
+                let msg_len = message.len();
+                let encap_rsp = GrpcResponse {
+                    rsp_msg: message,
+                    status: None,
+                    last: false,
+                };
+                // Send the response back to the invocation channel.
+                debug!("Sending gRPC response: {:?}", encap_rsp);
+                invocation
+                    .send_response(encap_rsp, runtime)
+                    .map_err(|error| {
+                        error!("Couldn't send gRPC response to the invocation: {:?}", error);
+                        error
+                    })?;
+                metrics_recorder.observe_message_with_len(msg_len);
+            } else {
+                debug!("No message available, close out method invocation");
+                break;
+            }
+        }
+
+        Ok(())
     }
 }
 
