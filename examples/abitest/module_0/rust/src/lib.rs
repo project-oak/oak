@@ -37,7 +37,7 @@ use proto::{
 use rand::Rng;
 use std::{collections::HashMap, convert::TryInto};
 
-const BACKEND_COUNT: usize = 0; // @@@@@
+const BACKEND_COUNT: usize = 1; // @@@@@
 
 const FRONTEND_MODULE_NAME: &str = "frontend_module";
 const BACKEND_MODULE_NAME: &str = "backend_module";
@@ -160,10 +160,6 @@ impl OakAbiTestService for FrontendNode {
             "Run tests matching '{}' except those matching '{}'",
             req.include, req.exclude
         );
-        if 1 == 1 {
-            error!("@@@@ exit test immediately");
-            return Ok(AbiTestResponse::default());
-        }
         if req.predictable_counts {
             info!("Skip tests with unpredictable effects on object counts");
         }
