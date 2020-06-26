@@ -91,7 +91,7 @@ pub async fn load_database(url: Url) -> anyhow::Result<Vec<PointOfInterest>> {
     parse_database(&xml_database)
 }
 
-/// Parse an XML database into a vector of [`DatabaseEntry`].
+/// Parse an XML database into a vector of database entries.
 pub fn parse_database(xml_database: &str) -> anyhow::Result<Vec<PointOfInterest>> {
     let database: Database = from_str(xml_database).context("Couldn't parse XML data")?;
 

@@ -20,7 +20,7 @@ use trusted_information_retrieval_client::proto::{
 };
 
 const MODULE_CONFIG_NAME: &str = "database_proxy";
-const MODULE_ENTRYPOINT_NAME: &str = "database_proxy_main";
+const MODULE_ENTRYPOINT_NAME: &str = "grpc_database_proxy_main";
 
 const DATABASE_URL: &str = "https://localhost:8888";
 
