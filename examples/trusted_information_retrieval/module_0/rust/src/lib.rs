@@ -66,7 +66,7 @@ impl TrustedInformationRetrieval for TrustedInformationRetrievalNode {
         })?;
 
         // Decode point of interest.
-        let point_of_interest = Message::decode(entry.value.as_bytes()).unwrap();
+        let point_of_interest = Message::decode(entry.value.as_ref()).unwrap();
         Ok(GetPointOfInterestResponse {
             point_of_interest: Some(point_of_interest),
         })

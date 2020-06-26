@@ -94,9 +94,7 @@ impl Database for DatabaseService {
                     entry.encode(&mut serialized_entry).unwrap();
                     DatabaseEntry {
                         key: entry.id.to_string(),
-                        value: String::from_utf8(serialized_entry).unwrap_or_else(|error| {
-                            format!("Data entry cannot be serialized: {:?}", error)
-                        }),
+                        value: serialized_entry,
                     }
                 })
                 .collect(),
