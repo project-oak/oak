@@ -221,15 +221,20 @@ As an example, if the `a`'s confidentiality is `{c_0, c_1}`, and `a`'s integrity
 is `{i_0, i_1}`, then:
 
 - information can flow from `a` to `b` if `b`'s confidentiality is
-  `{c_0, c_1, c_2} ⊇ {c_0, c_1}`, since `b` is "at least as secret" than `a`
-- information cannot flow from `a` to `b` if `b`'s confidentiality is
-  `{c_0} ⊉ {c_0, c_1}`, since `b` is "less secret" than `a` (in particular, `b`
-  is not allowed to see secrets owned by `c_1`)
+  `{c_0, c_1, c_2}`. This is because comparing the confidentiality of `a` and
+  `b` through `{c_0, c_1, c_2} ⊇ {c_0, c_1}` shows that `b` is “at least as
+  secret” as `a`
+- information cannot flow from `a` to `b` if `b`'s confidentiality is `{c_0}`.
+  This is because comparing the confidentiality of `a` and `b` through
+  `{c_0} ⊉ {c_0, c_1}` shows that `b` is "less secret" as `a` (in particular,
+  `b` is not allowed to see secrets owned by `c_1`)
 - information cannot flow from `a` to `b` if `b`'s integrity is
-  `{i_0, i_1, i_2} ⊈ {i_0, i_1}`, since `a` is "less trusted" than `b` (in
-  particular, `a` is not trusted by `i_2`)
-- information can flow from `a` to `b` if `b`'s integrity is
-  `{i_0} ⊆ {i_0, i_1}`, since `a` is "at least as trusted" than `b`
+  `{i_0, i_1, i_2}`. This is because comparing the integrity of `b` and `a`
+  through `{i_0, i_1, i_2} ⊈ {i_0, i_1}` shows that `a` is "less trusted" as `b`
+  (in particular, `a` is not trusted by `i_2`)
+- information can flow from `a` to `b` if `b`'s integrity is `{i_0}`. This is
+  because comparing the integrity of `b` and `a` through `{i_0} ⊆ {i_0, i_1}`
+  shows that `a` is "at least as trusted" as `b`
 
 In particular:
 
