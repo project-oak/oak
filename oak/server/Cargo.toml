@@ -14,3 +14,7 @@ oak_runtime = { path = "rust/oak_runtime" }
 oak_utils = { path = "../../oak_utils" }
 # Third party.
 roughenough = { path = "../../third_party/roughenough" }
+prost = { path = "../../third_party/prost" }
+prost-derive = { path = "../../third_party/prost/prost-derive" }
+prost-build = { path = "../../third_party/prost/prost-build" }
+prost-types = { path = "../../third_party/prost/prost-types" }

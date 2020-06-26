@@ -51,3 +51,7 @@ trusted_information_retrieval_client = { path = "trusted_information_retrieval/c
 # Third party.
 expect = { path = "../third_party/expect" }
 roughenough = { path = "../third_party/roughenough" }
+prost = { path = "../third_party/prost" }
+prost-build = { path = "../third_party/prost/prost-build" }
+prost-derive = { path = "../third_party/prost/prost-derive" }
+prost-types = { path = "../third_party/prost/prost-types" }

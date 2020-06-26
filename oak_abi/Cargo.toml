@@ -15,3 +15,8 @@ prost-types = "*"
 [build-dependencies]
 oak_utils = { path = "../oak_utils" }
 prost-build = "*"
+
+[patch.crates-io]
+prost-build = { path = "../third_party/prost/prost-build" }
+prost = { path = "../third_party/prost" }
+prost-types = { path = "../third_party/prost/prost-types" }

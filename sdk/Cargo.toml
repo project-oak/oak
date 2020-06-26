@@ -16,3 +16,7 @@ oak_tests = { path = "rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }
 # Third party.
 roughenough = { path = "../third_party/roughenough" }
+prost = { path = "../third_party/prost" }
+prost-build = { path = "../third_party/prost/prost-build" }
+prost-derive = { path = "../third_party/prost/prost-derive" }
+prost-types = { path = "../third_party/prost/prost-types" }

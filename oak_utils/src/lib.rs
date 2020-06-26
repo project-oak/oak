@@ -163,6 +163,25 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
     }
 }
 
+/// Options for generating Protocol buffer Rust types.
+pub struct ProtoOptions {
+    /// Generate Oak-specific service code for inter-node communication.
+    ///
+    /// Default: **true**.
+    ///
+    /// Generated code depends on the `oak` SDK crate.
+    pub generate_services: bool,
+}
+
+/// The default option values.
+impl Default for ProtoOptions {
+    fn default() -> ProtoOptions {
+        ProtoOptions {
+            generate_services: true,
+        }
+    }
+}
+
 /// Build Rust code corresponding to a set of protocol buffer message and service definitions,
 /// emitting generated code to crate's `OUT_DIR`.  For gRPC service definitions, this
 /// function generates Oak-specific code that is suitable for use inside an Oak Node (i.e.  *not*
@@ -171,22 +190,16 @@ pub fn compile_protos<P>(inputs: &[P], includes: &[P])
 where
     P: AsRef<std::path::Path>,
 {
-    compile_protos_with(true, inputs, includes);
+    compile_protos_with_options(inputs, includes, ProtoOptions::default());
 }
 
-/// Build Rust code corresponding to a set of protocol buffer messages, skipping any service
-/// definitions, emitting generated code to crate's `OUT_DIR`.
-pub fn compile_protos_without_services<P>(inputs: &[P], includes: &[P])
+/// Like `compile_protos`, but allows for configuring options through `ProtoOptions`.
+pub fn compile_protos_with_options<P>(inputs: &[P], includes: &[P], options: ProtoOptions)
 where
     P: AsRef<std::path::Path>,
 {
-    compile_protos_with(false, inputs, includes);
-}
+    set_protoc_env_if_unset();
 
-fn compile_protos_with<P>(generate_services: bool, inputs: &[P], includes: &[P])
-where
-    P: AsRef<std::path::Path>,
-{
     for input in inputs {
         // Tell cargo to rerun this build script if the proto file has changed.
         // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
@@ -194,7 +207,7 @@ where
     }
 
     let mut prost_config = prost_build::Config::new();
-    if generate_services {
+    if options.generate_services {
         prost_config.service_generator(Box::new(OakServiceGenerator));
     }
     prost_config
@@ -220,6 +233,8 @@ pub fn generate_grpc_code(
     file_paths: &[&str],
     options: CodegenOptions,
 ) -> std::io::Result<()> {
+    set_protoc_env_if_unset();
+
     // TODO(#1093): Move all proto generation to a common crate.
     let proto_path = std::path::Path::new(proto_path);
     let file_paths: Vec<std::path::PathBuf> = file_paths
@@ -239,4 +254,12 @@ pub fn generate_grpc_code(
         .build_client(options.build_client)
         .build_server(options.build_server)
         .compile(&file_paths, &[proto_path.to_path_buf()])
+}
+
+fn set_protoc_env_if_unset() {
+    if std::env::var("PROTOC").is_err() {
+        // Use the system protoc if no override is set, so prost-build does not try to use the
+        // bundled one that we remove as part of the vendoring process.
+        std::env::set_var("PROTOC", "protoc");
+    }
 }
