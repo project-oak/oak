@@ -55,9 +55,9 @@ dependencies = [
 name = "abitest_grpc"
 version = "0.1.0"
 dependencies = [
+ "oak_utils",
  "prost",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -89,11 +89,11 @@ dependencies = [
  "futures-core",
  "futures-util",
  "log",
+ "oak_utils",
  "prost",
  "structopt",
  "tokio",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -104,9 +104,9 @@ version = "0.1.0"
 name = "aggregator_grpc"
 version = "0.1.0"
 dependencies = [
+ "oak_utils",
  "prost",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -191,12 +191,12 @@ dependencies = [
  "futures-util",
  "hyper",
  "log",
+ "oak_utils",
  "open",
  "prost",
  "structopt",
  "tokio",
  "tonic",
- "tonic-build",
  "url",
 ]
 
@@ -650,9 +650,9 @@ dependencies = [
 name = "hello_world_grpc"
 version = "0.1.0"
 dependencies = [
+ "oak_utils",
  "prost",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -1141,7 +1141,6 @@ dependencies = [
  "sha2",
  "tokio",
  "tonic",
- "tonic-build",
  "wasmi",
 ]
 
@@ -1170,6 +1169,7 @@ dependencies = [
  "prost-build",
  "quote",
  "tempfile",
+ "tonic-build",
  "walkdir",
 ]
 
@@ -1348,9 +1348,9 @@ dependencies = [
 name = "private_set_intersection_grpc"
 version = "0.1.0"
 dependencies = [
+ "oak_utils",
  "prost",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -1731,9 +1731,9 @@ dependencies = [
 name = "running_average_grpc"
 version = "0.1.0"
 dependencies = [
+ "oak_utils",
  "prost",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -2433,9 +2433,9 @@ dependencies = [
 name = "translator_grpc"
 version = "0.1.0"
 dependencies = [
+ "oak_utils",
  "prost",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -2472,6 +2472,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "log",
+ "oak_utils",
  "prost",
  "quick-xml",
  "reqwest",
@@ -2479,7 +2480,6 @@ dependencies = [
  "structopt",
  "tokio",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -2494,7 +2494,6 @@ dependencies = [
  "structopt",
  "tokio",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]

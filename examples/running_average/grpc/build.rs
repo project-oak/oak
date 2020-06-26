@@ -14,22 +14,7 @@
 // limitations under the License.
 //
 
-use std::path::Path;
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // TODO(#1093): drop this client crate and move all proto generation to common crate.
-    let proto_path = Path::new("../proto");
-    let file_path = proto_path.join("running_average.proto");
-
-    // Tell cargo to rerun this build script if the proto file has changed.
-    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    println!("cargo:rerun-if-changed={}", file_path.display());
-
-    // Generate the normal (non-Oak) server and client code for the gRPC service,
-    // along with the Rust types corresponding to the message definitions.
-    tonic_build::configure()
-        .build_client(true)
-        .build_server(false)
-        .compile(&[file_path.as_path()], &[proto_path])?;
+    oak_utils::compile_client_proto("../proto", "running_average.proto")?;
     Ok(())
 }

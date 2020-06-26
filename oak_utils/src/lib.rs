@@ -204,3 +204,37 @@ where
         .compile_protos(inputs, includes)
         .expect("could not run prost-build");
 }
+
+/// Generate Protobuf code using `tonic`.
+/// `build_client` and `build_server` specify whether to generate client or server related code.
+fn compile_proto(
+    proto_path: &str,
+    file_path: &str,
+    build_client: bool,
+    build_server: bool,
+) -> std::io::Result<()> {
+    // TODO(#1093): Move all proto generation to a common crate.
+    let proto_path = std::path::Path::new(proto_path);
+    let file_path = proto_path.join(file_path);
+
+    // Tell cargo to rerun this build script if the proto file has changed.
+    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
+    println!("cargo:rerun-if-changed={}", file_path.display());
+
+    // Generate the normal (non-Oak) server and client code for the gRPC service,
+    // along with the Rust types corresponding to the message definitions.
+    tonic_build::configure()
+        .build_client(build_client)
+        .build_server(build_server)
+        .compile(&[file_path.as_path()], &[proto_path])
+}
+
+/// Generate Protobuf code for client using `tonic`.
+pub fn compile_client_proto(proto_path: &str, file_path: &str) -> std::io::Result<()> {
+    compile_proto(proto_path, file_path, true, false)
+}
+
+/// Generate Protobuf code for server using `tonic`.
+pub fn compile_server_proto(proto_path: &str, file_path: &str) -> std::io::Result<()> {
+    compile_proto(proto_path, file_path, false, true)
+}
