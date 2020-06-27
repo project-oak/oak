@@ -37,7 +37,7 @@ use proto::{
 use rand::Rng;
 use std::{collections::HashMap, convert::TryInto};
 
-const BACKEND_COUNT: usize = 1; // @@@@@
+const BACKEND_COUNT: usize = 3;
 
 const FRONTEND_MODULE_NAME: &str = "frontend_module";
 const BACKEND_MODULE_NAME: &str = "backend_module";

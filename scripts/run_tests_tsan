@@ -10,3 +10,6 @@ export TSAN_OPTIONS="halt_on_error=1 report_atomic_races=0"
 
 # Just run the abitest example for the moment.
 time cargo -Zbuild-std test --manifest-path=./examples/abitest/module_0/rust/Cargo.toml --target=x86_64-unknown-linux-gnu --verbose -- --nocapture
+time cargo -Zbuild-std test --manifest-path=./examples/abitest/module_0/rust/Cargo.toml --target=x86_64-unknown-linux-gnu --verbose -- --nocapture
+time cargo -Zbuild-std test --manifest-path=./examples/abitest/module_0/rust/Cargo.toml --target=x86_64-unknown-linux-gnu --verbose -- --nocapture
+time cargo -Zbuild-std test --manifest-path=./examples/abitest/module_0/rust/Cargo.toml --target=x86_64-unknown-linux-gnu --verbose -- --nocapture
