@@ -169,67 +169,69 @@ impl OakAbiTestService for FrontendNode {
 
         // Manual registry of all tests.
         let mut tests: HashMap<&str, (TestFn, Count)> = HashMap::new();
-        tests.insert(
-            "ChannelCreateRaw",
-            (Self::test_channel_create_raw, Count::Unchanged),
-        );
-        tests.insert(
-            "ChannelCreate",
-            (Self::test_channel_create, Count::Unchanged),
-        );
-        tests.insert(
-            "ChannelCloseRaw",
-            (Self::test_channel_close_raw, Count::Unchanged),
-        );
-        tests.insert("ChannelClose", (Self::test_channel_close, Count::Unchanged));
-        tests.insert(
-            "ChannelReadRaw",
-            (Self::test_channel_read_raw, Count::Unchanged),
-        );
-        tests.insert("ChannelRead", (Self::test_channel_read, Count::Unchanged));
-        tests.insert(
-            "ChannelReadOrphan",
-            (Self::test_channel_read_orphan, Count::Unchanged),
-        );
-        tests.insert(
-            "ChannelWriteRaw",
-            (Self::test_channel_write_raw, Count::Unchanged),
-        );
-        tests.insert("ChannelWrite", (Self::test_channel_write, Count::Unchanged));
-        tests.insert(
-            "ChannelWriteHandle",
-            (Self::test_channel_write_handle, Count::Unchanged),
-        );
-        tests.insert(
-            "ChannelWriteOrphanEmpty",
-            (Self::test_channel_write_orphan_empty, Count::Unchanged),
-        );
-        tests.insert(
-            "ChannelWriteOrphanFull",
-            (Self::test_channel_write_orphan_full, Count::Unchanged),
-        );
-        tests.insert(
-            "ChannelHandleRecovered",
-            (Self::test_channel_handle_recovered, Count::Unchanged),
-        );
-        tests.insert(
-            "ChannelChainLost",
-            (Self::test_channel_chain_lost, Count::Unchanged),
-        );
-        tests.insert(
-            "ChannelChainLeaked",
-            (
-                Self::test_channel_chain_leaked,
-                Count::Delta {
-                    nodes: 0,
-                    channels: 9,
-                },
-            ),
-        );
-        tests.insert(
-            "ChannelChainRecovered",
-            (Self::test_channel_chain_recovered, Count::Unchanged),
-        );
+        /*
+                tests.insert(
+                    "ChannelCreateRaw",
+                    (Self::test_channel_create_raw, Count::Unchanged),
+                );
+                tests.insert(
+                    "ChannelCreate",
+                    (Self::test_channel_create, Count::Unchanged),
+                );
+                tests.insert(
+                    "ChannelCloseRaw",
+                    (Self::test_channel_close_raw, Count::Unchanged),
+                );
+                tests.insert("ChannelClose", (Self::test_channel_close, Count::Unchanged));
+                tests.insert(
+                    "ChannelReadRaw",
+                    (Self::test_channel_read_raw, Count::Unchanged),
+                );
+                tests.insert("ChannelRead", (Self::test_channel_read, Count::Unchanged));
+                tests.insert(
+                    "ChannelReadOrphan",
+                    (Self::test_channel_read_orphan, Count::Unchanged),
+                );
+                tests.insert(
+                    "ChannelWriteRaw",
+                    (Self::test_channel_write_raw, Count::Unchanged),
+                );
+                tests.insert("ChannelWrite", (Self::test_channel_write, Count::Unchanged));
+                tests.insert(
+                    "ChannelWriteHandle",
+                    (Self::test_channel_write_handle, Count::Unchanged),
+                );
+                tests.insert(
+                    "ChannelWriteOrphanEmpty",
+                    (Self::test_channel_write_orphan_empty, Count::Unchanged),
+                );
+                tests.insert(
+                    "ChannelWriteOrphanFull",
+                    (Self::test_channel_write_orphan_full, Count::Unchanged),
+                );
+                tests.insert(
+                    "ChannelHandleRecovered",
+                    (Self::test_channel_handle_recovered, Count::Unchanged),
+                );
+                tests.insert(
+                    "ChannelChainLost",
+                    (Self::test_channel_chain_lost, Count::Unchanged),
+                );
+                tests.insert(
+                    "ChannelChainLeaked",
+                    (
+                        Self::test_channel_chain_leaked,
+                        Count::Delta {
+                            nodes: 0,
+                            channels: 9,
+                        },
+                    ),
+                );
+                tests.insert(
+                    "ChannelChainRecovered",
+                    (Self::test_channel_chain_recovered, Count::Unchanged),
+                );
+        */
         tests.insert(
             "WaitOnChannelsRaw",
             (Self::test_channel_wait_raw, Count::Unchanged),
