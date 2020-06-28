@@ -194,7 +194,3 @@ RUN rustup component add \
   rust-analysis \
   rust-src \
   rustfmt
-
-RUN cargo install cargo-deadlinks
-RUN cargo install cargo-deny
-RUN cargo install cargo-crev
