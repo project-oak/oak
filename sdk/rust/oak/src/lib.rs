@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 pub use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 
 mod error;
-#[cfg(target_os = "macos")]
+#[cfg(not(target_arch = "wasm32"))]
 mod stubs;
 pub use error::OakError;
 
