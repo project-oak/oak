@@ -230,95 +230,93 @@ impl OakAbiTestService for FrontendNode {
             "ChannelChainRecovered",
             (Self::test_channel_chain_recovered, Count::Unchanged),
         );
-        /*
-                      tests.insert(
-                      "WaitOnChannelsRaw",
-                      (Self::test_channel_wait_raw, Count::Unchanged),
-                  );
-                  tests.insert(
-                      "WaitOnChannels",
-                      (Self::test_channel_wait, Count::Unchanged),
-                  );
-                  tests.insert(
-                      "WaitOnChannelsOrphan",
-                      (Self::test_channel_wait_orphan, Count::Unchanged),
-                  );
-                  tests.insert("NodeCreate", (Self::test_node_create, Count::Unchanged));
-                  tests.insert(
-                      "NodeCreateRaw",
-                      (Self::test_node_create_raw, Count::Unchanged),
-                  );
-                  tests.insert("NodePanic", (Self::test_node_panic, Count::Unsure));
-                  tests.insert(
-                      "RandomGetRaw",
-                      (Self::test_random_get_raw, Count::Unchanged),
-                  );
-                  tests.insert("RandomGet", (Self::test_random_get, Count::Unchanged));
-                  tests.insert("RandomRng", (Self::test_random_rng, Count::Unchanged));
-                  tests.insert(
-                      "ChannelHandleReuse",
-                      (Self::test_channel_handle_reuse, Count::Unchanged),
-                  );
-                  tests.insert("Log", (Self::test_log, Count::Unchanged));
-                  tests.insert("DirectLog", (Self::test_direct_log, Count::Unchanged));
-                  tests.insert(
-                      "BackendRoundtrip",
-                      (Self::test_backend_roundtrip, Count::Unchanged),
-                  );
-                  tests.insert("Storage", (Self::test_storage, Count::Unsure));
-                  tests.insert("AbsentStorage", (Self::test_absent_storage, Count::Unsure));
-                  tests.insert(
-                      "GrpcServerSecond",
-                      (Self::test_grpc_server_second, Count::Unsure),
-                  );
-                  tests.insert(
-                      "GrpcServerInvalidAddress",
-                      (Self::test_grpc_server_invalid_address, Count::Unsure),
-                  );
-                  tests.insert(
-                      "GrpcServerFailNoHandle",
-                      (Self::test_grpc_server_fail_no_handle, Count::Unchanged),
-                  );
-                  tests.insert(
-                      "GrpcServerFailReadHandle",
-                      (Self::test_grpc_server_fail_read_handle, Count::Unchanged),
-                  );
-                  tests.insert(
-                      "GrpcServerFailTwoHandles",
-                      (Self::test_grpc_server_fail_two_handles, Count::Unchanged),
-                  );
-                  tests.insert(
-                      "GrpcClientUnaryMethod",
-                      (Self::test_grpc_client_unary_method, Count::Unsure),
-                  );
-                  tests.insert(
-                      "GrpcClientServerStreamingMethod",
-                      (
-                          Self::test_grpc_client_server_streaming_method,
-                          Count::Unsure,
-                      ),
-                  );
-                  tests.insert(
-                      "AbsentGrpcClientUnaryMethod",
-                      (Self::test_absent_grpc_client_unary_method, Count::Unsure),
-                  );
-                  tests.insert(
-                      "AbsentGrpcClientServerStreamingMethod",
-                      (
-                          Self::test_absent_grpc_client_server_streaming_method,
-                          Count::Unsure,
-                      ),
-                  );
-                  tests.insert(
-                      "RoughtimeClient",
-                      (Self::test_roughtime_client, Count::Unsure),
-                  );
-                  tests.insert(
-                      "MisconfiguredRoughtimeClient",
-                      (Self::test_roughtime_client_misconfig, Count::Unsure),
-                  );
+        tests.insert(
+            "WaitOnChannelsRaw",
+            (Self::test_channel_wait_raw, Count::Unchanged),
+        );
+        tests.insert(
+            "WaitOnChannels",
+            (Self::test_channel_wait, Count::Unchanged),
+        );
+        tests.insert(
+            "WaitOnChannelsOrphan",
+            (Self::test_channel_wait_orphan, Count::Unchanged),
+        );
+        tests.insert("NodeCreate", (Self::test_node_create, Count::Unchanged));
+        tests.insert(
+            "NodeCreateRaw",
+            (Self::test_node_create_raw, Count::Unchanged),
+        );
+        tests.insert("NodePanic", (Self::test_node_panic, Count::Unsure));
+        tests.insert(
+            "RandomGetRaw",
+            (Self::test_random_get_raw, Count::Unchanged),
+        );
+        tests.insert("RandomGet", (Self::test_random_get, Count::Unchanged));
+        tests.insert("RandomRng", (Self::test_random_rng, Count::Unchanged));
+        tests.insert(
+            "ChannelHandleReuse",
+            (Self::test_channel_handle_reuse, Count::Unchanged),
+        );
+        tests.insert("Log", (Self::test_log, Count::Unchanged));
+        tests.insert("DirectLog", (Self::test_direct_log, Count::Unchanged));
+        tests.insert(
+            "BackendRoundtrip",
+            (Self::test_backend_roundtrip, Count::Unchanged),
+        );
+        tests.insert("Storage", (Self::test_storage, Count::Unsure));
+        tests.insert("AbsentStorage", (Self::test_absent_storage, Count::Unsure));
+        tests.insert(
+            "GrpcServerSecond",
+            (Self::test_grpc_server_second, Count::Unsure),
+        );
+        tests.insert(
+            "GrpcServerInvalidAddress",
+            (Self::test_grpc_server_invalid_address, Count::Unsure),
+        );
+        tests.insert(
+            "GrpcServerFailNoHandle",
+            (Self::test_grpc_server_fail_no_handle, Count::Unchanged),
+        );
+        tests.insert(
+            "GrpcServerFailReadHandle",
+            (Self::test_grpc_server_fail_read_handle, Count::Unchanged),
+        );
+        tests.insert(
+            "GrpcServerFailTwoHandles",
+            (Self::test_grpc_server_fail_two_handles, Count::Unchanged),
+        );
+        tests.insert(
+            "GrpcClientUnaryMethod",
+            (Self::test_grpc_client_unary_method, Count::Unsure),
+        );
+        tests.insert(
+            "GrpcClientServerStreamingMethod",
+            (
+                Self::test_grpc_client_server_streaming_method,
+                Count::Unsure,
+            ),
+        );
+        tests.insert(
+            "AbsentGrpcClientUnaryMethod",
+            (Self::test_absent_grpc_client_unary_method, Count::Unsure),
+        );
+        tests.insert(
+            "AbsentGrpcClientServerStreamingMethod",
+            (
+                Self::test_absent_grpc_client_server_streaming_method,
+                Count::Unsure,
+            ),
+        );
+        tests.insert(
+            "RoughtimeClient",
+            (Self::test_roughtime_client, Count::Unsure),
+        );
+        tests.insert(
+            "MisconfiguredRoughtimeClient",
+            (Self::test_roughtime_client_misconfig, Count::Unsure),
+        );
 
-        */
         for (&name, &info) in &tests {
             let (testfn, counts) = info;
             if !include.is_match(name) {
