@@ -41,7 +41,7 @@ readonly CLIENT_ARGS=("${@-}")  # Choose client args provided after '--'.
 # Shutdown cleanly.
 kill_bg_pids
 
-# Generate and upload coverage summary
+# Generate coverage summary
 (
     cd oak/server || exit 1
     grcov ./target/debug/ \
