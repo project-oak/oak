@@ -17,7 +17,7 @@
 //! Helper types for data structures that can be transmitted over channels.
 
 use crate::{runtime::RuntimeProxy, NodeMessage};
-use log::error;
+use log::{error, info};
 use oak_abi::{ChannelReadStatus, Handle, OakStatus};
 
 /// A trait for objects that can be decoded from bytes + handles.
@@ -79,8 +79,8 @@ impl<T: Decodable> Receiver<T> {
     pub fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakStatus> {
         let read_status = runtime.wait_on_channels(&[self.handle])?;
 
-        if read_status[0] == ChannelReadStatus::ReadReady {
-            runtime
+        match read_status[0] {
+            ChannelReadStatus::ReadReady => runtime
                 .channel_read(self.handle)
                 .and_then(|message| {
                     message.ok_or_else(|| {
@@ -88,10 +88,15 @@ impl<T: Decodable> Receiver<T> {
                         OakStatus::ErrInternal
                     })
                 })
-                .and_then(|message| T::decode(&message))
-        } else {
-            error!("Channel read error {:?}: {:?}", self.handle, read_status[0]);
-            Err(OakStatus::ErrInternal)
+                .and_then(|message| T::decode(&message)),
+            ChannelReadStatus::Orphaned => {
+                info!("Channel closed {:?}", self.handle);
+                Err(OakStatus::ErrChannelClosed)
+            }
+            status => {
+                error!("Channel read error {:?}: {:?}", self.handle, status);
+                Err(OakStatus::ErrInternal)
+            }
         }
     }
 }
