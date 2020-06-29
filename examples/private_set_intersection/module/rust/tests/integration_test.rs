@@ -44,11 +44,25 @@ async fn test_set_intersection() {
     let result = client.submit_set(req).await;
     assert_matches!(result, Ok(_));
 
+    // Send more sets than threshold.
+    let req = SubmitSetRequest {
+        values: vec!["c".to_string()],
+    };
+    let result = client.submit_set(req).await;
+    assert_matches!(result, Err(_));
+
     let result = client.get_intersection(()).await;
     assert_matches!(result, Ok(_));
     let got = HashSet::<String>::from_iter(result.unwrap().into_inner().values.to_vec());
     let want: HashSet<String> = ["b".to_string(), "c".to_string()].iter().cloned().collect();
     assert_eq!(got, want);
+
+    // Send a new set after the intersection was requested.
+    let req = SubmitSetRequest {
+        values: vec!["c".to_string()],
+    };
+    let result = client.submit_set(req).await;
+    assert_matches!(result, Err(_));
 
     runtime.stop();
 }
