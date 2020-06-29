@@ -222,8 +222,8 @@ is `{i_0, i_1}`, then:
 
 - information can flow from `a` to `b` if `b`'s confidentiality is
   `{c_0, c_1, c_2}`. This is because comparing the confidentiality of `a` and
-  `b` through `{c_0, c_1, c_2} ⊇ {c_0, c_1}` shows that `b` is “at least as
-  secret” as `a`
+  `b` through `{c_0, c_1, c_2} ⊇ {c_0, c_1}` shows that `b` is "at least as
+  secret" as `a`
 - information cannot flow from `a` to `b` if `b`'s confidentiality is `{c_0}`.
   This is because comparing the confidentiality of `a` and `b` through
   `{c_0} ⊉ {c_0, c_1}` shows that `b` is "less secret" as `a` (in particular,
