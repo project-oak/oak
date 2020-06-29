@@ -41,6 +41,7 @@ pub enum Command {
     RunExamples(RunExamples),
     BuildServer(BuildServer),
     Format,
+    CheckFormat,
     RunTests,
     RunCi,
 }
@@ -119,6 +120,7 @@ impl std::fmt::Display for StatusResultValue {
     }
 }
 
+#[derive(Clone)]
 pub struct SingleStatusResult {
     value: StatusResultValue,
     logs: String,
@@ -492,6 +494,92 @@ fn test_spread() {
 impl std::fmt::Display for RunningCmd {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "{}", self.command)
+    }
+}
+
+/// A [`Runnable`] command that checks for the existence of source files without the necessary
+/// license header.
+pub struct CheckLicense {
+    path: String,
+}
+
+impl CheckLicense {
+    pub fn new(path: String) -> Box<dyn Runnable> {
+        Box::new(CheckLicense { path: path })
+    }
+}
+
+impl Runnable for CheckLicense {
+    fn run(&self, _opt: &Opt) -> Box<dyn Running> {
+        let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
+        let result_value = if file_content.contains("Apache License") {
+            StatusResultValue::Ok
+        } else {
+            StatusResultValue::Error
+        };
+        Box::new(ImmediateResult {
+            result: SingleStatusResult {
+                value: result_value,
+                logs: String::new(),
+            },
+        })
+    }
+}
+
+/// A [`Runnable`] command that checks for the existence of todos in the codebase with no associated
+/// GitHub issue number.
+pub struct CheckTodo {
+    path: String,
+}
+
+impl CheckTodo {
+    pub fn new(path: String) -> Box<dyn Runnable> {
+        Box::new(CheckTodo { path: path })
+    }
+}
+
+impl Runnable for CheckTodo {
+    fn run(&self, _opt: &Opt) -> Box<dyn Running> {
+        let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
+        let todo_words = file_content
+            .split_whitespace()
+            .filter(|word| word.contains(&format!("{}{}", "TO", "DO")))
+            .filter(|word| {
+                !(word.starts_with(&format!("{}{}(", "TO", "DO"))
+                    && (word.ends_with("):") || word.ends_with(")")))
+            })
+            .collect::<Vec<_>>();
+        let result = if todo_words.is_empty() {
+            SingleStatusResult {
+                value: StatusResultValue::Ok,
+                logs: String::new(),
+            }
+        } else {
+            SingleStatusResult {
+                value: StatusResultValue::Error,
+                logs: format!("Invalid todos: {:?}", todo_words),
+            }
+        };
+        Box::new(ImmediateResult { result })
+    }
+}
+
+/// An implementation of [`Running`] that immediately returns a pre-determined
+/// [`SingleStatusResult`] value.
+struct ImmediateResult {
+    result: SingleStatusResult,
+}
+
+impl Running for ImmediateResult {
+    fn kill(&mut self) {}
+    fn wait(&mut self, _opt: &Opt) -> SingleStatusResult {
+        self.result.clone()
+    }
+}
+
+impl std::fmt::Display for ImmediateResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "n/a")
     }
 }
 

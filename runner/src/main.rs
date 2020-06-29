@@ -51,6 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::RunTests => run_tests(),
             Command::Format => format(),
+            Command::CheckFormat => check_format(),
             Command::RunCi => run_ci(),
         };
         // TODO(#396): Add support for running individual commands via command line flags.
@@ -200,8 +201,8 @@ fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
         steps: vec![
-            // run_cargo_clippy(),
-            // run_cargo_test(),
+            run_cargo_clippy(),
+            run_cargo_test(),
             run_cargo_doc_check(),
             run_cargo_test_tsan(),
             run_bazel_build(),
@@ -227,6 +228,8 @@ fn check_format() -> Step {
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
+            run_check_license(),
+            run_check_todo(),
             run_buildifier(FormatMode::Check),
             run_prettier(FormatMode::Check),
             run_markdownlint(FormatMode::Check),
@@ -536,6 +539,15 @@ fn workspace_manifest_files() -> impl Iterator<Item = PathBuf> {
         .filter(is_cargo_workspace_file)
 }
 
+/// Return whether the provided path refers to a source file in a programming language.
+fn is_source_code_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".cc")
+        || filename.ends_with(".h")
+        || filename.ends_with(".rs")
+        || filename.ends_with(".proto")
+}
+
 /// Return whether the provided path refers to a Bazel file (`BUILD`, `WORKSPACE`, or `*.bzl`)
 fn is_bazel_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
@@ -714,6 +726,34 @@ fn run_liche() -> Step {
     }
 }
 
+fn run_check_license() -> Step {
+    Step::Multiple {
+        name: "check license".to_string(),
+        steps: source_files()
+            .filter(is_source_code_file)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: CheckLicense::new(entry),
+            })
+            .collect(),
+    }
+}
+
+fn run_check_todo() -> Step {
+    Step::Multiple {
+        name: "check todo".to_string(),
+        steps: source_files()
+            .filter(is_source_code_file)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: CheckTodo::new(entry),
+            })
+            .collect(),
+    }
+}
+
 fn run_cargo_fmt(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "cargo fmt".to_string(),
@@ -772,7 +812,7 @@ fn run_cargo_test_tsan() -> Step {
             &[
                 "-Zbuild-std",
                 "test",
-                "--manifest-path=./examples/abitest/tests/Cargo.toml",
+                "--manifest-path=./examples/abitest/module_0/rust/Cargo.toml",
                 "--target=x86_64-unknown-linux-gnu",
                 "--verbose",
                 "--",
