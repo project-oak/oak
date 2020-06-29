@@ -69,6 +69,7 @@ mod io;
 mod message;
 mod metrics;
 mod node;
+mod permissions;
 mod proto;
 mod proxy;
 #[cfg(test)]
