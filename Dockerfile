@@ -198,3 +198,4 @@ RUN rustup component add \
 RUN cargo install cargo-deadlinks
 RUN cargo install cargo-deny
 RUN cargo install cargo-crev
+RUN cargo install grcov
