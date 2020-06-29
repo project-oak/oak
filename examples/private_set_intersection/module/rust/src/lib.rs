@@ -63,7 +63,7 @@ impl PrivateSetIntersection for Node {
         if self.fixed {
             return Err(grpc::build_status(
                 grpc::Code::InvalidArgument,
-                "Set contributions are now longer available",
+                "Set contributions are no longer available",
             ));
         }
 
