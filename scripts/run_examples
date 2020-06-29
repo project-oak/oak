@@ -42,7 +42,7 @@ for example in ${examples}; do
   elif [[ "${example}" == 'chat' ]]; then
       "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -e chat -- --test
   elif [[ "${example}" == 'trusted_information_retrieval' ]]; then
-      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "bazel cargo" -e trusted_information_retrieval -- --latitude 0.0 --longitude 0.0
+      "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "bazel cargo" -e trusted_information_retrieval -- --id 1
   elif [[ "${example}" == 'hello_world' ]]; then
       "${SCRIPTS_DIR}/run_example" -s "${server}" -a "${application_language}" -c "bazel npm" -e "${example}"
   else

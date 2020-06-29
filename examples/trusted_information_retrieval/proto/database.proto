@@ -1,0 +1,67 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.examples.database;
+
+import "google/protobuf/empty.proto";
+
+message DatabaseEntry {
+  string key = 1;
+  bytes value = 2;
+}
+
+message GetDatabaseEntryRequest {
+  string key = 1;
+  string database_url = 2;
+}
+
+message GetDatabaseEntryResponse {
+  DatabaseEntry entry = 1;
+}
+
+// Service definition used by an Oak Node that implements private database lookup without revealing
+// the requested database entry (performs Private Information Retrieval).
+service DatabaseProxy {
+  // Get database entry based on the key and database URL.
+  rpc GetDatabaseEntry(GetDatabaseEntryRequest) returns (GetDatabaseEntryResponse);
+}
+
+message ListDatabaseEntriesRequest {
+  // Offset of the first requested entry in the database.
+  int32 offset = 1;
+  // Number of requested entries.
+  int32 page_size = 2;
+}
+
+message ListDatabaseEntriesResponse {
+  repeated DatabaseEntry entries = 1;
+}
+
+// Service definition used by the backend database which Oak Node connects to.
+service Database {
+  // Get a subset of entries from the database based on the offset and the number of entries.
+  // Database stores entries in an array, and they are not assumed to be sorted by any specific
+  // value.
+  //
+  // Since database entries are stored in an array, requested subsets are defined by the offset in
+  // this array and the page size, which defines the number of requested entries.
+  //
+  // If more entries are requested than available, then the response contains only available
+  // entries.
+  rpc ListDatabaseEntries(ListDatabaseEntriesRequest) returns (ListDatabaseEntriesResponse);
+}

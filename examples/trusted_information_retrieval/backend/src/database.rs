@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::DatabaseEntry;
+use crate::proto::PointOfInterest;
 use anyhow::Context;
 use log::debug;
 use quick_xml::de::from_str;
@@ -34,7 +34,8 @@ pub struct Database {
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Station {
-    id: u32,
+    id: String,
+    #[serde(rename = "name", default)]
     name: String,
     #[serde(rename = "terminalName", default)]
     terminal_name: String,
@@ -57,7 +58,7 @@ pub struct Station {
     number_of_docks: u32,
 }
 
-impl From<Station> for DatabaseEntry {
+impl From<Station> for PointOfInterest {
     fn from(station: Station) -> Self {
         Self {
             id: station.id,
@@ -78,7 +79,7 @@ impl From<Station> for DatabaseEntry {
 }
 
 /// Download an XML database from `url`.
-pub async fn load_database(url: Url) -> anyhow::Result<Vec<DatabaseEntry>> {
+pub async fn load_database(url: Url) -> anyhow::Result<Vec<PointOfInterest>> {
     debug!("Loading database from {}", url);
     let response = reqwest::get(url)
         .await
@@ -90,8 +91,8 @@ pub async fn load_database(url: Url) -> anyhow::Result<Vec<DatabaseEntry>> {
     parse_database(&xml_database)
 }
 
-/// Parse an XML database into a vector of [`DatabaseEntry`].
-pub fn parse_database(xml_database: &str) -> anyhow::Result<Vec<DatabaseEntry>> {
+/// Parse an XML database into a vector of database entries.
+pub fn parse_database(xml_database: &str) -> anyhow::Result<Vec<PointOfInterest>> {
     let database: Database = from_str(xml_database).context("Couldn't parse XML data")?;
 
     // Transform [`Station`] deserialized by Serde to [`DatabaseEntry`] created by Protobuf.

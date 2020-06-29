@@ -1,5 +1,5 @@
 [package]
-name = "trusted_information_retrieval"
+name = "database_proxy"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
@@ -10,13 +10,10 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "*"
-itertools = "*"
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
 prost = "*"
-serde = "*"
-toml = "*"
 
 [dev-dependencies]
 assert_matches = "*"
@@ -24,10 +21,10 @@ env_logger = "*"
 oak_abi = "=0.1.0"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
-maplit = "*"
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
 tonic = { version = "*", features = ["tls"] }
 trusted_information_retrieval_client = "=0.1.0"
 
 [build-dependencies]
 oak_utils = "*"
+tonic-build = "*"

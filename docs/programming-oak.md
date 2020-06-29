@@ -296,7 +296,7 @@ The initial Node of an Application can retrieve this configuration with the
 `oak::app_config_map` helper function.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/trusted_information_retrieval/module/rust/src/lib.rs Rust /oak::entrypoint/ /.*let config_map =.*/)
+[embedmd]:# (../examples/trusted_information_retrieval/module_0/rust/src/lib.rs Rust /oak::entrypoint/ /.*let config_map =.*/)
 ```Rust
 oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();

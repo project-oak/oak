@@ -27,7 +27,7 @@ use tonic::{
 };
 use trusted_information_retrieval_client::proto::{
     trusted_information_retrieval_client::TrustedInformationRetrievalClient,
-    ListPointsOfInterestRequest, Location,
+    GetPointOfInterestRequest,
 };
 
 #[derive(StructOpt, Clone)]
@@ -44,10 +44,8 @@ pub struct Opt {
         help = "PEM encoded X.509 TLS root certificate file used by gRPC client"
     )]
     root_tls_certificate: String,
-    #[structopt(long, help = "Requested location's latitude in degrees (WGS84)")]
-    latitude: f32,
-    #[structopt(long, help = "Requested location's longitude in degrees (WGS84)")]
-    longitude: f32,
+    #[structopt(long, help = "ID of the point of interest")]
+    id: String,
 }
 
 #[tokio::main]
@@ -59,20 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root_tls_certificate = tokio::fs::read(&opt.root_tls_certificate)
         .await
         .expect("Could not load certificate file");
-    let latitude = opt.latitude;
-    if latitude < -90.0 || latitude > 90.0 {
-        panic!(
-            "Latitude must be a valid floating point number >=-90 and <= 90, found {}",
-            latitude
-        );
-    }
-    let longitude = opt.longitude;
-    if longitude < -180.0 || longitude > 180.0 {
-        panic!(
-            "Longitude must be a valid floating point number >= -180 and <= 180, found {}",
-            longitude
-        );
-    }
+    let id = opt.id;
 
     info!("Connecting to Oak Application: {:?}", uri);
     let tls_config =
@@ -99,16 +84,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     );
 
-    let request = Request::new(ListPointsOfInterestRequest {
-        location: Some(Location {
-            latitude,
-            longitude,
-        }),
-    });
+    let request = Request::new(GetPointOfInterestRequest { id });
     info!("Sending request: {:?}", request);
 
     let response = client
-        .list_points_of_interest(request)
+        .get_point_of_interest(request)
         .await
         .expect("Could not receive response");
     info!("Received response: {:?}", response);

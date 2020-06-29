@@ -27,6 +27,7 @@ serialized_config(
     name = "config",
     modules = {
         "app": "//:examples/target/wasm32-unknown-unknown/release/trusted_information_retrieval.wasm",
+        "database_proxy": "//:examples/target/wasm32-unknown-unknown/release/database_proxy.wasm",
     },
     textproto = ":config.textproto",
 )
