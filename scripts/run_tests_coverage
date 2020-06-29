@@ -14,6 +14,9 @@ export RUSTDOCFLAGS="-Cpanic=abort"
 export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests"
 cargo build --manifest-path=oak/server/rust/oak_loader/Cargo.toml
 
+# Run the abitest integration test
+cargo test --manifest-path=examples/abitest/module_0/rust/Cargo.toml
+
 # Run the instrumented Runtime server in the background.
 SERVER_ARGS=(
   "--grpc-tls-private-key=${SCRIPTS_DIR}/../examples/certs/local/local.key"
