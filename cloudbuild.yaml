@@ -63,7 +63,7 @@ steps:
     waitFor: ['build_server_no_debug']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/runner', '--commands', '--logs', 'run-ci']
+    args: ['./scripts/runner', '--commands', 'run-ci']
 
   # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'

@@ -39,6 +39,7 @@ mod internal;
 use internal::*;
 
 const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-unknown-linux-musl";
+const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
@@ -152,18 +153,35 @@ fn run_examples(opt: &RunExamples) -> Step {
     }
 }
 
-fn build_wasm_module(name: &str, manifest_path: &str) -> Step {
-    Step::Single {
-        name: format!("wasm:{}:{}", name, manifest_path.to_string()),
-        command: Cmd::new(
-            "cargo",
-            &[
-                "build",
-                "--release",
-                "--target=wasm32-unknown-unknown",
-                &format!("--manifest-path={}", manifest_path),
-            ],
-        ),
+fn build_wasm_module(name: &str, target: &Target) -> Step {
+    match target {
+        Target::Cargo { cargo_manifest } => Step::Single {
+            name: format!("wasm:{}:{}", name, cargo_manifest.to_string()),
+            command: Cmd::new(
+                "cargo",
+                &[
+                    "build",
+                    "--release",
+                    "--target=wasm32-unknown-unknown",
+                    &format!("--manifest-path={}", cargo_manifest),
+                ],
+            ),
+        },
+        Target::Bazel {
+            bazel_target,
+            config,
+        } => Step::Single {
+            name: format!("wasm:{}:{}", name, bazel_target.to_string()),
+            command: Cmd::new(
+                "bazel",
+                vec![
+                    "build".to_string(),
+                    format!("--config={}", config),
+                    bazel_target.to_string(),
+                ],
+            ),
+        },
+        Target::Npm { .. } => todo!(),
     }
 }
 
@@ -203,7 +221,6 @@ fn run_tests() -> Step {
         steps: vec![
             run_cargo_clippy(),
             run_cargo_test(),
-            run_cargo_doc_check(),
             run_cargo_test_tsan(),
             run_bazel_build(),
             run_bazel_test(),
@@ -260,7 +277,10 @@ fn run_ci() -> Step {
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
                 example_name: None,
-                build_only: false,
+                run_server: None,
+                run_clients: None,
+                client_additional_args: Vec::new(),
+                server_additional_args: Vec::new(),
                 build_server: BuildServer {
                     server_variant: "base".to_string(),
                     server_rust_toolchain: None,
@@ -271,15 +291,22 @@ fn run_ci() -> Step {
     }
 }
 
-fn build_example_config(example_name: &str) -> Step {
+fn build_example_config(example_name: &str, config: &str) -> Step {
     Step::Single {
-        name: "build_config".to_string(),
+        name: "build app config".to_string(),
         command: Cmd::new(
             "bazel",
-            &[
-                "build",
-                &format!("//examples/{}/config:config", example_name),
-            ],
+            vec![
+                vec!["build".to_string()],
+                if config.is_empty() {
+                    vec![]
+                } else {
+                    vec![format!("--config={}", config)]
+                },
+                vec![format!("//examples/{}/config:config", example_name)],
+            ]
+            .iter()
+            .flatten(),
         ),
     }
 }
@@ -287,6 +314,7 @@ fn build_example_config(example_name: &str) -> Step {
 fn run_example_server(
     opt: &BuildServer,
     example_server: &ExampleServer,
+    server_additional_args: Vec<String>,
     application_file: &str,
 ) -> Box<dyn Runnable> {
     Cmd::new(
@@ -313,8 +341,11 @@ fn run_example_server(
                 vec!["--no-default-features".to_string()]
             } else {
                 vec![]
+            } else {
+                vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()]
             },
             ...example_server.additional_args.clone(),
+            ...server_additional_args,
         ],
     )
 }
@@ -323,6 +354,8 @@ fn run_example_server(
 #[serde(deny_unknown_fields)]
 struct Example {
     name: String,
+    #[serde(default)]
+    application_bazel_config: String,
     #[serde(default)]
     server: ExampleServer,
     #[serde(default)]
@@ -341,9 +374,17 @@ struct ExampleServer {
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 enum Target {
-    Bazel { bazel_target: String },
-    Cargo { cargo_manifest: String },
-    Npm { package_directory: String },
+    Bazel {
+        bazel_target: String,
+        #[serde(default)]
+        config: String,
+    },
+    Cargo {
+        cargo_manifest: String,
+    },
+    Npm {
+        package_directory: String,
+    },
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -363,42 +404,69 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
             &example.server,
             &format!("./examples/bin/{}/config.bin", example.name),
         ),
-        foreground: Box::new(Step::Multiple {
-            name: "run_client".to_string(),
-            steps: example
-                .clients
-                .iter()
-                .map(|(name, client)| run_client(name, &client))
-                .collect(),
-        }),
     };
-    let run_background = match &example.backend {
-        Some(backend) => Step::WithBackground {
-            name: "run_backend".to_string(),
-            background: run(&backend),
-            foreground: Box::new(run_server),
-        },
-        None => run_server,
+    let run_clients = Step::Multiple {
+        name: "run clients".to_string(),
+        steps: example
+            .clients
+            .iter()
+            .map(|(name, client)| run_client(name, &client, opt.client_additional_args.clone()))
+            .collect(),
     };
+
+    // Build the run steps (if any) according to the provided flags.
+    //
+    // If `run-server` is enabled, then run the server as well as a potential backend, both in the
+    // background.
+    //
+    // If `run-clients` is enabled, then run the server and backend in the background, and the
+    // clients in the foreground.
+    #[allow(clippy::collapsible_if)]
+    let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
+        let run_server_clients = if opt.run_clients.unwrap_or(true) {
+            Step::WithBackground {
+                name: "background server".to_string(),
+                background: run_server,
+                foreground: Box::new(run_clients),
+            }
+        } else {
+            Step::Single {
+                name: "run server".to_string(),
+                command: run_server,
+            }
+        };
+        match &example.backend {
+            Some(backend) => Step::WithBackground {
+                name: "background backend".to_string(),
+                background: run(&backend, Vec::new()),
+                foreground: Box::new(run_server_clients),
+            },
+            None => run_server_clients,
+        }
+    } else {
+        if opt.run_clients.unwrap_or(true) {
+            run_clients
+        } else {
+            Step::Multiple {
+                name: "run clients (empty)".to_string(),
+                steps: vec![],
+            }
+        }
+    };
+
     Step::Multiple {
         name: example.name.to_string(),
         steps: vec![
             vec![
                 Step::Multiple {
-                    name: "build_wasm_modules".to_string(),
+                    name: "build wasm modules".to_string(),
                     steps: example
                         .modules
                         .iter()
-                        .map(|(name, target)| match target {
-                            Target::Cargo { cargo_manifest } => {
-                                build_wasm_module(name, &cargo_manifest)
-                            }
-                            Target::Bazel { .. } => todo!(),
-                            Target::Npm { .. } => todo!(),
-                        })
+                        .map(|(name, target)| build_wasm_module(name, target))
                         .collect(),
                 },
-                build_example_config(&example.name),
+                build_example_config(&example.name, &example.application_bazel_config),
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
                 build_server(&opt.build_server),
@@ -410,11 +478,10 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 }],
                 None => vec![],
             },
-            if opt.build_only {
-                vec![]
-            } else {
-                vec![run_background]
-            },
+            vec![Step::Multiple {
+                name: "run".to_string(),
+                steps: vec![run_backend_server_clients],
+            }],
         ]
         .into_iter()
         .flatten()
@@ -429,12 +496,27 @@ fn build(executable: &Executable) -> Box<dyn Runnable> {
             vec![
                 "build".to_string(),
                 "--release".to_string(),
+                format!("--target={}", DEFAULT_EXAMPLE_BACKEND_RUST_TARGET),
                 format!("--manifest-path={}", cargo_manifest),
             ],
         ),
-        Target::Bazel { bazel_target } => {
-            Cmd::new("bazel", vec!["build".to_string(), bazel_target.to_string()])
-        }
+        Target::Bazel {
+            bazel_target,
+            config,
+        } => Cmd::new(
+            "bazel",
+            vec![
+                vec!["build".to_string()],
+                if config.is_empty() {
+                    vec![]
+                } else {
+                    vec![format!("--config={}", config)]
+                },
+                vec![bazel_target.to_string()],
+            ]
+            .iter()
+            .flatten(),
+        ),
         Target::Npm { package_directory } => Cmd::new(
             "npm",
             vec!["ci".to_string(), format!("--prefix={}", package_directory)],
@@ -442,7 +524,7 @@ fn build(executable: &Executable) -> Box<dyn Runnable> {
     }
 }
 
-fn run(executable: &Executable) -> Box<dyn Runnable> {
+fn run(executable: &Executable, additional_args: Vec<String>) -> Box<dyn Runnable> {
     match &executable.target {
         Target::Cargo { cargo_manifest } => Cmd::new(
             "cargo",
@@ -450,24 +532,35 @@ fn run(executable: &Executable) -> Box<dyn Runnable> {
                 vec![
                     "run".to_string(),
                     "--release".to_string(),
+                    format!("--target={}", DEFAULT_EXAMPLE_BACKEND_RUST_TARGET),
                     format!("--manifest-path={}", cargo_manifest),
                     "--".to_string(),
                 ],
                 executable.additional_args.clone(),
+                additional_args,
             ]
             .iter()
             .flatten(),
         ),
-        Target::Bazel { bazel_target } => Cmd::new(
+        Target::Bazel {
+            bazel_target,
+            config,
+        } => Cmd::new(
             "bazel",
             vec![
+                vec!["run".to_string()],
+                if config.is_empty() {
+                    vec![]
+                } else {
+                    vec![format!("--config={}", config)]
+                },
                 vec![
-                    "run".to_string(),
                     "--".to_string(),
                     bazel_target.to_string(),
                     "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
                 ],
                 executable.additional_args.clone(),
+                additional_args,
             ]
             .iter()
             .flatten(),
@@ -482,7 +575,7 @@ fn run(executable: &Executable) -> Box<dyn Runnable> {
     }
 }
 
-fn run_client(name: &str, executable: &Executable) -> Step {
+fn run_client(name: &str, executable: &Executable, additional_args: Vec<String>) -> Step {
     Step::Multiple {
         name: name.to_string(),
         steps: vec![
@@ -492,7 +585,7 @@ fn run_client(name: &str, executable: &Executable) -> Step {
             },
             Step::Single {
                 name: "run".to_string(),
-                command: run(executable),
+                command: run(executable, additional_args),
             },
         ],
     }
@@ -779,19 +872,6 @@ fn run_cargo_fmt(mode: FormatMode) -> Step {
 }
 
 fn run_cargo_test() -> Step {
-    Step::Multiple {
-        name: "cargo test".to_string(),
-        steps: workspace_manifest_files()
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
-            })
-            .collect(),
-    }
-}
-
-fn run_cargo_doc_check() -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: workspace_manifest_files()

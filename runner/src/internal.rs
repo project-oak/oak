@@ -55,17 +55,26 @@ pub struct RunExamples {
     )]
     pub application_variant: String,
     // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
-    #[structopt(long, help = "name of a single example to run")]
+    #[structopt(
+        long,
+        help = "name of a single example to run; if unset, run all the examples"
+    )]
     pub example_name: Option<String>,
-    #[structopt(long, help = "only build the examples, do not run them")]
-    pub build_only: bool,
     #[structopt(flatten)]
     pub build_server: BuildServer,
+    #[structopt(long, help = "run server [default: true]")]
+    pub run_server: Option<bool>,
+    #[structopt(long, help = "run clients [default: true]")]
+    pub run_clients: Option<bool>,
+    #[structopt(long, help = "additional arguments to pass to clients")]
+    pub client_additional_args: Vec<String>,
+    #[structopt(long, help = "additional arguments to pass to server")]
+    pub server_additional_args: Vec<String>,
 }
 
 #[derive(StructOpt, Clone)]
 pub struct BuildServer {
-    #[structopt(long, help = "server variant: [base]", default_value = "base")]
+    #[structopt(long, help = "server variant: [base, logless]", default_value = "base")]
     pub server_variant: String,
     #[structopt(
         long,
@@ -126,7 +135,7 @@ pub struct SingleStatusResult {
     logs: String,
 }
 
-/// An execution step, which may be a single `Cmd`, or a collection of sub-steps.
+/// An execution step, which may be a single `Runnable`, or a collection of sub-steps.
 pub enum Step {
     Single {
         name: String,
@@ -267,7 +276,7 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub fn new<I, S>(executable: &str, args: I) -> Box<dyn Runnable>
+    pub fn new<I, S>(executable: &str, args: I) -> Box<Self>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
@@ -279,11 +288,7 @@ impl Cmd {
         })
     }
 
-    pub fn new_with_env<I, S>(
-        executable: &str,
-        args: I,
-        env: &HashMap<String, String>,
-    ) -> Box<dyn Runnable>
+    pub fn new_with_env<I, S>(executable: &str, args: I, env: &HashMap<String, String>) -> Box<Self>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
@@ -326,6 +331,16 @@ impl Runnable for Cmd {
             cmd.env("CARGO_HOME", v);
         }
 
+        if let Ok(v) = std::env::var("EMSDK") {
+            cmd.env("EMSDK", v);
+        }
+        if let Ok(v) = std::env::var("EM_CACHE") {
+            cmd.env("EM_CACHE", v);
+        }
+        if let Ok(v) = std::env::var("EM_CONFIG") {
+            cmd.env("EM_CONFIG", v);
+        }
+
         cmd.envs(&self.env);
         let command_string = format!("{:?}", cmd);
         if opt.dry_run {
@@ -345,8 +360,6 @@ impl Runnable for Cmd {
                 std::process::Stdio::inherit()
             } else {
                 std::process::Stdio::piped()
-                // The hello_world example client seems to hang when this is set to piped.
-                // std::process::Stdio::null()
             };
             let child = cmd
                 .stdout(stdout)
@@ -504,8 +517,8 @@ pub struct CheckLicense {
 }
 
 impl CheckLicense {
-    pub fn new(path: String) -> Box<dyn Runnable> {
-        Box::new(CheckLicense { path: path })
+    pub fn new(path: String) -> Box<Self> {
+        Box::new(CheckLicense { path })
     }
 }
 
@@ -533,8 +546,8 @@ pub struct CheckTodo {
 }
 
 impl CheckTodo {
-    pub fn new(path: String) -> Box<dyn Runnable> {
-        Box::new(CheckTodo { path: path })
+    pub fn new(path: String) -> Box<Self> {
+        Box::new(CheckTodo { path })
     }
 }
 
@@ -546,7 +559,7 @@ impl Runnable for CheckTodo {
             .filter(|word| word.contains(&format!("{}{}", "TO", "DO")))
             .filter(|word| {
                 !(word.starts_with(&format!("{}{}(", "TO", "DO"))
-                    && (word.ends_with("):") || word.ends_with(")")))
+                    && (word.ends_with("):") || word.ends_with(')')))
             })
             .collect::<Vec<_>>();
         let result = if todo_words.is_empty() {

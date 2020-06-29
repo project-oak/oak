@@ -10,10 +10,10 @@ additional_args = [
 ]
 
 [modules]
-module = { Cargo = { cargo_manifest = "examples/trusted_information_retrieval/module/rust/Cargo.toml" } }
+module_0 = { Cargo = { cargo_manifest = "examples/trusted_information_retrieval/module_0/rust/Cargo.toml" } }
+module_1 = { Cargo = { cargo_manifest = "examples/trusted_information_retrieval/module_1/rust/Cargo.toml" } }
 
 [clients]
 cpp = { Bazel = { bazel_target = "//examples/trusted_information_retrieval/client:client" }, additional_args = [
-  "--latitude=0.0",
-  "--longitude=0.0"
+  "--id=1",
 ] }

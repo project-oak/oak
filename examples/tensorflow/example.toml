@@ -1,0 +1,8 @@
+name = "tensorflow"
+application_bazel_config = "emscripten"
+
+[modules]
+module = { Bazel = { bazel_target = "//examples/tensorflow/module/cpp:all", config = "emscripten" } }
+
+[clients]
+cpp = { Bazel = { bazel_target = "//examples/tensorflow/client:client" } }
