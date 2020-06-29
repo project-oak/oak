@@ -128,7 +128,7 @@ pub struct SingleStatusResult {
 pub enum Step {
     Single {
         name: String,
-        command: Cmd,
+        command: Box<dyn Runnable>,
     },
     Multiple {
         name: String,
@@ -136,7 +136,7 @@ pub enum Step {
     },
     WithBackground {
         name: String,
-        background: Cmd,
+        background: Box<dyn Runnable>,
         foreground: Box<Step>,
     },
 }
@@ -164,10 +164,10 @@ pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
             let context = context.child(name);
 
             let start = Instant::now();
-            let running = command.run(&context.opt);
+            let mut running = command.run(&context.opt);
 
             if context.opt.commands || context.opt.dry_run {
-                eprintln!("{} ⊢ [{}] ... ", context.prefix, running.command);
+                eprintln!("{} ⊢ [{}] ... ", context.prefix, running);
             }
 
             eprint!("{} ⊢ ", context.prefix);
@@ -218,7 +218,7 @@ pub fn run_step(context: &Context, step: &Step) -> HashSet<StatusResultValue> {
 
             let mut running_background = background.run(&context.opt);
             let background_command = if context.opt.commands || context.opt.dry_run {
-                format!("[{}]", running_background.command)
+                format!("[{}]", running_background)
             } else {
                 "".to_string()
             };
@@ -265,33 +265,40 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub fn new<I, S>(executable: &str, args: I) -> Self
+    pub fn new<I, S>(executable: &str, args: I) -> Box<dyn Runnable>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
-        Cmd {
+        Box::new(Cmd {
             executable: executable.to_string(),
             args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
             env: HashMap::new(),
-        }
+        })
     }
 
-    pub fn new_with_env<I, S>(executable: &str, args: I, env: &HashMap<String, String>) -> Self
+    pub fn new_with_env<I, S>(
+        executable: &str,
+        args: I,
+        env: &HashMap<String, String>,
+    ) -> Box<dyn Runnable>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
-        Cmd {
+        Box::new(Cmd {
             executable: executable.to_string(),
             args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
             env: env.clone(),
-        }
+        })
     }
+}
+
+impl Runnable for Cmd {
     /// Run the provided command, printing a status message with the current prefix.
     /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
     /// to run was not found).
-    fn run(&self, opt: &Opt) -> Running {
+    fn run(&self, opt: &Opt) -> Box<dyn Running> {
         std::io::stderr().flush().expect("could not flush stderr");
         let mut cmd = std::process::Command::new(&self.executable);
         cmd.args(&self.args);
@@ -320,10 +327,10 @@ impl Cmd {
         cmd.envs(&self.env);
         let command_string = format!("{:?}", cmd);
         if opt.dry_run {
-            Running {
+            Box::new(RunningCmd {
                 command: command_string,
                 process: None,
-            }
+            })
         } else {
             // If the `logs` flag is enabled, inherit stdout and stderr from the main runner
             // process.
@@ -345,21 +352,21 @@ impl Cmd {
                 .spawn()
                 .expect("could not spawn command");
 
-            Running {
+            Box::new(RunningCmd {
                 command: command_string,
                 process: Some(child),
-            }
+            })
         }
     }
 }
 
 /// An instance of a running command.
-pub struct Running {
+pub struct RunningCmd {
     command: String,
     process: Option<std::process::Child>,
 }
 
-impl Running {
+impl Running for RunningCmd {
     /// Forces the running command to stop. Equivalent to sending `SIGINT`.
     fn kill(&mut self) {
         if let Some(ref mut child) = self.process {
@@ -372,8 +379,8 @@ impl Running {
     }
 
     /// Waits for the running command to spontaneously terminate.
-    fn wait(self, _opt: &Opt) -> SingleStatusResult {
-        let child = match self.process {
+    fn wait(&mut self, _opt: &Opt) -> SingleStatusResult {
+        let child = match self.process.take() {
             Some(child) => child,
             None => {
                 return SingleStatusResult {
@@ -480,4 +487,19 @@ fn test_spread() {
         vec!["foo", "bar"],
         spread!["foo", "bar"].cloned().collect::<Vec<_>>()
     );
+}
+
+impl std::fmt::Display for RunningCmd {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self.command)
+    }
+}
+
+pub trait Runnable {
+    fn run(&self, opt: &Opt) -> Box<dyn Running>;
+}
+
+pub trait Running: std::fmt::Display {
+    fn kill(&mut self);
+    fn wait(&mut self, opt: &Opt) -> SingleStatusResult;
 }

@@ -285,7 +285,7 @@ fn run_example_server(
     opt: &BuildServer,
     example_server: &ExampleServer,
     application_file: &str,
-) -> Cmd {
+) -> Box<dyn Runnable> {
     Cmd::new(
         "cargo",
         spread![
@@ -419,48 +419,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     }
 }
 
-fn run_client(name: &str, client: &Client) -> Step {
-    match &client.target {
-        Target::Cargo { .. } => todo!(),
-        Target::Bazel { bazel_target } => Step::Single {
-            name: format!("bazel:{}:{}", name, bazel_target),
-            command: Cmd::new(
-                "bazel",
-                spread![
-                    "run".to_string(),
-                    "--".to_string(),
-                    bazel_target.to_string(),
-                    "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
-                    ...client.additional_args.clone(),
-                ],
-            ),
-        },
-        Target::Npm { package_directory } => Step::Multiple {
-            name: format!("npm:{}:{}", name, package_directory),
-            steps: vec![
-                Step::Single {
-                    name: "npm ci".to_string(),
-                    command: Cmd::new(
-                        "npm",
-                        vec![
-                            "ci".to_string(),
-                            "--prefix".to_string(),
-                            package_directory.to_string(),
-                        ],
-                    ),
-                },
-                Step::Single {
-                    name: "npm start".to_string(),
-                    command: Cmd::new(
-                        "npm",
-                        vec![
-                            "start".to_string(),
-                            "--prefix".to_string(),
-                            package_directory.to_string(),
-                        ],
-                    ),
-                },
-fn build(executable: &Executable) -> Cmd {
+fn build(executable: &Executable) -> Box<dyn Runnable> {
     match &executable.target {
         Target::Cargo { cargo_manifest } => Cmd::new(
             "cargo",
@@ -480,7 +439,7 @@ fn build(executable: &Executable) -> Cmd {
     }
 }
 
-fn run(executable: &Executable) -> Cmd {
+fn run(executable: &Executable) -> Box<dyn Runnable> {
     match &executable.target {
         Target::Cargo { cargo_manifest } => Cmd::new(
             "cargo",
