@@ -110,7 +110,7 @@ async fn test_abi() {
         assert_eq!(true, success);
     } // ensure futures are all dropped
     drop(client);
-    runtime.stop();
+    //    runtime.stop();
 }
 
 #[tokio::test(core_threads = 2)]
@@ -197,5 +197,5 @@ async fn test_leaks() {
         }
     } // ensure futures are all dropped
     drop(client);
-    runtime.stop();
+    //  runtime.stop();
 }
