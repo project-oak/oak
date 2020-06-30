@@ -128,9 +128,12 @@ fn panic_check() {
     );
 }
 
-/// Create a test Node that creates a Channel with the same label and succeeds.
+/// Create a test Node with a non-public confidentiality label and no downgrading privilege that
+/// creates a Channel with the same label and fails.
+///
+/// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
-fn create_channel_same_label_ok() {
+fn create_channel_same_label_err() {
     let label = test_label();
     let label_clone = label.clone();
     run_node_body(
@@ -140,17 +143,16 @@ fn create_channel_same_label_ok() {
             // Attempt to perform an operation that requires the [`Runtime`] to have created an
             // appropriate [`NodeInfo`] instance.
             let result = runtime.channel_create(&label_clone);
-            assert_eq!(true, result.is_ok());
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
     );
 }
 
-/// Create a test Node that creates a Channel with a less confidential label and fails.
+/// Create a test Node with a non-public confidentiality label and no downgrading privilege that
+/// creates a Channel with a less confidential label and fails.
 ///
-/// If this succeeded, it would be a violation of information flow control, since the original
-/// confidential Node would be able to spawn "less confidential / public" Channels and use their
-/// side effects as a covert channel to exfiltrate confidential data.
+/// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
 fn create_channel_less_confidential_label_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
@@ -174,10 +176,12 @@ fn create_channel_less_confidential_label_err() {
     );
 }
 
-/// Create a test Node that creates a Channel with a less confidential label and succeeds, because
-/// the node is granted the ability to declassify the removed confidentiality tag.
+/// Create a test Node with a non-public confidentiality label and some downgrading privilege that
+/// creates a Channel with a less confidential label and fails.
+///
+/// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
-fn create_channel_less_confidential_label_declassification_ok() {
+fn create_channel_less_confidential_label_declassification_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let other_tag = oak_abi::label::authorization_bearer_token_hmac_tag(&[3, 3, 3]);
@@ -199,14 +203,16 @@ fn create_channel_less_confidential_label_declassification_ok() {
         },
         Box::new(move |runtime| {
             let result = runtime.channel_create(&less_confidential_label);
-            assert_eq!(true, result.is_ok());
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
     );
 }
 
-/// Create a test Node that creates a Channel with a less confidential label and fails, because the
-/// node is granted the ability to endorse (rather than declassify) the removed confidentiality tag.
+/// Create a test Node with a non-public confidentiality label that creates a Channel with a less
+/// confidential label and fails.
+///
+/// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
 fn create_channel_less_confidential_label_no_privilege_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
@@ -235,7 +241,7 @@ fn create_channel_less_confidential_label_no_privilege_err() {
     );
 }
 
-/// Create a test Node with no privilege that:
+/// Create a test Node with public confidentiality label and no privilege that:
 ///
 /// - creates a Channel with a more confidential label and succeeds
 /// - writes to the newly created channel and succeeds
@@ -243,15 +249,11 @@ fn create_channel_less_confidential_label_no_privilege_err() {
 ///
 /// Data is always allowed to flow to more confidential labels.
 #[test]
-fn create_channel_more_confidential_label_ok() {
+fn create_channel_with_more_confidential_label_from_public_untrusted_node_ok() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
-    let initial_label = Label {
-        confidentiality_tags: vec![tag_0.clone()],
-        integrity_tags: vec![],
-    };
+    let initial_label = &Label::public_untrusted();
     let more_confidential_label = Label {
-        confidentiality_tags: vec![tag_0, tag_1],
+        confidentiality_tags: vec![tag_0],
         integrity_tags: vec![],
     };
     run_node_body(
@@ -263,20 +265,21 @@ fn create_channel_more_confidential_label_ok() {
 
             let (write_handle, read_handle) = result.unwrap();
 
+            let message = NodeMessage {
+                data: vec![14, 12, 88],
+                handles: vec![],
+            };
+
             {
-                // Writing to a more confidential Channel is allowed.
-                let message = NodeMessage {
-                    data: vec![14, 12, 88],
-                    handles: vec![],
-                };
+                // Writing to a more confidential Channel is always allowed.
                 let result = runtime.channel_write(write_handle, message);
-                assert_eq!(true, result.is_ok());
+                assert_eq!(Ok(()), result);
             }
 
             {
                 // Reading from a more confidential Channel is not allowed.
                 let result = runtime.channel_read(read_handle);
-                assert_eq!(false, result.is_ok());
+                assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             }
 
             Ok(())
@@ -284,14 +287,56 @@ fn create_channel_more_confidential_label_ok() {
     );
 }
 
-/// Create a test Node with downgrading privilege that:
+/// Create a test Node with public confidentiality label and downgrading privilege that:
 ///
 /// - creates a Channel with a more confidential label and succeeds (same as previous test case)
 /// - writes to the newly created channel and succeeds (same as previous test case)
 /// - reads from the newly created channel and succeeds (different from previous test case, thanks
 ///   to the newly added privilege)
 #[test]
-fn create_channel_more_confidential_label_privilege_ok() {
+fn create_channel_with_more_confidential_label_from_public_node_with_privilege_ok() {
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let initial_label = Label::public_untrusted();
+    let more_confidential_label = Label {
+        confidentiality_tags: vec![tag_0.clone()],
+        integrity_tags: vec![],
+    };
+    run_node_body(
+        &initial_label,
+        &NodePrivilege {
+            can_declassify_confidentiality_tags: hashset! { tag_0 },
+            can_endorse_integrity_tags: hashset! {},
+        },
+        Box::new(move |runtime| {
+            let result = runtime.channel_create(&more_confidential_label);
+            assert_eq!(true, result.is_ok());
+
+            let (write_handle, read_handle) = result.unwrap();
+
+            let message = NodeMessage {
+                data: vec![14, 12, 88],
+                handles: vec![],
+            };
+
+            {
+                // Writing to a more confidential Channel is always allowed.
+                let result = runtime.channel_write(write_handle, message.clone());
+                assert_eq!(Ok(()), result);
+            }
+
+            {
+                // Reading from a more confidential Channel is allowed because of the privilege.
+                let result = runtime.channel_read(read_handle);
+                assert_eq!(Ok(Some(message)), result);
+            }
+
+            Ok(())
+        }),
+    );
+}
+
+#[test]
+fn create_channel_with_more_confidential_label_from_non_public_node_with_privilege_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
@@ -310,26 +355,7 @@ fn create_channel_more_confidential_label_privilege_ok() {
         },
         Box::new(move |runtime| {
             let result = runtime.channel_create(&more_confidential_label);
-            assert_eq!(true, result.is_ok());
-
-            let (write_handle, read_handle) = result.unwrap();
-
-            {
-                // Writing to a more confidential Channel is allowed.
-                let message = NodeMessage {
-                    data: vec![14, 12, 88],
-                    handles: vec![],
-                };
-                let result = runtime.channel_write(write_handle, message);
-                assert_eq!(true, result.is_ok());
-            }
-
-            {
-                // Reading from a more confidential Channel is allowed because of the privilege.
-                let result = runtime.channel_read(read_handle);
-                assert_eq!(true, result.is_ok());
-            }
-
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
     );

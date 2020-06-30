@@ -180,11 +180,15 @@ If writing to the specified channel would violate
 
 ### `channel_create`
 
-Creates a new unidirectional channel assigning the label specified by `param[2]`
-and `param[3]` to the newly created Channel, and returns the channel handles for
+Creates a new unidirectional Channel assigning the label specified by `param[2]`
+and `param[3]` to the newly created Channel, and returns the Channel handles for
 its read and write halves as output parameters in `param[0]` and `param[1]`.
 
 The label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
+
+Because the label of the newly created Channel is effectively public, this
+function may only be invoked by Nodes whose label "flows to" the "public
+untrusted" label.
 
 If creating the specified Channel would violate
 [information flow control](/docs/concepts.md#labels), returns
@@ -215,6 +219,10 @@ identified by `param[4]`.
 The Node configuration is a serialized
 [`NodeConfiguration`](/oak/proto/application.proto) protobuf message, and the
 label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
+
+Because the label of the newly created Node is effectively public, this function
+may only be invoked by Nodes whose label "flows to" the "public untrusted"
+label.
 
 If creating the specified Node would violate
 [information flow control](/docs/concepts.md#labels), returns
