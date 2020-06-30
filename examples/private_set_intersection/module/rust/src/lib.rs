@@ -18,7 +18,7 @@
 //!
 //! Clients invoke the module by providing their own private set, and the module keeps track of the
 //! intersection of all the provided sets from all the clients that have interacted with it.
-//! The number of contributed private sets is limited and defined by [`CONTRIBUTION_THRESHOLD`].
+//! The number of contributed private sets is limited and defined by [`SET_THRESHOLD`].
 //!
 //! The (common) intersection can then be retrieved by each client by a separate invocation.
 //! After the first client retrieves the intersection it becomes locked, and new contributions are
