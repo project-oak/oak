@@ -20,7 +20,7 @@ SERVER_ARGS=(
   "--grpc-tls-certificate=${SCRIPTS_DIR}/../examples/certs/local/local.pem"
   "--root-tls-certificate=${SCRIPTS_DIR}/../examples/certs/local/ca.pem"
 )
-readonly APPLICATION_FILE="${PWD}/bazel-client-bin/examples/abitest/config/config.bin"
+readonly APPLICATION_FILE="${PWD}/examples/abitest/config/config.bin"
 cargo run --manifest-path=oak/server/rust/oak_loader/Cargo.toml -- --application="${APPLICATION_FILE}" "${SERVER_ARGS[@]}" &
 readonly SERVER_PID=$!
 to_kill+=("${SERVER_PID}")

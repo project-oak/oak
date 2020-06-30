@@ -64,14 +64,9 @@ if [[ -n ${EXAMPLE+x} ]]; then
   # Determine expected configuration file from example name and language variant.
   case "${application_language}" in
     rust)
-      readonly APPLICATION_FILE="${PWD}/bazel-client-bin/examples/${EXAMPLE}/config/config.bin";;
+      readonly APPLICATION_FILE="${PWD}/examples/${EXAMPLE}/config/config.bin";;
     cpp)
-      # TensorFlow example is compiled with Emscripten and other examples with Clang.
-      if [[ "${EXAMPLE}" == "tensorflow" ]]; then
-        readonly APPLICATION_FILE="${PWD}/bazel-emscripten-bin/examples/tensorflow/config/config_cpp.bin"
-      else
-        readonly APPLICATION_FILE="${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/config/config_cpp.bin"
-      fi;;
+      readonly APPLICATION_FILE="${PWD}/examples/${EXAMPLE}/config/config_cpp.bin";;
     *)
       echo "Invalid example variant: ${application_language}"
       exit 1;;

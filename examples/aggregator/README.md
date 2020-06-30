@@ -40,7 +40,7 @@ Build and run the Aggregator with the following command:
 ./scripts/build_example -e aggregator
 ./scripts/build_server -s base
 cargo run --release --target=x86_64-unknown-linux-musl --manifest-path=oak/server/rust/oak_loader/Cargo.toml -- \
-  --application=./bazel-client-bin/examples/aggregator/config/config.bin \
+  --application=./examples/aggregator/config/config.bin \
   --grpc-tls-private-key=./examples/certs/local/local.key \
   --grpc-tls-certificate=./examples/certs/local/local.pem \
   --root-tls-certificate=./examples/certs/local/ca.pem
