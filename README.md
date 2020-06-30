@@ -87,4 +87,6 @@ to extract the received data.
 
 ## Getting involved
 
-We welcome contributors! To join our community, we recommend joining the [mailing list](https://groups.google.com/g/project-oak-discuss) and the [slack](https://join.slack.com/t/project-oak/shared_invite/zt-5hiliinq-f0fYZGwlzfH3kMrJuu3qlw). 
+We welcome contributors! To join our community, we recommend joining the
+[mailing list](https://groups.google.com/g/project-oak-discuss) and the
+[slack](https://join.slack.com/t/project-oak/shared_invite/zt-5hiliinq-f0fYZGwlzfH3kMrJuu3qlw).
