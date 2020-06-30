@@ -47,6 +47,7 @@
 <span id="47">47</span>
 <span id="48">48</span>
 <span id="49">49</span>
+<span id="50">50</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -82,6 +83,7 @@
 <span class="doccomment">/// internal counterpart of the SDK&#39;s `Message` type, whereas the internal `Message`</span>
 <span class="doccomment">/// type above holds internal channel references that can be moved between different</span>
 <span class="doccomment">/// Node contexts.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodeMessage</span> {
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">oak_abi</span>::<span class="ident">Handle</span><span class="op">&gt;</span>,

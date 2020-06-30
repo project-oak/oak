@@ -1055,6 +1055,23 @@
 <span id="1055">1055</span>
 <span id="1056">1056</span>
 <span id="1057">1057</span>
+<span id="1058">1058</span>
+<span id="1059">1059</span>
+<span id="1060">1060</span>
+<span id="1061">1061</span>
+<span id="1062">1062</span>
+<span id="1063">1063</span>
+<span id="1064">1064</span>
+<span id="1065">1065</span>
+<span id="1066">1066</span>
+<span id="1067">1067</span>
+<span id="1068">1068</span>
+<span id="1069">1069</span>
+<span id="1070">1070</span>
+<span id="1071">1071</span>
+<span id="1072">1072</span>
+<span id="1073">1073</span>
+<span id="1074">1074</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1619,7 +1636,18 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_terminating</span>() {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>);
+        }
+
+        <span class="comment">// The label (and mere presence) of the newly created Channel is effectively public, so we</span>
+        <span class="comment">// must ensure that the label of the calling Node flows to both &quot;public untrusted&quot; and to</span>
+        <span class="comment">// the label of the Channel to be created.</span>
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())<span class="question-mark">?</span>;
+        <span class="comment">// We also additionally make sure that the label of the newly created Channel can be written</span>
+        <span class="comment">// to by the current Node, since in general this may be lower than &quot;public untrusted&quot;.</span>
         <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="ident">label</span>)<span class="question-mark">?</span>;
+
         <span class="comment">// First get a pair of `ChannelHalf` objects.</span>
         <span class="kw">let</span> <span class="ident">channel_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">next_channel_id</span>.<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">SeqCst</span>);
         <span class="kw">let</span> <span class="ident">channel</span> <span class="op">=</span> <span class="ident">Channel</span>::<span class="ident">new</span>(<span class="ident">channel_id</span>, <span class="ident">label</span>);
@@ -1982,10 +2010,16 @@
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;creating node with config: {:?}&quot;</span>, <span class="ident">config</span>);
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_terminating</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>);
         }
+
+        <span class="comment">// The label (and mere presence) of the newly created Node is effectively public, so we must</span>
+        <span class="comment">// ensure that the label of the calling Node flows to both &quot;public untrusted&quot; and to the</span>
+        <span class="comment">// label of the Node to be created.</span>
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())<span class="question-mark">?</span>;
+        <span class="comment">// We also additionally make sure that the label of the newly created Node can be written to</span>
+        <span class="comment">// by the current Node, since in general this may be lower than &quot;public untrusted&quot;.</span>
         <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="ident">label</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">reader</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="ident">initial_handle</span>)<span class="question-mark">?</span>;
