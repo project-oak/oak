@@ -29,6 +29,10 @@ message GetIntersectionResponse {
 }
 
 service PrivateSetIntersection {
+  // Submit a private set that will be contributed to the set intersection.
+  // The number of submissions is limited.
   rpc SubmitSet(SubmitSetRequest) returns (google.protobuf.Empty);
+  // Request the final private set intersection.
+  // Once the intersection is requested it becomes locked, and new contributions are discarded.
   rpc GetIntersection(google.protobuf.Empty) returns (GetIntersectionResponse);
 }

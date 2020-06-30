@@ -21,7 +21,7 @@
 //! The number of contributed private sets is limited and defined by [`CONTRIBUTION_THRESHOLD`].
 //!
 //! The (common) intersection can then be retrieved by each client by a separate invocation.
-//! After the first client retrieves the intersection it becomes fixed, and new contributions are
+//! After the first client retrieves the intersection it becomes locked, and new contributions are
 //! discarded.
 
 pub mod proto {
@@ -46,7 +46,7 @@ oak::entrypoint!(oak_main => |_in_channel| {
 });
 
 /// Maximum number of contributed private sets.
-pub const CONTRIBUTION_THRESHOLD: u64 = 2;
+pub const SET_THRESHOLD: u64 = 2;
 
 #[derive(Default)]
 struct Node {
@@ -54,20 +54,20 @@ struct Node {
     values: Option<HashSet<String>>,
     /// Number of contributed private sets.
     set_count: u64,
-    /// Check whether the intersection is fixed and new contributions are discarded.
-    fixed: bool,
+    /// The intersection is locked and new contributions are discarded.
+    locked: bool,
 }
 
 impl PrivateSetIntersection for Node {
     fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<()> {
-        if self.fixed {
+        if self.locked {
             return Err(grpc::build_status(
-                grpc::Code::InvalidArgument,
+                grpc::Code::FailedPrecondition,
                 "Set contributions are no longer available",
             ));
         }
 
-        if self.set_count < CONTRIBUTION_THRESHOLD {
+        if self.set_count < SET_THRESHOLD {
             let set = req.values.iter().cloned().collect::<HashSet<_>>();
             let next = match self.values {
                 Some(ref previous) => previous.intersection(&set).cloned().collect(),
@@ -78,7 +78,7 @@ impl PrivateSetIntersection for Node {
             Ok(())
         } else {
             Err(grpc::build_status(
-                grpc::Code::InvalidArgument,
+                grpc::Code::FailedPrecondition,
                 "Maximum number of contributed private sets is reached",
             ))
         }
@@ -89,7 +89,7 @@ impl PrivateSetIntersection for Node {
         if let Some(ref set) = self.values {
             res.values = set.iter().cloned().collect();
         };
-        self.fixed = true;
+        self.locked = true;
         Ok(res)
     }
 }
