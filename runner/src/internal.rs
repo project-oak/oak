@@ -131,8 +131,8 @@ impl std::fmt::Display for StatusResultValue {
 
 #[derive(Clone)]
 pub struct SingleStatusResult {
-    value: StatusResultValue,
-    logs: String,
+    pub value: StatusResultValue,
+    pub logs: String,
 }
 
 /// An execution step, which may be a single `Runnable`, or a collection of sub-steps.
@@ -310,20 +310,18 @@ impl Runnable for Cmd {
         let mut cmd = std::process::Command::new(&self.executable);
         cmd.args(&self.args);
 
+        // Clear the parent environment. Only the variables explicitly passed below are going to be
+        // available to the command, to avoid accidentally depending on extraneous ones.
         cmd.env_clear();
 
+        // General variables.
         cmd.env("HOME", std::env::var("HOME").unwrap());
         cmd.env("PATH", std::env::var("PATH").unwrap());
         if let Ok(v) = std::env::var("USER") {
             cmd.env("USER", v);
         }
 
-        cmd.env(
-            "RUST_LOG",
-            std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
-        );
-        cmd.env("RUST_BACKTRACE", "1");
-
+        // Rust compilation variables.
         if let Ok(v) = std::env::var("RUSTUP_HOME") {
             cmd.env("RUSTUP_HOME", v);
         }
@@ -331,6 +329,14 @@ impl Runnable for Cmd {
             cmd.env("CARGO_HOME", v);
         }
 
+        // Rust runtime variables.
+        cmd.env(
+            "RUST_LOG",
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
+        );
+        cmd.env("RUST_BACKTRACE", "1");
+
+        // Emscripten variables.
         if let Ok(v) = std::env::var("EMSDK") {
             cmd.env("EMSDK", v);
         }
@@ -342,6 +348,7 @@ impl Runnable for Cmd {
         }
 
         cmd.envs(&self.env);
+
         let command_string = format!("{:?}", cmd);
         if opt.dry_run {
             Box::new(RunningCmd {
@@ -510,77 +517,10 @@ impl std::fmt::Display for RunningCmd {
     }
 }
 
-/// A [`Runnable`] command that checks for the existence of source files without the necessary
-/// license header.
-pub struct CheckLicense {
-    path: String,
-}
-
-impl CheckLicense {
-    pub fn new(path: String) -> Box<Self> {
-        Box::new(CheckLicense { path })
-    }
-}
-
-impl Runnable for CheckLicense {
-    fn run(&self, _opt: &Opt) -> Box<dyn Running> {
-        let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
-        let result_value = if file_content.contains("Apache License") {
-            StatusResultValue::Ok
-        } else {
-            StatusResultValue::Error
-        };
-        Box::new(ImmediateResult {
-            result: SingleStatusResult {
-                value: result_value,
-                logs: String::new(),
-            },
-        })
-    }
-}
-
-/// A [`Runnable`] command that checks for the existence of todos in the codebase with no associated
-/// GitHub issue number.
-pub struct CheckTodo {
-    path: String,
-}
-
-impl CheckTodo {
-    pub fn new(path: String) -> Box<Self> {
-        Box::new(CheckTodo { path })
-    }
-}
-
-impl Runnable for CheckTodo {
-    fn run(&self, _opt: &Opt) -> Box<dyn Running> {
-        let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
-        let todo_words = file_content
-            .split_whitespace()
-            .filter(|word| word.contains(&format!("{}{}", "TO", "DO")))
-            .filter(|word| {
-                !(word.starts_with(&format!("{}{}(", "TO", "DO"))
-                    && (word.ends_with("):") || word.ends_with(')')))
-            })
-            .collect::<Vec<_>>();
-        let result = if todo_words.is_empty() {
-            SingleStatusResult {
-                value: StatusResultValue::Ok,
-                logs: String::new(),
-            }
-        } else {
-            SingleStatusResult {
-                value: StatusResultValue::Error,
-                logs: format!("Invalid todos: {:?}", todo_words),
-            }
-        };
-        Box::new(ImmediateResult { result })
-    }
-}
-
 /// An implementation of [`Running`] that immediately returns a pre-determined
 /// [`SingleStatusResult`] value.
-struct ImmediateResult {
-    result: SingleStatusResult,
+pub struct ImmediateResult {
+    pub result: SingleStatusResult,
 }
 
 impl Running for ImmediateResult {

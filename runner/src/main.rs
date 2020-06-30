@@ -38,6 +38,12 @@ use structopt::StructOpt;
 mod internal;
 use internal::*;
 
+mod check_todo;
+use check_todo::CheckTodo;
+
+mod check_license;
+use check_license::CheckLicense;
+
 const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-unknown-linux-musl";
 const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 
