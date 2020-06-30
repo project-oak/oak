@@ -110,7 +110,7 @@ fi
 readonly CLIENT_ARGS=("${@-}")  # Choose client args provided after '--'.
 
 # Run the application clients.
-for client_variant in $client_variants
+for client_variant in ${client_variants}
 do
   case "${client_variant}" in
     cargo)

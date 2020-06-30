@@ -108,7 +108,7 @@ if [[ -n "${docker_config}" ]]; then
 fi
 
 # Build the application clients.
-for client_variant in $client_variants
+for client_variant in ${client_variants}
 do
   case "${client_variant}" in
     cargo)
