@@ -84,3 +84,9 @@ exchange data, there is a pre-existing basic trust relationship between them; in
 particular we assume that the recipient of the data is not going to
 intentionally circumvent robust protection mechanisms on their device in order
 to extract the received data.
+
+## Getting involved
+
+We welcome contributors! To join our community, we recommend joining the
+[mailing list](https://groups.google.com/g/project-oak-discuss) and the
+[slack](https://join.slack.com/t/project-oak/shared_invite/zt-5hiliinq-f0fYZGwlzfH3kMrJuu3qlw).
