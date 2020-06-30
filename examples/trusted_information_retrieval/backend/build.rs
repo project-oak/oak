@@ -21,8 +21,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto",
         &["trusted_information_retrieval.proto", "database.proto"],
         CodegenOptions {
-            build_client: false,
             build_server: true,
+            ..Default::default()
         },
     )?;
     Ok(())

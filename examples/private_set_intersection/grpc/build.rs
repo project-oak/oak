@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &["private_set_intersection.proto"],
         CodegenOptions {
             build_client: true,
-            build_server: false,
+            ..Default::default()
         },
     )?;
     Ok(())

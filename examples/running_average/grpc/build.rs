@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &["running_average.proto"],
         CodegenOptions {
             build_client: true,
-            build_server: false,
+            ..Default::default()
         },
     )?;
     Ok(())

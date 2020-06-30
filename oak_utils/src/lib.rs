@@ -206,6 +206,7 @@ where
 }
 
 /// Options for building gRPC code.
+#[derive(Default)]
 pub struct CodegenOptions {
     /// Specify whether to build client related code.
     pub build_client: bool,
@@ -225,21 +226,17 @@ pub fn generate_grpc_code(
         .iter()
         .map(|file_path| proto_path.join(file_path))
         .collect();
-    // Tonic compile requires a vector of `Path` references.
-    let file_path_refs: Vec<&std::path::Path> = file_paths
-        .iter()
-        .map(|file_path| {
-            // Tell cargo to rerun this build script if the proto file has changed.
-            // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-            println!("cargo:rerun-if-changed={}", file_path.display());
-            file_path.as_path()
-        })
-        .collect();
+
+    // Tell cargo to rerun this build script if the proto file has changed.
+    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
+    for file_path in file_paths.iter() {
+        println!("cargo:rerun-if-changed={}", file_path.display());
+    }
 
     // Generate the normal (non-Oak) server and client code for the gRPC service,
     // along with the Rust types corresponding to the message definitions.
     tonic_build::configure()
         .build_client(options.build_client)
         .build_server(options.build_server)
-        .compile(file_path_refs.as_ref(), &[proto_path])
+        .compile(&file_paths, &[proto_path.to_path_buf()])
 }

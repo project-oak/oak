@@ -21,8 +21,8 @@ fn main() {
         "../../../../oak/proto",
         &["authentication.proto"],
         CodegenOptions {
-            build_client: false,
             build_server: true,
+            ..Default::default()
         },
     )
     .expect("Proto compilation failed.");
