@@ -14,7 +14,16 @@
 // limitations under the License.
 //
 
+use oak_utils::{generate_grpc_code, CodegenOptions};
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    oak_utils::compile_client_proto("../proto", "private_set_intersection.proto")?;
+    generate_grpc_code(
+        "../proto",
+        &["private_set_intersection.proto"],
+        CodegenOptions {
+            build_client: true,
+            build_server: false,
+        },
+    )?;
     Ok(())
 }

@@ -14,8 +14,16 @@
 // limitations under the License.
 //
 
+use oak_utils::{generate_grpc_code, CodegenOptions};
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    oak_utils::compile_client_proto("../../proto", "trusted_information_retrieval.proto")?;
-    oak_utils::compile_client_proto("../../proto", "database.proto")?;
+    generate_grpc_code(
+        "../../proto",
+        &["trusted_information_retrieval.proto", "database.proto"],
+        CodegenOptions {
+            build_client: true,
+            build_server: false,
+        },
+    )?;
     Ok(())
 }

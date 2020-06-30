@@ -205,36 +205,41 @@ where
         .expect("could not run prost-build");
 }
 
-/// Generate Protobuf code using `tonic`.
-/// `build_client` and `build_server` specify whether to generate client or server related code.
-fn compile_proto(
+/// Options for building gRPC code.
+pub struct CodegenOptions {
+    /// Specify whether to build client related code.
+    pub build_client: bool,
+    /// Specify whether to build server related code.
+    pub build_server: bool,
+}
+
+/// Generate gRPC code from Protobuf using `tonic` library.
+pub fn generate_grpc_code(
     proto_path: &str,
-    file_path: &str,
-    build_client: bool,
-    build_server: bool,
+    file_paths: &[&str],
+    options: CodegenOptions,
 ) -> std::io::Result<()> {
     // TODO(#1093): Move all proto generation to a common crate.
     let proto_path = std::path::Path::new(proto_path);
-    let file_path = proto_path.join(file_path);
-
-    // Tell cargo to rerun this build script if the proto file has changed.
-    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    println!("cargo:rerun-if-changed={}", file_path.display());
+    let file_paths: Vec<std::path::PathBuf> = file_paths
+        .iter()
+        .map(|file_path| proto_path.join(file_path))
+        .collect();
+    // Tonic compile requires a vector of `Path` references.
+    let file_path_refs: Vec<&std::path::Path> = file_paths
+        .iter()
+        .map(|file_path| {
+            // Tell cargo to rerun this build script if the proto file has changed.
+            // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
+            println!("cargo:rerun-if-changed={}", file_path.display());
+            file_path.as_path()
+        })
+        .collect();
 
     // Generate the normal (non-Oak) server and client code for the gRPC service,
     // along with the Rust types corresponding to the message definitions.
     tonic_build::configure()
-        .build_client(build_client)
-        .build_server(build_server)
-        .compile(&[file_path.as_path()], &[proto_path])
-}
-
-/// Generate Protobuf code for client using `tonic`.
-pub fn compile_client_proto(proto_path: &str, file_path: &str) -> std::io::Result<()> {
-    compile_proto(proto_path, file_path, true, false)
-}
-
-/// Generate Protobuf code for server using `tonic`.
-pub fn compile_server_proto(proto_path: &str, file_path: &str) -> std::io::Result<()> {
-    compile_proto(proto_path, file_path, false, true)
+        .build_client(options.build_client)
+        .build_server(options.build_server)
+        .compile(file_path_refs.as_ref(), &[proto_path])
 }

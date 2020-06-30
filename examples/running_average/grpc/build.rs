@@ -14,7 +14,16 @@
 // limitations under the License.
 //
 
+use oak_utils::{generate_grpc_code, CodegenOptions};
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    oak_utils::compile_client_proto("../proto", "running_average.proto")?;
+    generate_grpc_code(
+        "../proto",
+        &["running_average.proto"],
+        CodegenOptions {
+            build_client: true,
+            build_server: false,
+        },
+    )?;
     Ok(())
 }

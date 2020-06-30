@@ -14,7 +14,16 @@
 // limitations under the License.
 //
 
+use oak_utils::{generate_grpc_code, CodegenOptions};
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    oak_utils::compile_client_proto("../../../oak/proto", "authentication.proto")?;
+    generate_grpc_code(
+        "../../../oak/proto",
+        &["authentication.proto"],
+        CodegenOptions {
+            build_client: true,
+            build_server: false,
+        },
+    )?;
     Ok(())
 }

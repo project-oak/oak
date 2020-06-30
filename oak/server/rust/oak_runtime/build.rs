@@ -14,7 +14,16 @@
 // limitations under the License.
 //
 
+use oak_utils::{generate_grpc_code, CodegenOptions};
+
 fn main() {
-    oak_utils::compile_server_proto("../../../../oak/proto", "authentication.proto")
-        .expect("Proto compilation failed.");
+    generate_grpc_code(
+        "../../../../oak/proto",
+        &["authentication.proto"],
+        CodegenOptions {
+            build_client: false,
+            build_server: true,
+        },
+    )
+    .expect("Proto compilation failed.");
 }
