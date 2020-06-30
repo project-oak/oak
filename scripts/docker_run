@@ -17,9 +17,12 @@ source "$SCRIPTS_DIR/common"
 readonly DOCKER_UID="${UID:-0}"
 readonly DOCKER_GID="${GID:-0}"
 readonly DOCKER_USER="${USER:-root}"
+# In order for the docker-cli inside the container to use the host dockerd, 
+# we need permissions for the user with the same gid as the host
+readonly HOST_DOCKER_GID="$(getent group docker | cut -d: -f3)"
 
-mkdir -p './bazel-cache'
-mkdir -p './cargo-cache'
+mkdir --parents './bazel-cache'
+mkdir --parents './cargo-cache'
 
 docker build \
   --cache-from="$DOCKER_IMAGE_NAME:latest" \
@@ -38,6 +41,10 @@ docker_run_flags=(
   "--volume=$PWD:/opt/my-project"
   '--workdir=/opt/my-project'
   '--network=host'
+  # We need to use Docker from inside the container, but only for build.
+  # To do that, we map the socket from the host and add the right group
+  '--volume=/var/run/docker.sock:/var/run/docker.sock'
+  "--group-add=$HOST_DOCKER_GID"
 )
 
 # Some CI systems (GitHub actions) do not run with a real TTY attached.

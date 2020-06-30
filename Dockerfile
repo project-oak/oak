@@ -7,14 +7,25 @@ FROM debian/snapshot:${debian_snapshot}
 # See https://github.com/hadolint/hadolint/wiki/DL4006
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# Uncomment the RUN below if the default snapshot package manager is slow.
+# Please not that this might cause issues and affects reproducible builds,
+# so only use for development.
+# RUN echo \
+#  deb [arch=amd64] http://ukdebian.mirror.anlx.net/debian buster main non-free contrib\
+# > /etc/apt/sources.list
+
+# Getting curl and certificates dependecies.
 RUN apt-get --yes update \
   && apt-get install --no-install-recommends --yes \
+  apt-transport-https \
   build-essential \
-  clang-format \
+  ca-certificates \
   clang-tidy \
   curl \
   default-jdk-headless \
   git \
+  gnupg2 \
+  gnupg-agent \
   libfl2 \
   libncurses5 \
   libssl-dev \
@@ -26,17 +37,28 @@ RUN apt-get --yes update \
   python3-dev \
   python3-six \
   shellcheck \
+  software-properties-common \
   vim \
   xml2 \
   # `unzip` and `zlib1g-dev` are needed for Bazel.
   unzip \
   zlib1g-dev \
+  # Cleanup
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/* \
   # Print version of various installed tools.
   && git --version \
-  && clang-format -version \
   && shellcheck --version
+
+
+RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
+
+# Install a version of docker CLI.
+RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \
+  && apt-get --yes update \
+  && apt-get install --no-install-recommends --yes docker-ce-cli \
+  && apt-get clean \
+  && rm --recursive --force /var/lib/apt/lists/*
 
 # Use a later version of clang-format from buster-backports.
 RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list \

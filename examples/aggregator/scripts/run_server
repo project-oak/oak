@@ -8,7 +8,7 @@ source "${GLOBAL_SCRIPTS_DIR}/common"
 "${GLOBAL_SCRIPTS_DIR}/build_server" -s base
 "${GLOBAL_SCRIPTS_DIR}/build_example" -e aggregator
 
-readonly APPLICATION="${PWD}/examples/aggregator/config/config.bin"
+readonly APPLICATION="${PWD}/examples/aggregator/bin/config.bin"
 exec cargo run --release --target=x86_64-unknown-linux-musl --manifest-path=oak/server/rust/oak_loader/Cargo.toml -- \
   --application="${APPLICATION}" \
   --grpc-tls-private-key="${GLOBAL_SCRIPTS_DIR}/../examples/certs/local/local.key" \

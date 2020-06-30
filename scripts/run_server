@@ -64,9 +64,9 @@ if [[ -n ${EXAMPLE+x} ]]; then
   # Determine expected configuration file from example name and language variant.
   case "${application_language}" in
     rust)
-      readonly APPLICATION_FILE="${PWD}/examples/${EXAMPLE}/config/config.bin";;
+      readonly APPLICATION_FILE="${PWD}/examples/${EXAMPLE}/bin/config.bin";;
     cpp)
-      readonly APPLICATION_FILE="${PWD}/examples/${EXAMPLE}/config/config_cpp.bin";;
+      readonly APPLICATION_FILE="${PWD}/examples/${EXAMPLE}/bin/config_cpp.bin";;
     *)
       echo "Invalid example variant: ${application_language}"
       exit 1;;

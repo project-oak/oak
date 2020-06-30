@@ -8,6 +8,7 @@ bazel_build_flags+=(
   '--experimental_action_listener=@io_kythe//kythe/cxx/tools/generate_compile_commands:extract_json'
   '--noshow_progress'
   '--noshow_loading_progress'
+  '--experimental_extra_action_top_level_only'
 )
 
 # Compilation database should be stored in the Bazel execution root.
