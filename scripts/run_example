@@ -132,4 +132,14 @@ do
   esac
 done
 
+if [[ -n "${SERVER_PID}" ]]; then
+  # Check whether the server is still running.
+  ps -p ${SERVER_PID} > /dev/null
+  readonly SERVER_GONE=$?
+  if ${SERVER_GONE} ; then
+    echo "Runtime server has terminated early"
+    exit 1
+  fi
+fi
+
 kill_bg_pids
