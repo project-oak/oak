@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_utils"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"oak_utils/struct.CodegenOptions.html\" title=\"struct oak_utils::CodegenOptions\">CodegenOptions</a>","synthetic":false,"types":["oak_utils::CodegenOptions"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
