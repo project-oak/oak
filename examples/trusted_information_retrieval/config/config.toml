@@ -1,1 +1,5 @@
-database_url = "https://localhost:8888"
+name = "trusted_information_retrieval"
+
+[modules]
+app = { path = "examples/target/wasm32-unknown-unknown/release/trusted_information_retrieval.wasm" }
+database_proxy = { path = "examples/target/wasm32-unknown-unknown/release/database_proxy.wasm" }

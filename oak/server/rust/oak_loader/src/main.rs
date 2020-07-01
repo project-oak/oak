@@ -37,9 +37,8 @@ use oak_runtime::{
 use prost::Message;
 use std::{
     collections::HashMap,
-    fs::{read_to_string, File},
+    fs::{read, read_to_string},
     include_bytes,
-    io::Read,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -118,16 +117,6 @@ impl FromStr for ConfigEntry {
     }
 }
 
-/// Read the contents of a file.
-fn read_file(filename: &str) -> anyhow::Result<Vec<u8>> {
-    let mut file =
-        File::open(filename).with_context(|| format!("Failed to open file <{}>", filename))?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)
-        .with_context(|| format!("Failed to read file <{}>", filename))?;
-    Ok(buffer)
-}
-
 /// Parse a collection of configuration entries and return the contents of
 /// the corresponding files as a [`ConfigMap`].
 pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<ConfigMap> {
@@ -140,7 +129,8 @@ pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<Config
         );
         file_map.insert(
             config_entry.key.to_string(),
-            read_file(&config_entry.filename)?,
+            read(&config_entry.filename)
+                .with_context(|| format!("Couldn't read file {}", &config_entry.filename))?,
         );
     }
     Ok(ConfigMap { items: file_map })
@@ -172,7 +162,7 @@ fn main() -> anyhow::Result<()> {
 
     // Load application configuration.
     let app_config_data =
-        read_file(&opt.application).context("could not read application configuration")?;
+        read(&opt.application).context("could not read application configuration")?;
     let app_config = ApplicationConfiguration::decode(app_config_data.as_ref())
         .context("could not parse application configuration")?;
 

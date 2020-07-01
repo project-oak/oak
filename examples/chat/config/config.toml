@@ -1,0 +1,4 @@
+name = "chat"
+
+[modules]
+app = { path = "examples/target/wasm32-unknown-unknown/release/chat.wasm" }

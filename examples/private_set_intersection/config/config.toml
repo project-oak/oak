@@ -1,0 +1,4 @@
+name = "private_set_intersection"
+
+[modules]
+app = { path = "examples/target/wasm32-unknown-unknown/release/private_set_intersection.wasm" }

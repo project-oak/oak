@@ -1,0 +1,4 @@
+name = "machine_learning"
+
+[modules]
+app = { path = "examples/target/wasm32-unknown-unknown/release/machine_learning.wasm" }

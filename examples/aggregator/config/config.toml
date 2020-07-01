@@ -1,0 +1,4 @@
+name = "aggregator"
+
+[modules]
+app = { path = "examples/target/wasm32-unknown-unknown/release/aggregator.wasm" }

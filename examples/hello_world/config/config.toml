@@ -1,0 +1,5 @@
+name = "hello_world"
+
+[modules]
+app = { path = "examples/target/wasm32-unknown-unknown/release/hello_world.wasm" }
+translator = { path = "examples/target/wasm32-unknown-unknown/release/translator.wasm" }

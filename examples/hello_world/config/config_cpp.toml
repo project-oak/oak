@@ -1,0 +1,4 @@
+name = "hello_world"
+
+[modules]
+app = { path = "bazel-cache/wasm32/execroot/oak/bazel-out/wasm32-fastbuild/bin/examples/hello_world/module/cpp/hello_world.wasm" }

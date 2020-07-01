@@ -53,6 +53,7 @@ if [[ -z "${EXAMPLE+z}" ]]; then
   exit 1
 fi
 
+mkdir --parents "out/examples/${EXAMPLE}"
 case "${application_language}" in
   rust)
     for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do
@@ -61,7 +62,6 @@ case "${application_language}" in
       cargo build --release --target=wasm32-unknown-unknown --manifest-path="${module}"
     done
 
-    # Serialize application configuration for Rust module.
     if [[ "${EXAMPLE}" == "hello_world" ]]; then
       # `hello_world` example has an optional additional `translator` module.
       cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
@@ -72,8 +72,11 @@ case "${application_language}" in
       # `trusted_information_retrieval` example has an additional Backend binary.
       cargo build --release --target="${RUST_HOST_TARGET}" --manifest-path="examples/trusted_information_retrieval/backend/Cargo.toml"
     fi
-    # shellcheck source=/dev/null
-    source "./examples/${EXAMPLE}/config/build.sh"
+
+    # Serialize application configuration for Rust module.
+    cargo run --manifest-path="sdk/rust/oak_config_serializer/Cargo.toml" -- \
+      --input-file="examples/${EXAMPLE}/config/config.toml" \
+      --output-file="out/examples/${EXAMPLE}/config.bin"
     ;;
   cpp)
     if [[ "${EXAMPLE}" == "tensorflow" ]]; then
@@ -84,8 +87,11 @@ case "${application_language}" in
       # TODO: support compilation mode wasm.
       bazel --output_base="${CACHE_DIR}/wasm32" build "${bazel_build_flags[@]}" --config=wasm32 "//examples/${EXAMPLE}/module/cpp:all"
     fi
-    # shellcheck source=/dev/null
-    source "./examples/${EXAMPLE}/config/build_cpp.sh"
+
+    # Serialize application configuration for Rust module.
+    cargo run --manifest-path="sdk/rust/oak_config_serializer/Cargo.toml" -- \
+      --input-file="examples/${EXAMPLE}/config/config.toml" \
+      --output-file="out/examples/${EXAMPLE}/config_cpp.bin"
     ;;
   *)
     echo "Invalid example application variant: ${application_language}"
