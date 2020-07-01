@@ -18,13 +18,13 @@ use assert_matches::assert_matches;
 use log::info;
 use translator_grpc::proto::{translator_client::TranslatorClient, TranslateRequest};
 
-const MODULE_CONFIG_NAME: &str = "translator";
+const MODULE_WASM_FILE_NAME: &str = "translator.wasm";
 
 #[tokio::test(core_threads = 2)]
 async fn test_translate() {
     env_logger::init();
 
-    let runtime = oak_tests::run_single_module(MODULE_CONFIG_NAME, "grpc_oak_main")
+    let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "grpc_oak_main")
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;

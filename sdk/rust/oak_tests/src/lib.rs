@@ -16,6 +16,7 @@
 
 //! Test utilities to help with unit testing of Oak SDK code.
 
+use anyhow::Context;
 use log::{debug, info};
 use oak_abi::{
     label::Label,
@@ -35,7 +36,7 @@ use tonic::{
 // TODO(#544): re-enable unit tests of SDK functionality
 
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
-pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result<Vec<u8>> {
+pub fn compile_rust_wasm(cargo_path: &str, module_wasm_file_name: &str) -> anyhow::Result<Vec<u8>> {
     // Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it
     // should end with `target` so that it gets automatically ignored by our `.gitignore`.
     let target_dir = PathBuf::from("oak_tests/target");
@@ -51,25 +52,28 @@ pub fn compile_rust_wasm(cargo_path: &str, module_name: &str) -> std::io::Result
             &format!("--manifest-path={}", cargo_path),
         ])
         .env_remove("RUSTFLAGS")
-        .spawn()?
-        .wait()?;
+        .spawn()
+        .context("could not spawn cargo build")?
+        .wait()
+        .context("could not wait for cargo build to finish")?;
 
     let mut module_path = target_dir;
     module_path.push("wasm32-unknown-unknown/debug");
-    module_path.push(module_name);
+    module_path.push(module_wasm_file_name);
 
     info!("compiled Wasm module path: {:?}", module_path);
 
-    std::fs::read(module_path)
+    std::fs::read(module_path).context("could not read compiled module")
 }
 
+/// Default module name for the module under test.
+const DEFAULT_MODULE_NAME: &str = "app";
 /// Default entrypoint name for the module under test.
 const DEFAULT_ENTRYPOINT_NAME: &str = "oak_main";
 /// Default URI that the tests expect to find a live Runtime at.
 const RUNTIME_URI: &str = "https://localhost:8080";
 
 const DEFAULT_MODULE_MANIFEST: &str = "Cargo.toml";
-const MODULE_WASM_SUFFIX: &str = ".wasm";
 
 // Retry parameters when connecting to a gRPC server.
 const RETRY_COUNT: u32 = 360;
@@ -83,51 +87,49 @@ pub fn run_single_module_default(
     run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME)
 }
 
-/// Convenience helper to build and run a single-Node application with the given module name, using
-/// the provided entrypoint name.
+/// Convenience helper to build and run a single-Node application with the given Wasm module file
+/// name, using the provided entrypoint name.
 pub fn run_single_module(
-    module_config_name: &str,
+    module_wasm_file_name: &str,
     entrypoint_name: &str,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
-    let combined_config = runtime_config(module_config_name, entrypoint_name, ConfigMap::default());
+    let combined_config =
+        runtime_config(module_wasm_file_name, entrypoint_name, ConfigMap::default());
     oak_runtime::configure_and_run(combined_config)
 }
 
-/// Convenience helper to build and run a single-Node application with the given module name, using
-/// the provided entrypoint name, passing in the provided `ConfigMap` at start-of-day.
+/// Convenience helper to build and run a single-Node application with the given Wasm module file
+/// name, using the provided entrypoint name, passing in the provided `ConfigMap` at start-of-day.
 pub fn run_single_module_with_config(
-    module_config_name: &str,
+    module_wasm_file_name: &str,
     entrypoint_name: &str,
     config_map: ConfigMap,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
-    let combined_config = runtime_config(module_config_name, entrypoint_name, config_map);
+    let combined_config = runtime_config(module_wasm_file_name, entrypoint_name, config_map);
     oak_runtime::configure_and_run(combined_config)
 }
 
-/// Build the configuration needed to launch a test Runtime instance that
-/// runs a single-Node application with the given module name and entrypoint.
+/// Build the configuration needed to launch a test Runtime instance that runs a single-Node
+/// application with the given Wasm module file name and entrypoint.
 pub fn runtime_config(
-    module_config_name: &str,
+    module_wasm_file_name: &str,
     entrypoint_name: &str,
     config_map: ConfigMap,
 ) -> oak_runtime::RuntimeConfiguration {
     let wasm: HashMap<String, Vec<u8>> = [(
-        module_config_name.to_owned(),
-        compile_rust_wasm(
-            DEFAULT_MODULE_MANIFEST,
-            &(module_config_name.to_owned() + MODULE_WASM_SUFFIX),
-        )
-        .expect("failed to build wasm module"),
+        DEFAULT_MODULE_NAME.to_string(),
+        compile_rust_wasm(DEFAULT_MODULE_MANIFEST, module_wasm_file_name)
+            .expect("failed to build wasm module"),
     )]
     .iter()
     .cloned()
     .collect();
 
-    runtime_config_wasm(wasm, module_config_name, entrypoint_name, config_map)
+    runtime_config_wasm(wasm, DEFAULT_MODULE_NAME, entrypoint_name, config_map)
 }
 
-/// Build the configuration needed to launch a test Runtime instance that runs the given
-/// collection of Wasm modules, starting with the given module name and entrypoint.
+/// Build the configuration needed to launch a test Runtime instance that runs the given collection
+/// of Wasm modules, starting with the given module name and entrypoint.
 pub fn runtime_config_wasm(
     wasm_modules: HashMap<String, Vec<u8>>,
     module_config_name: &str,

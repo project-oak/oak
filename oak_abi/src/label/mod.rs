@@ -92,3 +92,14 @@ pub fn web_assembly_module_tag(web_assembly_module_hash_sha_256: &[u8]) -> Tag {
         })),
     }
 }
+
+/// Creates a [`Tag`] having as principal the provided TLS authority.
+///
+/// See https://github.com/project-oak/oak/blob/main/oak/proto/label.proto
+pub fn tls_endpoint_tag(authority: &str) -> Tag {
+    Tag {
+        tag: Some(tag::Tag::TlsEndpointTag(TlsEndpointTag {
+            authority: authority.to_string(),
+        })),
+    }
+}

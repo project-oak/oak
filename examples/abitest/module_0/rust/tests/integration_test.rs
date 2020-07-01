@@ -15,6 +15,7 @@
 //
 
 use abitest_grpc::proto::{oak_abi_test_service_client::OakAbiTestServiceClient, AbiTestRequest};
+use anyhow::Context;
 use assert_matches::assert_matches;
 use log::{debug, error, info};
 use maplit::hashmap;
@@ -34,13 +35,13 @@ const FRONTEND_ENTRYPOINT_NAME: &str = "frontend_oak_main";
 const FRONTEND_MANIFEST: &str = "../../module_0/rust/Cargo.toml";
 const BACKEND_MANIFEST: &str = "../../module_1/rust/Cargo.toml";
 
-const FRONTEND_WASM_NAME: &str = "abitest_0_frontend.wasm";
-const BACKEND_WASM_NAME: &str = "abitest_1_backend.wasm";
+const FRONTEND_MODULE_WASM_FILE_NAME: &str = "abitest_0_frontend.wasm";
+const BACKEND_MODULE_WASM_FILE_NAME: &str = "abitest_1_backend.wasm";
 
-fn build_wasm() -> std::io::Result<HashMap<String, Vec<u8>>> {
+fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
     Ok(hashmap! {
-        FRONTEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(FRONTEND_MANIFEST, FRONTEND_WASM_NAME)?,
-        BACKEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(BACKEND_MANIFEST, BACKEND_WASM_NAME)?,
+        FRONTEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(FRONTEND_MANIFEST, FRONTEND_MODULE_WASM_FILE_NAME).context("could not compile frontend module")?,
+        BACKEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(BACKEND_MANIFEST, BACKEND_MODULE_WASM_FILE_NAME).context("could not compile backend module")?,
     })
 }
 

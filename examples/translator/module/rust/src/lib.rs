@@ -26,7 +26,7 @@ use translator_common::proto::{
 oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
     let dispatcher = TranslatorDispatcher::new(Node);
-    oak::run_event_loop(dispatcher, in_channel);
+    oak::run_event_loop(dispatcher, oak::io::Receiver::<grpc::Invocation>::new(in_channel));
 });
 
 // The `grpc_oak_main` entrypoint is used when the Translator acts as a standalone Oak

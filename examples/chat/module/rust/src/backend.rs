@@ -21,7 +21,7 @@ use prost::Message as _;
 
 oak::entrypoint!(backend_oak_main => |in_channel| {
     oak::logger::init_default();
-    oak::run_event_loop(Room::default(), in_channel);
+    oak::run_event_loop(Room::default(), oak::io::Receiver::<Command>::new(in_channel));
 });
 
 #[derive(Default)]

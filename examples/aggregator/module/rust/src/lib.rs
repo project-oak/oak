@@ -106,7 +106,7 @@ impl AggregatorNode {
         //     integrity_tags: vec![],
         // };
         match oak::grpc::client::Client::new_with_label(
-            &oak::node_config::grpc_client("127.0.0.1:8888"),
+            &oak::node_config::grpc_client("https://localhost:8888"),
             &Label::public_untrusted(),
         )
         .map(AggregatorClient)
@@ -157,9 +157,26 @@ impl Aggregator for AggregatorNode {
     }
 }
 
-oak::entrypoint!(oak_main => |_in_channel| {
+oak::entrypoint!(grpc_worker => |in_channel| {
     oak::logger::init_default();
     let dispatcher = AggregatorDispatcher::new(AggregatorNode::new());
-    let grpc_channel = oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_event_loop(dispatcher, grpc_channel);
+    oak::run_event_loop(dispatcher, oak::io::Receiver::<grpc::Invocation>::new(in_channel));
+});
+
+oak::entrypoint!(oak_main => |_in_channel| {
+    oak::logger::init_default();
+    let grpc_channel =
+        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
+    let (invocation_sender, invocation_receiver) =
+        oak::io::channel_create::<oak::grpc::Invocation>()
+            .expect("could not create gRPC invocation channel");
+    oak::node_create(
+        &oak::node_config::wasm("app", "grpc_worker"),
+        invocation_receiver.handle,
+    ).expect("could not create gRPC worker node");
+    while let Ok(invocation) = grpc_channel.receive() {
+        invocation_sender
+            .send(&invocation)
+            .expect("could not send invocation to worker node");
+    }
 });

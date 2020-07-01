@@ -25,7 +25,6 @@ pub fn grpc_client(address: &str) -> NodeConfiguration {
     NodeConfiguration {
         name: "grpc_client".to_string(),
         config_type: Some(ConfigType::GrpcClientConfig(GrpcClientConfiguration {
-            address: address.to_string(),
             uri: address.to_string(),
         })),
     }

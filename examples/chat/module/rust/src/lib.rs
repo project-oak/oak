@@ -41,7 +41,7 @@ struct Node {
 oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
     let dispatcher = ChatDispatcher::new(Node::default());
-    oak::run_event_loop(dispatcher, in_channel);
+    oak::run_event_loop(dispatcher, oak::io::Receiver::<grpc::Invocation>::new(in_channel));
 });
 
 oak::entrypoint!(grpc_oak_main => |_in_channel| {

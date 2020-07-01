@@ -1747,19 +1747,19 @@ impl FrontendNode {
         // Create a second gRPC server Node on a different port.
         let result = oak::grpc::server::init("[::]:8181");
         expect_matches!(result, Ok(_));
-        let handle = result.unwrap();
+        let invocation_receiver = result.unwrap();
         // Close the only read-handle for the invocation handle, which should
         // trigger the gRPC server pseudo-Node to terminate (but we can't
         // check that here).
-        expect_eq!(Ok(()), oak::channel_close(handle.handle));
+        expect_eq!(Ok(()), invocation_receiver.close());
         Ok(())
     }
 
     fn test_grpc_server_invalid_address(&mut self) -> TestResult {
         // Attempt to create an additional gRPC server with an invalid local address.
         expect_eq!(
-            Err(OakStatus::ErrInvalidArgs),
-            oak::grpc::server::init("10 Downing Street")
+            Some(OakStatus::ErrInvalidArgs),
+            oak::grpc::server::init("10 Downing Street").err()
         );
         Ok(())
     }

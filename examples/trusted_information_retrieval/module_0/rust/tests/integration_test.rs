@@ -22,7 +22,7 @@ use trusted_information_retrieval_client::proto::{
     GetPointOfInterestRequest, GetPointOfInterestResponse,
 };
 
-const MODULE_CONFIG_NAME: &str = "trusted_information_retrieval";
+const MODULE_WASM_FILE_NAME: &str = "trusted_information_retrieval.wasm";
 const ENTRYPOINT_NAME: &str = "oak_main";
 
 const CONFIG_FILE: &str = r#"
@@ -45,9 +45,12 @@ async fn test_trusted_information_retrieval_for_unavailable_database() {
     let config_map = ConfigMap {
         items: hashmap! {"config".to_string() => CONFIG_FILE.as_bytes().to_vec()},
     };
-    let runtime =
-        oak_tests::run_single_module_with_config(MODULE_CONFIG_NAME, ENTRYPOINT_NAME, config_map)
-            .expect("Unable to configure runtime with test wasm!");
+    let runtime = oak_tests::run_single_module_with_config(
+        MODULE_WASM_FILE_NAME,
+        ENTRYPOINT_NAME,
+        config_map,
+    )
+    .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
     let mut client = TrustedInformationRetrievalClient::with_interceptor(channel, interceptor);

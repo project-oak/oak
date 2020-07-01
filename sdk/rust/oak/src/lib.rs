@@ -492,14 +492,13 @@ pub fn app_config_map(initial_handle: ReadHandle) -> Result<ConfigMap, OakError>
 
 pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
     mut node: N,
-    in_channel: crate::ReadHandle,
+    receiver: crate::io::Receiver<T>,
 ) {
-    if !in_channel.handle.is_valid() {
-        error!("{:?}: invalid input handle", in_channel);
+    if !receiver.handle.handle.is_valid() {
+        error!("{:?}: invalid input handle", receiver);
         return;
     }
-    let receiver = crate::io::Receiver::new(in_channel);
-    info!("{:?}: starting event loop", in_channel);
+    info!("{:?}: starting event loop", receiver);
     loop {
         // First wait until a message is available. If the Node was terminated while waiting, this
         // will return `ErrTerminated`, which indicates that the event loop should be terminated.
@@ -512,47 +511,47 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
                     ErrTerminated => {
                         info!(
                             "{:?}: received termination status: {:?}; terminating event loop",
-                            in_channel, status
+                            receiver, status
                         );
                         return;
                     }
                     _ => {
                         error!(
                             "{:?}: received status: {:?}; but `Receiver::wait` never returns an error other than `ErrTerminated`",
-                            in_channel, status
+                            receiver, status
                         );
                         return;
                     }
                 }
             }
             Ok(status) => match status {
-                ChannelReadStatus::ReadReady => trace!("{:?}: wait over", in_channel),
+                ChannelReadStatus::ReadReady => trace!("{:?}: wait over", receiver),
                 ChannelReadStatus::Orphaned
                 | ChannelReadStatus::PermissionDenied
                 | ChannelReadStatus::InvalidChannel => {
                     warn!(
                         "{:?}: received invalid channel read status: {:?}; terminating event loop",
-                        in_channel, status
+                        receiver, status
                     );
                     return;
                 }
                 ChannelReadStatus::NotReady => {
                     error!(
                         "{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.",
-                        in_channel);
+                        receiver);
                     return;
                 }
             },
         }
         match receiver.try_receive() {
             Ok(command) => {
-                info!("{:?}: received command", in_channel);
+                info!("{:?}: received command", receiver);
                 if let Err(err) = node.handle_command(command) {
-                    error!("{:?}: error handling command: {}", in_channel, err);
+                    error!("{:?}: error handling command: {}", receiver, err);
                 }
             }
             Err(err) => {
-                error!("{:?}: error receiving command: {}", in_channel, err);
+                error!("{:?}: error receiving command: {}", receiver, err);
             }
         }
     }
@@ -563,19 +562,12 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
 /// This registers the entrypoint name and the expression that runs an event loop.
 ///
 /// ```
-/// # struct DummyCommand;
-/// # impl oak::io::Decodable for DummyCommand {
-/// #     fn decode(message: &oak::io::Message) -> Result<Self, oak::OakError> {
-/// #         unimplemented!()
-/// #     }
-/// # }
-/// #
 /// #[derive(Default)]
 /// struct DummyNode;
 ///
-/// impl oak::Node<DummyCommand> for DummyNode {
+/// impl oak::Node<oak::grpc::Invocation> for DummyNode {
 ///     // ...
-///     # fn handle_command(&mut self, command: DummyCommand) -> Result<(), oak::OakError> {
+///     # fn handle_command(&mut self, command: oak::grpc::Invocation) -> Result<(), oak::OakError> {
 ///     #     unimplemented!()
 ///     # }
 /// }
@@ -600,18 +592,11 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
 /// ```
 /// # fn init_all_the_things() {}
 /// #
-/// # struct DummyCommand;
-/// # impl oak::io::Decodable for DummyCommand {
-/// #     fn decode(message: &oak::io::Message) -> Result<Self, oak::OakError> {
-/// #         unimplemented!()
-/// #     }
-/// # }
-/// #
 /// # #[derive(Default)]
 /// # struct DummyNode;
 /// #
-/// # impl oak::Node<DummyCommand> for DummyNode {
-/// #     fn handle_command(&mut self, command: DummyCommand) -> Result<(), oak::OakError> {
+/// # impl oak::Node<oak::grpc::Invocation> for DummyNode {
+/// #     fn handle_command(&mut self, command: oak::grpc::Invocation) -> Result<(), oak::OakError> {
 /// #         unimplemented!()
 /// #     }
 /// # }

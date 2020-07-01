@@ -22,9 +22,10 @@ use crate::{
         grpc::{codec::VecCodec, invocation::Invocation},
         ConfigurationError, Node,
     },
-    runtime::RuntimeProxy,
+    runtime::{NodePrivilege, RuntimeProxy},
 };
 use log::{debug, error, info, warn};
+use maplit::hashset;
 use oak_abi::{
     proto::{
         google::rpc,
@@ -47,6 +48,7 @@ pub struct GrpcClientNode {
     root_tls_certificate: Certificate,
     /// gRPC client to allow re-use of connection across multiple method invocations.
     grpc_client: Option<tonic::client::Grpc<tonic::transport::channel::Channel>>,
+    node_privilege: NodePrivilege,
 }
 
 /// Checks if URI contains the "Host" element.
@@ -55,6 +57,22 @@ fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
         .filter(|authority| !authority.host().is_empty())
         .map(|_| ())
         .ok_or(ConfigurationError::NoHostElement)
+}
+
+fn grpc_client_node_privilege(uri: &Uri) -> NodePrivilege {
+    if uri.scheme() == Some(&http::uri::Scheme::HTTPS) {
+        // Authority is the host:port portion of the endpoint name.
+        if let Some(authority) = uri.authority() {
+            NodePrivilege::new(
+                hashset! { oak_abi::label::tls_endpoint_tag(&authority.as_str()) },
+                hashset! { oak_abi::label::tls_endpoint_tag(&authority.as_str()) },
+            )
+        } else {
+            NodePrivilege::default()
+        }
+    } else {
+        NodePrivilege::default()
+    }
 }
 
 impl GrpcClientNode {
@@ -69,11 +87,17 @@ impl GrpcClientNode {
             ConfigurationError::IncorrectURI
         })?;
         check_uri(&uri)?;
+        // We compute the node privilege once and for all at start and just store it, since it does
+        // not change throughout the node execution.
+        let node_privilege = grpc_client_node_privilege(&uri);
+        // TODO(#814): Actually check that the newly created node can write to the
+        // "public_untrusted" label, taking into account its own label and privilege.
         Ok(Self {
             node_name: node_name.to_string(),
             uri,
             root_tls_certificate,
             grpc_client: None,
+            node_privilege,
         })
     }
 
@@ -248,6 +272,10 @@ impl Node for GrpcClientNode {
             notify_receiver,
         ));
         info!("{}: Exiting gRPC client pseudo-Node thread", self.node_name);
+    }
+
+    fn get_privilege(&self) -> NodePrivilege {
+        self.node_privilege.clone()
     }
 }
 

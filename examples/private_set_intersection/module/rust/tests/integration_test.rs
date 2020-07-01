@@ -20,13 +20,13 @@ use private_set_intersection_grpc::proto::{
 };
 use std::{collections::HashSet, iter::FromIterator};
 
-const MODULE_CONFIG_NAME: &str = "private_set_intersection";
+const MODULE_WASM_FILE_NAME: &str = "private_set_intersection.wasm";
 
 #[tokio::test(core_threads = 2)]
 async fn test_set_intersection() {
     env_logger::init();
 
-    let runtime = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
