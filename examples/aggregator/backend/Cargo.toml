@@ -16,4 +16,4 @@ tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
 tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
-tonic-build = "*"
+oak_utils = "*"

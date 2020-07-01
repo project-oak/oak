@@ -30,4 +30,4 @@ quick-xml = { version = "*", features = ["serialize"] }
 assert_matches = "*"
 
 [build-dependencies]
-tonic-build = "*"
+oak_utils = "*"

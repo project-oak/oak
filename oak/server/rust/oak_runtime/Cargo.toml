@@ -60,9 +60,3 @@ wat = "*"
 [build-dependencies]
 oak_utils = "*"
 prost-build = "*"
-# Disable the `rustfmt` feature, as it requires `rustfmt` which may not be supported for custom
-# toolchains.
-tonic-build = { version = "*", default-features = false, features = [
-  "prost",
-  "transport"
-] }

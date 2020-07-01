@@ -20,4 +20,4 @@ tonic = { version = "*", features = ["tls"] }
 url = "*"
 
 [build-dependencies]
-tonic-build = "*"
+oak_utils = "*"

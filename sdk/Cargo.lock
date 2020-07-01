@@ -748,7 +748,6 @@ dependencies = [
  "sha2",
  "tokio",
  "tonic",
- "tonic-build",
  "wasmi",
 ]
 
@@ -777,6 +776,7 @@ dependencies = [
  "prost-build",
  "quote",
  "tempfile",
+ "tonic-build",
  "walkdir",
 ]
 
