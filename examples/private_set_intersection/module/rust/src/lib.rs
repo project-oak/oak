@@ -18,12 +18,11 @@
 //!
 //! Clients invoke the module by providing their own private set, and the module keeps track of the
 //! intersection of all the provided sets from all the clients that have interacted with it.
+//! The number of contributed private sets is limited and defined by [`SET_THRESHOLD`].
 //!
 //! The (common) intersection can then be retrieved by each client by a separate invocation.
-//!
-//! TODO(#747): Limit number of clients / sets that may contribute to the intersection.
-//! TODO(#747): Consider stopping accepting contributions after the first client retrieves the
-//! intersection.
+//! After the first client retrieves the intersection it becomes locked, and new contributions are
+//! discarded.
 
 pub mod proto {
     include!(concat!(
@@ -46,20 +45,43 @@ oak::entrypoint!(oak_main => |_in_channel| {
     oak::run_event_loop(dispatcher, grpc_channel);
 });
 
+/// Maximum number of contributed private sets.
+pub const SET_THRESHOLD: u64 = 2;
+
 #[derive(Default)]
 struct Node {
+    /// Current intersection of contributed private sets.
     values: Option<HashSet<String>>,
+    /// Number of contributed private sets.
+    set_count: u64,
+    /// The intersection is locked and new contributions are discarded.
+    locked: bool,
 }
 
 impl PrivateSetIntersection for Node {
     fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<()> {
-        let set = req.values.iter().cloned().collect::<HashSet<_>>();
-        let next = match self.values {
-            Some(ref previous) => previous.intersection(&set).cloned().collect(),
-            None => set,
-        };
-        self.values = Some(next);
-        Ok(())
+        if self.locked {
+            return Err(grpc::build_status(
+                grpc::Code::FailedPrecondition,
+                "Set contributions are no longer available",
+            ));
+        }
+
+        if self.set_count < SET_THRESHOLD {
+            let set = req.values.iter().cloned().collect::<HashSet<_>>();
+            let next = match self.values {
+                Some(ref previous) => previous.intersection(&set).cloned().collect(),
+                None => set,
+            };
+            self.values = Some(next);
+            self.set_count += 1;
+            Ok(())
+        } else {
+            Err(grpc::build_status(
+                grpc::Code::FailedPrecondition,
+                "Maximum number of contributed private sets is reached",
+            ))
+        }
     }
 
     fn get_intersection(&mut self, _req: ()) -> grpc::Result<GetIntersectionResponse> {
@@ -67,6 +89,7 @@ impl PrivateSetIntersection for Node {
         if let Some(ref set) = self.values {
             res.values = set.iter().cloned().collect();
         };
+        self.locked = true;
         Ok(res)
     }
 }
