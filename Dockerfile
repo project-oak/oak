@@ -195,7 +195,26 @@ RUN rustup component add \
   rust-src \
   rustfmt
 
+# No binary available on Github, have to use cargo install
 RUN cargo install cargo-deadlinks
-RUN cargo install cargo-deny
-RUN cargo install cargo-crev
-RUN cargo install grcov
+
+# Where to install rust tooling
+ARG install_dir=${rustup_dir}/bin
+
+# Install grcov
+ARG grcov_version=v0.5.15
+ARG grcov_location=https://github.com/mozilla/grcov/releases/download/${grcov_version}/grcov-linux-x86_64.tar.bz2
+RUN curl --location ${grcov_location} | tar --extract --bzip2 --directory=${install_dir}
+RUN chmod +x ${install_dir}/grcov
+
+# Install cargo-crev
+ARG crev_version=v0.16.1
+ARG crev_location=https://github.com/crev-dev/cargo-crev/releases/download/${crev_version}/cargo-crev-${crev_version}-x86_64-unknown-linux-musl.tar.gz
+RUN curl --location ${crev_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
+RUN chmod +x ${install_dir}/cargo-crev
+
+# Install cargo-deny
+ARG deny_version=0.7.0
+ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
+RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
+RUN chmod +x ${install_dir}/cargo-deny

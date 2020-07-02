@@ -7,5 +7,5 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 for crate in "${ALL_CRATES[@]}"; do
-  cargo deny --manifest-path="${crate}/Cargo.toml" check
+  cargo-deny --manifest-path="${crate}/Cargo.toml" check
 done
