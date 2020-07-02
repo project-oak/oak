@@ -150,10 +150,6 @@
 <span id="150">150</span>
 <span id="151">151</span>
 <span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// An ApplicationConfiguration represents a unit of deployment in Oak.</span>
 <span class="doccomment">///</span>
@@ -260,10 +256,6 @@
     <span class="doccomment">/// element. https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">uri</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
-    <span class="doccomment">/// The endpoint address of the external gRPC service.</span>
-    <span class="doccomment">/// `address` is represented as an &quot;ip_address:tcp_port&quot; string.</span>
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="doccomment">/// RoughtimeClientConfiguration describes the configuration of a Roughtime</span>
 <span class="doccomment">/// client pseudo-Node (which is provided by the Oak Runtime), with the</span>

@@ -70,15 +70,6 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// Label represents information flowing through a Node or channel.</span>
 <span class="doccomment">///</span>
@@ -147,19 +138,10 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TlsEndpointTag</span> {
-    <span class="doccomment">/// The Subject Alternative Name (SAN) of a certificate that a remote endpoint must be able to</span>
-    <span class="doccomment">/// present in order to be allowed to receive data with this confidentiality tag.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// In general a certificate may have multiple SANs; an HTTP or gRPC client pseudo-node connected</span>
-    <span class="doccomment">/// to a remote endpoint with multiple SANs is able to declassify data with a TlsEndpointTag</span>
-    <span class="doccomment">/// referring to any of these SANs.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The certificate is validated by the Oak Runtime using the set of Certificate Authorities (CA)</span>
-    <span class="doccomment">/// that are available to it.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See https://tools.ietf.org/html/rfc5280#section-4.2.1.6</span>
+    <span class="doccomment">/// The TLS authority (host:port) of the remote endpoint, which is validated by the Oak Runtime</span>
+    <span class="doccomment">/// using the set of Certificate Authorities (CA) that are available to it.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">certificate_subject_alternative_name</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">authority</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../../../../../../../";window.currentCrate = "oak_abi";</script><script src="../../../../../../../../../../main.js"></script><script src="../../../../../../../../../../source-script.js"></script><script src="../../../../../../../../../../source-files.js"></script><script defer src="../../../../../../../../../../search-index.js"></script></body></html>

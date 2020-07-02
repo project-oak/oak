@@ -661,6 +661,7 @@
 <span id="661">661</span>
 <span id="662">662</span>
 <span id="663">663</span>
+<span id="664">664</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -772,6 +773,7 @@
                 <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
             })<span class="question-mark">?</span>;
 
+        <span class="comment">// TODO(#389): Automatically generate this code.</span>
         <span class="kw">let</span> <span class="ident">invocation_channel</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">read_status</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> {
             <span class="ident">runtime</span>
                 .<span class="ident">channel_read</span>(<span class="ident">startup_handle</span>)

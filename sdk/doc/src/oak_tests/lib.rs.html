@@ -211,6 +211,8 @@
 <span id="211">211</span>
 <span id="212">212</span>
 <span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -230,6 +232,7 @@
 
 <span class="doccomment">//! Test utilities to help with unit testing of Oak SDK code.</span>
 
+<span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
     <span class="ident">label</span>::<span class="ident">Label</span>,
@@ -249,7 +252,7 @@
 <span class="comment">// TODO(#544): re-enable unit tests of SDK functionality</span>
 
 <span class="doccomment">/// Uses cargo to compile a Rust manifest to Wasm bytes.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_rust_wasm</span>(<span class="ident">cargo_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">module_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_rust_wasm</span>(<span class="ident">cargo_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="comment">// Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it</span>
     <span class="comment">// should end with `target` so that it gets automatically ignored by our `.gitignore`.</span>
     <span class="kw">let</span> <span class="ident">target_dir</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;oak_tests/target&quot;</span>);
@@ -265,25 +268,28 @@
             <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">cargo_path</span>),
         ])
         .<span class="ident">env_remove</span>(<span class="string">&quot;RUSTFLAGS&quot;</span>)
-        .<span class="ident">spawn</span>()<span class="question-mark">?</span>
-        .<span class="ident">wait</span>()<span class="question-mark">?</span>;
+        .<span class="ident">spawn</span>()
+        .<span class="ident">context</span>(<span class="string">&quot;could not spawn cargo build&quot;</span>)<span class="question-mark">?</span>
+        .<span class="ident">wait</span>()
+        .<span class="ident">context</span>(<span class="string">&quot;could not wait for cargo build to finish&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">module_path</span> <span class="op">=</span> <span class="ident">target_dir</span>;
     <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="string">&quot;wasm32-unknown-unknown/debug&quot;</span>);
-    <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="ident">module_name</span>);
+    <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="ident">module_wasm_file_name</span>);
 
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;compiled Wasm module path: {:?}&quot;</span>, <span class="ident">module_path</span>);
 
-    <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="ident">module_path</span>)
+    <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="ident">module_path</span>).<span class="ident">context</span>(<span class="string">&quot;could not read compiled module&quot;</span>)
 }
 
+<span class="doccomment">/// Default module name for the module under test.</span>
+<span class="kw">const</span> <span class="ident">DEFAULT_MODULE_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;app&quot;</span>;
 <span class="doccomment">/// Default entrypoint name for the module under test.</span>
 <span class="kw">const</span> <span class="ident">DEFAULT_ENTRYPOINT_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;oak_main&quot;</span>;
 <span class="doccomment">/// Default URI that the tests expect to find a live Runtime at.</span>
 <span class="kw">const</span> <span class="ident">RUNTIME_URI</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;https://localhost:8080&quot;</span>;
 
 <span class="kw">const</span> <span class="ident">DEFAULT_MODULE_MANIFEST</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Cargo.toml&quot;</span>;
-<span class="kw">const</span> <span class="ident">MODULE_WASM_SUFFIX</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;.wasm&quot;</span>;
 
 <span class="comment">// Retry parameters when connecting to a gRPC server.</span>
 <span class="kw">const</span> <span class="ident">RETRY_COUNT</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">360</span>;
@@ -297,51 +303,49 @@
     <span class="ident">run_single_module</span>(<span class="ident">module_config_name</span>, <span class="ident">DEFAULT_ENTRYPOINT_NAME</span>)
 }
 
-<span class="doccomment">/// Convenience helper to build and run a single-Node application with the given module name, using</span>
-<span class="doccomment">/// the provided entrypoint name.</span>
+<span class="doccomment">/// Convenience helper to build and run a single-Node application with the given Wasm module file</span>
+<span class="doccomment">/// name, using the provided entrypoint name.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module</span>(
-    <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span> <span class="ident">runtime_config</span>(<span class="ident">module_config_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">ConfigMap</span>::<span class="ident">default</span>());
+    <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span>
+        <span class="ident">runtime_config</span>(<span class="ident">module_wasm_file_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">ConfigMap</span>::<span class="ident">default</span>());
     <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">combined_config</span>)
 }
 
-<span class="doccomment">/// Convenience helper to build and run a single-Node application with the given module name, using</span>
-<span class="doccomment">/// the provided entrypoint name, passing in the provided `ConfigMap` at start-of-day.</span>
+<span class="doccomment">/// Convenience helper to build and run a single-Node application with the given Wasm module file</span>
+<span class="doccomment">/// name, using the provided entrypoint name, passing in the provided `ConfigMap` at start-of-day.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module_with_config</span>(
-    <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">config_map</span>: <span class="ident">ConfigMap</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span> <span class="ident">runtime_config</span>(<span class="ident">module_config_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">config_map</span>);
+    <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span> <span class="ident">runtime_config</span>(<span class="ident">module_wasm_file_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">config_map</span>);
     <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">combined_config</span>)
 }
 
-<span class="doccomment">/// Build the configuration needed to launch a test Runtime instance that</span>
-<span class="doccomment">/// runs a single-Node application with the given module name and entrypoint.</span>
+<span class="doccomment">/// Build the configuration needed to launch a test Runtime instance that runs a single-Node</span>
+<span class="doccomment">/// application with the given Wasm module file name and entrypoint.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">runtime_config</span>(
-    <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">config_map</span>: <span class="ident">ConfigMap</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
     <span class="kw">let</span> <span class="ident">wasm</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> [(
-        <span class="ident">module_config_name</span>.<span class="ident">to_owned</span>(),
-        <span class="ident">compile_rust_wasm</span>(
-            <span class="ident">DEFAULT_MODULE_MANIFEST</span>,
-            <span class="kw-2">&amp;</span>(<span class="ident">module_config_name</span>.<span class="ident">to_owned</span>() <span class="op">+</span> <span class="ident">MODULE_WASM_SUFFIX</span>),
-        )
-        .<span class="ident">expect</span>(<span class="string">&quot;failed to build wasm module&quot;</span>),
+        <span class="ident">DEFAULT_MODULE_NAME</span>.<span class="ident">to_string</span>(),
+        <span class="ident">compile_rust_wasm</span>(<span class="ident">DEFAULT_MODULE_MANIFEST</span>, <span class="ident">module_wasm_file_name</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;failed to build wasm module&quot;</span>),
     )]
     .<span class="ident">iter</span>()
     .<span class="ident">cloned</span>()
     .<span class="ident">collect</span>();
 
-    <span class="ident">runtime_config_wasm</span>(<span class="ident">wasm</span>, <span class="ident">module_config_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">config_map</span>)
+    <span class="ident">runtime_config_wasm</span>(<span class="ident">wasm</span>, <span class="ident">DEFAULT_MODULE_NAME</span>, <span class="ident">entrypoint_name</span>, <span class="ident">config_map</span>)
 }
 
-<span class="doccomment">/// Build the configuration needed to launch a test Runtime instance that runs the given</span>
-<span class="doccomment">/// collection of Wasm modules, starting with the given module name and entrypoint.</span>
+<span class="doccomment">/// Build the configuration needed to launch a test Runtime instance that runs the given collection</span>
+<span class="doccomment">/// of Wasm modules, starting with the given module name and entrypoint.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">runtime_config_wasm</span>(
     <span class="ident">wasm_modules</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,

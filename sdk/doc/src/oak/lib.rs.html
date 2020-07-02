@@ -636,21 +636,6 @@
 <span id="636">636</span>
 <span id="637">637</span>
 <span id="638">638</span>
-<span id="639">639</span>
-<span id="640">640</span>
-<span id="641">641</span>
-<span id="642">642</span>
-<span id="643">643</span>
-<span id="644">644</span>
-<span id="645">645</span>
-<span id="646">646</span>
-<span id="647">647</span>
-<span id="648">648</span>
-<span id="649">649</span>
-<span id="650">650</span>
-<span id="651">651</span>
-<span id="652">652</span>
-<span id="653">653</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -1146,14 +1131,13 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_event_loop</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Decodable</span>, <span class="ident">N</span>: <span class="ident">Node</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(
     <span class="kw-2">mut</span> <span class="ident">node</span>: <span class="ident">N</span>,
-    <span class="ident">in_channel</span>: <span class="kw">crate</span>::<span class="ident">ReadHandle</span>,
+    <span class="ident">receiver</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 ) {
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">in_channel</span>.<span class="ident">handle</span>.<span class="ident">is_valid</span>() {
-        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}: invalid input handle&quot;</span>, <span class="ident">in_channel</span>);
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">receiver</span>.<span class="ident">handle</span>.<span class="ident">handle</span>.<span class="ident">is_valid</span>() {
+        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}: invalid input handle&quot;</span>, <span class="ident">receiver</span>);
         <span class="kw">return</span>;
     }
-    <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span>::<span class="ident">new</span>(<span class="ident">in_channel</span>);
-    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{:?}: starting event loop&quot;</span>, <span class="ident">in_channel</span>);
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{:?}: starting event loop&quot;</span>, <span class="ident">receiver</span>);
     <span class="kw">loop</span> {
         <span class="comment">// First wait until a message is available. If the Node was terminated while waiting, this</span>
         <span class="comment">// will return `ErrTerminated`, which indicates that the event loop should be terminated.</span>
@@ -1166,47 +1150,47 @@
                     <span class="ident">ErrTerminated</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">info</span><span class="macro">!</span>(
                             <span class="string">&quot;{:?}: received termination status: {:?}; terminating event loop&quot;</span>,
-                            <span class="ident">in_channel</span>, <span class="ident">status</span>
+                            <span class="ident">receiver</span>, <span class="ident">status</span>
                         );
                         <span class="kw">return</span>;
                     }
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">error</span><span class="macro">!</span>(
                             <span class="string">&quot;{:?}: received status: {:?}; but `Receiver::wait` never returns an error other than `ErrTerminated`&quot;</span>,
-                            <span class="ident">in_channel</span>, <span class="ident">status</span>
+                            <span class="ident">receiver</span>, <span class="ident">status</span>
                         );
                         <span class="kw">return</span>;
                     }
                 }
             }
             <span class="prelude-val">Ok</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">status</span> {
-                <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: wait over&quot;</span>, <span class="ident">in_channel</span>),
+                <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: wait over&quot;</span>, <span class="ident">receiver</span>),
                 <span class="ident">ChannelReadStatus</span>::<span class="ident">Orphaned</span>
                 <span class="op">|</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">PermissionDenied</span>
                 <span class="op">|</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">InvalidChannel</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="macro">warn</span><span class="macro">!</span>(
                         <span class="string">&quot;{:?}: received invalid channel read status: {:?}; terminating event loop&quot;</span>,
-                        <span class="ident">in_channel</span>, <span class="ident">status</span>
+                        <span class="ident">receiver</span>, <span class="ident">status</span>
                     );
                     <span class="kw">return</span>;
                 }
                 <span class="ident">ChannelReadStatus</span>::<span class="ident">NotReady</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="macro">error</span><span class="macro">!</span>(
                         <span class="string">&quot;{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.&quot;</span>,
-                        <span class="ident">in_channel</span>);
+                        <span class="ident">receiver</span>);
                     <span class="kw">return</span>;
                 }
             },
         }
         <span class="kw">match</span> <span class="ident">receiver</span>.<span class="ident">try_receive</span>() {
             <span class="prelude-val">Ok</span>(<span class="ident">command</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{:?}: received command&quot;</span>, <span class="ident">in_channel</span>);
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{:?}: received command&quot;</span>, <span class="ident">receiver</span>);
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">node</span>.<span class="ident">handle_command</span>(<span class="ident">command</span>) {
-                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}: error handling command: {}&quot;</span>, <span class="ident">in_channel</span>, <span class="ident">err</span>);
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}: error handling command: {}&quot;</span>, <span class="ident">receiver</span>, <span class="ident">err</span>);
                 }
             }
             <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}: error receiving command: {}&quot;</span>, <span class="ident">in_channel</span>, <span class="ident">err</span>);
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}: error receiving command: {}&quot;</span>, <span class="ident">receiver</span>, <span class="ident">err</span>);
             }
         }
     }
@@ -1217,19 +1201,12 @@
 <span class="doccomment">/// This registers the entrypoint name and the expression that runs an event loop.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
-<span class="doccomment">/// # struct DummyCommand;</span>
-<span class="doccomment">/// # impl oak::io::Decodable for DummyCommand {</span>
-<span class="doccomment">/// #     fn decode(message: &amp;oak::io::Message) -&gt; Result&lt;Self, oak::OakError&gt; {</span>
-<span class="doccomment">/// #         unimplemented!()</span>
-<span class="doccomment">/// #     }</span>
-<span class="doccomment">/// # }</span>
-<span class="doccomment">/// #</span>
 <span class="doccomment">/// #[derive(Default)]</span>
 <span class="doccomment">/// struct DummyNode;</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// impl oak::Node&lt;DummyCommand&gt; for DummyNode {</span>
+<span class="doccomment">/// impl oak::Node&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
 <span class="doccomment">///     // ...</span>
-<span class="doccomment">///     # fn handle_command(&amp;mut self, command: DummyCommand) -&gt; Result&lt;(), oak::OakError&gt; {</span>
+<span class="doccomment">///     # fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; Result&lt;(), oak::OakError&gt; {</span>
 <span class="doccomment">///     #     unimplemented!()</span>
 <span class="doccomment">///     # }</span>
 <span class="doccomment">/// }</span>
@@ -1254,18 +1231,11 @@
 <span class="doccomment">/// ```</span>
 <span class="doccomment">/// # fn init_all_the_things() {}</span>
 <span class="doccomment">/// #</span>
-<span class="doccomment">/// # struct DummyCommand;</span>
-<span class="doccomment">/// # impl oak::io::Decodable for DummyCommand {</span>
-<span class="doccomment">/// #     fn decode(message: &amp;oak::io::Message) -&gt; Result&lt;Self, oak::OakError&gt; {</span>
-<span class="doccomment">/// #         unimplemented!()</span>
-<span class="doccomment">/// #     }</span>
-<span class="doccomment">/// # }</span>
-<span class="doccomment">/// #</span>
 <span class="doccomment">/// # #[derive(Default)]</span>
 <span class="doccomment">/// # struct DummyNode;</span>
 <span class="doccomment">/// #</span>
-<span class="doccomment">/// # impl oak::Node&lt;DummyCommand&gt; for DummyNode {</span>
-<span class="doccomment">/// #     fn handle_command(&amp;mut self, command: DummyCommand) -&gt; Result&lt;(), oak::OakError&gt; {</span>
+<span class="doccomment">/// # impl oak::Node&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
+<span class="doccomment">/// #     fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; Result&lt;(), oak::OakError&gt; {</span>
 <span class="doccomment">/// #         unimplemented!()</span>
 <span class="doccomment">/// #     }</span>
 <span class="doccomment">/// # }</span>
