@@ -5,7 +5,7 @@ c2bf618be440628fea36a6e01826b6d6f2c1e68fff94a8f9f932f7300b045458  ./examples/tar
 d6ae990b2ee7ccb0d64966a187ad689b8f63a3bb2ceb2dbe60db90b4996cd3da  ./examples/target/wasm32-unknown-unknown/release/database_proxy.wasm
 bc8035e2363ce03809b17a6a96f97b7c218a705e6a0465b48b07f6c0bab7c803  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
 540cb9cdd92e1fefde401a8b7b34c6e7338b9c63f5bd6433e17d3015f727e929  ./examples/target/wasm32-unknown-unknown/release/machine_learning.wasm
-0651fce5cea151c7d855c37fb84ac0fa63876fca84c4557b76f3b75d3fa6a9c9  ./examples/target/wasm32-unknown-unknown/release/private_set_intersection.wasm
+cf2a697e1b14184c5deeea77298ab06d65bdb88125d99eb1934826de19e12c39  ./examples/target/wasm32-unknown-unknown/release/private_set_intersection.wasm
 f11c4bf4b75c7a42873643090cf37f848ef03154ee99b09381f378b6707e214c  ./examples/target/wasm32-unknown-unknown/release/running_average.wasm
 14ce660fa06fbe014b925b80b96aca319fc3c6fe64f65ee6ac6317b806364da1  ./examples/target/wasm32-unknown-unknown/release/translator.wasm
 348a44c8023adc10992df6c810628aeaeaf8bb3b5dd1359c498f4d73e9cc5ed3  ./examples/target/wasm32-unknown-unknown/release/trusted_information_retrieval.wasm
