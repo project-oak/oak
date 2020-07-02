@@ -59,6 +59,13 @@ oak::label::Label WebAssemblyModuleLabel(const std::string& web_assembly_module_
   return label;
 }
 
+oak::label::Label TlsEndpointLabel(const std::string& authority) {
+  oak::label::Label label;
+  auto* confidentiality_tag = label.add_confidentiality_tags();
+  confidentiality_tag->mutable_tls_endpoint_tag()->set_authority(authority);
+  return label;
+}
+
 oak::label::Label PublicUntrustedLabel() {
   oak::label::Label label;
   return label;

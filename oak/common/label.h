@@ -50,6 +50,9 @@ oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization
 // Creates a label having as principal the provided WebAssembly module SHA-256 hash.
 oak::label::Label WebAssemblyModuleLabel(const std::string& web_asesemblymodule_hash_sha_256);
 
+// Creates a label having as principal the provided TLS authority (host:port).
+oak::label::Label TlsEndpointLabel(const std::string& authority);
+
 // Creates a public untrusted label, which is the least confidential and least trusted label and
 // applies no confidentiality restrictions to the data contained in the request.
 oak::label::Label PublicUntrustedLabel();

@@ -28,6 +28,7 @@ serde_json = "*"
 oak_utils = "*"
 
 [dev-dependencies]
+anyhow = "*"
 abitest_grpc = "=0.1.0"
 assert_matches = "*"
 env_logger = "*"

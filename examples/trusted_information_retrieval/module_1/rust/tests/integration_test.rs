@@ -19,7 +19,7 @@ use trusted_information_retrieval_client::proto::{
     database_proxy_client::DatabaseProxyClient, GetDatabaseEntryRequest, GetDatabaseEntryResponse,
 };
 
-const MODULE_CONFIG_NAME: &str = "database_proxy";
+const MODULE_WASM_FILE_NAME: &str = "database_proxy.wasm";
 const MODULE_ENTRYPOINT_NAME: &str = "grpc_database_proxy_main";
 
 const DATABASE_URL: &str = "https://localhost:8888";
@@ -40,7 +40,7 @@ async fn get_database_entry(
 async fn test_database_proxy_for_unavailable_database() {
     env_logger::init();
 
-    let runtime = oak_tests::run_single_module(MODULE_CONFIG_NAME, MODULE_ENTRYPOINT_NAME)
+    let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, MODULE_ENTRYPOINT_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;

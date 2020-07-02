@@ -24,10 +24,21 @@ use serde::{Deserialize, Serialize};
 /// For use when the underlying [`Handle`] is known to be for a receive half.
 ///
 /// [`Handle`]: crate::Handle
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Receiver<T: Decodable> {
     pub handle: ReadHandle,
     phantom: std::marker::PhantomData<T>,
+}
+
+/// Manual implementation of [`std::fmt::Debug`] for any `T`.
+///
+/// The automatically derived implementation would only cover types `T` that are themselves
+/// `Display`, but we do not care about that bound, since there is never an actual element of type
+/// `T` to display.
+impl<T: Decodable> std::fmt::Debug for Receiver<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "Receiver({:?})", self.handle)
+    }
 }
 
 impl<T: Decodable> Receiver<T> {

@@ -108,6 +108,7 @@ impl GrpcServerNode {
                 OakStatus::ErrInternal
             })?;
 
+        // TODO(#389): Automatically generate this code.
         let invocation_channel = if read_status[0] == ChannelReadStatus::ReadReady {
             runtime
                 .channel_read(startup_handle)

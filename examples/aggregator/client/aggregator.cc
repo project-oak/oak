@@ -103,8 +103,10 @@ int main(int argc, char** argv) {
     values.push_back(value);
   }
 
-  // Submit data sample.
-  submit_sample(stub.get(), bucket, indices, values);
+  // Submit data sample as many times as it takes to reach the hardcoded threshold.
+  for (int i = 0; i < 5; i++) {
+    submit_sample(stub.get(), bucket, indices, values);
+  }
 
   return EXIT_SUCCESS;
 }

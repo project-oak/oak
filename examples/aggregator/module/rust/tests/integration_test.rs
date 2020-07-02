@@ -24,7 +24,7 @@ use std::{
     convert::{From, TryFrom},
 };
 
-const MODULE_CONFIG_NAME: &str = "aggregator";
+const MODULE_WASM_FILE_NAME: &str = "aggregator.wasm";
 
 async fn submit_sample(
     client: &mut AggregatorClient<tonic::transport::Channel>,
@@ -43,7 +43,7 @@ async fn submit_sample(
 async fn test_aggregator() {
     env_logger::init();
 
-    let runtime = oak_tests::run_single_module_default(MODULE_CONFIG_NAME)
+    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;

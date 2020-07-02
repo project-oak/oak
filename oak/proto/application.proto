@@ -107,9 +107,6 @@ message GrpcClientConfiguration {
   // The URI component of a gRPC server endpoint. Must contain the "Host"
   // element. https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html
   string uri = 1;
-  // The endpoint address of the external gRPC service.
-  // `address` is represented as an "ip_address:tcp_port" string.
-  string address = 2;
 }
 
 // RoughtimeClientConfiguration describes the configuration of a Roughtime

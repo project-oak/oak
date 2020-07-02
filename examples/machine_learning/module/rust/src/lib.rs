@@ -154,7 +154,7 @@ oak::entrypoint!(oak_main => |in_channel| {
         config: None,
         model: NaiveBayes::new(),
     };
-    oak::run_event_loop(node, in_channel);
+    oak::run_event_loop(node, oak::io::Receiver::<grpc::Invocation>::new(in_channel));
 });
 
 oak::entrypoint!(grpc_oak_main => |_in_channel| {
