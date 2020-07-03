@@ -87,8 +87,8 @@ case "${application_language}" in
     if [[ "${EXAMPLE}" == "tensorflow" ]]; then
       # TODO: Compile all examples in Emscripten when imports are fixed.
       # https://github.com/project-oak/oak/issues/439
-      bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "//examples/${EXAMPLE}/module/cpp:all"
-      cp --force "${PWD}/bazel-emscripten-bin/examples/${EXAMPLE}/module/cpp/${EXAMPLE}.wasm" "${EXAMPLE_BIN_DIR}/${EXAMPLE}_cpp.wasm"
+      bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "//examples/tensorflow/module/cpp:all"
+      cp --force "${PWD}/bazel-emscripten-bin/examples/tensorflow/module/cpp/tensorflow_micro.wasm" "${EXAMPLE_BIN_DIR}/tensorflow_cpp.wasm"
     else
       # TODO: support compilation mode wasm.
       bazel --output_base="${CACHE_DIR}/wasm32" build "${bazel_build_flags[@]}" --config=wasm32 "//examples/${EXAMPLE}/module/cpp:all"
