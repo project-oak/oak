@@ -1,5 +1,5 @@
 name = "trusted_information_retrieval"
 
 [modules]
-app = { path = "examples/target/wasm32-unknown-unknown/release/trusted_information_retrieval.wasm" }
-database_proxy = { path = "examples/target/wasm32-unknown-unknown/release/database_proxy.wasm" }
+app = { path = "examples/trusted_information_retrieval/bin/trusted_information_retrieval.wasm" }
+database_proxy = { path = "examples/trusted_information_retrieval/bin/database_proxy.wasm" }

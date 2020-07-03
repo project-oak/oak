@@ -1,7 +1,7 @@
 name = "machine_learning"
 
 [modules]
-app = { path = "examples/target/wasm32-unknown-unknown/release/machine_learning.wasm" }
+app = { path = "examples/machine_learning/bin/machine_learning.wasm" }
 
 [initial_node_configuration]
 wasm_module_name = "app"

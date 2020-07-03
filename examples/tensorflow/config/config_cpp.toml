@@ -1,4 +1,4 @@
 name = "tensorflow"
 
 [modules]
-app = { path = "bazel-cache/emscripten/execroot/oak/bazel-out/wasm-fastbuild/bin/examples/tensorflow/module/cpp/tensorflow.wasm" }
+app = { path = "examples/tensorflow/bin/tensorflow_cpp.wasm" }
