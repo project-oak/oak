@@ -1,5 +1,9 @@
 name = "chat"
 
+[application]
+build = { Shell = { script = "examples/chat/config/build.sh" } }
+out = "examples/chat/bin/config.bin"
+
 [modules]
 module = { Cargo = { cargo_manifest = "examples/chat/module/rust/Cargo.toml" } }
 

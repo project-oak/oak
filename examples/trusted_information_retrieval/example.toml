@@ -4,6 +4,10 @@ backend = { Cargo = { cargo_manifest = "examples/trusted_information_retrieval/b
   "--grpc-tls-certificate=./examples/certs/local/local.pem",
 ] }
 
+[application]
+build = { Shell = { script = "examples/trusted_information_retrieval/config/build.sh" } }
+out = "examples/trusted_information_retrieval/bin/config.bin"
+
 [server]
 additional_args = [
   "--config-files=config=examples/trusted_information_retrieval/config/config.toml",

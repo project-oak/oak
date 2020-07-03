@@ -1,5 +1,9 @@
 name = "aggregator"
 
+[application]
+build = { Shell = { script = "examples/aggregator/config/build.sh" } }
+out = "examples/aggregator/bin/config.bin"
+
 [modules]
 module = { Cargo = { cargo_manifest = "examples/aggregator/module/rust/Cargo.toml" } }
 

@@ -188,6 +188,7 @@ fn build_wasm_module(name: &str, target: &Target) -> Step {
             ),
         },
         Target::Npm { .. } => todo!(),
+        Target::Shell { .. } => todo!(),
     }
 }
 
@@ -297,16 +298,6 @@ fn run_ci() -> Step {
     }
 }
 
-fn build_example_config(example_name: &str) -> Step {
-    Step::Single {
-        name: "build app config".to_string(),
-        command: Cmd::new(
-            "bash",
-            &[format!("examples/{}/config/build.sh", example_name)],
-        ),
-    }
-}
-
 fn run_example_server(
     opt: &BuildServer,
     example_server: &ExampleServer,
@@ -354,8 +345,16 @@ struct Example {
     server: ExampleServer,
     #[serde(default)]
     backend: Option<Executable>,
+    application: Application,
     modules: HashMap<String, Target>,
     clients: HashMap<String, Executable>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+struct Application {
+    build: Target,
+    out: String,
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
@@ -379,6 +378,9 @@ enum Target {
     Npm {
         package_directory: String,
     },
+    Shell {
+        script: String,
+    },
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -395,7 +397,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
         &opt.build_server,
         &example.server,
         opt.server_additional_args.clone(),
-        &format!("./examples/{}/bin/config.bin", example.name),
+        &example.application.out,
     );
     let run_clients = Step::Multiple {
         name: "run clients".to_string(),
@@ -458,7 +460,10 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                         .map(|(name, target)| build_wasm_module(name, target))
                         .collect(),
                 },
-                build_example_config(&example.name),
+                Step::Single {
+                    name: "build application".to_string(),
+                    command: build(&example.application.build),
+                },
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
                 build_server(&opt.build_server),
@@ -466,7 +471,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
             match &example.backend {
                 Some(backend) => vec![Step::Single {
                     name: "build backend".to_string(),
-                    command: build(backend),
+                    command: build(&backend.target),
                 }],
                 None => vec![],
             },
@@ -481,8 +486,8 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     }
 }
 
-fn build(executable: &Executable) -> Box<dyn Runnable> {
-    match &executable.target {
+fn build(target: &Target) -> Box<dyn Runnable> {
+    match target {
         Target::Cargo { cargo_manifest } => Cmd::new(
             "cargo",
             vec![
@@ -513,6 +518,7 @@ fn build(executable: &Executable) -> Box<dyn Runnable> {
             "npm",
             vec!["ci".to_string(), format!("--prefix={}", package_directory)],
         ),
+        Target::Shell { script } => Cmd::new("bash", &[script]),
     }
 }
 
@@ -564,6 +570,7 @@ fn run(executable: &Executable, additional_args: Vec<String>) -> Box<dyn Runnabl
                 format!("--prefix={}", package_directory),
             ],
         ),
+        Target::Shell { script } => Cmd::new("bash", &[script]),
     }
 }
 
@@ -573,7 +580,7 @@ fn run_client(name: &str, executable: &Executable, additional_args: Vec<String>)
         steps: vec![
             Step::Single {
                 name: "build".to_string(),
-                command: build(executable),
+                command: build(&executable.target),
             },
             Step::Single {
                 name: "run".to_string(),

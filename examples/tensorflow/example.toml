@@ -1,5 +1,9 @@
 name = "tensorflow"
 
+[application]
+build = { Shell = { script = "examples/tensorflow/config/build_cpp.sh" } }
+out = "examples/tensorflow/bin/config_cpp.bin"
+
 [modules]
 module = { Bazel = { bazel_target = "//examples/tensorflow/module/cpp:all", config = "emscripten" } }
 

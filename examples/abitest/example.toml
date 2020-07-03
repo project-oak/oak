@@ -1,5 +1,9 @@
 name = "abitest"
 
+[application]
+build = { Shell = { script = "examples/abitest/config/build.sh" } }
+out = "examples/abitest/bin/config.bin"
+
 [modules]
 module_0 = { Cargo = { cargo_manifest = "examples/abitest/module_0/rust/Cargo.toml" } }
 module_1 = { Cargo = { cargo_manifest = "examples/abitest/module_1/rust/Cargo.toml" } }
