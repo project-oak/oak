@@ -1,31 +1,30 @@
 #!/usr/bin/env bash
 
 readonly GLOBAL_SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")/../../../scripts/"
-readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
 # shellcheck source=scripts/common
 source "${GLOBAL_SCRIPTS_DIR}/common"
 
 readonly AGGREGATOR_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator'
 readonly BACKEND_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator-backend'
 
-declare -a image backend_image
-image="$(find ./examples/aggregator/bin -name aggregator.tar)"
-backend_image="$(find ./examples/aggregator/bin -name aggregator_backend.tar)"
-if [[ -z ${image} || -z ${backend_image} ]]; then
-  echo "Docker images have not been built, run './scripts/build_example -e aggregator -i'"
+declare -a images backend_images
+mapfile -t images < <(find ./examples/aggregator/bin -name aggregator.tar)
+mapfile -t backend_images < <(find ./examples/aggregator/bin -name aggregator_backend.tar)
+if [[ ${#images[@]} -eq 0 || ${#backend_images[@]} -eq 0 ]]; then
+  echo "Docker images have not been built, run './scripts/build_example -e aggregator -i base'"
   exit 1
 fi
-if [[ ${#image[@]} > 1 || ${#backend_image[@]} > 1 ]]; then
-  echo "Too many Docker images: ${image}, ${backend_image}"
+if [[ ${#images[@]} -gt 1 || ${#backend_images[@]} -gt 1 ]]; then
+  echo "Too many Docker images: ${images[*]}, ${backend_images[*]}"
   exit 0
 fi
 
 # Push Oak application server Docker image.
-docker load --input="./${image}"
+docker load --input="./${images[0]}"
 docker tag 'bazel/examples/aggregator/server:aggregator' "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
 docker push "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
 
 # Push Backend Docker image.
-docker load --input="./${backend_image}"
+docker load --input="./${backend_images[0]}"
 docker tag 'bazel/examples/aggregator/server:aggregator_backend' "${BACKEND_DOCKER_IMAGE_NAME}":latest
 docker push "${BACKEND_DOCKER_IMAGE_NAME}":latest
