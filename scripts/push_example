@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "${SCRIPTS_DIR}/common"
+
+while getopts "e:h" opt; do
+  case "${opt}" in
+    h)
+      echo -e "Usage: ${0} [-h] -e EXAMPLE
+
+Save example modules in Google Cloud Storage.
+
+Options:
+  -e    Example application name (required)
+  -h    Print Help (this message) and exit"
+      exit 0;;
+    e)
+      readonly EXAMPLE="${OPTARG}";;
+    *)
+      echo "Invalid argument: ${OPTARG}"
+      exit 1;;
+  esac
+done
+
+if [[ -z "${EXAMPLE+z}" ]]; then
+  echo "Missing required option: -e EXAMPLE"
+  exit 1
+fi
+
+readonly EXAMPLE_BIN_DIR="${PWD}/examples/${EXAMPLE}/bin"
+for module in "${EXAMPLE_BIN_DIR:?}"/*.wasm; do
+  module_hash="$(sha256sum ${module} | awk '{print $1}')"
+  module_name="$(basename ${module} | cut -f 1 -d '.')"
+
+  gsutil cp "${module}" "gs://oak-modules/${module_name}/${module_hash}"
+done
