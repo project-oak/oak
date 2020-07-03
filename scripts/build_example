@@ -53,7 +53,7 @@ if [[ -z "${EXAMPLE+z}" ]]; then
   exit 1
 fi
 
-readonly EXAMPLE_BIN_DIR="${PWD}/examples/${EXAMPLE}/bin/"
+readonly EXAMPLE_BIN_DIR="${PWD}/examples/${EXAMPLE}/bin"
 rm -rf "${EXAMPLE_BIN_DIR:?}"
 mkdir --parents "${EXAMPLE_BIN_DIR}"
 case "${application_language}" in
