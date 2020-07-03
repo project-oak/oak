@@ -24,13 +24,15 @@
 //!     --output-file=<OUTPUT_FILE>
 //! ```
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use log::debug;
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, NodeConfiguration,
     WebAssemblyConfiguration,
 };
 use prost::Message;
+use reqwest::Url;
+use sha2::{Digest, Sha256};
 use std::{collections::HashMap, fs};
 use structopt::StructOpt;
 
@@ -56,10 +58,17 @@ struct Config {
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 enum Module {
-    #[serde(rename = "url")]
-    Url(String),
     #[serde(rename = "path")]
     Path(String),
+    #[serde(rename = "external")]
+    External(External),
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct External {
+    url: String,
+    sha256: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -78,12 +87,44 @@ impl Default for InitialNodeConfig {
     }
 }
 
+fn get_sha256(data: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    hex::encode(hasher.finalize().as_slice().to_vec())
+}
+
 /// Load Wasm module from URL or a file, if URL is not specified.
-fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
+async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
     match module {
-        Module::Url(_url) => unimplemented!(),
         Module::Path(path) => {
             fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
+        }
+        Module::External(external) => {
+            let url: Url = external.url
+                .parse()
+                .context("Couldn't parse URL")?;
+
+            debug!("Downloading module from: {}", url);
+            // TODO(#1240): Add a Wasm module cache.
+            let response = reqwest::get(url.clone())
+                .await
+                .with_context(|| format!("Couldn't download module from {}", url))?;
+            let data = response
+                .bytes()
+                .await
+                .context("Couldn't retrieve module from HTTP response")?
+                .to_vec();
+
+            let received_sha256 = get_sha256(&data);
+            if received_sha256 == external.sha256 {
+                Ok(data)
+            } else {
+                Err(anyhow!(
+                    "Incorrect SHA256 sum: expected {}, received {}",
+                    external.sha256,
+                    received_sha256
+                ))
+            }
         }
     }
 }
@@ -101,20 +142,21 @@ pub fn write_config_to_file(
     Ok(())
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let opt = Opt::from_args();
-    debug!("parsed opts: {:?}", opt);
+    debug!("Parsed opts: {:?}", opt);
 
     let input_file = fs::read_to_string(opt.input_file).context("Couldn't read input file")?;
     let config: Config = toml::from_str(&input_file).context("Couldn't parse TOML config file")?;
-    debug!("parsed config file: {:?}", config);
+    debug!("Parsed config file: {:?}", config);
 
     // Load Wasm modules.
     let mut modules = HashMap::new();
     for (name, module) in config.modules.iter() {
-        let loaded_module = load_module(&module).context("Couldn't load module")?;
+        let loaded_module = load_module(&module).await.context("Couldn't load module")?;
         modules.insert(name.to_string(), loaded_module);
     }
 
