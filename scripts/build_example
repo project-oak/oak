@@ -97,7 +97,7 @@ case "${application_language}" in
 
     # Serialize application configuration for Rust module.
     cargo run --manifest-path="sdk/rust/oak_config_serializer/Cargo.toml" -- \
-      --input-file="examples/${EXAMPLE}/config/config.toml" \
+      --input-file="examples/${EXAMPLE}/config/config_cpp.toml" \
       --output-file="${EXAMPLE_BIN_DIR}/config_cpp.bin"
     ;;
   *)
