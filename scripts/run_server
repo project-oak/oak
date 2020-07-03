@@ -4,11 +4,12 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
+application_language="rust"
 server="base"
 while getopts "s:a:l:f:e:c:vh" opt; do
   case "${opt}" in
     h)
-      echo -e "Usage: ${0} [-s base|logless] (-f APPLICATION | -e EXAMPLE) [-c OIDC_CLIENT] [-v]
+      echo -e "Usage: ${0} [-s base|logless] [-a rust|cpp] (-f APPLICATION | -e EXAMPLE) [-c OIDC_CLIENT] [-v]
 
 Run a particular Oak Application in the Oak Runtime.
 Either the -f APPLICATION or the -e EXAMPLE option is required.
@@ -18,10 +19,15 @@ Either the -f APPLICATION or the -e EXAMPLE option is required.
   -s    Server type:
           - base: base version of the server
           - logless: base version of the server with debug logging compiled out
+  -a    Example application variant (if -e specified):
+        - rust (used by default)
+        - cpp
   -c    Path to the downloaded JSON-encoded OpenID Connect client identity file
   -v    Enable verbose/debug output
   -h    Print Help (this message) and exit"
       exit 0;;
+    a)
+      application_language="${OPTARG}";;
     s)
       case "${OPTARG}" in
         base|logless)
