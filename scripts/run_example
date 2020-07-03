@@ -73,7 +73,7 @@ if [[ "${server}" != "none" ]]; then
   # The server is being built before running, so the build process will not happen in the
   # background.
   "${SCRIPTS_DIR}/build_server" -s "${server}"
-  "${SCRIPTS_DIR}/run_server" ${serverargs} -s "${server}" -e "${EXAMPLE}" &
+  "${SCRIPTS_DIR}/run_server" ${serverargs} -s "${server}" -a "${application_language}" -e "${EXAMPLE}" &
   readonly SERVER_PID=$!
   to_kill+=("${SERVER_PID}")
 
