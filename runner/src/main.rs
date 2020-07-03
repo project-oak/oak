@@ -297,22 +297,12 @@ fn run_ci() -> Step {
     }
 }
 
-fn build_example_config(example_name: &str, config: &str) -> Step {
+fn build_example_config(example_name: &str) -> Step {
     Step::Single {
         name: "build app config".to_string(),
         command: Cmd::new(
-            "bazel",
-            vec![
-                vec!["build".to_string()],
-                if config.is_empty() {
-                    vec![]
-                } else {
-                    vec![format!("--config={}", config)]
-                },
-                vec![format!("//examples/{}/config:config", example_name)],
-            ]
-            .iter()
-            .flatten(),
+            "bash",
+            &[format!("examples/{}/config/build.sh", example_name)],
         ),
     }
 }
@@ -361,8 +351,6 @@ fn run_example_server(
 struct Example {
     name: String,
     #[serde(default)]
-    application_bazel_config: String,
-    #[serde(default)]
     server: ExampleServer,
     #[serde(default)]
     backend: Option<Executable>,
@@ -403,14 +391,12 @@ struct Executable {
 }
 
 fn run_example(opt: &RunExamples, example: &Example) -> Step {
-    let run_server = Step::WithBackground {
-        name: "run_server".to_string(),
-        background: run_example_server(
-            &opt.build_server,
-            &example.server,
-            &format!("./examples/bin/{}/config.bin", example.name),
-        ),
-    };
+    let run_server = run_example_server(
+        &opt.build_server,
+        &example.server,
+        opt.server_additional_args.clone(),
+        &format!("./examples/{}/bin/config.bin", example.name),
+    );
     let run_clients = Step::Multiple {
         name: "run clients".to_string(),
         steps: example
@@ -472,7 +458,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                         .map(|(name, target)| build_wasm_module(name, target))
                         .collect(),
                 },
-                build_example_config(&example.name, &example.application_bazel_config),
+                build_example_config(&example.name),
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
                 build_server(&opt.build_server),

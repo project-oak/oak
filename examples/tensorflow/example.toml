@@ -1,5 +1,4 @@
 name = "tensorflow"
-application_bazel_config = "emscripten"
 
 [modules]
 module = { Bazel = { bazel_target = "//examples/tensorflow/module/cpp:all", config = "emscripten" } }
