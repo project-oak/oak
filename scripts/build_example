@@ -72,21 +72,20 @@ case "${application_language}" in
       # `trusted_information_retrieval` example has an additional Backend binary.
       cargo build --release --target="${RUST_HOST_TARGET}" --manifest-path="examples/trusted_information_retrieval/backend/Cargo.toml"
     fi
-    bazel --output_base="${CACHE_DIR}/client" build "${bazel_build_flags[@]}" "//examples/${EXAMPLE}/config:config";;
+    # shellcheck source=/dev/null
+    source "./examples/${EXAMPLE}/config/build.sh"
+    ;;
   cpp)
-    # `config_cpp` depends on a Wasm module, so it should be built with `wasm32` or `emscripten`.
-    readonly BUILD_RULES=(
-      "//examples/${EXAMPLE}/module/cpp:all"
-      "//examples/${EXAMPLE}/config:config_cpp"
-    )
     if [[ "${EXAMPLE}" == "tensorflow" ]]; then
       # TODO: Compile all examples in Emscripten when imports are fixed.
       # https://github.com/project-oak/oak/issues/439
-      bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "${BUILD_RULES[@]}"
+      bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "//examples/${EXAMPLE}/module/cpp:all"
     else
       # TODO: support compilation mode wasm.
-      bazel --output_base="${CACHE_DIR}/wasm32" build "${bazel_build_flags[@]}" --config=wasm32 "${BUILD_RULES[@]}"
+      bazel --output_base="${CACHE_DIR}/wasm32" build "${bazel_build_flags[@]}" --config=wasm32 "//examples/${EXAMPLE}/module/cpp:all"
     fi
+    # shellcheck source=/dev/null
+    source "./examples/${EXAMPLE}/config/build_cpp.sh"
     ;;
   *)
     echo "Invalid example application variant: ${application_language}"
@@ -95,15 +94,16 @@ esac
 
 if [[ -n "${docker_config}" ]]; then
   "${SCRIPTS_DIR}/build_server" -s "${docker_config}"
-  if [[ "${EXAMPLE}" == "tensorflow" ]]; then
-    bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten //examples/tensorflow/server:tensorflow_image.tar
-  else
-    bazel build "${bazel_build_flags[@]}" "--config=clang" "//examples/${EXAMPLE}/server:${EXAMPLE}_image.tar"
-  fi
+  # Build the base server.
+  docker build --tag=oak_docker --file=./oak/server/Dockerfile ./oak/server
+  # Build and save the example
+  docker build --tag="${EXAMPLE}" --file=./examples/Dockerfile "./examples/${EXAMPLE}"
+  docker save "${EXAMPLE}" > "./examples/${EXAMPLE}/bin/${EXAMPLE}.tar"
 
   # `aggregator` example has an additional Backend Docker image.
   if [[ "${EXAMPLE}" == "aggregator" ]]; then
-    bazel build "${bazel_build_flags[@]}" "//examples/aggregator/server:aggregator_backend_image.tar"
+    docker build --tag=aggregator_backend --file="./examples/${EXAMPLE}/server/Dockerfile" "./examples"
+    docker save aggregator_backend > "./examples/${EXAMPLE}/bin/aggregator_backend.tar"
   fi
 fi
 

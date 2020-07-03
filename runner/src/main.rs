@@ -338,7 +338,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                     name: "run_server".to_string(),
                     background: run_example_server(
                         &opt.build_server,
-                        &format!("./bazel-bin/examples/{}/config/config.bin", example.name),
+                        &format!("./examples/{}/bin/config.bin", example.name),
                     ),
                     foreground: Box::new(Step::Multiple {
                         name: "run_client".to_string(),
