@@ -1035,7 +1035,7 @@
                     <span class="ident">name</span>: <span class="string">&quot;run_server&quot;</span>.<span class="ident">to_string</span>(),
                     <span class="ident">background</span>: <span class="ident">run_example_server</span>(
                         <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_server</span>,
-                        <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;./bazel-bin/examples/{}/config/config.bin&quot;</span>, <span class="ident">example</span>.<span class="ident">name</span>),
+                        <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;./examples/{}/bin/config.bin&quot;</span>, <span class="ident">example</span>.<span class="ident">name</span>),
                     ),
                     <span class="ident">foreground</span>: <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Step</span>::<span class="ident">Multiple</span> {
                         <span class="ident">name</span>: <span class="string">&quot;run_client&quot;</span>.<span class="ident">to_string</span>(),
