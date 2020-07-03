@@ -34,7 +34,7 @@ readonly TARGET_ABS_PATH="$(realpath "${TARGET_DIR}")"
 
 # All the dirs that we want to generate docs for.
 declare -ar SOURCE_PATHS=("oak/server" "oak_abi" "oak_utils" "sdk" "runner")
-declare -ar TARGET_SUBDIRS=("oak" "oak_abi" "oak_utils" "sdk" "runner")
+declare -ar TARGET_SUBDIRS=("oak_runtime" "oak_abi" "oak_utils" "oak" "runner")
 
 # Titles used in the top-level index.html files. 
 declare -ar PAGE_TITLES=("Runtime" "ABI" "Utils" "SDK" "Runner")
@@ -45,7 +45,7 @@ for ((i=0;i<LEN;i++)); do
   (
     cd "${SOURCE_PATHS[$i]}"
 
-    target_dir="${TARGET_ABS_PATH}/${TARGET_SUBDIRS[$i]}"
+    target_dir="${TARGET_ABS_PATH}/${SOURCE_PATHS[$i]}"
     mkdir --parent "${target_dir}"
 
     # Generate docs directly into the target dir.
