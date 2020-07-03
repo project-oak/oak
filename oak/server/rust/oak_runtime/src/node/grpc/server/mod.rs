@@ -556,7 +556,7 @@ impl MetricsRecorder {
         self.msg_count += 1;
         self.metrics_data
             .grpc_server_metrics
-            .grpc_response_size_bytes
+            .grpc_server_response_size_bytes
             .with_label_values(&[&self.method_name])
             .observe(msg_len as f64);
     }
