@@ -152,6 +152,87 @@
 <span id="152">152</span>
 <span id="153">153</span>
 <span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -185,16 +266,22 @@
 <span class="doccomment">/// Mostly copied from https://github.com/grpc-ecosystem/java-grpc-prometheus</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcServerMetrics</span> {
-    <span class="doccomment">/// Total number of RPCs started on the server.</span>
     <span class="kw">pub</span> <span class="ident">grpc_server_started_total</span>: <span class="ident">IntCounterVec</span>,
-    <span class="doccomment">/// Total number of RPCs completed on the server, regardless of success or failure.</span>
     <span class="kw">pub</span> <span class="ident">grpc_server_handled_total</span>: <span class="ident">IntCounterVec</span>,
-    <span class="doccomment">/// Histogram of response latency of RPCs handled by the server, in seconds.</span>
     <span class="kw">pub</span> <span class="ident">grpc_server_handled_latency_seconds</span>: <span class="ident">HistogramVec</span>,
-    <span class="doccomment">/// Histogram of response sizes of RPCs handled by the server.</span>
-    <span class="kw">pub</span> <span class="ident">grpc_response_size_bytes</span>: <span class="ident">HistogramVec</span>,
-    <span class="doccomment">/// Total number of stream messages sent by the server.</span>
+    <span class="kw">pub</span> <span class="ident">grpc_server_response_size_bytes</span>: <span class="ident">HistogramVec</span>,
     <span class="kw">pub</span> <span class="ident">grpc_server_msg_sent_total</span>: <span class="ident">HistogramVec</span>,
+}
+
+<span class="doccomment">/// Mostly copied from https://github.com/grpc-ecosystem/java-grpc-prometheus</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcClientMetrics</span> {
+    <span class="kw">pub</span> <span class="ident">grpc_client_started_total</span>: <span class="ident">IntCounterVec</span>,
+    <span class="kw">pub</span> <span class="ident">grpc_client_completed</span>: <span class="ident">IntCounterVec</span>,
+    <span class="kw">pub</span> <span class="ident">grpc_client_completed_latency_seconds</span>: <span class="ident">HistogramVec</span>,
+    <span class="kw">pub</span> <span class="ident">grpc_client_sent_bytes</span>: <span class="ident">HistogramVec</span>,
+    <span class="kw">pub</span> <span class="ident">grpc_client_received_bytes</span>: <span class="ident">HistogramVec</span>,
+    <span class="kw">pub</span> <span class="ident">grpc_client_received_msgs</span>: <span class="ident">HistogramVec</span>,
 }
 
 <span class="doccomment">/// Struct that collects all metrics for monitoring the Oak Runtime.</span>
@@ -210,6 +297,7 @@
     <span class="ident">registry</span>: <span class="ident">Registry</span>,
     <span class="kw">pub</span> <span class="ident">runtime_metrics</span>: <span class="ident">RuntimeMetrics</span>,
     <span class="kw">pub</span> <span class="ident">grpc_server_metrics</span>: <span class="ident">GrpcServerMetrics</span>,
+    <span class="kw">pub</span> <span class="ident">grpc_client_metrics</span>: <span class="ident">GrpcClientMetrics</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">MetricsBuilder</span> {
@@ -246,29 +334,102 @@
             <span class="ident">grpc_server_started_total</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">counter_vec</span>(
                 <span class="string">&quot;grpc_server_started_total&quot;</span>,
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;method_name&quot;</span>],
-                <span class="string">&quot;Total number of RPCs started on the server.&quot;</span>,
+                <span class="string">&quot;Total number of RPCs started on the server, for each method invocation.&quot;</span>,
             )),
             <span class="ident">grpc_server_handled_total</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">counter_vec</span>(
                 <span class="string">&quot;grpc_server_handled_total&quot;</span>,
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;method_name&quot;</span>, <span class="string">&quot;status_code&quot;</span>],
-                <span class="string">&quot;Total number of RPCs completed on the server, regardless of success or failure.&quot;</span>,
+                <span class="string">&quot;Total number of RPCs completed on the server, for each method invocation, regardless of success or failure.&quot;</span>,
             )),
             <span class="ident">grpc_server_handled_latency_seconds</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">histogram_vec</span>(
                 <span class="string">&quot;grpc_server_handled_latency_seconds&quot;</span>,
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;method_name&quot;</span>],
-                <span class="string">&quot;Histogram of response latency of RPCs handled by the server.&quot;</span>,
+                <span class="string">&quot;Histogram of response latency of RPCs handled by the server, for each method invocation.&quot;</span>,
             )),
-            <span class="ident">grpc_response_size_bytes</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">histogram_vec</span>(
-                <span class="string">&quot;grpc_response_size_bytes&quot;</span>,
+            <span class="ident">grpc_server_response_size_bytes</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">histogram_vec</span>(
+                <span class="string">&quot;grpc_server_response_size_bytes&quot;</span>,
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;method_name&quot;</span>],
-                <span class="string">&quot;Histogram of response sizes of RPCs handled by the server.&quot;</span>,
+                <span class="string">&quot;Histogram of RPC response message sizes sent by the server, for each method invocation.&quot;</span>,
             )),
             <span class="ident">grpc_server_msg_sent_total</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">histogram_vec</span>(
                 <span class="string">&quot;grpc_server_msg_sent_total&quot;</span>,
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;method_name&quot;</span>],
-                <span class="string">&quot;Total number of RPC response messages sent by the server.&quot;</span>,
+                <span class="string">&quot;Histogram of number of RPC response messages sent by the server, for each method invocation.&quot;</span>,
             )),
         }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">GrpcClientMetrics</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">builder</span>: <span class="kw-2">&amp;</span><span class="ident">MetricsBuilder</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">GrpcClientMetrics</span> {
+            <span class="ident">grpc_client_started_total</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">counter_vec</span>(
+                <span class="string">&quot;grpc_client_started_total&quot;</span>,
+                <span class="kw-2">&amp;</span>[<span class="string">&quot;server&quot;</span>, <span class="string">&quot;method_name&quot;</span>],
+                <span class="string">&quot;Total number of RPCs started on the client, for each method invocation.&quot;</span>,
+            )),
+            <span class="ident">grpc_client_completed</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">counter_vec</span>(
+                <span class="string">&quot;grpc_client_completed&quot;</span>,
+                <span class="kw-2">&amp;</span>[<span class="string">&quot;server&quot;</span>, <span class="string">&quot;method_name&quot;</span>, <span class="string">&quot;status_code&quot;</span>],
+                <span class="string">&quot;Total number of RPCs completed on the client, for each method invocation, regardless of success or failure.&quot;</span>,
+            )),
+            <span class="ident">grpc_client_completed_latency_seconds</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">histogram_vec</span>(
+                <span class="string">&quot;grpc_client_completed_latency_seconds&quot;</span>,
+                <span class="kw-2">&amp;</span>[<span class="string">&quot;server&quot;</span>, <span class="string">&quot;method_name&quot;</span>],
+                <span class="string">&quot;Histogram of RPC response latency for completed RPCs, for each method invocation, in seconds.&quot;</span>,
+            )),
+            <span class="ident">grpc_client_sent_bytes</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">histogram_vec</span>(
+                <span class="string">&quot;grpc_client_sent_bytes&quot;</span>,
+                <span class="kw-2">&amp;</span>[<span class="string">&quot;server&quot;</span>, <span class="string">&quot;method_name&quot;</span>],
+                <span class="string">&quot;Histogram of RPC request sizes sent by the client, for each method invocation.&quot;</span>,
+            )),
+            <span class="ident">grpc_client_received_bytes</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">histogram_vec</span>(
+                <span class="string">&quot;grpc_client_received_bytes&quot;</span>,
+                <span class="kw-2">&amp;</span>[<span class="string">&quot;server&quot;</span>, <span class="string">&quot;method_name&quot;</span>],
+                <span class="string">&quot;Histogram of RPC response message sizes received by the client, for each method invocation.&quot;</span>,
+            )),
+            <span class="ident">grpc_client_received_msgs</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">histogram_vec</span>(
+                <span class="string">&quot;grpc_client_received_msgs&quot;</span>,
+                <span class="kw-2">&amp;</span>[<span class="string">&quot;server&quot;</span>, <span class="string">&quot;method_name&quot;</span>],
+                <span class="string">&quot;Histogram of number of RPC response messages received by the client, for each method invocation.&quot;</span>,
+            )),
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">observe_new_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">server</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">msg_len</span>: <span class="ident">usize</span>) {
+        <span class="self">self</span>.<span class="ident">grpc_client_started_total</span>
+            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">server</span>, <span class="ident">method_name</span>])
+            .<span class="ident">inc</span>();
+        <span class="self">self</span>.<span class="ident">grpc_client_sent_bytes</span>
+            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">server</span>, <span class="ident">method_name</span>])
+            .<span class="ident">observe</span>(<span class="ident">msg_len</span> <span class="kw">as</span> <span class="ident">f64</span>);
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">observe_new_response_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">server</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">msg_len</span>: <span class="ident">usize</span>) {
+        <span class="self">self</span>.<span class="ident">grpc_client_received_bytes</span>
+            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">server</span>, <span class="ident">method_name</span>])
+            .<span class="ident">observe</span>(<span class="ident">msg_len</span> <span class="kw">as</span> <span class="ident">f64</span>);
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">observe_response_handling_completed</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">server</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">status_code</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">msg_count</span>: <span class="ident">u32</span>,
+    ) {
+        <span class="self">self</span>.<span class="ident">grpc_client_received_msgs</span>
+            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">server</span>, <span class="ident">method_name</span>])
+            .<span class="ident">observe</span>(<span class="ident">msg_count</span> <span class="kw">as</span> <span class="ident">f64</span>);
+        <span class="self">self</span>.<span class="ident">grpc_client_completed</span>
+            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">server</span>, <span class="ident">method_name</span>, <span class="ident">status_code</span>])
+            .<span class="ident">inc</span>();
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_timer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">server</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">prometheus</span>::<span class="ident">HistogramTimer</span> {
+        <span class="self">self</span>.<span class="ident">grpc_client_completed_latency_seconds</span>
+            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">server</span>, <span class="ident">method_name</span>])
+            .<span class="ident">start_timer</span>()
     }
 }
 
@@ -293,6 +454,7 @@
         <span class="self">Self</span> {
             <span class="ident">runtime_metrics</span>: <span class="ident">RuntimeMetrics</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">builder</span>),
             <span class="ident">grpc_server_metrics</span>: <span class="ident">GrpcServerMetrics</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">builder</span>),
+            <span class="ident">grpc_client_metrics</span>: <span class="ident">GrpcClientMetrics</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">builder</span>),
             <span class="ident">registry</span>: <span class="ident">builder</span>.<span class="ident">registry</span>,
         }
     }

@@ -1249,7 +1249,7 @@
         <span class="self">self</span>.<span class="ident">msg_count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         <span class="self">self</span>.<span class="ident">metrics_data</span>
             .<span class="ident">grpc_server_metrics</span>
-            .<span class="ident">grpc_response_size_bytes</span>
+            .<span class="ident">grpc_server_response_size_bytes</span>
             .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">method_name</span>])
             .<span class="ident">observe</span>(<span class="ident">msg_len</span> <span class="kw">as</span> <span class="ident">f64</span>);
     }
