@@ -30,8 +30,8 @@ fi
 
 readonly EXAMPLE_BIN_DIR="${PWD}/examples/${EXAMPLE}/bin"
 for module in "${EXAMPLE_BIN_DIR:?}"/*.wasm; do
-  module_hash="$(sha256sum ${module} | cut -f 1 -d ' ')"
-  module_name="$(basename ${module} | cut -f 1 -d '.')"
+  module_hash="$(sha256sum "${module}" | cut -f 1 -d ' ')"
+  module_name="$(basename "${module}" | cut -f 1 -d '.')"
 
   gsutil cp "${module}" "gs://oak-modules/${module_name}/${module_hash}"
 done
