@@ -404,7 +404,7 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
             // Inject the encapsulated gRPC request into the Oak Application.
             debug!("inject encapsulated request into Oak Node");
             let response_iter = handler
-                .inject_grpc_request(grpc_request, &oak_label, metrics_data.clone())
+                .inject_grpc_request(grpc_request, &oak_label)
                 .map_err(|()| tonic::Status::new(tonic::Code::Internal, ""))?;
 
             // First convert the `Iterator<Item = GrpcResponse>` to an
@@ -450,7 +450,6 @@ impl GrpcInvocationHandler {
         &self,
         request: GrpcRequest,
         label: &Label,
-        metrics_data: Metrics,
     ) -> Result<GrpcResponseIterator, ()> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
 
@@ -525,46 +524,82 @@ impl GrpcInvocationHandler {
         Ok(GrpcResponseIterator::new(
             self.runtime.clone(),
             response_reader,
-            metrics_data,
             self.method_name.clone(),
         ))
     }
 }
 
-struct GrpcResponseIterator {
-    runtime: RuntimeProxy,
-    response_reader: oak_abi::Handle,
+struct MetricsRecorder {
     metrics_data: Metrics,
     method_name: String,
-    // The lifetime of the timer matches the lifetime of the iterator,
-    // updating the request-timer metric when the iterator is dropped.
+    msg_count: u32,
     _timer: prometheus::HistogramTimer,
-    done: bool,
 }
 
-impl GrpcResponseIterator {
-    fn new(
-        runtime: RuntimeProxy,
-        response_reader: oak_abi::Handle,
-        metrics_data: Metrics,
-        method_name: String,
-    ) -> Self {
-        trace!(
-            "Create new GrpcResponseIterator for '{}', reading from {}",
-            method_name,
-            response_reader
-        );
+impl MetricsRecorder {
+    fn new(runtime: RuntimeProxy, method_name: String) -> MetricsRecorder {
+        let metrics_data = runtime.metrics_data();
         let timer = metrics_data
             .grpc_server_metrics
             .grpc_server_handled_latency_seconds
             .with_label_values(&[&method_name])
             .start_timer();
+        MetricsRecorder {
+            metrics_data,
+            method_name,
+            msg_count: 0,
+            _timer: timer,
+        }
+    }
+
+    fn observe_message_with_len(&mut self, msg_len: usize) {
+        self.msg_count += 1;
+        self.metrics_data
+            .grpc_server_metrics
+            .grpc_response_size_bytes
+            .with_label_values(&[&self.method_name])
+            .observe(msg_len as f64);
+    }
+
+    fn observe_completion(&self) {
+        self.metrics_data
+            .grpc_server_metrics
+            .grpc_server_msg_sent_total
+            .with_label_values(&[&self.method_name])
+            .observe(self.msg_count as f64);
+    }
+}
+
+impl Drop for MetricsRecorder {
+    fn drop(&mut self) {
+        self.observe_completion();
+    }
+    // Note that dropping self._timer will record the duration.
+}
+
+struct GrpcResponseIterator {
+    runtime: RuntimeProxy,
+    response_reader: oak_abi::Handle,
+    method_name: String,
+    // The lifetime of the metrics_recorder matches the lifetime of the
+    // iterator, updating the metrics when the iterator is dropped.
+    metrics_recorder: MetricsRecorder,
+    done: bool,
+}
+
+impl GrpcResponseIterator {
+    fn new(runtime: RuntimeProxy, response_reader: oak_abi::Handle, method_name: String) -> Self {
+        trace!(
+            "Create new GrpcResponseIterator for '{}', reading from {}",
+            method_name,
+            response_reader
+        );
+        let metrics_recorder = MetricsRecorder::new(runtime.clone(), method_name.clone());
         GrpcResponseIterator {
             runtime,
             response_reader,
-            metrics_data,
             method_name,
-            _timer: timer,
+            metrics_recorder,
             done: false,
         }
     }
@@ -582,7 +617,8 @@ impl Drop for GrpcResponseIterator {
         if let Err(err) = self.runtime.channel_close(self.response_reader) {
             error!("Failed to close gRPC response reader channel: {:?}", err);
         }
-        // Note that dropping self.timer will record the duration.
+        // Note that dropping self.metrics_recorder will record the duration, and update the
+        // `grpc_server_msg_sent_total` metric.
     }
 }
 
@@ -606,16 +642,8 @@ impl Iterator for GrpcResponseIterator {
             match self.runtime.channel_read(self.response_reader) {
                 Ok(Some(msg)) => match GrpcResponse::decode(msg.data.as_slice()) {
                     Ok(grpc_rsp) => {
-                        self.metrics_data
-                            .grpc_server_metrics
-                            .grpc_response_size_bytes
-                            .with_label_values(&[&self.method_name])
-                            .observe(grpc_rsp.rsp_msg.len() as f64);
-                        self.metrics_data
-                            .grpc_server_metrics
-                            .grpc_server_msg_sent_total
-                            .with_label_values(&[&self.method_name])
-                            .observe(1.0);
+                        self.metrics_recorder
+                            .observe_message_with_len(grpc_rsp.rsp_msg.len());
                         if grpc_rsp.last {
                             // The Node has definitively marked this as the last response for this
                             // invocation; keep track of this and don't bother attempting to read
