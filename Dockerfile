@@ -22,7 +22,6 @@ RUN apt-get --yes update \
   ca-certificates \
   clang-tidy \
   curl \
-  default-jdk-headless \
   git \
   gnupg2 \
   gnupg-agent \
@@ -32,10 +31,9 @@ RUN apt-get --yes update \
   musl-tools \
   pkg-config \
   procps \
-  python-dev \
-  python2.7-dev \
-  python3-dev \
+  python3 \
   python3-six \
+  python3-distutils \
   shellcheck \
   software-properties-common \
   vim \
@@ -50,10 +48,8 @@ RUN apt-get --yes update \
   && git --version \
   && shellcheck --version
 
-
-RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
-
 # Install a version of docker CLI.
+RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
 RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \
   && apt-get --yes update \
   && apt-get install --no-install-recommends --yes docker-ce-cli \
@@ -79,26 +75,18 @@ RUN curl --location "${bazel_url}" > bazel.deb \
   && apt-get clean \
   && bazel version
 
-# Install Node.js and npm.
-RUN curl --location https://deb.nodesource.com/setup_12.x | bash - \
-  && apt-get install --no-install-recommends --yes nodejs \
-  && mkdir "/.npm" \
-  && chmod a+rwx "/.npm" \
-  && node --version \
-  && npm --version
-
 # Install the necessary binaries and SDKs, ordering them from the less frequently changed to the
 # more frequently changed.
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#leverage-build-cache.
 
 # Install Emscripten.
-ARG emscripten_version=1.39.6
-ARG emscripten_commit=6bfbe2a7da68e650054af2d272d2b79307a6ad72
-ARG emscripten_sha256=aa4c3b8f23fd26363f98207674bffcc138105c621c6c8bf12175f6aab1231357
+ARG emscripten_version=1.39.17
+ARG emscripten_node_version=12.9.1_64bit
+ARG emscripten_sha256=925dd5ca7dd783d0b367386e81847eaf680d54ae86017c4b5846dea951e17dc9
 ARG emscripten_dir=/usr/local/emsdk
 ARG emscripten_temp=/tmp/emscripten.zip
 RUN mkdir --parents ${emscripten_dir} \
-  && curl --location https://github.com/emscripten-core/emsdk/archive/${emscripten_commit}.tar.gz > ${emscripten_temp} \
+  && curl --location https://github.com/emscripten-core/emsdk/archive/${emscripten_version}.tar.gz > ${emscripten_temp} \
   && sha256sum --binary ${emscripten_temp} && echo "${emscripten_sha256} *${emscripten_temp}" | sha256sum --check \
   && tar --extract --gzip --file=${emscripten_temp} --directory=${emscripten_dir} --strip-components=1 \
   && rm ${emscripten_temp} \
@@ -107,8 +95,9 @@ RUN mkdir --parents ${emscripten_dir} \
 ENV EMSDK "${emscripten_dir}"
 ENV EM_CONFIG "${emscripten_dir}/.emscripten"
 ENV EM_CACHE "${emscripten_dir}/.emscripten_cache"
-# We need to allow a non-root Docker container to write into the `EM_CACHE` directory.
-RUN chmod --recursive go+wx "${EM_CACHE}"
+ENV PATH "${emscripten_dir}:${emscripten_dir}/node/${emscripten_node_version}/bin:${PATH}"
+# We need to allow a non-root Docker container to write into the directory
+RUN chmod --recursive go+wx "${emscripten_dir}"
 
 # Install Go.
 ARG golang_version=1.14.4
@@ -130,14 +119,17 @@ RUN mkdir --parents ${GOROOT} \
   && go version
 
 # Install embedmd (Markdown snippet embedder) (via Go).
+# https://github.com/campoy/embedmd
 RUN go get github.com/campoy/embedmd@97c13d6 \
   && embedmd -v
 
 # Install liche (Markdown link checker) (via Go).
+# https://github.com/raviqqe/liche
 RUN go get github.com/raviqqe/liche@f57a5d1 \
   && liche --version
 
 # Install prettier and markdownlint (via Node.js).
+# This will use the Node version installed by emscripten.
 # https://prettier.io/
 # https://github.com/igorshubovych/markdownlint-cli
 ARG prettier_version=1.19.1
@@ -150,6 +142,8 @@ RUN npm install --global \
   && prettier --version \
   && markdownlint --version
 
+# Install hadolint.
+# https://github.com/hadolint/hadolint
 ARG hadolint_version=1.17.5
 ARG hadolint_sha256=20dd38bc0602040f19268adc14c3d1aae11af27b463af43f3122076baf827a35
 ARG hadolint_dir=/usr/local/hadolint/bin
@@ -162,6 +156,7 @@ RUN mkdir --parents ${hadolint_dir} \
   && hadolint --version
 
 # Install buildifier.
+# https://github.com/bazelbuild/buildtools/tree/master/buildifier
 ARG bazel_tools_version=2.2.1
 ARG buildifier_sha256=731a6a9bf8fca8a00a165cd5b3fbac9907a7cf422ec9c2f206b0a76c0a7e3d62
 ARG buildifier_dir=/usr/local/buildifier/bin
@@ -209,33 +204,34 @@ RUN rustup target add wasm32-unknown-unknown
 # Install musl target for Rust (for statically linked binaries).
 RUN rustup target add x86_64-unknown-linux-musl
 
-# Install rustfmt, clippy, and the Rust Language Server.
+# Install rustfmt and clippy.
 RUN rustup component add \
   clippy \
-  rls \
-  rust-analysis \
   rust-src \
   rustfmt
 
-# No binary available on Github, have to use cargo install
+# No binary available on Github, have to use cargo install.
 RUN cargo install cargo-deadlinks
 
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
 
-# Install grcov
+# Install grcov.
+# https://github.com/mozilla/grcov
 ARG grcov_version=v0.5.15
 ARG grcov_location=https://github.com/mozilla/grcov/releases/download/${grcov_version}/grcov-linux-x86_64.tar.bz2
 RUN curl --location ${grcov_location} | tar --extract --bzip2 --directory=${install_dir}
 RUN chmod +x ${install_dir}/grcov
 
-# Install cargo-crev
+# Install cargo-crev.
+# https://github.com/crev-dev/cargo-crev
 ARG crev_version=v0.16.1
 ARG crev_location=https://github.com/crev-dev/cargo-crev/releases/download/${crev_version}/cargo-crev-${crev_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${crev_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-crev
 
 # Install cargo-deny
+# https://github.com/EmbarkStudios/cargo-deny
 ARG deny_version=0.7.0
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1

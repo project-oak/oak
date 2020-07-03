@@ -16,5 +16,7 @@ if [[ -n "${EM_CACHE}" ]]; then
   export EM_EXCLUSIVE_CACHE_ACCESS=1
 fi
 export EMCC_WASM_BACKEND=1
+export EMCC_FORCE_STDLIBS=libc-wasm,libc++,libc++abi,libmalloc,libc_rt_wasm
+export EMCC_ONLY_FORCED_STDLIBS=1
 
 external/emsdk/emsdk/upstream/emscripten/emcc "$@"
