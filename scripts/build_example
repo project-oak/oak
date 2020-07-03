@@ -53,18 +53,23 @@ if [[ -z "${EXAMPLE+z}" ]]; then
   exit 1
 fi
 
+readonly EXAMPLE_BIN_DIR="${PWD}/examples/${EXAMPLE}/bin"
+rm -rf "${EXAMPLE_BIN_DIR:?}"
+mkdir --parents "${EXAMPLE_BIN_DIR}"
 case "${application_language}" in
   rust)
     for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do
       # Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it
       # should end with `target` so that it gets automatically ignored by our `.gitignore`.
-      cargo build --release --target=wasm32-unknown-unknown --manifest-path="${module}"
+      # `--out-dir` is unstable and requires `-Z unstable-options`.
+      cargo build --release --target=wasm32-unknown-unknown --manifest-path="${module}" \
+        --out-dir="${EXAMPLE_BIN_DIR}" -Z unstable-options
     done
 
-    # Serialize application configuration for Rust module.
     if [[ "${EXAMPLE}" == "hello_world" ]]; then
       # `hello_world` example has an optional additional `translator` module.
-      cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml"
+      cargo build --release --target=wasm32-unknown-unknown --manifest-path="examples/translator/module/rust/Cargo.toml" \
+        --out-dir="${EXAMPLE_BIN_DIR}" -Z unstable-options
     elif [[ "${EXAMPLE}" == "aggregator" ]]; then
       # `aggregator` example has an additional Backend binary.
       cargo build --release --target="${RUST_HOST_TARGET}" --manifest-path="examples/aggregator/backend/Cargo.toml"
@@ -72,20 +77,28 @@ case "${application_language}" in
       # `trusted_information_retrieval` example has an additional Backend binary.
       cargo build --release --target="${RUST_HOST_TARGET}" --manifest-path="examples/trusted_information_retrieval/backend/Cargo.toml"
     fi
-    # shellcheck source=/dev/null
-    source "./examples/${EXAMPLE}/config/build.sh"
+
+    # Serialize application configuration for Rust module.
+    cargo run --manifest-path="sdk/rust/oak_config_serializer/Cargo.toml" -- \
+      --input-file="examples/${EXAMPLE}/config/config.toml" \
+      --output-file="${EXAMPLE_BIN_DIR}/config.bin"
     ;;
   cpp)
     if [[ "${EXAMPLE}" == "tensorflow" ]]; then
       # TODO: Compile all examples in Emscripten when imports are fixed.
       # https://github.com/project-oak/oak/issues/439
-      bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "//examples/${EXAMPLE}/module/cpp:all"
+      bazel --output_base="${CACHE_DIR}/emscripten" build "${bazel_build_flags[@]}" --config=emscripten "//examples/tensorflow/module/cpp:all"
+      cp --force "${PWD}/bazel-emscripten-bin/examples/tensorflow/module/cpp/tensorflow_micro.wasm" "${EXAMPLE_BIN_DIR}/tensorflow_cpp.wasm"
     else
       # TODO: support compilation mode wasm.
       bazel --output_base="${CACHE_DIR}/wasm32" build "${bazel_build_flags[@]}" --config=wasm32 "//examples/${EXAMPLE}/module/cpp:all"
+      cp --force "${PWD}/bazel-wasm-bin/examples/${EXAMPLE}/module/cpp/${EXAMPLE}.wasm" "${EXAMPLE_BIN_DIR}/${EXAMPLE}_cpp.wasm"
     fi
-    # shellcheck source=/dev/null
-    source "./examples/${EXAMPLE}/config/build_cpp.sh"
+
+    # Serialize application configuration for Rust module.
+    cargo run --manifest-path="sdk/rust/oak_config_serializer/Cargo.toml" -- \
+      --input-file="examples/${EXAMPLE}/config/config_cpp.toml" \
+      --output-file="${EXAMPLE_BIN_DIR}/config_cpp.bin"
     ;;
   *)
     echo "Invalid example application variant: ${application_language}"

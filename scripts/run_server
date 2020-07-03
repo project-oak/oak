@@ -20,8 +20,8 @@ Either the -f APPLICATION or the -e EXAMPLE option is required.
           - base: base version of the server
           - logless: base version of the server with debug logging compiled out
   -a    Example application variant (if -e specified):
-          - rust (used by default)
-          - cpp
+        - rust (used by default)
+        - cpp
   -c    Path to the downloaded JSON-encoded OpenID Connect client identity file
   -v    Enable verbose/debug output
   -h    Print Help (this message) and exit"
@@ -74,7 +74,7 @@ if [[ -n ${EXAMPLE+x} ]]; then
 
   if [[ "${EXAMPLE}" == "trusted_information_retrieval" ]]; then
     additional_args+=(
-      "--config-files=config=${SCRIPTS_DIR}/../examples/trusted_information_retrieval/config/config.toml"
+      "--config-files=config=${SCRIPTS_DIR}/../examples/trusted_information_retrieval/database.toml"
     )
   fi
 fi

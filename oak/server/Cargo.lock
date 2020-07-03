@@ -681,6 +681,7 @@ dependencies = [
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak_abi 0.1.0",
  "oak_runtime 0.1.0",
+ "oak_utils 0.1.0",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustls 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -730,6 +731,7 @@ dependencies = [
 name = "oak_utils"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro2 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",

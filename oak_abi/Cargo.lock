@@ -116,6 +116,7 @@ dependencies = [
 name = "oak_utils"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "maplit",
  "proc-macro2",
  "prost",

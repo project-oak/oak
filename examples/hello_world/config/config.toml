@@ -1,0 +1,5 @@
+name = "hello_world"
+
+[modules]
+app = { path = "examples/hello_world/bin/hello_world.wasm" }
+translator = { path = "examples/hello_world/bin/translator.wasm" }

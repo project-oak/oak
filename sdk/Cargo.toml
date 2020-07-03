@@ -1,5 +1,5 @@
 [workspace]
-members = ["rust/oak", "rust/oak_tests"]
+members = ["rust/oak", "rust/oak_config_serializer", "rust/oak_tests"]
 
 # Patch dependencies on oak crates so that they refer to the versions within this same repository.
 #
@@ -10,6 +10,7 @@ members = ["rust/oak", "rust/oak_tests"]
 # Oak.
 oak = { path = "rust/oak" }
 oak_abi = { path = "../oak_abi" }
+oak_config_serializer = { path = "rust/oak_config_serializer" }
 oak_runtime = { path = "../oak/server/rust/oak_runtime" }
 oak_tests = { path = "rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }

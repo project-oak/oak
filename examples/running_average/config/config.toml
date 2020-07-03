@@ -1,0 +1,4 @@
+name = "running_average"
+
+[modules]
+app = { path = "examples/running_average/bin/running_average.wasm" }
