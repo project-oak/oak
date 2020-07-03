@@ -244,17 +244,17 @@ translator = { path = "examples/hello_world/bin/translator.wasm" }
 ```
 
 All these steps are implemented as a part of the
-`./scripts/build_example -e hello_world` script.
+`./scripts/runner run-examples --example-name=hello_world` script.
 
 ### Starting the Oak Application
 
-The Oak Application is then loaded using the Oak Runner:
+The Oak Application is then started using the Oak Loader:
 
 ```bash
-./scripts/run_server -f "${PWD}/config.bin"
+./oak/server/target/x86_64-unknown-linux-musl/release/oak_loader --application="${PWD}/config.bin"
 ```
 
-The Oak Runner will launch an [Oak Runtime](concepts.md#oak-runtime), and this
+The Oak Loader will launch an [Oak Runtime](concepts.md#oak-runtime), and this
 Runtime will check the provided Wasm module(s) and application configuration.
 Assuming everything is correct (e.g. the Nodes all have a main entrypoint and
 only expect to link to the Oak [host functions](abi.md#host-functions)), the Oak

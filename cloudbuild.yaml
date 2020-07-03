@@ -63,7 +63,7 @@ steps:
     waitFor: ['build_server_no_debug']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/runner', '--commands', 'run-ci']
+    args: ['./scripts/runner', 'run-ci']
 
   # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
@@ -71,7 +71,15 @@ steps:
     waitFor: ['git_init']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'base']
+    args:
+      [
+        './scripts/runner',
+        'run-examples',
+        '--example-name=hello_world',
+        '--run-server=false',
+        '--run-clients=false',
+        '--build-docker',
+      ]
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: generate_root_ca_certs

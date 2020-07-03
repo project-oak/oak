@@ -16,7 +16,7 @@ To build and run one of the Oak example applications under Docker, run:
 
 ```bash
 ./scripts/docker_pull  # retrieve cached Docker image for faster builds
-./scripts/docker_run ./scripts/run_example -e hello_world
+./scripts/docker_run ./scripts/runner run-examples --example-name=hello_world
 ```
 
 This should build the Runtime, an Oak Application and a client for the
@@ -118,13 +118,13 @@ Running one of the example Oak applications will confirm that all core
 prerequisites have been installed. Run one inside Docker with:
 
 ```bash
-./scripts/docker_run ./scripts/run_example -e hello_world
+./scripts/docker_run ./scripts/runner run-examples --example-name=hello_world
 ```
 
 or, if all prerequisites are available on the local system, outside of Docker:
 
 ```bash
-./scripts/run_example -e hello_world
+./scripts/runner run-examples --example-name=hello_world
 ```
 
 That script:
@@ -151,7 +151,7 @@ to a WebAssembly module and then serializes it into a binary application
 configuration file to be loaded to the Oak Server:
 
 ```bash
-./scripts/build_example -e hello_world
+./scripts/runner run-examples --run-server=false --run-clients=false --example-name=hello_world
 ```
 
 This binary application configuration file includes the compiled Wasm code for
@@ -172,7 +172,7 @@ The following command builds the Oak Runtime server. An initial build will take
 some time, but subsequent builds should be cached and so run much faster.
 
 ```bash
-./scripts/build_server
+./scripts/runner build-server
 ```
 
 ### Run Runtime Server
@@ -182,7 +182,7 @@ Oak Application (which must already have been compiled into WebAssembly and
 built into a serialized configuration, as [described above](#build-application).
 
 ```bash
-./scripts/run_server -e hello_world
+./scripts/runner run-examples --run-clients=false --example-name=hello_world
 ```
 
 In the end, you should end up with an Oak server running, end with log output
@@ -202,7 +202,7 @@ client of an example Oak Application (as [described above](#build-application)),
 and runs the client code locally.
 
 ```bash
-./scripts/run_example -s none -e hello_world
+./scripts/runner run-examples --run-server=false --logs --example-name=hello_world
 ```
 
 The `-s none` option indicates that the script expects to find an

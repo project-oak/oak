@@ -71,6 +71,8 @@ pub struct RunExamples {
     pub client_additional_args: Vec<String>,
     #[structopt(long, help = "additional arguments to pass to server")]
     pub server_additional_args: Vec<String>,
+    #[structopt(long, help = "build a Docker image for the examples")]
+    pub build_docker: bool,
 }
 
 #[derive(StructOpt, Clone)]
@@ -322,6 +324,11 @@ impl Runnable for Cmd {
             cmd.env("USER", v);
         }
 
+        // Python variables.
+        if let Ok(v) = std::env::var("PYTHONPATH") {
+            cmd.env("PYTHONPATH", v);
+        }
+
         // Rust compilation variables.
         if let Ok(v) = std::env::var("RUSTUP_HOME") {
             cmd.env("RUSTUP_HOME", v);
@@ -377,14 +384,22 @@ impl Runnable for Cmd {
                 .spawn()
                 .expect("could not spawn command");
 
-            let stdout = read_background(child.stdout.take().expect("could not take stdout"));
-            let stderr = read_background(child.stderr.take().expect("could not take stderr"));
+            let stdout_logs = if opt.logs {
+                Default::default()
+            } else {
+                read_background(child.stdout.take().expect("could not take stdout"))
+            };
+            let stderr_logs = if opt.logs {
+                Default::default()
+            } else {
+                read_background(child.stderr.take().expect("could not take stderr"))
+            };
 
             Box::new(RunningCmd {
                 command: command_string,
                 process: Some(child),
-                stdout,
-                stderr,
+                stdout: stdout_logs,
+                stderr: stderr_logs,
             })
         }
     }

@@ -228,6 +228,7 @@ fn run_tests() -> Step {
         steps: vec![
             run_cargo_clippy(),
             run_cargo_test(),
+            run_cargo_doc(),
             run_cargo_test_tsan(),
             run_bazel_build(),
             run_bazel_test(),
@@ -239,6 +240,7 @@ fn format() -> Step {
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
+            run_clang_format(FormatMode::Fix),
             run_buildifier(FormatMode::Fix),
             run_prettier(FormatMode::Fix),
             run_markdownlint(FormatMode::Fix),
@@ -254,12 +256,15 @@ fn check_format() -> Step {
         steps: vec![
             run_check_license(),
             run_check_todo(),
+            run_clang_format(FormatMode::Check),
             run_buildifier(FormatMode::Check),
             run_prettier(FormatMode::Check),
             run_markdownlint(FormatMode::Check),
             run_embedmd(FormatMode::Check),
             run_liche(),
             run_cargo_fmt(FormatMode::Check),
+            run_hadolint(),
+            run_shellcheck(),
         ],
     }
 }
@@ -288,6 +293,7 @@ fn run_ci() -> Step {
                 run_clients: None,
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
+                build_docker: false,
                 build_server: BuildServer {
                     server_variant: "base".to_string(),
                     server_rust_toolchain: None,
@@ -468,6 +474,11 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 // faster.
                 build_server(&opt.build_server),
             ],
+            if opt.build_docker {
+                vec![build_docker(&example)]
+            } else {
+                vec![]
+            },
             match &example.backend {
                 Some(backend) => vec![Step::Single {
                     name: "build backend".to_string(),
@@ -483,6 +494,38 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
         .into_iter()
         .flatten()
         .collect::<Vec<_>>(),
+    }
+}
+
+fn build_docker(example: &Example) -> Step {
+    Step::Multiple {
+        name: "docker".to_string(),
+        steps: vec![
+            Step::Single {
+                name: "build server image".to_string(),
+                command: Cmd::new(
+                    "docker",
+                    &[
+                        "build",
+                        "--tag=oak_docker",
+                        "--file=./oak/server/Dockerfile",
+                        "./oak/server",
+                    ],
+                ),
+            },
+            Step::Single {
+                name: "build example image".to_string(),
+                command: Cmd::new(
+                    "docker",
+                    &[
+                        "build",
+                        &format!("--tag={}", example.name),
+                        "--file=./examples/Dockerfile",
+                        &format!("./examples/{}", example.name),
+                    ],
+                ),
+            },
+        ],
     }
 }
 
@@ -640,6 +683,12 @@ fn is_source_code_file(path: &PathBuf) -> bool {
         || filename.ends_with(".proto")
 }
 
+/// Return whether the provided path refers to a source file that can be formatted by clang-tidy.
+fn is_clang_format_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".cc") || filename.ends_with(".h") || filename.ends_with(".proto")
+}
+
 /// Return whether the provided path refers to a Bazel file (`BUILD`, `WORKSPACE`, or `*.bzl`)
 fn is_bazel_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
@@ -650,6 +699,11 @@ fn is_bazel_file(path: &PathBuf) -> bool {
 fn is_markdown_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".md")
+}
+
+fn is_dockerfile(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with("Dockerfile")
 }
 
 fn is_toml_file(path: &PathBuf) -> bool {
@@ -697,6 +751,19 @@ fn is_cargo_workspace_file(path: &PathBuf) -> bool {
     // alternative would be to actually parse the file as `toml` and figure out whether it has a
     // `workspace` section, but it seems overkill for now.
     contents.contains("[workspace]")
+}
+
+fn is_shell_script(path: &PathBuf) -> bool {
+    if path.is_file() {
+        let mut file = std::fs::File::open(path).expect("could not open file");
+        let mut contents = String::new();
+        match file.read_to_string(&mut contents) {
+            Ok(_size) => contents.starts_with("#!"),
+            Err(_err) => false,
+        }
+    } else {
+        false
+    }
 }
 
 enum FormatMode {
@@ -818,6 +885,64 @@ fn run_liche() -> Step {
     }
 }
 
+fn run_hadolint() -> Step {
+    Step::Multiple {
+        name: "hadolint".to_string(),
+        steps: source_files()
+            .filter(is_dockerfile)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new("hadolint", &[entry]),
+            })
+            .collect(),
+    }
+}
+
+fn run_shellcheck() -> Step {
+    Step::Multiple {
+        name: "shellcheck".to_string(),
+        steps: source_files()
+            .filter(is_shell_script)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new("shellcheck", &["--external-sources", &entry]),
+            })
+            .collect(),
+    }
+}
+
+fn run_clang_format(mode: FormatMode) -> Step {
+    match mode {
+        FormatMode::Check => Step::Single {
+            name: "clang format".to_string(),
+            command: Cmd::new(
+                "python",
+                &[
+                    "./third_party/run-clang-format/run-clang-format.py",
+                    "-r",
+                    "--exclude",
+                    "*/node_modules",
+                    "oak",
+                    "examples",
+                ],
+            ),
+        },
+        FormatMode::Fix => Step::Multiple {
+            name: "clang format".to_string(),
+            steps: source_files()
+                .filter(is_clang_format_file)
+                .map(to_string)
+                .map(|entry| Step::Single {
+                    name: entry.clone(),
+                    command: Cmd::new("clang-format", &["-i", "-style=file", &entry]),
+                })
+                .collect(),
+        },
+    }
+}
+
 fn run_check_license() -> Step {
     Step::Multiple {
         name: "check license".to_string(),
@@ -880,6 +1005,13 @@ fn run_cargo_test() -> Step {
                 command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
             })
             .collect(),
+    }
+}
+
+fn run_cargo_doc() -> Step {
+    Step::Single {
+        name: "cargo doc".to_string(),
+        command: Cmd::new("bash", &["./scripts/check_docs"]),
     }
 }
 

@@ -15,23 +15,17 @@ as bearer tokens:
 
 ## Command Line Operation
 
-Initially, the chat example needs to be built:
+Initially, the chat example needs to be built, and the server started:
 
 ```bash
-./scripts/build_example -e chat
-```
-
-Next, let's start the server:
-
-```bash
-./scripts/run_server -e chat
+./scripts/runner --logs run-examples --run-clients=false --example-name=chat
 ```
 
 After this, one can run the first client, which connects to the Oak Application
 and opens a first chat room inside it:
 
 ```bash
-./scripts/run_example -s none -e chat
+./scripts/runner --logs run-examples --run-server=false --example-name=chat --client-additional-args=--test=false
 ```
 
 This will emit a trace line that holds the information needed to:
@@ -46,22 +40,7 @@ This will emit a trace line that holds the information needed to:
 Another party can then join the same chat room by using these arguments:
 
 ```bash
-./scripts/run_example -s none -e chat -- --address=localhost:8080 --room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
-```
-
-Alternatively, another party can create a new chat room running on the same Oak
-Application by just copying the `--address` argument, but specifying a new room
-name:
-
-```bash
-./scripts/run_example -s none -e chat -- --address=localhost:8080
-```
-
-This will again emit a trace line with the information needed to join this new
-room (on the same server):
-
-```log
-2019-10-24 11:04:40  INFO  chat.cc : 242 : Join this room with --address=localhost:8080 --room_id=msSGas1Ie2rtGIvG0bLa2Jh3ODjO35nix46R3j2iYjAcB8zDcJpn/P2DD7c0yB1NMmfoipBSAePJzlXjknm8gg==
+./scripts/runner --logs run-examples --run-server=false --example-name=chat --client-additional-args=--test=false --client-additional-args=--room_id=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
 ```
 
 ## CI Invocation

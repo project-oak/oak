@@ -15,6 +15,7 @@
 //
 
 use super::*;
+
 /// A [`Runnable`] command that checks for the existence of source files without the necessary
 /// license header.
 pub struct CheckLicense {

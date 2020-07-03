@@ -45,14 +45,17 @@ jobs:
 
       # Build artifacts that are supposed to be reproducible.
       - name: Build Rust server
-        run: ./scripts/docker_run ./scripts/build_server -s base
+        run: |
+          ./scripts/docker_run ./scripts/runner build-server --server-variant=base
 
       - name: Build examples
-        run: ./scripts/docker_run ./scripts/build_examples
+        run: |
+          ./scripts/docker_run ./scripts/runner run-examples --run-clients=false --run-server=false
 
       # Generate an index of the hashes of the reproducible artifacts.
       - name: Generate Reproducibility Index
-        run: ./scripts/docker_run ./scripts/build_reproducibility_index
+        run: |
+          ./scripts/docker_run ./scripts/build_reproducibility_index
 
       # Remove all files from the "out" folder.
       - name: Clear "out" folder
