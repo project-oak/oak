@@ -36,28 +36,12 @@
 
 extern "C" {
 
-PLACEHOLDER(int, __syscall5, int, int)
-PLACEHOLDER(int, __syscall192, int, int)
-PLACEHOLDER(int, __syscall194, int, int)
-
 PLACEHOLDER(int, fstat, int, struct stat*)
 PLACEHOLDER(ssize_t, lgetxattr, const char*, const char*, void*, size_t)
 PLACEHOLDER(ssize_t, listxattr, const char*, char*, size_t)
 
 PLACEHOLDER(void*, dlopen, const char*, int)
 PLACEHOLDER(void*, dlsym, void*, const char*)
-PLACEHOLDER(long, sysconf, int)
-
-PLACEHOLDER(int, clock_gettime, clockid_t, struct timespec*)
-PLACEHOLDER(int, nanosleep, const struct timespec*, struct timespec*)
-
-PLACEHOLDER(int, pthread_cond_destroy, pthread_cond_t*)
-PLACEHOLDER(int, pthread_cond_init, pthread_cond_t*, const pthread_condattr_t*)
-PLACEHOLDER(int, pthread_create, pthread_t*, const pthread_attr_t*, void* (*)(void*), void*)
-PLACEHOLDER(int, pthread_equal, pthread_t, pthread_t)
-PLACEHOLDER(void, pthread_exit, void*)
-PLACEHOLDER(int, pthread_join, pthread_t, void**)
-PLACEHOLDER(int, pthread_setcancelstate, int, int*)
 
 double round(double x) { return __builtin_round(x); }
 float roundf(float x) { return __builtin_roundf(x); }

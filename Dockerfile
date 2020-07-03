@@ -83,6 +83,7 @@ RUN curl --location "${bazel_url}" > bazel.deb \
 ARG emscripten_version=1.39.17
 ARG emscripten_node_version=12.9.1_64bit
 ARG emscripten_sha256=925dd5ca7dd783d0b367386e81847eaf680d54ae86017c4b5846dea951e17dc9
+
 ARG emscripten_dir=/usr/local/emsdk
 ARG emscripten_temp=/tmp/emscripten.zip
 RUN mkdir --parents ${emscripten_dir} \
@@ -98,6 +99,8 @@ ENV EM_CACHE "${emscripten_dir}/.emscripten_cache"
 ENV PATH "${emscripten_dir}:${emscripten_dir}/node/${emscripten_node_version}/bin:${PATH}"
 # We need to allow a non-root Docker container to write into the directory
 RUN chmod --recursive go+wx "${emscripten_dir}"
+# Emscripten brings Node with it, we need to allow non-root access to temp folders
+RUN mkdir "/.npm" && chmod a+rwx "/.npm"
 
 # Install Go.
 ARG golang_version=1.14.4
