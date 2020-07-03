@@ -20,6 +20,7 @@ tokio = { version = "*", features = [
   "fs",
   "macros",
   "rt-threaded",
+  "signal",
   "sync",
   "stream"
 ] }
