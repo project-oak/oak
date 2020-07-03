@@ -17,7 +17,8 @@
 use colored::*;
 use std::{
     collections::{HashMap, HashSet},
-    io::Write,
+    io::{Read, Write},
+    sync::{Arc, Mutex},
     time::Instant,
 };
 use structopt::StructOpt;
@@ -354,6 +355,8 @@ impl Runnable for Cmd {
             Box::new(RunningCmd {
                 command: command_string,
                 process: None,
+                stdout: Default::default(),
+                stderr: Default::default(),
             })
         } else {
             // If the `logs` flag is enabled, inherit stdout and stderr from the main runner
@@ -368,24 +371,43 @@ impl Runnable for Cmd {
             } else {
                 std::process::Stdio::piped()
             };
-            let child = cmd
+            let mut child = cmd
                 .stdout(stdout)
                 .stderr(stderr)
                 .spawn()
                 .expect("could not spawn command");
 
+            let stdout = read_background(child.stdout.take().expect("could not take stdout"));
+            let stderr = read_background(child.stderr.take().expect("could not take stderr"));
+
             Box::new(RunningCmd {
                 command: command_string,
                 process: Some(child),
+                stdout,
+                stderr,
             })
         }
     }
+}
+
+/// Reads a stream in a separate thread, to avoid internal pipe buffers filling and causing a
+/// deadlock.
+fn read_background<T: Read + Send + 'static>(mut r: T) -> Arc<Mutex<String>> {
+    let buf = Arc::new(Mutex::new(String::new()));
+    let buf_2 = buf.clone();
+    std::thread::spawn(move || {
+        let mut s = buf_2.lock().expect("could not take logs lock");
+        r.read_to_string(&mut s).expect("could not read logs");
+    });
+    buf
 }
 
 /// An instance of a running command.
 pub struct RunningCmd {
     command: String,
     process: Option<std::process::Child>,
+    stdout: Arc<Mutex<String>>,
+    stderr: Arc<Mutex<String>>,
 }
 
 impl Running for RunningCmd {
@@ -418,15 +440,13 @@ impl Running for RunningCmd {
 
         let mut logs = String::new();
         {
-            let stdout =
-                std::str::from_utf8(&output.stdout).expect("could not parse command stdout");
+            let stdout = self.stdout.lock().expect("cold not acquire stdout lock");
             if !stdout.is_empty() {
                 logs += &format!("════╡ stdout ╞════\n{}", stdout);
             }
         }
         {
-            let stderr =
-                std::str::from_utf8(&output.stderr).expect("could not parse command stderr");
+            let stderr = self.stderr.lock().expect("could not acquire stderr lock");
             if !stderr.is_empty() {
                 logs += &format!("════╡ stderr ╞════\n{}", stderr);
             }
