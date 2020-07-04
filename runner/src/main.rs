@@ -23,6 +23,8 @@
 //! cargo run --manifest-path=runner/Cargo.toml
 //! ```
 
+#![feature(async_closure)]
+
 use colored::*;
 use maplit::hashmap;
 use notify::Watcher;
@@ -47,12 +49,13 @@ use check_license::CheckLicense;
 const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-unknown-linux-musl";
 const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
 
     let watch = opt.watch;
 
-    let run = move || {
+    let run = async move || {
         let steps = match opt.cmd {
             Command::RunExamples(ref opt) => run_examples(&opt),
             Command::BuildServer(ref opt) => build_server(&opt),
@@ -62,7 +65,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::RunCi => run_ci(),
         };
         // TODO(#396): Add support for running individual commands via command line flags.
-        run_step(&Context::root(&opt), &steps)
+        run_step(&Context::root(&opt), &steps).await
     };
 
     if watch {
@@ -93,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             })?;
         watcher.watch(".", notify::RecursiveMode::Recursive)?;
 
-        run();
+        run().await;
 
         spinner = Some(new_spinner());
         loop {
@@ -114,13 +117,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("{}", format!("- {:?}", path).purple());
                 }
                 eprintln!();
-                run();
+                // run().await;
                 eprintln!();
                 spinner = Some(new_spinner());
             }
         }
     } else {
-        let statuses = run();
+        let statuses = run().await;
         // If the overall status value is an error, terminate with a nonzero exit code.
         if statuses.contains(&StatusResultValue::Error) {
             std::process::exit(1);

@@ -9,11 +9,15 @@ license = "Apache-2.0"
 
 [dependencies]
 colored = "*"
+futures = "*"
+futures-core = "*"
+futures-util = "*"
 maplit = "*"
 nix = "*"
 notify = "5.0.0-pre.2"
 serde = { version = "*", features = ["derive"] }
 spinners = "*"
 structopt = "*"
+tokio = { version = "*", features = ["fs", "macros", "process", "sync", "stream"] }
 toml = "*"
 walkdir = "*"
