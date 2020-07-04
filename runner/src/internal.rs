@@ -373,3 +373,68 @@ impl Running {
         }
     }
 }
+
+/// Similar to the `vec!` macro, but also allows a "spread" operator syntax (`...`) to inline and
+/// expand nested iterable values.
+///
+/// See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax.
+#[macro_export]
+macro_rules! spread [
+    // Empty case.
+    () => (
+        vec![].iter()
+    );
+    // Spread value base case.
+    (...$vv:expr) => (
+        $vv.iter()
+    );
+    // Spread value recursive case.
+    (...$vv:expr, $($rest:tt)*) => (
+        $vv.iter().chain( spread![$($rest)*] )
+    );
+    // Single value base case.
+    ($v:expr) => (
+        vec![$v].iter()
+    );
+    // Single value recursive case.
+    ($v:expr, $($rest:tt)*) => (
+        vec![$v].iter().chain( spread![$($rest)*] )
+    );
+];
+
+#[test]
+fn test_spread() {
+    assert_eq!(vec![1], spread![1].cloned().collect::<Vec<i32>>());
+    assert_eq!(vec![1, 2], spread![1, 2].cloned().collect::<Vec<i32>>());
+    assert_eq!(
+        vec![1, 2, 3, 4],
+        spread![1, 2, 3, 4].cloned().collect::<Vec<i32>>()
+    );
+    assert_eq!(
+        vec![1, 2, 3, 4],
+        spread![...vec![1, 2], 3, 4].cloned().collect::<Vec<i32>>()
+    );
+    assert_eq!(
+        vec![1, 2, 3, 4],
+        spread![1, ...vec![2, 3], 4].cloned().collect::<Vec<i32>>()
+    );
+    assert_eq!(
+        vec![1, 2, 3, 4],
+        spread![1, 2, ...vec![3, 4]].cloned().collect::<Vec<i32>>()
+    );
+    assert_eq!(
+        vec![1, 2, 3, 4],
+        spread![...vec![1, 2], ...vec![3, 4]]
+            .cloned()
+            .collect::<Vec<i32>>()
+    );
+    assert_eq!(
+        vec![1, 2, 3, 4],
+        spread![...vec![1, 2, 3, 4]].cloned().collect::<Vec<i32>>()
+    );
+
+    assert_eq!(
+        vec!["foo", "bar"],
+        spread!["foo", "bar"].cloned().collect::<Vec<_>>()
+    );
+}
