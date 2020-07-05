@@ -241,25 +241,25 @@ initial_node_configuration: {
 The `wasm_modules` field (not shown above because it is empty in the template
 configuration) will be filled with WebAssembly module bytes after serialization
 using the
-[_Application Configuration Serializer_](../oak/common/app_config_serializer.cc),
-as follows:
+[_Application Configuration Serializer_](../sdk/rust/oak_config_serializer), as
+follows:
 
 ```bash
-./bazel-bin/oak/common/app_config_serializer \
-  --textproto=examples/hello_world/config/config.textproto \
-  --modules=app://target/wasm32-unknown-unknown/release/hello_world.wasm \
-  --output_file=config.bin"
+cargo run --manifest-path="sdk/rust/oak_config_serializer/Cargo.toml" -- \
+  --input-file="examples/hello_world/config/config.toml" \
+  --output-file="hello_world/bin/config.bin"
 ```
 
-Here:
+The input file is the .toml configuration and the output is the binary
+containing all the needed modules. Here is an example of a configuration file:
 
-- The `--textproto` option gives the location of the template configuration file
-  described above.
-- The `--modules` option gives a comma-separated list of name:filename pairs,
-  which provides the WebAssembly module bytes for all of the named `wasm_config`
-  entries in the configuration.
-- The `--output_file` gives the output location of the assembled Application
-  configuration.
+```toml
+name = "hello_world"
+
+[modules]
+app = { path = "examples/hello_world/bin/hello_world.wasm" }
+translator = { path = "examples/hello_world/bin/translator.wasm" }
+```
 
 All these steps are implemented as a part of the
 `./scripts/build_example -e hello_world` script.
