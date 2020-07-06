@@ -65,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::RunCi => run_ci(),
         };
         // TODO(#396): Add support for running individual commands via command line flags.
-        run_step(&Context::root(&opt), &steps).await
+        run_step(&Context::root(&opt), steps).await
     };
 
     if watch {
@@ -562,17 +562,15 @@ fn build(target: &Target) -> Box<dyn Runnable> {
             config,
         } => Cmd::new(
             "bazel",
-            vec![
-                vec!["build".to_string()],
-                if config.is_empty() {
+            spread![
+                "build".to_string(),
+                ...if config.is_empty() {
                     vec![]
                 } else {
                     vec![format!("--config={}", config)]
                 },
-                vec![bazel_target.to_string()],
-            ]
-            .iter()
-            .flatten(),
+                bazel_target.to_string(),
+            ],
         ),
         Target::Npm { package_directory } => Cmd::new(
             "npm",
@@ -586,42 +584,34 @@ fn run(executable: &Executable, additional_args: Vec<String>) -> Box<dyn Runnabl
     match &executable.target {
         Target::Cargo { cargo_manifest } => Cmd::new(
             "cargo",
-            vec![
-                vec![
+            spread![
                     "run".to_string(),
                     "--release".to_string(),
                     format!("--target={}", DEFAULT_EXAMPLE_BACKEND_RUST_TARGET),
                     format!("--manifest-path={}", cargo_manifest),
                     "--".to_string(),
-                ],
-                executable.additional_args.clone(),
-                additional_args,
-            ]
-            .iter()
-            .flatten(),
+                ...executable.additional_args.clone(),
+                ...additional_args,
+            ],
         ),
         Target::Bazel {
             bazel_target,
             config,
         } => Cmd::new(
             "bazel",
-            vec![
-                vec!["run".to_string()],
-                if config.is_empty() {
+            spread![
+                "run".to_string(),
+                ...if config.is_empty() {
                     vec![]
                 } else {
                     vec![format!("--config={}", config)]
                 },
-                vec![
                     "--".to_string(),
                     bazel_target.to_string(),
                     "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
-                ],
-                executable.additional_args.clone(),
-                additional_args,
-            ]
-            .iter()
-            .flatten(),
+                ...executable.additional_args.clone(),
+                ...additional_args,
+            ],
         ),
         Target::Npm { package_directory } => Cmd::new(
             "npm",

@@ -28,19 +28,23 @@ impl CheckLicense {
     }
 }
 
+impl std::fmt::Display for CheckLicense {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "n/a")
+    }
+}
+
 impl Runnable for CheckLicense {
-    fn run(&self, _opt: &Opt) -> Box<dyn Running> {
+    fn run(self: Box<Self>, _opt: &Opt) -> Box<dyn Running> {
         let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
         let result_value = if file_content.contains("Apache License") {
             StatusResultValue::Ok
         } else {
             StatusResultValue::Error
         };
-        Box::new(ImmediateResult {
-            result: SingleStatusResult {
-                value: result_value,
-                logs: String::new(),
-            },
+        Box::new(SingleStatusResult {
+            value: result_value,
+            logs: String::new(),
         })
     }
 }

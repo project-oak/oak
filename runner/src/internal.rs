@@ -15,13 +15,11 @@
 //
 
 use colored::*;
-use futures::future::BoxFuture;
+use futures::future::{ready, BoxFuture};
 use futures_util::future::FutureExt;
 use std::{
     collections::{HashMap, HashSet},
-    future::Future,
-    io::{Read, Write},
-    sync::{Arc, Mutex},
+    io::Write,
     time::Instant,
 };
 use structopt::StructOpt;
@@ -176,114 +174,108 @@ where
 
 /// Run the provided step, printing out information about the execution, and returning a set of
 /// status results from the single or multiple steps that were executed.
-pub fn run_step<'a>(
-    context: &'a Context,
-    step: &'a Step,
-) -> BoxFuture<'a, HashSet<StatusResultValue>> {
-    async move {
-        match step {
-            Step::Single { name, command } => {
-                let context = context.child(name);
+#[async_recursion::async_recursion]
+pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValue> {
+    match step {
+        Step::Single { name, command } => {
+            let context = context.child(&name);
 
-                let start = Instant::now();
-                let mut running = command.run(&context.opt);
+            let start = Instant::now();
 
-                if context.opt.commands || context.opt.dry_run {
-                    eprintln!("{} ⊢ [{}] ... ", context.prefix, running);
-                }
-
-                eprint!("{} ⊢ ", context.prefix);
-                let status = running.wait(&context.opt).await;
-                let end = Instant::now();
-                let elapsed = end.duration_since(start);
-                eprintln!("{} [{:.0?}]", status.value, elapsed);
-
-                if (status.value == StatusResultValue::Error || context.opt.logs)
-                    && !status.logs.is_empty()
-                {
-                    eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
-                    for line in status.logs.lines() {
-                        eprintln!("{} {} {}", context.prefix, "║".blue(), line);
-                    }
-                    eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
-                }
-                let mut values = HashSet::new();
-                values.insert(status.value);
-                values
+            if context.opt.commands || context.opt.dry_run {
+                eprintln!("{} ⊢ [{}] ... ", context.prefix, command.to_string().blue());
             }
-            Step::Multiple { name, steps } => {
-                let context = context.child(name);
-                eprintln!("{} {{", context.prefix);
-                let start = Instant::now();
-                let values =
-                    futures::future::join_all(steps.iter().map(|step| run_step(&context, step)))
-                        .await
-                        .iter()
-                        .flatten()
-                        .cloned()
-                        .collect();
-                let end = Instant::now();
-                let elapsed = end.duration_since(start);
-                eprintln!(
-                    "{} }} ⊢ {} [{:.0?}]",
-                    context.prefix,
-                    values_to_string(&values),
-                    elapsed
-                );
-                values
-            }
-            Step::WithBackground {
-                name,
-                background,
-                foreground,
-            } => {
-                let context = context.child(name);
-                eprintln!("{} {{", context.prefix);
 
-                let mut running_background = background.run(&context.opt);
-                let background_command = if context.opt.commands || context.opt.dry_run {
-                    format!("[{}]", running_background)
-                } else {
-                    "".to_string()
-                };
-                eprintln!(
-                    "{} ⊢ {} (background) ...",
-                    context.prefix, background_command
-                );
+            eprint!("{} ⊢ ", context.prefix);
+            let status = command.run(&context.opt).result().await;
+            let end = Instant::now();
+            let elapsed = end.duration_since(start);
+            eprintln!("{} [{:.0?}]", status.value, elapsed);
 
-                // Small delay to make it more likely that the background process started.
-                std::thread::sleep(std::time::Duration::from_millis(2_000));
-
-                let values = run_step(&context, foreground).await;
-
-                running_background.kill();
-                eprintln!("{} ⊢ {} (waiting)", context.prefix, background_command,);
-                let background_status = running_background.wait(&context.opt).await;
-                eprintln!(
-                    "{} ⊢ {} (finished) {}",
-                    context.prefix, background_command, background_status.value
-                );
-                if (background_status.value == StatusResultValue::Error
-                    || values.contains(&StatusResultValue::Error)
-                    || context.opt.logs)
-                    && !background_status.logs.is_empty()
-                {
-                    eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
-                    for line in background_status.logs.lines() {
-                        eprintln!("{} {} {}", context.prefix, "║".blue(), line);
-                    }
-                    eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
+            if (status.value == StatusResultValue::Error || context.opt.logs)
+                && !status.logs.is_empty()
+            {
+                eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
+                for line in status.logs.lines() {
+                    eprintln!("{} {} {}", context.prefix, "║".blue(), line);
                 }
-
-                values
+                eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
             }
+            let mut values = HashSet::new();
+            values.insert(status.value);
+            values
+        }
+        Step::Multiple { name, steps } => {
+            let context = context.child(&name);
+            eprintln!("{} {{", context.prefix);
+            let start = Instant::now();
+            let mut values = HashSet::new();
+            for step in steps {
+                values = values
+                    .union(&run_step(&context, step).await)
+                    .cloned()
+                    .collect();
+            }
+            let end = Instant::now();
+            let elapsed = end.duration_since(start);
+            eprintln!(
+                "{} }} ⊢ {} [{:.0?}]",
+                context.prefix,
+                values_to_string(&values),
+                elapsed
+            );
+            values
+        }
+        Step::WithBackground {
+            name,
+            background,
+            foreground,
+        } => {
+            let context = context.child(&name);
+            eprintln!("{} {{", context.prefix);
+
+            let background_command = if context.opt.commands || context.opt.dry_run {
+                format!("[{}]", background)
+            } else {
+                "".to_string()
+            };
+            eprintln!(
+                "{} ⊢ {} (background) ...",
+                context.prefix, background_command
+            );
+
+            let mut running_background = background.run(&context.opt);
+
+            // Small delay to make it more likely that the background process started.
+            std::thread::sleep(std::time::Duration::from_millis(2_000));
+
+            let values = run_step(&context, *foreground).await;
+
+            running_background.kill();
+            eprintln!("{} ⊢ {} (waiting)", context.prefix, background_command,);
+            let background_status = running_background.result().await;
+            eprintln!(
+                "{} ⊢ {} (finished) {}",
+                context.prefix, background_command, background_status.value
+            );
+            if (background_status.value == StatusResultValue::Error
+                || values.contains(&StatusResultValue::Error)
+                || context.opt.logs)
+                && !background_status.logs.is_empty()
+            {
+                eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
+                for line in background_status.logs.lines() {
+                    eprintln!("{} {} {}", context.prefix, "║".blue(), line);
+                }
+                eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
+            }
+
+            values
         }
     }
-    .boxed()
 }
 
 /// A single command.
-#[derive(Clone)]
 pub struct Cmd {
     executable: String,
     args: Vec<String>,
@@ -316,11 +308,17 @@ impl Cmd {
     }
 }
 
+impl std::fmt::Display for Cmd {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{} {}", self.executable, self.args.join(" "))
+    }
+}
+
 impl Runnable for Cmd {
     /// Run the provided command, printing a status message with the current prefix.
     /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
     /// to run was not found).
-    fn run(&self, opt: &Opt) -> Box<dyn Running> {
+    fn run(self: Box<Self>, opt: &Opt) -> Box<dyn Running> {
         std::io::stderr().flush().expect("could not flush stderr");
         let mut cmd = tokio::process::Command::new(&self.executable);
         cmd.args(&self.args);
@@ -369,13 +367,10 @@ impl Runnable for Cmd {
 
         cmd.envs(&self.env);
 
-        let command_string = format!("{:?}", cmd);
         if opt.dry_run {
-            Box::new(RunningCmd {
-                command: command_string,
-                process: None,
-                stdout: Default::default(),
-                stderr: Default::default(),
+            Box::new(SingleStatusResult {
+                value: StatusResultValue::Skipped,
+                logs: String::new(),
             })
         } else {
             // If the `logs` flag is enabled, inherit stdout and stderr from the main runner
@@ -390,91 +385,56 @@ impl Runnable for Cmd {
             } else {
                 std::process::Stdio::piped()
             };
-            let mut child = cmd
+            let child = cmd
                 .stdout(stdout)
                 .stderr(stderr)
                 .spawn()
                 .expect("could not spawn command");
 
-            let stdout_logs = if opt.logs { None } else { child.stdout.take() };
-            let stderr_logs = if opt.logs { None } else { child.stderr.take() };
-
-            Box::new(RunningCmd {
-                command: command_string,
-                process: Some(child),
-                stdout: stdout_logs,
-                stderr: stderr_logs,
-            })
+            Box::new(RunningCmd { child })
         }
     }
 }
 
-/// Reads a stream in a separate thread, to avoid internal pipe buffers filling and causing a
-/// deadlock.
-fn read_background<T: Read + Send + 'static>(mut r: T) -> Arc<Mutex<String>> {
-    let buf = Arc::new(Mutex::new(String::new()));
-    let buf_2 = buf.clone();
-    std::thread::spawn(move || {
-        let mut s = buf_2.lock().expect("could not take logs lock");
-        r.read_to_string(&mut s).expect("could not read logs");
-    });
-    buf
-}
-
-/// An instance of a running command.
-pub struct RunningCmd {
-    command: String,
-    process: Option<tokio::process::Child>,
-    stdout: Option<tokio::process::ChildStdout>,
-    stderr: Option<tokio::process::ChildStderr>,
+struct RunningCmd {
+    child: tokio::process::Child,
 }
 
 impl Running for RunningCmd {
-    /// Forces the running command to stop. Equivalent to sending `SIGINT`.
     fn kill(&mut self) {
-        if let Some(ref mut child) = self.process {
-            // TODO(#396): Send increasingly stronger signals if the process fails to terminate
-            // within a given amount of time.
-            let pid = nix::unistd::Pid::from_raw(child.id() as i32);
-            nix::sys::signal::kill(pid, nix::sys::signal::Signal::SIGINT)
-                .expect("could not kill process");
-        }
+        // TODO(#396): Send increasingly stronger signals if the process fails to terminate
+        // within a given amount of time.
+        let pid = nix::unistd::Pid::from_raw(self.child.id() as i32);
+        nix::sys::signal::kill(pid, nix::sys::signal::Signal::SIGINT)
+            .expect("could not kill process");
     }
 
-    /// Waits for the running command to spontaneously terminate.
-    fn wait(&mut self, _opt: &Opt) -> BoxFuture<SingleStatusResult> {
-        async move {
-            let child = match self.process.take() {
-                Some(child) => child,
-                None => {
-                    return SingleStatusResult {
-                        logs: "".to_string(),
-                        value: StatusResultValue::Skipped,
-                    }
-                }
-            };
+    fn result(mut self: Box<Self>) -> BoxFuture<'static, SingleStatusResult> {
+        async {
+            let child_stdout = self.child.stdout.take();
+            let child_stderr = self.child.stderr.take();
 
-            let exit_status = child.await.expect("could not get exit status");
+            let exit_status = self.child.await.expect("could not get exit status");
 
             let mut logs = String::new();
             {
                 let mut stdout = String::new();
-                self.stdout
-                    .take()
-                    .expect("could not read stdout")
+                child_stdout
+                    .expect("could not obtain stdout")
                     .read_to_string(&mut stdout)
-                    .await;
+                    .await
+                    .expect("could not read stdout");
                 if !stdout.is_empty() {
                     logs += &format!("════╡ stdout ╞════\n{}", stdout);
                 }
             }
             {
                 let mut stderr = String::new();
-                self.stderr
-                    .take()
-                    .expect("could not read stderr")
+                child_stderr
+                    .expect("could not obtain stderr")
                     .read_to_string(&mut stderr)
-                    .await;
+                    .await
+                    .expect("could not read stderr");
                 if !stderr.is_empty() {
                     logs += &format!("════╡ stderr ╞════\n{}", stderr);
                 }
@@ -493,6 +453,21 @@ impl Running for RunningCmd {
             }
         }
         .boxed()
+    }
+}
+
+pub trait Runnable: Send + core::fmt::Display {
+    fn run(self: Box<Self>, opt: &Opt) -> Box<dyn Running>;
+}
+
+pub trait Running: Send {
+    fn kill(&mut self) {}
+    fn result(self: Box<Self>) -> BoxFuture<'static, SingleStatusResult>;
+}
+
+impl Running for SingleStatusResult {
+    fn result(self: Box<Self>) -> BoxFuture<'static, SingleStatusResult> {
+        Box::pin(ready(*self))
     }
 }
 
@@ -559,38 +534,4 @@ fn test_spread() {
         vec!["foo", "bar"],
         spread!["foo", "bar"].cloned().collect::<Vec<_>>()
     );
-}
-
-impl std::fmt::Display for RunningCmd {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", self.command)
-    }
-}
-
-/// An implementation of [`Running`] that immediately returns a pre-determined
-/// [`SingleStatusResult`] value.
-pub struct ImmediateResult {
-    pub result: SingleStatusResult,
-}
-
-impl Running for ImmediateResult {
-    fn kill(&mut self) {}
-    fn wait(&mut self, _opt: &Opt) -> BoxFuture<SingleStatusResult> {
-        Box::pin(futures::future::ready(self.result.clone()))
-    }
-}
-
-impl std::fmt::Display for ImmediateResult {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "n/a")
-    }
-}
-
-pub trait Runnable: Sync {
-    fn run(&self, opt: &Opt) -> Box<dyn Running>;
-}
-
-pub trait Running: std::fmt::Display + Send {
-    fn kill(&mut self);
-    fn wait(&mut self, opt: &Opt) -> BoxFuture<SingleStatusResult>;
 }
