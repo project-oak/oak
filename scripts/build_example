@@ -55,7 +55,7 @@ fi
 
 readonly EXAMPLE_BIN_DIR="${PWD}/examples/${EXAMPLE}/bin"
 rm -rf "${EXAMPLE_BIN_DIR:?}"
-mkdir --parents "${EXAMPLE_BIN_DIR}"
+mkdir -p "${EXAMPLE_BIN_DIR}"
 case "${application_language}" in
   rust)
     for module in examples/"${EXAMPLE}"/module*/rust/Cargo.toml; do

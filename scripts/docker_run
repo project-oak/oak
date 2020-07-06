@@ -17,12 +17,12 @@ source "$SCRIPTS_DIR/common"
 readonly DOCKER_UID="${UID:-0}"
 readonly DOCKER_GID="${GID:-0}"
 readonly DOCKER_USER="${USER:-root}"
-# In order for the docker-cli inside the container to use the host dockerd, 
+# In order for the docker-cli inside the container to use the host dockerd,
 # we need permissions for the user with the same gid as the host
 readonly HOST_DOCKER_GID="$(getent group docker | cut -d: -f3)"
 
-mkdir --parents './bazel-cache'
-mkdir --parents './cargo-cache'
+mkdir -p './bazel-cache'
+mkdir -p './cargo-cache'
 
 docker build \
   --cache-from="$DOCKER_IMAGE_NAME:latest" \
