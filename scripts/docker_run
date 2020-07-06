@@ -19,7 +19,11 @@ readonly DOCKER_GID="${GID:-0}"
 readonly DOCKER_USER="${USER:-root}"
 # In order for the docker-cli inside the container to use the host dockerd,
 # we need permissions for the user with the same gid as the host
-readonly HOST_DOCKER_GID="$(getent group docker | cut -d: -f3)"
+if [[ "${OSTYPE}" == "darwin"*  ]]; then
+  readonly HOST_DOCKER_GID="$(dscl . -read /Groups/staff | awk '($1 == "PrimaryGroupID:") { print $2 }')"
+else
+  readonly HOST_DOCKER_GID="$(getent group docker | cut -d: -f3)"
+fi
 
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
