@@ -132,7 +132,7 @@ do
   esac
 done
 
-if [[ -n "${SERVER_PID}" ]]; then
+if [[ "${server}" != "none" ]]; then
   # Check whether the server is still running.
   ps -p ${SERVER_PID} > /dev/null
   readonly SERVER_GONE=$?
