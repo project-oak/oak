@@ -17,7 +17,7 @@
 workspace(name = "oak")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 
 http_archive(
     name = "bazel_skylib",
@@ -80,6 +80,25 @@ http_archive(
     sha256 = "c2ab8a42a0d673c1acb596d276055adcc074c1116e427f118415da3e79e52969",
     strip_prefix = "grpc-1.27.3",
     urls = ["https://github.com/grpc/grpc/archive/v1.27.3.tar.gz"],
+)
+
+# cpp-httplib HTTP library for C++.
+new_git_repository(
+    name = "cpp_httplib",
+    build_file_content = """
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "httplib",
+    hdrs = ["httplib.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+    ],
+)
+""",
+    # Commit for tag v0.7.0
+    commit = "42f9f9107f87ad2ee04be117dbbadd621c449552",
+    remote = "https://github.com/yhirose/cpp-httplib",
 )
 
 # Google Test

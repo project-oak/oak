@@ -21,11 +21,15 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/strings/match.h"
+#include "absl/strings/numbers.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "examples/abitest/client/grpc_test_server.h"
 #include "examples/abitest/client/grpctest.h"
 #include "examples/abitest/proto/abitest.grpc.pb.h"
 #include "examples/abitest/proto/abitest.pb.h"
 #include "glog/logging.h"
+#include "httplib.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/server/storage/memory_provider.h"
@@ -41,6 +45,7 @@ ABSL_FLAG(int, grpc_test_port, 7878,
           "Port on which the test gRPC Server listens; set to zero to disable.");
 ABSL_FLAG(bool, test_abi, true, "Whether to perform ABI tests");
 ABSL_FLAG(bool, test_grpc, true, "Whether to perform gRPC tests");
+ABSL_FLAG(bool, test_aux, true, "Whether to perform tests on Runtime auxiliary servers");
 ABSL_FLAG(std::string, test_include, "", "Filter indicating which tests to include");
 ABSL_FLAG(std::string, test_exclude, "", "Filter indicating tests to exclude (if nonempty)");
 
@@ -120,6 +125,66 @@ bool run_grpc_tests(OakABITestService::Stub* stub, const std::string& include,
   }
   if (disabled > 0) {
     LOG(INFO) << " YOU HAVE " << disabled << " DISABLED GRPC TEST" << ((disabled > 1) ? "S" : "");
+  }
+
+  return success;
+}
+
+bool check_page(httplib::Client* client, const char* path) {
+  LOG(INFO) << "Get aux page at '" << path << "'";
+  auto res = client->Get(path);
+  if (!res || res->status != 200) {
+    LOG(WARNING) << "Request for '" << path << "' failed";
+    return false;
+  }
+  VLOG(1) << "Received for '" << path << "': " << res->body;
+  return true;
+}
+
+// Test that the Runtime's auxiliary servers respond to various
+// paths.
+bool run_aux_tests() {
+  bool success = true;
+
+  httplib::Client metrics("localhost", 9090);
+  success &= check_page(&metrics, "/metrics");
+  // Check a failed page.
+  success &= !check_page(&metrics, "/boguspath");
+
+  httplib::Client introspect("localhost", 1909);
+  success &= check_page(&introspect, "/");
+  success &= check_page(&introspect, "/graph");
+  success &= check_page(&introspect, "/objcount");
+  success &= check_page(&introspect, "/node/0");
+  success &= check_page(&introspect, "/node/1");
+  // Check some failed pages.
+  success &= !check_page(&introspect, "/boguspath");
+  success &= !check_page(&introspect, "/node/9999999999");
+  success &= !check_page(&introspect, "/node/9999999999/1");
+
+  // Look in the content of a per-Node page to find a valid /node/handle/ link.
+  auto res = introspect.Get("/node/1");
+  if (res && res->status == 200) {
+    // Find the first match for 'href="/node/1/\d+"' in res->body.
+    std::string prefix = "href=\"/node/1/";
+    size_t found = res->body.find(prefix);
+    if (found != std::string::npos) {
+      size_t start = found + prefix.size();
+      size_t end = res->body.find("\"", start);
+      absl::string_view handle_str(res->body.c_str() + start, end - start);
+      uint64_t handle;
+      if (absl::SimpleAtoi(handle_str, &handle)) {
+        success &= check_page(&introspect, absl::StrCat("/node/1/", handle).c_str());
+      } else {
+        LOG(ERROR) << "Could not parse handle value from '" << handle_str << "'";
+        success = false;
+      }
+    } else {
+      LOG(ERROR) << "Could not find link to node-handle page";
+      success = false;
+    }
+  } else {
+    success = false;
   }
 
   return success;
@@ -232,6 +297,13 @@ int main(int argc, char** argv) {
   if (absl::GetFlag(FLAGS_test_grpc)) {
     // Test gRPC modes.
     if (!run_grpc_tests(stub.get(), include, exclude)) {
+      success = false;
+    }
+  }
+
+  if (absl::GetFlag(FLAGS_test_aux)) {
+    // Test auxiliary servers.
+    if (!run_aux_tests()) {
       success = false;
     }
   }
