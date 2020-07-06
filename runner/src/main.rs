@@ -159,7 +159,7 @@ fn run_examples(opt: &RunExamples) -> Step {
     }
 }
 
-fn build_wasm_module(name: &str, target: &Target) -> Step {
+fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
     match target {
         Target::Cargo { cargo_manifest } => Step::Single {
             name: format!("wasm:{}:{}", name, cargo_manifest.to_string()),
@@ -170,6 +170,10 @@ fn build_wasm_module(name: &str, target: &Target) -> Step {
                     "--release",
                     "--target=wasm32-unknown-unknown",
                     &format!("--manifest-path={}", cargo_manifest),
+                    "-Z",
+                    "unstable-options",
+                    // `--out-dir` is unstable and requires `-Z unstable-options`.
+                    &format!("--out-dir=examples/{}/bin", example_name),
                 ],
             ),
         },
@@ -327,13 +331,10 @@ fn run_example_server(
             "--".to_string(),
             "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
             "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
-            "--root-tls-certificate=./examples/certs/local/ca.pem".to_string(),
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
             ...if opt.server_variant == "logless" {
                 vec!["--no-default-features".to_string()]
-            } else {
-                vec![]
             } else {
                 vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()]
             },
@@ -359,7 +360,7 @@ struct Example {
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Application {
-    build: Target,
+    manifest: String,
     out: String,
 }
 
@@ -463,12 +464,12 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                     steps: example
                         .modules
                         .iter()
-                        .map(|(name, target)| build_wasm_module(name, target))
+                        .map(|(name, target)| build_wasm_module(name, target, &example.name))
                         .collect(),
                 },
                 Step::Single {
                     name: "build application".to_string(),
-                    command: build(&example.application.build),
+                    command: build_application(&example.application),
                 },
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
@@ -495,6 +496,19 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
         .flatten()
         .collect::<Vec<_>>(),
     }
+}
+
+fn build_application(application: &Application) -> Box<dyn Runnable> {
+    Cmd::new(
+        "cargo",
+        vec![
+            "run".to_string(),
+            "--manifest-path=sdk/rust/oak_config_serializer/Cargo.toml".to_string(),
+            "--".to_string(),
+            format!("--input-file={}", application.manifest),
+            format!("--output-file={}", application.out),
+        ],
+    )
 }
 
 fn build_docker(example: &Example) -> Step {

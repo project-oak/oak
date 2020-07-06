@@ -1,7 +1,7 @@
 name = "aggregator"
 
 [application]
-build = { Shell = { script = "examples/aggregator/config/build.sh" } }
+manifest = "examples/aggregator/config/config.toml"
 out = "examples/aggregator/bin/config.bin"
 
 [modules]

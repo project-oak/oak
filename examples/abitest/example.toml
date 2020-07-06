@@ -1,7 +1,7 @@
 name = "abitest"
 
 [application]
-build = { Shell = { script = "examples/abitest/config/build.sh" } }
+manifest = "examples/abitest/config/config.toml"
 out = "examples/abitest/bin/config.bin"
 
 [modules]

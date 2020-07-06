@@ -1,7 +1,7 @@
 name = "hello_world"
 
 [application]
-build = { Shell = { script = "examples/hello_world/config/build.sh" } }
+manifest = "examples/hello_world/config/config.toml"
 out = "examples/hello_world/bin/config.bin"
 
 [modules]

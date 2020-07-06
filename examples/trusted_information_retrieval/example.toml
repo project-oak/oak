@@ -5,7 +5,7 @@ backend = { Cargo = { cargo_manifest = "examples/trusted_information_retrieval/b
 ] }
 
 [application]
-build = { Shell = { script = "examples/trusted_information_retrieval/config/build.sh" } }
+manifest = "examples/trusted_information_retrieval/config/config.toml"
 out = "examples/trusted_information_retrieval/bin/config.bin"
 
 [server]

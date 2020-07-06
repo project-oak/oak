@@ -1,7 +1,7 @@
 name = "tensorflow"
 
 [application]
-build = { Shell = { script = "examples/tensorflow/config/build_cpp.sh" } }
+manifest = "examples/tensorflow/config/config_cpp.toml"
 out = "examples/tensorflow/bin/config_cpp.bin"
 
 [modules]
