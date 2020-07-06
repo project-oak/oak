@@ -164,21 +164,21 @@ steps:
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: check_formatting
-    waitFor: ['git_check_diff', 'build_android_image']
+    waitFor: ['git_init', 'build_android_image']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/check_formatting']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: check_cargo_deny
-    waitFor: ['check_formatting']
+    waitFor: ['check_formatting', 'git_check_diff']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/check_cargo_deny']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: check_docs
-    waitFor: ['check_formatting']
+    waitFor: ['check_formatting', 'git_check_diff']
     timeout: 30m
     entrypoint: 'bash'
     args: ['./scripts/check_docs']
