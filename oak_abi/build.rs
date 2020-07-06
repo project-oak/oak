@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
+// Keep clippy from complaining about a needless call to `Default::default()`.
+#[allow(clippy::needless_update)]
 fn main() {
-    // Exclude generation of service code, as it would require a reference to the Oak SDK to
-    // compile.
-    oak_utils::compile_protos_without_services(
+    oak_utils::compile_protos_with_options(
         &[
             "../oak/proto/application.proto",
             "../oak/proto/grpc_encap.proto",
@@ -29,5 +29,11 @@ fn main() {
             "../third_party/google/rpc/status.proto",
         ],
         &[".."],
+        oak_utils::ProtoOptions {
+            // Exclude generation of service code, as it would require a reference to the Oak SDK to
+            // compile.
+            generate_services: false,
+            ..Default::default()
+        },
     );
 }

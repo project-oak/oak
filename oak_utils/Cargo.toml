@@ -22,3 +22,7 @@ tonic-build = { version = "*", default-features = false, features = [
   "prost",
   "transport"
 ] }
+
+[patch.crates-io]
+prost-build = { path = "../third_party/prost/prost-build" }
+prost = { path = "../third_party/prost" }
