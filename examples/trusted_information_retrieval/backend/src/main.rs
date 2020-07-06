@@ -31,6 +31,7 @@ mod proto {
 mod tests;
 
 use database::load_database;
+use futures::future::FutureExt;
 use log::{error, info};
 use prost::Message;
 use proto::{
@@ -145,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))
         .add_service(DatabaseServer::new(handler))
-        .serve(address)
+        .serve_with_shutdown(address, tokio::signal::ctrl_c().map(|r| r.unwrap()))
         .await?;
 
     Ok(())
