@@ -240,6 +240,29 @@
 <span id="240">240</span>
 <span id="241">241</span>
 <span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -406,6 +429,25 @@
     }
 }
 
+<span class="doccomment">/// Options for generating Protocol buffer Rust types.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ProtoOptions</span> {
+    <span class="doccomment">/// Generate Oak-specific service code for inter-node communication.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Default: **true**.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Generated code depends on the `oak` SDK crate.</span>
+    <span class="kw">pub</span> <span class="ident">generate_services</span>: <span class="ident">bool</span>,
+}
+
+<span class="doccomment">/// The default option values.</span>
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">ProtoOptions</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ProtoOptions</span> {
+        <span class="ident">ProtoOptions</span> {
+            <span class="ident">generate_services</span>: <span class="bool-val">true</span>,
+        }
+    }
+}
+
 <span class="doccomment">/// Build Rust code corresponding to a set of protocol buffer message and service definitions,</span>
 <span class="doccomment">/// emitting generated code to crate&#39;s `OUT_DIR`.  For gRPC service definitions, this</span>
 <span class="doccomment">/// function generates Oak-specific code that is suitable for use inside an Oak Node (i.e.  *not*</span>
@@ -414,22 +456,16 @@
 <span class="kw">where</span>
     <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span><span class="op">&gt;</span>,
 {
-    <span class="ident">compile_protos_with</span>(<span class="bool-val">true</span>, <span class="ident">inputs</span>, <span class="ident">includes</span>);
+    <span class="ident">compile_protos_with_options</span>(<span class="ident">inputs</span>, <span class="ident">includes</span>, <span class="ident">ProtoOptions</span>::<span class="ident">default</span>());
 }
 
-<span class="doccomment">/// Build Rust code corresponding to a set of protocol buffer messages, skipping any service</span>
-<span class="doccomment">/// definitions, emitting generated code to crate&#39;s `OUT_DIR`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_protos_without_services</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>(<span class="ident">inputs</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>], <span class="ident">includes</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>])
+<span class="doccomment">/// Like `compile_protos`, but allows for configuring options through `ProtoOptions`.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_protos_with_options</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>(<span class="ident">inputs</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>], <span class="ident">includes</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>], <span class="ident">options</span>: <span class="ident">ProtoOptions</span>)
 <span class="kw">where</span>
     <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span><span class="op">&gt;</span>,
 {
-    <span class="ident">compile_protos_with</span>(<span class="bool-val">false</span>, <span class="ident">inputs</span>, <span class="ident">includes</span>);
-}
+    <span class="ident">set_protoc_env_if_unset</span>();
 
-<span class="kw">fn</span> <span class="ident">compile_protos_with</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>(<span class="ident">generate_services</span>: <span class="ident">bool</span>, <span class="ident">inputs</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>], <span class="ident">includes</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>])
-<span class="kw">where</span>
-    <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span><span class="op">&gt;</span>,
-{
     <span class="kw">for</span> <span class="ident">input</span> <span class="kw">in</span> <span class="ident">inputs</span> {
         <span class="comment">// Tell cargo to rerun this build script if the proto file has changed.</span>
         <span class="comment">// https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath</span>
@@ -437,7 +473,7 @@
     }
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prost_config</span> <span class="op">=</span> <span class="ident">prost_build</span>::<span class="ident">Config</span>::<span class="ident">new</span>();
-    <span class="kw">if</span> <span class="ident">generate_services</span> {
+    <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">generate_services</span> {
         <span class="ident">prost_config</span>.<span class="ident">service_generator</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">OakServiceGenerator</span>));
     }
     <span class="ident">prost_config</span>
@@ -463,6 +499,8 @@
     <span class="ident">file_paths</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>],
     <span class="ident">options</span>: <span class="ident">CodegenOptions</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="ident">set_protoc_env_if_unset</span>();
+
     <span class="comment">// TODO(#1093): Move all proto generation to a common crate.</span>
     <span class="kw">let</span> <span class="ident">proto_path</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span>::<span class="ident">new</span>(<span class="ident">proto_path</span>);
     <span class="kw">let</span> <span class="ident">file_paths</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">file_paths</span>
@@ -482,6 +520,14 @@
         .<span class="ident">build_client</span>(<span class="ident">options</span>.<span class="ident">build_client</span>)
         .<span class="ident">build_server</span>(<span class="ident">options</span>.<span class="ident">build_server</span>)
         .<span class="ident">compile</span>(<span class="kw-2">&amp;</span><span class="ident">file_paths</span>, <span class="kw-2">&amp;</span>[<span class="ident">proto_path</span>.<span class="ident">to_path_buf</span>()])
+}
+
+<span class="kw">fn</span> <span class="ident">set_protoc_env_if_unset</span>() {
+    <span class="kw">if</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;PROTOC&quot;</span>).<span class="ident">is_err</span>() {
+        <span class="comment">// Use the system protoc if no override is set, so prost-build does not try to use the</span>
+        <span class="comment">// bundled one that we remove as part of the vendoring process.</span>
+        <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">set_var</span>(<span class="string">&quot;PROTOC&quot;</span>, <span class="string">&quot;protoc&quot;</span>);
+    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_utils";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

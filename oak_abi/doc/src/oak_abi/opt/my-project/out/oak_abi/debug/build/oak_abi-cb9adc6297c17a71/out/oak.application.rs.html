@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `/opt/my-project/out/oak_abi/debug/build/oak_abi-8816d2183a80cb43/out/oak.application.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>oak.application.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../../../../../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../light.css" id="themeStyle"><script src="../../../../../../../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../../../../../../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../../../../../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../../../../../../../../oak_abi/index.html'><div class='logo-container'><img src='../../../../../../../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../../../../../../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../../../../../../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../../../../../../../../settings.html"><img src="../../../../../../../../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `/opt/my-project/out/oak_abi/debug/build/oak_abi-cb9adc6297c17a71/out/oak.application.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>oak.application.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../../../../../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../light.css" id="themeStyle"><script src="../../../../../../../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../../../../../../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../../../../../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../../../../../../../../oak_abi/index.html'><div class='logo-container'><img src='../../../../../../../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../../../../../../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../../../../../../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../../../../../../../../settings.html"><img src="../../../../../../../../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -150,6 +150,7 @@
 <span id="150">150</span>
 <span id="151">151</span>
 <span id="152">152</span>
+<span id="153">153</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// An ApplicationConfiguration represents a unit of deployment in Oak.</span>
 <span class="doccomment">///</span>
@@ -174,13 +175,13 @@
     <span class="doccomment">/// Entries in this map may be referenced by instances of</span>
     <span class="doccomment">/// WebAssemblyConfiguration objects.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">map</span><span class="op">=</span><span class="string">&quot;string, bytes&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">wasm_modules</span>: ::<span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>, <span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">wasm_modules</span>: ::<span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span><span class="op">&lt;</span>::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>, ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Indication of what configuration the initial Node should run.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Usually a NodeConfiguration entry that holds a WebAssemblyConfiguration</span>
     <span class="doccomment">/// object.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">initial_node_configuration</span>: ::<span class="ident">std</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeConfiguration</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">initial_node_configuration</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeConfiguration</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// NodeConfiguration indicates the configuration of a created Node.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
@@ -189,10 +190,11 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Does not need to be unique.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">name</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;node_configuration::ConfigType&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;2, 3, 4, 5, 6, 7&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">config_type</span>: ::<span class="ident">std</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">node_configuration</span>::<span class="ident">ConfigType</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">config_type</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">node_configuration</span>::<span class="ident">ConfigType</span><span class="op">&gt;</span>,
 }
+<span class="doccomment">/// Nested message and enum types in `NodeConfiguration`.</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">node_configuration</span> {
     <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Oneof</span>)]</span>
     <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConfigType</span> {
@@ -217,11 +219,11 @@
     <span class="doccomment">/// The name of one of the entries in the</span>
     <span class="doccomment">/// `ApplicationConfiguration.wasm_modules` field.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">wasm_module_name</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">wasm_module_name</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
     <span class="doccomment">/// The name of an exported WebAssembly function to invoke as the Node entry</span>
     <span class="doccomment">/// point.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">wasm_entrypoint_name</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">wasm_entrypoint_name</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="doccomment">/// LogConfiguration describes the configuration of a logging pseudo-Node (which</span>
 <span class="doccomment">/// is provided by the Oak Runtime).</span>
@@ -235,7 +237,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StorageProxyConfiguration</span> {
     <span class="doccomment">/// The address of the external storage provider.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">address</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="doccomment">/// GrpcServerConfiguration describes the configuration of a gRPC server</span>
 <span class="doccomment">/// pseudo-Node (which is provided by the Oak Runtime), that processes gRPC</span>
@@ -245,7 +247,7 @@
     <span class="doccomment">/// The endpoint address for the gRPC server to listen on.</span>
     <span class="doccomment">/// `address` is represented as an &quot;ip_address:tcp_port&quot; string.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">address</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="doccomment">/// GrpcClientConfiguration describes the configuration of a gRPC client</span>
 <span class="doccomment">/// pseudo-Node (which is provided by the Oak Runtime), connected to a specific</span>
@@ -255,7 +257,7 @@
     <span class="doccomment">/// The URI component of a gRPC server endpoint. Must contain the &quot;Host&quot;</span>
     <span class="doccomment">/// element. https://docs.rs/tonic/0.2.1/tonic/transport/struct.Uri.html</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">uri</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">uri</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="doccomment">/// RoughtimeClientConfiguration describes the configuration of a Roughtime</span>
 <span class="doccomment">/// client pseudo-Node (which is provided by the Oak Runtime), with the</span>
@@ -265,30 +267,30 @@
     <span class="doccomment">/// The collection of Roughtime servers to query. A default set of servers</span>
     <span class="doccomment">/// will be used if this is empty.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">repeated</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">servers</span>: ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RoughtimeServer</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">servers</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RoughtimeServer</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Connection parameters; default values will be used if any parameter is</span>
     <span class="doccomment">/// unset.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">min_overlapping_intervals</span>: ::<span class="ident">std</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">min_overlapping_intervals</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">timeout_seconds</span>: ::<span class="ident">std</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">timeout_seconds</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;4&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">server_retries</span>: ::<span class="ident">std</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">server_retries</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;5&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">max_radius_microseconds</span>: ::<span class="ident">std</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">max_radius_microseconds</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// Information to identify a particular Roughtime server.</span>
 <span class="doccomment">/// Only UDP and Ed25519 public keys are currently supported.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoughtimeServer</span> {
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">name</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">host</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">host</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint32</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">port</span>: <span class="ident">u32</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;4&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">public_key_base64</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">public_key_base64</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="doccomment">/// A serialized list of key-value pairs that are specified as command line flags</span>
 <span class="doccomment">/// to the Oak Loader binary, and are made available to the initial Node of the</span>
@@ -301,7 +303,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConfigMap</span> {
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">map</span><span class="op">=</span><span class="string">&quot;string, bytes&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">items</span>: ::<span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>, <span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">items</span>: ::<span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span><span class="op">&lt;</span>::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>, ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../../../../../../../";window.currentCrate = "oak_abi";</script><script src="../../../../../../../../../../main.js"></script><script src="../../../../../../../../../../source-script.js"></script><script src="../../../../../../../../../../source-files.js"></script><script defer src="../../../../../../../../../../search-index.js"></script></body></html>
