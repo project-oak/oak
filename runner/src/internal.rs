@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
+use async_recursion::async_recursion;
+use async_trait::async_trait;
 use colored::*;
-use futures::future::{ready, BoxFuture};
-use futures_util::future::FutureExt;
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
@@ -174,7 +174,7 @@ where
 
 /// Run the provided step, printing out information about the execution, and returning a set of
 /// status results from the single or multiple steps that were executed.
-#[async_recursion::async_recursion]
+#[async_recursion]
 pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValue> {
     match step {
         Step::Single { name, command } => {
@@ -400,6 +400,7 @@ struct RunningCmd {
     child: tokio::process::Child,
 }
 
+#[async_trait]
 impl Running for RunningCmd {
     fn kill(&mut self) {
         // TODO(#396): Send increasingly stronger signals if the process fails to terminate
@@ -409,50 +410,47 @@ impl Running for RunningCmd {
             .expect("could not kill process");
     }
 
-    fn result(mut self: Box<Self>) -> BoxFuture<'static, SingleStatusResult> {
-        async {
-            let child_stdout = self.child.stdout.take();
-            let child_stderr = self.child.stderr.take();
+    async fn result(mut self: Box<Self>) -> SingleStatusResult {
+        let child_stdout = self.child.stdout.take();
+        let child_stderr = self.child.stderr.take();
 
-            let exit_status = self.child.await.expect("could not get exit status");
+        let exit_status = self.child.await.expect("could not get exit status");
 
-            let mut logs = String::new();
-            {
-                let mut stdout = String::new();
-                child_stdout
-                    .expect("could not obtain stdout")
-                    .read_to_string(&mut stdout)
-                    .await
-                    .expect("could not read stdout");
-                if !stdout.is_empty() {
-                    logs += &format!("════╡ stdout ╞════\n{}", stdout);
-                }
-            }
-            {
-                let mut stderr = String::new();
-                child_stderr
-                    .expect("could not obtain stderr")
-                    .read_to_string(&mut stderr)
-                    .await
-                    .expect("could not read stderr");
-                if !stderr.is_empty() {
-                    logs += &format!("════╡ stderr ╞════\n{}", stderr);
-                }
-            }
-
-            if exit_status.success() {
-                SingleStatusResult {
-                    value: StatusResultValue::Ok,
-                    logs,
-                }
-            } else {
-                SingleStatusResult {
-                    value: StatusResultValue::Error,
-                    logs,
-                }
+        let mut logs = String::new();
+        {
+            let mut stdout = String::new();
+            child_stdout
+                .expect("could not obtain stdout")
+                .read_to_string(&mut stdout)
+                .await
+                .expect("could not read stdout");
+            if !stdout.is_empty() {
+                logs += &format!("════╡ stdout ╞════\n{}", stdout);
             }
         }
-        .boxed()
+        {
+            let mut stderr = String::new();
+            child_stderr
+                .expect("could not obtain stderr")
+                .read_to_string(&mut stderr)
+                .await
+                .expect("could not read stderr");
+            if !stderr.is_empty() {
+                logs += &format!("════╡ stderr ╞════\n{}", stderr);
+            }
+        }
+
+        if exit_status.success() {
+            SingleStatusResult {
+                value: StatusResultValue::Ok,
+                logs,
+            }
+        } else {
+            SingleStatusResult {
+                value: StatusResultValue::Error,
+                logs,
+            }
+        }
     }
 }
 
@@ -460,14 +458,16 @@ pub trait Runnable: Send + core::fmt::Display {
     fn run(self: Box<Self>, opt: &Opt) -> Box<dyn Running>;
 }
 
+#[async_trait]
 pub trait Running: Send {
     fn kill(&mut self) {}
-    fn result(self: Box<Self>) -> BoxFuture<'static, SingleStatusResult>;
+    async fn result(self: Box<Self>) -> SingleStatusResult;
 }
 
+#[async_trait]
 impl Running for SingleStatusResult {
-    fn result(self: Box<Self>) -> BoxFuture<'static, SingleStatusResult> {
-        Box::pin(ready(*self))
+    async fn result(self: Box<Self>) -> SingleStatusResult {
+        *self
     }
 }
 
