@@ -222,25 +222,7 @@ Each of these steps is described in the following sections.
 ### Creating a Configuration File
 
 In order to load an Oak Application into the Oak Server its configuration must
-be serialized into a binary file. The Application first needs to specify a
-template configuration file:
-
-<!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/config/config.textproto)
-```textproto
-initial_node_configuration: {
-  name: "main"
-  wasm_config: {
-    wasm_module_name: "app"
-    wasm_entrypoint_name: "oak_main"
-  }
-}
-```
-<!-- prettier-ignore-end -->
-
-The `wasm_modules` field (not shown above because it is empty in the template
-configuration) will be filled with WebAssembly module bytes after serialization
-using the
+be serialized into a binary file that will be parsed by the
 [_Application Configuration Serializer_](../sdk/rust/oak_config_serializer), as
 follows:
 
