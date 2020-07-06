@@ -15,6 +15,7 @@ readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
 readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
 
 readonly CACHE_DIR='bazel-cache'
+readonly SERVER_BIN_DIR="${PWD}/oak/server/bin"
 
 # List all workspaces.
 declare -ar ALL_CRATES=("oak_utils" "oak_abi" "oak/server" "sdk" "examples" "runner" "experimental")

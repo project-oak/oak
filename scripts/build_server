@@ -32,4 +32,8 @@ Build the specified version of the Oak Runtime server.
   esac
 done
 
-cargo build "${cargo_build_flags[@]}" --manifest-path=oak/server/rust/oak_loader/Cargo.toml
+rm -rf "${SERVER_BIN_DIR:?}"
+mkdir --parents "${SERVER_BIN_DIR}"
+# `--out-dir` is unstable and requires `-Z unstable-options`.
+cargo build "${cargo_build_flags[@]}" --manifest-path=oak/server/rust/oak_loader/Cargo.toml \
+  --out-dir="${SERVER_BIN_DIR}" -Z unstable-options
