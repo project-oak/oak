@@ -33,6 +33,7 @@ use std::{
 };
 use structopt::StructOpt;
 
+#[macro_use]
 mod internal;
 use internal::*;
 
@@ -168,23 +169,19 @@ fn build_server(opt: &BuildServer) -> Step {
             name: "build rust server".to_string(),
             command: Cmd::new(
                 "cargo",
-                vec![
-                    match &opt.server_rust_toolchain {
+                spread![
+                    ...match &opt.server_rust_toolchain {
                         // This overrides the toolchain used by `rustup` to invoke the actual
                         // `cargo` binary.
                         // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
                         Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
                         None => vec![],
                     },
-                    vec![
-                        "build".to_string(),
-                        "--release".to_string(),
-                        format!("--target={}", opt.server_rust_target),
-                        "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
-                    ],
-                ]
-                .iter()
-                .flatten(),
+                    "build".to_string(),
+                    "--release".to_string(),
+                    format!("--target={}", opt.server_rust_target),
+                    "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
+                ],
             ),
         },
         v => panic!("unknown server variant: {}", v),
@@ -256,29 +253,25 @@ fn build_example_config(example_name: &str) -> Step {
 fn run_example_server(opt: &BuildServer, application_file: &str) -> Cmd {
     Cmd::new(
         "cargo",
-        vec![
-            match &opt.server_rust_toolchain {
+        spread![
+            ...match &opt.server_rust_toolchain {
                 // This overrides the toolchain used by `rustup` to invoke the actual `cargo`
                 // binary.
                 // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
                 Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
                 None => vec![],
             },
-            vec![
-                "run".to_string(),
-                "--release".to_string(),
-                format!("--target={}", opt.server_rust_target),
-                "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
-                "--".to_string(),
-                "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
-                "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
-                "--root-tls-certificate=./examples/certs/local/ca.pem".to_string(),
-                // TODO(#396): Add `--oidc-client` support.
-                format!("--application={}", application_file),
-            ],
-        ]
-        .iter()
-        .flatten(),
+            "run".to_string(),
+            "--release".to_string(),
+            format!("--target={}", opt.server_rust_target),
+            "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
+            "--".to_string(),
+            "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
+            "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
+            "--root-tls-certificate=./examples/certs/local/ca.pem".to_string(),
+            // TODO(#396): Add `--oidc-client` support.
+            format!("--application={}", application_file),
+        ],
     )
 }
 
@@ -364,17 +357,13 @@ fn run_client(name: &str, client: &Client) -> Step {
             name: format!("bazel:{}:{}", name, bazel_target),
             command: Cmd::new(
                 "bazel",
-                vec![
-                    vec![
-                        "run".to_string(),
-                        "--".to_string(),
-                        bazel_target.to_string(),
-                        "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
-                    ],
-                    client.additional_args.clone(),
-                ]
-                .iter()
-                .flatten(),
+                spread![
+                    "run".to_string(),
+                    "--".to_string(),
+                    bazel_target.to_string(),
+                    "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
+                    ...client.additional_args.clone(),
+                ],
             ),
         },
         Target::Npm { package_directory } => Step::Multiple {
@@ -559,15 +548,13 @@ fn run_markdownlint(mode: FormatMode) -> Step {
                 name: entry.clone(),
                 command: Cmd::new(
                     "markdownlint",
-                    vec![
-                        match mode {
+                    spread![
+                        ...match mode {
                             FormatMode::Check => vec![],
-                            FormatMode::Fix => vec!["--fix"],
+                            FormatMode::Fix => vec!["--fix".to_string()],
                         },
-                        vec![&entry],
-                    ]
-                    .iter()
-                    .flatten(),
+                        entry,
+                    ],
                 ),
             })
             .collect(),
@@ -627,15 +614,15 @@ fn run_cargo_fmt(mode: FormatMode) -> Step {
                 name: entry.clone(),
                 command: Cmd::new(
                     "cargo",
-                    vec![
-                        vec!["fmt", "--all", &format!("--manifest-path={}", &entry)],
-                        match mode {
+                    spread![
+                        "fmt",
+                        "--all",
+                        format!("--manifest-path={}", &entry).as_ref(),
+                        ...match mode {
                             FormatMode::Check => vec!["--", "--check"],
                             FormatMode::Fix => vec![],
                         },
-                    ]
-                    .iter()
-                    .flatten(),
+                    ],
                 ),
             })
             .collect(),
