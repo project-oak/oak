@@ -32,7 +32,6 @@ Build the specified version of the Oak Runtime server.
   esac
 done
 
-readonly SERVER_BIN_DIR="${PWD}/oak/server/bin"
 rm -rf "${SERVER_BIN_DIR:?}"
 mkdir --parents "${SERVER_BIN_DIR}"
 # `--out-dir` is unstable and requires `-Z unstable-options`.
