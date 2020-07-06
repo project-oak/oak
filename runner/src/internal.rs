@@ -418,25 +418,27 @@ impl Running for RunningCmd {
 
         let mut logs = String::new();
         {
-            let mut stdout = String::new();
-            child_stdout
-                .expect("could not obtain stdout")
-                .read_to_string(&mut stdout)
-                .await
-                .expect("could not read stdout");
-            if !stdout.is_empty() {
-                logs += &format!("════╡ stdout ╞════\n{}", stdout);
+            if let Some(mut child_stdout) = child_stdout {
+                let mut stdout = String::new();
+                child_stdout
+                    .read_to_string(&mut stdout)
+                    .await
+                    .expect("could not read stdout");
+                if !stdout.is_empty() {
+                    logs += &format!("════╡ stdout ╞════\n{}", stdout);
+                }
             }
         }
         {
-            let mut stderr = String::new();
-            child_stderr
-                .expect("could not obtain stderr")
-                .read_to_string(&mut stderr)
-                .await
-                .expect("could not read stderr");
-            if !stderr.is_empty() {
-                logs += &format!("════╡ stderr ╞════\n{}", stderr);
+            if let Some(mut child_stderr) = child_stderr {
+                let mut stderr = String::new();
+                child_stderr
+                    .read_to_string(&mut stderr)
+                    .await
+                    .expect("could not read stderr");
+                if !stderr.is_empty() {
+                    logs += &format!("════╡ stderr ╞════\n{}", stderr);
+                }
             }
         }
 

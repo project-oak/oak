@@ -117,6 +117,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("{}", format!("- {:?}", path).purple());
                 }
                 eprintln!();
+                // TODO: This does not work well with async, the `run` function can only be invoked
+                // once.
                 // run().await;
                 eprintln!();
                 spinner = Some(new_spinner());
