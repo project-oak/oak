@@ -20,7 +20,4 @@ oak_utils = "*"
 
 [dev-dependencies]
 assert_matches = "*"
-oak_tests = "=0.1.0"
-serial_test = "*"
-serial_test_derive = "*"
 serde_json = "*"
