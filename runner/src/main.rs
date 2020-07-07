@@ -117,8 +117,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("{}", format!("- {:?}", path).purple());
                 }
                 eprintln!();
-                // TODO: This does not work well with async, the `run` function can only be invoked
-                // once.
+                // TODO(#396): This does not work well with async, the `run` function can only be
+                // invoked once.
                 // run().await;
                 eprintln!();
                 spinner = Some(new_spinner());
@@ -587,11 +587,11 @@ fn run(executable: &Executable, additional_args: Vec<String>) -> Box<dyn Runnabl
         Target::Cargo { cargo_manifest } => Cmd::new(
             "cargo",
             spread![
-                    "run".to_string(),
-                    "--release".to_string(),
-                    format!("--target={}", DEFAULT_EXAMPLE_BACKEND_RUST_TARGET),
-                    format!("--manifest-path={}", cargo_manifest),
-                    "--".to_string(),
+                "run".to_string(),
+                "--release".to_string(),
+                format!("--target={}", DEFAULT_EXAMPLE_BACKEND_RUST_TARGET),
+                format!("--manifest-path={}", cargo_manifest),
+                "--".to_string(),
                 ...executable.additional_args.clone(),
                 ...additional_args,
             ],
@@ -608,9 +608,9 @@ fn run(executable: &Executable, additional_args: Vec<String>) -> Box<dyn Runnabl
                 } else {
                     vec![format!("--config={}", config)]
                 },
-                    "--".to_string(),
-                    bazel_target.to_string(),
-                    "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
+                "--".to_string(),
+                bazel_target.to_string(),
+                "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
                 ...executable.additional_args.clone(),
                 ...additional_args,
             ],

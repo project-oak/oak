@@ -249,20 +249,18 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             // Small delay to make it more likely that the background process started.
             std::thread::sleep(std::time::Duration::from_millis(2_000));
 
-            async fn read_to_end<A: AsyncRead + Unpin>(mut io: A) -> String {
-                let mut buf = String::new();
-                io.read_to_string(&mut buf)
+            async fn read_to_end<A: AsyncRead + Unpin>(mut io: A) -> Vec<u8> {
+                let mut buf = Vec::new();
+                io.read_to_end(&mut buf)
                     .await
                     .expect("could not read from future");
                 buf
             }
 
-            let background_stdout_future =
-                tokio::spawn(read_to_end(running_background.stdout())).fuse();
+            let background_stdout_future = read_to_end(running_background.stdout()).fuse();
             tokio::pin!(background_stdout_future);
 
-            let background_stderr_future =
-                tokio::spawn(read_to_end(running_background.stderr())).fuse();
+            let background_stderr_future = read_to_end(running_background.stderr()).fuse();
             tokio::pin!(background_stderr_future);
 
             let step_future = run_step(&context, *foreground).fuse();
@@ -272,6 +270,9 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             let mut stdout = None;
             let mut stderr = None;
             loop {
+                // We need to make sure we keep consuming the logs (stdout and stderr) from the
+                // background task, or the internal buffers may get filled up and cause the task to
+                // hang.
                 tokio::select! {
                     v = &mut background_stdout_future => {
                         stdout = Some(v);
@@ -281,17 +282,24 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
                     }
                     v = &mut step_future => {
                         values = Some(v);
+                        // When the foreground task terminates, kill the background task; the stdout
+                        // and stderr in this select should immediately unblock.
                         running_background.kill();
                     }
                 }
                 if values.is_some() && stdout.is_some() && stderr.is_some() {
+                    // When foreground task, stdout and stderr have all been captured, continue
+                    // below.
                     break;
                 }
             }
 
-            let values = values.expect("no values");
+            let mut values = values.expect("no values");
+            let stdout = stdout.expect("no stdout");
+            let stderr = stderr.expect("no stderr");
+            let logs = format_logs(&stdout, &stderr);
 
-            eprintln!("{} ⊢ {} (waiting)", context.prefix, background_command,);
+            eprintln!("{} ⊢ {} (waiting)", context.prefix, background_command);
             let background_status = running_background.result().await;
             eprintln!(
                 "{} ⊢ {} (finished) {}",
@@ -300,14 +308,17 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             if (background_status.value == StatusResultValue::Error
                 || values.contains(&StatusResultValue::Error)
                 || context.opt.logs)
-                && !background_status.logs.is_empty()
+                && !logs.is_empty()
             {
                 eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
-                for line in background_status.logs.lines() {
+                for line in logs.lines() {
                     eprintln!("{} {} {}", context.prefix, "║".blue(), line);
                 }
                 eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
             }
+
+            // Also propagate the status of the background process.
+            values.insert(background_status.value);
 
             values
         }
@@ -416,15 +427,11 @@ impl Runnable for Cmd {
             let stdout = if opt.logs {
                 std::process::Stdio::inherit()
             } else {
-                // XXX
-                // std::process::Stdio::null()
                 std::process::Stdio::piped()
             };
             let stderr = if opt.logs {
                 std::process::Stdio::inherit()
             } else {
-                // XXX
-                // std::process::Stdio::null()
                 std::process::Stdio::piped()
             };
             let child = cmd
@@ -461,59 +468,19 @@ impl Running for RunningCmd {
         }
     }
     fn stderr(&mut self) -> Box<dyn AsyncRead + Send + Unpin> {
-        match self.child.stdout.take() {
-            Some(stdout) => Box::new(stdout),
+        match self.child.stderr.take() {
+            Some(stderr) => Box::new(stderr),
             None => Box::new(empty()),
         }
     }
 
     async fn result(mut self: Box<Self>) -> SingleStatusResult {
-        // let child_stdout = self.child.stdout.take();
-        // let child_stderr = self.child.stderr.take();
-
         let output = self
             .child
             .wait_with_output()
             .await
             .expect("could not get exit status");
-
-        let mut logs = String::new();
-        if !output.stdout.is_empty() {
-            logs += &format!(
-                "════╡ stdout ╞════\n{}",
-                String::from_utf8(output.stdout).expect("could not parse stdout as UTF8")
-            );
-        }
-        if !output.stderr.is_empty() {
-            logs += &format!(
-                "════╡ stderr ╞════\n{}",
-                String::from_utf8(output.stderr).expect("could not parse stderr as UTF8")
-            );
-        }
-        /*
-        {
-            if let Some(mut child_stdout) = child_stdout {
-                let mut stdout = String::new();
-                child_stdout
-                    .read_to_string(&mut stdout)
-                    .await
-                    .expect("could not read stdout");
-            }
-        }
-        {
-            if let Some(mut child_stderr) = child_stderr {
-                let mut stderr = String::new();
-                child_stderr
-                    .read_to_string(&mut stderr)
-                    .await
-                    .expect("could not read stderr");
-                if !stderr.is_empty() {
-                    logs += &format!("════╡ stderr ╞════\n{}", stderr);
-                }
-            }
-        }
-        */
-
+        let logs = format_logs(&output.stdout, &output.stderr);
         if output.status.success() {
             SingleStatusResult {
                 value: StatusResultValue::Ok,
@@ -526,6 +493,23 @@ impl Running for RunningCmd {
             }
         }
     }
+}
+
+fn format_logs(stdout: &[u8], stderr: &[u8]) -> String {
+    let mut logs = String::new();
+    if !stdout.is_empty() {
+        logs += &format!(
+            "════╡ stdout ╞════\n{}",
+            std::str::from_utf8(stdout).expect("could not parse stdout as UTF8")
+        );
+    }
+    if !stderr.is_empty() {
+        logs += &format!(
+            "════╡ stderr ╞════\n{}",
+            std::str::from_utf8(stderr).expect("could not parse stderr as UTF8")
+        );
+    }
+    logs
 }
 
 pub trait Runnable: Send + core::fmt::Display {
