@@ -2,4 +2,4 @@ name = "trusted_information_retrieval"
 
 [modules]
 app = { path = "examples/trusted_information_retrieval/bin/trusted_information_retrieval.wasm" }
-database_proxy = { path = "examples/trusted_information_retrieval/bin/database_proxy.wasm" }
+database_proxy = { external = { url = "https://storage.googleapis.com/oak-modules/database_proxy/8fccfe9b81329c23007bc1a6812b82c2be62975ba831019f7e002555f31bcf0a", sha256 = "8fccfe9b81329c23007bc1a6812b82c2be62975ba831019f7e002555f31bcf0a" } }
