@@ -87,6 +87,7 @@ impl Default for InitialNodeConfig {
     }
 }
 
+/// Computes SHA256 sum from `data` and returns it as a HEX encoded string.
 fn get_sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
@@ -100,9 +101,7 @@ async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
             fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
         }
         Module::External(external) => {
-            let url: Url = external.url
-                .parse()
-                .context("Couldn't parse URL")?;
+            let url: Url = external.url.parse().context("Couldn't parse URL")?;
 
             debug!("Downloading module from: {}", url);
             // TODO(#1240): Add a Wasm module cache.
