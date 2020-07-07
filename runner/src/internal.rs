@@ -261,46 +261,19 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
                 buf
             }
 
-            let background_stdout_future = read_to_end(running_background.stdout()).fuse();
-            tokio::pin!(background_stdout_future);
+            let background_stdout_future = tokio::spawn(read_to_end(running_background.stdout()));
+            let background_stderr_future = tokio::spawn(read_to_end(running_background.stderr()));
 
-            let background_stderr_future = read_to_end(running_background.stderr()).fuse();
-            tokio::pin!(background_stderr_future);
+            let mut values = run_step(&context, *foreground).await;
+            running_background.kill();
 
-            let step_future = run_step(&context, *foreground).fuse();
-            tokio::pin!(step_future);
+            let mut stdout = background_stdout_future
+                .await
+                .expect("could not read stdout");
+            let mut stderr = background_stderr_future
+                .await
+                .expect("could not read stderr");
 
-            let mut values = None;
-            let mut stdout = None;
-            let mut stderr = None;
-            loop {
-                // We need to make sure we keep consuming the logs (stdout and stderr) from the
-                // background task, or the internal buffers may get filled up and cause the task to
-                // hang.
-                tokio::select! {
-                    v = &mut background_stdout_future => {
-                        stdout = Some(v);
-                    }
-                    v = &mut background_stderr_future => {
-                        stderr = Some(v);
-                    }
-                    v = &mut step_future => {
-                        values = Some(v);
-                        // When the foreground task terminates, kill the background task; the stdout
-                        // and stderr in this select should immediately unblock.
-                        running_background.kill();
-                    }
-                }
-                if values.is_some() && stdout.is_some() && stderr.is_some() {
-                    // When foreground task, stdout and stderr have all been captured, continue
-                    // below.
-                    break;
-                }
-            }
-
-            let mut values = values.expect("no values");
-            let stdout = stdout.expect("no stdout");
-            let stderr = stderr.expect("no stderr");
             let logs = format_logs(&stdout, &stderr);
 
             eprintln!("{} ⊢ {} (waiting)", context.prefix, background_command);
