@@ -17,13 +17,13 @@
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use colored::*;
+use futures::future::FutureExt;
 use std::{
     collections::{HashMap, HashSet},
-    io::Write,
     time::Instant,
 };
 use structopt::StructOpt;
-use tokio::io::AsyncReadExt;
+use tokio::io::{empty, AsyncRead, AsyncReadExt};
 
 #[derive(StructOpt, Clone)]
 pub struct Opt {
@@ -235,7 +235,7 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             eprintln!("{} {{", context.prefix);
 
             let background_command = if context.opt.commands || context.opt.dry_run {
-                format!("[{}]", background)
+                format!("[{}]", background.to_string().blue())
             } else {
                 "".to_string()
             };
@@ -249,9 +249,48 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             // Small delay to make it more likely that the background process started.
             std::thread::sleep(std::time::Duration::from_millis(2_000));
 
-            let values = run_step(&context, *foreground).await;
+            async fn read_to_end<A: AsyncRead + Unpin>(mut io: A) -> String {
+                let mut buf = String::new();
+                io.read_to_string(&mut buf)
+                    .await
+                    .expect("could not read from future");
+                buf
+            }
 
-            running_background.kill();
+            let background_stdout_future =
+                tokio::spawn(read_to_end(running_background.stdout())).fuse();
+            tokio::pin!(background_stdout_future);
+
+            let background_stderr_future =
+                tokio::spawn(read_to_end(running_background.stderr())).fuse();
+            tokio::pin!(background_stderr_future);
+
+            let step_future = run_step(&context, *foreground).fuse();
+            tokio::pin!(step_future);
+
+            let mut values = None;
+            let mut stdout = None;
+            let mut stderr = None;
+            loop {
+                tokio::select! {
+                    v = &mut background_stdout_future => {
+                        stdout = Some(v);
+                    }
+                    v = &mut background_stderr_future => {
+                        stderr = Some(v);
+                    }
+                    v = &mut step_future => {
+                        values = Some(v);
+                        running_background.kill();
+                    }
+                }
+                if values.is_some() && stdout.is_some() && stderr.is_some() {
+                    break;
+                }
+            }
+
+            let values = values.expect("no values");
+
             eprintln!("{} ⊢ {} (waiting)", context.prefix, background_command,);
             let background_status = running_background.result().await;
             eprintln!(
@@ -319,7 +358,6 @@ impl Runnable for Cmd {
     /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
     /// to run was not found).
     fn run(self: Box<Self>, opt: &Opt) -> Box<dyn Running> {
-        std::io::stderr().flush().expect("could not flush stderr");
         let mut cmd = tokio::process::Command::new(&self.executable);
         cmd.args(&self.args);
 
@@ -378,14 +416,20 @@ impl Runnable for Cmd {
             let stdout = if opt.logs {
                 std::process::Stdio::inherit()
             } else {
+                // XXX
+                // std::process::Stdio::null()
                 std::process::Stdio::piped()
             };
             let stderr = if opt.logs {
                 std::process::Stdio::inherit()
             } else {
+                // XXX
+                // std::process::Stdio::null()
                 std::process::Stdio::piped()
             };
             let child = cmd
+                // Close stdin to avoid hanging.
+                .stdin(std::process::Stdio::null())
                 .stdout(stdout)
                 .stderr(stderr)
                 .spawn()
@@ -410,13 +454,43 @@ impl Running for RunningCmd {
             .expect("could not kill process");
     }
 
-    async fn result(mut self: Box<Self>) -> SingleStatusResult {
-        let child_stdout = self.child.stdout.take();
-        let child_stderr = self.child.stderr.take();
+    fn stdout(&mut self) -> Box<dyn AsyncRead + Send + Unpin> {
+        match self.child.stdout.take() {
+            Some(stdout) => Box::new(stdout),
+            None => Box::new(empty()),
+        }
+    }
+    fn stderr(&mut self) -> Box<dyn AsyncRead + Send + Unpin> {
+        match self.child.stdout.take() {
+            Some(stdout) => Box::new(stdout),
+            None => Box::new(empty()),
+        }
+    }
 
-        let exit_status = self.child.await.expect("could not get exit status");
+    async fn result(mut self: Box<Self>) -> SingleStatusResult {
+        // let child_stdout = self.child.stdout.take();
+        // let child_stderr = self.child.stderr.take();
+
+        let output = self
+            .child
+            .wait_with_output()
+            .await
+            .expect("could not get exit status");
 
         let mut logs = String::new();
+        if !output.stdout.is_empty() {
+            logs += &format!(
+                "════╡ stdout ╞════\n{}",
+                String::from_utf8(output.stdout).expect("could not parse stdout as UTF8")
+            );
+        }
+        if !output.stderr.is_empty() {
+            logs += &format!(
+                "════╡ stderr ╞════\n{}",
+                String::from_utf8(output.stderr).expect("could not parse stderr as UTF8")
+            );
+        }
+        /*
         {
             if let Some(mut child_stdout) = child_stdout {
                 let mut stdout = String::new();
@@ -424,9 +498,6 @@ impl Running for RunningCmd {
                     .read_to_string(&mut stdout)
                     .await
                     .expect("could not read stdout");
-                if !stdout.is_empty() {
-                    logs += &format!("════╡ stdout ╞════\n{}", stdout);
-                }
             }
         }
         {
@@ -441,8 +512,9 @@ impl Running for RunningCmd {
                 }
             }
         }
+        */
 
-        if exit_status.success() {
+        if output.status.success() {
             SingleStatusResult {
                 value: StatusResultValue::Ok,
                 logs,
@@ -463,6 +535,12 @@ pub trait Runnable: Send + core::fmt::Display {
 #[async_trait]
 pub trait Running: Send {
     fn kill(&mut self) {}
+    fn stdout(&mut self) -> Box<dyn AsyncRead + Send + Unpin> {
+        Box::new(empty())
+    }
+    fn stderr(&mut self) -> Box<dyn AsyncRead + Send + Unpin> {
+        Box::new(empty())
+    }
     async fn result(self: Box<Self>) -> SingleStatusResult;
 }
 

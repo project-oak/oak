@@ -5,12 +5,12 @@ backend = { Cargo = { cargo_manifest = "examples/trusted_information_retrieval/b
 ] }
 
 [application]
-manifest = "examples/trusted_information_retrieval/database.toml"
+manifest = "examples/trusted_information_retrieval/config/config.toml"
 out = "examples/trusted_information_retrieval/bin/config.bin"
 
 [server]
 additional_args = [
-  "--config-files=config=examples/trusted_information_retrieval/config/config.toml",
+  "--config-files=config=examples/trusted_information_retrieval/database.toml",
 ]
 
 [modules]
