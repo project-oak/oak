@@ -26,10 +26,8 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
   && rustup --version
 
 # Install Rust toolchain.
-# We currently need the nightly version in order to be able to compile some of the examples.
-# See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
-# the appropriate set of components.
-ARG rust_version=nightly-2020-06-10
+# Install default Rust toolchain (stable channel as of 2020-06-03).
+ARG rust_version=1.44.0
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 

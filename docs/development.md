@@ -70,9 +70,8 @@ versions installed in the [`Dockerfile`](/Dockerfile).
 The key prerequisites for the project are:
 
 - **Rust**: The [Rust toolchain](https://www.rust-lang.org/tools/install) and
-  ancillary tools are required for building the project's source. Note that we
-  also [require](https://github.com/project-oak/oak/issues/969) a nightly build
-  of Rust; check the [`Dockerfile`](/Dockerfile) for the specific version.
+  ancillary tools are required for building the project's source; check the
+  [`Dockerfile`](/Dockerfile) for the specific version.
   - Follow install instructions from https://rustup.rs/, roughly:
     - `curl https://sh.rustup.rs -sSf > /tmp/rustup`
     - `less /tmp/rustup` (inspect downloaded script before running it)
