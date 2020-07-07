@@ -26,8 +26,11 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import com.google.oak.label.Label;
 import io.grpc.ManagedChannel;
+import io.grpc.Metadata;
 import io.grpc.okhttp.OkHttpChannelBuilder;
+import io.grpc.stub.MetadataUtils;
 import java.io.InputStream;
 import java.lang.Runnable;
 import java.lang.ref.WeakReference;
@@ -41,6 +44,9 @@ import javax.net.ssl.TrustManagerFactory;
 
 /** Main activity for the Oak Android "Hello, World" app. */
 public class MainActivity extends Activity {
+  // Keep in sync with /oak/server/rust/oak_runtime/src/node/grpc/server/mod.rs.
+  private static final String OAK_LABEL_GRPC_METADATA_KEY = "x-oak-label-bin";
+  
   private HandlerThread backgroundHandlerThread;
   private Handler backgroundHandler;
 
@@ -131,9 +137,21 @@ public class MainActivity extends Activity {
     /** Creates a TLS channel. */
     private ManagedChannel createChannel(String address) throws Exception {
       return OkHttpChannelBuilder.forTarget(address)
+          .intercept(MetadataUtils.newAttachHeadersInterceptor(getPublicUntrustedLabelMetadata()))
           .useTransportSecurity()
           .sslSocketFactory(getSocketFactory())
           .build();
+    }
+
+    /** Gets the metadata associated with the empty label (public/untrusted). */
+    private Metadata getPublicUntrustedLabelMetadata() {
+      // TODO(#1066): Use a more restrictive Label.
+      Metadata result = new Metadata();
+      Label label = Label.newBuilder().build();
+      Metadata.Key<byte[]> key =
+          Metadata.Key.of(OAK_LABEL_GRPC_METADATA_KEY, Metadata.BINARY_BYTE_MARSHALLER);
+      result.put(key, label.toByteArray());
+      return result;
     }
 
     /** Gets a socket factory configured with a custom CA certificate to trust. */
