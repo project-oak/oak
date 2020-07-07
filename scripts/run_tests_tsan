@@ -5,13 +5,23 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 export RUST_BACKTRACE=1
-export RUSTFLAGS="-Z sanitizer=thread"
 # TODO(#1208): figure out race report and remove suppression
 export TSAN_OPTIONS="halt_on_error=1 report_atomic_races=0 suppressions=$PWD/.tsan_suppress"
-
-# Just run the abitest example for the moment.
-time cargo -Zbuild-std test --manifest-path=./examples/abitest/module_0/rust/Cargo.toml --target=x86_64-unknown-linux-gnu --verbose -- --nocapture
 
 bazel_build_flags+=( '--keep_going' '--config=tsan' )
 
 bazel test "${bazel_build_flags[@]}" -- //oak/...:all
+
+# Just run the abitest example for the moment.
+# ThreadSanitizer support needs the nightly channel of Rust, see:
+# https://github.com/rust-lang/rust/issues/39699
+RUSTFLAGS="-Z sanitizer=thread" \
+    time \
+    cargo \
+    +nightly-2020-04-17 \
+    -Zbuild-std test \
+    --manifest-path=./examples/abitest/tests/Cargo.toml \
+    --target=x86_64-unknown-linux-gnu \
+    --verbose \
+    -- \
+    --nocapture

@@ -237,3 +237,14 @@ ARG deny_version=0.7.0
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny
+
+# Also install Rust nightly for ThreadSanitizer tests.
+ARG nightly_version=nightly-2020-04-17
+RUN rustup toolchain install ${nightly_version}
+
+RUN rustup target add --toolchain ${nightly_version} wasm32-unknown-unknown
+RUN rustup target add --toolchain ${nightly_version} x86_64-unknown-linux-musl
+RUN rustup component add  --toolchain ${nightly_version} \
+  clippy \
+  rust-src \
+  rustfmt
