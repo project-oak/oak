@@ -15,9 +15,15 @@
 #
 
 load("@rules_android//android:rules.bzl", "android_binary", "android_library")
+load("@rules_java//java:defs.bzl", "java_lite_proto_library")
 
 package(
     licenses = ["notice"],
+)
+
+java_lite_proto_library(
+    name = "label_java_proto_lite",
+    deps = ["//oak/proto:label_proto"],
 )
 
 android_library(
@@ -27,9 +33,9 @@ android_library(
     manifest = "AndroidManifest.xml",
     resource_files = glob(["java/com/google/oak/hello_world/res/**"]),
     deps = [
+        ":label_java_proto_lite",
         "//examples/hello_world/proto:hello_world_java_grpc",
         "//examples/hello_world/proto:hello_world_java_proto_lite",
-        "//oak/proto:label_java_proto_lite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//okhttp",

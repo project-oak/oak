@@ -44,7 +44,9 @@ import javax.net.ssl.TrustManagerFactory;
 
 /** Main activity for the Oak Android "Hello, World" app. */
 public class MainActivity extends Activity {
+  // Keep in sync with /oak/server/rust/oak_runtime/src/node/grpc/server/mod.rs.
   private static final String OAK_LABEL_GRPC_METADATA_KEY = "x-oak-label-bin";
+  
   private HandlerThread backgroundHandlerThread;
   private Handler backgroundHandler;
 
