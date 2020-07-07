@@ -251,7 +251,7 @@ All these steps are implemented as a part of the
 The Oak Application is then started using the Oak Loader:
 
 ```bash
-./oak/server/target/x86_64-unknown-linux-musl/release/oak_loader --application="${PWD}/config.bin"
+./oak/server/target/x86_64-unknown-linux-musl/release/oak_loader --application=./examples/hello_world/bin/config.bin
 ```
 
 The Oak Loader will launch an [Oak Runtime](concepts.md#oak-runtime), and this
