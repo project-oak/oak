@@ -6,9 +6,9 @@ out = "examples/hello_world/bin/config.bin"
 
 [modules]
 module = { Cargo = { cargo_manifest = "examples/hello_world/module/rust/Cargo.toml" } }
-# Disabled by default, since it requires emsdk to be installed on the host.
-# module_cpp = { Bazel = { bazel_target = "//examples/hello_world/module/cpp:all", config = "emscripten" } }
 translator = { Cargo = { cargo_manifest = "examples/translator/module/rust/Cargo.toml" } }
+# This module is only built but not actually run.
+module_cpp = { Bazel = { bazel_target = "//examples/hello_world/module/cpp:hello_world.wasm", config = "wasm32" } }
 
 [clients]
 cpp = { Bazel = { bazel_target = "//examples/hello_world/client:client" } }

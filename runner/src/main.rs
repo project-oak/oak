@@ -219,7 +219,12 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                         vec![
                             "--force".to_string(),
                             format!(
-                                "bazel-emscripten-bin/{}",
+                                "bazel-{}-bin/{}",
+                                match config.as_ref() {
+                                    "emscripten" => "emscripten",
+                                    "wasm32" => "wasm",
+                                    _ => panic!("unsupported Bazel config: {}", config),
+                                },
                                 bazel_target.replace("//", "").replace(":", "/")
                             ),
                             format!("examples/{}/bin", example_name),
@@ -681,14 +686,22 @@ fn run_client(name: &str, executable: &Executable, additional_args: Vec<String>)
 fn is_ignored_path(path: &PathBuf) -> bool {
     let components = path.components().collect::<std::collections::HashSet<_>>();
     components.contains(&std::path::Component::Normal(".git".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-bin".as_ref()))
         || components.contains(&std::path::Component::Normal("bazel-cache".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-clang-oak".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-clang-out".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-client-oak".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-client-out".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-bin".as_ref()))
         || components.contains(&std::path::Component::Normal("bazel-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-clang-bin".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-clang-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-clang-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-client-bin".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-client-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-client-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-emscripten-bin".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-emscripten-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-emscripten-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-wasm-bin".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-wasm-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-wasm-oak".as_ref()))
         || components.contains(&std::path::Component::Normal("cargo-cache".as_ref()))
         || components.contains(&std::path::Component::Normal("node_modules".as_ref()))
         || components.contains(&std::path::Component::Normal("target".as_ref())) // Rust artifacts.

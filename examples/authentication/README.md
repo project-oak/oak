@@ -36,19 +36,14 @@ https://pantheon.corp.google.com/apis/credentials/oauthclient/691249393555-0h52j
 Click on `DOWNLOAD JSON` and save the file. This file contains sensitive
 information, so **do not share this file or add it to the repository**.
 
-To test the authentication client application with the downloaded file, ensure
-that the "Hello World" example has been built by running:
+To test the authentication client application with the downloaded file, run the
+server using:
 
 ```bash
-./scripts/build_example -e hello_world
-```
-
-Then run the server using:
-
-```bash
-./scripts/run_server \
-    -e hello_world \
-    -c ./client_secret_691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com.json
+./scripts/runner run-examples \
+    --example-name=hello_world \
+    --run-clients=false \
+    --server-additional-args=--oidc-client=./client_secret_691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com.json
 ```
 
 While the Oak server is running with the OpenID Connect authentication service
