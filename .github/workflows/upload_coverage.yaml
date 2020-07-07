@@ -33,6 +33,8 @@ jobs:
       - name: Generate coverage data
         run: ./scripts/docker_run ./scripts/run_tests_coverage
 
-      - name: Upload to codecov.io
-        run: |
-          bash <(curl -s https://codecov.io/bash) -f ./oak/server/target/debug/lcov.info
+      - name: Upload to coveralls.io
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./oak/server/target/debug/lcov.info
