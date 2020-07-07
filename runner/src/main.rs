@@ -46,6 +46,9 @@ use check_todo::CheckTodo;
 mod check_license;
 use check_license::CheckLicense;
 
+mod check_build_licenses;
+use check_build_licenses::CheckBuildLicenses;
+
 const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-unknown-linux-musl";
 const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 
@@ -270,6 +273,7 @@ fn run_tests() -> Step {
             run_cargo_test_tsan(),
             run_bazel_build(),
             run_bazel_test(),
+            run_clang_tidy(),
         ],
     }
 }
@@ -293,6 +297,7 @@ fn check_format() -> Step {
         name: "format".to_string(),
         steps: vec![
             run_check_license(),
+            run_check_build_licenses(),
             run_check_todo(),
             run_clang_format(FormatMode::Check),
             run_buildifier(FormatMode::Check),
@@ -733,6 +738,11 @@ fn is_bazel_file(path: &PathBuf) -> bool {
     filename == "BUILD" || filename == "WORKSPACE" || filename.ends_with(".bzl")
 }
 
+fn is_build_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename == "BUILD"
+}
+
 /// Return whether the provided path refers to a markdown file (`*.md`)
 fn is_markdown_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
@@ -995,6 +1005,20 @@ fn run_check_license() -> Step {
     }
 }
 
+fn run_check_build_licenses() -> Step {
+    Step::Multiple {
+        name: "check BUILD licenses".to_string(),
+        steps: source_files()
+            .filter(is_build_file)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: CheckBuildLicenses::new(entry),
+            })
+            .collect(),
+    }
+}
+
 fn run_check_todo() -> Step {
     Step::Multiple {
         name: "check todo".to_string(),
@@ -1050,6 +1074,13 @@ fn run_cargo_doc() -> Step {
     Step::Single {
         name: "cargo doc".to_string(),
         command: Cmd::new("bash", &["./scripts/check_docs"]),
+    }
+}
+
+fn run_clang_tidy() -> Step {
+    Step::Single {
+        name: "clang tidy".to_string(),
+        command: Cmd::new("bash", &["./scripts/run_clang_tidy"]),
     }
 }
 

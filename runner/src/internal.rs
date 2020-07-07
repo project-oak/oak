@@ -17,7 +17,6 @@
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use colored::*;
-use futures::future::FutureExt;
 use std::{
     collections::{HashMap, HashSet},
     time::Instant,
@@ -267,10 +266,10 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             let mut values = run_step(&context, *foreground).await;
             running_background.kill();
 
-            let mut stdout = background_stdout_future
+            let stdout = background_stdout_future
                 .await
                 .expect("could not read stdout");
-            let mut stderr = background_stderr_future
+            let stderr = background_stderr_future
                 .await
                 .expect("could not read stderr");
 

@@ -32,6 +32,13 @@ steps:
     args: ['./scripts/git_init']
 
   - name: 'gcr.io/oak-ci/oak:latest'
+    id: cargo_crev
+    entrypoint: 'bash'
+    waitFor: ['git_init']
+    timeout: 5m
+    args: ['./scripts/run_cargo_crev']
+
+  - name: 'gcr.io/oak-ci/oak:latest'
     id: runner_ci
     waitFor: ['git_init']
     timeout: 5m
