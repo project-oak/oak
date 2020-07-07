@@ -5,7 +5,7 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 # Build the example client and Application normally.
-"${SCRIPTS_DIR}/build_example" -e abitest
+"${SCRIPTS_DIR}/runner" run-examples --example-name=abitest --run-server=false --run-clients=false
 
 # Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
 export CARGO_INCREMENTAL=0
