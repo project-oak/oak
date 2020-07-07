@@ -65,9 +65,8 @@ are squashed against the correct commit if necessary.
 ### Rust
 
 - Make sure code is [`cargo clippy`](https://crates.io/crates/clippy) clean.
-- Use the [`scripts/format`](/scripts/format) scripts to keep Rust code
-  formatted consistently, according to our
-  [`rustfmt` configuration](/.rustfmt.toml).
+- Use the `./scripts/runner format` command to keep Rust code formatted
+  consistently, according to our [`rustfmt` configuration](/.rustfmt.toml).
 - Use the [`scripts/check_docs`](/scripts/check_docs) script to check for
   warnings from
   [`cargo doc`](https://doc.rust-lang.org/cargo/commands/cargo-doc.html) and

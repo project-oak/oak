@@ -88,7 +88,6 @@ step):
 ## Codebase Tools
 
 The Oak codebase also makes use of several linting tools. To run these, and
-their wrapper scripts (e.g. [`scripts/format`](/scripts/format) and
-[`scripts/check_formatting`](/scripts/check_formatting)), the OS X versions of
-the tools will need to be installed. Check the top-level
-[`Dockerfile`](/Dockerfile) for the set of required tools.
+their wrapper scripts (e.g. `./scripts/runner format`), the OS X versions of the
+tools will need to be installed. Check the top-level [`Dockerfile`](/Dockerfile)
+for the set of required tools.
