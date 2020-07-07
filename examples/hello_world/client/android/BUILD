@@ -29,6 +29,7 @@ android_library(
     deps = [
         "//examples/hello_world/proto:hello_world_java_grpc",
         "//examples/hello_world/proto:hello_world_java_proto_lite",
+        "//oak/proto:label_java_proto_lite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//okhttp",
