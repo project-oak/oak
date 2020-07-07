@@ -28,13 +28,11 @@ impl CheckTodo {
     }
 }
 
-impl std::fmt::Display for CheckTodo {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "n/a")
-    }
-}
-
 impl Runnable for CheckTodo {
+    fn description(&self) -> String {
+        "check todo".to_string()
+    }
+
     fn run(self: Box<Self>, _opt: &Opt) -> Box<dyn Running> {
         let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
         let todo_words = file_content

@@ -185,16 +185,45 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
         Target::Bazel {
             bazel_target,
             config,
-        } => Step::Single {
-            name: format!("wasm:{}:{}", name, bazel_target.to_string()),
-            command: Cmd::new(
-                "bazel",
-                vec![
-                    "build".to_string(),
-                    format!("--config={}", config),
-                    bazel_target.to_string(),
-                ],
-            ),
+        } => Step::Multiple {
+            name: "wasm".to_string(),
+            steps: vec![
+                Step::Single {
+                    name: format!("wasm:{}:{}", name, bazel_target.to_string()),
+                    command: Cmd::new(
+                        "bazel",
+                        vec![
+                            "build".to_string(),
+                            format!("--config={}", config),
+                            bazel_target.to_string(),
+                        ],
+                    ),
+                },
+                Step::Single {
+                    name: "create bin folder".to_string(),
+                    command: Cmd::new(
+                        "mkdir",
+                        vec![
+                            "--parents".to_string(),
+                            format!("examples/{}/bin", example_name),
+                        ],
+                    ),
+                },
+                Step::Single {
+                    name: "copy wasm module".to_string(),
+                    command: Cmd::new(
+                        "cp",
+                        vec![
+                            "--force".to_string(),
+                            format!(
+                                "bazel-emscripten-bin/{}",
+                                bazel_target.replace("//", "").replace(":", "/")
+                            ),
+                            format!("examples/{}/bin", example_name),
+                        ],
+                    ),
+                },
+            ],
         },
         Target::Npm { .. } => todo!(),
         Target::Shell { .. } => todo!(),

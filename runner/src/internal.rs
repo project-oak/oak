@@ -183,7 +183,11 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             let start = Instant::now();
 
             if context.opt.commands || context.opt.dry_run {
-                eprintln!("{} ⊢ [{}] ... ", context.prefix, command.to_string().blue());
+                eprintln!(
+                    "{} ⊢ [{}] ... ",
+                    context.prefix,
+                    command.description().blue()
+                );
             }
 
             eprint!("{} ⊢ ", context.prefix);
@@ -235,7 +239,7 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             eprintln!("{} {{", context.prefix);
 
             let background_command = if context.opt.commands || context.opt.dry_run {
-                format!("[{}]", background.to_string().blue())
+                format!("[{}]", background.description().blue())
             } else {
                 "".to_string()
             };
@@ -358,13 +362,10 @@ impl Cmd {
     }
 }
 
-impl std::fmt::Display for Cmd {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{} {}", self.executable, self.args.join(" "))
-    }
-}
-
 impl Runnable for Cmd {
+    fn description(&self) -> String {
+        format!("{} {}", self.executable, self.args.join(" "))
+    }
     /// Run the provided command, printing a status message with the current prefix.
     /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
     /// to run was not found).
@@ -512,19 +513,28 @@ fn format_logs(stdout: &[u8], stderr: &[u8]) -> String {
     logs
 }
 
-pub trait Runnable: Send + core::fmt::Display {
+/// A task that can be run asynchronously.
+pub trait Runnable: Send {
+    /// Returns a description of the task, e.g. the command line arguments that are part of it.
+    fn description(&self) -> String;
+    /// Starts the task and returns a [`Running`] implementation.
     fn run(self: Box<Self>, opt: &Opt) -> Box<dyn Running>;
 }
 
+/// A task that is currently running asynchronously.
 #[async_trait]
 pub trait Running: Send {
+    /// Attempts to kill the running task.
     fn kill(&mut self) {}
+    /// Returns an [`AsyncRead`] object to stream stdout logs from the task.
     fn stdout(&mut self) -> Box<dyn AsyncRead + Send + Unpin> {
         Box::new(empty())
     }
+    /// Returns an [`AsyncRead`] object to stream stderr logs from the task.
     fn stderr(&mut self) -> Box<dyn AsyncRead + Send + Unpin> {
         Box::new(empty())
     }
+    /// Returns the final result of the task, upon spontaneous termination.
     async fn result(self: Box<Self>) -> SingleStatusResult;
 }
 
