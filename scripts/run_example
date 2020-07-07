@@ -115,7 +115,7 @@ do
   case "${client_variant}" in
     cargo)
       rust_client_manifest="${SCRIPTS_DIR}/../examples/${EXAMPLE}/client/rust/Cargo.toml"
-          cargo run --release --manifest-path="${rust_client_manifest}" -- \
+          cargo run --release --target="${RUST_HOST_TARGET}" --manifest-path="${rust_client_manifest}" -- \
             --root-tls-certificate="${SCRIPTS_DIR}/../examples/certs/local/ca.pem" \
             "${CLIENT_ARGS[@]-}"
       ;;

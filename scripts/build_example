@@ -125,7 +125,7 @@ for client_variant in ${client_variants}
 do
   case "${client_variant}" in
     cargo)
-      cargo build --release "--manifest-path=./examples/${EXAMPLE}/client/rust/Cargo.toml"
+      cargo build --release --target="${RUST_HOST_TARGET}" "--manifest-path=./examples/${EXAMPLE}/client/rust/Cargo.toml"
       ;;
     bazel)
       bazel_build_flags+=(
