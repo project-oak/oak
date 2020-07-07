@@ -1,4 +1,5 @@
 Require Import OakIFC.Lattice.
+Require Import OakIFC.GenericMap.
 Require Import List.
 
 Section RuntimeModel.
@@ -41,77 +42,111 @@ Inductive call: Type :=
     | Internal (cmd: internal_cmd): call.
 
 Inductive node: Type :=
-    | Node (l: level)(calls: list call): node.
+    | Node (l: level)(calls: list call)(hans: list handle): node.
+(*
+Record node := Node {
+    l: level;
+    calls: list call;
+    hans: list handle
+}.
+*) (* TODO: unsure if records or inductives are better for proofs.
+records are better for spec writing.
+also consider using a finite set of nodes rather than a map from
+node ids to nodes since node ids are not real anyway *)
 
-Definition node_state := node_id-> option node.
-Definition chan_state := handle -> (option channel).
+Instance Knid : KeyT := {
+    t := node_id; 
+    eqb := fun x => fun y =>
+        if (dec_eq_nid x y) then true else false
+}.
+Definition node_state := pg_map Knid node.
+Instance Khandle : KeyT := {
+    t := handle;
+    eqb := fun x => fun y =>
+        if (dec_eq_h x y) then true else false
+}.
+Definition chan_state := pg_map Khandle channel.
 Record state := State {
     nodes: node_state;
     chans: chan_state
 }.
 
 (*============================================================================
-* Updaters
+* Utils
 ============================================================================*)
 Definition chan_append (c: channel)(m: message): channel :=
     match c with | Chan l ms => Chan l (m :: ms) end.
 
+Definition chan_lbl (c: channel): level :=
+    match c with | Chan l ms => l end.
+
 Definition node_push_c (n: node)(c: call): node :=
-    match n with | Node l cs => Node l (c :: cs) end .
+    match n with | Node l cs hs => Node l (c :: cs) hs end .
 
-Definition upd_node (id: node_id)(n: node)(ns: node_state): node_state :=
-    fun x => if (dec_eq_nid id x) then Some n else (ns x).
+Definition node_get_hs (n: node): list handle :=
+    match n with | Node l cs hs => hs end.
 
-Definition upd_chan (h: handle)(ch: channel)(cs: chan_state): chan_state :=
-    fun x => if (dec_eq_h h x) then Some ch else (cs x).
+Definition node_lbl (n: node): level :=
+    match n with | Node l cs hs => l end.
+
+Definition is_node_call (n: node)(c: call): Prop :=
+    match n with | Node l cs hs =>
+            match cs with
+                | c :: _ => True
+                | _ => False
+            end
+    end.
+
+Definition node_pop_cmd (n: node): node :=
+    match n with | Node l cs hs =>
+        match cs with
+            | c :: cs' => Node l cs' hs
+            | _ => n
+        end
+    end.
+
+Definition state_pop_caller (nid: node_id)(s: state): state := 
+    match (s.(nodes) nid) with
+        | None => s
+        | Some n => 
+            {| nodes := pg_update s.(nodes) nid (node_pop_cmd n);
+            chans := s.(chans) |}
+    end.
+
+Definition opt_match {A: Type}(o: option A)(a: A): Prop :=
+    match o with | Some a => True | _ => False end.
 
 (*============================================================================
 * Single Call Semantics
 ============================================================================*)
-(* TODO well-formed def making sure caller id, caller, top cmd in caller list
-* all match *)
-(* Is there a way to structure this using inductive properties, more like a
-* type system would be formalized? So that the inversion tactic could be used ?*)
-(* TODO need to pop command *)
-Definition step_call (c: call)(caller: node)(cid: node_id)(s: state): state :=
-    match c with
-        | WriteChannel h m => 
-                match (s.(chans) h) with
-                    | Some ch => let chans' := 
-                            upd_chan h (chan_append ch m) s.(chans) in
-                            {| nodes := s.(nodes); chans := chans'|}
-                    | None => 
-                            let caller' := node_push_c caller (Internal
-                                IntRecvErr) in
-                            let nodes' := upd_node cid caller' s.(nodes) in
-                            {| nodes := nodes'; chans := s.(chans) |}
-                end
-        | Internal cmd => s (* TODO, internal command semantics *)
-    end.
 
-(* Execute a single node, non-deterministically. Because this is
-* nondeterministic, a relation is used *)
-(* TODO: try using sets of threads instead of a map from TIDs to threads*)
-Definition active_node (nid: node_id) (s: state): Prop :=
-    match s.(nodes) nid with
-        | Some _ => True
-        | None => False
-    end.
+Inductive step_call: node_id -> call -> state -> state -> Prop :=
+    | SWriteSucc caller_id caller han chan msg s
+        (H0: In han (node_get_hs caller))
+        (H1: opt_match (s.(chans) han) chan)
+        (H2: (node_lbl caller) << (chan_lbl chan)):
+        step_call caller_id (WriteChannel han msg) s (
+            let chans' :=
+                (pg_update s.(chans) han (chan_append chan msg)) in
+            {| nodes := s.(nodes); chans := chans'|}
+        )
+    | SWriteLblErr caller_id caller han chan msg s
+        (H0: In han (node_get_hs caller))
+        (H1: opt_match (s.(chans) han) chan)
+        (H2: ~((node_lbl caller) << (chan_lbl chan))):
+        step_call caller_id (WriteChannel han msg) s (
+            let nodes' :=
+                (pg_update s.(nodes) caller_id
+                    (node_push_c caller (Internal IntRecvErr) )) in
+            {| nodes := nodes'; chans := s.(chans) |}
+        ).
 
-(* These definitions are clearly terrible *)
-(* Look at using sets of nodes *)
-Definition valid_sys_step (s1: state) (s2: state) :=
-    exists nid: node_id, (active_node nid s1) /\
-     (* this bit can at least be improved by rolling this back into step *)
-        match s1.(nodes) nid with
-            | Some n => match n with
-                | Node l cmds =>
-                    match cmds with
-                        | nil => False
-                        | hd :: cmds' => (step_call hd n nid s1) = s2
-                    end
-                end
-            | None => False
-        end.
+Inductive step_node: node_id -> state -> state -> Prop :=
+    | ValidStep caller_id caller call s s_pop s'
+        (H0: opt_match (s.(nodes) caller_id) caller)
+        (H1: is_node_call caller call)
+        (H3: s_pop = state_pop_caller caller_id s)
+        (H4: step_call caller_id call s_pop s'):
+        step_node caller_id s s'.
 
 End RuntimeModel.
