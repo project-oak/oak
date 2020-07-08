@@ -1114,7 +1114,6 @@ dependencies = [
  "prost",
  "prost-types",
  "rand_core 0.5.1",
- "serde",
 ]
 
 [[package]]

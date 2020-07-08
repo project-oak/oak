@@ -20,7 +20,6 @@ use prost::{
     bytes::{Buf, BufMut},
     encoding::{DecodeContext, WireType},
 };
-use serde::{Deserialize, Serialize};
 
 /// Wrapper for a handle to the read half of a channel, allowing to receive data that can be decoded
 /// as bytes + handles via the `Decodable` trait.
@@ -28,7 +27,7 @@ use serde::{Deserialize, Serialize};
 /// For use when the underlying [`Handle`] is known to be for a receive half.
 ///
 /// [`Handle`]: crate::Handle
-#[derive(Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Receiver<T: Decodable> {
     pub handle: ReadHandle,
     phantom: std::marker::PhantomData<T>,
