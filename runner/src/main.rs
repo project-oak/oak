@@ -28,6 +28,7 @@
 use colored::*;
 use maplit::hashmap;
 use notify::Watcher;
+use once_cell::sync::Lazy;
 use std::{
     collections::HashMap,
     io::Read,
@@ -59,9 +60,7 @@ const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-apple-darwin";
 #[cfg(not(target_os = "macos"))]
 const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 
-lazy_static::lazy_static! {
-    static ref PROCESSES: Mutex<Vec<i32>> = Mutex::new(Vec::new());
-}
+static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
