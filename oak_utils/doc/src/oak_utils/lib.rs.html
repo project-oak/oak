@@ -263,6 +263,31 @@
 <span id="263">263</span>
 <span id="264">264</span>
 <span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -437,6 +462,17 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Generated code depends on the `oak` SDK crate.</span>
     <span class="kw">pub</span> <span class="ident">generate_services</span>: <span class="ident">bool</span>,
+
+    <span class="doccomment">/// Automatically derive the `HandleVisit` trait from the Oak SDK for generated Protobuf types.</span>
+    <span class="doccomment">/// If this is enabled, the generated types can contain handles and can be used to exchange</span>
+    <span class="doccomment">/// handles with other nodes using inter-node communication over Protocol Buffers.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Default: **true**.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Generated code depends on the `oak` SDK crate.</span>
+    <span class="kw">pub</span> <span class="ident">derive_handle_visit</span>: <span class="ident">bool</span>,
+
+    <span class="kw">pub</span> <span class="ident">out_dir_override</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// The default option values.</span>
@@ -444,6 +480,8 @@
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ProtoOptions</span> {
         <span class="ident">ProtoOptions</span> {
             <span class="ident">generate_services</span>: <span class="bool-val">true</span>,
+            <span class="ident">derive_handle_visit</span>: <span class="bool-val">true</span>,
+            <span class="ident">out_dir_override</span>: <span class="prelude-val">None</span>,
         }
     }
 }
@@ -475,6 +513,18 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prost_config</span> <span class="op">=</span> <span class="ident">prost_build</span>::<span class="ident">Config</span>::<span class="ident">new</span>();
     <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">generate_services</span> {
         <span class="ident">prost_config</span>.<span class="ident">service_generator</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">OakServiceGenerator</span>));
+    }
+    <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">derive_handle_visit</span> {
+        <span class="ident">prost_config</span>
+            <span class="comment">// Auto-derive the HandleVisit trait</span>
+            .<span class="ident">type_attribute</span>(<span class="string">&quot;.&quot;</span>, <span class="string">&quot;#[derive(::oak::handle::HandleVisit)]&quot;</span>)
+            <span class="comment">// Link relevant Oak protos to the Oak SDK types.</span>
+            .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.handle&quot;</span>, <span class="string">&quot;::oak::handle&quot;</span>)
+            .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.encap.GrpcRequest&quot;</span>, <span class="string">&quot;::oak::grpc::GrpcRequest&quot;</span>)
+            .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.encap.GrpcResponse&quot;</span>, <span class="string">&quot;::oak::grpc::GrpcResponse&quot;</span>);
+    }
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">out_dir</span>) <span class="op">=</span> <span class="ident">options</span>.<span class="ident">out_dir_override</span> {
+        <span class="ident">prost_config</span>.<span class="ident">out_dir</span>(<span class="ident">out_dir</span>);
     }
     <span class="ident">prost_config</span>
         <span class="comment">// We require label-related types to be comparable and hashable so that they can be used in</span>
