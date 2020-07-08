@@ -811,6 +811,7 @@ dependencies = [
  "async-trait",
  "colored",
  "futures",
+ "lazy_static",
  "maplit",
  "nix",
  "notify",

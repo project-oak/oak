@@ -275,11 +275,11 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
 
             let logs = format_logs(&stdout, &stderr);
 
-            eprintln!("{} ⊢ {} (waiting)", context.prefix, background_command);
+            eprintln!("{} ⊢ (waiting)", context.prefix);
             let background_status = running_background.result().await;
             eprintln!(
-                "{} ⊢ {} (finished) {}",
-                context.prefix, background_command, background_status.value
+                "{} ⊢ (finished) {}",
+                context.prefix, background_status.value
             );
             if (background_status.value == StatusResultValue::Error
                 || values.contains(&StatusResultValue::Error)
@@ -415,9 +415,22 @@ impl Runnable for Cmd {
                 .spawn()
                 .expect("could not spawn command");
 
+            crate::PROCESSES
+                .lock()
+                .expect("could not acquire processes lock")
+                .push(child.id() as i32);
+
             Box::new(RunningCmd { child })
         }
     }
+}
+
+pub fn kill_process(pid: i32) {
+    // TODO(#396): Send increasingly stronger signals if the process fails to terminate
+    // within a given amount of time.
+    let pid = nix::unistd::Pid::from_raw(pid);
+    // Ignore errors.
+    let _ = nix::sys::signal::kill(pid, nix::sys::signal::Signal::SIGINT);
 }
 
 struct RunningCmd {
@@ -427,11 +440,7 @@ struct RunningCmd {
 #[async_trait]
 impl Running for RunningCmd {
     fn kill(&mut self) {
-        // TODO(#396): Send increasingly stronger signals if the process fails to terminate
-        // within a given amount of time.
-        let pid = nix::unistd::Pid::from_raw(self.child.id() as i32);
-        nix::sys::signal::kill(pid, nix::sys::signal::Signal::SIGINT)
-            .expect("could not kill process");
+        kill_process(self.child.id() as i32);
     }
 
     fn stdout(&mut self) -> Box<dyn AsyncRead + Send + Unpin> {

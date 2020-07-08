@@ -52,6 +52,10 @@ use check_build_licenses::CheckBuildLicenses;
 const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-unknown-linux-musl";
 const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 
+lazy_static::lazy_static! {
+    static ref PROCESSES: Mutex<Vec<i32>> = Mutex::new(Vec::new());
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
@@ -128,6 +132,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     } else {
+        // This is a crude way of killing any potentially running process when receiving a Ctrl-C
+        // signal. We collect all process IDs in the `PROCESSES` variable, regardless of whether
+        // they have already been terminated, and we try to kill all of them when receiving the
+        // signal.
+        tokio::spawn(async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("could not wait for signal");
+            eprintln!();
+            eprintln!(
+                "{}",
+                "signal received, killing outstanding processes"
+                    .bright_white()
+                    .on_red()
+            );
+            for pid in PROCESSES
+                .lock()
+                .expect("could not acquire processes lock")
+                .iter()
+            {
+                // We intentionally don't print anything here as it may obscure more interesting
+                // results from the current execution.
+                internal::kill_process(*pid);
+            }
+            std::process::exit(-1);
+        });
         let statuses = run().await;
         // If the overall status value is an error, terminate with a nonzero exit code.
         if statuses.contains(&StatusResultValue::Error) {
@@ -174,13 +204,12 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
             command: Cmd::new(
                 "cargo",
                 &[
+                    // `--out-dir` is unstable and requires `-Zunstable-options`.
+                    "-Zunstable-options",
                     "build",
                     "--release",
                     "--target=wasm32-unknown-unknown",
                     &format!("--manifest-path={}", cargo_manifest),
-                    "-Z",
-                    "unstable-options",
-                    // `--out-dir` is unstable and requires `-Z unstable-options`.
                     &format!("--out-dir=examples/{}/bin", example_name),
                 ],
             ),
@@ -206,10 +235,7 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                     name: "create bin folder".to_string(),
                     command: Cmd::new(
                         "mkdir",
-                        vec![
-                            "--parents".to_string(),
-                            format!("examples/{}/bin", example_name),
-                        ],
+                        vec!["-p".to_string(), format!("examples/{}/bin", example_name)],
                     ),
                 },
                 Step::Single {
@@ -217,7 +243,7 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                     command: Cmd::new(
                         "cp",
                         vec![
-                            "--force".to_string(),
+                            "-f".to_string(),
                             format!(
                                 "bazel-{}-bin/{}",
                                 match config.as_ref() {
