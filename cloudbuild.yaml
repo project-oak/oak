@@ -41,7 +41,7 @@ steps:
   - name: 'gcr.io/oak-ci/oak:latest'
     id: runner_ci
     waitFor: ['git_init']
-    timeout: 5m
+    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/runner', '--commands', 'run-ci']
 
