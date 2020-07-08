@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package tests;
+
+import "handle.proto";
+
+message TestMessage {
+  string other_arbitrary_field = 1;
+  oak.handle.Sender test_sender = 2 [(oak.handle.message_type) = ".tests.TestMessageType"];
+  oak.handle.Receiver test_receiver = 3 [(oak.handle.message_type) = ".tests.TestMessageType"];
+}
+
+message TestMessageWithEnum {
+  oneof either {
+    oak.handle.Sender either_sender = 1 [(oak.handle.message_type) = ".tests.TestMessageType"];
+    oak.handle.Receiver either_receiver = 2 [(oak.handle.message_type) = ".tests.TestMessageType"];
+  }
+}
+
+message RecursiveMessage {
+  oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".tests.TestMessageType"];
+  RecursiveMessage recursive_message = 2;
+}
+
+message RepeatedMessage {
+  repeated oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".tests.TestMessageType"];
+}
+
+message TestMessageType {
+  string body = 1;
+}
+
+message LookMaNoHandles {
+  string a = 1;
+  int64 b = 2;
+}
+
+message SaneHandleOrder {
+  oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".tests.TestMessageType"];
+  repeated SaneHandleOrder children = 2;
+  oak.handle.Receiver receiver = 3 [(oak.handle.message_type) = ".tests.TestMessageType"];
+}
+
+// This message should contain all other test messages. It is used to test roundtrips
+message RoundtripContainer {
+  TestMessage test_message = 1;
+  TestMessageWithEnum test_message_with_enum = 2;
+  RecursiveMessage recursive_message = 3;
+  RepeatedMessage repeated_message = 4;
+  LookMaNoHandles look_ma_no_handles = 5;
+  SaneHandleOrder sane_handle_order = 6;
+}

@@ -32,6 +32,7 @@ mod stubs;
 pub use error::OakError;
 
 pub mod grpc;
+pub mod handle;
 pub mod io;
 pub mod logger;
 pub mod node_config;

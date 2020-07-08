@@ -14,18 +14,16 @@
 // limitations under the License.
 //
 
-use command::Command;
 use log::info;
-use oak::grpc;
-use prost::Message;
+use oak::{grpc, io::Sender};
 use proto::{
-    Chat, ChatDispatcher, CreateRoomRequest, DestroyRoomRequest, SendMessageRequest,
+    command::Command::{JoinRoom, SendMessage},
+    Chat, ChatDispatcher, Command, CreateRoomRequest, DestroyRoomRequest, SendMessageRequest,
     SubscribeRequest,
 };
 use std::collections::{hash_map::Entry, HashMap};
 
 mod backend;
-mod command;
 mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.chat.rs"));
 }
@@ -126,7 +124,9 @@ impl Chat for Node {
             }
             Some(room) => {
                 info!("new subscription to room {:?}", req.room_id);
-                let command = Command::Join(writer.handle());
+                let command = Command {
+                    command: Some(JoinRoom(Sender::new(writer.handle()))),
+                };
                 room.sender
                     .send(&command)
                     .expect("could not send command to room Node");
@@ -140,12 +140,9 @@ impl Chat for Node {
             None => room_id_not_found_err(),
             Some(room) => {
                 info!("new message to room {:?}", req.room_id);
-                let mut message_bytes = Vec::new();
-                req.message
-                    .unwrap_or_default()
-                    .encode(&mut message_bytes)
-                    .expect("could not convert message to bytes");
-                let command = Command::SendMessage(message_bytes);
+                let command = Command {
+                    command: req.message.map(SendMessage),
+                };
                 room.sender
                     .send(&command)
                     .expect("could not send command to room Node");

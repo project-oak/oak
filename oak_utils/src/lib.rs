@@ -171,6 +171,17 @@ pub struct ProtoOptions {
     ///
     /// Generated code depends on the `oak` SDK crate.
     pub generate_services: bool,
+
+    /// Automatically derive the `HandleVisit` trait from the Oak SDK for generated Protobuf types.
+    /// If this is enabled, the generated types can contain handles and can be used to exchange
+    /// handles with other nodes using inter-node communication over Protocol Buffers.
+    ///
+    /// Default: **true**.
+    ///
+    /// Generated code depends on the `oak` SDK crate.
+    pub derive_handle_visit: bool,
+
+    pub out_dir_override: Option<std::path::PathBuf>,
 }
 
 /// The default option values.
@@ -178,6 +189,8 @@ impl Default for ProtoOptions {
     fn default() -> ProtoOptions {
         ProtoOptions {
             generate_services: true,
+            derive_handle_visit: true,
+            out_dir_override: None,
         }
     }
 }
@@ -209,6 +222,18 @@ where
     let mut prost_config = prost_build::Config::new();
     if options.generate_services {
         prost_config.service_generator(Box::new(OakServiceGenerator));
+    }
+    if options.derive_handle_visit {
+        prost_config
+            // Auto-derive the HandleVisit trait
+            .type_attribute(".", "#[derive(::oak::handle::HandleVisit)]")
+            // Link relevant Oak protos to the Oak SDK types.
+            .extern_path(".oak.handle", "::oak::handle")
+            .extern_path(".oak.encap.GrpcRequest", "::oak::grpc::GrpcRequest")
+            .extern_path(".oak.encap.GrpcResponse", "::oak::grpc::GrpcResponse");
+    }
+    if let Some(out_dir) = options.out_dir_override {
+        prost_config.out_dir(out_dir);
     }
     prost_config
         // We require label-related types to be comparable and hashable so that they can be used in

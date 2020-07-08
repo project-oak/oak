@@ -1,5 +1,5 @@
 #
-# Copyright 2019 The Project Oak Authors
+# Copyright 2020 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
 # limitations under the License.
 #
 
-load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,26 +24,23 @@ package(
 )
 
 proto_library(
-    name = "chat_proto",
-    srcs = ["chat.proto"],
+    name = "injection_proto",
+    srcs = ["injection.proto"],
     deps = [
-        "//oak/proto:grpc_encap_proto",
         "//oak/proto:handle_proto",
         "@com_google_protobuf//:empty_proto",
     ],
 )
 
 cc_proto_library(
-    name = "chat_cc_proto",
-    deps = [
-        ":chat_proto",
-    ],
+    name = "injection_cc_proto",
+    deps = [":injection_proto"],
 )
 
 cc_grpc_library(
-    name = "chat_cc_grpc",
-    srcs = ["chat_proto"],
+    name = "injection_cc_grpc",
+    srcs = ["injection_proto"],
     grpc_only = True,
     well_known_protos = True,
-    deps = ["chat_cc_proto"],
+    deps = ["injection_cc_proto"],
 )
