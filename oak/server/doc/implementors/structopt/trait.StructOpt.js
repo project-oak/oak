@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["oak_loader"] = [{"text":"impl StructOpt for <a class=\"struct\" href=\"oak_loader/struct.Opt.html\" title=\"struct oak_loader::Opt\">Opt</a>","synthetic":false,"types":["oak_loader::Opt"]}];
+implementors["oak_loader"] = [{"text":"impl StructOpt for <a class=\"struct\" href=\"oak_loader/options/struct.Opt.html\" title=\"struct oak_loader::options::Opt\">Opt</a>","synthetic":false,"types":["oak_loader::options::Opt"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
