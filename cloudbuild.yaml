@@ -42,33 +42,6 @@ steps:
     id: runner_ci
     waitFor: ['git_init']
     timeout: 5m
-    args: ['info']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: cargo_crev
-    entrypoint: 'bash'
-    waitFor: ['git_init']
-    timeout: 5m
-    args: ['./scripts/run_cargo_crev']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_formatting
-    waitFor: ['git_init']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_formatting']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_no_debug
-    waitFor: ['bazel_init', 'check_formatting']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'logless']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server
-    waitFor: ['build_server_no_debug']
-    timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/runner', '--commands', 'run-ci']
 
@@ -131,20 +104,6 @@ steps:
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_examples_android']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_cargo_deny
-    waitFor: ['check_formatting', 'git_check_diff']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_cargo_deny']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_docs
-    waitFor: ['check_formatting', 'git_check_diff']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_docs']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:
