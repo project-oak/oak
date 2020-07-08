@@ -168,7 +168,6 @@
 <span id="168">168</span>
 <span id="169">169</span>
 <span id="170">170</span>
-<span id="171">171</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -192,7 +191,6 @@
     <span class="ident">bytes</span>::{<span class="ident">Buf</span>, <span class="ident">BufMut</span>},
     <span class="ident">encoding</span>::{<span class="ident">DecodeContext</span>, <span class="ident">WireType</span>},
 };
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="doccomment">/// Wrapper for a handle to the read half of a channel, allowing to receive data that can be decoded</span>
 <span class="doccomment">/// as bytes + handles via the `Decodable` trait.</span>
@@ -200,7 +198,7 @@
 <span class="doccomment">/// For use when the underlying [`Handle`] is known to be for a receive half.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// [`Handle`]: crate::Handle</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Decodable</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="ident">handle</span>: <span class="ident">ReadHandle</span>,
     <span class="ident">phantom</span>: <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
