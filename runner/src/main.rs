@@ -624,6 +624,20 @@ fn build_docker(example: &Example) -> Step {
                     ],
                 ),
             },
+            Step::Single {
+                name: "save example image".to_string(),
+                command: Cmd::new(
+                    "docker",
+                    &[
+                        "save",
+                        &example.name,
+                        &format!(
+                            "--output=./examples/{}/bin/{}.tar",
+                            example.name, example.name
+                        ),
+                    ],
+                ),
+            },
         ],
     }
 }
