@@ -37,6 +37,9 @@ impl Runnable for CheckTodo {
         let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
         let todo_words = file_content
             .split_whitespace()
+            // We cannot use the TO DO word all together here, because otherwise it would trigger
+            // the very logic that this struct is implementing.
+            // TODO(#396): Use a regex to match on a more precise format.
             .filter(|word| word.contains(&format!("{}{}", "TO", "DO")))
             .filter(|word| {
                 !(word.starts_with(&format!("{}{}(", "TO", "DO"))

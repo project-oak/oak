@@ -49,7 +49,14 @@ use check_license::CheckLicense;
 mod check_build_licenses;
 use check_build_licenses::CheckBuildLicenses;
 
+#[cfg(target_os = "macos")]
+const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-apple-darwin";
+#[cfg(not(target_os = "macos"))]
 const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-unknown-linux-musl";
+
+#[cfg(target_os = "macos")]
+const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-apple-darwin";
+#[cfg(not(target_os = "macos"))]
 const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 
 lazy_static::lazy_static! {
@@ -67,6 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::RunExamples(ref opt) => run_examples(&opt),
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::RunTests => run_tests(),
+            Command::RunTestsTsan => run_tests_tsan(),
             Command::Format => format(),
             Command::CheckFormat => check_format(),
             Command::RunCi => run_ci(),
@@ -280,7 +288,7 @@ fn build_server(opt: &BuildServer) -> Step {
                     },
                     "build".to_string(),
                     "--release".to_string(),
-                    format!("--target={}", opt.server_rust_target),
+                    format!("--target={}", opt.server_rust_target.clone().unwrap_or(DEFAULT_SERVER_RUST_TARGET.to_string())),
                     "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
                     ...if opt.server_variant == "logless" {
                         vec!["--no-default-features".to_string()]
@@ -306,6 +314,13 @@ fn run_tests() -> Step {
             run_bazel_test(),
             run_clang_tidy(),
         ],
+    }
+}
+
+fn run_tests_tsan() -> Step {
+    Step::Multiple {
+        name: "tests".to_string(),
+        steps: vec![run_cargo_test_tsan()],
     }
 }
 
@@ -352,14 +367,15 @@ fn run_ci() -> Step {
             build_server(&BuildServer {
                 server_variant: "base".to_string(),
                 server_rust_toolchain: None,
-                server_rust_target: DEFAULT_SERVER_RUST_TARGET.to_string(),
+                server_rust_target: None,
             }),
             build_server(&BuildServer {
                 server_variant: "logless".to_string(),
                 server_rust_toolchain: None,
-                server_rust_target: DEFAULT_SERVER_RUST_TARGET.to_string(),
+                server_rust_target: None,
             }),
             run_tests(),
+            run_tests_tsan(),
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
                 example_name: None,
@@ -371,7 +387,7 @@ fn run_ci() -> Step {
                 build_server: BuildServer {
                     server_variant: "base".to_string(),
                     server_rust_toolchain: None,
-                    server_rust_target: DEFAULT_SERVER_RUST_TARGET.to_string(),
+                    server_rust_target: None,
                 },
             }),
         ],
@@ -396,7 +412,7 @@ fn run_example_server(
             },
             "run".to_string(),
             "--release".to_string(),
-            format!("--target={}", opt.server_rust_target),
+            format!("--target={}", opt.server_rust_target.clone().unwrap_or(DEFAULT_SERVER_RUST_TARGET.to_string())),
             "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
             "--".to_string(),
             "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),

@@ -45,6 +45,7 @@ pub enum Command {
     Format,
     CheckFormat,
     RunTests,
+    RunTestsTsan,
     RunCi,
 }
 
@@ -87,10 +88,9 @@ pub struct BuildServer {
     pub server_rust_toolchain: Option<String>,
     #[structopt(
         long,
-        help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl]",
-        default_value = "x86_64-unknown-linux-musl"
+        help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     )]
-    pub server_rust_target: String,
+    pub server_rust_target: Option<String>,
 }
 
 /// Encapsulates all the local state relative to a step, and is propagated to child steps.
@@ -264,6 +264,9 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             let background_stderr_future = tokio::spawn(read_to_end(running_background.stderr()));
 
             let mut values = run_step(&context, *foreground).await;
+
+            // TODO(#396): If the background task was already spontanously terminated by now, it is
+            // probably a sign that something went wrong, so we should return an error.
             running_background.kill();
 
             let stdout = background_stdout_future
