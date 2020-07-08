@@ -14,11 +14,9 @@ fmt = "*"
 log = { version = "*", features = ["std"] }
 byteorder = "*"
 rand_core = { version = "*", features = ["std"] }
-serde = { version = "*", features = ["derive"] }
 
 [build-dependencies]
 oak_utils = "*"
 
 [dev-dependencies]
 assert_matches = "*"
-serde_json = "*"

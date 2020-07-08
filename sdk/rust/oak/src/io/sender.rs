@@ -19,7 +19,6 @@ use prost::{
     bytes::{Buf, BufMut},
     encoding::{DecodeContext, WireType},
 };
-use serde::{Deserialize, Serialize};
 
 /// Wrapper for a handle to the send half of a channel, allowing to send data that can be encoded as
 /// bytes + handles via the `Encodable` trait.
@@ -27,7 +26,7 @@ use serde::{Deserialize, Serialize};
 /// For use when the underlying [`Handle`] is known to be for a send half.
 ///
 /// [`Handle`]: crate::Handle
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Sender<T: Encodable> {
     pub handle: WriteHandle,
     phantom: std::marker::PhantomData<T>,
