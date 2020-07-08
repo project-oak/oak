@@ -19,6 +19,7 @@ tempfile = "*"
 # toolchains.
 tonic-build = { version = "*", default-features = false, features = [
   "prost",
+  "rustfmt",
   "transport"
 ] }
 walkdir = "*"

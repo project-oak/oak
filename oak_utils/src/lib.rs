@@ -232,7 +232,7 @@ where
             .extern_path(".oak.encap.GrpcRequest", "::oak::grpc::GrpcRequest")
             .extern_path(".oak.encap.GrpcResponse", "::oak::grpc::GrpcResponse");
     }
-    if let Some(out_dir) = options.out_dir_override {
+    if let Some(out_dir) = &options.out_dir_override {
         prost_config.out_dir(out_dir);
     }
     prost_config
@@ -241,6 +241,14 @@ where
         .type_attribute(".oak.label", "#[derive(Eq, Hash)]")
         .compile_protos(inputs, includes)
         .expect("could not run prost-build");
+
+    if options.generate_services {
+        let out_dir = match options.out_dir_override {
+            Some(out_dir) => out_dir,
+            None => std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap()),
+        };
+        tonic_build::fmt(out_dir.to_str().expect("Expected utf8 out_dir"));
+    }
 }
 
 /// Options for building gRPC code.
