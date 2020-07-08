@@ -287,7 +287,7 @@ fn build_server(opt: &BuildServer) -> Step {
                     },
                     "build".to_string(),
                     "--release".to_string(),
-                    format!("--target={}", opt.server_rust_target.clone().unwrap_or(DEFAULT_SERVER_RUST_TARGET.to_string())),
+                    format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                     "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
                     ...if opt.server_variant == "logless" {
                         vec!["--no-default-features".to_string()]
@@ -411,7 +411,7 @@ fn run_example_server(
             },
             "run".to_string(),
             "--release".to_string(),
-            format!("--target={}", opt.server_rust_target.clone().unwrap_or(DEFAULT_SERVER_RUST_TARGET.to_string())),
+            format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
             "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
             "--".to_string(),
             "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
