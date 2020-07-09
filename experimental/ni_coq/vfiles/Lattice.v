@@ -14,6 +14,7 @@ Class Lattice (A: Type) := {
     ord_refl: forall x, x << x;
     ord_trans: forall x y z, x << y -> y << z -> x << z;
     ord_anti: forall x y, x << y -> y << x -> x = y;
+    ord_dec: forall x y, { x << y } + { ~(x << y) };
 
     join: A -> A -> A where "x ⊔ y" := (join x y);
     join_assoc: assoc join;
@@ -26,8 +27,11 @@ Class Lattice (A: Type) := {
     meet_comm: comm join;
     meet_idem: idem join;
     meet_lub: forall x y, x ⊓ y << x /\ x ⊓ y << y; 
+
+    top: A;
+    top_is_top: forall (a:A), a << top;
+
+    bot: A;
+    bot_is_bot: forall (a:A), bot << a;
 }.
 
-Infix "⊔" := join (at level 40, left associativity).
-Infix "⊓" := meet (at level 40, left associativity).
-Infix "<<" := ord (at level 50).
