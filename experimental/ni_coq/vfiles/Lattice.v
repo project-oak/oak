@@ -27,3 +27,7 @@ Class Lattice (A: Type) := {
     meet_idem: idem join;
     meet_lub: forall x y, x ⊓ y << x /\ x ⊓ y << y; 
 }.
+
+Infix "⊔" := join (at level 40, left associativity).
+Infix "⊓" := meet (at level 40, left associativity).
+Infix "<<" := ord (at level 50).
