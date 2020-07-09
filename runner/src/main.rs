@@ -326,7 +326,6 @@ fn run_tests() -> Step {
             run_cargo_clippy(),
             run_cargo_test(),
             run_cargo_doc(),
-            run_cargo_test_tsan(),
             run_bazel_build(),
             run_bazel_test(),
             run_clang_tidy(),
