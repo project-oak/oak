@@ -2,7 +2,6 @@ Require Import OakIFC.Lattice.
 Require Import OakIFC.GenericMap.
 Require Import List.
 
-Section RuntimeModel.
 (*
 Security levels. The term level is used rather than label because, with
 syntax extensions the label syntax might include security levels
@@ -20,15 +19,13 @@ Context {node_id: Type}
 Context {handle: Type}
     {dec_eq_h: forall x y: handle, {x=y} + {x <> y}}.
 
-Infix "⊔" := join (at level 40, left associativity).
-Infix "⊓" := meet (at level 40, left associativity).
-Infix "<<" := ord (at level 50).
-
 (*============================================================================
  Commands, State, Etc.
 ============================================================================*)
-Inductive channel: Type :=
-    | Chan (l: level) (ms: list message): channel.
+Record channel := Chan {
+    clbl: level;
+    ms: list message
+}.
 
 (* Internal actions that nodes do other than ABI calls *)
 Inductive internal_cmd: Type :=
@@ -41,15 +38,13 @@ Inductive call: Type :=
     | WriteChannel (h: handle) (m: message): call
     | Internal (cmd: internal_cmd): call.
 
-Inductive node: Type :=
-    | Node (l: level)(calls: list call)(hans: list handle): node.
-(*
 Record node := Node {
-    l: level;
+    nlbl: level;
     calls: list call;
     hans: list handle
 }.
-*) (* TODO: unsure if records or inductives are better for proofs.
+
+(* TODO: unsure if records or inductives are better for proofs.
 records are better for spec writing.
 also consider using a finite set of nodes rather than a map from
 node ids to nodes since node ids are not real anyway *)
@@ -77,32 +72,19 @@ Record state := State {
 Definition chan_append (c: channel)(m: message): channel :=
     match c with | Chan l ms => Chan l (m :: ms) end.
 
-Definition chan_lbl (c: channel): level :=
-    match c with | Chan l ms => l end.
-
 Definition node_push_c (n: node)(c: call): node :=
     match n with | Node l cs hs => Node l (c :: cs) hs end .
 
-Definition node_get_hs (n: node): list handle :=
-    match n with | Node l cs hs => hs end.
-
-Definition node_lbl (n: node): level :=
-    match n with | Node l cs hs => l end.
-
 Definition is_node_call (n: node)(c: call): Prop :=
-    match n with | Node l cs hs =>
-            match cs with
-                | c :: _ => True
-                | _ => False
-            end
+    match n.(calls) with
+        | c :: _ => True
+        | _ => False
     end.
 
 Definition node_pop_cmd (n: node): node :=
-    match n with | Node l cs hs =>
-        match cs with
-            | c :: cs' => Node l cs' hs
-            | _ => n
-        end
+    match n.(calls) with
+        | c :: cs' => Node n.(nlbl) n.(calls) n.(hans)
+        | _ => n
     end.
 
 Definition state_pop_caller (nid: node_id)(s: state): state := 
@@ -122,18 +104,18 @@ Definition opt_match {A: Type}(o: option A)(a: A): Prop :=
 
 Inductive step_call: node_id -> call -> state -> state -> Prop :=
     | SWriteSucc caller_id caller han chan msg s
-        (H0: In han (node_get_hs caller))
+        (H0: In han caller.(hans))
         (H1: opt_match (s.(chans) han) chan)
-        (H2: (node_lbl caller) << (chan_lbl chan)):
+        (H2: caller.(nlbl) << chan.(clbl)):
         step_call caller_id (WriteChannel han msg) s (
             let chans' :=
                 (pg_update s.(chans) han (chan_append chan msg)) in
             {| nodes := s.(nodes); chans := chans'|}
         )
     | SWriteLblErr caller_id caller han chan msg s
-        (H0: In han (node_get_hs caller))
+        (H0: In han caller.(hans))
         (H1: opt_match (s.(chans) han) chan)
-        (H2: ~((node_lbl caller) << (chan_lbl chan))):
+        (H2: ~(caller.(nlbl) << chan.(clbl))):
         step_call caller_id (WriteChannel han msg) s (
             let nodes' :=
                 (pg_update s.(nodes) caller_id
@@ -149,4 +131,4 @@ Inductive step_node: node_id -> state -> state -> Prop :=
         (H4: step_call caller_id call s_pop s'):
         step_node caller_id s s'.
 
-End RuntimeModel.
+
