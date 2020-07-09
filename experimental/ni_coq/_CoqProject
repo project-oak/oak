@@ -1,4 +1,5 @@
 -R vfiles/ OakIFC
 vfiles/Lattice.v 
+vfiles/Parameters.v 
 vfiles/GenericMap.v
 vfiles/RuntimeModel.v

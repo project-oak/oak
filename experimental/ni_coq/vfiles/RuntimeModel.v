@@ -1,23 +1,8 @@
 Require Import OakIFC.Lattice.
+Require Import OakIFC.Parameters.
 Require Import OakIFC.GenericMap.
 Require Import List.
 
-(*
-Security levels. The term level is used rather than label because, with
-syntax extensions the label syntax might include security levels
-as well as other kinds of labels, like functions from values to security levels.
-In this case, labels are syntactic objects and levels are the security domains.
-*)
-
-(* Assumed types, most with decidable equality *)
-Variable level: Type.
-Context { Lat: Lattice level}.
-Context {message: Type}
-    {dec_eq_msg: forall x y: message, {x=y} + {x <> y}}.
-Context {node_id: Type}
-    {dec_eq_nid: forall x y: node_id, {x=y} + {x <> y}}.
-Context {handle: Type}
-    {dec_eq_h: forall x y: handle, {x=y} + {x <> y}}.
 
 (*============================================================================
  Commands, State, Etc.
@@ -49,13 +34,13 @@ records are better for spec writing.
 also consider using a finite set of nodes rather than a map from
 node ids to nodes since node ids are not real anyway *)
 
-Instance Knid : KeyT := {
+Instance Knid: KeyT := {
     t := node_id; 
     eqb := fun x => fun y =>
         if (dec_eq_nid x y) then true else false
 }.
 Definition node_state := pg_map Knid node.
-Instance Khandle : KeyT := {
+Instance Khandle: KeyT := {
     t := handle;
     eqb := fun x => fun y =>
         if (dec_eq_h x y) then true else false
@@ -123,12 +108,10 @@ Inductive step_call: node_id -> call -> state -> state -> Prop :=
             {| nodes := nodes'; chans := s.(chans) |}
         ).
 
-Inductive step_node: node_id -> state -> state -> Prop :=
+Inductive step_system: state -> state -> Prop :=
     | ValidStep caller_id caller call s s_pop s'
         (H0: opt_match (s.(nodes) caller_id) caller)
         (H1: is_node_call caller call)
         (H3: s_pop = state_pop_caller caller_id s)
         (H4: step_call caller_id call s_pop s'):
-        step_node caller_id s s'.
-
-
+        step_system s s'.
