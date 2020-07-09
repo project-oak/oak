@@ -10,6 +10,7 @@ In this case, labels are syntactic objects and levels are the security domains.
 Class params := {
     (* Assumed types, most with decidable equality *)
     level: Type; 
+    dec_eq_lev: forall x y: level, {x=y} + {x <> y};
     message: Type;
     dec_eq_msg: forall x y: message, {x=y} + {x <> y};
     node_id: Type;
