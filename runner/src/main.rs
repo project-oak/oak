@@ -64,6 +64,20 @@ static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    std::panic::set_hook(Box::new(|panic_info| {
+        let msg = match panic_info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match panic_info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Box<Any>",
+            },
+        };
+        eprintln!();
+        eprintln!();
+        eprintln!("panic occurred: {}", msg.bright_white().on_red());
+        cleanup();
+    }));
+
     let opt = Opt::from_args();
 
     let watch = opt.watch;
@@ -147,22 +161,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::signal::ctrl_c()
                 .await
                 .expect("could not wait for signal");
-            eprintln!();
-            eprintln!(
-                "{}",
-                "signal received, killing outstanding processes"
-                    .bright_white()
-                    .on_red()
-            );
-            for pid in PROCESSES
-                .lock()
-                .expect("could not acquire processes lock")
-                .iter()
-            {
-                // We intentionally don't print anything here as it may obscure more interesting
-                // results from the current execution.
-                internal::kill_process(*pid);
-            }
+            cleanup();
             std::process::exit(-1);
         });
         let statuses = run().await;
@@ -173,6 +172,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn cleanup() {
+    eprintln!();
+    eprintln!(
+        "{}",
+        "signal or panic received, killing outstanding processes"
+            .bright_white()
+            .on_red()
+    );
+    for pid in PROCESSES
+        .lock()
+        .expect("could not acquire processes lock")
+        .iter()
+    {
+        // We intentionally don't print anything here as it may obscure more interesting
+        // results from the current execution.
+        internal::kill_process(*pid);
+    }
 }
 
 fn run_examples(opt: &RunExamples) -> Step {
