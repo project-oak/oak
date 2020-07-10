@@ -304,12 +304,15 @@ fn build_server(opt: &BuildServer) -> Step {
                         None => vec![],
                     },
                     "build".to_string(),
-                    "--release".to_string(),
-                    // If building in coverage mode, use the default target from the host.
+                    // If building in coverage mode, use the default target from the host, and build
+                    // in debug mode.
                     ...if opt.coverage {
                         vec![]
                     } else {
-                        vec![format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET))]
+                        vec![
+                            format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                            "--release".to_string(),
+                        ]
                     },
                     "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
                     ...if opt.server_variant == "logless" {
@@ -446,12 +449,15 @@ fn run_example_server(
                 None => vec![],
             },
             "run".to_string(),
-            "--release".to_string(),
-            // If building in coverage mode, use the default target from the host.
+            // If building in coverage mode, use the default target from the host, and build in
+            // debug mode.
             ...if opt.coverage {
                 vec![]
             } else {
-                vec![format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET))]
+                vec![
+                    format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                    "--release".to_string(),
+                ]
             },
             "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
             "--".to_string(),

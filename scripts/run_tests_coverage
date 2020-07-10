@@ -11,13 +11,13 @@ source "$SCRIPTS_DIR/common"
 (
     cd oak/server || exit 1
     grcov ./target/debug/ \
-          --source-dir . \
+          --source-dir=. \
           --llvm \
           --branch \
           --ignore-not-existing \
-          --excl-line "(panic!|unreachable!|#\\[derive\\()" \
-          --excl-start "LCOV_EXCL_START" \
-          --excl-stop  "LCOV_EXCL_STOP" \
-          --output-type lcov \
-          --output-path ./target/debug/lcov.info
+          --excl-line="(panic!|unreachable!|#\\[derive\\()" \
+          --excl-start=LCOV_EXCL_START \
+          --excl-stop=LCOV_EXCL_STOP \
+          --output-type=lcov \
+          --output-path=./target/debug/lcov.info
 )

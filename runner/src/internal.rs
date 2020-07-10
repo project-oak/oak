@@ -252,7 +252,7 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             let mut running_background = background.run(&context.opt);
 
             // Small delay to make it more likely that the background process started.
-            std::thread::sleep(std::time::Duration::from_millis(2_000));
+            std::thread::sleep(std::time::Duration::from_millis(6_000));
 
             async fn read_to_end<A: AsyncRead + Unpin>(mut io: A) -> Vec<u8> {
                 let mut buf = Vec::new();
