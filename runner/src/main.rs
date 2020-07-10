@@ -293,7 +293,7 @@ fn build_server(opt: &BuildServer) -> Step {
     match opt.server_variant.as_str() {
         "base" | "logless" => Step::Single {
             name: format!("build server ({})", opt.server_variant),
-            command: Cmd::new(
+            command: Cmd::new_with_env(
                 "cargo",
                 spread![
                     ...match &opt.server_rust_toolchain {
@@ -305,7 +305,12 @@ fn build_server(opt: &BuildServer) -> Step {
                     },
                     "build".to_string(),
                     "--release".to_string(),
-                    format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                    // If building in coverage mode, use the default target from the host.
+                    ...if opt.coverage {
+                        vec![]
+                    } else {
+                        vec![format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET))]
+                    },
                     "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
                     ...if opt.server_variant == "logless" {
                         vec!["--no-default-features".to_string()]
@@ -313,6 +318,17 @@ fn build_server(opt: &BuildServer) -> Step {
                         vec![]
                     },
                 ],
+                &if opt.coverage {
+                    hashmap! {
+                        // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
+                        "CARGO_INCREMENTAL".to_string() => "0".to_string(),
+                        "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
+                        // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
+                        "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
+                    }
+                } else {
+                    hashmap! {}
+                },
             ),
         },
         v => panic!("unknown server variant: {}", v),
@@ -384,11 +400,13 @@ fn run_ci() -> Step {
                 server_variant: "base".to_string(),
                 server_rust_toolchain: None,
                 server_rust_target: None,
+                coverage: false,
             }),
             build_server(&BuildServer {
                 server_variant: "logless".to_string(),
                 server_rust_toolchain: None,
                 server_rust_target: None,
+                coverage: false,
             }),
             run_tests(),
             run_tests_tsan(),
@@ -404,6 +422,7 @@ fn run_ci() -> Step {
                     server_variant: "base".to_string(),
                     server_rust_toolchain: None,
                     server_rust_target: None,
+                    coverage: false,
                 },
             }),
         ],
@@ -416,7 +435,7 @@ fn run_example_server(
     server_additional_args: Vec<String>,
     application_file: &str,
 ) -> Box<dyn Runnable> {
-    Cmd::new(
+    Cmd::new_with_env(
         "cargo",
         spread![
             ...match &opt.server_rust_toolchain {
@@ -428,7 +447,12 @@ fn run_example_server(
             },
             "run".to_string(),
             "--release".to_string(),
-            format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+            // If building in coverage mode, use the default target from the host.
+            ...if opt.coverage {
+                vec![]
+            } else {
+                vec![format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET))]
+            },
             "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
             "--".to_string(),
             "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
@@ -443,6 +467,17 @@ fn run_example_server(
             ...example_server.additional_args.clone(),
             ...server_additional_args,
         ],
+        &if opt.coverage {
+            hashmap! {
+                // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
+                "CARGO_INCREMENTAL".to_string() => "0".to_string(),
+                "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
+                // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
+                "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
+            }
+        } else {
+            hashmap! {}
+        },
     )
 }
 

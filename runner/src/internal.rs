@@ -91,6 +91,8 @@ pub struct BuildServer {
         help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     )]
     pub server_rust_target: Option<String>,
+    #[structopt(long, help = "produce coverage report")]
+    pub coverage: bool,
 }
 
 /// Encapsulates all the local state relative to a step, and is propagated to child steps.
