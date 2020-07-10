@@ -36,7 +36,7 @@ readonly TLS_ARGS=(
 readonly CLIENT_ARGS=("${@-}")  # Choose client args provided after '--'.
 
 # Run the client program.
-"${SCRIPTS_DIR}/../bazel-client-bin/examples/abitest/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
+"${SCRIPTS_DIR}/../bazel-bin/examples/abitest/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
 
 # Shutdown cleanly.
 kill_bg_pids
