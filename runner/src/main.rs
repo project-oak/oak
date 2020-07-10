@@ -23,8 +23,12 @@
 //! cargo run --manifest-path=runner/Cargo.toml
 //! ```
 
+#![feature(async_closure)]
+
 use colored::*;
+use maplit::hashmap;
 use notify::Watcher;
+use once_cell::sync::Lazy;
 use std::{
     collections::HashMap,
     io::Read,
@@ -37,21 +41,59 @@ use structopt::StructOpt;
 mod internal;
 use internal::*;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+mod check_todo;
+use check_todo::CheckTodo;
+
+mod check_license;
+use check_license::CheckLicense;
+
+mod check_build_licenses;
+use check_build_licenses::CheckBuildLicenses;
+
+#[cfg(target_os = "macos")]
+const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-apple-darwin";
+#[cfg(not(target_os = "macos"))]
+const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-unknown-linux-musl";
+
+#[cfg(target_os = "macos")]
+const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-apple-darwin";
+#[cfg(not(target_os = "macos"))]
+const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
+
+static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    std::panic::set_hook(Box::new(|panic_info| {
+        let msg = match panic_info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match panic_info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Box<Any>",
+            },
+        };
+        eprintln!();
+        eprintln!();
+        eprintln!("panic occurred: {}", msg.bright_white().on_red());
+        cleanup();
+    }));
+
     let opt = Opt::from_args();
 
     let watch = opt.watch;
 
-    let run = move || {
+    let run = async move || {
         let steps = match opt.cmd {
             Command::RunExamples(ref opt) => run_examples(&opt),
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::RunTests => run_tests(),
+            Command::RunTestsTsan => run_tests_tsan(),
             Command::Format => format(),
+            Command::CheckFormat => check_format(),
             Command::RunCi => run_ci(),
         };
         // TODO(#396): Add support for running individual commands via command line flags.
-        run_step(&Context::root(&opt), &steps)
+        run_step(&Context::root(&opt), steps).await
     };
 
     if watch {
@@ -82,7 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             })?;
         watcher.watch(".", notify::RecursiveMode::Recursive)?;
 
-        run();
+        run().await;
 
         spinner = Some(new_spinner());
         loop {
@@ -103,13 +145,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("{}", format!("- {:?}", path).purple());
                 }
                 eprintln!();
-                run();
+                // TODO(#396): This does not work well with async, the `run` function can only be
+                // invoked once.
+                // run().await;
                 eprintln!();
                 spinner = Some(new_spinner());
             }
         }
     } else {
-        let statuses = run();
+        // This is a crude way of killing any potentially running process when receiving a Ctrl-C
+        // signal. We collect all process IDs in the `PROCESSES` variable, regardless of whether
+        // they have already been terminated, and we try to kill all of them when receiving the
+        // signal.
+        tokio::spawn(async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("could not wait for signal");
+            cleanup();
+            std::process::exit(-1);
+        });
+        let statuses = run().await;
         // If the overall status value is an error, terminate with a nonzero exit code.
         if statuses.contains(&StatusResultValue::Error) {
             std::process::exit(1);
@@ -117,6 +172,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn cleanup() {
+    eprintln!();
+    eprintln!(
+        "{}",
+        "signal or panic received, killing outstanding processes"
+            .bright_white()
+            .on_red()
+    );
+    for pid in PROCESSES
+        .lock()
+        .expect("could not acquire processes lock")
+        .iter()
+    {
+        // We intentionally don't print anything here as it may obscure more interesting
+        // results from the current execution.
+        internal::kill_process(*pid);
+    }
 }
 
 fn run_examples(opt: &RunExamples) -> Step {
@@ -148,26 +222,78 @@ fn run_examples(opt: &RunExamples) -> Step {
     }
 }
 
-fn build_wasm_module(name: &str, manifest_path: &str) -> Step {
-    Step::Single {
-        name: format!("wasm:{}:{}", name, manifest_path.to_string()),
-        command: Cmd::new(
-            "cargo",
-            &[
-                "build",
-                "--release",
-                "--target=wasm32-unknown-unknown",
-                &format!("--manifest-path={}", manifest_path),
+fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
+    match target {
+        Target::Cargo { cargo_manifest } => Step::Single {
+            name: format!("wasm:{}:{}", name, cargo_manifest.to_string()),
+            command: Cmd::new(
+                "cargo",
+                &[
+                    // `--out-dir` is unstable and requires `-Zunstable-options`.
+                    "-Zunstable-options",
+                    "build",
+                    "--release",
+                    "--target=wasm32-unknown-unknown",
+                    &format!("--manifest-path={}", cargo_manifest),
+                    &format!("--out-dir=examples/{}/bin", example_name),
+                ],
+            ),
+        },
+        Target::Bazel {
+            bazel_target,
+            config,
+        } => Step::Multiple {
+            name: "wasm".to_string(),
+            steps: vec![
+                Step::Single {
+                    name: format!("wasm:{}:{}", name, bazel_target.to_string()),
+                    command: Cmd::new(
+                        "bazel",
+                        vec![
+                            "build".to_string(),
+                            format!("--config={}", config),
+                            bazel_target.to_string(),
+                        ],
+                    ),
+                },
+                Step::Single {
+                    name: "create bin folder".to_string(),
+                    command: Cmd::new(
+                        "mkdir",
+                        vec!["-p".to_string(), format!("examples/{}/bin", example_name)],
+                    ),
+                },
+                Step::Single {
+                    name: "copy wasm module".to_string(),
+                    command: Cmd::new(
+                        "cp",
+                        vec![
+                            "-f".to_string(),
+                            format!(
+                                "bazel-{}-bin/{}",
+                                match config.as_ref() {
+                                    "emscripten" => "emscripten",
+                                    "wasm32" => "wasm",
+                                    _ => panic!("unsupported Bazel config: {}", config),
+                                },
+                                bazel_target.replace("//", "").replace(":", "/")
+                            ),
+                            format!("examples/{}/bin", example_name),
+                        ],
+                    ),
+                },
             ],
-        ),
+        },
+        Target::Npm { .. } => todo!(),
+        Target::Shell { .. } => todo!(),
     }
 }
 
 fn build_server(opt: &BuildServer) -> Step {
     match opt.server_variant.as_str() {
-        "base" => Step::Single {
-            name: "build rust server".to_string(),
-            command: Cmd::new(
+        "base" | "logless" => Step::Single {
+            name: format!("build server ({})", opt.server_variant),
+            command: Cmd::new_with_env(
                 "cargo",
                 spread![
                     ...match &opt.server_rust_toolchain {
@@ -178,10 +304,34 @@ fn build_server(opt: &BuildServer) -> Step {
                         None => vec![],
                     },
                     "build".to_string(),
-                    "--release".to_string(),
-                    format!("--target={}", opt.server_rust_target),
+                    // If building in coverage mode, use the default target from the host, and build
+                    // in debug mode.
+                    ...if opt.coverage {
+                        vec![]
+                    } else {
+                        vec![
+                            format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                            "--release".to_string(),
+                        ]
+                    },
                     "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
+                    ...if opt.server_variant == "logless" {
+                        vec!["--no-default-features".to_string()]
+                    } else {
+                        vec![]
+                    },
                 ],
+                &if opt.coverage {
+                    hashmap! {
+                        // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
+                        "CARGO_INCREMENTAL".to_string() => "0".to_string(),
+                        "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
+                        // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
+                        "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
+                    }
+                } else {
+                    hashmap! {}
+                },
             ),
         },
         v => panic!("unknown server variant: {}", v),
@@ -192,16 +342,20 @@ fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
         steps: vec![
-            run_buildifier(FormatMode::Check),
-            run_prettier(FormatMode::Check),
-            run_markdownlint(FormatMode::Check),
-            run_liche(),
-            run_cargo_fmt(FormatMode::Check),
             run_cargo_clippy(),
             run_cargo_test(),
+            run_cargo_doc(),
             run_bazel_build(),
             run_bazel_test(),
+            run_clang_tidy(),
         ],
+    }
+}
+
+fn run_tests_tsan() -> Step {
+    Step::Multiple {
+        name: "tests".to_string(),
+        steps: vec![run_cargo_test_tsan()],
     }
 }
 
@@ -209,6 +363,7 @@ fn format() -> Step {
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
+            run_clang_format(FormatMode::Fix),
             run_buildifier(FormatMode::Fix),
             run_prettier(FormatMode::Fix),
             run_markdownlint(FormatMode::Fix),
@@ -218,40 +373,72 @@ fn format() -> Step {
     }
 }
 
+fn check_format() -> Step {
+    Step::Multiple {
+        name: "format".to_string(),
+        steps: vec![
+            run_check_license(),
+            run_check_build_licenses(),
+            run_check_todo(),
+            run_clang_format(FormatMode::Check),
+            run_buildifier(FormatMode::Check),
+            run_prettier(FormatMode::Check),
+            run_markdownlint(FormatMode::Check),
+            run_embedmd(FormatMode::Check),
+            run_liche(),
+            run_cargo_fmt(FormatMode::Check),
+            run_hadolint(),
+            run_shellcheck(),
+        ],
+    }
+}
+
 fn run_ci() -> Step {
     Step::Multiple {
         name: "ci".to_string(),
         steps: vec![
+            check_format(),
+            run_cargo_deny(),
+            build_server(&BuildServer {
+                server_variant: "base".to_string(),
+                server_rust_toolchain: None,
+                server_rust_target: None,
+                coverage: false,
+            }),
+            build_server(&BuildServer {
+                server_variant: "logless".to_string(),
+                server_rust_toolchain: None,
+                server_rust_target: None,
+                coverage: false,
+            }),
             run_tests(),
+            run_tests_tsan(),
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
                 example_name: None,
-                build_only: false,
+                run_server: None,
+                run_clients: None,
+                client_additional_args: Vec::new(),
+                server_additional_args: Vec::new(),
+                build_docker: false,
                 build_server: BuildServer {
                     server_variant: "base".to_string(),
                     server_rust_toolchain: None,
-                    server_rust_target: "x86_64-unknown-linux-musl".to_string(),
+                    server_rust_target: None,
+                    coverage: false,
                 },
             }),
         ],
     }
 }
 
-fn build_example_config(example_name: &str) -> Step {
-    Step::Single {
-        name: "build_config".to_string(),
-        command: Cmd::new(
-            "bazel",
-            &[
-                "build",
-                &format!("//examples/{}/config:config", example_name),
-            ],
-        ),
-    }
-}
-
-fn run_example_server(opt: &BuildServer, application_file: &str) -> Cmd {
-    Cmd::new(
+fn run_example_server(
+    opt: &BuildServer,
+    example_server: &ExampleServer,
+    server_additional_args: Vec<String>,
+    application_file: &str,
+) -> Box<dyn Runnable> {
+    Cmd::new_with_env(
         "cargo",
         spread![
             ...match &opt.server_rust_toolchain {
@@ -262,16 +449,41 @@ fn run_example_server(opt: &BuildServer, application_file: &str) -> Cmd {
                 None => vec![],
             },
             "run".to_string(),
-            "--release".to_string(),
-            format!("--target={}", opt.server_rust_target),
+            // If building in coverage mode, use the default target from the host, and build in
+            // debug mode.
+            ...if opt.coverage {
+                vec![]
+            } else {
+                vec![
+                    format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                    "--release".to_string(),
+                ]
+            },
             "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
             "--".to_string(),
             "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
             "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
-            "--root-tls-certificate=./examples/certs/local/ca.pem".to_string(),
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
+            ...if opt.server_variant == "logless" {
+                vec!["--no-default-features".to_string()]
+            } else {
+                vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()]
+            },
+            ...example_server.additional_args.clone(),
+            ...server_additional_args,
         ],
+        &if opt.coverage {
+            hashmap! {
+                // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
+                "CARGO_INCREMENTAL".to_string() => "0".to_string(),
+                "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
+                // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
+                "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
+            }
+        } else {
+            hashmap! {}
+        },
     )
 }
 
@@ -279,21 +491,51 @@ fn run_example_server(opt: &BuildServer, application_file: &str) -> Cmd {
 #[serde(deny_unknown_fields)]
 struct Example {
     name: String,
+    #[serde(default)]
+    server: ExampleServer,
+    #[serde(default)]
+    backend: Option<Executable>,
+    application: Application,
     modules: HashMap<String, Target>,
-    clients: HashMap<String, Client>,
+    clients: HashMap<String, Executable>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+struct Application {
+    manifest: String,
+    out: String,
+}
+
+#[derive(serde::Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+struct ExampleServer {
+    #[serde(default)]
+    additional_args: Vec<String>,
 }
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 enum Target {
-    Bazel { bazel_target: String },
-    Cargo { cargo_manifest: String },
-    Npm { package_directory: String },
+    Bazel {
+        bazel_target: String,
+        #[serde(default)]
+        config: String,
+    },
+    Cargo {
+        cargo_manifest: String,
+    },
+    Npm {
+        package_directory: String,
+    },
+    Shell {
+        script: String,
+    },
 }
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct Client {
+struct Executable {
     #[serde(flatten)]
     target: Target,
     #[serde(default)]
@@ -301,48 +543,97 @@ struct Client {
 }
 
 fn run_example(opt: &RunExamples, example: &Example) -> Step {
+    let run_server = run_example_server(
+        &opt.build_server,
+        &example.server,
+        opt.server_additional_args.clone(),
+        &example.application.out,
+    );
+    let run_clients = Step::Multiple {
+        name: "run clients".to_string(),
+        steps: example
+            .clients
+            .iter()
+            .map(|(name, client)| run_client(name, &client, opt.client_additional_args.clone()))
+            .collect(),
+    };
+
+    // Build the run steps (if any) according to the provided flags.
+    //
+    // If `run-server` is enabled, then run the server as well as a potential backend, both in the
+    // background.
+    //
+    // If `run-clients` is enabled, then run the server and backend in the background, and the
+    // clients in the foreground.
+    #[allow(clippy::collapsible_if)]
+    let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
+        let run_server_clients = if opt.run_clients.unwrap_or(true) {
+            Step::WithBackground {
+                name: "background server".to_string(),
+                background: run_server,
+                foreground: Box::new(run_clients),
+            }
+        } else {
+            Step::Single {
+                name: "run server".to_string(),
+                command: run_server,
+            }
+        };
+        match &example.backend {
+            Some(backend) => Step::WithBackground {
+                name: "background backend".to_string(),
+                background: run(&backend, Vec::new()),
+                foreground: Box::new(run_server_clients),
+            },
+            None => run_server_clients,
+        }
+    } else {
+        if opt.run_clients.unwrap_or(true) {
+            run_clients
+        } else {
+            Step::Multiple {
+                name: "run clients (empty)".to_string(),
+                steps: vec![],
+            }
+        }
+    };
+
     Step::Multiple {
         name: example.name.to_string(),
         steps: vec![
             vec![
                 Step::Multiple {
-                    name: "build_wasm_modules".to_string(),
+                    name: "build wasm modules".to_string(),
                     steps: example
                         .modules
                         .iter()
-                        .map(|(name, target)| match target {
-                            Target::Cargo { cargo_manifest } => {
-                                build_wasm_module(name, &cargo_manifest)
-                            }
-                            Target::Bazel { .. } => todo!(),
-                            Target::Npm { .. } => todo!(),
-                        })
+                        .map(|(name, target)| build_wasm_module(name, target, &example.name))
                         .collect(),
                 },
-                build_example_config(&example.name),
+                Step::Single {
+                    name: "build application".to_string(),
+                    command: build_application(&example.application),
+                },
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
                 build_server(&opt.build_server),
             ],
-            if opt.build_only {
-                vec![]
+            if opt.build_docker {
+                vec![build_docker(&example)]
             } else {
-                vec![Step::WithBackground {
-                    name: "run_server".to_string(),
-                    background: run_example_server(
-                        &opt.build_server,
-                        &format!("./examples/{}/bin/config.bin", example.name),
-                    ),
-                    foreground: Box::new(Step::Multiple {
-                        name: "run_client".to_string(),
-                        steps: example
-                            .clients
-                            .iter()
-                            .map(|(name, client)| run_client(name, &client))
-                            .collect(),
-                    }),
-                }]
+                vec![]
             },
+            match &example.backend {
+                Some(backend) => vec![Step::Single {
+                    name: "build backend".to_string(),
+                    command: build(&backend.target),
+                }],
+                None => vec![],
+            },
+            vec![Step::Multiple {
+                name: "run".to_string(),
+                steps: vec![run_backend_server_clients],
+            }],
         ]
         .into_iter()
         .flatten()
@@ -350,49 +641,156 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     }
 }
 
-fn run_client(name: &str, client: &Client) -> Step {
-    match &client.target {
-        Target::Cargo { .. } => todo!(),
-        Target::Bazel { bazel_target } => Step::Single {
-            name: format!("bazel:{}:{}", name, bazel_target),
-            command: Cmd::new(
-                "bazel",
-                spread![
-                    "run".to_string(),
-                    "--".to_string(),
-                    bazel_target.to_string(),
-                    "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
-                    ...client.additional_args.clone(),
-                ],
-            ),
-        },
-        Target::Npm { package_directory } => Step::Multiple {
-            name: format!("npm:{}:{}", name, package_directory),
-            steps: vec![
-                Step::Single {
-                    name: "npm ci".to_string(),
-                    command: Cmd::new(
-                        "npm",
-                        vec![
-                            "ci".to_string(),
-                            "--prefix".to_string(),
-                            package_directory.to_string(),
-                        ],
-                    ),
-                },
-                Step::Single {
-                    name: "npm start".to_string(),
-                    command: Cmd::new(
-                        "npm",
-                        vec![
-                            "start".to_string(),
-                            "--prefix".to_string(),
-                            package_directory.to_string(),
-                        ],
-                    ),
-                },
+fn build_application(application: &Application) -> Box<dyn Runnable> {
+    Cmd::new(
+        "cargo",
+        vec![
+            "run".to_string(),
+            "--manifest-path=sdk/rust/oak_config_serializer/Cargo.toml".to_string(),
+            "--".to_string(),
+            format!("--input-file={}", application.manifest),
+            format!("--output-file={}", application.out),
+        ],
+    )
+}
+
+fn build_docker(example: &Example) -> Step {
+    Step::Multiple {
+        name: "docker".to_string(),
+        steps: vec![
+            Step::Single {
+                name: "build server image".to_string(),
+                command: Cmd::new(
+                    "docker",
+                    &[
+                        "build",
+                        "--tag=oak_docker",
+                        "--file=./oak/server/Dockerfile",
+                        "./oak/server",
+                    ],
+                ),
+            },
+            Step::Single {
+                name: "build example image".to_string(),
+                command: Cmd::new(
+                    "docker",
+                    &[
+                        "build",
+                        &format!("--tag={}", example.name),
+                        "--file=./examples/Dockerfile",
+                        &format!("./examples/{}", example.name),
+                    ],
+                ),
+            },
+            Step::Single {
+                name: "save example image".to_string(),
+                command: Cmd::new(
+                    "docker",
+                    &[
+                        "save",
+                        &example.name,
+                        &format!(
+                            "--output=./examples/{}/bin/{}.tar",
+                            example.name, example.name
+                        ),
+                    ],
+                ),
+            },
+        ],
+    }
+}
+
+fn build(target: &Target) -> Box<dyn Runnable> {
+    match target {
+        Target::Cargo { cargo_manifest } => Cmd::new(
+            "cargo",
+            vec![
+                "build".to_string(),
+                "--release".to_string(),
+                format!("--target={}", DEFAULT_EXAMPLE_BACKEND_RUST_TARGET),
+                format!("--manifest-path={}", cargo_manifest),
             ],
-        },
+        ),
+        Target::Bazel {
+            bazel_target,
+            config,
+        } => Cmd::new(
+            "bazel",
+            spread![
+                "build".to_string(),
+                ...if config.is_empty() {
+                    vec![]
+                } else {
+                    vec![format!("--config={}", config)]
+                },
+                bazel_target.to_string(),
+            ],
+        ),
+        Target::Npm { package_directory } => Cmd::new(
+            "npm",
+            vec!["ci".to_string(), format!("--prefix={}", package_directory)],
+        ),
+        Target::Shell { script } => Cmd::new("bash", &[script]),
+    }
+}
+
+fn run(executable: &Executable, additional_args: Vec<String>) -> Box<dyn Runnable> {
+    match &executable.target {
+        Target::Cargo { cargo_manifest } => Cmd::new(
+            "cargo",
+            spread![
+                "run".to_string(),
+                "--release".to_string(),
+                format!("--target={}", DEFAULT_EXAMPLE_BACKEND_RUST_TARGET),
+                format!("--manifest-path={}", cargo_manifest),
+                "--".to_string(),
+                ...executable.additional_args.clone(),
+                ...additional_args,
+            ],
+        ),
+        Target::Bazel {
+            bazel_target,
+            config,
+        } => Cmd::new(
+            "bazel",
+            spread![
+                "run".to_string(),
+                ...if config.is_empty() {
+                    vec![]
+                } else {
+                    vec![format!("--config={}", config)]
+                },
+                "--".to_string(),
+                bazel_target.to_string(),
+                "--ca_cert=../../../../../../../../examples/certs/local/ca.pem".to_string(),
+                ...executable.additional_args.clone(),
+                ...additional_args,
+            ],
+        ),
+        Target::Npm { package_directory } => Cmd::new(
+            "npm",
+            vec![
+                "start".to_string(),
+                format!("--prefix={}", package_directory),
+            ],
+        ),
+        Target::Shell { script } => Cmd::new("bash", &[script]),
+    }
+}
+
+fn run_client(name: &str, executable: &Executable, additional_args: Vec<String>) -> Step {
+    Step::Multiple {
+        name: name.to_string(),
+        steps: vec![
+            Step::Single {
+                name: "build".to_string(),
+                command: build(&executable.target),
+            },
+            Step::Single {
+                name: "run".to_string(),
+                command: run(executable, additional_args),
+            },
+        ],
     }
 }
 
@@ -401,14 +799,22 @@ fn run_client(name: &str, client: &Client) -> Step {
 fn is_ignored_path(path: &PathBuf) -> bool {
     let components = path.components().collect::<std::collections::HashSet<_>>();
     components.contains(&std::path::Component::Normal(".git".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-bin".as_ref()))
         || components.contains(&std::path::Component::Normal("bazel-cache".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-clang-oak".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-clang-out".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-client-oak".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-client-out".as_ref()))
-        || components.contains(&std::path::Component::Normal("bazel-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-bin".as_ref()))
         || components.contains(&std::path::Component::Normal("bazel-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-clang-bin".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-clang-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-clang-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-client-bin".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-client-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-client-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-emscripten-bin".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-emscripten-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-emscripten-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-wasm-bin".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-wasm-out".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-wasm-oak".as_ref()))
         || components.contains(&std::path::Component::Normal("cargo-cache".as_ref()))
         || components.contains(&std::path::Component::Normal("node_modules".as_ref()))
         || components.contains(&std::path::Component::Normal("target".as_ref())) // Rust artifacts.
@@ -437,16 +843,51 @@ fn workspace_manifest_files() -> impl Iterator<Item = PathBuf> {
         .filter(is_cargo_workspace_file)
 }
 
+/// Return whether the provided path refers to a source file in a programming language.
+fn is_source_code_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".cc")
+        || filename.ends_with(".h")
+        || filename.ends_with(".rs")
+        || filename.ends_with(".proto")
+}
+
+/// Return whether the provided path refers to a source file that can be formatted by clang-tidy.
+fn is_clang_format_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".cc") || filename.ends_with(".h") || filename.ends_with(".proto")
+}
+
 /// Return whether the provided path refers to a Bazel file (`BUILD`, `WORKSPACE`, or `*.bzl`)
 fn is_bazel_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "BUILD" || filename == "WORKSPACE" || filename.ends_with(".bzl")
 }
 
+fn is_build_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename == "BUILD"
+}
+
 /// Return whether the provided path refers to a markdown file (`*.md`)
 fn is_markdown_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".md")
+}
+
+fn is_dockerfile(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with("Dockerfile")
+}
+
+fn is_toml_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".toml")
+}
+
+fn is_yaml_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".yaml")
 }
 
 /// Return whether the provided path refers to a `Cargo.toml` file. Note that it does not
@@ -486,6 +927,19 @@ fn is_cargo_workspace_file(path: &PathBuf) -> bool {
     contents.contains("[workspace]")
 }
 
+fn is_shell_script(path: &PathBuf) -> bool {
+    if path.is_file() {
+        let mut file = std::fs::File::open(path).expect("could not open file");
+        let mut contents = String::new();
+        match file.read_to_string(&mut contents) {
+            Ok(_size) => contents.starts_with("#!"),
+            Err(_err) => false,
+        }
+    } else {
+        false
+    }
+}
+
 enum FormatMode {
     Check,
     Fix,
@@ -519,7 +973,7 @@ fn run_prettier(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "prettier".to_string(),
         steps: source_files()
-            .filter(is_markdown_file)
+            .filter(|path| is_markdown_file(path) || is_yaml_file(path) || is_toml_file(path))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -605,6 +1059,106 @@ fn run_liche() -> Step {
     }
 }
 
+fn run_hadolint() -> Step {
+    Step::Multiple {
+        name: "hadolint".to_string(),
+        steps: source_files()
+            .filter(is_dockerfile)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new("hadolint", &[entry]),
+            })
+            .collect(),
+    }
+}
+
+fn run_shellcheck() -> Step {
+    Step::Multiple {
+        name: "shellcheck".to_string(),
+        steps: source_files()
+            .filter(is_shell_script)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new("shellcheck", &["--external-sources", &entry]),
+            })
+            .collect(),
+    }
+}
+
+fn run_clang_format(mode: FormatMode) -> Step {
+    match mode {
+        FormatMode::Check => Step::Single {
+            name: "clang format".to_string(),
+            command: Cmd::new(
+                "python",
+                &[
+                    "./third_party/run-clang-format/run-clang-format.py",
+                    "-r",
+                    "--exclude",
+                    "*/node_modules",
+                    "oak",
+                    "examples",
+                ],
+            ),
+        },
+        FormatMode::Fix => Step::Multiple {
+            name: "clang format".to_string(),
+            steps: source_files()
+                .filter(is_clang_format_file)
+                .map(to_string)
+                .map(|entry| Step::Single {
+                    name: entry.clone(),
+                    command: Cmd::new("clang-format", &["-i", "-style=file", &entry]),
+                })
+                .collect(),
+        },
+    }
+}
+
+fn run_check_license() -> Step {
+    Step::Multiple {
+        name: "check license".to_string(),
+        steps: source_files()
+            .filter(is_source_code_file)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: CheckLicense::new(entry),
+            })
+            .collect(),
+    }
+}
+
+fn run_check_build_licenses() -> Step {
+    Step::Multiple {
+        name: "check BUILD licenses".to_string(),
+        steps: source_files()
+            .filter(is_build_file)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: CheckBuildLicenses::new(entry),
+            })
+            .collect(),
+    }
+}
+
+fn run_check_todo() -> Step {
+    Step::Multiple {
+        name: "check todo".to_string(),
+        steps: source_files()
+            .filter(is_source_code_file)
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: CheckTodo::new(entry),
+            })
+            .collect(),
+    }
+}
+
 fn run_cargo_fmt(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "cargo fmt".to_string(),
@@ -642,6 +1196,43 @@ fn run_cargo_test() -> Step {
     }
 }
 
+fn run_cargo_doc() -> Step {
+    Step::Single {
+        name: "cargo doc".to_string(),
+        command: Cmd::new("bash", &["./scripts/check_docs"]),
+    }
+}
+
+fn run_clang_tidy() -> Step {
+    Step::Single {
+        name: "clang tidy".to_string(),
+        command: Cmd::new("bash", &["./scripts/run_clang_tidy"]),
+    }
+}
+
+fn run_cargo_test_tsan() -> Step {
+    Step::Single {
+        name: "cargo test (tsan)".to_string(),
+        command: Cmd::new_with_env(
+            "cargo",
+            &[
+                "-Zbuild-std",
+                "test",
+                "--manifest-path=./examples/abitest/module_0/rust/Cargo.toml",
+                "--target=x86_64-unknown-linux-gnu",
+                "--verbose",
+                "--",
+                "--nocapture",
+            ],
+            &hashmap! {
+                "RUST_BACKTRACE".to_string() => "1".to_string(),
+                "RUSTFLAGS".to_string() => "-Z sanitizer=thread".to_string(),
+                "TSAN_OPTIONS".to_string() => format!("halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress", std::env::current_dir().unwrap().display()),
+            },
+        ),
+    }
+}
+
 fn run_cargo_clippy() -> Step {
     Step::Multiple {
         name: "cargo clippy".to_string(),
@@ -658,6 +1249,22 @@ fn run_cargo_clippy() -> Step {
                         "--",
                         "--deny=warnings",
                     ],
+                ),
+            })
+            .collect(),
+    }
+}
+
+fn run_cargo_deny() -> Step {
+    Step::Multiple {
+        name: "cargo deny".to_string(),
+        steps: workspace_manifest_files()
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new(
+                    "cargo",
+                    &["deny", &format!("--manifest-path={}", &entry), "check"],
                 ),
             })
             .collect(),

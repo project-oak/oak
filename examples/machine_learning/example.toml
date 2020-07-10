@@ -1,5 +1,9 @@
 name = "machine_learning"
 
+[application]
+manifest = "examples/machine_learning/config/config.toml"
+out = "examples/machine_learning/bin/config.bin"
+
 [modules]
 module = { Cargo = { cargo_manifest = "examples/machine_learning/module/rust/Cargo.toml" } }
 

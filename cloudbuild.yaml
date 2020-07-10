@@ -31,15 +31,6 @@ steps:
     timeout: 5m
     args: ['./scripts/git_init']
 
-  # Make sure that the Bazel server is unpacked and initialized, by calling `bazel info` (any other
-  # Bazel command would probably do).
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: bazel_init
-    entrypoint: 'bazel'
-    waitFor: ['git_init']
-    timeout: 5m
-    args: ['info']
-
   - name: 'gcr.io/oak-ci/oak:latest'
     id: cargo_crev
     entrypoint: 'bash'
@@ -48,76 +39,27 @@ steps:
     args: ['./scripts/run_cargo_crev']
 
   - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_formatting
+    id: runner_ci
     waitFor: ['git_init']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_formatting']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server_no_debug
-    waitFor: ['bazel_init', 'check_formatting']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'logless']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_server
-    waitFor: ['build_server_no_debug']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_server', '-s', 'base']
+    args: ['./scripts/runner', '--commands', 'run-ci']
 
   # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_docker
-    waitFor: ['build_server']
+    waitFor: ['git_init']
     timeout: 60m
     entrypoint: 'bash'
-    args: ['./scripts/build_example', '-e', 'hello_world', '-i', 'base']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_tests
-    waitFor: ['build_server_docker']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/run_tests']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_tests_tsan
-    waitFor: ['run_tests']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/run_tests_tsan']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_examples
-    waitFor: ['run_tests_tsan']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'base']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_examples_cpp
-    waitFor: ['run_examples']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/run_examples', '-s', 'base', '-a', 'cpp']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: build_experimental
-    waitFor: ['run_tests']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_experimental']
-
-  # Run clang-tidy after the examples finish running, since they share the same `output_base`.
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: run_clang_tidy
-    waitFor: ['run_examples_cpp']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/run_clang_tidy']
+    args:
+      [
+        './scripts/runner',
+        'run-examples',
+        '--example-name=hello_world',
+        '--run-server=false',
+        '--run-clients=false',
+        '--build-docker',
+      ]
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: generate_root_ca_certs
@@ -130,13 +72,7 @@ steps:
   # ignored by git.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_check_diff
-    waitFor:
-      [
-        'git_init',
-        'run_clang_tidy',
-        'run_examples_cpp',
-        'generate_root_ca_certs',
-      ]
+    waitFor: ['git_init', 'runner_ci', 'generate_root_ca_certs']
     timeout: 5m
     entrypoint: 'bash'
     args: ['./scripts/git_check_diff']
@@ -168,20 +104,6 @@ steps:
     timeout: 60m
     entrypoint: 'bash'
     args: ['./scripts/build_examples_android']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_cargo_deny
-    waitFor: ['check_formatting', 'git_check_diff']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_cargo_deny']
-
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: check_docs
-    waitFor: ['check_formatting', 'git_check_diff']
-    timeout: 30m
-    entrypoint: 'bash'
-    args: ['./scripts/check_docs']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:

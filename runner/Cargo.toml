@@ -8,11 +8,23 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+async-recursion = "*"
+async-trait = "*"
 colored = "*"
+futures = "*"
+maplit = "*"
 nix = "*"
 notify = "5.0.0-pre.2"
+once_cell = "*"
 serde = { version = "*", features = ["derive"] }
 spinners = "*"
 structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "process",
+  "sync",
+  "stream"
+] }
 toml = "*"
 walkdir = "*"

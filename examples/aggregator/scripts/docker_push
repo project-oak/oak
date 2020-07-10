@@ -11,7 +11,7 @@ declare -a images backend_images
 mapfile -t images < <(find ./examples/aggregator/bin -name aggregator.tar)
 mapfile -t backend_images < <(find ./examples/aggregator/bin -name aggregator_backend.tar)
 if [[ ${#images[@]} -eq 0 || ${#backend_images[@]} -eq 0 ]]; then
-  echo "Docker images have not been built, run './scripts/build_example -e aggregator -i base'"
+  echo "Docker images have not been built, run './scripts/runner run-examples --example-name=aggregator --build-docker'"
   exit 1
 fi
 if [[ ${#images[@]} -gt 1 || ${#backend_images[@]} -gt 1 ]]; then

@@ -37,13 +37,7 @@ a Sparse Vector - a dictionary with integer keys.
 Build and run the Aggregator with the following command:
 
 ```bash
-./scripts/build_example -e aggregator
-./scripts/build_server -s base
-cargo run --release --target=x86_64-unknown-linux-musl --manifest-path=oak/server/rust/oak_loader/Cargo.toml -- \
-  --application=./examples/aggregator/bin/config.bin \
-  --grpc-tls-private-key=./examples/certs/local/local.key \
-  --grpc-tls-certificate=./examples/certs/local/local.pem \
-  --root-tls-certificate=./examples/certs/local/ca.pem
+./scripts/runner run-examples --run-clients=false --example-name=aggregator
 ```
 
 Aggregator code is in `common` and `module` directories (where `common` defines
@@ -56,12 +50,7 @@ Simple client that connects to the Aggregator and sends a data sample via gRPC.
 Build and run the Client with the following command:
 
 ```bash
-./scripts/build_example -e aggregator
-./bazel-client-bin/examples/aggregator/client/client \
-  --address=localhost:8080 \
-  --ca_cert=./examples/certs/local/ca.pem \
-  --bucket=test \
-  --data=1:10,2:20,3:30
+./scripts/runner run-examples --run-server=false --example-name=aggregator
 ```
 
 A common use case is to keep running the client until the aggregation threshold

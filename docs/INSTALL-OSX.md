@@ -60,20 +60,20 @@ retrieved from a Google Cloud Docker repository.
 The Oak Runtime and its dependencies are built with the following script:
 
 ```bash
-./scripts/build_server
+./scripts/runner build-server
 ```
 
 Build a particular example, say `hello_world`, with:
 
 ```bash
-./scripts/build_example -e hello_world
+./scripts/runner run-examples --run-server=false --run-clients=false --example-name=hello_world
 ```
 
 Note that the Runtime server requires a particular Oak Application to run, and
 so relies on the previous section.
 
 ```bash
-./scripts/run_server -e hello_world
+./scripts/runner run-examples --run-clients=false --example-name=hello_world
 ```
 
 In a separate terminal, run an example client that connects to the Oak Runtime
@@ -82,13 +82,12 @@ needed, so the client will connect to the already-running server of the previous
 step):
 
 ```bash
-./scripts/run_example -s none -e hello_world
+./scripts/runner run-examples --run-server=false --example-name=hello_world
 ```
 
 ## Codebase Tools
 
 The Oak codebase also makes use of several linting tools. To run these, and
-their wrapper scripts (e.g. [`scripts/format`](/scripts/format) and
-[`scripts/check_formatting`](/scripts/check_formatting)), the OS X versions of
-the tools will need to be installed. Check the top-level
-[`Dockerfile`](/Dockerfile) for the set of required tools.
+their wrapper scripts (e.g. `./scripts/runner format`), the OS X versions of the
+tools will need to be installed. Check the top-level [`Dockerfile`](/Dockerfile)
+for the set of required tools.

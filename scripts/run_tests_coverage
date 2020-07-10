@@ -4,54 +4,20 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# Build the example client and Application normally.
-"${SCRIPTS_DIR}/build_example" -e abitest
-
-# Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
-export CARGO_INCREMENTAL=0
-export RUSTDOCFLAGS="-Cpanic=abort"
-# grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
-export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests"
-cargo build --manifest-path=oak/server/rust/oak_loader/Cargo.toml
-
-# Run the instrumented Runtime server in the background.
-SERVER_ARGS=(
-  "--grpc-tls-private-key=${SCRIPTS_DIR}/../examples/certs/local/local.key"
-  "--grpc-tls-certificate=${SCRIPTS_DIR}/../examples/certs/local/local.pem"
-  "--root-tls-certificate=${SCRIPTS_DIR}/../examples/certs/local/ca.pem"
-)
-readonly APPLICATION_FILE="${PWD}/examples/abitest/bin/config.bin"
-cargo run --manifest-path=oak/server/rust/oak_loader/Cargo.toml -- --application="${APPLICATION_FILE}" "${SERVER_ARGS[@]}" &
-readonly SERVER_PID=$!
-to_kill+=("${SERVER_PID}")
-
-# Wait for the Runtime and the Oak Application to start.
-sleep 10
-
-readonly ADDITIONAL_ARGS=('--test_exclude=Storage')
-readonly TLS_ARGS=(
-    "--ca_cert=${SCRIPTS_DIR}/../examples/certs/local/ca.pem"
-    "--cert_chain=${SCRIPTS_DIR}/../examples/certs/local/local.pem"
-    "--private_key=${SCRIPTS_DIR}/../examples/certs/local/local.key")
-readonly CLIENT_ARGS=("${@-}")  # Choose client args provided after '--'.
-
-# Run the client program.
-"${SCRIPTS_DIR}/../bazel-client-bin/examples/abitest/client/client" "${TLS_ARGS[@]}" "${ADDITIONAL_ARGS[@]-}" "${CLIENT_ARGS[@]-}"
-
-# Shutdown cleanly.
-kill_bg_pids
+# Build the example client and Application in coverage mode and run them.
+"${SCRIPTS_DIR}/runner" run-examples --example-name=abitest --coverage
 
 # Generate coverage summary
 (
     cd oak/server || exit 1
     grcov ./target/debug/ \
-          --source-dir . \
+          --source-dir=. \
           --llvm \
           --branch \
           --ignore-not-existing \
-          --excl-line "(panic!|unreachable!|#\\[derive\\()" \
-          --excl-start "LCOV_EXCL_START" \
-          --excl-stop  "LCOV_EXCL_STOP" \
-          --output-type lcov \
-          --output-path ./target/debug/lcov.info
+          --excl-line="(panic!|unreachable!|#\\[derive\\()" \
+          --excl-start=LCOV_EXCL_START \
+          --excl-stop=LCOV_EXCL_STOP \
+          --output-type=lcov \
+          --output-path=./target/debug/lcov.info
 )
