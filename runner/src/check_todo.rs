@@ -15,6 +15,12 @@
 //
 
 use super::*;
+use once_cell::sync::Lazy;
+use regex::Regex;
+
+static PATTERN: Lazy<Regex> =
+    // Break up "TO" and "DO" to avoid false positives on this code.
+    Lazy::new(|| Regex::new(&format!(r"{}DO\(#\d+\)", "TO")).expect("Could not parse regex"));
 
 /// A [`Runnable`] command that checks for the existence of todos in the codebase with no associated
 /// GitHub issue number.
@@ -26,6 +32,11 @@ impl CheckTodo {
     pub fn new(path: String) -> Box<Self> {
         Box::new(CheckTodo { path })
     }
+
+    fn is_invalid_todo(word: &str) -> bool {
+        // Break up "TO" and "DO" to avoid false positives on this code.
+        word.contains(&format!("{}DO", "TO")) && !PATTERN.is_match(word)
+    }
 }
 
 impl Runnable for CheckTodo {
@@ -35,18 +46,11 @@ impl Runnable for CheckTodo {
 
     fn run(self: Box<Self>, _opt: &Opt) -> Box<dyn Running> {
         let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
-        let todo_words = file_content
+        let invalid_todo_words = file_content
             .split_whitespace()
-            // We cannot use the TO DO word all together here, because otherwise it would trigger
-            // the very logic that this struct is implementing.
-            // TODO(#396): Use a regex to match on a more precise format.
-            .filter(|word| word.contains(&format!("{}{}", "TO", "DO")))
-            .filter(|word| {
-                !(word.starts_with(&format!("{}{}(", "TO", "DO"))
-                    && (word.ends_with("):") || word.ends_with(')')))
-            })
+            .filter(|word| CheckTodo::is_invalid_todo(word))
             .collect::<Vec<_>>();
-        let result = if todo_words.is_empty() {
+        let result = if invalid_todo_words.is_empty() {
             SingleStatusResult {
                 value: StatusResultValue::Ok,
                 logs: String::new(),
@@ -54,9 +58,19 @@ impl Runnable for CheckTodo {
         } else {
             SingleStatusResult {
                 value: StatusResultValue::Error,
-                logs: format!("Invalid todos: {:?}", todo_words),
+                logs: format!("Invalid todos: {:?}", invalid_todo_words),
             }
         };
         Box::new(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CheckTodo;
+    #[test]
+    fn check_todos() {
+        assert!(CheckTodo::is_invalid_todo(&format!("{}DO()", "TO")));
+        assert!(!CheckTodo::is_invalid_todo(&format!("{}DO(#123)", "TO")));
     }
 }
