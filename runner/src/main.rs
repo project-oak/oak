@@ -80,6 +80,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let opt = Opt::from_args();
 
+    if let Command::Completion = opt.cmd {
+        Opt::clap().gen_completions_to("runner", clap::Shell::Bash, &mut std::io::stdout());
+        std::process::exit(0);
+    };
+
     let watch = opt.watch;
 
     let run = async move || {
@@ -91,6 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::Format => format(),
             Command::CheckFormat => check_format(),
             Command::RunCi => run_ci(),
+            Command::Completion => panic!("should have been handled above"),
         };
         // TODO(#396): Add support for running individual commands via command line flags.
         run_step(&Context::root(&opt), steps).await

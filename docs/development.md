@@ -4,6 +4,7 @@
 - [Meta-Advice](#meta-advice)
 - [Docker vs. Native](#docker-vs-native)
 - [Prerequisites](#prerequisites)
+- [Runner](#runner)
 - [Run Example Application](#run-example-application)
   - [Build Application](#build-application)
   - [Build Runtime Server](#build-runtime-server)
@@ -111,6 +112,21 @@ A full development environment for the project also includes various extra
 tools, for example for linting and synchronizing documentation. As ever, the
 [`Dockerfile`](/Dockerfile) holds the details, but the scripts under
 [`scripts/`](/scripts) also indicate what's needed for different steps.
+
+## Runner
+
+`runner` is a utility binary to perform a number of common tasks within the Oak
+repository. It can be run by invoking `./scripts/runner` from the root of the
+repository, and it has a number of flags and sub-commands available, which
+should be self-explanatory.
+
+For convenience, the following commands install a `runner` alias and bash
+autocompletion:
+
+```bash
+alias runner=./scripts/runner
+source <(runner completion)
+```
 
 ## Run Example Application
 

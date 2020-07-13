@@ -47,6 +47,8 @@ pub enum Command {
     RunTests,
     RunTestsTsan,
     RunCi,
+    #[structopt(about = "generate bash completion script to stdout")]
+    Completion,
 }
 
 #[derive(StructOpt, Clone)]
