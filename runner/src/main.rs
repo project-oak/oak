@@ -298,7 +298,7 @@ fn build_server(opt: &BuildServer) -> Step {
                     name: "create bin folder".to_string(),
                     command: Cmd::new(
                         "mkdir",
-                        vec!["--parent".to_string(), "oak/server/bin".to_string()],
+                        vec!["-p".to_string(), "oak/server/bin".to_string()],
                     ),
                 },
                 Step::Single {
