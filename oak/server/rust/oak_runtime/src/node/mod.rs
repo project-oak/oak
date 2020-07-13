@@ -27,6 +27,7 @@ use std::net::AddrParseError;
 use tokio::sync::oneshot;
 
 pub mod grpc;
+pub mod http;
 mod logger;
 mod roughtime;
 mod storage;
@@ -135,6 +136,10 @@ pub fn create_node(
         Some(ConfigType::StorageConfig(_config)) => {
             Ok(Box::new(storage::StorageNode::new(node_name)))
         }
+        Some(ConfigType::HttpServerConfig(config)) => Ok(Box::new(http::HttpServerNode::new(
+            node_name,
+            config.clone(),
+        )?)),
         None => Err(ConfigurationError::InvalidNodeConfiguration),
     }
 }
