@@ -851,6 +851,8 @@ fn is_source_code_file(path: &PathBuf) -> bool {
         || filename.ends_with(".h")
         || filename.ends_with(".rs")
         || filename.ends_with(".proto")
+        || filename.ends_with(".js")
+        || filename.ends_with(".go")
 }
 
 /// Return whether the provided path refers to a source file that can be formatted by clang-tidy.
