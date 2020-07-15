@@ -1,0 +1,89 @@
+//
+// Copyright 2019 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package oak.event;
+
+// This messages defines an event sent by the Oak Runtime to allow for dynamic
+// introspection in non-production enviroments. It provides a "schema" to
+// describe the creation/destruction of nodes, channels, handles, as well as the
+// queuing of messages.
+message Event {
+  google.protobuf.Timestamp timestamp = 1;
+  oneof event_details {
+    NodeCreated node_created = 2;
+    NodeDestroyed node_destroyed = 3;
+    ChannelCreated channel_created = 4;
+    ChannelDestroyed channel_destroyed = 5;
+    HandleCreated handle_created = 6;
+    HandleDestroyed handle_destroyed = 7;
+  }
+}
+
+message NodeCreated {
+  uint64 node_id = 1;
+}
+
+message NodeDestroyed {
+  uint64 node_id = 1;
+}
+
+message ChannelCreated {
+  uint64 node_id = 1;
+
+  uint64 channel_id = 2;
+}
+
+message ChannelDestroyed {
+  uint64 node_id = 1;
+
+  uint64 channel_id = 2;
+}
+
+message HandleCreated {
+  uint64 node_id = 1;
+
+  uint64 channel_id = 2;
+
+  uint64 handle = 3;
+}
+
+message HandleDestroyed {
+  uint64 node_id = 1;
+
+  uint64 channel_id = 2;
+
+  uint64 handle = 3;
+}
+
+message MessageEnqueueing {
+  uint64 node_id = 1;
+
+  uint64 channel_id = 2;
+
+  repeated uint64 included_handles = 3;
+}
+
+message MessageDequeueing {
+  uint64 node_id = 1;
+
+  uint64 channel_id = 2;
+
+  repeated uint64 acquired_handles = 3;
+}
