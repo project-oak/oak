@@ -22,23 +22,25 @@ use log::info;
 use prost_types::Timestamp;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+fn current_timestamp() -> Timestamp {
+  let duration_since_unix_epoch = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .expect("Time went backwards");
+
+  Timestamp {
+    seconds: duration_since_unix_epoch.as_secs() as i64,
+    nanos: duration_since_unix_epoch.subsec_nanos() as i32,
+  }
+}
+
 // Introspection event related methods for the Runtime.
 impl Runtime {
   /// Generates an introspection event recording a modification to the Oak
   /// application.
   #[cfg(feature = "oak_debug")]
   pub fn introspection_event(&self, event_details: EventDetails) {
-    let duration_since_unix_epoch = SystemTime::now()
-      .duration_since(UNIX_EPOCH)
-      .expect("Time went backwards");
-
-    let timestamp = Timestamp {
-      seconds: duration_since_unix_epoch.as_secs() as i64,
-      nanos: duration_since_unix_epoch.subsec_nanos() as i32,
-    };
-
     let event = Event {
-      timestamp: Some(timestamp),
+      timestamp: Some(current_timestamp()),
       event_details: Some(event_details),
     };
 
