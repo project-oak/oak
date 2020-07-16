@@ -4,7 +4,7 @@ Date: Fri, 27 Mar 2020 14:34:20 +0000
 Subject: [PATCH] Patch prost to generate typesafe Sender and Receiver.
 
 ---
- prost-build/src/code_generator.rs | 13 +++++++++++++
+ prost-build/src/code_generator.rs | 18 ++++++++++++++++++
  prost-types/src/protobuf.rs       |  3 +++
  2 files changed, 16 insertions(+)
 
@@ -12,7 +12,7 @@ diff --git a/prost-build/src/code_generator.rs b/prost-build/src/code_generator.
 index 7323eb6..f500791 100644
 --- a/prost-build/src/code_generator.rs
 +++ b/prost-build/src/code_generator.rs
-@@ -715,7 +715,20 @@ impl<'a> CodeGenerator<'a> {
+@@ -715,7 +715,25 @@ impl<'a> CodeGenerator<'a> {
          self.buf.push_str("}\n");
      }
 
@@ -23,7 +23,12 @@ index 7323eb6..f500791 100644
 +            ".oak.handle.Receiver" => Some("Receiver"),
 +            _ => None,
 +        }?;
-+        Some(format!("::oak::io::{}<{}>", direction, message_type))
++        let oak_package = if self.package == "oak" {
++            "crate"
++        } else {
++            "::oak"
++        };
++        Some(format!("{}::io::{}<{}>", oak_package, direction, message_type))
 +    }
 +
      fn resolve_type(&self, field: &FieldDescriptorProto) -> String {

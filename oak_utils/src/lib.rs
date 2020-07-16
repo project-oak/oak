@@ -182,6 +182,13 @@ pub struct ProtoOptions {
     pub derive_handle_visit: bool,
 
     pub out_dir_override: Option<std::path::PathBuf>,
+
+    /// Replace `::oak` with `crate` in the generated proto code.
+    ///
+    /// Code generator expects an `oak` crate to be available for resolving `::oak::io::Sender`.
+    /// The generated path is valid for all crates that list `oak` as a dependency, but is not
+    /// currently available for `oak` itself.
+    pub replace_oak_with_crate: bool,
 }
 
 /// The default option values.
@@ -191,6 +198,7 @@ impl Default for ProtoOptions {
             generate_services: true,
             derive_handle_visit: true,
             out_dir_override: None,
+            replace_oak_with_crate: false,
         }
     }
 }
@@ -212,6 +220,11 @@ where
     P: AsRef<std::path::Path>,
 {
     set_protoc_env_if_unset();
+    let oak_package = if options.replace_oak_with_crate {
+        "crate"
+    } else {
+        "::oak"
+    };
 
     for input in inputs {
         // Tell cargo to rerun this build script if the proto file has changed.
@@ -226,11 +239,20 @@ where
     if options.derive_handle_visit {
         prost_config
             // Auto-derive the HandleVisit trait
-            .type_attribute(".", "#[derive(::oak::handle::HandleVisit)]")
+            .type_attribute(
+                ".",
+                format!("#[derive({}::handle::HandleVisit)]", oak_package),
+            )
             // Link relevant Oak protos to the Oak SDK types.
-            .extern_path(".oak.handle", "::oak::handle")
-            .extern_path(".oak.encap.GrpcRequest", "::oak::grpc::GrpcRequest")
-            .extern_path(".oak.encap.GrpcResponse", "::oak::grpc::GrpcResponse");
+            .extern_path(".oak.handle", format!("{}::handle", oak_package))
+            .extern_path(
+                ".oak.encap.GrpcRequest",
+                format!("{}::grpc::GrpcRequest", oak_package),
+            )
+            .extern_path(
+                ".oak.encap.GrpcResponse",
+                format!("{}::grpc::GrpcResponse", oak_package),
+            );
     }
     if let Some(out_dir) = options.out_dir_override {
         prost_config.out_dir(out_dir);
