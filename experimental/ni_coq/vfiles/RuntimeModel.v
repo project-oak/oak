@@ -41,16 +41,14 @@ node ids to nodes since node ids are not real anyway *)
 
 Instance Knid: KeyT := {
     t := node_id; 
-    eqb := fun x => fun y =>
-        if (dec_eq_nid x y) then true else false
+    eq_dec := dec_eq_nid;
 }.
 Definition node_state := tg_map Knid node.
 Instance Khandle: KeyT := {
     t := handle;
-    eqb := fun x => fun y =>
-        if (dec_eq_h x y) then true else false
+    eq_dec := dec_eq_h;
 }.
-Definition chan_state := pg_map Khandle channel.
+Definition chan_state := tg_map Khandle channel.
 Record state := State {
     nodes: node_state;
     chans: chan_state
@@ -60,7 +58,7 @@ Record state := State {
 * Utils
 ============================================================================*)
 Definition chan_append (c: channel)(m: message): channel :=
-    match c with | Chan l ms => Chan l (m :: ms) end.
+    {| clbl := c.(clbl); ms := (m :: c.(ms)) |}.
 
 Definition node_push_c (n: node)(c: call): node :=
     match n with | Node l cs hs => Node l (c :: cs) hs end .
@@ -86,26 +84,27 @@ Definition state_upd_node (nid: node_id)(n: node)(s: state): state :=
 Definition state_upd_chan (h: handle)(ch: channel)(s: state): state :=
     {|
         nodes := s.(nodes);
-        chans := pg_update s.(chans) h ch;
+        chans := tg_update s.(chans) h ch;
     |}.
 
 Definition state_pop_caller (nid: node_id)(s: state): state := 
     state_upd_node nid (node_pop_cmd (s.(nodes) nid)) s.
 
+(*
 Definition opt_match {A: Type}(o: option A)(a: A): Prop :=
     match o with | Some a => True | _ => False end.
+*)
 
 (*============================================================================
 * Single Call Semantics
 ============================================================================*)
 
 Inductive step_call: node_id -> call -> state -> state -> Prop :=
-    | SWriteSucc caller_id (han: handle) chan msg s
+    | SWriteSucc caller_id han msg s
         (H0: In (s.(nodes) caller_id).(hans) han)
-        (H1: opt_match (s.(chans) han) chan)
-        (H2: (s.(nodes) caller_id).(nlbl) << chan.(clbl)):
+        (H2: (s.(nodes) caller_id).(nlbl) << (s.(chans) han).(clbl)):
         step_call caller_id (WriteChannel han msg) s 
-            (state_upd_chan han (chan_append chan msg) s).
+            (state_upd_chan han (chan_append (s.(chans) han) msg) s).
     (*
     | SWriteLblErr caller_id han chan msg s
         (H0: In (s.(nodes) caller_id).(hans) han)

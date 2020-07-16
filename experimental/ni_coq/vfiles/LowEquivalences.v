@@ -21,11 +21,7 @@ Inductive node_low_eq: level -> node -> node -> Prop :=
 
 (* Way to phrase this as an inductive ?? *)
 Definition chan_state_low_eq (ell: level)(chs1 chs2: chan_state): Prop :=
-    forall m, match (chs1 m), (chs2 m) with
-        | None, None => True
-        | Some ch1, Some ch2 => chan_low_eq ell ch1 ch2
-        | _, _ => False
-    end.
+    forall h, chan_low_eq ell (chs1 h) (chs2 h).
 
 Definition node_state_low_eq (ell: level)(ns1 ns2: node_state): Prop :=
     forall m, node_low_eq ell (ns1 m) (ns2 m).
@@ -38,8 +34,10 @@ Definition trace := list state.
 
 Inductive trace_low_eq: level -> trace -> trace -> Prop :=
     | NilEQ ell: trace_low_eq ell [] []
-    | AddBoth ell x t1 t2 (H: trace_low_eq ell t1 t2):
-        trace_low_eq ell (x::t1) (x::t2)
+    | AddBoth ell x y t1 t2 
+        (H1: trace_low_eq ell t1 t2)
+        (H2: state_low_eq ell x y):
+        trace_low_eq ell (x::t1) (y::t2)
     | AddEqR ell x y t1 t2 
         (H1: trace_low_eq ell t1 (y::t2))
         (H2: state_low_eq ell x y):
