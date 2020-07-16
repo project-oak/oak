@@ -152,20 +152,24 @@ pub extern "C" fn frontend_oak_main(_in_handle: u64) {
 
 ### Generated gRPC service code
 
-The Oak SDK provides `oak_utils::compile_protos` to autogenerate Rust code from
-a [gRPC service definition](https://grpc.io/docs/guides/concepts/). Adding a
+The Oak SDK provides
+[`oak_utils::compile_protos`](https://project-oak.github.io/oak/oak_utils/doc/oak_utils/fn.compile_protos.html)
+to autogenerate Rust code from a
+[gRPC service definition](https://grpc.io/docs/guides/concepts/). Adding a
 `build.rs` file to the Node that uses this function results in a generated file
 `<service>_grpc.rs` appearing under the crate's build
 [`OUT_DIR`](https://doc.rust-lang.org/cargo/reference/environment-variables.html)
 (by default).
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/module/rust/build.rs Rust /fn main/ /^}/)
+[embedmd]:# (../examples/translator/common/build.rs Rust /fn main/ /^}/)
 ```Rust
 fn main() {
+    // Generate the Oak-specific server and client code for the gRPC service,
+    // along with the Rust types corresponding to the message definitions.
     oak_utils::compile_protos(
-        &["../../proto/hello_world.proto"],
-        &["../../proto", "../../../../third_party"],
+        &["../proto/translator.proto"],
+        &["../proto", "../third_party"],
     );
 }
 ```
