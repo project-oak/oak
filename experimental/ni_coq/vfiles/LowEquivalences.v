@@ -28,11 +28,7 @@ Definition chan_state_low_eq (ell: level)(chs1 chs2: chan_state): Prop :=
     end.
 
 Definition node_state_low_eq (ell: level)(ns1 ns2: node_state): Prop :=
-    forall m, match (ns1 m), (ns2 m) with
-        | None, None => True
-        | Some ch1, Some ch2 => node_low_eq ell ch1 ch2
-        | _, _ => False
-    end.
+    forall m, node_low_eq ell (ns1 m) (ns2 m).
 
 Definition state_low_eq (ell: level)(s1 s2: state): Prop :=
     (node_state_low_eq ell s1.(nodes) s2.(nodes)) /\
