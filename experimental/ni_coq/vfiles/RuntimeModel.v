@@ -2,7 +2,12 @@ Require Import OakIFC.Lattice.
 Require Import OakIFC.Parameters.
 Require Import OakIFC.GenericMap.
 Require Import List.
+Require Import Coq.Sets.Ensembles.
 
+(* Ensembles don't have implicit type params and these lines fix that *)
+Arguments Ensembles.In {U}.
+Arguments Ensembles.Add {U}.
+Arguments Ensembles.Subtract {U}.
 
 (*============================================================================
  Commands, State, Etc.
@@ -26,7 +31,7 @@ Inductive call: Type :=
 Record node := Node {
     nlbl: level;
     calls: list call;
-    hans: list handle
+    hans: Ensemble handle
 }.
 
 (* TODO: unsure if records or inductives are better for proofs.
@@ -39,7 +44,7 @@ Instance Knid: KeyT := {
     eqb := fun x => fun y =>
         if (dec_eq_nid x y) then true else false
 }.
-Definition node_state := pg_map Knid node.
+Definition node_state := tg_map Knid node.
 Instance Khandle: KeyT := {
     t := handle;
     eqb := fun x => fun y =>
@@ -72,13 +77,20 @@ Definition node_pop_cmd (n: node): node :=
         | _ => n
     end.
 
+Definition state_upd_node (nid: node_id)(n: node)(s: state): state :=
+    {| 
+        nodes := tg_update s.(nodes) nid n; 
+        chans := s.(chans)
+    |}.
+
+Definition state_upd_chan (h: handle)(ch: channel)(s: state): state :=
+    {|
+        nodes := s.(nodes);
+        chans := pg_update s.(chans) h ch;
+    |}.
+
 Definition state_pop_caller (nid: node_id)(s: state): state := 
-    match (s.(nodes) nid) with
-        | None => s
-        | Some n => 
-            {| nodes := pg_update s.(nodes) nid (node_pop_cmd n);
-            chans := s.(chans) |}
-    end.
+    state_upd_node nid (node_pop_cmd (s.(nodes) nid)) s.
 
 Definition opt_match {A: Type}(o: option A)(a: A): Prop :=
     match o with | Some a => True | _ => False end.
@@ -88,29 +100,25 @@ Definition opt_match {A: Type}(o: option A)(a: A): Prop :=
 ============================================================================*)
 
 Inductive step_call: node_id -> call -> state -> state -> Prop :=
-    | SWriteSucc caller_id caller han chan msg s
-        (H0: In han caller.(hans))
+    | SWriteSucc caller_id (han: handle) chan msg s
+        (H0: In (s.(nodes) caller_id).(hans) han)
         (H1: opt_match (s.(chans) han) chan)
-        (H2: caller.(nlbl) << chan.(clbl)):
-        step_call caller_id (WriteChannel han msg) s (
-            let chans' :=
-                (pg_update s.(chans) han (chan_append chan msg)) in
-            {| nodes := s.(nodes); chans := chans'|}
-        )
-    | SWriteLblErr caller_id caller han chan msg s
-        (H0: In han caller.(hans))
+        (H2: (s.(nodes) caller_id).(nlbl) << chan.(clbl)):
+        step_call caller_id (WriteChannel han msg) s 
+            (state_upd_chan han (chan_append chan msg) s).
+    (*
+    | SWriteLblErr caller_id han chan msg s
+        (H0: In (s.(nodes) caller_id).(hans) han)
         (H1: opt_match (s.(chans) han) chan)
-        (H2: ~(caller.(nlbl) << chan.(clbl))):
-        step_call caller_id (WriteChannel han msg) s (
-            let nodes' :=
-                (pg_update s.(nodes) caller_id
-                    (node_push_c caller (Internal IntRecvErr) )) in
-            {| nodes := nodes'; chans := s.(chans) |}
-        ).
+        (H2: ~((s.(nodes) caller_id).(nlbl) << chan.(clbl))):
+        step_call caller_id (WriteChannel han msg) s 
+            ( let n' := (node_push_c (s.(nodes) caller_id)
+                (Internal IntRecvErr)) in
+            state_upd_node caller_id n' s).
+    *)
 
 Inductive step_system: state -> state -> Prop :=
     | ValidStep caller_id caller call s s_pop s'
-        (H0: opt_match (s.(nodes) caller_id) caller)
         (H1: is_node_call caller call)
         (H3: s_pop = state_pop_caller caller_id s)
         (H4: step_call caller_id call s_pop s'):
