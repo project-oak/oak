@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["authentication",""]]});
+initSidebarItems({"mod":[["authentication",""],["introspection_events",""]]});
