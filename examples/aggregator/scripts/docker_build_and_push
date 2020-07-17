@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+readonly GLOBAL_ROOT_DIR="${SCRIPTS_DIR}/../../.."
+readonly GLOBAL_SCRIPTS_DIR="${GLOBAL_ROOT_DIR}/scripts/"
+# shellcheck source=scripts/common
+source "${GLOBAL_SCRIPTS_DIR}/common"
+
+readonly AGGREGATOR_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator'
+readonly BACKEND_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator-backend'
+
+(
+  cd "${GLOBAL_ROOT_DIR}/"
+  # Build aggregator image
+
+  # Build the base server.
+  docker build --tag=oak_docker --file=./oak/server/Dockerfile ./oak/server
+  # Build and save the example
+  docker build --tag=aggregator --file=./examples/Dockerfile "./examples/aggregator"
+  docker tag aggregator "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
+  docker push "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
+
+  # Build aggregator_backend image
+  docker build --tag=aggregator_backend --file="./examples/aggregator/server/Dockerfile" "./examples"
+  docker tag aggregator_backend "${BACKEND_DOCKER_IMAGE_NAME}":latest
+  docker push "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest
+)

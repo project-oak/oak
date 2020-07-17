@@ -97,8 +97,7 @@ Deployment requires Docker images to be uploaded to the
 the following command:
 
 ```bash
-./scripts/build_example -e aggregator -i base
-./examples/aggregator/scripts/docker_push
+./examples/aggregator/scripts/docker_build_and_push
 ```
 
 ## Monitoring
