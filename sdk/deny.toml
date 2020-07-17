@@ -7,17 +7,32 @@ targets = [
   { triple = "x86_64-unknown-linux-musl" },
 ]
 
-# List of allowed licenses.
-# For more detailsinformation see http://go/thirdpartylicenses
-[licenses]
-allow = [
-  "Apache-2.0",
-  "MPL-2.0",
-  "ISC",
-  "MIT",
-  "OpenSSL",
-  "Zlib",
+# Deny all advisories unless explicitly ignored.
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+yanked = "deny"
+notice = "deny"
+ignore = [
+  # TODO(#1267): Remove when mio no longer depends on net2.
+  "RUSTSEC-2020-0016",
+  # TODO(#1268): Remove when ring no longer depends on spin.
+  "RUSTSEC-2019-0031",
 ]
+
+# Deny multiple versions unless explicitly skipped.
+[bans]
+multiple-versions = "deny"
+
+# TODO(#1270): Remove when no longer needed by tonic and rustls.
+[[bans.skip]]
+name = "base64"
+version = "=0.11.0"
+
+# List of allowed licenses.
+# For more detailed information see http://go/thirdpartylicenses.
+[licenses]
+allow = ["Apache-2.0", "MPL-2.0", "ISC", "MIT", "OpenSSL", "Zlib"]
 copyleft = "deny"
 
 [[licenses.clarify]]

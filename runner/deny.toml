@@ -2,12 +2,47 @@
 #
 # For further details on all configuration options see:
 # https://embarkstudios.github.io/cargo-deny/checks/cfg.html
-targets = [
-  { triple = "x86_64-unknown-linux-musl" },
+targets = [{ triple = "x86_64-unknown-linux-musl" }]
+
+# Deny all advisories unless explicitly ignored.
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+yanked = "deny"
+notice = "deny"
+ignore = [
+  # TODO(#1267): Remove when mio no longer depends on net2.
+  "RUSTSEC-2020-0016",
+  # TODO(#1269): Remove when spinner no longer depends on term.
+  "RUSTSEC-2018-0015",
 ]
 
+# Deny multiple versions unless explicitly skipped.
+[bans]
+multiple-versions = "deny"
+
+# TODO(#1270): Remove when no longer needed by spinners.
+[[bans.skip]]
+name = "ansi_term"
+version = "=0.7.5"
+
+# TODO(#1270): Remove when no longer needed by spinners.
+[[bans.skip]]
+name = "quote"
+version = "=0.3.15"
+
+# TODO(#1270): Remove when no longer needed by spinners.
+[[bans.skip]]
+name = "syn"
+version = "=0.11.11"
+
+# TODO(#1270): Remove when no longer needed by spinners.
+[[bans.skip]]
+name = "unicode-xid"
+version = "=0.0.4"
+
 # List of allowed licenses.
-# For more detailsinformation see http://go/thirdpartylicenses
+# For more detailed information see http://go/thirdpartylicenses.
 [licenses]
 allow = [
   "Apache-2.0",

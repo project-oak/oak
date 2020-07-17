@@ -2,15 +2,21 @@
 #
 # For further details on all configuration options see:
 # https://embarkstudios.github.io/cargo-deny/checks/cfg.html
-targets = [
-  { triple = "x86_64-unknown-linux-musl" },
-]
+targets = [{ triple = "x86_64-unknown-linux-musl" }]
+
+# Deny all advisories unless explicitly ignored.
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+yanked = "deny"
+notice = "deny"
+
+# Deny multiple versions unless explicitly skipped.
+[bans]
+multiple-versions = "deny"
 
 # List of allowed licenses.
 # For more detailsinformation see http://go/thirdpartylicenses
 [licenses]
-allow = [
-  "Apache-2.0",
-  "MIT",
-]
+allow = ["Apache-2.0", "MIT"]
 copyleft = "deny"
