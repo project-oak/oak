@@ -1,0 +1,16 @@
+# Configuration used for dependency checking with cargo-deny.
+#
+# For further details on all configuration options see:
+# https://embarkstudios.github.io/cargo-deny/checks/cfg.html
+targets = [
+  { triple = "x86_64-unknown-linux-musl" },
+]
+
+# List of allowed licenses.
+# For more detailsinformation see http://go/thirdpartylicenses
+[licenses]
+allow = [
+  "Apache-2.0",
+  "MIT",
+]
+copyleft = "deny"
