@@ -47,6 +47,7 @@ mod channel;
 pub mod graph;
 #[cfg(feature = "oak_debug")]
 mod introspect;
+mod introspection_events;
 mod proxy;
 #[cfg(test)]
 pub mod tests;

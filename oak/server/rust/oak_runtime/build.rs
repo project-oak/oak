@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_utils::{generate_grpc_code, CodegenOptions};
+use oak_utils::{compile_protos_with_options, generate_grpc_code, CodegenOptions, ProtoOptions};
 
 fn main() {
     generate_grpc_code(
@@ -26,4 +26,15 @@ fn main() {
         },
     )
     .expect("Proto compilation failed.");
+
+    compile_protos_with_options(
+        &["../../../../oak/proto/introspection_events.proto"],
+        &["../../../../oak/proto"],
+        ProtoOptions {
+            // Exclude generation of HandleVisit auto-derive, as it would
+            // require a reference to the Oak SDK to compile.
+            derive_handle_visit: false,
+            ..Default::default()
+        },
+    );
 }

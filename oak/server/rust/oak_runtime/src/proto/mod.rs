@@ -20,4 +20,8 @@ pub mod oak {
     pub mod authentication {
         include!(concat!(env!("OUT_DIR"), "/oak.authentication.rs"));
     }
+
+    pub mod introspection_events {
+        include!(concat!(env!("OUT_DIR"), "/oak.introspection_events.rs"));
+    }
 }

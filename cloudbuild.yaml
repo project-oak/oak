@@ -48,7 +48,7 @@ steps:
   # Package the Hello World application in a Docker image.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: build_server_docker
-    waitFor: ['git_init']
+    waitFor: ['runner_ci', 'git_init']
     timeout: 60m
     entrypoint: 'bash'
     args:

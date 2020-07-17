@@ -18,7 +18,7 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
-package oak.event;
+package oak.introspection_events;
 
 // This messages defines an event sent by the Oak Runtime to allow for dynamic
 // introspection in non-production enviroments. It provides a "schema" to
@@ -72,7 +72,7 @@ message HandleDestroyed {
   uint64 handle = 3;
 }
 
-message MessageEnqueueing {
+message MessageEnqueued {
   uint64 node_id = 1;
 
   uint64 channel_id = 2;
@@ -80,7 +80,7 @@ message MessageEnqueueing {
   repeated uint64 included_handles = 3;
 }
 
-message MessageDequeueing {
+message MessageDequeued {
   uint64 node_id = 1;
 
   uint64 channel_id = 2;
