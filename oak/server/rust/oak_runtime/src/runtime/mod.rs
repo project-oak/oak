@@ -20,7 +20,7 @@ use crate::{
     message::{Message, NodeMessage},
     metrics::Metrics,
     node,
-    proto::oak::introspection_events::{event::EventDetails, NodeCreated},
+    proto::oak::introspection_events::{event::EventDetails, ChannelCreated, NodeCreated},
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
     GrpcConfiguration,
 };
@@ -595,6 +595,18 @@ impl Runtime {
             write_handle,
             read_handle,
         );
+
+        {
+            // Fire ChannelCreated introspection event
+            let NodeId(node_id_as_primitive) = node_id;
+            let event_details = ChannelCreated {
+                node_id: node_id_as_primitive,
+                channel_id,
+            };
+
+            self.introspection_event(EventDetails::ChannelCreated(event_details));
+        }
+
         Ok((write_handle, read_handle))
     }
 
