@@ -2,6 +2,7 @@ Require Import OakIFC.Lattice.
 Require Import OakIFC.Parameters.
 Require Import OakIFC.GenericMap.
 Require Import List.
+Import ListNotations.
 Require Import Coq.Sets.Ensembles.
 
 (* Ensembles don't have implicit type params and these lines fix that *)
@@ -17,37 +18,27 @@ Record channel := Chan {
     ms: list message
 }.
 
-(* Internal actions that nodes do other than ABI calls *)
-Inductive internal_cmd: Type :=
-    | IntRecvErr: internal_cmd (* TODO distinguish errors *)
-    | IntOther: internal_cmd
-    | IntRecvMesg (m: message): internal_cmd.
-
 (* ABI Calls *)
 Inductive call: Type :=
     | WriteChannel (h: handle) (m: message): call
-    | Internal (cmd: internal_cmd): call.
+    | ReadChannel (h: handle): call
+    | Internal: call.
 
 Record node := Node {
     nlbl: level;
-    calls: list call;
-    hans: Ensemble handle
+    hans: Ensemble handle;
+    ncall: call
 }.
-
-(* TODO: unsure if records or inductives are better for proofs.
-records are better for spec writing.
-also consider using a finite set of nodes rather than a map from
-node ids to nodes since node ids are not real anyway *)
 
 Instance Knid: KeyT := {
     t := node_id; 
     eq_dec := dec_eq_nid;
 }.
-Definition node_state := tg_map Knid node.
 Instance Khandle: KeyT := {
     t := handle;
     eq_dec := dec_eq_h;
 }.
+Definition node_state := tg_map Knid node.
 Definition chan_state := tg_map Khandle channel.
 Record state := State {
     nodes: node_state;
@@ -55,25 +46,24 @@ Record state := State {
 }.
 
 (*============================================================================
+* Empty
+============================================================================*)
+Definition empty_chan := {| clbl := top; ms := []; |}.
+Definition empty_node := {|
+        nlbl := top;
+        hans := Empty_set handle;
+        ncall := Internal;
+    |}.
+Definition empty_state := {| 
+        nodes := ( _ !-> empty_node);
+        chans := ( _ !-> empty_chan);
+    |}.
+
+(*============================================================================
 * Utils
 ============================================================================*)
 Definition chan_append (c: channel)(m: message): channel :=
     {| clbl := c.(clbl); ms := (m :: c.(ms)) |}.
-
-Definition node_push_c (n: node)(c: call): node :=
-    match n with | Node l cs hs => Node l (c :: cs) hs end .
-
-Definition is_node_call (n: node)(c: call): Prop :=
-    match n.(calls) with
-        | c :: _ => True
-        | _ => False
-    end.
-
-Definition node_pop_cmd (n: node): node :=
-    match n.(calls) with
-        | c :: cs' => Node n.(nlbl) n.(calls) n.(hans)
-        | _ => n
-    end.
 
 Definition state_upd_node (nid: node_id)(n: node)(s: state): state :=
     {| 
@@ -87,38 +77,47 @@ Definition state_upd_chan (h: handle)(ch: channel)(s: state): state :=
         chans := tg_update s.(chans) h ch;
     |}.
 
-Definition state_pop_caller (nid: node_id)(s: state): state := 
-    state_upd_node nid (node_pop_cmd (s.(nodes) nid)) s.
-
-(*
-Definition opt_match {A: Type}(o: option A)(a: A): Prop :=
-    match o with | Some a => True | _ => False end.
-*)
-
 (*============================================================================
 * Single Call Semantics
 ============================================================================*)
 
-Inductive step_call: node_id -> call -> state -> state -> Prop :=
-    | SWriteSucc caller_id han msg s
-        (H0: In (s.(nodes) caller_id).(hans) han)
-        (H2: (s.(nodes) caller_id).(nlbl) << (s.(chans) han).(clbl)):
-        step_call caller_id (WriteChannel han msg) s 
+(* step for a single node (which can be thought of as a thread) *)
+Inductive step_node: node_id -> state -> state -> Prop :=
+    | SWriteSucc s id n han msg
+        (H0: (s.(nodes) id) = n)
+        (H1: n.(ncall) = WriteChannel han msg)
+        (H1: In n.(hans) han)
+        (H2: n.(nlbl) << (s.(chans) han).(clbl)):
+        step_node id s
             (state_upd_chan han (chan_append (s.(chans) han) msg) s).
-    (*
-    | SWriteLblErr caller_id han chan msg s
-        (H0: In (s.(nodes) caller_id).(hans) han)
-        (H1: opt_match (s.(chans) han) chan)
-        (H2: ~((s.(nodes) caller_id).(nlbl) << chan.(clbl))):
-        step_call caller_id (WriteChannel han msg) s 
-            ( let n' := (node_push_c (s.(nodes) caller_id)
-                (Internal IntRecvErr)) in
-            state_upd_node caller_id n' s).
-    *)
+    (* TODO all the other calls *)
 
+(* step for the full system (which picks a thread to execute and is
+non-deterministic). This is needed in addition to step_node, because
+we should show that regardless of the thread ordering, there are no information
+leaks. *)
 Inductive step_system: state -> state -> Prop :=
-    | ValidStep caller_id caller call s s_pop s'
-        (H1: is_node_call caller call)
-        (H3: s_pop = state_pop_caller caller_id s)
-        (H4: step_call caller_id call s_pop s'):
+    (* possibly also a termination case *)
+    | ValidStep id s s'
+        (H1: step_node id s s'):
         step_system s s'.
+
+(* Traces are sequences of states modeling entire executions *)
+(* Noninterference definitions are defined by comparing "any two" executions *)
+Definition global_state: Type := state.
+Definition trace := list global_state.
+
+Definition last_state (t: trace)(s: state): Prop :=
+    match t with
+        | [] => False
+        | x :: t' => s = x
+    end.
+
+Inductive valid_trace (init: state): trace -> Prop :=
+    | VTOne: (valid_trace init [init] )
+    | VTAdd (s s': state)(t: trace)
+            (H0: valid_trace init t )
+            (H1: last_state t s')
+            (H2: step_system s s):
+            valid_trace init (s' :: t).
+
