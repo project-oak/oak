@@ -20,7 +20,9 @@ use crate::{
     message::{Message, NodeMessage},
     metrics::Metrics,
     node,
-    proto::oak::introspection_events::{event::EventDetails, ChannelCreated, NodeCreated},
+    proto::oak::introspection_events::{
+        event::EventDetails, ChannelCreated, HandleCreated, NodeCreated,
+    },
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
     GrpcConfiguration,
 };
@@ -270,7 +272,24 @@ impl Runtime {
                     "{:?}: new ABI handle {} maps to {:?}",
                     node_id, candidate, half
                 );
+
+                // Copy the channel_id for introspection before moving the half.
+                let channel_id = half.channel.id;
+
                 node_info.abi_handles.insert(candidate, half);
+
+                {
+                    // Fire HandleCreated introspection event
+                    let NodeId(node_id_as_primitive) = node_id;
+                    let event_details = HandleCreated {
+                        node_id: node_id_as_primitive,
+                        handle: candidate,
+                        channel_id,
+                    };
+
+                    self.introspection_event(EventDetails::HandleCreated(event_details));
+                }
+
                 return candidate;
             }
         }
