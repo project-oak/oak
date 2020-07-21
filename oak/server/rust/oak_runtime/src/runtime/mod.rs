@@ -20,6 +20,7 @@ use crate::{
     message::{Message, NodeMessage},
     metrics::Metrics,
     node,
+    proto::oak::introspection_events::{event::EventDetails, NodeCreated},
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
     GrpcConfiguration,
 };
@@ -986,6 +987,16 @@ impl Runtime {
         // Insert the now running instance to the list of running instances (by moving it), so that
         // `Node::stop` will be called on it eventually.
         self.add_node_stopper(new_node_id, node_stopper);
+
+        {
+            // Fire NodeCreated introspection event
+            let NodeId(node_id_as_primitive) = new_node_id;
+            let event_details = NodeCreated {
+                node_id: node_id_as_primitive,
+            };
+
+            self.introspection_event(EventDetails::NodeCreated(event_details));
+        }
 
         Ok(())
     }
