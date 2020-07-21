@@ -1070,7 +1070,8 @@ fn run_liche() -> Step {
                     // We exclude the following URLs from the checks:
                     // - https://groups.google.com/g/project-oak-discuss : not publicly accessible
                     // - https://crates.io/crates : returns 404 (see https://github.com/raviqqe/liche/issues/39)
-                    "--exclude=(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates)",
+                    // - https://codecov.io/gh/project-oak/oak : unstable, and often unaccessible on CI-build
+                    "--exclude=(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates|https://codecov.io/gh/project-oak/oak)",
                     &entry,
                 ]),
             })
