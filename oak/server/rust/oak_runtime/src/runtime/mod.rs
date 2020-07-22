@@ -21,7 +21,7 @@ use crate::{
     metrics::Metrics,
     node,
     proto::oak::introspection_events::{
-        event::EventDetails, ChannelCreated, HandleCreated, NodeCreated,
+        event::EventDetails, ChannelCreated, HandleCreated, NodeCreated, NodeDestroyed,
     },
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
     GrpcConfiguration,
@@ -924,6 +924,16 @@ impl Runtime {
             .remove(&node_id)
             .expect("remove_node_id: Node didn't exist!");
         self.update_nodes_count_metric();
+
+        {
+            // Fire NodeDestroyed introspection event
+            let NodeId(node_id_as_primitive) = node_id;
+            let event_details = NodeDestroyed {
+                node_id: node_id_as_primitive,
+            };
+
+            self.introspection_event(EventDetails::NodeDestroyed(event_details));
+        }
     }
 
     /// Add an [`NodeId`] [`NodeInfo`] pair to the [`Runtime`]. This method temporarily holds the
