@@ -275,21 +275,15 @@ impl Runtime {
                     node_id, candidate, half
                 );
 
-                // Copy the channel_id for introspection before moving the half.
-                let channel_id = half.get_id();
+                let event_details = HandleCreated {
+                    node_id: node_id_to_primitive(node_id),
+                    handle: candidate,
+                    channel_id: half.get_id(),
+                };
 
                 node_info.abi_handles.insert(candidate, half);
 
-                {
-                    // Fire HandleCreated introspection event
-                    let event_details = HandleCreated {
-                        node_id: node_id_to_primitive(node_id),
-                        handle: candidate,
-                        channel_id,
-                    };
-
-                    self.introspection_event(EventDetails::HandleCreated(event_details));
-                }
+                self.introspection_event(EventDetails::HandleCreated(event_details));
 
                 return candidate;
             }
@@ -316,11 +310,8 @@ impl Runtime {
             .ok_or(OakStatus::ErrBadHandle)
             .map(|_half| ());
 
-        // Fire HandleDestroyed event if the handle was dropped
         match result {
-            Ok(()) => {
-                self.introspection_event(EventDetails::HandleDestroyed(event_details));
-            }
+            Ok(()) => self.introspection_event(EventDetails::HandleDestroyed(event_details)),
             Err(_status) => (),
         };
 
@@ -637,15 +628,10 @@ impl Runtime {
             read_handle,
         );
 
-        {
-            // Fire ChannelCreated introspection event
-            let event_details = ChannelCreated {
-                node_id: node_id_to_primitive(node_id),
-                channel_id,
-            };
-
-            self.introspection_event(EventDetails::ChannelCreated(event_details));
-        }
+        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated {
+            node_id: node_id_to_primitive(node_id),
+            channel_id,
+        }));
 
         Ok((write_handle, read_handle))
     }
@@ -946,14 +932,9 @@ impl Runtime {
             .expect("remove_node_id: Node didn't exist!");
         self.update_nodes_count_metric();
 
-        {
-            // Fire NodeDestroyed introspection event
-            let event_details = NodeDestroyed {
-                node_id: node_id_to_primitive(node_id),
-            };
-
-            self.introspection_event(EventDetails::NodeDestroyed(event_details));
-        }
+        self.introspection_event(EventDetails::NodeDestroyed(NodeDestroyed {
+            node_id: node_id_to_primitive(node_id),
+        }))
     }
 
     /// Add an [`NodeId`] [`NodeInfo`] pair to the [`Runtime`]. This method temporarily holds the
@@ -1049,14 +1030,9 @@ impl Runtime {
         // `Node::stop` will be called on it eventually.
         self.add_node_stopper(new_node_id, node_stopper);
 
-        {
-            // Fire NodeCreated introspection event
-            let event_details = NodeCreated {
-                node_id: node_id_to_primitive(node_id),
-            };
-
-            self.introspection_event(EventDetails::NodeCreated(event_details));
-        }
+        self.introspection_event(EventDetails::NodeCreated(NodeCreated {
+            node_id: node_id_to_primitive(node_id),
+        }));
 
         Ok(())
     }
