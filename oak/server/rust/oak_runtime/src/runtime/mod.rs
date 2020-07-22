@@ -52,7 +52,6 @@ pub mod graph;
 #[cfg(feature = "oak_debug")]
 mod introspect;
 mod introspection_events;
-use introspection_events::node_id_to_primitive;
 mod proxy;
 #[cfg(test)]
 pub mod tests;
@@ -276,7 +275,7 @@ impl Runtime {
                 );
 
                 let event_details = HandleCreated {
-                    node_id: node_id_to_primitive(node_id),
+                    node_id: node_id.0,
                     handle: candidate,
                     channel_id: half.get_id(),
                 };
@@ -295,7 +294,7 @@ impl Runtime {
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
 
         let event_details = HandleDestroyed {
-            node_id: node_id_to_primitive(node_id),
+            node_id: node_id.0,
             handle,
             channel_id: node_info
                 .abi_handles
@@ -629,7 +628,7 @@ impl Runtime {
         );
 
         self.introspection_event(EventDetails::ChannelCreated(ChannelCreated {
-            node_id: node_id_to_primitive(node_id),
+            node_id: node_id.0,
             channel_id,
         }));
 
@@ -933,7 +932,7 @@ impl Runtime {
         self.update_nodes_count_metric();
 
         self.introspection_event(EventDetails::NodeDestroyed(NodeDestroyed {
-            node_id: node_id_to_primitive(node_id),
+            node_id: node_id.0,
         }))
     }
 
@@ -1031,7 +1030,7 @@ impl Runtime {
         self.add_node_stopper(new_node_id, node_stopper);
 
         self.introspection_event(EventDetails::NodeCreated(NodeCreated {
-            node_id: node_id_to_primitive(node_id),
+            node_id: node_id.0,
         }));
 
         Ok(())
