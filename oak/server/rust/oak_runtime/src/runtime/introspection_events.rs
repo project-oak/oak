@@ -16,11 +16,16 @@
 
 use crate::{
     proto::oak::introspection_events::{event::EventDetails, Event},
-    runtime::Runtime,
+    runtime::{NodeId, Runtime},
 };
 use log::info;
 use prost_types::Timestamp;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+pub fn node_id_to_primitive(node_id: NodeId) -> u64 {
+    let NodeId(node_id_as_primitive) = node_id;
+    node_id_as_primitive
+}
 
 fn current_timestamp() -> Timestamp {
     let duration_since_unix_epoch = SystemTime::now()

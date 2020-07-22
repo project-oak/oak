@@ -52,6 +52,7 @@ pub mod graph;
 #[cfg(feature = "oak_debug")]
 mod introspect;
 mod introspection_events;
+use introspection_events::node_id_to_primitive;
 mod proxy;
 #[cfg(test)]
 pub mod tests;
@@ -281,9 +282,8 @@ impl Runtime {
 
                 {
                     // Fire HandleCreated introspection event
-                    let NodeId(node_id_as_primitive) = node_id;
                     let event_details = HandleCreated {
-                        node_id: node_id_as_primitive,
+                        node_id: node_id_to_primitive(node_id),
                         handle: candidate,
                         channel_id,
                     };
@@ -300,15 +300,14 @@ impl Runtime {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
 
-        let NodeId(node_id_as_primitive) = node_id;
-        let half = node_info
-            .abi_handles
-            .get(&handle)
-            .ok_or(OakStatus::ErrBadHandle)?;
         let event_details = HandleDestroyed {
-            node_id: node_id_as_primitive,
+            node_id: node_id_to_primitive(node_id),
             handle,
-            channel_id: half.get_id(),
+            channel_id: node_info
+                .abi_handles
+                .get(&handle)
+                .ok_or(OakStatus::ErrBadHandle)?
+                .get_id(),
         };
 
         let result = node_info
@@ -640,9 +639,8 @@ impl Runtime {
 
         {
             // Fire ChannelCreated introspection event
-            let NodeId(node_id_as_primitive) = node_id;
             let event_details = ChannelCreated {
-                node_id: node_id_as_primitive,
+                node_id: node_id_to_primitive(node_id),
                 channel_id,
             };
 
@@ -950,9 +948,8 @@ impl Runtime {
 
         {
             // Fire NodeDestroyed introspection event
-            let NodeId(node_id_as_primitive) = node_id;
             let event_details = NodeDestroyed {
-                node_id: node_id_as_primitive,
+                node_id: node_id_to_primitive(node_id),
             };
 
             self.introspection_event(EventDetails::NodeDestroyed(event_details));
@@ -1054,9 +1051,8 @@ impl Runtime {
 
         {
             // Fire NodeCreated introspection event
-            let NodeId(node_id_as_primitive) = new_node_id;
             let event_details = NodeCreated {
-                node_id: node_id_as_primitive,
+                node_id: node_id_to_primitive(node_id),
             };
 
             self.introspection_event(EventDetails::NodeCreated(event_details));
