@@ -21,7 +21,8 @@ use crate::{
     metrics::Metrics,
     node,
     proto::oak::introspection_events::{
-        event::EventDetails, ChannelCreated, HandleCreated, NodeCreated, NodeDestroyed,
+        event::EventDetails, ChannelCreated, HandleCreated, HandleDestroyed, NodeCreated,
+        NodeDestroyed,
     },
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
     GrpcConfiguration,
@@ -298,11 +299,34 @@ impl Runtime {
     fn drop_abi_handle(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
-        node_info
+
+        let NodeId(node_id_as_primitive) = node_id;
+        let half = node_info
+            .abi_handles
+            .get(&handle)
+            .ok_or(OakStatus::ErrBadHandle)?;
+        let channel_id = half.channel.id;
+        let event_details = HandleDestroyed {
+            node_id: node_id_as_primitive,
+            handle,
+            channel_id,
+        };
+
+        let result = node_info
             .abi_handles
             .remove(&handle)
             .ok_or(OakStatus::ErrBadHandle)
-            .map(|_half| ())
+            .map(|_half| ());
+
+        // Fire HandleDestroyed event if the handle was dropped
+        match result {
+            Ok(()) => {
+                self.introspection_event(EventDetails::HandleDestroyed(event_details));
+            }
+            Err(_status) => (),
+        };
+
+        result
     }
     /// Convert an ABI handle to an internal [`ChannelHalf`].
     fn abi_to_half(
