@@ -47,7 +47,7 @@ type WaitingThreads = Mutex<HashMap<ThreadId, Weak<Thread>>>;
 /// is included in the `reader_count` or `writer_count`.
 pub struct Channel {
     // An internal identifier for this channel. Purely for disambiguation in debugging output.
-    pub id: ChannelId,
+    id: ChannelId,
 
     pub messages: RwLock<Messages>,
 
@@ -85,11 +85,6 @@ impl std::fmt::Debug for Channel {
 
 /// A reference to one half of a [`Channel`].
 pub struct ChannelHalf {
-    // Make the associated channel public for introspection
-    #[cfg(feature = "oak_debug")]
-    pub channel: Arc<Channel>,
-    // Ensure the associated channel is private
-    #[cfg(not(feature = "oak_debug"))]
     channel: Arc<Channel>,
     pub direction: ChannelHalfDirection,
 }
@@ -103,6 +98,12 @@ impl ChannelHalf {
             ChannelHalfDirection::Read => channel.inc_reader_count(),
         };
         ChannelHalf { channel, direction }
+    }
+
+    /// Get the ID of the underlying channel.  For debugging/introspection
+    /// purposes.
+    pub fn get_id(&self) -> u64 {
+        self.channel.id
     }
 
     /// Get read-only access to the channel's messages.  For debugging/introspection

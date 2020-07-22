@@ -275,7 +275,7 @@ impl Runtime {
                 );
 
                 // Copy the channel_id for introspection before moving the half.
-                let channel_id = half.channel.id;
+                let channel_id = half.get_id();
 
                 node_info.abi_handles.insert(candidate, half);
 
@@ -305,11 +305,10 @@ impl Runtime {
             .abi_handles
             .get(&handle)
             .ok_or(OakStatus::ErrBadHandle)?;
-        let channel_id = half.channel.id;
         let event_details = HandleDestroyed {
             node_id: node_id_as_primitive,
             handle,
-            channel_id,
+            channel_id: half.get_id(),
         };
 
         let result = node_info
