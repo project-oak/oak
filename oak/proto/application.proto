@@ -64,6 +64,7 @@ message NodeConfiguration {
     GrpcServerConfiguration grpc_server_config = 5;
     GrpcClientConfiguration grpc_client_config = 6;
     RoughtimeClientConfiguration roughtime_client_config = 7;
+    HttpServerConfiguration http_server_config = 8;
   }
 }
 
@@ -122,6 +123,15 @@ message RoughtimeClientConfiguration {
   google.protobuf.UInt32Value timeout_seconds = 3;
   google.protobuf.UInt32Value server_retries = 4;
   google.protobuf.UInt32Value max_radius_microseconds = 5;
+}
+
+// HttpServerConfiguration describes the configuration of an HTTP server
+// pseudo-Node (which is provided by the Oak Runtime), that processes HTTP/2
+// requests from external (non-Oak) clients.
+message HttpServerConfiguration {
+  // The endpoint address for the HTTP server to listen on.
+  // `address` is represented as an "ip_address:tcp_port" string.
+  string address = 1;
 }
 
 // Information to identify a particular Roughtime server.
