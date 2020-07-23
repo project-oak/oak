@@ -449,6 +449,21 @@ fn run_ci() -> Step {
                     coverage: false,
                 },
             }),
+            run_examples(&RunExamples {
+                application_variant: "cpp".to_string(),
+                example_name: None,
+                run_server: None,
+                run_clients: None,
+                client_additional_args: Vec::new(),
+                server_additional_args: Vec::new(),
+                build_docker: false,
+                build_server: BuildServer {
+                    server_variant: "base".to_string(),
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                    coverage: false,
+                },
+            }),
             // Package the Hello World application in a Docker image.
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
