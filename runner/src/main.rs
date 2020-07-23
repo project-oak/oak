@@ -220,7 +220,7 @@ fn run_examples(opt: &RunExamples) -> Step {
                 None => true,
             })
             .filter(|example| match opt.application_variant.as_str() {
-                "rust" | "cpp" => &example.application.variant == &opt.application_variant,
+                "rust" | "cpp" => example.application.variant == opt.application_variant,
                 v => panic!("unknown variant: {}", v),
             })
             .map(|example| run_example(opt, example))
