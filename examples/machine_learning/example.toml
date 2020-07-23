@@ -1,6 +1,7 @@
 name = "machine_learning"
 
 [application]
+variant = "rust"
 manifest = "examples/machine_learning/config/config.toml"
 out = "examples/machine_learning/bin/config.bin"
 

@@ -208,23 +208,23 @@ fn run_examples(opt: &RunExamples) -> Step {
         })
         .collect();
     eprintln!("parsed examples manifest files: {:?}", examples);
-    match opt.application_variant.as_str() {
-        "rust" => Step::Multiple {
-            name: "examples".to_string(),
-            /// TODO(#396): Check that all the example folders are covered by an entry here, or
-            /// explicitly ignored. This will probably require pulling out the `Vec<Example>` to a
-            /// top-level method first.
-            steps: examples
-                .iter()
-                .filter(|example| match &opt.example_name {
-                    Some(example_name) => &example.name == example_name,
-                    None => true,
-                })
-                .map(|example| run_example(opt, example))
-                .collect(),
-        },
-        "cpp" => unimplemented!("C++ examples not implemented yet"),
-        v => panic!("unknown variant: {}", v),
+    Step::Multiple {
+        name: "examples".to_string(),
+        /// TODO(#396): Check that all the example folders are covered by an entry here, or
+        /// explicitly ignored. This will probably require pulling out the `Vec<Example>` to a
+        /// top-level method first.
+        steps: examples
+            .iter()
+            .filter(|example| match &opt.example_name {
+                Some(example_name) => &example.name == example_name,
+                None => true,
+            })
+            .filter(|example| match opt.application_variant.as_str() {
+                "rust" | "cpp" => &example.application.variant == &opt.application_variant,
+                v => panic!("unknown variant: {}", v),
+            })
+            .map(|example| run_example(opt, example))
+            .collect(),
     }
 }
 
@@ -520,6 +520,7 @@ struct Example {
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Application {
+    variant: String,
     manifest: String,
     out: String,
 }
@@ -922,7 +923,7 @@ fn example_toml_files() -> impl Iterator<Item = PathBuf> {
 
 fn is_example_toml_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    filename == "example.toml"
+    filename == "example.toml" || filename == "example_cpp.toml"
 }
 
 fn read_file(path: &PathBuf) -> String {

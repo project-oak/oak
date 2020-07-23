@@ -1,6 +1,7 @@
 name = "abitest"
 
 [application]
+variant = "rust"
 manifest = "examples/abitest/config/config.toml"
 out = "examples/abitest/bin/config.bin"
 

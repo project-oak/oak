@@ -1,6 +1,7 @@
 name = "translator"
 
 [application]
+variant = "rust"
 manifest = "examples/translator/config/config.toml"
 out = "examples/translator/bin/config.bin"
 

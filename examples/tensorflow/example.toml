@@ -1,6 +1,7 @@
 name = "tensorflow"
 
 [application]
+variant = "cpp"
 manifest = "examples/tensorflow/config/config_cpp.toml"
 out = "examples/tensorflow/bin/config_cpp.bin"
 

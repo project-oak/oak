@@ -1,6 +1,7 @@
 name = "private_set_intersection"
 
 [application]
+variant = "rust"
 manifest = "examples/private_set_intersection/config/config.toml"
 out = "examples/private_set_intersection/bin/config.bin"
 

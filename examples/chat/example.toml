@@ -1,6 +1,7 @@
 name = "chat"
 
 [application]
+variant = "rust"
 manifest = "examples/chat/config/config.toml"
 out = "examples/chat/bin/config.bin"
 

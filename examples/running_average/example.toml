@@ -1,6 +1,7 @@
 name = "running_average"
 
 [application]
+variant = "rust"
 manifest = "examples/running_average/config/config.toml"
 out = "examples/running_average/bin/config.bin"
 

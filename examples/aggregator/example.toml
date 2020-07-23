@@ -1,6 +1,7 @@
 name = "aggregator"
 
 [application]
+variant = "rust"
 manifest = "examples/aggregator/config/config.toml"
 out = "examples/aggregator/bin/config.bin"
 
