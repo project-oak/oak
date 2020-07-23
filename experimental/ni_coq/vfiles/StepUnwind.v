@@ -65,6 +65,37 @@ Proof.
                 apply H0. apply n. apply n.
 Qed.
 
+Definition step_node_cmd (n: node_id)(cmd: call)(s s': state): Prop :=
+    ((s.(nodes) n).(ncall) = cmd) /\
+        (step_node n s s').
+
+Theorem low_eq_step_same_cmd: 
+    forall (ell: level)(s1 s2 s1' s2': state)
+    (n: node_id)(c: call),
+    (state_low_eq ell s1 s2) ->
+    (step_node_cmd n c s1 s1') ->
+    (step_node_cmd n c s2 s2') ->
+    (state_low_eq ell s1' s2').
+Proof.
+    unfold step_node_cmd; intros; subst; destruct H0; destruct H1.
+    destruct c; 
+        (* show that the undefined commands can't happen. If
+        the definition was more normal, inversion would take care of this 
+        mostly automatically *) 
+        try (inversion H2; rewrite H4 in H0;
+        rewrite H5 in H0; discriminate H0).
+    - inversion H2. assert (E: han = h /\ msg = m). {
+        rewrite H4 in H0; rewrite H5 in H0; injection H0;
+        intros; subst; split; reflexivity.
+    } destruct E; subst.
+    inversion H3. assert (E: han = h /\ msg = m). {
+        rewrite H4 in H1; rewrite H8 in H1; injection H1;
+        intros; subst; split; reflexivity.
+    } destruct E; subst.
+    apply leq_ch_upd_preserves_sleq.
+    apply chan_append_unwind. apply H. apply H.
+Qed. 
+
 Theorem low_eq_step: forall (ell: level)(s1 s2 s1' s2': state)
         (n: node_id),
     (state_low_eq ell s1 s2) ->
@@ -72,8 +103,9 @@ Theorem low_eq_step: forall (ell: level)(s1 s2 s1' s2': state)
     (step_node n s2 s2') ->
     (state_low_eq ell s1' s2').
 Proof.
-    intros. inversion H0. inversion H1.
-    subst. 
+    intros. inversion H0. inversion H1. subst.
+
+    subst. subst in *.
         (* commands don't necessarily match in the two 
         * executions which complicates proof.
         * in principle, this could probably be done by reasoning
