@@ -151,6 +151,18 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// An ApplicationConfiguration represents a unit of deployment in Oak.</span>
 <span class="doccomment">///</span>
@@ -191,7 +203,7 @@
     <span class="doccomment">/// Does not need to be unique.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">name</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;node_configuration::ConfigType&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;2, 3, 4, 5, 6, 7&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;node_configuration::ConfigType&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;2, 3, 4, 5, 6, 7, 8&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">config_type</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">node_configuration</span>::<span class="ident">ConfigType</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// Nested message and enum types in `NodeConfiguration`.</span>
@@ -210,6 +222,8 @@
         <span class="ident">GrpcClientConfig</span>(<span class="kw">super</span>::<span class="ident">GrpcClientConfiguration</span>),
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;7&quot;</span>)]</span>
         <span class="ident">RoughtimeClientConfig</span>(<span class="kw">super</span>::<span class="ident">RoughtimeClientConfiguration</span>),
+        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;8&quot;</span>)]</span>
+        <span class="ident">HttpServerConfig</span>(<span class="kw">super</span>::<span class="ident">HttpServerConfiguration</span>),
     }
 }
 <span class="doccomment">/// WebAssemblyConfiguration describes the configuration of a Web Assembly based</span>
@@ -278,6 +292,16 @@
     <span class="kw">pub</span> <span class="ident">server_retries</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;5&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">max_radius_microseconds</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+}
+<span class="doccomment">/// HttpServerConfiguration describes the configuration of an HTTP server</span>
+<span class="doccomment">/// pseudo-Node (which is provided by the Oak Runtime), that processes HTTP/2</span>
+<span class="doccomment">/// requests from external (non-Oak) clients.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HttpServerConfiguration</span> {
+    <span class="doccomment">/// The endpoint address for the HTTP server to listen on.</span>
+    <span class="doccomment">/// `address` is represented as an &quot;ip_address:tcp_port&quot; string.</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">address</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="doccomment">/// Information to identify a particular Roughtime server.</span>
 <span class="doccomment">/// Only UDP and Ed25519 public keys are currently supported.</span>

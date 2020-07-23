@@ -138,6 +138,11 @@
 <span id="138">138</span>
 <span id="139">139</span>
 <span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -168,6 +173,7 @@
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">grpc</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">http</span>;
 <span class="kw">mod</span> <span class="ident">logger</span>;
 <span class="kw">mod</span> <span class="ident">roughtime</span>;
 <span class="kw">mod</span> <span class="ident">storage</span>;
@@ -276,6 +282,10 @@
         <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">StorageConfig</span>(<span class="ident">_config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage</span>::<span class="ident">StorageNode</span>::<span class="ident">new</span>(<span class="ident">node_name</span>)))
         }
+        <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">HttpServerConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">http</span>::<span class="ident">HttpServerNode</span>::<span class="ident">new</span>(
+            <span class="ident">node_name</span>,
+            <span class="ident">config</span>.<span class="ident">clone</span>(),
+        )<span class="question-mark">?</span>)),
         <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ConfigurationError</span>::<span class="ident">InvalidNodeConfiguration</span>),
     }
 }
