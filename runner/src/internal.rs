@@ -193,6 +193,7 @@ where
 /// status results from the single or multiple steps that were executed.
 #[async_recursion]
 pub async fn run_step(context: &Context, step: Step) -> StepResult {
+    let mut step_result = StepResult::new();
     match step {
         Step::Single { name, command } => {
             let context = context.child(&name);
@@ -213,7 +214,6 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
             let elapsed = end.duration_since(start);
             eprintln!("{} [{:.0?}]", status.value, elapsed);
 
-            let mut step_result = StepResult::new();
             if (status.value == StatusResultValue::Error || context.opt.logs)
                 && !status.logs.is_empty()
             {
@@ -225,13 +225,11 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
                 step_result.failed_steps_prefixes.push(context.prefix);
             }
             step_result.values.insert(status.value);
-            step_result
         }
         Step::Multiple { name, steps } => {
             let context = context.child(&name);
             eprintln!("{} {{", context.prefix);
             let start = Instant::now();
-            let mut step_result = StepResult::new();
             for step in steps {
                 let mut result = run_step(&context, step).await;
                 step_result.values = step_result.values.union(&result.values).cloned().collect();
@@ -247,7 +245,6 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
                 values_to_string(&step_result.values),
                 elapsed
             );
-            step_result
         }
         Step::WithBackground {
             name,
@@ -305,7 +302,6 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
                 context.prefix, background_status.value
             );
 
-            let mut step_result = StepResult::new();
             if (background_status.value == StatusResultValue::Error
                 || foreground_result.values.contains(&StatusResultValue::Error)
                 || context.opt.logs)
@@ -326,10 +322,9 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
 
             // Also propagate the status of the background process.
             step_result.values.insert(background_status.value);
-
-            step_result
         }
     }
+    step_result
 }
 
 /// A single command.
