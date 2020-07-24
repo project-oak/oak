@@ -17,7 +17,7 @@ To build and run one of the Oak example applications under Docker, run:
 
 ```bash
 ./scripts/docker_pull  # retrieve cached Docker image for faster builds
-./scripts/docker_run ./scripts/runner run-examples --example-name=hello_world
+./scripts/docker_run ./scripts/runner --logs run-examples --example-name=hello_world
 ```
 
 This should build the Runtime, an Oak Application and a client for the
@@ -25,11 +25,14 @@ Application, then run them all, with log output ending something like the
 following:
 
 ```log
-2020-05-11 17:24:18,770 INFO  [oak_runtime::runtime] stopping runtime instance
-2020-05-11 17:24:18,770 DEBUG [oak_runtime::runtime] waking waiters on NodeId(0) handle 11172775277784258633 => Channel 0 WRITE
-2020-05-11 17:24:18,770 INFO  [oak_runtime::runtime] Runtime instance dropped
-2020-05-11 17:24:18,770 DEBUG [oak_runtime::runtime::channel] last writer for channel 0 gone, wake waiters
-2020-05-11 17:24:18,770 DEBUG [oak_runtime::runtime::channel] dropping Channel object Channel { id=0, #readers=0, #writers=0, label=Label { confidentiality_tags: [], integrity_tags: [] } }
+[2020-07-24T10:52:39Z INFO  oak_runtime::runtime] stopping node NodeId(2)...done
+[2020-07-24T10:52:39Z INFO  oak_loader] Runtime stopped
+[2020-07-24T10:52:39Z INFO  oak_runtime::runtime] stopping runtime instance
+[2020-07-24T10:52:39Z INFO  oak_runtime::runtime] Runtime instance dropped
+ ❯ examples ❯ hello_world ❯ run ❯ background server ⊢ (finished) OK
+ ❯ examples ❯ hello_world ❯ run } ⊢ [OK] [34s]
+ ❯ examples ❯ hello_world } ⊢ [OK] [143s]
+ ❯ examples } ⊢ [OK] [143s]
 ```
 
 The remainder of this document explores what's going on under the covers here,
