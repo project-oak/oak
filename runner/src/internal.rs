@@ -101,6 +101,7 @@ pub struct BuildServer {
 pub struct Context {
     opt: Opt,
     prefix: String,
+    depth: u8,
 }
 
 impl Context {
@@ -108,6 +109,7 @@ impl Context {
         Context {
             opt: opt.clone(),
             prefix: "".to_string(),
+            depth: 0,
         }
     }
 
@@ -115,12 +117,13 @@ impl Context {
         Context {
             opt: self.opt.clone(),
             prefix: format!("{} ❯ {}", self.prefix, prefix),
+            depth: self.depth + 1,
         }
     }
 }
 
 /// The outcome of an individual step of execution.
-#[derive(PartialEq, Eq, Clone, Hash)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub enum StatusResultValue {
     Ok,
     Error,
@@ -160,6 +163,20 @@ pub enum Step {
     },
 }
 
+pub struct StepResult {
+    pub values: HashSet<StatusResultValue>,
+    pub failed_steps_prefixes: Vec<String>,
+}
+
+impl StepResult {
+    fn new() -> Self {
+        Self {
+            values: HashSet::new(),
+            failed_steps_prefixes: vec![],
+        }
+    }
+}
+
 fn values_to_string<T>(values: T) -> String
 where
     T: IntoIterator,
@@ -178,7 +195,9 @@ where
 /// Run the provided step, printing out information about the execution, and returning a set of
 /// status results from the single or multiple steps that were executed.
 #[async_recursion]
-pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValue> {
+
+// pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValue> {
+pub async fn run_step(context: &Context, step: Step) -> StepResult {
     match step {
         Step::Single { name, command } => {
             let context = context.child(&name);
@@ -199,6 +218,7 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             let elapsed = end.duration_since(start);
             eprintln!("{} [{:.0?}]", status.value, elapsed);
 
+            let mut step_result = StepResult::new();
             if (status.value == StatusResultValue::Error || context.opt.logs)
                 && !status.logs.is_empty()
             {
@@ -207,31 +227,32 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
                     eprintln!("{} {} {}", context.prefix, "║".blue(), line);
                 }
                 eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
+                step_result.failed_steps_prefixes.push(context.prefix);
             }
-            let mut values = HashSet::new();
-            values.insert(status.value);
-            values
+            step_result.values.insert(status.value);
+            step_result
         }
         Step::Multiple { name, steps } => {
             let context = context.child(&name);
             eprintln!("{} {{", context.prefix);
             let start = Instant::now();
-            let mut values = HashSet::new();
+            let mut step_result = StepResult::new();
             for step in steps {
-                values = values
-                    .union(&run_step(&context, step).await)
-                    .cloned()
-                    .collect();
+                let mut result = run_step(&context, step).await;
+                step_result.values = step_result.values.union(&result.values).cloned().collect();
+                step_result
+                    .failed_steps_prefixes
+                    .append(&mut result.failed_steps_prefixes);
             }
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             eprintln!(
                 "{} }} ⊢ {} [{:.0?}]",
                 context.prefix,
-                values_to_string(&values),
+                values_to_string(&step_result.values),
                 elapsed
             );
-            values
+            step_result
         }
         Step::WithBackground {
             name,
@@ -267,9 +288,9 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
             let background_stdout_future = tokio::spawn(read_to_end(running_background.stdout()));
             let background_stderr_future = tokio::spawn(read_to_end(running_background.stderr()));
 
-            let mut values = run_step(&context, *foreground).await;
+            let mut foreground_result = run_step(&context, *foreground).await;
 
-            // TODO(#396): If the background task was already spontanously terminated by now, it is
+            // TODO(#396): If the background task was already spontaneously terminated by now, it is
             // probably a sign that something went wrong, so we should return an error.
             running_background.kill();
 
@@ -288,8 +309,10 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
                 "{} ⊢ (finished) {}",
                 context.prefix, background_status.value
             );
+
+            let mut step_result = StepResult::new();
             if (background_status.value == StatusResultValue::Error
-                || values.contains(&StatusResultValue::Error)
+                || foreground_result.values.contains(&StatusResultValue::Error)
                 || context.opt.logs)
                 && !logs.is_empty()
             {
@@ -298,12 +321,18 @@ pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValu
                     eprintln!("{} {} {}", context.prefix, "║".blue(), line);
                 }
                 eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
+                step_result.failed_steps_prefixes.push(context.prefix);
             }
 
-            // Also propagate the status of the background process.
-            values.insert(background_status.value);
+            step_result.values = foreground_result.values;
+            step_result
+                .failed_steps_prefixes
+                .append(&mut foreground_result.failed_steps_prefixes);
 
-            values
+            // Also propagate the status of the background process.
+            step_result.values.insert(background_status.value);
+
+            step_result
         }
     }
 }
