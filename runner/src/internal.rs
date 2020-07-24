@@ -120,7 +120,7 @@ impl Context {
 }
 
 /// The outcome of an individual step of execution.
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub enum StatusResultValue {
     Ok,
     Error,
@@ -192,8 +192,6 @@ where
 /// Run the provided step, printing out information about the execution, and returning a set of
 /// status results from the single or multiple steps that were executed.
 #[async_recursion]
-
-// pub async fn run_step(context: &Context, step: Step) -> HashSet<StatusResultValue> {
 pub async fn run_step(context: &Context, step: Step) -> StepResult {
     match step {
         Step::Single { name, command } => {
