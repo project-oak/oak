@@ -101,7 +101,6 @@ pub struct BuildServer {
 pub struct Context {
     opt: Opt,
     prefix: String,
-    depth: u8,
 }
 
 impl Context {
@@ -109,7 +108,6 @@ impl Context {
         Context {
             opt: opt.clone(),
             prefix: "".to_string(),
-            depth: 0,
         }
     }
 
@@ -117,7 +115,6 @@ impl Context {
         Context {
             opt: self.opt.clone(),
             prefix: format!("{} ❯ {}", self.prefix, prefix),
-            depth: self.depth + 1,
         }
     }
 }
