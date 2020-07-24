@@ -25,6 +25,8 @@ members = [
   "translator/grpc",
   "translator/common",
   "translator/module/rust",
+  "minimal/client/rust",
+  "minimal/module/rust",
 ]
 
 # Patch dependencies on oak crates so that they refer to the versions within this same repository.
@@ -50,6 +52,7 @@ running_average_grpc = { path = "running_average/grpc" }
 translator_common = { path = "translator/common" }
 translator_grpc = { path = "translator/grpc" }
 trusted_information_retrieval_client = { path = "trusted_information_retrieval/client/rust" }
+minimal_client = { path = "minimal/client/rust" }
 # Third party.
 expect = { path = "../third_party/expect" }
 roughenough = { path = "../third_party/roughenough" }

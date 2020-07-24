@@ -89,6 +89,35 @@ steps:
     entrypoint: 'bash'
     args: ['./scripts/build_examples_android']
 
+  # Pull Minimal Docker image.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: pull_minimal_image
+    waitFor: ['-']
+    timeout: 10m
+    args: ['pull', 'gcr.io/oak-ci/oak-minimal:latest']
+  # Build Docker image for Minimal setup.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build_minimal_image
+    waitFor: ['pull_minimal_image']
+    timeout: 60m
+    args:
+      [
+        'build',
+        '--pull',
+        '--cache-from=gcr.io/oak-ci/oak-minimal:latest',
+        '--tag=gcr.io/oak-ci/oak-minimal:latest',
+        '--file=minimal.Dockerfile',
+        '.',
+      ]
+
+  # Run Minimal example.
+  - name: 'gcr.io/oak-ci/oak-minimal:latest'
+    id: run_example_minimal
+    waitFor: ['build_minimal_image']
+    timeout: 60m
+    entrypoint: 'bash'
+    args: ['./scripts/runner', 'run-examples', '--example-name=minimal']
+
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:
 # - https://pantheon.corp.google.com/storage/browser/artifacts.oak-ci.appspot.com/test/?project=oak-ci

@@ -1,0 +1,26 @@
+[package]
+name = "minimal_client"
+version = "0.1.0"
+authors = ["Ionut-Victor Anghelcovici <iovi@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+name = "minimal_client"
+path = "src/lib.rs"
+
+[[bin]]
+name = "minimal_client_bin"
+path = "src/main.rs"
+
+[dependencies]
+env_logger = "*"
+log = "*"
+oak_abi = "=0.1.0"
+prost = "*"
+structopt = "*"
+tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
+tonic = { version = "*", features = ["tls"] }
+
+[build-dependencies]
+oak_utils = "*"

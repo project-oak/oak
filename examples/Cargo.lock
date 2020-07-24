@@ -951,6 +951,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "minimal"
+version = "0.1.0"
+dependencies = [
+ "assert_matches",
+ "env_logger",
+ "log",
+ "minimal_client",
+ "oak",
+ "oak_runtime",
+ "oak_tests",
+ "oak_utils",
+ "prost",
+ "tokio",
+]
+
+[[package]]
+name = "minimal_client"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "oak_abi",
+ "oak_utils",
+ "prost",
+ "structopt",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
 name = "mio"
 version = "0.6.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"

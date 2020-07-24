@@ -1,0 +1,26 @@
+[package]
+name = "minimal"
+version = "0.1.0"
+authors = ["Ionut-Victor Anghelcovici <iovi@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+log = "*"
+oak = "=0.1.0"
+prost = "*"
+
+[dev-dependencies]
+assert_matches = "*"
+env_logger = "*"
+log = "*"
+oak_runtime = "=0.1.0"
+oak_tests = "=0.1.0"
+tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+minimal_client = "=0.1.0"
+
+[build-dependencies]
+oak_utils = "*"

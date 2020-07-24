@@ -1,0 +1,4 @@
+name = "minimal"
+
+[modules]
+app = { path = "examples/minimal/bin/minimal.wasm" }

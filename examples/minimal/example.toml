@@ -1,0 +1,13 @@
+name = "minimal"
+
+[application]
+manifest = "examples/minimal/config/config.toml"
+out = "examples/minimal/bin/config.bin"
+
+[modules]
+app = { Cargo = { cargo_manifest = "examples/minimal/module/rust/Cargo.toml" } }
+
+[clients]
+rust = { Cargo = { cargo_manifest = "examples/minimal/client/rust/Cargo.toml" }, additional_args = [
+  "--root-tls-certificate=./examples/certs/local/ca.pem",
+] }
