@@ -15,7 +15,7 @@ manifest = "examples/hello_world/config/config_cpp.toml"
 out = "examples/hello_world/bin/config_cpp.bin"
 
 [applications.cpp.modules]
-module = { Bazel = { bazel_target = "//examples/hello_world/module/cpp:hello_world.wasm", config = "wasm32" } }
+module = { Bazel = { bazel_target = "//examples/hello_world/module/cpp:hello_world_cpp.wasm", config = "wasm32" } }
 translator = { Cargo = { cargo_manifest = "examples/translator/module/rust/Cargo.toml" } }
 
 [clients]

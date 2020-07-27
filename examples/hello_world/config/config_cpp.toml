@@ -1,4 +1,4 @@
 name = "hello_world"
 
 [modules]
-app = { path = "examples/hello_world/bin/hello_world.wasm" }
+app = { path = "examples/hello_world/bin/hello_world_cpp.wasm" }
