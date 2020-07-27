@@ -1,11 +1,12 @@
 name = "private_set_intersection"
 
-[application]
-variant = "rust"
+[applications]
+
+[applications.rust]
 manifest = "examples/private_set_intersection/config/config.toml"
 out = "examples/private_set_intersection/bin/config.bin"
 
-[modules]
+[applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/private_set_intersection/module/rust/Cargo.toml" } }
 
 [clients]

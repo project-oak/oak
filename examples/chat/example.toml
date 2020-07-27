@@ -1,11 +1,12 @@
 name = "chat"
 
-[application]
-variant = "rust"
+[applications]
+
+[applications.rust]
 manifest = "examples/chat/config/config.toml"
 out = "examples/chat/bin/config.bin"
 
-[modules]
+[applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/chat/module/rust/Cargo.toml" } }
 
 [clients]

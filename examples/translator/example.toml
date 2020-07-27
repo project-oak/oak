@@ -1,11 +1,12 @@
 name = "translator"
 
-[application]
-variant = "rust"
+[applications]
+
+[applications.rust]
 manifest = "examples/translator/config/config.toml"
 out = "examples/translator/bin/config.bin"
 
-[modules]
+[applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/translator/module/rust/Cargo.toml" } }
 
 [clients]

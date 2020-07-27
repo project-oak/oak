@@ -219,9 +219,17 @@ fn run_examples(opt: &RunExamples) -> Step {
                 Some(example_name) => &example.name == example_name,
                 None => true,
             })
-            .filter(|example| match opt.application_variant.as_str() {
-                "rust" | "cpp" => example.application.variant == opt.application_variant,
-                v => panic!("unknown variant: {}", v),
+            .filter(|example| {
+                println!("--------- EXAMPLE {:?}", example);
+                println!("--------- VARIANT {:?}", opt.application_variant.as_str());
+                println!(
+                    "--------- GET {:?}",
+                    example.applications.get(opt.application_variant.as_str())
+                );
+                example
+                    .applications
+                    .get(opt.application_variant.as_str())
+                    .is_some()
             })
             .map(|example| run_example(opt, example))
             .collect(),
@@ -527,17 +535,16 @@ struct Example {
     server: ExampleServer,
     #[serde(default)]
     backend: Option<Executable>,
-    application: Application,
-    modules: HashMap<String, Target>,
+    applications: HashMap<String, Application>,
     clients: HashMap<String, Executable>,
 }
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Application {
-    variant: String,
     manifest: String,
     out: String,
+    modules: HashMap<String, Target>,
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
@@ -576,11 +583,16 @@ struct Executable {
 }
 
 fn run_example(opt: &RunExamples, example: &Example) -> Step {
+    let application = example
+        .applications
+        .get(opt.application_variant.as_str())
+        .expect("Unsupported application variant");
+
     let run_server = run_example_server(
         &opt.build_server,
         &example.server,
         opt.server_additional_args.clone(),
-        &example.application.out,
+        &application.out,
     );
     let run_clients = Step::Multiple {
         name: "run clients".to_string(),
@@ -637,7 +649,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
             vec![
                 Step::Multiple {
                     name: "build wasm modules".to_string(),
-                    steps: example
+                    steps: application
                         .modules
                         .iter()
                         .map(|(name, target)| build_wasm_module(name, target, &example.name))
@@ -645,7 +657,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 },
                 Step::Single {
                     name: "build application".to_string(),
-                    command: build_application(&example.application),
+                    command: build_application(&application),
                 },
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
@@ -938,7 +950,7 @@ fn example_toml_files() -> impl Iterator<Item = PathBuf> {
 
 fn is_example_toml_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    filename == "example.toml" || filename == "example_cpp.toml"
+    filename == "example.toml"
 }
 
 fn read_file(path: &PathBuf) -> String {

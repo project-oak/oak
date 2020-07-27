@@ -1,11 +1,12 @@
 name = "tensorflow"
 
-[application]
-variant = "cpp"
+[applications]
+
+[applications.cpp]
 manifest = "examples/tensorflow/config/config_cpp.toml"
 out = "examples/tensorflow/bin/config_cpp.bin"
 
-[modules]
+[applications.cpp.modules]
 module = { Bazel = { bazel_target = "//examples/tensorflow/module/cpp:tensorflow_micro.wasm", config = "emscripten" } }
 
 [clients]
