@@ -220,12 +220,6 @@ fn run_examples(opt: &RunExamples) -> Step {
                 None => true,
             })
             .filter(|example| {
-                println!("--------- EXAMPLE {:?}", example);
-                println!("--------- VARIANT {:?}", opt.application_variant.as_str());
-                println!(
-                    "--------- GET {:?}",
-                    example.applications.get(opt.application_variant.as_str())
-                );
                 example
                     .applications
                     .get(opt.application_variant.as_str())
