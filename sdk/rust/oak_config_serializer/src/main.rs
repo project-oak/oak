@@ -57,18 +57,10 @@ struct Config {
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-enum Module {
-    #[serde(rename = "path")]
-    Path(String),
-    #[serde(rename = "external")]
-    External(External),
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-struct External {
-    url: String,
-    sha256: String,
+struct Module {
+    path: String,
+    url: Option<String>,
+    sha256: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -94,37 +86,55 @@ fn get_sha256(data: &[u8]) -> String {
     hex::encode(hasher.finalize().as_slice().to_vec())
 }
 
-/// Load Wasm module from URL or a file, if URL is not specified.
+/// Download Wasm module from `url` and caches it in `filename`.
+async fn download_module_from_url(url: &str, filename: &str) -> anyhow::Result<Vec<u8>> {
+    let url: Url = url.parse().context("Couldn't parse URL")?;
+
+    debug!("Downloading module from: {}", url);
+    let response = reqwest::get(url.clone())
+        .await
+        .with_context(|| format!("Couldn't download module from {}", url))?;
+    let data = response
+        .bytes()
+        .await
+        .context("Couldn't retrieve module from HTTP response")?
+        .to_vec();
+
+    fs::write(filename, &data).with_context(|| format!("Couldn't write file {}", filename))?;
+    Ok(data)
+}
+
+/// Load Wasm module from file or URL if specified.
+/// If file was loaded from URL, it is cached in `module.path`.
 async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
-    match module {
-        Module::Path(path) => {
-            fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
-        }
-        Module::External(external) => {
-            let url: Url = external.url.parse().context("Couldn't parse URL")?;
+    let data = match fs::read(&module.path) {
+        Ok(data) => Ok(data),
+        Err(error) => match &module.url {
+            Some(url) => {
+                debug!(
+                    "Couldn't load module from cache: {:?}, loading from URL: {}",
+                    error, url
+                );
+                download_module_from_url(&url, &module.path).await
+            }
+            None => Err(anyhow!("Couldn't read file {}: {:?}", module.path, error)),
+        },
+    }?;
 
-            debug!("Downloading module from: {}", url);
-            // TODO(#1240): Add a Wasm module cache.
-            let response = reqwest::get(url.clone())
-                .await
-                .with_context(|| format!("Couldn't download module from {}", url))?;
-            let data = response
-                .bytes()
-                .await
-                .context("Couldn't retrieve module from HTTP response")?
-                .to_vec();
-
+    match &module.sha256 {
+        Some(sha256) => {
             let received_sha256 = get_sha256(&data);
-            if received_sha256 == external.sha256 {
+            if received_sha256 == *sha256 {
                 Ok(data)
             } else {
                 Err(anyhow!(
                     "Incorrect SHA256 sum: expected {}, received {}",
-                    external.sha256,
+                    sha256,
                     received_sha256
                 ))
             }
         }
+        None => Ok(data),
     }
 }
 
