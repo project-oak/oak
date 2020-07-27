@@ -3,7 +3,7 @@ f1bb7e9219a4264185135c8b2f773308226ccb98781932c33c03ef544f8965c0  ./examples/tar
 f2c6e041a2b1771800fa5657d62885ac9f2334cecc3d839b047dc6d16ec82e1c  ./examples/target/wasm32-unknown-unknown/release/aggregator.wasm
 1b3613750ccebc43699a97b88d7494f2765c6d36d2fbc5d6e5a5f5a01e01b00e  ./examples/target/wasm32-unknown-unknown/release/chat.wasm
 3606a86d9fa01d223dc3cb092c1aceb9e3afe0ed9799ac5d5b214b1610209f8f  ./examples/target/wasm32-unknown-unknown/release/database_proxy.wasm
-443b6c87e761073eafe39913b43cab3103bf790ded8a29ae5f700b4afdd46443  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
+57ba0bcebf2c01389d0413736b0a3bb261312bcf0d6e87181359e402df751d50  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
 66c810217ff8fc991b7792bdd31ed4811b270fc63fb75c42220b48ab0aca2804  ./examples/target/wasm32-unknown-unknown/release/machine_learning.wasm
 0efc90fff856b48d02692729af3c0a3814d046d686f4d30086c482bcbfcb6384  ./examples/target/wasm32-unknown-unknown/release/private_set_intersection.wasm
 487d529320a1a9ce9c71928713deb9e7eade43d94d8b7bd71e940c96be4d841c  ./examples/target/wasm32-unknown-unknown/release/running_average.wasm
