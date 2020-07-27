@@ -171,8 +171,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::process::exit(-1);
         });
         let statuses = run().await;
+
+        if !statuses.failed_steps_prefixes.is_empty() {
+            eprintln!("List of failed steps:");
+            statuses.failed_steps_prefixes.iter().for_each(|step| {
+                eprintln!("{} ⊢ [{}]", step, StatusResultValue::Error);
+            })
+        }
+
         // If the overall status value is an error, terminate with a nonzero exit code.
-        if statuses.contains(&StatusResultValue::Error) {
+        if statuses.values.contains(&StatusResultValue::Error) {
             std::process::exit(1);
         }
     }
