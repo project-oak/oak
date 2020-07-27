@@ -65,6 +65,17 @@ Definition empty_state := {|
 Definition chan_append (c: channel)(m: message): channel :=
     {| clbl := c.(clbl); ms := (m :: c.(ms)) |}.
 
+(* this is used in channel read where there is a premise
+* that checks that the channel is not empty *)
+Definition chan_pop (c: channel): channel :=
+    {| 
+        clbl := c.(clbl); 
+        ms := match c.(ms) with
+            | nil => nil
+            | m :: ms' => ms'
+        end;
+    |}.
+
 Definition state_upd_node (nid: node_id)(n: node)(s: state): state :=
     {| 
         nodes := tg_update s.(nodes) nid n; 
@@ -77,35 +88,71 @@ Definition state_upd_chan (h: handle)(ch: channel)(s: state): state :=
         chans := tg_update s.(chans) h ch;
     |}.
 
+Definition state_upd_call (nid: node_id)(c: call)(s: state): state :=
+    let old_n := (s.(nodes) nid) in
+    state_upd_node nid ({|
+            nlbl := old_n.(nlbl);
+            hans := old_n.(hans);
+            ncall := c;
+        |}) s.
+
+Definition state_append_msg (h: handle)(m: message)(s: state): state :=
+    state_upd_chan h (chan_append (s.(chans) h) m) s.
+
+Definition state_chan_pop (h: handle)(s: state): state :=
+    state_upd_chan h (chan_pop (s.(chans) h)) s.
+
+
 (*============================================================================
 * Single Call Semantics
 ============================================================================*)
 
 (* step for a single node (which can be thought of as a thread) *)
-Inductive step_node: node_id -> state -> state -> Prop :=
-    | SWriteSucc s id n han msg
+Inductive step_node: node_id -> call -> state -> state -> Prop :=
+    | SWriteChan s id n han msg
+            (* it might be awkward looking that there is no premise checking
+            that the call is really the call of this particular node. 
+            The global transition relation checks this, though. It could
+            be added redundantly here ? Another option could be to make this
+            a node -> state -> state -> Prop relation, that checks this
+            redundantly. Then have a separate relation with the -> call -> bit
+            to make proofs easier, then prove they are equivalent *)
         (H0: (s.(nodes) id) = n)
-        (H1: n.(ncall) = WriteChannel han msg)
         (H1: In n.(hans) han)
         (H2: n.(nlbl) << (s.(chans) han).(clbl)):
-        step_node id s
-            (state_upd_chan han (chan_append (s.(chans) han) msg) s).
-    (* TODO all the other calls *)
+        step_node id (WriteChannel han msg) s (state_append_msg han msg s)
+    | SReadChan s id n han chan
+            (* note that, we already expect that this call 
+            * will have leaks and we cannot prove NI with it *)
+        (H0: (s.(nodes) id) = n)
+        (H1: In n.(hans) han)
+        (H2: (s.(chans) han) = chan)
+        (H3: (length chan.(ms)) > 0)
+        (H2: chan.(clbl) << n.(nlbl)):
+        step_node id (ReadChannel han) s (state_chan_pop han s)
+    | SInternal s id: step_node id Internal s s.
 
 (* step for the full system (which picks a thread to execute and is
 non-deterministic). This is needed in addition to step_node, because
-we should show that regardless of the thread ordering, there are no information
+we should show that regardless of the thread scheduling, there are no information
 leaks. *)
+(* To be general and language agnostic, computation of code within nodes other
+than the ABI calls is modeled as simply returning an arbitrary continuation 
+(c') of the node's choosing (for any call). *)
+(* Errors might later be modeled by choosing a different continuation based
+on whether or not a call was successful, in this case, the resulting
+continuation likely needs to be moved into the local transition relation *)
 Inductive step_system: state -> state -> Prop :=
     (* possibly also a termination case *)
-    | ValidStep id s s'
-        (H1: step_node id s s'):
-        step_system s s'.
+    | ValidStep id n c c' s s'
+        (H0: (s.(nodes) id) = n)
+        (H1: n.(ncall) = c)
+        (H2: step_node id c s s'):
+        step_system s (state_upd_call id c' s').
 
 (* Traces are sequences of states modeling entire executions *)
 (* Noninterference definitions are defined by comparing "any two" executions *)
-Definition global_state: Type := state.
-Definition trace := list global_state.
+Definition trace := list state.
 
 Definition last_state (t: trace)(s: state): Prop :=
     match t with
@@ -120,4 +167,3 @@ Inductive valid_trace (init: state): trace -> Prop :=
             (H1: last_state t s')
             (H2: step_system s s):
             valid_trace init (s' :: t).
-
