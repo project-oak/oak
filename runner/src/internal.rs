@@ -312,7 +312,6 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
                     eprintln!("{} {} {}", context.prefix, "║".blue(), line);
                 }
                 eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
-                step_result.failed_steps_prefixes.push(context.prefix);
             }
 
             step_result.values = foreground_result.values;
@@ -321,6 +320,9 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
                 .append(&mut foreground_result.failed_steps_prefixes);
 
             // Also propagate the status of the background process.
+            if background_status.value == StatusResultValue::Error {
+                step_result.failed_steps_prefixes.push(context.prefix);
+            }
             step_result.values.insert(background_status.value);
         }
     }

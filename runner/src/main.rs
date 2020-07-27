@@ -173,7 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let statuses = run().await;
 
         if !statuses.failed_steps_prefixes.is_empty() {
-            eprintln!("Finished with errors:");
+            eprintln!("List of failed steps:");
             statuses.failed_steps_prefixes.iter().for_each(|step| {
                 eprintln!("{} ⊢ [{}]", step, StatusResultValue::Error);
             })
