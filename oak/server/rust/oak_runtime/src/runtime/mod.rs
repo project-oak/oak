@@ -21,8 +21,8 @@ use crate::{
     metrics::Metrics,
     node,
     proto::oak::introspection_events::{
-        event::EventDetails, ChannelCreated, HandleCreated, HandleDestroyed, NodeCreated,
-        NodeDestroyed,
+        event::EventDetails, ChannelCreated, HandleCreated, HandleDestroyed, MessageDequeued,
+        MessageEnqueued, NodeCreated, NodeDestroyed,
     },
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
     GrpcConfiguration,
@@ -741,9 +741,15 @@ impl Runtime {
         let half = self.abi_to_write_half(node_id, write_handle)?;
         self.validate_can_write_to_channel(node_id, &half)?;
 
+        let event_details = MessageEnqueued {
+            node_id: node_id.0,
+            channel_id: half.get_channel_id(),
+            included_handles: node_msg.handles.clone(),
+        };
+
         // Translate the Node-relative handles in the `NodeMessage` to channel halves.
         let msg = self.message_from(node_msg, node_id)?;
-        with_writer_channel(&half, |channel| {
+        let result = with_writer_channel(&half, |channel| {
             if !channel.has_readers() {
                 return Err(OakStatus::ErrChannelClosed);
             }
@@ -751,7 +757,11 @@ impl Runtime {
             channel.wake_waiters();
 
             Ok(())
-        })
+        });
+
+        self.introspection_event(EventDetails::MessageEnqueued(event_details));
+
+        result
     }
 
     /// Translate the Node-relative handles in the `NodeMessage` to channel halves.
@@ -789,7 +799,17 @@ impl Runtime {
         }) {
             Err(status) => Err(status),
             Ok(None) => Ok(None),
-            Ok(Some(runtime_msg)) => Ok(Some(self.node_message_from(runtime_msg, node_id))),
+            Ok(Some(runtime_msg)) => {
+                let node_msg = self.node_message_from(runtime_msg, node_id);
+
+                self.introspection_event(EventDetails::MessageDequeued(MessageDequeued {
+                    node_id: node_id.0,
+                    channel_id: half.get_channel_id(),
+                    acquired_handles: node_msg.handles.clone(),
+                }));
+
+                Ok(Some(node_msg))
+            }
         }
     }
 
