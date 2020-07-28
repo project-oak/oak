@@ -21,6 +21,7 @@ fn main() {
         &[
             "../oak/proto/application.proto",
             "../oak/proto/grpc_encap.proto",
+            "../oak/proto/http_encap.proto",
             "../oak/proto/label.proto",
             "../oak/proto/log.proto",
             "../oak/proto/oak_abi.proto",

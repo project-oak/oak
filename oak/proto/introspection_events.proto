@@ -33,6 +33,8 @@ message Event {
     ChannelDestroyed channel_destroyed = 5;
     HandleCreated handle_created = 6;
     HandleDestroyed handle_destroyed = 7;
+    MessageEnqueued message_enqueued = 8;
+    MessageDequeued message_dequeued = 9;
   }
 }
 
