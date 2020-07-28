@@ -277,7 +277,7 @@ impl Runtime {
                 let event_details = HandleCreated {
                     node_id: node_id.0,
                     handle: candidate,
-                    channel_id: half.get_id(),
+                    channel_id: half.get_channel_id(),
                 };
 
                 node_info.abi_handles.insert(candidate, half);
@@ -300,7 +300,7 @@ impl Runtime {
                 .abi_handles
                 .get(&handle)
                 .ok_or(OakStatus::ErrBadHandle)?
-                .get_id(),
+                .get_channel_id(),
         };
 
         let result = node_info
@@ -309,9 +309,8 @@ impl Runtime {
             .ok_or(OakStatus::ErrBadHandle)
             .map(|_half| ());
 
-        match result {
-            Ok(()) => self.introspection_event(EventDetails::HandleDestroyed(event_details)),
-            Err(_status) => (),
+        if result.is_ok() {
+            self.introspection_event(EventDetails::HandleDestroyed(event_details))
         };
 
         result
