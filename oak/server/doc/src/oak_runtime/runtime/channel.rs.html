@@ -319,6 +319,12 @@
 <span id="319">319</span>
 <span id="320">320</span>
 <span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -420,6 +426,12 @@
             <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">channel</span>.<span class="ident">inc_reader_count</span>(),
         };
         <span class="ident">ChannelHalf</span> { <span class="ident">channel</span>, <span class="ident">direction</span> }
+    }
+
+    <span class="doccomment">/// Get the ID of the underlying channel.  For debugging/introspection</span>
+    <span class="doccomment">/// purposes.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_channel_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">channel</span>.<span class="ident">id</span>
     }
 
     <span class="doccomment">/// Get read-only access to the channel&#39;s messages.  For debugging/introspection</span>
