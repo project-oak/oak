@@ -1,10 +1,12 @@
 name = "running_average"
 
-[application]
+[applications]
+
+[applications.rust]
 manifest = "examples/running_average/config/config.toml"
 out = "examples/running_average/bin/config.bin"
 
-[modules]
+[applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/running_average/module/rust/Cargo.toml" } }
 
 [clients]
