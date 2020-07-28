@@ -99,8 +99,9 @@ ENV EM_CACHE "${emscripten_dir}/.emscripten_cache"
 ENV PATH "${emscripten_dir}:${emscripten_dir}/node/${emscripten_node_version}/bin:${PATH}"
 # We need to allow a non-root Docker container to write into the directory
 RUN chmod --recursive go+wx "${emscripten_dir}"
-# Emscripten brings Node with it, we need to allow non-root access to temp folders
-RUN mkdir "/.npm" && chmod a+rwx "/.npm"
+# Emscripten brings Node with it, we need to allow non-root access to temp and
+# config folders
+RUN mkdir -p "/.npm" && chmod a+rwx "/.npm" & mkdir -p "/.config" && chmod a+rwx "/.config"
 
 # Install Go.
 ARG golang_version=1.14.4
