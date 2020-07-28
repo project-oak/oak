@@ -1,7 +1,7 @@
 name = "abitest"
 
 [modules.frontend_module]
-file = { path = "examples/abitest/bin/abitest_0_frontend.wasm" 
+file = { path = "examples/abitest/bin/abitest_0_frontend.wasm" }
 
 [modules.backend_module]
 file = { path = "examples/abitest/bin/abitest_1_backend.wasm" }
