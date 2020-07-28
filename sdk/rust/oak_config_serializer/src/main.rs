@@ -58,9 +58,17 @@ struct Config {
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Module {
-    path: String,
-    url: Option<String>,
+    file: WasmFile,
     sha256: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+enum WasmFile {
+    #[serde(rename = "path")]
+    Path(String),
+    #[serde(rename = "url")]
+    Url(String),
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -79,6 +87,8 @@ impl Default for InitialNodeConfig {
     }
 }
 
+const CACHE_DIRECTORY: &str = ".oak";
+
 /// Computes SHA256 sum from `data` and returns it as a HEX encoded string.
 fn get_sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
@@ -86,8 +96,8 @@ fn get_sha256(data: &[u8]) -> String {
     hex::encode(hasher.finalize().as_slice().to_vec())
 }
 
-/// Download Wasm module from `url` and caches it in `filename`.
-async fn download_module_from_url(url: &str, filename: &str) -> anyhow::Result<Vec<u8>> {
+/// Download Wasm module from `url`.
+async fn download_module_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
     let url: Url = url.parse().context("Couldn't parse URL")?;
 
     debug!("Downloading module from: {}", url);
@@ -99,27 +109,30 @@ async fn download_module_from_url(url: &str, filename: &str) -> anyhow::Result<V
         .await
         .context("Couldn't retrieve module from HTTP response")?
         .to_vec();
-
-    fs::write(filename, &data).with_context(|| format!("Couldn't write file {}", filename))?;
     Ok(data)
 }
 
 /// Load Wasm module from file or URL if specified.
-/// If file was loaded from URL, it is cached in `module.path`.
+/// If the file was downloaded from URL, it is cached in [`CACHE_DIRECTORY`].
 async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
-    let data = match fs::read(&module.path) {
-        Ok(data) => Ok(data),
-        Err(error) => match &module.url {
-            Some(url) => {
-                debug!(
-                    "Couldn't load module from cache: {:?}, loading from URL: {}",
-                    error, url
-                );
-                download_module_from_url(&url, &module.path).await
-            }
-            None => Err(anyhow!("Couldn't read file {}: {:?}", module.path, error)),
-        },
-    }?;
+    let data = match &module.file {
+        WasmFile::Path(path) => {
+            fs::read(&path).with_context(|| format!("Couldn't read file {}", path))?
+        }
+        WasmFile::Url(url) => {
+            let mut cache_path = std::env::current_dir().unwrap();
+            cache_path.push(CACHE_DIRECTORY);
+            std::fs::create_dir_all(cache_path.as_path())
+                .context("Couldn't create cache directory")?;
+
+            let data = download_module_from_url(&url).await?;
+
+            cache_path.push(get_sha256(&data));
+            fs::write(&cache_path, &data)
+                .with_context(|| format!("Couldn't write file {:?}", cache_path.as_path()))?;
+            data
+        }
+    };
 
     match &module.sha256 {
         Some(sha256) => {
