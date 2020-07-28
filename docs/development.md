@@ -13,11 +13,11 @@
 
 ## Quick Start
 
-To build and run one of the Oak example applications under Docker, run:
+To build and run one of the Oak example applications under Docker, run (after [installing Docker](Docker.md) if necessary):
 
 ```bash
 ./scripts/docker_pull  # retrieve cached Docker image for faster builds
-./scripts/docker_run ./scripts/runner run-examples --example-name=hello_world
+./scripts/docker_run ./scripts/runner --logs run-examples --example-name=hello_world
 ```
 
 This should build the Runtime, an Oak Application and a client for the
