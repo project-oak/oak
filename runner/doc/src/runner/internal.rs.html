@@ -618,6 +618,10 @@
 <span id="618">618</span>
 <span id="619">619</span>
 <span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -690,8 +694,12 @@
     <span class="kw">pub</span> <span class="ident">build_server</span>: <span class="ident">BuildServer</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run server [default: true]&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">run_server</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run clients [default: true]&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">run_clients</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(
+        <span class="ident">long</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;client variant: [all, rust, cpp, go, nodejs, none] [default: all]&quot;</span>,
+        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;all&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">client_variant</span>: <span class="ident">String</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to clients&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">client_additional_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;additional arguments to pass to server&quot;</span>)]</span>
