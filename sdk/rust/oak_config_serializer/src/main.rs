@@ -57,18 +57,18 @@ struct Config {
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Module {
-    file: WasmFile,
-    sha256: Option<String>,
+enum Module {
+    #[serde(rename = "path")]
+    Path(String),
+    #[serde(rename = "external")]
+    External(External),
 }
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-enum WasmFile {
-    #[serde(rename = "path")]
-    Path(String),
-    #[serde(rename = "url")]
-    Url(String),
+struct External {
+    url: String,
+    sha256: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -117,40 +117,36 @@ async fn download_module_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
 /// Load Wasm module from file or URL if specified.
 /// If the file was downloaded from URL, it is cached in [`CACHE_DIRECTORY`].
 async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
-    let data = match &module.file {
-        WasmFile::Path(path) => {
-            fs::read(&path).with_context(|| format!("Couldn't read file {}", path))?
+    let data = match &module {
+        Module::Path(path) => {
+            fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
         }
-        WasmFile::Url(url) => {
+        Module::External(external) => {
             let mut cache_path = std::env::current_dir().unwrap();
             cache_path.push(CACHE_DIRECTORY);
             std::fs::create_dir_all(cache_path.as_path())
                 .context("Couldn't create cache directory")?;
 
-            let data = download_module_from_url(&url).await?;
+            let data = download_module_from_url(&external.url).await?;
 
-            cache_path.push(get_sha256(&data));
-            fs::write(&cache_path, &data)
-                .with_context(|| format!("Couldn't write file {:?}", cache_path.as_path()))?;
-            data
-        }
-    };
-
-    match &module.sha256 {
-        Some(sha256) => {
+            // Check SHA256 sum of the downloaded Wasm module.
             let received_sha256 = get_sha256(&data);
-            if received_sha256 == *sha256 {
+            if received_sha256 == external.sha256 {
+                // Save the downloaded Wasm module into the cache directory.
+                cache_path.push(get_sha256(&data));
+                fs::write(&cache_path, &data)
+                    .with_context(|| format!("Couldn't write file {:?}", cache_path.as_path()))?;
                 Ok(data)
             } else {
                 Err(anyhow!(
                     "Incorrect SHA256 sum: expected {}, received {}",
-                    sha256,
+                    external.sha256,
                     received_sha256
                 ))
             }
         }
-        None => Ok(data),
-    }
+    }?;
+    Ok(data)
 }
 
 /// Serializes an application configuration from `app_config` and writes it into `filename`.

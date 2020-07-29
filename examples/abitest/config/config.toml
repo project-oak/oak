@@ -1,10 +1,8 @@
 name = "abitest"
 
-[modules.frontend_module]
-file = { path = "examples/abitest/bin/abitest_0_frontend.wasm" }
-
-[modules.backend_module]
-file = { path = "examples/abitest/bin/abitest_1_backend.wasm" }
+[modules]
+frontend_module = { path = "examples/abitest/bin/abitest_0_frontend.wasm" }
+backend_module = { path = "examples/abitest/bin/abitest_1_backend.wasm" }
 
 [initial_node_configuration]
 wasm_module_name = "frontend_module"

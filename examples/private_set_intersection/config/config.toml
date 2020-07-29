@@ -1,4 +1,4 @@
 name = "private_set_intersection"
 
-[modules.app]
-file = { path = "examples/private_set_intersection/bin/private_set_intersection.wasm" }
+[modules]
+app = { path = "examples/private_set_intersection/bin/private_set_intersection.wasm" }

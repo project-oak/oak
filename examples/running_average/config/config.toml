@@ -1,4 +1,4 @@
 name = "running_average"
 
-[modules.app]
-file = { path = "examples/running_average/bin/running_average.wasm" }
+[modules]
+app = { path = "examples/running_average/bin/running_average.wasm" }

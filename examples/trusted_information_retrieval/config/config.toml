@@ -1,10 +1,5 @@
 name = "trusted_information_retrieval"
 
 [modules]
-
-[modules.app]
-file = { path = "examples/trusted_information_retrieval/bin/trusted_information_retrieval.wasm" }
-
-[modules.database_proxy]
-file = { url = "https://storage.googleapis.com/oak-modules/database_proxy/3606a86d9fa01d223dc3cb092c1aceb9e3afe0ed9799ac5d5b214b1610209f8f" }
-sha256 = "3606a86d9fa01d223dc3cb092c1aceb9e3afe0ed9799ac5d5b214b1610209f8f"
+app = { path = "examples/trusted_information_retrieval/bin/trusted_information_retrieval.wasm" }
+database_proxy = { external = { url = "https://storage.googleapis.com/oak-modules/database_proxy/3606a86d9fa01d223dc3cb092c1aceb9e3afe0ed9799ac5d5b214b1610209f8f", sha256 = "3606a86d9fa01d223dc3cb092c1aceb9e3afe0ed9799ac5d5b214b1610209f8f" } }

@@ -1,7 +1,7 @@
 name = "translator"
 
-[modules.app]
-file = { path = "examples/translator/bin/translator.wasm" }
+[modules]
+app = { path = "examples/translator/bin/translator.wasm" }
 
 [initial_node_configuration]
 wasm_module_name = "app"
