@@ -66,14 +66,14 @@ The Oak Runtime and its dependencies are built with the following script:
 Build a particular example, say `hello_world`, with:
 
 ```bash
-./scripts/runner run-examples --run-server=false --run-clients=false --example-name=hello_world
+./scripts/runner run-examples --run-server=false --client-variant=none --example-name=hello_world
 ```
 
 Note that the Runtime server requires a particular Oak Application to run, and
 so relies on the previous section.
 
 ```bash
-./scripts/runner run-examples --run-clients=false --example-name=hello_world
+./scripts/runner run-examples --client-variant=none --example-name=hello_world
 ```
 
 In a separate terminal, run an example client that connects to the Oak Runtime

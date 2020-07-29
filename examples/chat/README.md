@@ -18,7 +18,7 @@ as bearer tokens:
 Initially, the chat example needs to be built, and the server started:
 
 ```bash
-./scripts/runner --logs run-examples --run-clients=false --example-name=chat
+./scripts/runner --logs run-examples --client-variant=none --example-name=chat
 ```
 
 After this, one can run the first client, which connects to the Oak Application
