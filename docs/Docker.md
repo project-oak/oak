@@ -4,20 +4,14 @@
 
 ### From Docker.com
 
-[Download the dmg](https://www.docker.com/get-started) and install it.
+Follow [these instructions](https://docs.docker.com/docker-for-mac/install/).
 
-Run Docker and follow through the initial setup dialog (doesn't take long and possibly can be bypassed, but we don't know how).
+Note that you may have to re-run Docker after each reboot or if you see an error like
 
-It won't work until you've completed this step.
+```bash
+docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+```
 
 ### Using Homeboew
 
-```bash
-brew install docker
-```
-
-And then what? Oak's install script fails with
-
-```bash
-Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
-```
+See [this article](https://medium.com/@yutafujii_59175/a-complete-one-by-one-guide-to-install-docker-on-your-mac-os-using-homebrew-e818eb4cfc3).
