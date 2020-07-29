@@ -87,6 +87,8 @@ impl Default for InitialNodeConfig {
     }
 }
 
+/// Directory used to save downloaded Wasm modules.
+/// Created in the `std::env::current_dir()`.
 const CACHE_DIRECTORY: &str = ".oak";
 
 /// Computes SHA256 sum from `data` and returns it as a HEX encoded string.
@@ -96,7 +98,7 @@ fn get_sha256(data: &[u8]) -> String {
     hex::encode(hasher.finalize().as_slice().to_vec())
 }
 
-/// Download Wasm module from `url`.
+/// Download file from `url`.
 async fn download_module_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
     let url: Url = url.parse().context("Couldn't parse URL")?;
 
