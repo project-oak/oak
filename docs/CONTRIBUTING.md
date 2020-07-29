@@ -62,11 +62,12 @@ are squashed against the correct commit if necessary.
 
 ## Style Guide
 
+Before submitting your PR, we ask you to run `./scripts/runner format`, which
+formats code & docs according to our style guide.
+
 ### Rust
 
 - Make sure code is [`cargo clippy`](https://crates.io/crates/clippy) clean.
-- Use the `./scripts/runner format` command to keep Rust code formatted
-  consistently, according to our [`rustfmt` configuration](/.rustfmt.toml).
 - Use the [`scripts/check_docs`](/scripts/check_docs) script to check for
   warnings from
   [`cargo doc`](https://doc.rust-lang.org/cargo/commands/cargo-doc.html) and
@@ -76,8 +77,6 @@ are squashed against the correct commit if necessary.
 
 - Follow https://google.github.io/styleguide/cppguide.html
 - Follow https://abseil.io/tips/
-- Use [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) to keep C++
-  code formatted consistently.
 - Use fully qualified names (leading `::`) for `using` declarations and
   namespace aliases, and avoid fully qualified names for everything else, unless
   it is necessary to make the code compile.
