@@ -101,7 +101,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::Completion => panic!("should have been handled above"),
         };
         // TODO(#396): Add support for running individual commands via command line flags.
-        run_step(&Context::root(&opt), steps).await
+        let remaining_steps = steps.len();
+        run_step(&Context::root(&opt), steps, Status::new(remaining_steps)).await
     };
 
     if watch {
