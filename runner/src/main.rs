@@ -448,7 +448,7 @@ fn run_ci() -> Step {
                 application_variant: "rust".to_string(),
                 example_name: None,
                 run_server: None,
-                run_clients: None,
+                client_variant: "all".to_string(),
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
                 build_docker: false,
@@ -463,7 +463,7 @@ fn run_ci() -> Step {
                 application_variant: "cpp".to_string(),
                 example_name: None,
                 run_server: None,
-                run_clients: None,
+                client_variant: "all".to_string(),
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
                 build_docker: false,
@@ -479,7 +479,7 @@ fn run_ci() -> Step {
                 application_variant: "rust".to_string(),
                 example_name: Some("hello_world".to_string()),
                 run_server: Some(false),
-                run_clients: Some(false),
+                client_variant: "none".to_string(),
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
                 build_docker: true,
@@ -601,6 +601,10 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
         steps: example
             .clients
             .iter()
+            .filter(|(name, _)| match opt.client_variant.as_str() {
+                "all" => true,
+                client => *name == client,
+            })
             .map(|(name, client)| run_client(name, &client, opt.client_additional_args.clone()))
             .collect(),
     };
@@ -614,7 +618,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     // clients in the foreground.
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
-        let run_server_clients = if opt.run_clients.unwrap_or(true) {
+        let run_server_clients = if opt.client_variant != "none" {
             Step::WithBackground {
                 name: "background server".to_string(),
                 background: run_server,
@@ -635,7 +639,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
             None => run_server_clients,
         }
     } else {
-        if opt.run_clients.unwrap_or(true) {
+        if opt.client_variant != "none" {
             run_clients
         } else {
             Step::Multiple {
