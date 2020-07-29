@@ -50,7 +50,7 @@ jobs:
 
       - name: Build examples
         run: |
-          ./scripts/docker_run ./scripts/runner run-examples --run-clients=false --run-server=false
+          ./scripts/docker_run ./scripts/runner run-examples --client-variant=none --run-server=false
 
       # Generate an index of the hashes of the reproducible artifacts.
       - name: Generate Reproducibility Index

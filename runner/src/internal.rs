@@ -69,8 +69,12 @@ pub struct RunExamples {
     pub build_server: BuildServer,
     #[structopt(long, help = "run server [default: true]")]
     pub run_server: Option<bool>,
-    #[structopt(long, help = "run clients [default: true]")]
-    pub run_clients: Option<bool>,
+    #[structopt(
+        long,
+        help = "client variant: [all, rust, cpp, go, nodejs, none] [default: all]",
+        default_value = "all"
+    )]
+    pub client_variant: String,
     #[structopt(long, help = "additional arguments to pass to clients")]
     pub client_additional_args: Vec<String>,
     #[structopt(long, help = "additional arguments to pass to server")]
