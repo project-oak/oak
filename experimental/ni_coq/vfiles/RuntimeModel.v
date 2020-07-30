@@ -9,7 +9,13 @@ Require Import Coq.Sets.Ensembles.
 Arguments Ensembles.In {U}.
 Arguments Ensembles.Add {U}.
 Arguments Ensembles.Subtract {U}.
+Arguments Ensembles.Singleton {U}.
 
+(* TODO:
+    - distinguish between read/write handles
+    - use option types for channel_state node_state range
+    - look into libraries for record types
+*)
 (*============================================================================
  Commands, State, Etc.
 ============================================================================*)
@@ -22,7 +28,10 @@ Record channel := Chan {
 Inductive call: Type :=
     | WriteChannel (h: handle) (m: message): call
     | ReadChannel (h: handle): call
+    | CreateChannel (lbl: level)(wid: node_id)(rid: node_id): call
+    | CreateNode (lbl: level)(h: handle): call
     | Internal: call.
+(* TODO wait_on_channels, channel_close *)
 
 Record node := Node {
     nlbl: level;
@@ -82,6 +91,7 @@ Definition state_upd_node (nid: node_id)(n: node)(s: state): state :=
         chans := s.(chans)
     |}.
 
+
 Definition state_upd_chan (h: handle)(ch: channel)(s: state): state :=
     {|
         nodes := s.(nodes);
@@ -102,6 +112,24 @@ Definition state_append_msg (h: handle)(m: message)(s: state): state :=
 Definition state_chan_pop (h: handle)(s: state): state :=
     state_upd_chan h (chan_pop (s.(chans) h)) s.
 
+Definition state_node_add_han (h: handle)(nid: node_id)(s: state): state :=
+    let old_n := (s.(nodes) nid) in
+    state_upd_node nid {|
+            nlbl  := old_n.(nlbl);
+            hans  := Ensembles.Add old_n.(hans) h;
+            ncall := old_n.(ncall);
+        |} s.
+
+(* 
+TODO it would actually be better to use option types
+for the range of both the node state and channel states 
+*)
+(* There may be potential problems with these definitions *)
+Definition handle_fresh (s: state)(h: handle): Prop :=
+    (s.(chans) h) = empty_chan.
+
+Definition nid_fresh (s: state)(nid: node_id): Prop :=
+    (s.(nodes) nid) = empty_node.
 
 (*============================================================================
 * Single Call Semantics
@@ -128,8 +156,29 @@ Inductive step_node: node_id -> call -> state -> state -> Prop :=
         (H1: In n.(hans) han)
         (H2: (s.(chans) han) = chan)
         (H3: (length chan.(ms)) > 0)
-        (H2: chan.(clbl) << n.(nlbl)):
+        (H4: chan.(clbl) << n.(nlbl)):
         step_node id (ReadChannel han) s (state_chan_pop han s)
+    | SCreateChan s cid rid wid h lbl
+        (H1: (s.(nodes) cid).(nlbl) << lbl)
+            (* in an alternative design, there could be checks here comparing 
+            the labels of the reader/writer and the label of the channel 
+            here *instead* of in the read/write calls *)
+        (H2: handle_fresh s h):
+            let s0 := (state_upd_chan h {| ms := []; clbl := lbl; |} s) in
+            let s1 := (state_node_add_han h rid s0) in
+            let s' := (state_node_add_han h wid s1) in
+            step_node cid (CreateChannel lbl rid wid) s s'
+    | SCreateNode s cid nid lbl h
+        (H0: (s.(nodes) cid).(nlbl) << lbl)
+        (* consider the following also : *)
+        (* (H1: lbl << (s.(chans). h).(clbl) ) *)
+        (H1: (nid_fresh s nid)):
+        step_node cid (CreateNode lbl h) s 
+            (state_upd_node nid {| 
+                nlbl := lbl;
+                hans := (Singleton h);
+                ncall := Internal;
+            |} s)
     | SInternal s id: step_node id Internal s s.
 
 (* step for the full system (which picks a thread to execute and is
