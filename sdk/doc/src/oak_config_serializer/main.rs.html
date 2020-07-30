@@ -177,6 +177,50 @@
 <span id="177">177</span>
 <span id="178">178</span>
 <span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -205,7 +249,7 @@
 <span class="doccomment">//! ```</span>
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
-<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
     <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">NodeConfiguration</span>,
     <span class="ident">WebAssemblyConfiguration</span>,
@@ -213,7 +257,7 @@
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">reqwest</span>::<span class="ident">Url</span>;
 <span class="kw">use</span> <span class="ident">sha2</span>::{<span class="ident">Digest</span>, <span class="ident">Sha256</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">fs</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">fs</span>, <span class="ident">path</span>};
 <span class="kw">use</span> <span class="ident">structopt</span>::<span class="ident">StructOpt</span>;
 
 <span class="doccomment">/// Command line options for the Oak Application Configuration Serializer.</span>
@@ -267,6 +311,19 @@
     }
 }
 
+<span class="doccomment">/// Directory used to save downloaded Wasm modules.</span>
+<span class="doccomment">/// Created in the `std::env::current_dir()`.</span>
+<span class="kw">const</span> <span class="ident">CACHE_DIRECTORY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;.oak&quot;</span>;
+
+<span class="doccomment">/// Get path for caching a downloaded file in the [`CACHE_DIRECTORY`].</span>
+<span class="doccomment">/// Cache file is named after `sha256_sum`.</span>
+<span class="kw">fn</span> <span class="ident">get_module_cache_path</span>(<span class="ident">sha256_sum</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">path</span>::<span class="ident">PathBuf</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cache_path</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">current_dir</span>().<span class="ident">unwrap</span>();
+    <span class="ident">cache_path</span>.<span class="ident">push</span>(<span class="ident">CACHE_DIRECTORY</span>);
+    <span class="ident">cache_path</span>.<span class="ident">push</span>(<span class="kw-2">&amp;</span><span class="ident">sha256_sum</span>);
+    <span class="ident">cache_path</span>
+}
+
 <span class="doccomment">/// Computes SHA256 sum from `data` and returns it as a HEX encoded string.</span>
 <span class="kw">fn</span> <span class="ident">get_sha256</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">Sha256</span>::<span class="ident">new</span>();
@@ -274,34 +331,65 @@
     <span class="ident">hex</span>::<span class="ident">encode</span>(<span class="ident">hasher</span>.<span class="ident">finalize</span>().<span class="ident">as_slice</span>().<span class="ident">to_vec</span>())
 }
 
-<span class="doccomment">/// Load Wasm module from URL or a file, if URL is not specified.</span>
+<span class="doccomment">/// Download file from `url`.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">download_file_from_url</span>(<span class="ident">url</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">url</span>: <span class="ident">Url</span> <span class="op">=</span> <span class="ident">url</span>
+        .<span class="ident">parse</span>()
+        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t parse URL {}&quot;</span>, <span class="ident">url</span>))<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">reqwest</span>::<span class="ident">get</span>(<span class="ident">url</span>.<span class="ident">clone</span>())
+        .<span class="kw">await</span>
+        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t download file from {}&quot;</span>, <span class="ident">url</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">response</span>
+        .<span class="ident">bytes</span>()
+        .<span class="kw">await</span>
+        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t retrieve file from HTTP response&quot;</span>)<span class="question-mark">?</span>
+        .<span class="ident">to_vec</span>();
+    <span class="prelude-val">Ok</span>(<span class="ident">data</span>)
+}
+
+<span class="doccomment">/// Load Wasm module from file or URL if specified.</span>
+<span class="doccomment">/// If the file was downloaded from URL, it is cached in [`CACHE_DIRECTORY`].</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">load_module</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">Module</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">match</span> <span class="ident">module</span> {
+    <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">module</span> {
         <span class="ident">Module</span>::<span class="ident">Path</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">fs</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>).<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read file {}&quot;</span>, <span class="ident">path</span>))
         }
         <span class="ident">Module</span>::<span class="ident">External</span>(<span class="ident">external</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">url</span>: <span class="ident">Url</span> <span class="op">=</span> <span class="ident">external</span>.<span class="ident">url</span>.<span class="ident">parse</span>().<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse URL&quot;</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Try to load module from cache, if failed, download it from URL.</span>
+            <span class="kw">let</span> <span class="ident">cache_path</span> <span class="op">=</span> <span class="ident">get_module_cache_path</span>(<span class="kw-2">&amp;</span><span class="ident">external</span>.<span class="ident">sha256</span>);
+            <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">fs</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="ident">cache_path</span>) {
+                <span class="prelude-val">Ok</span>(<span class="ident">data</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Loaded module from cache {:?}&quot;</span>, <span class="ident">cache_path</span>.<span class="ident">as_path</span>());
+                    <span class="ident">data</span>
+                }
+                <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">info</span><span class="macro">!</span>(
+                        <span class="string">&quot;Couldn&#39;t load module from cache {:?}, downloading from URL {}&quot;</span>,
+                        <span class="ident">cache_path</span>.<span class="ident">as_path</span>(),
+                        <span class="ident">external</span>.<span class="ident">url</span>,
+                    );
+                    <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">download_file_from_url</span>(<span class="kw-2">&amp;</span><span class="ident">external</span>.<span class="ident">url</span>).<span class="kw">await</span><span class="question-mark">?</span>;
 
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Downloading module from: {}&quot;</span>, <span class="ident">url</span>);
-            <span class="comment">// TODO(#1240): Add a Wasm module cache.</span>
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">reqwest</span>::<span class="ident">get</span>(<span class="ident">url</span>.<span class="ident">clone</span>())
-                .<span class="kw">await</span>
-                .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t download module from {}&quot;</span>, <span class="ident">url</span>))<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">response</span>
-                .<span class="ident">bytes</span>()
-                .<span class="kw">await</span>
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t retrieve module from HTTP response&quot;</span>)<span class="question-mark">?</span>
-                .<span class="ident">to_vec</span>();
+                    <span class="comment">// Save the downloaded Wasm module into the cache directory.</span>
+                    <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="ident">cache_path</span>.<span class="ident">parent</span>().<span class="ident">unwrap</span>())
+                        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create cache directory&quot;</span>)<span class="question-mark">?</span>;
+                    <span class="ident">fs</span>::<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">cache_path</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>).<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> {
+                        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t write file {:?}&quot;</span>, <span class="ident">cache_path</span>.<span class="ident">as_path</span>())
+                    })<span class="question-mark">?</span>;
+                    <span class="ident">data</span>
+                }
+            };
 
-            <span class="kw">let</span> <span class="ident">received_sha256</span> <span class="op">=</span> <span class="ident">get_sha256</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>);
-            <span class="kw">if</span> <span class="ident">received_sha256</span> <span class="op">=</span><span class="op">=</span> <span class="ident">external</span>.<span class="ident">sha256</span> {
+            <span class="comment">// Check SHA256 sum of the Wasm module.</span>
+            <span class="kw">let</span> <span class="ident">sha256_sum</span> <span class="op">=</span> <span class="ident">get_sha256</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>);
+            <span class="kw">if</span> <span class="ident">sha256_sum</span> <span class="op">=</span><span class="op">=</span> <span class="ident">external</span>.<span class="ident">sha256</span> {
                 <span class="prelude-val">Ok</span>(<span class="ident">data</span>)
             } <span class="kw">else</span> {
                 <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(
                     <span class="string">&quot;Incorrect SHA256 sum: expected {}, received {}&quot;</span>,
                     <span class="ident">external</span>.<span class="ident">sha256</span>,
-                    <span class="ident">received_sha256</span>
+                    <span class="ident">sha256_sum</span>
                 ))
             }
         }
