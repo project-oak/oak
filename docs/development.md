@@ -13,7 +13,8 @@
 
 ## Quick Start
 
-To build and run one of the Oak example applications under Docker, run (after [installing Docker](Docker.md) if necessary):
+To build and run one of the Oak example applications under Docker, run (after
+[installing Docker](Docker.md) if necessary):
 
 ```bash
 ./scripts/docker_pull  # retrieve cached Docker image for faster builds
