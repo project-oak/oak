@@ -62,8 +62,9 @@ are squashed against the correct commit if necessary.
 
 ## Style Guide
 
-Before submitting your PR, we ask you to run `./scripts/runner format`, which
-formats code & docs according to our style guide.
+Before submitting your PR, we ask you to run
+`./scripts/docker_run ./scripts/runner format`, which formats code & docs
+according to our style guide.
 
 ### Rust
 
