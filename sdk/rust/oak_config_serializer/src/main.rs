@@ -118,7 +118,7 @@ async fn download_file_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
 /// Load Wasm module from file or URL if specified.
 /// If the file was downloaded from URL, it is cached in [`CACHE_DIRECTORY`].
 async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
-    let data = match &module {
+    match &module {
         Module::Path(path) => {
             fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
         }
@@ -163,44 +163,8 @@ async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
                 ))
             }
         }
-    }?;
-    Ok(data)
+    }
 }
-
-// /// Load Wasm module from file or URL if specified.
-// /// If the file was downloaded from URL, it is cached in [`CACHE_DIRECTORY`].
-// async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
-//     let data = match &module {
-//         Module::Path(path) => {
-//             fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
-//         }
-//         Module::External(external) => {
-//             let mut cache_path = std::env::current_dir().unwrap();
-//             cache_path.push(CACHE_DIRECTORY);
-//             std::fs::create_dir_all(cache_path.as_path())
-//                 .context("Couldn't create cache directory")?;
-
-//             let data = download_file_from_url(&external.url).await?;
-
-//             // Check SHA256 sum of the downloaded Wasm module.
-//             let received_sha256 = get_sha256(&data);
-//             if received_sha256 == external.sha256 {
-//                 // Save the downloaded Wasm module into the cache directory.
-//                 cache_path.push(get_sha256(&data));
-//                 fs::write(&cache_path, &data)
-//                     .with_context(|| format!("Couldn't write file {:?}", cache_path.as_path()))?;
-//                 Ok(data)
-//             } else {
-//                 Err(anyhow!(
-//                     "Incorrect SHA256 sum: expected {}, received {}",
-//                     external.sha256,
-//                     received_sha256
-//                 ))
-//             }
-//         }
-//     }?;
-//     Ok(data)
-// }
 
 /// Serializes an application configuration from `app_config` and writes it into `filename`.
 pub fn write_config_to_file(
