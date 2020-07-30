@@ -1138,6 +1138,7 @@
 <span id="1138">1138</span>
 <span id="1139">1139</span>
 <span id="1140">1140</span>
+<span id="1141">1141</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1328,7 +1329,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AuxServer</span> {
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">join_handle</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">notify_sender</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">termination_notificiation_sender</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">AuxServer</span> {
@@ -1339,16 +1340,17 @@
         <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
         <span class="ident">f</span>: <span class="ident">F</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> (<span class="ident">notify_sender</span>, <span class="ident">notify_receiver</span>) <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>();
+        <span class="kw">let</span> (<span class="ident">termination_notificiation_sender</span>, <span class="ident">termination_notificiation_receiver</span>) <span class="op">=</span>
+            <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>();
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;spawning {} server on new thread&quot;</span>, <span class="ident">name</span>);
         <span class="kw">let</span> <span class="ident">join_handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
             .<span class="ident">name</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}-server&quot;</span>, <span class="ident">name</span>))
-            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="ident">f</span>(<span class="ident">port</span>, <span class="ident">runtime</span>, <span class="ident">notify_receiver</span>))
+            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="ident">f</span>(<span class="ident">port</span>, <span class="ident">runtime</span>, <span class="ident">termination_notificiation_receiver</span>))
             .<span class="ident">expect</span>(<span class="string">&quot;failed to spawn introspection thread&quot;</span>);
         <span class="ident">AuxServer</span> {
             <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_string</span>(),
             <span class="ident">join_handle</span>: <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>),
-            <span class="ident">notify_sender</span>: <span class="prelude-val">Some</span>(<span class="ident">notify_sender</span>),
+            <span class="ident">termination_notificiation_sender</span>: <span class="prelude-val">Some</span>(<span class="ident">termination_notificiation_sender</span>),
         }
     }
 }
@@ -1358,12 +1360,12 @@
     <span class="doccomment">/// then joining its thread.</span>
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="kw">let</span> <span class="ident">join_handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">join_handle</span>.<span class="ident">take</span>();
-        <span class="kw">let</span> <span class="ident">notify_sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">notify_sender</span>.<span class="ident">take</span>();
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">notify_sender</span>) <span class="op">=</span> <span class="ident">notify_sender</span> {
+        <span class="kw">let</span> <span class="ident">termination_notificiation_sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">termination_notificiation_sender</span>.<span class="ident">take</span>();
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">termination_notificiation_sender</span>) <span class="op">=</span> <span class="ident">termination_notificiation_sender</span> {
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;stopping {} server&quot;</span>, <span class="self">self</span>.<span class="ident">name</span>);
             <span class="comment">// The auxiliary server may already have stopped, so ignore</span>
             <span class="comment">// errors when sending the stop notification.</span>
-            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">notify_sender</span>.<span class="ident">send</span>(());
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">termination_notificiation_sender</span>.<span class="ident">send</span>(());
         }
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">join_handle</span>) <span class="op">=</span> <span class="ident">join_handle</span> {
             <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">join_handle</span>.<span class="ident">join</span>();
