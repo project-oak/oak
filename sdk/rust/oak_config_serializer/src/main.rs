@@ -25,7 +25,7 @@
 //! ```
 
 use anyhow::{anyhow, Context};
-use log::debug;
+use log::{debug, info};
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, NodeConfiguration,
     WebAssemblyConfiguration,
@@ -33,7 +33,7 @@ use oak_abi::proto::oak::application::{
 use prost::Message;
 use reqwest::Url;
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, path};
 use structopt::StructOpt;
 
 /// Command line options for the Oak Application Configuration Serializer.
@@ -91,6 +91,15 @@ impl Default for InitialNodeConfig {
 /// Created in the `std::env::current_dir()`.
 const CACHE_DIRECTORY: &str = ".oak";
 
+/// Get path for caching a downloaded file in the [`CACHE_DIRECTORY`].
+/// Cache file is named after `sha256_sum`.
+fn get_module_cache_path(sha256_sum: &str) -> path::PathBuf {
+    let mut cache_path = std::env::current_dir().unwrap();
+    cache_path.push(CACHE_DIRECTORY);
+    cache_path.push(&sha256_sum);
+    cache_path
+}
+
 /// Computes SHA256 sum from `data` and returns it as a HEX encoded string.
 fn get_sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
@@ -123,18 +132,15 @@ async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
             fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
         }
         Module::External(external) => {
-            let mut cache_path = std::env::current_dir().unwrap();
-            cache_path.push(CACHE_DIRECTORY);
-            cache_path.push(&external.sha256);
-
             // Try to load module from cache, if failed, download it from URL.
+            let cache_path = get_module_cache_path(&external.sha256);
             let data = match fs::read(&cache_path) {
                 Ok(data) => {
-                    debug!("Loaded module from cache {:?}", cache_path.as_path());
+                    info!("Loaded module from cache {:?}", cache_path.as_path());
                     data
                 }
                 Err(_) => {
-                    debug!(
+                    info!(
                         "Couldn't load module from cache {:?}, downloading from URL {}",
                         cache_path.as_path(),
                         external.url,
@@ -152,14 +158,14 @@ async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
             };
 
             // Check SHA256 sum of the Wasm module.
-            let received_sha256 = get_sha256(&data);
-            if received_sha256 == external.sha256 {
+            let sha256_sum = get_sha256(&data);
+            if sha256_sum == external.sha256 {
                 Ok(data)
             } else {
                 Err(anyhow!(
                     "Incorrect SHA256 sum: expected {}, received {}",
                     external.sha256,
-                    received_sha256
+                    sha256_sum
                 ))
             }
         }
