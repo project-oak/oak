@@ -131,7 +131,7 @@ async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
             let data = match fs::read(&cache_path) {
                 Ok(data) => {
                     debug!("Loaded module from cache {:?}", cache_path.as_path());
-                    Ok(data)
+                    data
                 }
                 Err(_) => {
                     debug!(
@@ -139,18 +139,21 @@ async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
                         cache_path.as_path(),
                         external.url,
                     );
-                    download_file_from_url(&external.url).await
-                }
-            }?;
+                    let data = download_file_from_url(&external.url).await?;
 
-            // Check SHA256 sum of the downloaded Wasm module.
+                    // Save the downloaded Wasm module into the cache directory.
+                    std::fs::create_dir_all(cache_path.parent().unwrap())
+                        .context("Couldn't create cache directory")?;
+                    fs::write(&cache_path, &data).with_context(|| {
+                        format!("Couldn't write file {:?}", cache_path.as_path())
+                    })?;
+                    data
+                }
+            };
+
+            // Check SHA256 sum of the Wasm module.
             let received_sha256 = get_sha256(&data);
             if received_sha256 == external.sha256 {
-                // Save the downloaded Wasm module into the cache directory.
-                std::fs::create_dir_all(cache_path.parent().unwrap())
-                    .context("Couldn't create cache directory")?;
-                fs::write(&cache_path, &data)
-                    .with_context(|| format!("Couldn't write file {:?}", cache_path.as_path()))?;
                 Ok(data)
             } else {
                 Err(anyhow!(
