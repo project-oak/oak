@@ -170,7 +170,7 @@ to a WebAssembly module and then serializes it into a binary application
 configuration file to be loaded to the Oak Server:
 
 ```bash
-./scripts/runner run-examples --run-server=false --run-clients=false --example-name=hello_world
+./scripts/runner run-examples --run-server=false --client-variant=none --example-name=hello_world
 ```
 
 This binary application configuration file includes the compiled Wasm code for
@@ -201,7 +201,7 @@ Oak Application (which must already have been compiled into WebAssembly and
 built into a serialized configuration, as [described above](#build-application).
 
 ```bash
-./scripts/runner run-examples --run-clients=false --example-name=hello_world
+./scripts/runner run-examples --client-variant=none --example-name=hello_world
 ```
 
 In the end, you should end up with an Oak server running, end with log output

@@ -20,6 +20,10 @@ use crate::{
     message::{Message, NodeMessage},
     metrics::Metrics,
     node,
+    proto::oak::introspection_events::{
+        event::EventDetails, ChannelCreated, HandleCreated, HandleDestroyed, MessageDequeued,
+        MessageEnqueued, NodeCreated, NodeDestroyed,
+    },
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
     GrpcConfiguration,
 };
@@ -269,7 +273,17 @@ impl Runtime {
                     "{:?}: new ABI handle {} maps to {:?}",
                     node_id, candidate, half
                 );
+
+                let event_details = HandleCreated {
+                    node_id: node_id.0,
+                    handle: candidate,
+                    channel_id: half.get_channel_id(),
+                };
+
                 node_info.abi_handles.insert(candidate, half);
+
+                self.introspection_event(EventDetails::HandleCreated(event_details));
+
                 return candidate;
             }
         }
@@ -278,11 +292,28 @@ impl Runtime {
     fn drop_abi_handle(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
-        node_info
+
+        let event_details = HandleDestroyed {
+            node_id: node_id.0,
+            handle,
+            channel_id: node_info
+                .abi_handles
+                .get(&handle)
+                .ok_or(OakStatus::ErrBadHandle)?
+                .get_channel_id(),
+        };
+
+        let result = node_info
             .abi_handles
             .remove(&handle)
             .ok_or(OakStatus::ErrBadHandle)
-            .map(|_half| ())
+            .map(|_half| ());
+
+        if result.is_ok() {
+            self.introspection_event(EventDetails::HandleDestroyed(event_details))
+        };
+
+        result
     }
     /// Convert an ABI handle to an internal [`ChannelHalf`].
     fn abi_to_half(
@@ -594,6 +625,12 @@ impl Runtime {
             write_handle,
             read_handle,
         );
+
+        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated {
+            node_id: node_id.0,
+            channel_id,
+        }));
+
         Ok((write_handle, read_handle))
     }
 
@@ -704,9 +741,15 @@ impl Runtime {
         let half = self.abi_to_write_half(node_id, write_handle)?;
         self.validate_can_write_to_channel(node_id, &half)?;
 
+        let event_details = MessageEnqueued {
+            node_id: node_id.0,
+            channel_id: half.get_channel_id(),
+            included_handles: node_msg.handles.clone(),
+        };
+
         // Translate the Node-relative handles in the `NodeMessage` to channel halves.
         let msg = self.message_from(node_msg, node_id)?;
-        with_writer_channel(&half, |channel| {
+        let result = with_writer_channel(&half, |channel| {
             if !channel.has_readers() {
                 return Err(OakStatus::ErrChannelClosed);
             }
@@ -714,7 +757,11 @@ impl Runtime {
             channel.wake_waiters();
 
             Ok(())
-        })
+        });
+
+        self.introspection_event(EventDetails::MessageEnqueued(event_details));
+
+        result
     }
 
     /// Translate the Node-relative handles in the `NodeMessage` to channel halves.
@@ -752,7 +799,17 @@ impl Runtime {
         }) {
             Err(status) => Err(status),
             Ok(None) => Ok(None),
-            Ok(Some(runtime_msg)) => Ok(Some(self.node_message_from(runtime_msg, node_id))),
+            Ok(Some(runtime_msg)) => {
+                let node_msg = self.node_message_from(runtime_msg, node_id);
+
+                self.introspection_event(EventDetails::MessageDequeued(MessageDequeued {
+                    node_id: node_id.0,
+                    channel_id: half.get_channel_id(),
+                    acquired_handles: node_msg.handles.clone(),
+                }));
+
+                Ok(Some(node_msg))
+            }
         }
     }
 
@@ -892,6 +949,10 @@ impl Runtime {
             .remove(&node_id)
             .expect("remove_node_id: Node didn't exist!");
         self.update_nodes_count_metric();
+
+        self.introspection_event(EventDetails::NodeDestroyed(NodeDestroyed {
+            node_id: node_id.0,
+        }))
     }
 
     /// Add an [`NodeId`] [`NodeInfo`] pair to the [`Runtime`]. This method temporarily holds the
@@ -986,6 +1047,10 @@ impl Runtime {
         // Insert the now running instance to the list of running instances (by moving it), so that
         // `Node::stop` will be called on it eventually.
         self.add_node_stopper(new_node_id, node_stopper);
+
+        self.introspection_event(EventDetails::NodeCreated(NodeCreated {
+            node_id: node_id.0,
+        }));
 
         Ok(())
     }

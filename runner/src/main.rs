@@ -61,6 +61,8 @@ const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-apple-darwin";
 const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 
 static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
+const ALL_CLIENTS: &str = "all";
+const NO_CLIENTS: &str = "none";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -216,23 +218,25 @@ fn run_examples(opt: &RunExamples) -> Step {
         })
         .collect();
     eprintln!("parsed examples manifest files: {:?}", examples);
-    match opt.application_variant.as_str() {
-        "rust" => Step::Multiple {
-            name: "examples".to_string(),
-            /// TODO(#396): Check that all the example folders are covered by an entry here, or
-            /// explicitly ignored. This will probably require pulling out the `Vec<Example>` to a
-            /// top-level method first.
-            steps: examples
-                .iter()
-                .filter(|example| match &opt.example_name {
-                    Some(example_name) => &example.name == example_name,
-                    None => true,
-                })
-                .map(|example| run_example(opt, example))
-                .collect(),
-        },
-        "cpp" => unimplemented!("C++ examples not implemented yet"),
-        v => panic!("unknown variant: {}", v),
+    Step::Multiple {
+        name: "examples".to_string(),
+        /// TODO(#396): Check that all the example folders are covered by an entry here, or
+        /// explicitly ignored. This will probably require pulling out the `Vec<Example>` to a
+        /// top-level method first.
+        steps: examples
+            .iter()
+            .filter(|example| match &opt.example_name {
+                Some(example_name) => &example.name == example_name,
+                None => true,
+            })
+            .filter(|example| {
+                example
+                    .applications
+                    .get(opt.application_variant.as_str())
+                    .is_some()
+            })
+            .map(|example| run_example(opt, example))
+            .collect(),
     }
 }
 
@@ -446,7 +450,22 @@ fn run_ci() -> Step {
                 application_variant: "rust".to_string(),
                 example_name: None,
                 run_server: None,
-                run_clients: None,
+                client_variant: ALL_CLIENTS.to_string(),
+                client_additional_args: Vec::new(),
+                server_additional_args: Vec::new(),
+                build_docker: false,
+                build_server: BuildServer {
+                    server_variant: "base".to_string(),
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                    coverage: false,
+                },
+            }),
+            run_examples(&RunExamples {
+                application_variant: "cpp".to_string(),
+                example_name: None,
+                run_server: None,
+                client_variant: ALL_CLIENTS.to_string(),
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
                 build_docker: false,
@@ -462,7 +481,7 @@ fn run_ci() -> Step {
                 application_variant: "rust".to_string(),
                 example_name: Some("hello_world".to_string()),
                 run_server: Some(false),
-                run_clients: Some(false),
+                client_variant: NO_CLIENTS.to_string(),
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
                 build_docker: true,
@@ -520,8 +539,7 @@ struct Example {
     server: ExampleServer,
     #[serde(default)]
     backend: Option<Executable>,
-    application: Application,
-    modules: HashMap<String, Target>,
+    applications: HashMap<String, Application>,
     clients: HashMap<String, Executable>,
 }
 
@@ -530,6 +548,7 @@ struct Example {
 struct Application {
     manifest: String,
     out: String,
+    modules: HashMap<String, Target>,
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
@@ -568,17 +587,26 @@ struct Executable {
 }
 
 fn run_example(opt: &RunExamples, example: &Example) -> Step {
+    let application = example
+        .applications
+        .get(opt.application_variant.as_str())
+        .expect("Unsupported application variant");
+
     let run_server = run_example_server(
         &opt.build_server,
         &example.server,
         opt.server_additional_args.clone(),
-        &example.application.out,
+        &application.out,
     );
     let run_clients = Step::Multiple {
         name: "run clients".to_string(),
         steps: example
             .clients
             .iter()
+            .filter(|(name, _)| match opt.client_variant.as_str() {
+                ALL_CLIENTS => true,
+                client => *name == client,
+            })
             .map(|(name, client)| run_client(name, &client, opt.client_additional_args.clone()))
             .collect(),
     };
@@ -592,7 +620,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     // clients in the foreground.
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
-        let run_server_clients = if opt.run_clients.unwrap_or(true) {
+        let run_server_clients = if opt.client_variant != NO_CLIENTS {
             Step::WithBackground {
                 name: "background server".to_string(),
                 background: run_server,
@@ -613,7 +641,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
             None => run_server_clients,
         }
     } else {
-        if opt.run_clients.unwrap_or(true) {
+        if opt.client_variant != NO_CLIENTS {
             run_clients
         } else {
             Step::Multiple {
@@ -629,7 +657,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
             vec![
                 Step::Multiple {
                     name: "build wasm modules".to_string(),
-                    steps: example
+                    steps: application
                         .modules
                         .iter()
                         .map(|(name, target)| build_wasm_module(name, target, &example.name))
@@ -637,7 +665,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 },
                 Step::Single {
                     name: "build application".to_string(),
-                    command: build_application(&example.application),
+                    command: build_application(&application),
                 },
                 // Build the server first so that when running it in the next step it will start up
                 // faster.

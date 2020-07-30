@@ -37,7 +37,7 @@ a Sparse Vector - a dictionary with integer keys.
 Build and run the Aggregator with the following command:
 
 ```bash
-./scripts/runner run-examples --run-clients=false --example-name=aggregator
+./scripts/runner run-examples --client-variant=none --example-name=aggregator
 ```
 
 Aggregator code is in `common` and `module` directories (where `common` defines

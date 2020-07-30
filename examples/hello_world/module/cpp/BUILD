@@ -22,7 +22,7 @@ package(
 )
 
 cc_binary(
-    name = "hello_world.wasm",
+    name = "hello_world_cpp.wasm",
     srcs = ["hello_world.cc"],
     deps = [
         "//oak/module:oak_abi",
