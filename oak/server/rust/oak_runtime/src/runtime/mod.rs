@@ -187,7 +187,7 @@ pub enum ReadStatus {
 pub struct AuxServer {
     pub name: String,
     pub join_handle: Option<JoinHandle<()>>,
-    pub notify_sender: Option<tokio::sync::oneshot::Sender<()>>,
+    pub termination_notificiation_sender: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
 impl AuxServer {
@@ -198,16 +198,17 @@ impl AuxServer {
         runtime: Arc<Runtime>,
         f: F,
     ) -> Self {
-        let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
+        let (termination_notificiation_sender, termination_notificiation_receiver) =
+            tokio::sync::oneshot::channel::<()>();
         info!("spawning {} server on new thread", name);
         let join_handle = thread::Builder::new()
             .name(format!("{}-server", name))
-            .spawn(move || f(port, runtime, notify_receiver))
+            .spawn(move || f(port, runtime, termination_notificiation_receiver))
             .expect("failed to spawn introspection thread");
         AuxServer {
             name: name.to_string(),
             join_handle: Some(join_handle),
-            notify_sender: Some(notify_sender),
+            termination_notificiation_sender: Some(termination_notificiation_sender),
         }
     }
 }
@@ -217,12 +218,12 @@ impl Drop for AuxServer {
     /// then joining its thread.
     fn drop(&mut self) {
         let join_handle = self.join_handle.take();
-        let notify_sender = self.notify_sender.take();
-        if let Some(notify_sender) = notify_sender {
+        let termination_notificiation_sender = self.termination_notificiation_sender.take();
+        if let Some(termination_notificiation_sender) = termination_notificiation_sender {
             info!("stopping {} server", self.name);
             // The auxiliary server may already have stopped, so ignore
             // errors when sending the stop notification.
-            let _ = notify_sender.send(());
+            let _ = termination_notificiation_sender.send(());
         }
         if let Some(join_handle) = join_handle {
             let result = join_handle.join();
