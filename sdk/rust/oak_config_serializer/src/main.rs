@@ -25,7 +25,7 @@
 //! ```
 
 use anyhow::{anyhow, Context};
-use log::debug;
+use log::{debug, info};
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, NodeConfiguration,
     WebAssemblyConfiguration,
@@ -33,7 +33,7 @@ use oak_abi::proto::oak::application::{
 use prost::Message;
 use reqwest::Url;
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, path};
 use structopt::StructOpt;
 
 /// Command line options for the Oak Application Configuration Serializer.
@@ -87,6 +87,19 @@ impl Default for InitialNodeConfig {
     }
 }
 
+/// Directory used to save downloaded Wasm modules.
+/// Created in the `std::env::current_dir()`.
+const CACHE_DIRECTORY: &str = ".oak";
+
+/// Get path for caching a downloaded file in the [`CACHE_DIRECTORY`].
+/// Cache file is named after `sha256_sum`.
+fn get_module_cache_path(sha256_sum: &str) -> path::PathBuf {
+    let mut cache_path = std::env::current_dir().unwrap();
+    cache_path.push(CACHE_DIRECTORY);
+    cache_path.push(&sha256_sum);
+    cache_path
+}
+
 /// Computes SHA256 sum from `data` and returns it as a HEX encoded string.
 fn get_sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
@@ -94,34 +107,65 @@ fn get_sha256(data: &[u8]) -> String {
     hex::encode(hasher.finalize().as_slice().to_vec())
 }
 
-/// Load Wasm module from URL or a file, if URL is not specified.
+/// Download file from `url`.
+async fn download_file_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
+    let url: Url = url
+        .parse()
+        .with_context(|| format!("Couldn't parse URL {}", url))?;
+
+    let response = reqwest::get(url.clone())
+        .await
+        .with_context(|| format!("Couldn't download file from {}", url))?;
+    let data = response
+        .bytes()
+        .await
+        .context("Couldn't retrieve file from HTTP response")?
+        .to_vec();
+    Ok(data)
+}
+
+/// Load Wasm module from file or URL if specified.
+/// If the file was downloaded from URL, it is cached in [`CACHE_DIRECTORY`].
 async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
-    match module {
+    match &module {
         Module::Path(path) => {
             fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
         }
         Module::External(external) => {
-            let url: Url = external.url.parse().context("Couldn't parse URL")?;
+            // Try to load module from cache, if failed, download it from URL.
+            let cache_path = get_module_cache_path(&external.sha256);
+            let data = match fs::read(&cache_path) {
+                Ok(data) => {
+                    info!("Loaded module from cache {:?}", cache_path.as_path());
+                    data
+                }
+                Err(_) => {
+                    info!(
+                        "Couldn't load module from cache {:?}, downloading from URL {}",
+                        cache_path.as_path(),
+                        external.url,
+                    );
+                    let data = download_file_from_url(&external.url).await?;
 
-            debug!("Downloading module from: {}", url);
-            // TODO(#1240): Add a Wasm module cache.
-            let response = reqwest::get(url.clone())
-                .await
-                .with_context(|| format!("Couldn't download module from {}", url))?;
-            let data = response
-                .bytes()
-                .await
-                .context("Couldn't retrieve module from HTTP response")?
-                .to_vec();
+                    // Save the downloaded Wasm module into the cache directory.
+                    std::fs::create_dir_all(cache_path.parent().unwrap())
+                        .context("Couldn't create cache directory")?;
+                    fs::write(&cache_path, &data).with_context(|| {
+                        format!("Couldn't write file {:?}", cache_path.as_path())
+                    })?;
+                    data
+                }
+            };
 
-            let received_sha256 = get_sha256(&data);
-            if received_sha256 == external.sha256 {
+            // Check SHA256 sum of the Wasm module.
+            let sha256_sum = get_sha256(&data);
+            if sha256_sum == external.sha256 {
                 Ok(data)
             } else {
                 Err(anyhow!(
                     "Incorrect SHA256 sum: expected {}, received {}",
                     external.sha256,
-                    received_sha256
+                    sha256_sum
                 ))
             }
         }
