@@ -68,6 +68,7 @@ propertries about executing a single node in serial.
 
 Stut_trace_low_eq is the "up to high stutter" definition.
 *)
+(*
 Inductive trace_low_eq: level -> trace -> trace -> Prop :=
     | NilEQ ell: trace_low_eq ell [] []
     | AddBoth ell x y t1 t2 
@@ -89,4 +90,4 @@ Inductive stut_trace_low_eq: level -> trace -> trace -> Prop :=
         (H1: stut_trace_low_eq ell (y::t1) t2)
         (H2: state_low_eq ell x y):
         stut_trace_low_eq ell (x::y::t1) t2.
-
+*)

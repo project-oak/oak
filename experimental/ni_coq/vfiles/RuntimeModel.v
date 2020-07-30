@@ -199,20 +199,3 @@ Inductive step_system: state -> state -> Prop :=
         (H2: step_node id c s s'):
         step_system s (state_upd_call id c' s').
 
-(* Traces are sequences of states modeling entire executions *)
-(* Noninterference definitions are defined by comparing "any two" executions *)
-Definition trace := list state.
-
-Definition last_state (t: trace)(s: state): Prop :=
-    match t with
-        | [] => False
-        | x :: t' => s = x
-    end.
-
-Inductive valid_trace (init: state): trace -> Prop :=
-    | VTOne: (valid_trace init [init] )
-    | VTAdd (s s': state)(t: trace)
-            (H0: valid_trace init t )
-            (H1: last_state t s')
-            (H2: step_system s s):
-            valid_trace init (s' :: t).
