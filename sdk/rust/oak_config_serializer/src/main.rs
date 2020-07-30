@@ -99,17 +99,18 @@ fn get_sha256(data: &[u8]) -> String {
 }
 
 /// Download file from `url`.
-async fn download_module_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
-    let url: Url = url.parse().context("Couldn't parse URL")?;
+async fn download_file_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
+    let url: Url = url
+        .parse()
+        .with_context(|| format!("Couldn't parse URL {}", url))?;
 
-    debug!("Downloading module from: {}", url);
     let response = reqwest::get(url.clone())
         .await
-        .with_context(|| format!("Couldn't download module from {}", url))?;
+        .with_context(|| format!("Couldn't download file from {}", url))?;
     let data = response
         .bytes()
         .await
-        .context("Couldn't retrieve module from HTTP response")?
+        .context("Couldn't retrieve file from HTTP response")?
         .to_vec();
     Ok(data)
 }
@@ -124,16 +125,30 @@ async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
         Module::External(external) => {
             let mut cache_path = std::env::current_dir().unwrap();
             cache_path.push(CACHE_DIRECTORY);
-            std::fs::create_dir_all(cache_path.as_path())
-                .context("Couldn't create cache directory")?;
+            cache_path.push(&external.sha256);
 
-            let data = download_module_from_url(&external.url).await?;
+            // Try to load module from cache, if failed, download it from URL.
+            let data = match fs::read(&cache_path) {
+                Ok(data) => {
+                    debug!("Loaded module from cache {:?}", cache_path.as_path());
+                    Ok(data)
+                }
+                Err(_) => {
+                    debug!(
+                        "Couldn't load module from cache {:?}, downloading from URL {}",
+                        cache_path.as_path(),
+                        external.url,
+                    );
+                    download_file_from_url(&external.url).await
+                }
+            }?;
 
             // Check SHA256 sum of the downloaded Wasm module.
             let received_sha256 = get_sha256(&data);
             if received_sha256 == external.sha256 {
                 // Save the downloaded Wasm module into the cache directory.
-                cache_path.push(get_sha256(&data));
+                std::fs::create_dir_all(cache_path.parent().unwrap())
+                    .context("Couldn't create cache directory")?;
                 fs::write(&cache_path, &data)
                     .with_context(|| format!("Couldn't write file {:?}", cache_path.as_path()))?;
                 Ok(data)
@@ -148,6 +163,41 @@ async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
     }?;
     Ok(data)
 }
+
+// /// Load Wasm module from file or URL if specified.
+// /// If the file was downloaded from URL, it is cached in [`CACHE_DIRECTORY`].
+// async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
+//     let data = match &module {
+//         Module::Path(path) => {
+//             fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
+//         }
+//         Module::External(external) => {
+//             let mut cache_path = std::env::current_dir().unwrap();
+//             cache_path.push(CACHE_DIRECTORY);
+//             std::fs::create_dir_all(cache_path.as_path())
+//                 .context("Couldn't create cache directory")?;
+
+//             let data = download_file_from_url(&external.url).await?;
+
+//             // Check SHA256 sum of the downloaded Wasm module.
+//             let received_sha256 = get_sha256(&data);
+//             if received_sha256 == external.sha256 {
+//                 // Save the downloaded Wasm module into the cache directory.
+//                 cache_path.push(get_sha256(&data));
+//                 fs::write(&cache_path, &data)
+//                     .with_context(|| format!("Couldn't write file {:?}", cache_path.as_path()))?;
+//                 Ok(data)
+//             } else {
+//                 Err(anyhow!(
+//                     "Incorrect SHA256 sum: expected {}, received {}",
+//                     external.sha256,
+//                     received_sha256
+//                 ))
+//             }
+//         }
+//     }?;
+//     Ok(data)
+// }
 
 /// Serializes an application configuration from `app_config` and writes it into `filename`.
 pub fn write_config_to_file(
