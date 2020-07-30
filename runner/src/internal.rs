@@ -101,25 +101,80 @@ pub struct BuildServer {
     pub coverage: bool,
 }
 
+/// A construct to keep track of the status of the execution. It only cares about the top-level
+/// steps.
+#[derive(Clone)]
+pub struct Status {
+    error: usize,
+    ok: usize,
+    remaining: usize,
+}
+
+impl Status {
+    pub fn new(remaining: usize) -> Self {
+        Status {
+            error: 0,
+            ok: 0,
+            remaining,
+        }
+    }
+
+    /// Guarantees that the `error`, `ok`, and `remaining` counts are updated only after the
+    /// completions of each top-level step.
+    fn update(&mut self, context: &Context, step_has_error: bool) {
+        // Update the status with results from the step, only if it is a top-level step.
+        if context.depth() == 1 {
+            self.remaining -= 1;
+            // We only care about pass (`ok`) and fail (`error`). If an entire step is skipped, we
+            // count it as a passed step.
+            if step_has_error {
+                self.error += 1;
+            } else {
+                self.ok += 1;
+            }
+        }
+    }
+}
+
+/// Formats the status as `E:<error-count>,O:<ok-count>,R:<remaining-count>`, suitable for
+/// annotating the log lines.
+impl std::fmt::Display for Status {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "E:{},O:{},R:{}", self.error, self.ok, self.remaining)
+    }
+}
+
 /// Encapsulates all the local state relative to a step, and is propagated to child steps.
 pub struct Context {
     opt: Opt,
-    prefix: String,
+    prefix: Vec<String>,
 }
 
 impl Context {
     pub fn root(opt: &Opt) -> Self {
         Context {
             opt: opt.clone(),
-            prefix: "".to_string(),
+            prefix: vec![],
         }
     }
 
-    fn child(&self, prefix: &str) -> Self {
+    fn child(&self, name: &str) -> Self {
+        let mut prefix = self.prefix.clone();
+        prefix.push(name.to_string());
         Context {
             opt: self.opt.clone(),
-            prefix: format!("{} ❯ {}", self.prefix, prefix),
+            prefix,
         }
+    }
+
+    fn depth(&self) -> usize {
+        self.prefix.len()
+    }
+}
+
+impl std::fmt::Display for Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.prefix.join(" ❯ "))
     }
 }
 
@@ -164,6 +219,25 @@ pub enum Step {
     },
 }
 
+impl Step {
+    /// Returns the number of top-level steps or commands. The number of sub-steps is not
+    /// recursively accumulated in the returned length.
+    pub fn len(&self) -> usize {
+        match self {
+            Step::Single {
+                name: _,
+                command: _,
+            } => 1,
+            Step::Multiple { name: _, steps: s } => s.len(),
+            Step::WithBackground {
+                name: _,
+                background: _,
+                foreground: f,
+            } => f.len(),
+        }
+    }
+}
+
 pub struct StepResult {
     pub values: HashSet<StatusResultValue>,
     pub failed_steps_prefixes: Vec<String>,
@@ -196,8 +270,10 @@ where
 /// Run the provided step, printing out information about the execution, and returning a set of
 /// status results from the single or multiple steps that were executed.
 #[async_recursion]
-pub async fn run_step(context: &Context, step: Step) -> StepResult {
+pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> StepResult {
     let mut step_result = StepResult::new();
+    let now = chrono::Utc::now();
+    let time_of_day = now.format("%H:%M:%S");
     match step {
         Step::Single { name, command } => {
             let context = context.child(&name);
@@ -206,46 +282,53 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
 
             if context.opt.commands || context.opt.dry_run {
                 eprintln!(
-                    "{} ⊢ [{}] ... ",
-                    context.prefix,
+                    "[{}; {}]: {} ⊢ [{}] ... ",
+                    time_of_day,
+                    run_status,
+                    context,
                     command.description().blue()
                 );
             }
 
-            eprint!("{} ⊢ ", context.prefix);
+            eprint!("[{}; {}]: {} ⊢ ", time_of_day, run_status, context);
             let status = command.run(&context.opt).result().await;
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             eprintln!("{} [{:.0?}]", status.value, elapsed);
 
-            if (status.value == StatusResultValue::Error || context.opt.logs)
-                && !status.logs.is_empty()
-            {
-                eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
+            let step_failed = status.value == StatusResultValue::Error;
+            if (step_failed || context.opt.logs) && !status.logs.is_empty() {
+                eprintln!("{} {}", context, "╔════════════════════════".blue());
                 for line in status.logs.lines() {
-                    eprintln!("{} {} {}", context.prefix, "║".blue(), line);
+                    eprintln!("{} {} {}", context, "║".blue(), line);
                 }
-                eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
-                step_result.failed_steps_prefixes.push(context.prefix);
+                eprintln!("{} {}", context, "╚════════════════════════".blue());
+                step_result
+                    .failed_steps_prefixes
+                    .push(format!("{}", context));
             }
             step_result.values.insert(status.value);
+            run_status.update(&context, step_failed);
         }
         Step::Multiple { name, steps } => {
             let context = context.child(&name);
-            eprintln!("{} {{", context.prefix);
+            eprintln!("[{}; {}]: {} {{", time_of_day, run_status, context);
             let start = Instant::now();
             for step in steps {
-                let mut result = run_step(&context, step).await;
+                let mut result = run_step(&context, step, run_status.clone()).await;
                 step_result.values = step_result.values.union(&result.values).cloned().collect();
                 step_result
                     .failed_steps_prefixes
                     .append(&mut result.failed_steps_prefixes);
+                run_status.update(&context, result.values.contains(&StatusResultValue::Error));
             }
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             eprintln!(
-                "{} }} ⊢ {} [{:.0?}]",
-                context.prefix,
+                "[{}; {}]: {} }} ⊢ {} [{:.0?}]",
+                time_of_day,
+                run_status,
+                context,
                 values_to_string(&step_result.values),
                 elapsed
             );
@@ -256,7 +339,7 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
             foreground,
         } => {
             let context = context.child(&name);
-            eprintln!("{} {{", context.prefix);
+            eprintln!("[{}; {}]: {} {{", time_of_day, run_status, context);
 
             let background_command = if context.opt.commands || context.opt.dry_run {
                 format!("[{}]", background.description().blue())
@@ -264,8 +347,8 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
                 "".to_string()
             };
             eprintln!(
-                "{} ⊢ {} (background) ...",
-                context.prefix, background_command
+                "[{}; {}]: {} ⊢ {} (background) ...",
+                time_of_day, run_status, context, background_command
             );
 
             let mut running_background = background.run(&context.opt);
@@ -284,7 +367,7 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
             let background_stdout_future = tokio::spawn(read_to_end(running_background.stdout()));
             let background_stderr_future = tokio::spawn(read_to_end(running_background.stderr()));
 
-            let mut foreground_result = run_step(&context, *foreground).await;
+            let mut foreground_result = run_step(&context, *foreground, run_status.clone()).await;
 
             // TODO(#396): If the background task was already spontaneously terminated by now, it is
             // probably a sign that something went wrong, so we should return an error.
@@ -299,11 +382,11 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
 
             let logs = format_logs(&stdout, &stderr);
 
-            eprintln!("{} ⊢ (waiting)", context.prefix);
+            eprintln!("[{}; {}]: {} ⊢ (waiting)", time_of_day, run_status, context);
             let background_status = running_background.result().await;
             eprintln!(
-                "{} ⊢ (finished) {}",
-                context.prefix, background_status.value
+                "[{}; {}]: {} ⊢ (finished) {}",
+                time_of_day, run_status, context, background_status.value
             );
 
             if (background_status.value == StatusResultValue::Error
@@ -311,11 +394,11 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
                 || context.opt.logs)
                 && !logs.is_empty()
             {
-                eprintln!("{} {}", context.prefix, "╔════════════════════════".blue());
+                eprintln!("{} {}", context, "╔════════════════════════".blue());
                 for line in logs.lines() {
-                    eprintln!("{} {} {}", context.prefix, "║".blue(), line);
+                    eprintln!("{} {} {}", context, "║".blue(), line);
                 }
-                eprintln!("{} {}", context.prefix, "╚════════════════════════".blue());
+                eprintln!("{} {}", context, "╚════════════════════════".blue());
             }
 
             step_result.values = foreground_result.values;
@@ -325,9 +408,16 @@ pub async fn run_step(context: &Context, step: Step) -> StepResult {
 
             // Also propagate the status of the background process.
             if background_status.value == StatusResultValue::Error {
-                step_result.failed_steps_prefixes.push(context.prefix);
+                step_result
+                    .failed_steps_prefixes
+                    .push(format!("{}", context));
             }
             step_result.values.insert(background_status.value);
+
+            run_status.update(
+                &context,
+                step_result.values.contains(&StatusResultValue::Error),
+            );
         }
     }
     step_result
