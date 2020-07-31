@@ -8,11 +8,9 @@ steps:
     timeout: 10m
     args: ['pull', 'gcr.io/oak-ci/oak:latest']
 
-  - name: 'ls'
-    id: list_files
-    waitFor: ['pull_image']
-    timeout: 10m
-    args: ['-als']
+  - name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "ls"
+    args: ["-la", "/workspace"]
   # Build Docker image based on current Dockerfile, if necessary.
   - name: 'gcr.io/cloud-builders/docker'
     id: build_image
