@@ -21,8 +21,8 @@ use crate::{
     metrics::Metrics,
     node,
     proto::oak::introspection_events::{
-        event::EventDetails, ChannelCreated, HandleCreated, HandleDestroyed, MessageDequeued,
-        MessageEnqueued, NodeCreated, NodeDestroyed,
+        event::EventDetails, ChannelCreated, Event, HandleCreated, HandleDestroyed,
+        MessageDequeued, MessageEnqueued, NodeCreated, NodeDestroyed,
     },
     runtime::channel::{with_reader_channel, with_writer_channel, Channel},
     GrpcConfiguration,
@@ -44,7 +44,7 @@ use std::{
     thread,
     thread::JoinHandle,
 };
-use tokio::sync::oneshot;
+use tokio::sync::{broadcast, oneshot};
 
 mod channel;
 #[cfg(feature = "oak_debug")]
@@ -247,6 +247,8 @@ pub struct Runtime {
     next_node_id: AtomicU64,
 
     aux_servers: Mutex<Vec<AuxServer>>,
+
+    introspection_event_sender: broadcast::Sender<Event>,
 
     pub metrics_data: Metrics,
 }

@@ -19,9 +19,10 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Error, Method, Request, Response, Server, StatusCode,
 };
-use log::info;
+use log::{debug, info, warn};
 use regex::Regex;
 use std::{net::SocketAddr, sync::Arc};
+use tokio::stream::StreamExt;
 
 /// Wrap a string holding a Graphviz Dot graph description in an HTML template
 /// suitable for live display.
@@ -150,10 +151,11 @@ async fn make_server(
     info!("starting introspection server on {:?}", addr);
 
     // And a MakeService to handle each connection...
+    let runtime_clone = runtime.clone();
     let make_service = make_service_fn(move |_| {
-        // The `Arc<Runtime>` is moved into this closure, but needs to be cloned
+        // The runtime_clone is moved into this closure, but needs to be cloned
         // because this closure is called for every connection.
-        let runtime = runtime.clone();
+        let runtime = runtime_clone.clone();
 
         async move {
             Ok::<_, Error>(service_fn(move |req| {
@@ -168,6 +170,24 @@ async fn make_server(
     let graceful = server.with_graceful_shutdown(async {
         // Treat notification failure the same as a notification.
         let _ = termination_notificiation_receiver.await;
+    });
+
+    // Listen for introspection events
+    let introspection_event_receiver = runtime.introspection_event_sender.clone().subscribe();
+    tokio::spawn(async move {
+        tokio::pin! {
+            let stream = introspection_event_receiver
+                .into_stream();
+        }
+
+        // TODO(#913): Use these events to construct a history of changes, and
+        // provide timescrubbing functionality in the introspection tool.
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(event) => debug!("Received introspection event: {:?}", event),
+                Err(error) => warn!("Failed to receive introspection event: {:?}", error),
+            }
+        }
     });
 
     // And run until asked to terminate...

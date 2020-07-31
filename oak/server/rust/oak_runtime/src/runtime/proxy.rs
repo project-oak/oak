@@ -34,6 +34,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex, RwLock},
 };
+use tokio::sync::broadcast;
 
 /// A proxy object that binds together a reference to the underlying [`Runtime`] with a single
 /// [`NodeId`].
@@ -61,6 +62,7 @@ impl RuntimeProxy {
         application_configuration: &ApplicationConfiguration,
         grpc_configuration: &GrpcConfiguration,
     ) -> RuntimeProxy {
+        let (introspection_event_sender, _) = broadcast::channel(100);
         let runtime = Arc::new(Runtime {
             application_configuration: application_configuration.clone(),
             grpc_configuration: grpc_configuration.clone(),
@@ -69,6 +71,7 @@ impl RuntimeProxy {
             node_infos: RwLock::new(HashMap::new()),
             next_node_id: AtomicU64::new(0),
             aux_servers: Mutex::new(Vec::new()),
+            introspection_event_sender,
             metrics_data: Metrics::new(),
         });
         let proxy = runtime.proxy_for_new_node();

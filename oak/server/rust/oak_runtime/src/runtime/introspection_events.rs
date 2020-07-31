@@ -18,7 +18,7 @@ use crate::{
     proto::oak::introspection_events::{event::EventDetails, Event},
     runtime::Runtime,
 };
-use log::debug;
+use log::warn;
 use prost_types::Timestamp;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -44,9 +44,10 @@ impl Runtime {
             event_details: Some(event_details),
         };
 
-        // TODO(#913): Push the event over to a channel, to be consumed by the
-        // introspection aux server.
-        debug!("Introspection event recorded: {:?}", event);
+        let sender = self.introspection_event_sender.clone();
+        if let Err(error) = sender.send(event) {
+            warn!("Failed to send introspection event to channel: {:?}", error);
+        }
     }
 
     /// no-op implementation, introspection events are a debugging feature.
