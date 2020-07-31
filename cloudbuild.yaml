@@ -38,12 +38,12 @@ steps:
     timeout: 5m
     args: ['./scripts/run_cargo_crev']
 
-  - name: 'gcr.io/oak-ci/oak:latest'
-    id: runner_ci
-    waitFor: ['git_init']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/runner', '--commands', 'run-ci']
+  # - name: 'gcr.io/oak-ci/oak:latest'
+  #   id: runner_ci
+  #   waitFor: ['git_init']
+  #   timeout: 60m
+  #   entrypoint: 'bash'
+  #   args: ['./scripts/runner', '--commands', 'run-ci']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: generate_root_ca_certs
@@ -56,38 +56,38 @@ steps:
   # ignored by git.
   - name: 'gcr.io/oak-ci/oak:latest'
     id: git_check_diff
-    waitFor: ['git_init', 'runner_ci', 'generate_root_ca_certs']
+    waitFor: ['git_init', 'generate_root_ca_certs']
     timeout: 5m
     entrypoint: 'bash'
-    args: ['./scripts/git_check_diff']
+    args: ['./scripts/git_check_dif']
 
   # Pull Android Docker image.
-  - name: 'gcr.io/cloud-builders/docker'
-    id: pull_android_image
-    waitFor: ['-']
-    timeout: 10m
-    args: ['pull', 'gcr.io/oak-ci/oak-android:latest']
+  # - name: 'gcr.io/cloud-builders/docker'
+  #   id: pull_android_image
+  #   waitFor: ['-']
+  #   timeout: 10m
+  #   args: ['pull', 'gcr.io/oak-ci/oak-android:latest']
   # Build Docker image based for Android SDK.
-  - name: 'gcr.io/cloud-builders/docker'
-    id: build_android_image
-    waitFor: ['pull_android_image']
-    timeout: 60m
-    args:
-      [
-        'build',
-        '--pull',
-        '--cache-from=gcr.io/oak-ci/oak-android:latest',
-        '--tag=gcr.io/oak-ci/oak-android:latest',
-        '--file=android.Dockerfile',
-        '.',
-      ]
+  # - name: 'gcr.io/cloud-builders/docker'
+  #   id: build_android_image
+  #   waitFor: ['pull_android_image']
+  #   timeout: 60m
+  #   args:
+  #     [
+  #       'build',
+  #       '--pull',
+  #       '--cache-from=gcr.io/oak-ci/oak-android:latest',
+  #       '--tag=gcr.io/oak-ci/oak-android:latest',
+  #       '--file=android.Dockerfile',
+  #       '.',
+  #     ]
   # Build Android Hello-World application.
-  - name: 'gcr.io/oak-ci/oak-android:latest'
-    id: build_examples_android
-    waitFor: ['build_android_image']
-    timeout: 60m
-    entrypoint: 'bash'
-    args: ['./scripts/build_examples_android']
+  # - name: 'gcr.io/oak-ci/oak-android:latest'
+  #   id: build_examples_android
+  #   waitFor: ['build_android_image']
+  #   timeout: 60m
+  #   entrypoint: 'bash'
+  #   args: ['./scripts/build_examples_android']
 
 # Copy compiled enclave binary to Google Cloud Storage.
 # See:
