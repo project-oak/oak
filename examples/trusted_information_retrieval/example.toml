@@ -17,6 +17,7 @@ module_1 = { Cargo = { cargo_manifest = "examples/trusted_information_retrieval/
 [server]
 additional_args = [
   "--config-files=config=examples/trusted_information_retrieval/database.toml",
+  "--signatures-manifest=examples/trusted_information_retrieval/signatures.toml"
 ]
 
 [clients]

@@ -40,8 +40,13 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         wasm_modules: hashmap! {},
         initial_node_configuration: None,
     };
+    let signature_table = SignatureTable::default();
     info!("Create runtime for test");
-    let proxy = crate::RuntimeProxy::create_runtime(&configuration, &GrpcConfiguration::default());
+    let proxy = crate::RuntimeProxy::create_runtime(
+        &configuration,
+        &GrpcConfiguration::default(),
+        &signature_table,
+    );
 
     struct TestNode {
         node_body: Box<NodeBody>,

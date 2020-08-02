@@ -36,6 +36,7 @@ use auth::oidc_utils::ClientInfo;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
+use minisign::{verify, PublicKey, SignatureBox};
 use oak_abi::{
     label::{Label, Tag},
     proto::oak::application::{ApplicationConfiguration, ConfigMap, NodeConfiguration},
@@ -88,6 +89,8 @@ pub struct RuntimeConfiguration {
     pub grpc_config: GrpcConfiguration,
     /// Application configuration.
     pub app_config: ApplicationConfiguration,
+    /// Table that contains signatures and public keys corresponding to Oak modules.
+    pub sign_table: SignatureTable,
     /// Start-of-day configuration to feed to the running Application.
     pub config_map: ConfigMap,
 }
@@ -106,6 +109,24 @@ pub struct GrpcConfiguration {
     /// Root TLS certificate to use for all gRPC Client Nodes.
     // TODO(#999): Remove user-configurable root CA.
     pub grpc_client_root_tls_certificate: Option<Certificate>,
+}
+
+/// Configuration options related to Wasm module signatures.
+/// Consists of parsed `minisign::PublicKey` and `minisign::SignatureBox`.
+/// This structure contains a public key and a signature that have not yet been
+/// verified since it's an argument passed to `oak_runtime`.
+/// The verification takes place in the `verify_module_signatures` function.
+#[derive(Clone)]
+pub struct Signature {
+    pub public_key: PublicKey,
+    pub signature: SignatureBox,
+}
+
+#[derive(Default, Clone)]
+/// Table that contains signatures and public keys corresponding to Oak modules.
+pub struct SignatureTable {
+    /// Keys in the table are Oak module hashes.
+    pub values: HashMap<String, Vec<Signature>>,
 }
 
 struct NodeStopper {
@@ -285,6 +306,7 @@ impl Drop for AuxServer {
 pub struct Runtime {
     application_configuration: ApplicationConfiguration,
     grpc_configuration: GrpcConfiguration,
+    signature_table: SignatureTable,
 
     terminating: AtomicBool,
 
@@ -423,6 +445,37 @@ impl Runtime {
     /// Return the accumulated metrics for the `Runtime`.
     pub fn gather_metrics(&self) -> Vec<MetricFamily> {
         self.metrics_data.gather()
+    }
+
+    /// Checks Wasm module signatures.
+    /// Since such signatures are optional - tries to find corresponding signatures by module names
+    /// and verifies them if found.
+    pub(crate) fn verify_module_signatures(&self) -> Result<(), OakStatus> {
+        for (name, module) in &self.application_configuration.wasm_modules {
+            let module_hash = sha_256_hex(&module);
+            // Get signature by module name.
+            if let Some(signatures) = self.signature_table.values.get(&module_hash) {
+                for signature_item in signatures.iter() {
+                    let public_key = &signature_item.public_key;
+                    let signature = &signature_item.signature;
+                    let data_reader = std::io::Cursor::new(module);
+
+                    // Output status information to `stderr`.
+                    // https://docs.rs/minisign/0.5.20/minisign/fn.verify.html#arguments
+                    const QUIET: bool = true;
+                    // Output a copy of the data to `stdout`.
+                    const OUTPUT: bool = false;
+                    verify(public_key, signature, data_reader, QUIET, OUTPUT).map_err(|error| {
+                        error!(
+                            "Wasm module signature verification failed for {}: {}",
+                            name, error
+                        );
+                        OakStatus::ErrInvalidArgs
+                    })?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -1070,6 +1123,7 @@ impl Runtime {
             &self.application_configuration,
             config,
             &self.grpc_configuration,
+            &self.signature_table,
         )
         .map_err(|err| {
             warn!("could not create node: {:?}", err);
@@ -1190,4 +1244,13 @@ impl Runtime {
             .expect("could not acquire lock on node_infos")
             .len() as i64
     }
+}
+
+/// Computes a SHA-256 digest of `bytes` and returns it in a hex encoded string.
+pub fn sha_256_hex(bytes: &[u8]) -> String {
+    use sha2::digest::Digest;
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(&bytes);
+    let hash_value = hasher.finalize();
+    hex::encode(hash_value)
 }

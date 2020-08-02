@@ -278,3 +278,15 @@ I0511 10:15:29.585389 244858 hello_world.cc:50] Request: WORLDS
 I0511 10:15:29.591434 244858 hello_world.cc:57] Response: HELLO WORLDS!
 I0511 10:15:29.593106 244858 hello_world.cc:57] Response: HELLO AGAIN WORLDS!
 ```
+
+### Signing Oak Wasm modules
+
+Oak Wasm modules can be signed using [Ed25519](https://ed25519.cr.yp.to/)
+scheme.
+
+In order create a signature `hello_world.sign` for a Wasm module
+`hello_world.wasm` use the following script:
+
+```bash
+./scripts/sign_module -i examples/hello_world/bin/hello_world.wasm -o examples/hello_world/bin/hello_world.sign
+```

@@ -19,11 +19,13 @@ log = "*"
 oak_abi = { path = "../oak_abi" }
 oak_runtime = { path = "../oak_runtime" }
 oak_utils = { path = "../oak_utils" }
+minisign = "*"
 prost = { path = "../third_party/prost" }
 rustls = "*"
 serde = { version = "*", features = ["derive"] }
 signal-hook = "*"
 structopt = "*"
+toml = "*"
 tonic = { version = "*", features = ["tls"] }
 
 [dev-dependencies]

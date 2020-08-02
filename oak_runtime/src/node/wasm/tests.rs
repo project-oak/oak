@@ -23,18 +23,33 @@ use oak_abi::{
         node_configuration::ConfigType, ApplicationConfiguration, WebAssemblyConfiguration,
     },
 };
-use wat::{parse_file, parse_str};
+use std::fs::read;
+use wat::parse_str;
 
-fn start_node(wasm_module: Vec<u8>, entrypoint_name: &str) -> Result<(), OakStatus> {
+fn start_node(
+    wasm_module: Vec<u8>,
+    entrypoint_name: &str,
+    signatures: &[Signature],
+) -> Result<(), OakStatus> {
     crate::tests::init_logging();
     let module_name = "oak_module";
+    let module_hash = sha_256_hex(wasm_module.as_ref());
     let application_configuration = ApplicationConfiguration {
         wasm_modules: hashmap! { module_name.to_string() => wasm_module },
         initial_node_configuration: None,
     };
-    let proxy =
-        RuntimeProxy::create_runtime(&application_configuration, &GrpcConfiguration::default());
+    let signature_table = SignatureTable {
+        values: hashmap! { module_hash => signatures.to_vec() },
+    };
+    let proxy = RuntimeProxy::create_runtime(
+        &application_configuration,
+        &GrpcConfiguration::default(),
+        &signature_table,
+    );
     let (_write_handle, read_handle) = proxy.channel_create(&Label::public_untrusted())?;
+
+    // Check Wasm module signatures.
+    proxy.runtime.verify_module_signatures()?;
 
     let result = proxy.node_create(
         &NodeConfiguration {
@@ -58,11 +73,22 @@ fn start_node(wasm_module: Vec<u8>, entrypoint_name: &str) -> Result<(), OakStat
     result
 }
 
+fn create_signature(public_key_path: &str, signature_path: &str) -> Signature {
+    let public_key =
+        minisign::PublicKey::from_file(public_key_path).expect("Could not read public key file");
+    let signature =
+        minisign::SignatureBox::from_file(signature_path).expect("Could not read signature file");
+    Signature {
+        public_key,
+        signature,
+    }
+}
+
 #[test]
 fn wasm_starting_module_without_content_fails() {
     // Loads an empty module that does not have the necessary entry point, so it should fail
     // immediately.
-    let binary = parse_file("../testdata/empty.wat").unwrap();
+    let binary = read("../testdata/empty.wasm").expect("Couldn't read Wasm file");
 
     // An empty module is equivalent to: [0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]
     // From https://docs.rs/wasmi/0.6.2/wasmi/struct.Module.html#method.from_buffer:
@@ -70,35 +96,35 @@ fn wasm_starting_module_without_content_fails() {
     // \0asm - magic
     // 0x01 - version (in little-endian)
     assert_eq!(binary, vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
-    let result = start_node(binary, "oak_main");
+    let result = start_node(binary, "oak_main", vec![].as_ref());
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
 fn wasm_starting_minimal_module_succeeds() {
-    let binary = parse_file("../testdata/minimal.wat").unwrap();
-    let result = start_node(binary, "oak_main");
+    let binary = read("../testdata/minimal.wasm").expect("Couldn't read Wasm file");
+    let result = start_node(binary, "oak_main", vec![].as_ref());
     assert_eq!(true, result.is_ok());
 }
 
 #[test]
 fn wasm_starting_module_missing_an_export_fails() {
-    let binary = parse_file("../testdata/missing.wat").unwrap();
-    let result = start_node(binary, "oak_main");
+    let binary = read("../testdata/missing.wasm").expect("Couldn't read Wasm file");
+    let result = start_node(binary, "oak_main", vec![].as_ref());
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
 fn wasm_starting_module_with_wrong_export_fails() {
-    let binary = parse_file("../testdata/minimal.wat").unwrap();
-    let result = start_node(binary, "oak_other_main");
+    let binary = read("../testdata/minimal.wasm").expect("Couldn't read Wasm file");
+    let result = start_node(binary, "oak_other_main", vec![].as_ref());
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
 fn wasm_starting_module_with_wrong_signature_fails() {
-    let binary = parse_file("../testdata/wrong.wat").unwrap();
-    let result = start_node(binary, "oak_main");
+    let binary = read("../testdata/wrong.wasm").expect("Couldn't read Wasm file");
+    let result = start_node(binary, "oak_main", vec![].as_ref());
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
@@ -116,7 +142,7 @@ fn wasm_starting_module_with_wrong_signature_2_fails() {
         (export "oak_main" (func $oak_main)))
     "#;
     let binary = parse_str(wat).unwrap();
-    let result = start_node(binary, "oak_main");
+    let result = start_node(binary, "oak_main", vec![].as_ref());
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
@@ -133,6 +159,22 @@ fn wasm_starting_module_with_wrong_signature_3_fails() {
         (export "oak_main" (func $oak_main)))
     "#;
     let binary = parse_str(wat).unwrap();
-    let result = start_node(binary, "oak_main");
+    let result = start_node(binary, "oak_main", vec![].as_ref());
+    assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
+}
+
+#[test]
+fn wasm_verify_module_signature_succeeds() {
+    let binary = read("../testdata/minimal.wasm").expect("Couldn't read Wasm file");
+    let signature = create_signature("../testdata/test.pub", "../testdata/minimal.sign");
+    let result = start_node(binary, "oak_main", vec![signature].as_ref());
+    assert_eq!(true, result.is_ok());
+}
+
+#[test]
+fn wasm_verify_module_signature_fails() {
+    let binary = read("../testdata/minimal.wasm").expect("Couldn't read Wasm file");
+    let signature = create_signature("../testdata/test.pub", "../testdata/wrong.sign");
+    let result = start_node(binary, "oak_main", vec![signature].as_ref());
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }

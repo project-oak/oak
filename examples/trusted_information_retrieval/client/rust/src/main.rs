@@ -70,6 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("Could not connect to Oak Application");
 
     // TODO(#1097): Turn the following logic into a proper reusable client library.
+    // TODO(#1344): Add Wasm module signature Label.
     let mut label = Vec::new();
     Label::public_untrusted()
         .encode(&mut label)

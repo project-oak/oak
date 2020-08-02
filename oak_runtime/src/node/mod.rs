@@ -16,7 +16,7 @@
 
 //! Functionality for different Node types.
 
-use crate::{GrpcConfiguration, NodePrivilege, RuntimeProxy};
+use crate::{GrpcConfiguration, NodePrivilege, RuntimeProxy, SignatureTable};
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
 };
@@ -93,6 +93,7 @@ pub fn create_node(
     application_configuration: &ApplicationConfiguration,
     node_configuration: &NodeConfiguration,
     grpc_configuration: &GrpcConfiguration,
+    signature_table: &SignatureTable,
 ) -> Result<Box<dyn Node>, ConfigurationError> {
     let node_name = &node_configuration.name;
     match &node_configuration.config_type {
@@ -115,6 +116,7 @@ pub fn create_node(
             node_name,
             application_configuration,
             config.clone(),
+            signature_table,
         )?)),
         Some(ConfigType::GrpcClientConfig(config)) => {
             Ok(Box::new(grpc::client::GrpcClientNode::new(

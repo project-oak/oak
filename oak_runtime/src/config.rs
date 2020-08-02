@@ -29,7 +29,8 @@ use tonic::transport::Certificate;
 /// send messages into the Runtime. Creating a new channel and passing the write [`oak_abi::Handle`]
 /// into the runtime will enable messages to be read back out from the [`RuntimeProxy`].
 pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, OakStatus> {
-    let proxy = RuntimeProxy::create_runtime(&config.app_config, &config.grpc_config);
+    let proxy =
+        RuntimeProxy::create_runtime(&config.app_config, &config.grpc_config, &config.sign_table);
     let config_map = config.config_map.clone();
     let handle = proxy.start_runtime(config)?;
 

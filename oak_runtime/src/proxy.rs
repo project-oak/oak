@@ -19,7 +19,7 @@
 
 use crate::{
     message::NodeMessage, metrics::Metrics, AuxServer, ChannelHalfDirection, GrpcConfiguration,
-    NodeId, NodePrivilege, NodeReadStatus, Runtime,
+    NodeId, NodePrivilege, NodeReadStatus, Runtime, SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -58,10 +58,12 @@ impl RuntimeProxy {
     pub fn create_runtime(
         application_configuration: &ApplicationConfiguration,
         grpc_configuration: &GrpcConfiguration,
+        signature_table: &SignatureTable,
     ) -> RuntimeProxy {
         let runtime = Arc::new(Runtime {
             application_configuration: application_configuration.clone(),
             grpc_configuration: grpc_configuration.clone(),
+            signature_table: signature_table.clone(),
             terminating: AtomicBool::new(false),
             next_channel_id: AtomicU64::new(0),
             node_infos: RwLock::new(HashMap::new()),
@@ -129,6 +131,9 @@ impl RuntimeProxy {
                     crate::metrics::server::start_metrics_server,
                 ));
         }
+
+        // Check Wasm module signatures.
+        self.runtime.verify_module_signatures()?;
 
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point Node.
