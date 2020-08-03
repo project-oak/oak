@@ -4,4 +4,7 @@ keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
 subjectAltName = @alt_names
 
 [alt_names]
+DNS.1 = aggregator.oakexamples.dev
+# It is not really needed, but in future if the WebPKI crate does start supporting 
+# IP addresses in certs, it could be used for connections as well.
 IP.1 = 35.246.87.178

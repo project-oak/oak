@@ -29,6 +29,12 @@ then
   "${SCRIPTS_DIR}/undeploy" || true
 else
   "${SCRIPTS_DIR}/undeploy" -m || true
+
+  # Deleting the service does not immediately delete the node ports, so `deploy` fails 
+  # if it is run immediately after `undeploy`.
+  # Ref: https://github.com/kubernetes/kubernetes/issues/32987#issuecomment-344514151
+  echo "Waiting for 5 mins for k8s to remove all the old resources..."
+  sleep 5m
 fi
 
 gcloud container clusters get-credentials aggregator --zone=europe-west2-a

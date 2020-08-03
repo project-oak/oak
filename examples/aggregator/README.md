@@ -53,11 +53,32 @@ Build and run the Client with the following command:
 ./scripts/runner run-examples --run-server=false --example-name=aggregator
 ```
 
+The command above assumes that an Aggregator application is running on
+localhost. Use the following command to connect the client to an Aggregator
+hosted at a specific domain name; in this case `aggregator.oakexamples.dev`:
+
+```bash
+./bazel-client-bin/examples/aggregator/client/client \
+  --address=aggregator.oakexamples.dev \
+  --ca_cert=./examples/certs/gcp/ca.pem \
+  --bucket=test \
+  --data=1:10,2:20,3:30
+```
+
 A common use case is to keep running the client until the aggregation threshold
 is reached, at which point the aggregator should release the aggregated data to
 the backend over gRPC.
 
 Client code is in the `client` directory.
+
+#### Troubleshooting
+
+Set the environment variable `GRPC_VERBOSITY` to `debug` to get more detailed
+logs from the client:
+
+```bash
+export GRPC_VERBOSITY=debug
+```
 
 ## Deployment
 

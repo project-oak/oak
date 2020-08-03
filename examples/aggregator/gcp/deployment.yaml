@@ -61,7 +61,15 @@ spec:
   selector:
     app: aggregator
   ports:
-    - port: 8080
+    - name: https
+      port: 443
+      targetPort: 8080
+      protocol: TCP
+    # Uncomment the following to expose metrics externally (for debugging)
+    # - name: metrics
+    #   port: 9090
+    #   targetPort: 9090
+    #   protocol: TCP
   type: LoadBalancer
   # This IP address was reserved it Google Cloud. New IP addresses can be reserved at:
   # https://pantheon.corp.google.com/networking/addresses/list?project=oak-ci
