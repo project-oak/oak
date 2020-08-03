@@ -3,7 +3,7 @@ name = "abitest"
 [applications]
 
 [applications.rust]
-manifest = "examples/abitest/config/config.toml"
+manifest = "examples/abitest/config.toml"
 out = "examples/abitest/bin/config.bin"
 
 [applications.rust.modules]

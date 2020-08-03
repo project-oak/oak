@@ -3,7 +3,7 @@ name = "translator"
 [applications]
 
 [applications.rust]
-manifest = "examples/translator/config/config.toml"
+manifest = "examples/translator/config.toml"
 out = "examples/translator/bin/config.bin"
 
 [applications.rust.modules]
