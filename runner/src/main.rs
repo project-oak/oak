@@ -617,7 +617,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     // If `run-server` is enabled, then run the server as well as a potential backend, both in the
     // background.
     //
-    // If `run-clients` is enabled, then run the server and backend in the background, and the
+    // If `client-variant` is not 'none', then run the server and backend in the background, and the
     // clients in the foreground.
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
