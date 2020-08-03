@@ -13,7 +13,7 @@ like
 docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
 ```
 
-### Using Homeboew
+### Using Homebrew
 
 See
 [this article](https://medium.com/@yutafujii_59175/a-complete-one-by-one-guide-to-install-docker-on-your-mac-os-using-homebrew-e818eb4cfc3).
