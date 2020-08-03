@@ -173,10 +173,9 @@ async fn make_server(
     });
 
     // Listen for introspection events
-    let introspection_event_receiver = runtime.introspection_event_sender.clone().subscribe();
     tokio::spawn(async move {
         tokio::pin! {
-            let stream = introspection_event_receiver
+            let stream = runtime.introspection_event_sender.subscribe()
                 .into_stream();
         }
 
