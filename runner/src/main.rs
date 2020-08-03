@@ -419,7 +419,8 @@ fn check_format() -> Step {
             run_prettier(FormatMode::Check),
             run_markdownlint(FormatMode::Check),
             run_embedmd(FormatMode::Check),
-            run_liche(),
+            // TODO(#1304): Uncomment, when re-run from GitHub is fixed.
+            // run_liche(),
             run_cargo_fmt(FormatMode::Check),
             run_hadolint(),
             run_shellcheck(),
@@ -1094,6 +1095,8 @@ fn run_embedmd(mode: FormatMode) -> Step {
     }
 }
 
+// TODO(#1304): Re-enable dead-code check, when re-run from GitHub is fixed.
+#[allow(dead_code)]
 fn run_liche() -> Step {
     Step::Multiple {
         name: "liche".to_string(),
