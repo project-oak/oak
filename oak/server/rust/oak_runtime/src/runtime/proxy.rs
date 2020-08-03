@@ -62,7 +62,10 @@ impl RuntimeProxy {
         application_configuration: &ApplicationConfiguration,
         grpc_configuration: &GrpcConfiguration,
     ) -> RuntimeProxy {
-        let (introspection_event_sender, _) = broadcast::channel(100);
+        // Max number of events that can be held in the channel while waiting
+        // to be received. Ref: https://docs.rs/tokio/0.2.21/tokio/sync/broadcast/index.html#lagging
+        const INTROSPECTION_CHANNEL_CAPACITY: usize = 100;
+        let (introspection_event_sender, _) = broadcast::channel(INTROSPECTION_CHANNEL_CAPACITY);
         let runtime = Arc::new(Runtime {
             application_configuration: application_configuration.clone(),
             grpc_configuration: grpc_configuration.clone(),
