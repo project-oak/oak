@@ -140,9 +140,6 @@
 <span id="140">140</span>
 <span id="141">141</span>
 <span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -162,10 +159,7 @@
 
 <span class="doccomment">//! Functionality for different Node types.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">runtime</span>::{<span class="ident">NodePrivilege</span>, <span class="ident">RuntimeProxy</span>},
-    <span class="ident">GrpcConfiguration</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">GrpcConfiguration</span>, <span class="ident">NodePrivilege</span>, <span class="ident">RuntimeProxy</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
     <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">LogConfiguration</span>, <span class="ident">NodeConfiguration</span>,
 };

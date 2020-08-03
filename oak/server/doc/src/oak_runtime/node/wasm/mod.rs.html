@@ -883,10 +883,6 @@
 <span id="883">883</span>
 <span id="884">884</span>
 <span id="885">885</span>
-<span id="886">886</span>
-<span id="887">887</span>
-<span id="888">888</span>
-<span id="889">889</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -906,11 +902,7 @@
 
 <span class="doccomment">//! WebAssembly Node functionality.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">node</span>::<span class="ident">ConfigurationError</span>,
-    <span class="ident">runtime</span>::{<span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>, <span class="ident">RuntimeProxy</span>},
-    <span class="ident">NodeMessage</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">node</span>::<span class="ident">ConfigurationError</span>, <span class="ident">NodeMessage</span>, <span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>, <span class="ident">RuntimeProxy</span>};
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">maplit</span>::<span class="ident">hashset</span>;
@@ -1317,7 +1309,7 @@
     <span class="doccomment">///   statuses in `status_buff` do not reflect the actual read statuses.</span>
     <span class="doccomment">/// - `Err(OakStatus::ErrInvalidArgs)`: if cannot parse `status_buff` into channel handles.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`Runtime`]: crate::runtime::Runtime</span>
+    <span class="doccomment">/// [`Runtime`]: crate::Runtime</span>
     <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">status_buff</span>: <span class="ident">AbiPointer</span>,

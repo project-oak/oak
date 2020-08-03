@@ -123,7 +123,6 @@
 <span id="123">123</span>
 <span id="124">124</span>
 <span id="125">125</span>
-<span id="126">126</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -141,6 +140,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Runtime</span>;
 <span class="kw">use</span> <span class="ident">http</span>::{<span class="ident">method</span>::<span class="ident">Method</span>, <span class="ident">StatusCode</span>};
 <span class="kw">use</span> <span class="ident">hyper</span>::{
     <span class="ident">header</span>::<span class="ident">CONTENT_TYPE</span>,
@@ -150,8 +150,6 @@
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">Encoder</span>, <span class="ident">TextEncoder</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
-
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">enum</span> <span class="ident">MetricsServerError</span> {

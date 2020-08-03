@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_runtime"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html\" title=\"trait core::cmp::Ord\">Ord</a> for <a class=\"struct\" href=\"oak_runtime/struct.NodeId.html\" title=\"struct oak_runtime::NodeId\">NodeId</a>","synthetic":false,"types":["oak_runtime::NodeId"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
