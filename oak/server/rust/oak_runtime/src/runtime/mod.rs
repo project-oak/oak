@@ -248,6 +248,8 @@ pub struct Runtime {
 
     aux_servers: Mutex<Vec<AuxServer>>,
 
+    /// Queue used to broadcast introspection events. The sender is used by the
+    /// runtime to send events, and can be subscribed to by aux servers.
     introspection_event_sender: broadcast::Sender<Event>,
 
     pub metrics_data: Metrics,
