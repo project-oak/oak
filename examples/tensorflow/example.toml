@@ -3,7 +3,7 @@ name = "tensorflow"
 [applications]
 
 [applications.cpp]
-manifest = "examples/tensorflow/config/config_cpp.toml"
+manifest = "examples/tensorflow/config_cpp.toml"
 out = "examples/tensorflow/bin/config_cpp.bin"
 
 [applications.cpp.modules]

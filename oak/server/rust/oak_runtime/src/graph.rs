@@ -16,7 +16,7 @@
 
 /// This module defines a trait and an implementation for representing the [`Runtime`] as
 /// a Graphviz dot graph. This is used in the introspection service.
-use crate::runtime::{ChannelHalf, ChannelHalfDirection, NodeId, Runtime};
+use crate::{ChannelHalf, ChannelHalfDirection, NodeId, Runtime};
 use itertools::Itertools;
 use log::info;
 use std::{collections::HashSet, fmt::Write, string::String};

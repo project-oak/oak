@@ -16,10 +16,7 @@
 
 //! Functionality for different Node types.
 
-use crate::{
-    runtime::{NodePrivilege, RuntimeProxy},
-    GrpcConfiguration,
-};
+use crate::{GrpcConfiguration, NodePrivilege, RuntimeProxy};
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
 };

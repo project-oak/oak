@@ -16,7 +16,7 @@
 
 use crate::{
     proto::oak::introspection_events::{event::EventDetails, Event},
-    runtime::Runtime,
+    Runtime,
 };
 use log::warn;
 use prost_types::Timestamp;

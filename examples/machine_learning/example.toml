@@ -3,7 +3,7 @@ name = "machine_learning"
 [applications]
 
 [applications.rust]
-manifest = "examples/machine_learning/config/config.toml"
+manifest = "examples/machine_learning/config.toml"
 out = "examples/machine_learning/bin/config.bin"
 
 [applications.rust.modules]

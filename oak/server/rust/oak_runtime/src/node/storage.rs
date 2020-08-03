@@ -16,7 +16,7 @@
 
 //! Storage pseudo-Node functionality.
 
-use crate::runtime::RuntimeProxy;
+use crate::RuntimeProxy;
 use log::{info, warn};
 use tokio::sync::oneshot;
 

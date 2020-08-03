@@ -3,7 +3,7 @@ name = "private_set_intersection"
 [applications]
 
 [applications.rust]
-manifest = "examples/private_set_intersection/config/config.toml"
+manifest = "examples/private_set_intersection/config.toml"
 out = "examples/private_set_intersection/bin/config.bin"
 
 [applications.rust.modules]

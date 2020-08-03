@@ -7,7 +7,7 @@ backend = { Cargo = { cargo_manifest = "examples/trusted_information_retrieval/b
 [applications]
 
 [applications.rust]
-manifest = "examples/trusted_information_retrieval/config/config.toml"
+manifest = "examples/trusted_information_retrieval/config.toml"
 out = "examples/trusted_information_retrieval/bin/config.bin"
 
 [applications.rust.modules]

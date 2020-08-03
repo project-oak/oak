@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{message::Message, runtime::graph::DotIdentifier};
+use crate::{graph::DotIdentifier, message::Message};
 use log::debug;
 use oak_abi::OakStatus;
 use std::{

@@ -19,11 +19,11 @@
 use crate::{
     io::Receiver,
     node::grpc::invocation::Invocation,
-    runtime::RuntimeProxy,
     time::{
         get_default_servers, RoughtimeClient, RoughtimeServer, DEFAULT_MAX_RADIUS_MICROSECONDS,
         DEFAULT_MIN_OVERLAPPING_INTERVALS, DEFAULT_SERVER_RETRIES, DEFAULT_TIMEOUT_SECONDS,
     },
+    RuntimeProxy,
 };
 use log::{debug, error, info};
 use oak_abi::{
