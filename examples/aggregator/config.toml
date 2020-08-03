@@ -1,4 +1,4 @@
 name = "aggregator"
 
 [modules]
-app = { path = "examples/aggregator/bin/aggregator.wasm" }
+app = { external = { url = "https://storage.googleapis.com/oak-modules/aggregator/f2c6e041a2b1771800fa5657d62885ac9f2334cecc3d839b047dc6d16ec82e1c", sha256 = "f2c6e041a2b1771800fa5657d62885ac9f2334cecc3d839b047dc6d16ec82e1c" } }
