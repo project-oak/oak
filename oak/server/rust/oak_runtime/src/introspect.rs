@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::runtime::Runtime;
+use crate::Runtime;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body, Error, Method, Request, Response, Server, StatusCode,

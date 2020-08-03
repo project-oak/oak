@@ -18,8 +18,7 @@
 
 use crate::{
     io::{Decodable, Receiver, Sender},
-    runtime::RuntimeProxy,
-    NodeMessage,
+    NodeMessage, RuntimeProxy,
 };
 use log::error;
 use oak_abi::{

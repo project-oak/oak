@@ -16,7 +16,7 @@
 
 //! Logging pseudo-Node functionality.
 
-use crate::runtime::RuntimeProxy;
+use crate::RuntimeProxy;
 use log::{error, info, log};
 use oak_abi::{
     proto::oak::log::{Level, LogMessage},

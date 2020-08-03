@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::Runtime;
 use http::{method::Method, StatusCode};
 use hyper::{
     header::CONTENT_TYPE,
@@ -23,8 +24,6 @@ use hyper::{
 use log::info;
 use prometheus::{Encoder, TextEncoder};
 use std::{net::SocketAddr, sync::Arc};
-
-use crate::runtime::Runtime;
 
 #[derive(Debug)]
 enum MetricsServerError {

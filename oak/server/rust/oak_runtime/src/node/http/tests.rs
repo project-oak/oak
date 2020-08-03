@@ -28,10 +28,8 @@ async fn test_low_level_server_node() {
         initial_node_configuration: None,
     };
     info!("Create runtime for test");
-    let runtime = crate::runtime::RuntimeProxy::create_runtime(
-        &configuration,
-        &crate::GrpcConfiguration::default(),
-    );
+    let runtime =
+        crate::RuntimeProxy::create_runtime(&configuration, &crate::GrpcConfiguration::default());
 
     let (init_receiver, invocation_receiver) = create_communication_channel(&runtime);
 

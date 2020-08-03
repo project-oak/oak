@@ -21,7 +21,7 @@
 
 use crate::{
     node::{ConfigurationError, Node},
-    runtime::{ChannelHalfDirection, RuntimeProxy},
+    ChannelHalfDirection, RuntimeProxy,
 };
 use hyper::{
     service::{make_service_fn, service_fn},
