@@ -3,7 +3,7 @@ name = "running_average"
 [applications]
 
 [applications.rust]
-manifest = "examples/running_average/config/config.toml"
+manifest = "examples/running_average/config.toml"
 out = "examples/running_average/bin/config.bin"
 
 [applications.rust.modules]

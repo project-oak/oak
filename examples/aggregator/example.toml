@@ -3,7 +3,7 @@ name = "aggregator"
 [applications]
 
 [applications.rust]
-manifest = "examples/aggregator/config/config.toml"
+manifest = "examples/aggregator/config.toml"
 out = "examples/aggregator/bin/config.bin"
 
 [applications.rust.modules]
