@@ -1965,7 +1965,7 @@
     <span class="comment">// If `run-server` is enabled, then run the server as well as a potential backend, both in the</span>
     <span class="comment">// background.</span>
     <span class="comment">//</span>
-    <span class="comment">// If `run-clients` is enabled, then run the server and backend in the background, and the</span>
+    <span class="comment">// If `client-variant` is not &#39;none&#39;, then run the server and backend in the background, and the</span>
     <span class="comment">// clients in the foreground.</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">collapsible_if</span>)]</span>
     <span class="kw">let</span> <span class="ident">run_backend_server_clients</span>: <span class="ident">Step</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">run_server</span>.<span class="ident">unwrap_or</span>(<span class="bool-val">true</span>) {
