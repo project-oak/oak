@@ -15,7 +15,7 @@
 //
 
 use super::*;
-use crate::{runtime::RuntimeProxy, GrpcConfiguration};
+use crate::{GrpcConfiguration, RuntimeProxy};
 use maplit::hashmap;
 use oak_abi::{
     label::Label,
@@ -26,7 +26,7 @@ use oak_abi::{
 use wat::{parse_file, parse_str};
 
 fn start_node(wasm_module: Vec<u8>, entrypoint_name: &str) -> Result<(), OakStatus> {
-    crate::runtime::tests::init_logging();
+    crate::tests::init_logging();
     let module_name = "oak_module";
     let application_configuration = ApplicationConfiguration {
         wasm_modules: hashmap! { module_name.to_string() => wasm_module },

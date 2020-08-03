@@ -16,11 +16,7 @@
 
 //! WebAssembly Node functionality.
 
-use crate::{
-    node::ConfigurationError,
-    runtime::{NodePrivilege, NodeReadStatus, RuntimeProxy},
-    NodeMessage,
-};
+use crate::{node::ConfigurationError, NodeMessage, NodePrivilege, NodeReadStatus, RuntimeProxy};
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, trace, warn};
 use maplit::hashset;
@@ -427,7 +423,7 @@ impl WasmInterface {
     ///   statuses in `status_buff` do not reflect the actual read statuses.
     /// - `Err(OakStatus::ErrInvalidArgs)`: if cannot parse `status_buff` into channel handles.
     ///
-    /// [`Runtime`]: crate::runtime::Runtime
+    /// [`Runtime`]: crate::Runtime
     fn wait_on_channels(
         &mut self,
         status_buff: AbiPointer,

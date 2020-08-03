@@ -18,10 +18,8 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    message::NodeMessage,
-    metrics::Metrics,
-    runtime::{AuxServer, ChannelHalfDirection, NodeId, NodePrivilege, NodeReadStatus, Runtime},
-    GrpcConfiguration,
+    message::NodeMessage, metrics::Metrics, AuxServer, ChannelHalfDirection, GrpcConfiguration,
+    NodeId, NodePrivilege, NodeReadStatus, Runtime,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -114,7 +112,7 @@ impl RuntimeProxy {
                         "introspect",
                         port,
                         self.runtime.clone(),
-                        crate::runtime::introspect::serve,
+                        crate::introspect::serve,
                     ));
             }
         }

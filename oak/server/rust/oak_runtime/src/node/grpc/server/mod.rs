@@ -23,7 +23,7 @@ use crate::{
         grpc::{codec::VecCodec, to_tonic_status},
         ConfigurationError, Node,
     },
-    runtime::{ChannelHalfDirection, RuntimeProxy},
+    ChannelHalfDirection, RuntimeProxy,
 };
 use futures_util::stream;
 use hyper::service::Service;

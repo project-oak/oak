@@ -23,7 +23,7 @@ use crate::{
         grpc::{codec::VecCodec, invocation::Invocation},
         ConfigurationError, Node,
     },
-    runtime::{NodePrivilege, RuntimeProxy},
+    NodePrivilege, RuntimeProxy,
 };
 use log::{debug, error, info, trace, warn};
 use maplit::hashset;
