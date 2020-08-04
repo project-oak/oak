@@ -27,16 +27,16 @@ Definition msg_is_head (ch: channel)(m: message): Prop :=
 *)
 
 Inductive step_node_ev: node_id -> call -> state -> trace -> state -> trace -> Prop :=
-    | SWriteChan s id n (han: handle) msg t ev
+    | SWriteChan s id n han msg t ev
         (H0: (s.(nodes) id) = n)
-        (H1: Ensembles.In n.(hans) han)
+        (H1: Ensembles.In n.(whans) han)
         (H2: n.(nlbl) << (s.(chans) han).(clbl))
         (H3: ev = (EvL (OutEv msg) n.(nlbl))):
         step_node_ev id (WriteChannel han msg) s t
             (state_append_msg han msg s) (ev :: t)
     | SReadChan s id n han chan msg t ev
         (H0: (s.(nodes) id) = n)
-        (H1: In n.(hans) han)
+        (H1: In n.(rhans) han)
         (H2: (s.(chans) han) = chan)
         (H3: (length chan.(ms)) > 0)
         (H4: chan.(clbl) << n.(nlbl))
@@ -44,26 +44,28 @@ Inductive step_node_ev: node_id -> call -> state -> trace -> state -> trace -> P
         (H6: ev = (EvL (InEv msg) n.(nlbl))):
         step_node_ev id (ReadChannel han) s t 
             (state_chan_pop han s) (ev :: t)
-    | SCreateChan s n cid rid wid h lbl t ev
+    | SCreateChan s n cid h lbl t ev
         (H0: (s.(nodes) cid) = n)
         (H1: n.(nlbl) << lbl)
         (H2: handle_fresh s h)
         (H3: ev = (EvL NilEv n.(nlbl)) ):
             let s0 := (state_upd_chan h {| ms := []; clbl := lbl; |} s) in
-            let s1 := (state_node_add_han h rid s0) in
-            let s' := (state_node_add_han h wid s1) in
-            step_node_ev cid (CreateChannel lbl rid wid) s t s' (ev :: t)
+            let s1 := (state_node_add_rhan h cid s0) in
+            let s' := (state_node_add_whan h cid s1) in
+            step_node_ev cid (CreateChannel lbl) s t s' (ev :: t)
     | SCreateNode s n cid nid lbl h t ev
         (H0: (s.(nodes) cid) = n)
         (H1: n.(nlbl) << lbl)
         (H2: (nid_fresh s nid))
         (H3: ev = (EvL NilEv n.(nlbl))):
-        step_node_ev cid (CreateNode lbl h) s t
-            (state_upd_node nid {| 
+        let s0 := (state_upd_node nid {| 
                 nlbl := lbl;
-                hans := (Singleton h);
+                rhans := (Singleton h);
+                whans := Empty_set handle;
                 ncall := Internal;
-            |} s) (ev :: t)
+            |} s) in
+        let s' := state_node_del_rhan h cid s0 in
+        step_node_ev cid (CreateNode lbl h) s t s' (ev :: t)
     | SInternal s id t ev
         (H0: ev = (EvL NilEv (s.(nodes) id).(nlbl))) :
         step_node_ev id Internal s t s (ev :: t).
