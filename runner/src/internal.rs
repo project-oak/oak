@@ -535,7 +535,7 @@ impl Runnable for Cmd {
                 .stdout(stdout)
                 .stderr(stderr)
                 .spawn()
-                .expect("could not spawn command");
+                .unwrap_or_else(|err| panic!("could not spawn command: {:?}: {}", cmd, err));
 
             crate::PROCESSES
                 .lock()
