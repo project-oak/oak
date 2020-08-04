@@ -14,7 +14,7 @@ low-projections, which are functions from "things" and security levels to
 though:
     - Trace low-projections need to be defined "up to high stutter" which
     necessitates either boolean or otherwise decidable equality on states (not
-    just propositional equality on).
+    just propositional equality).
     - States are records including generic maps. These generic maps are defined
     using functions. Propositional equality can be given by using functional
     extensionality, but this does not give a way to provide eqb.
