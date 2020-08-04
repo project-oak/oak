@@ -1250,7 +1250,7 @@
                 .<span class="ident">stdout</span>(<span class="ident">stdout</span>)
                 .<span class="ident">stderr</span>(<span class="ident">stderr</span>)
                 .<span class="ident">spawn</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;could not spawn command&quot;</span>);
+                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;could not spawn command: {:?}: {}&quot;</span>, <span class="ident">cmd</span>, <span class="ident">err</span>));
 
             <span class="kw">crate</span>::<span class="ident">PROCESSES</span>
                 .<span class="ident">lock</span>()
