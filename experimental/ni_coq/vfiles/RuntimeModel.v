@@ -11,11 +11,6 @@ Arguments Ensembles.Add {U}.
 Arguments Ensembles.Subtract {U}.
 Arguments Ensembles.Singleton {U}.
 
-(* TODO:
-    - distinguish between read/write handles
-    - use option types for channel_state node_state range
-    - look into libraries for record types
-*)
 (*============================================================================
  Commands, State, Etc.
 ============================================================================*)
@@ -26,16 +21,17 @@ Record channel := Chan {
 
 (* ABI Calls *)
 Inductive call: Type :=
-    | WriteChannel (h: handle) (m: message): call
+    | WriteChannel (h: handle)(m: message): call
     | ReadChannel (h: handle): call
-    | CreateChannel (lbl: level)(wid: node_id)(rid: node_id): call
+    | CreateChannel (lbl: level): call
     | CreateNode (lbl: level)(h: handle): call
     | Internal: call.
 (* TODO wait_on_channels, channel_close *)
 
 Record node := Node {
     nlbl: level;
-    hans: Ensemble handle;
+    rhans: Ensemble handle;
+    whans: Ensemble handle;
     ncall: call
 }.
 
@@ -60,7 +56,8 @@ Record state := State {
 Definition empty_chan := {| clbl := top; ms := []; |}.
 Definition empty_node := {|
         nlbl := top;
-        hans := Empty_set handle;
+        rhans := Empty_set handle;
+        whans := Empty_set handle;
         ncall := Internal;
     |}.
 Definition empty_state := {| 
@@ -102,7 +99,8 @@ Definition state_upd_call (nid: node_id)(c: call)(s: state): state :=
     let old_n := (s.(nodes) nid) in
     state_upd_node nid ({|
             nlbl := old_n.(nlbl);
-            hans := old_n.(hans);
+            rhans := old_n.(rhans);
+            whans := old_n.(whans);
             ncall := c;
         |}) s.
 
@@ -112,16 +110,35 @@ Definition state_append_msg (h: handle)(m: message)(s: state): state :=
 Definition state_chan_pop (h: handle)(s: state): state :=
     state_upd_chan h (chan_pop (s.(chans) h)) s.
 
-Definition state_node_add_han (h: handle)(nid: node_id)(s: state): state :=
+Definition state_node_add_rhan (h: handle)(nid: node_id)(s: state): state :=
     let old_n := (s.(nodes) nid) in
     state_upd_node nid {|
             nlbl  := old_n.(nlbl);
-            hans  := Ensembles.Add old_n.(hans) h;
+            rhans  := Ensembles.Add old_n.(rhans) h;
+            whans  := old_n.(whans);
+            ncall := old_n.(ncall);
+        |} s.
+
+Definition state_node_add_whan (h: handle)(nid: node_id)(s: state): state :=
+    let old_n := (s.(nodes) nid) in
+    state_upd_node nid {|
+            nlbl := old_n.(nlbl);
+            rhans := old_n.(rhans);
+            whans := Ensembles.Add old_n.(whans) h;
+            ncall := old_n.(ncall);
+        |} s.
+
+Definition state_node_del_rhan (h: handle)(nid: node_id)(s: state): state :=
+    let old_n := (s.(nodes) nid) in
+    state_upd_node nid {|
+            nlbl  := old_n.(nlbl);
+            rhans  := Ensembles.Subtract old_n.(rhans) h;
+            whans  := old_n.(whans);
             ncall := old_n.(ncall);
         |} s.
 
 (* 
-TODO it would actually be better to use option types
+NOTE it might actually be better to use option types
 for the range of both the node state and channel states 
 *)
 (* There may be potential problems with these definitions *)
@@ -146,39 +163,37 @@ Inductive step_node: node_id -> call -> state -> state -> Prop :=
             redundantly. Then have a separate relation with the -> call -> bit
             to make proofs easier, then prove they are equivalent *)
         (H0: (s.(nodes) id) = n)
-        (H1: In n.(hans) han)
+        (H1: In n.(whans) han)
         (H2: n.(nlbl) << (s.(chans) han).(clbl)):
         step_node id (WriteChannel han msg) s (state_append_msg han msg s)
     | SReadChan s id n han chan
             (* note that, we already expect that this call 
             * will have leaks and we cannot prove NI with it *)
         (H0: (s.(nodes) id) = n)
-        (H1: In n.(hans) han)
+        (H1: In n.(rhans) han)
         (H2: (s.(chans) han) = chan)
         (H3: (length chan.(ms)) > 0)
         (H4: chan.(clbl) << n.(nlbl)):
         step_node id (ReadChannel han) s (state_chan_pop han s)
-    | SCreateChan s cid rid wid h lbl
+    | SCreateChan s cid h lbl
         (H1: (s.(nodes) cid).(nlbl) << lbl)
-            (* in an alternative design, there could be checks here comparing 
-            the labels of the reader/writer and the label of the channel 
-            here *instead* of in the read/write calls *)
         (H2: handle_fresh s h):
             let s0 := (state_upd_chan h {| ms := []; clbl := lbl; |} s) in
-            let s1 := (state_node_add_han h rid s0) in
-            let s' := (state_node_add_han h wid s1) in
-            step_node cid (CreateChannel lbl rid wid) s s'
+            let s1 := (state_node_add_rhan h cid s0) in
+            let s' := (state_node_add_whan h cid s1) in
+            step_node cid (CreateChannel lbl) s s'
     | SCreateNode s cid nid lbl h
         (H0: (s.(nodes) cid).(nlbl) << lbl)
-        (* consider the following also : *)
-        (* (H1: lbl << (s.(chans). h).(clbl) ) *)
         (H1: (nid_fresh s nid)):
-        step_node cid (CreateNode lbl h) s 
-            (state_upd_node nid {| 
+            (* create new node with read handle *)
+        let s0 := (state_upd_node nid {| 
                 nlbl := lbl;
-                hans := (Singleton h);
+                rhans := (Singleton h);
+                whans := Empty_set handle;
                 ncall := Internal;
-            |} s)
+            |} s) in
+        let s' := state_node_del_rhan h cid s0 in
+        step_node cid (CreateNode lbl h) s s'
     | SInternal s id: step_node id Internal s s.
 
 (* step for the full system (which picks a thread to execute and is
