@@ -26,6 +26,11 @@ Inductive call: Type :=
     | CreateChannel (lbl: level): call
     | CreateNode (lbl: level)(h: handle): call
     | Internal: call.
+(*
+TODO with the linear channels design, we might need a call just for passing
+channels separate from message send.
+*)
+
 (* TODO wait_on_channels, channel_close *)
 
 Record node := Node {
@@ -114,15 +119,15 @@ Definition state_node_add_rhan (h: handle)(nid: node_id)(s: state): state :=
     let old_n := (s.(nodes) nid) in
     state_upd_node nid {|
             nlbl  := old_n.(nlbl);
-            rhans  := Ensembles.Add old_n.(rhans) h;
-            whans  := old_n.(whans);
+            rhans := Ensembles.Add old_n.(rhans) h;
+            whans := old_n.(whans);
             ncall := old_n.(ncall);
         |} s.
 
 Definition state_node_add_whan (h: handle)(nid: node_id)(s: state): state :=
     let old_n := (s.(nodes) nid) in
     state_upd_node nid {|
-            nlbl := old_n.(nlbl);
+            nlbl  := old_n.(nlbl);
             rhans := old_n.(rhans);
             whans := Ensembles.Add old_n.(whans) h;
             ncall := old_n.(ncall);
@@ -167,8 +172,6 @@ Inductive step_node: node_id -> call -> state -> state -> Prop :=
         (H2: n.(nlbl) << (s.(chans) han).(clbl)):
         step_node id (WriteChannel han msg) s (state_append_msg han msg s)
     | SReadChan s id n han chan
-            (* note that, we already expect that this call 
-            * will have leaks and we cannot prove NI with it *)
         (H0: (s.(nodes) id) = n)
         (H1: In n.(rhans) han)
         (H2: (s.(chans) han) = chan)
