@@ -70,9 +70,16 @@ int main(int argc, char** argv) {
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  // TODO(#972): Use a more restrictive Label, including the WebAssembly module attestation of the
-  // aggregator functionality.
-  oak::label::Label label = oak::PublicUntrustedLabel();
+  // Label corresponding to the hash of the WebAssembly module that implements the aggregator logic.
+  //
+  // The intention is that only such module will be able to declassify the data sent over gRPC.
+  // When a new version of the aggregator module is "released", this value needs to be changed to
+  // reflect the hash of the new module.
+  //
+  // This particular value is taken from
+  // https://github.com/project-oak/oak/blob/abb0bbff11b60f90be4df2cc4446be58b98015ff/reproducibility_index#L3
+  oak::label::Label label = oak::WebAssemblyModuleLabel(
+      absl::HexStringToBytes("f2c6e041a2b1771800fa5657d62885ac9f2334cecc3d839b047dc6d16ec82e1c"));
   // Connect to the Oak Application.
   auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
