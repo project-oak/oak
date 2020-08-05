@@ -17,8 +17,8 @@
 fn main() {
     oak_utils::compile_protos_with_options(
         &[
-            "../../../oak/proto/storage_service.proto",
-            "../../../oak/proto/roughtime_service.proto",
+            "../../../oak_abi/proto/storage_service.proto",
+            "../../../oak_abi/proto/roughtime_service.proto",
             "../../../oak/proto/handle.proto",
         ],
         &["../../.."],
