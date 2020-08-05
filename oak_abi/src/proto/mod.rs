@@ -27,12 +27,12 @@ pub mod oak {
         include!(concat!(env!("OUT_DIR"), "/oak.application.rs"));
     }
 
-    pub mod label {
-        include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
-    }
-
     pub mod encap {
         include!(concat!(env!("OUT_DIR"), "/oak.encap.rs"));
+    }
+
+    pub mod label {
+        include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
     }
 
     pub mod log {

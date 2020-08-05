@@ -21,7 +21,6 @@ fn main() {
         &[
             "../oak_abi/proto/application.proto",
             "../oak_abi/proto/grpc_encap.proto",
-            "../oak_abi/proto/handle.proto",
             "../oak_abi/proto/http_encap.proto",
             "../oak_abi/proto/label.proto",
             "../oak_abi/proto/log.proto",
