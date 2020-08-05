@@ -3,8 +3,8 @@ name = "abitest"
 [applications]
 
 [applications.rust]
-manifest = "examples/abitest/config.toml"
-out = "examples/abitest/bin/config.bin"
+manifest = "examples/abitest/oak_app_manifest.toml"
+out = "examples/abitest/bin/abitest.oak"
 
 [applications.rust.modules]
 module_0 = { Cargo = { cargo_manifest = "examples/abitest/module_0/rust/Cargo.toml" } }

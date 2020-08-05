@@ -3,8 +3,8 @@ name = "aggregator"
 [applications]
 
 [applications.rust]
-manifest = "examples/aggregator/config.toml"
-out = "examples/aggregator/bin/config.bin"
+manifest = "examples/aggregator/oak_app_manifest.toml"
+out = "examples/aggregator/bin/aggregator.oak"
 
 [applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/aggregator/module/rust/Cargo.toml" } }

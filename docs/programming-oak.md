@@ -231,13 +231,13 @@ be serialized into a binary file that will be parsed by the
 follows:
 
 ```bash
-cargo run --manifest-path="sdk/rust/oak_config_serializer/Cargo.toml" -- \
-  --input-file="examples/hello_world/config/config.toml" \
-  --output-file="hello_world/bin/config.bin"
+cargo run --manifest-path=sdk/rust/oak_app_build/Cargo.toml -- \
+  --manifest-path=examples/hello_world/oak_app_manifest.toml
 ```
 
-The input file is the .toml configuration and the output is the binary
-containing all the needed modules. Here is an example of a configuration file:
+The input file is the .toml manifest file and the output is the binary
+containing all the needed modules, which will be generated under the `bin`
+directory alongside the manifest file. Here is an example of a manifest file:
 
 ```toml
 name = "hello_world"
@@ -275,7 +275,7 @@ the following script:
 The Oak Application is then started using the Oak Loader:
 
 ```bash
-./oak/server/target/x86_64-unknown-linux-musl/release/oak_loader --application=./examples/hello_world/bin/config.bin
+./oak/server/target/x86_64-unknown-linux-musl/release/oak_loader --application=./examples/hello_world/bin/hello_world.oak
 ```
 
 The Oak Loader will launch an [Oak Runtime](concepts.md#oak-runtime), and this

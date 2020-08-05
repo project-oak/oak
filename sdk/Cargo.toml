@@ -1,7 +1,7 @@
 [workspace]
 members = [
   "rust/oak",
-  "rust/oak_config_serializer",
+  "rust/oak_app_build",
   "rust/oak_derive",
   "rust/oak_tests"
 ]
@@ -15,7 +15,7 @@ members = [
 # Oak.
 oak = { path = "rust/oak" }
 oak_abi = { path = "../oak_abi" }
-oak_config_serializer = { path = "rust/oak_config_serializer" }
+oak_app_build = { path = "rust/oak_app_build" }
 oak_derive = { path = "rust/oak_derive" }
 oak_runtime = { path = "../oak/server/rust/oak_runtime" }
 oak_tests = { path = "rust/oak_tests" }

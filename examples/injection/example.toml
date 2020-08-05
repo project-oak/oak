@@ -3,8 +3,8 @@ name = "injection"
 [applications]
 
 [applications.rust]
-manifest = "examples/injection/config.toml"
-out = "examples/injection/bin/config.bin"
+manifest = "examples/injection/oak_app_manifest.toml"
+out = "examples/injection/bin/injection.oak"
 
 [applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/injection/module/rust/Cargo.toml" } }

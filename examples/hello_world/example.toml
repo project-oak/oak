@@ -3,16 +3,16 @@ name = "hello_world"
 [applications]
 
 [applications.rust]
-manifest = "examples/hello_world/config.toml"
-out = "examples/hello_world/bin/config.bin"
+manifest = "examples/hello_world/oak_app_manifest.toml"
+out = "examples/hello_world/bin/hello_world.oak"
 
 [applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/hello_world/module/rust/Cargo.toml" } }
 translator = { Cargo = { cargo_manifest = "examples/translator/module/rust/Cargo.toml" } }
 
 [applications.cpp]
-manifest = "examples/hello_world/config_cpp.toml"
-out = "examples/hello_world/bin/config_cpp.bin"
+manifest = "examples/hello_world/oak_app_manifest_cpp.toml"
+out = "examples/hello_world/bin/hello_world_cpp.oak"
 
 [applications.cpp.modules]
 module = { Bazel = { bazel_target = "//examples/hello_world/module/cpp:hello_world_cpp.wasm", config = "wasm32" } }

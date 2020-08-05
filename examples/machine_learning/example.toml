@@ -3,8 +3,8 @@ name = "machine_learning"
 [applications]
 
 [applications.rust]
-manifest = "examples/machine_learning/config.toml"
-out = "examples/machine_learning/bin/config.bin"
+manifest = "examples/machine_learning/oak_app_manifest.toml"
+out = "examples/machine_learning/bin/machine_learning.oak"
 
 [applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/machine_learning/module/rust/Cargo.toml" } }

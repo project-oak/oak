@@ -849,7 +849,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_config_serializer"
+name = "oak_app_build"
 version = "0.1.0"
 dependencies = [
  "anyhow",

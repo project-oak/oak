@@ -701,10 +701,9 @@ fn build_application(application: &Application) -> Box<dyn Runnable> {
         "cargo",
         vec![
             "run".to_string(),
-            "--manifest-path=sdk/rust/oak_config_serializer/Cargo.toml".to_string(),
+            "--manifest-path=sdk/rust/oak_app_build/Cargo.toml".to_string(),
             "--".to_string(),
-            format!("--input-file={}", application.manifest),
-            format!("--output-file={}", application.out),
+            format!("--manifest-path={}", application.manifest),
         ],
     )
 }
@@ -733,6 +732,10 @@ fn build_docker(example: &Example) -> Step {
                         "build",
                         &format!("--tag={}", example.name),
                         "--file=./examples/Dockerfile",
+                        // An example may have more than one application, and the applications may
+                        // have arbitrary names, so this is an approximation of the expected
+                        // application file name of one of them.
+                        &format!("--build-arg=application_file_name={}.oak", example.name),
                         &format!("./examples/{}", example.name),
                     ],
                 ),
