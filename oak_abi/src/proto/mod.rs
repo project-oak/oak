@@ -42,8 +42,4 @@ pub mod oak {
     pub mod roughtime {
         include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
     }
-
-    pub mod storage {
-        include!(concat!(env!("OUT_DIR"), "/oak.storage.rs"));
-    }
 }

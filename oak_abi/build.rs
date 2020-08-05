@@ -26,7 +26,6 @@ fn main() {
             "../oak_abi/proto/log.proto",
             "../oak_abi/proto/oak_abi.proto",
             "../oak_abi/proto/roughtime_service.proto",
-            "../oak_abi/proto/storage_service.proto",
             "../third_party/google/rpc/code.proto",
             "../third_party/google/rpc/status.proto",
         ],

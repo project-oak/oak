@@ -34,7 +34,7 @@ fn type_ident(type_: &str) -> TokenStream {
 ///
 /// When compiling from within the `oak` crate we need to use `crate` to refer to itself.
 fn oak_package() -> TokenStream {
-    if std::env::var("CARGO_PKG_NAME").unwrap() == "oak_abi" {
+    if std::env::var("CARGO_PKG_NAME").unwrap() == "oak" {
         quote!(crate)
     } else {
         quote!(::oak)
