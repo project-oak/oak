@@ -67,12 +67,6 @@ cc_proto_library(
 )
 
 proto_library(
-    name = "handle_proto",
-    srcs = ["handle.proto"],
-    deps = ["@com_google_protobuf//:descriptor_proto"],
-)
-
-proto_library(
     name = "label_proto",
     srcs = ["label.proto"],
     deps = [],
