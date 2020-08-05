@@ -1,0 +1,62 @@
+//
+// Copyright 2019 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak_abi;
+
+// Status values exchanged as i32 values across the Node Wasm interface.
+enum OakStatus {
+  OAK_STATUS_UNSPECIFIED = 0;
+  // Success.
+  OK = 1;
+  // Invalid handle provided.
+  ERR_BAD_HANDLE = 2;
+  // Arguments invalid.
+  ERR_INVALID_ARGS = 3;
+  // Channel has been closed.
+  ERR_CHANNEL_CLOSED = 4;
+  // Provided buffer was too small for operation (an output value will indicate required size).
+  ERR_BUFFER_TOO_SMALL = 5;
+  // Provided handle space was too small for operation (an output value will
+  // indicate required size).
+  ERR_HANDLE_SPACE_TOO_SMALL = 6;
+  // Argument out of valid range.
+  ERR_OUT_OF_RANGE = 7;
+  // Internal error.
+  ERR_INTERNAL = 8;
+  // Node terminated.
+  ERR_TERMINATED = 9;
+  // Channel has no messages available to read.
+  ERR_CHANNEL_EMPTY = 10;
+  // The node does not have sufficient permissions to perform the requested operation.
+  ERR_PERMISSION_DENIED = 11;
+}
+
+// Single byte values used to indicate the read status of a channel on the
+// `oak.wait_on_channels` host function.
+enum ChannelReadStatus {
+  // No pending messages available on channel.
+  NOT_READY = 0;
+  // Pending message available on channel.
+  READ_READY = 1;
+  // Channel handle does not identify the read half of a current channel.
+  INVALID_CHANNEL = 2;
+  // Channel has no extant write halves (and is empty).
+  ORPHANED = 3;
+  // A node trying to access the channel does not have the permission to do so.
+  PERMISSION_DENIED = 4;
+}
