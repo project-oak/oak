@@ -26,10 +26,11 @@ gcloud container clusters get-credentials aggregator --zone=europe-west2-a
 
 kubectl delete secret tls-private-key || true
 kubectl delete service aggregator || true
-kubectl delete deployment aggregator || true
+kubectl delete deployment,replicaset,pod -l app=aggregator || true
 
 if [[ $metrics == 1 ]]
 then
     kubectl delete service prometheus-k8s -n agg-metrics || true
-    kubectl delete deployment metrics-sidecar -n agg-metrics || true
+    kubectl delete deployment,replicaset,pod -n agg-metrics -l app=metrics-sidecar || true
+    kubectl delete all -n agg-metrics -l app=metrics-sidecar || true
 fi
