@@ -1,3 +1,6 @@
+(* This file contains generic maps. It is likely to be replaced by a
+library for generic maps *)
+
 (* -- will be needed for theorems, but not yet
 From Coq Require Import Logic.FunctionalExtensionality.
 *)
@@ -5,7 +8,6 @@ From Coq Require Import Logic.FunctionalExtensionality.
 Class KeyT:= {
     t: Type;
     eq_dec: forall (t1 t2: t), {t1 = t2} + {t1 <> t2};
-    (* TODO, undoubtedly proof obligations *)
 }.
 
 Theorem eq_key {KT: KeyT}: forall (T: Type) (k: t) (p q: T),

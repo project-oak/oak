@@ -6,3 +6,4 @@ vfiles/RuntimeModel.v
 vfiles/LowEquivalences.v
 vfiles/Events.v
 vfiles/EvAugSemantics.v
+vfiles/PossibilisticNI.v

@@ -1,9 +1,12 @@
-Require Import OakIFC.Lattice.
-Require Import OakIFC.Parameters.
+From OakIFC Require Import
+    Lattice
+    Parameters
+    RuntimeModel
+    LowEquivalences.
 Require Import Coq.Lists.List.
-Require Import OakIFC.RuntimeModel.
-Require Import OakIFC.LowEquivalences.
 Import ListNotations.
+
+(* This file contains  *)
 
 Inductive event: Type :=
     | NilEv: event
@@ -18,10 +21,12 @@ Definition lvl(el: event_l): level :=
     match el with | EvL _ l => l end.
 
 Inductive ev_low_eq: level -> event_l -> event_l -> Prop :=
-    | EvEq ell el1 el2 (H: el1 = el2): ev_low_eq ell el1 el2
-    | EvNoFlow ell el1 el2
-        (H1: ~((lvl el2) << ell))
-        (H2: ~((lvl el1) << ell)):
+    | EvEq ell el1 el2: 
+            el1 = el2 ->
+            ev_low_eq ell el1 el2
+    | EvNoFlow ell el1 el2:
+        ~((lvl el2) << ell) ->
+        ~((lvl el1) << ell) ->
         ev_low_eq ell el1 el2.
 
 Definition trace := list (state * event_l).
@@ -29,7 +34,7 @@ Definition trace := list (state * event_l).
 (* We might need two different definitions of trace low-equivalence
 * depending on the top-level security condition *)
 
-(* This is a strateforward definition of trace low-equivalence
+(* This is a straightforward definition of trace low-equivalence
     Roughly, it says that 
     t1 =L t2 <-> forall i, t1[i] =L t2[i].
 
@@ -51,24 +56,30 @@ Definition trace := list (state * event_l).
     https://pdfs.semanticscholar.org/809b/f2702a765b9e7dba4624a1dbc53af11579db.pdf
     See also:
     https://www.cs.cornell.edu/andru/papers/csfw03.pdf
+
+    and discussion in PossibilisticNI.v
 *)
 Inductive trace_low_eq: level -> trace -> trace -> Prop :=
     | NilEQ ell: trace_low_eq ell [] []
-    | AddBoth ell xs xe ys ye t1 t2 
-        (H1: trace_low_eq ell t1 t2)
-        (H2: ev_low_eq ell xe ye)
-        (H3: state_low_eq ell xs ys):
+    | AddBoth ell xs xe ys ye t1 t2:
+        trace_low_eq ell t1 t2 ->
+        ev_low_eq ell xe ye ->
+        state_low_eq ell xs ys ->
         trace_low_eq ell ((xs, xe)::t1) ((ys, ye)::t2).
 
 
 (* An alternative way of specifying security for
    concurrent systems is observational determinism, which says
    that for any two executions that begin from low-equivalent
-   initial states, the observed behaviors _always_ look the same.
+   initial states, the actual observed behaviors 
+   (by contrast to possibly observed behaviors)
+   _always_ look the same.
 
     This looks like:
     forall s1 s2 t1 t2,
-        (s1 =L s2) /\ <c, s1> => t1 /\ <c, s2> => t2 ->
+        (s1 =L s2) /\
+        (step_multi s1) => t1 /\
+        (step_multi s2) => t2 ->
             t1 =L t2.
 
     If we write this top-level theorem using the straightforward
@@ -91,25 +102,21 @@ Inductive trace_low_eq: level -> trace -> trace -> Prop :=
 
     This definition of trace low-equivalence rules this out by collapsing
     adjacent low-equivalent states (called "high stutter") in the traces.
-
-    It is not clear to aferr just yet, which style of theorem theorem / 
-    trace-low equivalence we should target. The O.D. style is stronger, but it
-    might not be possible for us to prove it.
 *)
 Inductive stut_trace_low_eq: level -> trace -> trace -> Prop :=
     | SNilEQ ell: stut_trace_low_eq ell [] []
-    | SAddBoth ell xs xe ys ye t1 t2 
-        (H1: stut_trace_low_eq ell t1 t2)
-        (H2: ev_low_eq ell xe ye)
-        (H3: state_low_eq ell xs ys):
+    | SAddBoth ell xs xe ys ye t1 t2:
+        stut_trace_low_eq ell t1 t2 ->
+        ev_low_eq ell xe ye ->
+        state_low_eq ell xs ys ->
         stut_trace_low_eq ell ((xs, xe)::t1) ((ys, ye)::t2)
-    | SAddEqR ell xs xe ys ye t1 t2 
-        (H1: stut_trace_low_eq ell t1 ((ys, ye)::t2))
-        (H2: ev_low_eq ell xe ye)
-        (H3: state_low_eq ell xs ys):
+    | SAddEqR ell xs xe ys ye t1 t2:
+        stut_trace_low_eq ell t1 ((ys, ye)::t2) ->
+        ev_low_eq ell xe ye ->
+        state_low_eq ell xs ys ->
         stut_trace_low_eq ell t1 ((xs, xe)::(ys, ye)::t2)
-    | SAddEqL ell xs xe ys ye t1 t2
-        (H1: stut_trace_low_eq ell ((ys, ye)::t1) t2)
-        (H2: ev_low_eq ell xe ye)
-        (H3: state_low_eq ell xs ys):
+    | SAddEqL ell xs xe ys ye t1 t2:
+        stut_trace_low_eq ell ((ys, ye)::t1) t2 ->
+        ev_low_eq ell xe ye ->
+        state_low_eq ell xs ys ->
         stut_trace_low_eq ell ((xs, xe)::t1) ((ys, ye)::t2).
