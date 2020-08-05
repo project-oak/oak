@@ -34,10 +34,10 @@ fn type_ident(type_: &str) -> TokenStream {
 ///
 /// When compiling from within the `oak` crate we need to use `crate` to refer to itself.
 fn oak_package() -> TokenStream {
-    if std::env::var("CARGO_PKG_NAME").unwrap() == "oak" {
+    if std::env::var("CARGO_PKG_NAME").unwrap() == "oak_abi" {
         quote!(crate)
     } else {
-        quote!(::oak)
+        quote!(::oak_abi)
     }
 }
 
@@ -226,11 +226,11 @@ where
     if options.derive_handle_visit {
         prost_config
             // Auto-derive the HandleVisit trait
-            .type_attribute(".", "#[derive(::oak::handle::HandleVisit)]")
+            .type_attribute(".", "#[derive(::oak_abi::handle::HandleVisit)]")
             // Link relevant Oak protos to the Oak SDK types.
-            .extern_path(".oak.handle", "::oak::handle")
-            .extern_path(".oak.encap.GrpcRequest", "::oak::grpc::GrpcRequest")
-            .extern_path(".oak.encap.GrpcResponse", "::oak::grpc::GrpcResponse");
+            .extern_path(".oak_abi.handle", "::oak_abi::handle")
+            .extern_path(".oak_abi.encap.GrpcRequest", "::oak_abi::grpc::GrpcRequest")
+            .extern_path(".oak_abi.encap.GrpcResponse", "::oak_abi::grpc::GrpcResponse");
     }
     if let Some(out_dir) = options.out_dir_override {
         prost_config.out_dir(out_dir);
@@ -238,7 +238,7 @@ where
     prost_config
         // We require label-related types to be comparable and hashable so that they can be used in
         // hash-based collections.
-        .type_attribute(".oak.label", "#[derive(Eq, Hash)]")
+        .type_attribute(".oak_abi.label", "#[derive(Eq, Hash)]")
         .compile_protos(inputs, includes)
         .expect("could not run prost-build");
 }
