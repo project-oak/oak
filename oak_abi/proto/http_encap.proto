@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak_abi.encap;
+package oak.encap;
 
 import "third_party/google/rpc/status.proto";
 

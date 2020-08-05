@@ -718,11 +718,11 @@ impl<'a> CodeGenerator<'a> {
     fn resolve_message_type(&self, field: &FieldDescriptorProto) -> Option<String> {
         let message_type = self.resolve_ident(&field.options.as_ref()?.message_type.as_ref()?);
         let direction = match field.type_name() {
-            ".oak_abi.handle.Sender" => Some("Sender"),
-            ".oak_abi.handle.Receiver" => Some("Receiver"),
+            ".oak.handle.Sender" => Some("Sender"),
+            ".oak.handle.Receiver" => Some("Receiver"),
             _ => None,
         }?;
-        Some(format!("::oak_abi::io::{}<{}>", direction, message_type))
+        Some(format!("::oak::io::{}<{}>", direction, message_type))
     }
 
     fn resolve_type(&self, field: &FieldDescriptorProto) -> String {

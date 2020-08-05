@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak_abi.log;
+package oak.log;
 
 // This message defines the data that is passed as a log message to a logging pseudo-node. It
 // provides a "schema" to keep the logging pseudo-node in sync with the internal representation of

@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak_abi.application;
+package oak.application;
 
 import "google/protobuf/wrappers.proto";
 

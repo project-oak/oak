@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::oak_abi::encap::GrpcRequest;
+use crate::proto::oak::encap::GrpcRequest;
 use log::warn;
 
 /// Encapsulate a protocol buffer message in a GrpcRequest wrapper using the

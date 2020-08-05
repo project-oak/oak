@@ -16,10 +16,10 @@
 
 syntax = "proto3";
 
-package oak_abi.label;
+package oak.label;
 
 option java_multiple_files = true;
-option java_package = "com.google.oak_abi.label";
+option java_package = "com.google.oak.label";
 
 // Label represents information flowing through a Node or channel.
 //

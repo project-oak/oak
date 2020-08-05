@@ -20,30 +20,30 @@ pub mod google {
     }
 }
 
-pub mod oak_abi {
+pub mod oak {
     include!(concat!(env!("OUT_DIR"), "/oak_abi.rs"));
 
     pub mod application {
-        include!(concat!(env!("OUT_DIR"), "/oak_abi.application.rs"));
+        include!(concat!(env!("OUT_DIR"), "/oak.application.rs"));
     }
 
     pub mod label {
-        include!(concat!(env!("OUT_DIR"), "/oak_abi.label.rs"));
+        include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
     }
 
     pub mod encap {
-        include!(concat!(env!("OUT_DIR"), "/oak_abi.encap.rs"));
+        include!(concat!(env!("OUT_DIR"), "/oak.encap.rs"));
     }
 
     pub mod log {
-        include!(concat!(env!("OUT_DIR"), "/oak_abi.log.rs"));
+        include!(concat!(env!("OUT_DIR"), "/oak.log.rs"));
     }
 
     pub mod roughtime {
-        include!(concat!(env!("OUT_DIR"), "/oak_abi.roughtime.rs"));
+        include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
     }
 
     pub mod storage {
-        include!(concat!(env!("OUT_DIR"), "/oak_abi.storage.rs"));
+        include!(concat!(env!("OUT_DIR"), "/oak.storage.rs"));
     }
 }

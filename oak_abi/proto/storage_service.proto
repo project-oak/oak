@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak_abi.storage;
+package oak.storage;
 
 import "oak_abi/proto/label.proto";
 
@@ -28,7 +28,7 @@ import "oak_abi/proto/label.proto";
 message StorageItem {
   bytes name = 1;
   bytes value = 2;
-  oak_abi.label.Label label = 3;
+  oak.label.Label label = 3;
 }
 
 message StorageChannelReadRequest {

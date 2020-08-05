@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak_abi.handle;
+package oak.handle;
 
 import "google/protobuf/descriptor.proto";
 

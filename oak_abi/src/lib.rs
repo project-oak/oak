@@ -21,7 +21,7 @@ pub mod grpc;
 pub mod label;
 pub mod proto;
 
-pub use proto::oak_abi::{ChannelReadStatus, OakStatus};
+pub use proto::oak::{ChannelReadStatus, OakStatus};
 
 impl std::fmt::Display for OakStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {

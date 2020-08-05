@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak_abi.roughtime;
+package oak.roughtime;
 
 message GetRoughtimeRequest {}
 
