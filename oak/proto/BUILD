@@ -25,74 +25,19 @@ package(
 )
 
 proto_library(
-    name = "application_proto",
-    srcs = ["application.proto"],
-    deps = ["@com_google_protobuf//:wrappers_proto"],
-)
-
-cc_proto_library(
-    name = "application_cc_proto",
-    deps = [":application_proto"],
-)
-
-cc_grpc_library(
-    name = "application_cc_grpc",
-    srcs = [":application_proto"],
-    grpc_only = True,
-    well_known_protos = True,
-    deps = [":application_cc_proto"],
+    name = "handle_proto",
+    srcs = ["handle.proto"],
+    deps = ["@com_google_protobuf//:descriptor_proto"],
 )
 
 proto_library(
-    name = "grpc_encap_proto",
-    srcs = ["grpc_encap.proto"],
-    deps = [
-        "//third_party/google/rpc:status_proto",
-    ],
+    name = "roughtime_service_proto",
+    srcs = ["roughtime_service.proto"],
 )
 
 cc_proto_library(
-    name = "grpc_encap_cc_proto",
-    deps = [":grpc_encap_proto"],
-)
-
-proto_library(
-    name = "oak_abi_proto",
-    srcs = ["oak_abi.proto"],
-)
-
-cc_proto_library(
-    name = "oak_abi_cc_proto",
-    deps = [":oak_abi_proto"],
-)
-
-proto_library(
-    name = "label_proto",
-    srcs = ["label.proto"],
-    deps = [],
-)
-
-cc_proto_library(
-    name = "label_cc_proto",
-    deps = [":label_proto"],
-)
-
-go_proto_library(
-    name = "label_go_proto",
-    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "github.com/project-oak/oak/oak/proto/label",
-    proto = ":label_proto",
-)
-
-proto_library(
-    name = "log_proto",
-    srcs = ["log.proto"],
-    deps = [],
-)
-
-cc_proto_library(
-    name = "log_cc_proto",
-    deps = [":log_proto"],
+    name = "roughtime_service_cc_proto",
+    deps = [":roughtime_service_proto"],
 )
 
 proto_library(
@@ -126,20 +71,4 @@ cc_grpc_library(
         ":storage_cc_proto",
         "//third_party/google/rpc:status_cc_proto",
     ],
-)
-
-proto_library(
-    name = "roughtime_service_proto",
-    srcs = ["roughtime_service.proto"],
-)
-
-cc_proto_library(
-    name = "roughtime_service_cc_proto",
-    deps = [":roughtime_service_proto"],
-)
-
-proto_library(
-    name = "handle_proto",
-    srcs = ["handle.proto"],
-    deps = ["@com_google_protobuf//:descriptor_proto"],
 )
