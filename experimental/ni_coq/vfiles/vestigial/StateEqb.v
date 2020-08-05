@@ -5,6 +5,14 @@ Require Import OakIFC.GenericMap.
 Require Import Coq.Lists.List.
 Require Import Coq.Bool.Bool.
 
+(*
+This file gives various definitions of boolean equality.
+This was at one point used for various definitions of the theorem,
+but is not used at the moment. It is kept around, but moved out of the 
+way because it seems like the sort of thing that could turn
+out to be useful again.
+*)
+
 Fixpoint list_eqb {A: Type} (a_eqb: A -> A -> bool)(l1 l2: list A): bool :=
     match l1, l2 with
         | nil, nil => true

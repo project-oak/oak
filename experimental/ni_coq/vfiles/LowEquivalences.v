@@ -1,7 +1,8 @@
-Require Import OakIFC.RuntimeModel.
-Require Import OakIFC.Parameters.
 Require Import Coq.Lists.List.
 Import ListNotations.
+From OakIFC Require Import
+    RuntimeModel
+    Parameters.
 
 (*=============================================================================
 * Low Equivalences
@@ -10,7 +11,7 @@ Import ListNotations.
 This file defines "low equivalence relations" over various pieces of state.
 These are auxiliary definitions for defining the security condition.
 A low-equivalence relation holds for a particular security level ell, and a pair
-of state objects s1, s2 whenever the "appear the same" from the perspective of
+of state objects s1, s2 whenever they "appear the same" from the perspective of
 an observer at the level ell. For example, if the state objects are channels,
 an observer with security label "Alice" can see the contents of channels with
 label "Alice" (or any other ell s.t. ell flowsTo Alice), so channels with such
@@ -35,7 +36,6 @@ Inductive node_low_eq: level -> node -> node -> Prop :=
         (H2: ~(n2.(nlbl) << ell)):
         node_low_eq ell n1 n2.
 
-(* Way to phrase this as an inductive ?? *)
 Definition chan_state_low_eq (ell: level)(chs1 chs2: chan_state): Prop :=
     forall h, chan_low_eq ell (chs1 h) (chs2 h).
 

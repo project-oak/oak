@@ -1,9 +1,12 @@
-Require Import OakIFC.Lattice.
-Require Import OakIFC.Parameters.
-Require Import OakIFC.GenericMap.
 Require Import List.
 Import ListNotations.
 Require Import Coq.Sets.Ensembles.
+From OakIFC Require Import
+    Lattice
+    Parameters
+    GenericMap.
+
+(* This file is the top-level model of the Oak runtime *)
 
 (* Ensembles don't have implicit type params and these lines fix that *)
 Arguments Ensembles.In {U}.
@@ -25,18 +28,20 @@ Inductive call: Type :=
     | ReadChannel (h: handle): call
     | CreateChannel (lbl: level): call
     | CreateNode (lbl: level)(h: handle): call
-    | Internal: call.
+    | Internal: call. (* this is any action done by the node other than some
+                         ABI call, it is "internal" to the node because it does
+                         not affect the rest of the system*)
+(* TODO wait_on_channels, channel_close *)
 (*
 TODO with the linear channels design, we might need a call just for passing
-channels separate from message send.
+channels separate from message send so that the read handle is removed from the
+sender when it is sent.
 *)
-
-(* TODO wait_on_channels, channel_close *)
 
 Record node := Node {
     nlbl: level;
-    rhans: Ensemble handle;
-    whans: Ensemble handle;
+    read_handles: Ensemble handle;
+    write_handles: Ensemble handle;
     ncall: call
 }.
 
@@ -61,18 +66,18 @@ Record state := State {
 Definition empty_chan := {| clbl := top; ms := []; |}.
 Definition empty_node := {|
         nlbl := top;
-        rhans := Empty_set handle;
-        whans := Empty_set handle;
+        read_handles := Empty_set handle;
+        write_handles := Empty_set handle;
         ncall := Internal;
-    |}.
-Definition empty_state := {| 
-        nodes := ( _ !-> empty_node);
-        chans := ( _ !-> empty_chan);
     |}.
 
 (*============================================================================
 * Utils
 ============================================================================*)
+(*
+TODO look into this:  https://github.com/tchajed/coq-record-update
+or other record libraries more deeply since records are used often.
+*)
 Definition chan_append (c: channel)(m: message): channel :=
     {| clbl := c.(clbl); ms := (m :: c.(ms)) |}.
 
@@ -104,8 +109,8 @@ Definition state_upd_call (nid: node_id)(c: call)(s: state): state :=
     let old_n := (s.(nodes) nid) in
     state_upd_node nid ({|
             nlbl := old_n.(nlbl);
-            rhans := old_n.(rhans);
-            whans := old_n.(whans);
+            read_handles := old_n.(read_handles);
+            write_handles := old_n.(write_handles);
             ncall := c;
         |}) s.
 
@@ -119,8 +124,8 @@ Definition state_node_add_rhan (h: handle)(nid: node_id)(s: state): state :=
     let old_n := (s.(nodes) nid) in
     state_upd_node nid {|
             nlbl  := old_n.(nlbl);
-            rhans := Ensembles.Add old_n.(rhans) h;
-            whans := old_n.(whans);
+            read_handles := Ensembles.Add old_n.(read_handles) h;
+            write_handles := old_n.(write_handles);
             ncall := old_n.(ncall);
         |} s.
 
@@ -128,8 +133,8 @@ Definition state_node_add_whan (h: handle)(nid: node_id)(s: state): state :=
     let old_n := (s.(nodes) nid) in
     state_upd_node nid {|
             nlbl  := old_n.(nlbl);
-            rhans := old_n.(rhans);
-            whans := Ensembles.Add old_n.(whans) h;
+            read_handles := old_n.(read_handles);
+            write_handles := Ensembles.Add old_n.(write_handles) h;
             ncall := old_n.(ncall);
         |} s.
 
@@ -137,8 +142,8 @@ Definition state_node_del_rhan (h: handle)(nid: node_id)(s: state): state :=
     let old_n := (s.(nodes) nid) in
     state_upd_node nid {|
             nlbl  := old_n.(nlbl);
-            rhans  := Ensembles.Subtract old_n.(rhans) h;
-            whans  := old_n.(whans);
+            read_handles := Ensembles.Subtract old_n.(read_handles) h;
+            write_handles := old_n.(write_handles);
             ncall := old_n.(ncall);
         |} s.
 
@@ -157,50 +162,54 @@ Definition nid_fresh (s: state)(nid: node_id): Prop :=
 * Single Call Semantics
 ============================================================================*)
 
-(* step for a single node (which can be thought of as a thread) *)
+(* step for a single node (which can be thought of as a thread) executing
+* a particular call *)
+(* It might be akwkard looking that the call of a node is a part of the object,
+but that there is no premise checking that this call is really the one used
+in the relation. This is checked in the global transition relation just below.
+*)
 Inductive step_node: node_id -> call -> state -> state -> Prop :=
-    | SWriteChan s id n han msg
-            (* it might be awkward looking that there is no premise checking
-            that the call is really the call of this particular node. 
-            The global transition relation checks this, though. It could
-            be added redundantly here ? Another option could be to make this
-            a node -> state -> state -> Prop relation, that checks this
-            redundantly. Then have a separate relation with the -> call -> bit
-            to make proofs easier, then prove they are equivalent *)
-        (H0: (s.(nodes) id) = n)
-        (H1: In n.(whans) han)
-        (H2: n.(nlbl) << (s.(chans) han).(clbl)):
+    | SWriteChan s id n han msg:
+        (s.(nodes) id) = n ->
+        In n.(write_handles) han ->
+        n.(nlbl) << (s.(chans) han).(clbl) ->
         step_node id (WriteChannel han msg) s (state_append_msg han msg s)
-    | SReadChan s id n han chan
-        (H0: (s.(nodes) id) = n)
-        (H1: In n.(rhans) han)
-        (H2: (s.(chans) han) = chan)
-        (H3: (length chan.(ms)) > 0)
-        (H4: chan.(clbl) << n.(nlbl)):
+    | SReadChan s id n han chan:
+        (s.(nodes) id) = n ->
+        In n.(read_handles) han ->
+        (s.(chans) han) = chan ->
+            (* A channel read happens only when there is a message
+            available in the channel. TODO, re-check what really happens
+            when a message is not available, and possibly improve the model.
+            E.g., if an error is thrown, execute an error continuation instead
+            of the usual one if an error is _not_ thrown.
+            *)
+        length chan.(ms) > 0 ->
+        chan.(clbl) << n.(nlbl) ->
         step_node id (ReadChannel han) s (state_chan_pop han s)
-    | SCreateChan s cid h lbl
-        (H1: (s.(nodes) cid).(nlbl) << lbl)
-        (H2: handle_fresh s h):
+    | SCreateChan s cid h lbl:
+        (s.(nodes) cid).(nlbl) << lbl ->
+        handle_fresh s h ->
             let s0 := (state_upd_chan h {| ms := []; clbl := lbl; |} s) in
             let s1 := (state_node_add_rhan h cid s0) in
             let s' := (state_node_add_whan h cid s1) in
             step_node cid (CreateChannel lbl) s s'
-    | SCreateNode s cid nid lbl h
-        (H0: (s.(nodes) cid).(nlbl) << lbl)
-        (H1: (nid_fresh s nid)):
+    | SCreateNode s cid nid lbl h:
+        (s.(nodes) cid).(nlbl) << lbl ->
+        (nid_fresh s nid) ->
             (* create new node with read handle *)
         let s0 := (state_upd_node nid {| 
                 nlbl := lbl;
-                rhans := (Singleton h);
-                whans := Empty_set handle;
+                read_handles := (Singleton h);
+                write_handles := Empty_set handle;
                 ncall := Internal;
             |} s) in
         let s' := state_node_del_rhan h cid s0 in
         step_node cid (CreateNode lbl h) s s'
     | SInternal s id: step_node id Internal s s.
 
-(* step for the full system (which picks a thread to execute and is
-non-deterministic). This is needed in addition to step_node, because
+(* step for the full system which (non-deterministically) picks a thread to
+* execute. This is needed in addition to step_node, because
 we should show that regardless of the thread scheduling, there are no information
 leaks. *)
 (* To be general and language agnostic, computation of code within nodes other
@@ -211,9 +220,9 @@ on whether or not a call was successful, in this case, the resulting
 continuation likely needs to be moved into the local transition relation *)
 Inductive step_system: state -> state -> Prop :=
     (* possibly also a termination case *)
-    | ValidStep id n c c' s s'
-        (H0: (s.(nodes) id) = n)
-        (H1: n.(ncall) = c)
-        (H2: step_node id c s s'):
+    | ValidStep id n c c' s s':
+        (s.(nodes) id) = n ->
+        n.(ncall) = c ->
+        step_node id c s s' ->
         step_system s (state_upd_call id c' s').
 

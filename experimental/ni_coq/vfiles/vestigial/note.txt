@@ -1,0 +1,2 @@
+The files in this directory are not presently in use, but are kept around
+either as notes or in case they become useful again later.

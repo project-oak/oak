@@ -1,12 +1,14 @@
-Require Import OakIFC.RuntimeModel.
-Require Import OakIFC.Parameters.
-Require Import OakIFC.LowEquivalences.
+From OakIFC Require Import
+        RuntimeModel
+        Parameters
+        LowEquivalences
+        GenericMap.
 Require Import Coq.Lists.List.
-Require Import OakIFC.GenericMap.
 Import ListNotations.
 
 Theorem chan_upd_preserves_nodes: forall h ch s,
     (state_upd_chan h ch s).(nodes) = s.(nodes).
+Proof.
     intros; simpl; reflexivity.
 Qed.
 
