@@ -1,0 +1,83 @@
+//
+// Copyright 2019 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak;
+
+// The Storage service is the interface to a StorageProvider implementation
+// of persistent storage.  Each request message contains a storage_id that
+// uniquely identifies the logical storage instance for the operation and
+// the StorageProvider implementation determines how it is used.
+
+service Storage {
+  rpc Read(StorageReadRequest) returns (StorageReadResponse);
+  rpc Write(StorageWriteRequest) returns (StorageWriteResponse);
+  rpc Delete(StorageDeleteRequest) returns (StorageDeleteResponse);
+
+  rpc Begin(StorageBeginRequest) returns (StorageBeginResponse);
+  rpc Commit(StorageCommitRequest) returns (StorageCommitResponse);
+  rpc Rollback(StorageRollbackRequest) returns (StorageRollbackResponse);
+}
+
+message StorageReadRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+  bytes item_name = 3;
+}
+
+message StorageReadResponse {
+  bytes item_value = 1;
+}
+
+message StorageWriteRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+  bytes item_name = 3;
+  bytes item_value = 4;
+}
+
+message StorageWriteResponse {}
+
+message StorageDeleteRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+  bytes item_name = 3;
+}
+
+message StorageDeleteResponse {}
+
+message StorageBeginRequest {
+  bytes storage_id = 1;
+}
+
+message StorageBeginResponse {
+  bytes transaction_id = 1;
+}
+
+message StorageCommitRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+}
+
+message StorageCommitResponse {}
+
+message StorageRollbackRequest {
+  bytes storage_id = 1;
+  bytes transaction_id = 2;
+}
+
+message StorageRollbackResponse {}
