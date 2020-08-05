@@ -21,6 +21,7 @@ oak_runtime = "=0.1.0"
 oak_utils = "=0.1.0"
 prost = "*"
 rustls = "*"
+serde = { version = "*", features = ["derive"] }
 signal-hook = "*"
 structopt = "*"
 tonic = { version = "*", features = ["tls"] }
