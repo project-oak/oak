@@ -73,7 +73,7 @@ impl crate::proto::oak::label::Label {
 
 /// Creates a [`Tag`] having as principal the provided authorization bearer token.
 ///
-/// See https://github.com/project-oak/oak/blob/main/oak/proto/label.proto
+/// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto
 pub fn authorization_bearer_token_hmac_tag(authorization_bearer_token_hmac: &[u8]) -> Tag {
     Tag {
         tag: Some(tag::Tag::GrpcTag(GrpcTag {
@@ -84,7 +84,7 @@ pub fn authorization_bearer_token_hmac_tag(authorization_bearer_token_hmac: &[u8
 
 /// Creates a [`Tag`] having as principal the provided WebAssembly module SHA-256 hash.
 ///
-/// See https://github.com/project-oak/oak/blob/main/oak/proto/label.proto
+/// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto
 pub fn web_assembly_module_tag(web_assembly_module_hash_sha_256: &[u8]) -> Tag {
     Tag {
         tag: Some(tag::Tag::WebAssemblyModuleTag(WebAssemblyModuleTag {
@@ -95,7 +95,7 @@ pub fn web_assembly_module_tag(web_assembly_module_hash_sha_256: &[u8]) -> Tag {
 
 /// Creates a [`Tag`] having as principal the provided TLS authority.
 ///
-/// See https://github.com/project-oak/oak/blob/main/oak/proto/label.proto
+/// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto
 pub fn tls_endpoint_tag(authority: &str) -> Tag {
     Tag {
         tag: Some(tag::Tag::TlsEndpointTag(TlsEndpointTag {

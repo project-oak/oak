@@ -27,7 +27,7 @@ includes:
   [`INVALID_HANDLE`](https://project-oak.github.io/oak/oak_abi/doc/oak_abi/constant.INVALID_HANDLE.html)
   value).
 - Enum types (generated from the
-  [master protocol buffer definitions](/oak/proto/oak_abi.proto)) for
+  [master protocol buffer definitions](/oak_abi/proto/oak_abi.proto)) for
   [operation and channel status values](abi.md#integer-types).
 - Generated Rust code corresponding to
   [protocol buffer message types](abi.md#protocol-buffer-messages) that are used

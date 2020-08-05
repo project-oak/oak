@@ -54,11 +54,11 @@ Three specific sets of integer values are also used in the ABI:
   [channel](concepts.md#channels).
 - Many ABI operations return a `u32` **status** value, indicating the result of
   the operation. The possible values for this are defined in the `OakStatus`
-  enum in [oak_abi.proto](/oak/proto/oak_abi.proto).
+  enum in [oak_abi.proto](/oak_abi/proto/oak_abi.proto).
 - The `wait_on_channels` host function fills in a **channel status** value,
   indicating the readiness status of a particular channel. The possible values
   for this are defined in the `ChannelReadStatus` enum in
-  [oak_abi.proto](/oak/proto/oak_abi.proto).
+  [oak_abi.proto](/oak_abi/proto/oak_abi.proto).
 
 ## Protocol Buffer Messages
 
@@ -68,20 +68,21 @@ the Runtime, these opaque blobs of data are defined to take the form of
 serialized protocol buffer messages:
 
 - The label values included on Node and channel creation operations are in the
-  form of a serialized [`Label`](/oak/proto/label.proto) message.
+  form of a serialized [`Label`](/oak_abi/proto/label.proto) message.
 - The Node configuration information that is include on `node_create` operations
   is in the form of a serialized
-  [`NodeConfiguration`](/oak/proto/application.proto) message.
+  [`NodeConfiguration`](/oak_abi/proto/application.proto) message.
 - The sole initial message sent to the first Node of an Oak Application is in
-  the form of a serialized [`ConfigMap`](/oak/proto/application.proto) message.
+  the form of a serialized [`ConfigMap`](/oak_abi/proto/application.proto)
+  message.
 
 Similarly, messages exchanged with the pseudo-Nodes provided by the Oak system
 are also defined to take the form of serialized protocol buffer messages. These
 include:
 
-- [Structured logging messages](/oak/proto/log.proto).
-- [Encapsulated gRPC requests and responses](/oak/proto/grpc_encap.proto).
-- [Roughtime messages](/oak/proto/roughtime_service.proto).
+- [Structured logging messages](/oak_abi/proto/log.proto).
+- [Encapsulated gRPC requests and responses](/oak_abi/proto/grpc_encap.proto).
+- [Roughtime messages](/oak_abi/proto/roughtime_service.proto).
 
 ## Exported Function
 
@@ -91,7 +92,7 @@ with signature `fn(u64) -> ()`. This function is invoked when the Oak Manager
 executes the Oak Node; a handle for the read half of an initial channel is
 passed in as a parameter. The name of this entrypoint function for a Node is
 provided as part of the
-[Application configuration](/oak/proto/application.proto).
+[Application configuration](/oak_abi/proto/application.proto).
 
 The entrypoint function for each Node should perform its own event loop, reading
 incoming messages that arrive on the read halves of its channels, sending
@@ -184,7 +185,8 @@ Creates a new unidirectional Channel assigning the label specified by `param[2]`
 and `param[3]` to the newly created Channel, and returns the Channel handles for
 its read and write halves as output parameters in `param[0]` and `param[1]`.
 
-The label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
+The label is a serialized [`Label`](/oak_abi/proto/label.proto) protobuf
+message.
 
 Because the label of the newly created Channel is effectively public, this
 function may only be invoked by Nodes whose label "flows to" the "public
@@ -217,8 +219,9 @@ newly created Node, passing in an initial handle to the read half of a channel
 identified by `param[4]`.
 
 The Node configuration is a serialized
-[`NodeConfiguration`](/oak/proto/application.proto) protobuf message, and the
-label is a serialized [`Label`](/oak/proto/label.proto) protobuf message.
+[`NodeConfiguration`](/oak_abi/proto/application.proto) protobuf message, and
+the label is a serialized [`Label`](/oak_abi/proto/label.proto) protobuf
+message.
 
 Because the label of the newly created Node is effectively public, this function
 may only be invoked by Nodes whose label "flows to" the "public untrusted"

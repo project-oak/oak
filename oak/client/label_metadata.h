@@ -18,7 +18,7 @@
 #define OAK_CLIENT_LABEL_METADATA_H_
 
 #include "include/grpcpp/grpcpp.h"
-#include "oak/proto/label.pb.h"
+#include "oak_abi/proto/label.pb.h"
 
 namespace oak {
 

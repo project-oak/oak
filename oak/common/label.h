@@ -18,7 +18,7 @@
 #define OAK_COMMON_LABEL_H_
 
 #include "absl/base/attributes.h"
-#include "oak/proto/label.pb.h"
+#include "oak_abi/proto/label.pb.h"
 
 namespace oak {
 

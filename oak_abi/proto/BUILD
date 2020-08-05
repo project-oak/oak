@@ -80,7 +80,7 @@ cc_proto_library(
 go_proto_library(
     name = "label_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "github.com/project-oak/oak/oak/proto/label",
+    importpath = "github.com/project-oak/oak/oak_abi/proto/label",
     proto = ":label_proto",
 )
 

@@ -20,7 +20,7 @@ package oak.examples.chat;
 
 import "google/protobuf/empty.proto";
 import "oak/proto/handle.proto";
-import "oak/proto/grpc_encap.proto";
+import "oak_abi/proto/grpc_encap.proto";
 
 message CreateRoomRequest {
   // ID used to identify the room; knowledge of this value allows entry to the room. The client
