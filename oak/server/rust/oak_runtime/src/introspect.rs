@@ -146,7 +146,7 @@ async fn make_server(
     termination_notificiation_receiver: tokio::sync::oneshot::Receiver<()>,
 ) {
     // Initialize SocketAddr to listen on.
-    let addr = SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0], port));
+    let addr = SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, port));
     info!("starting introspection server on {:?}", addr);
 
     // Initialize MakeService to handle each connection.
