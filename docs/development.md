@@ -40,6 +40,39 @@ The remainder of this document explores what's going on under the covers here,
 allowing individual stages to be built and run independently, and allowing
 builds that don't have to rely on a Docker environment.
 
+## VS Code Dev Container
+
+The simplest way to get up and running with a development environment that
+contains all the required tools is to use
+[VS Code](https://code.visualstudio.com/) with the
+[Remote-Containers](https://code.visualstudio.com/docs/remote/containers)
+extension. After this is installed, and VS Code is running and pointing to the
+root of the Oak repository, from a separate terminal build the Docker image, if
+you haven't already:
+
+```bash
+./scripts/docker_pull
+./scripts/docker_build
+```
+
+Then from VS Code click on the Remote-Containers button in the bottom left
+corner of the status bar:
+
+![Remote-Containers status bar](https://code.visualstudio.com/assets/docs/remote/common/remote-dev-status-bar.png)
+
+and then select "Remote-Containers: Reopen in Container".
+
+This should attach VS Code to an instance of the Docker container with all the
+dev tools installed, and configured with most linters and Rust tools.
+
+The Rust-Analyzer extension may prompt you to download the rust-analyzer server,
+in which case allow that by clicking on "Download now" in the notification.
+
+To test that things work correctly, open a Rust file, start typing `std::`
+somewhere, and autocomplete results should start showing up. Note that it may
+take a while for the `rust-analyzer` extension to go through all the local code
+and build its index.
+
 ## Meta-Advice
 
 For any open-source project, the best way of figuring out what prerequisites and

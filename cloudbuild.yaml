@@ -10,16 +10,10 @@ steps:
   # Build Docker image based on current Dockerfile, if necessary.
   - name: 'gcr.io/cloud-builders/docker'
     id: build_image
+    entrypoint: 'bash'
     waitFor: ['pull_image']
     timeout: 20m
-    args:
-      [
-        'build',
-        '--pull',
-        '--cache-from=gcr.io/oak-ci/oak:latest',
-        '--tag=gcr.io/oak-ci/oak:latest',
-        '.',
-      ]
+    args: ['./scripts/docker_build']
   # Run next build steps inside the newly created Docker image.
   # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
   # Init .git repository used by check_generated

@@ -9,14 +9,8 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-# The default user for a Docker container has uid 0 (root). To avoid creating
-# root-owned files in the build directory we tell Docker to use the current user
-# ID, if known.
-# See
-# https://github.com/googleapis/google-cloud-cpp/blob/a186208b79d900b4ec71c6f9df3acf7638f01dc6/ci/kokoro/docker/build.sh#L147-L152
-readonly DOCKER_UID="${UID:-0}"
-readonly DOCKER_GID="${GID:-0}"
-readonly DOCKER_USER="${USER:-root}"
+"$SCRIPTS_DIR/docker_build"
+
 # In order for the docker-cli inside the container to use the host dockerd,
 # we need permissions for the user with the same gid as the host
 if [[ "${OSTYPE}" == "darwin"*  ]]; then
@@ -28,16 +22,9 @@ fi
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 
-docker build \
-  --cache-from="$DOCKER_IMAGE_NAME:latest" \
-  --tag="$DOCKER_IMAGE_NAME:latest" \
-  . 1>&2
-
 docker_run_flags=(
   '--interactive'
   '--rm'
-  "--user=$DOCKER_UID:$DOCKER_GID"
-  "--env=USER=$DOCKER_USER"
   '--env=BAZEL_REMOTE_CACHE_ENABLED'
   '--env=BAZEL_GOOGLE_CREDENTIALS'
   "--volume=$PWD/bazel-cache:/.cache/bazel"

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# The default user for a Docker container has uid 0 (root). To avoid creating
+# root-owned files in the build directory we tell Docker to use the current user
+# ID, if known.
+# See
+# https://github.com/googleapis/google-cloud-cpp/blob/a186208b79d900b4ec71c6f9df3acf7638f01dc6/ci/kokoro/docker/build.sh#L147-L152
+readonly DOCKER_UID="${UID:-0}"
+readonly DOCKER_GID="$(id -g)"
+readonly DOCKER_USER="${USER:-root}"
+
+docker build \
+  --cache-from="$DOCKER_IMAGE_NAME:latest" \
+  --tag="$DOCKER_IMAGE_NAME:latest" \
+  --build-arg=USERNAME="$DOCKER_USER" \
+  --build-arg=USER_UID="$DOCKER_UID" \
+  --build-arg=USER_GID="$DOCKER_GID" \
+  . 1>&2
