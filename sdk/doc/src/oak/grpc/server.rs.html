@@ -81,6 +81,10 @@
 <span id="81">81</span>
 <span id="82">82</span>
 <span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -100,7 +104,11 @@
 
 <span class="doccomment">//! Functionality to help Oak Nodes create gRPC server pseudo-Nodes.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">grpc</span>::<span class="ident">Invocation</span>, <span class="ident">io</span>::<span class="ident">Receiver</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">grpc</span>::<span class="ident">Invocation</span>,
+    <span class="ident">io</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>, <span class="ident">SenderExt</span>},
+    <span class="ident">OakStatus</span>,
+};
 
 <span class="kw">struct</span> <span class="ident">GrpcServerInit</span> {
     <span class="ident">invocation_sender</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span>,

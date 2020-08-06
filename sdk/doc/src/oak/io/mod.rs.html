@@ -111,8 +111,8 @@
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">decodable</span>::<span class="ident">Decodable</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">encodable</span>::<span class="ident">Encodable</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">receiver</span>::<span class="ident">Receiver</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sender</span>::<span class="ident">Sender</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">receiver</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sender</span>::{<span class="ident">Sender</span>, <span class="ident">SenderExt</span>};
 
 <span class="doccomment">/// Create a new channel for transmission of `Encodable` and `Decodable` types.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {

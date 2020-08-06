@@ -353,6 +353,9 @@
 <span id="353">353</span>
 <span id="354">354</span>
 <span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -372,7 +375,10 @@
 
 <span class="doccomment">//! Functionality to help Oak Nodes interact with gRPC.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">OakError</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">io</span>::{<span class="ident">ReceiverExt</span>, <span class="ident">SenderExt</span>},
+    <span class="ident">OakError</span>,
+};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::{

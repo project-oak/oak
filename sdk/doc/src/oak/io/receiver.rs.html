@@ -168,6 +168,17 @@
 <span id="168">168</span>
 <span id="169">169</span>
 <span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -204,45 +215,37 @@
     <span class="ident">phantom</span>: <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 }
 
-<span class="doccomment">/// Manual implementation of [`std::fmt::Debug`] for any `T`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The automatically derived implementation would only cover types `T` that are themselves</span>
-<span class="doccomment">/// `Display`, but we do not care about that bound, since there is never an actual element of type</span>
-<span class="doccomment">/// `T` to display.</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Decodable</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Receiver({:?})&quot;</span>, <span class="self">self</span>.<span class="ident">handle</span>)
-    }
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ReceiverExt</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Close the underlying channel used by the receiver.</span>
+    <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Attempt to wait for a value on the receiver, blocking if necessary.</span>
+    <span class="kw">fn</span> <span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakError</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Attempt to read a value from the receiver, without blocking.</span>
+    <span class="kw">fn</span> <span class="ident">try_receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakError</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Wait for a value to be available from the receiver.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns [`ChannelReadStatus`] of the wrapped handle, or `Err(OakStatus::ErrTerminated)` if</span>
+    <span class="doccomment">/// the Oak Runtime is terminating.</span>
+    <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>;
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Decodable</span><span class="op">&gt;</span> <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">handle</span>: <span class="ident">ReadHandle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">Receiver</span> {
-            <span class="ident">handle</span>,
-            <span class="ident">phantom</span>: <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span>,
-        }
-    }
-
-    <span class="doccomment">/// Close the underlying channel used by this receiver.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">trivially_copy_pass_by_ref</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Decodable</span><span class="op">&gt;</span> <span class="ident">ReceiverExt</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Close the underlying channel used by the receiver.</span>
+    <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>)
     }
 
-    <span class="doccomment">/// Attempt to wait for a value on this receiver, blocking if necessary.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See https://doc.rust-lang.org/std/sync/mpsc/struct.Receiver.html#method.recv</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">trivially_copy_pass_by_ref</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Attempt to wait for a value on the receiver, blocking if necessary.</span>
+    <span class="kw">fn</span> <span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">wait</span>()<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">try_receive</span>()
     }
 
-    <span class="doccomment">/// Attempt to read a value from this receiver, without blocking.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See https://doc.rust-lang.org/std/sync/mpsc/struct.Receiver.html#method.try_recv</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">trivially_copy_pass_by_ref</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Attempt to read a value from the receiver, without blocking.</span>
+    <span class="kw">fn</span> <span class="ident">try_receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="number">1024</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handles</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="number">16</span>);
         <span class="kw">crate</span>::<span class="ident">channel_read</span>(<span class="self">self</span>.<span class="ident">handle</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">bytes</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">handles</span>)<span class="question-mark">?</span>;
@@ -251,12 +254,11 @@
         <span class="ident">T</span>::<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="ident">message</span>)
     }
 
-    <span class="doccomment">/// Wait for a value to be available from this receiver.</span>
+    <span class="doccomment">/// Wait for a value to be available from the receiver.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns [`ChannelReadStatus`] of the wrapped handle, or `Err(OakStatus::ErrTerminated)` if</span>
     <span class="doccomment">/// the Oak Runtime is terminating.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">trivially_copy_pass_by_ref</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// TODO(#500): Consider creating the handle notification space once and for all in `new`.</span>
         <span class="kw">let</span> <span class="ident">read_handles</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="self">self</span>.<span class="ident">handle</span>];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">space</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">new_handle_space</span>(<span class="kw-2">&amp;</span><span class="ident">read_handles</span>);
@@ -285,6 +287,26 @@
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Should never get here. `wait_on_channels` should never return {:?}.&quot;</span>, <span class="ident">status</span>);
                 <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>)
             }
+        }
+    }
+}
+
+<span class="doccomment">/// Manual implementation of [`std::fmt::Debug`] for any `T`.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// The automatically derived implementation would only cover types `T` that are themselves</span>
+<span class="doccomment">/// `Display`, but we do not care about that bound, since there is never an actual element of type</span>
+<span class="doccomment">/// `T` to display.</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Decodable</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Receiver({:?})&quot;</span>, <span class="self">self</span>.<span class="ident">handle</span>)
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Decodable</span><span class="op">&gt;</span> <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">handle</span>: <span class="ident">ReadHandle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">Receiver</span> {
+            <span class="ident">handle</span>,
+            <span class="ident">phantom</span>: <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span>,
         }
     }
 }

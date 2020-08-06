@@ -92,6 +92,7 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
+<span id="95">95</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -116,6 +117,7 @@
 
 <span class="comment">// TODO(#544)</span>
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">SenderExt</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">Level</span>, <span class="ident">Log</span>, <span class="ident">Metadata</span>, <span class="ident">Record</span>, <span class="ident">SetLoggerError</span>};
 
 <span class="kw">struct</span> <span class="ident">OakChannelLogger</span> {

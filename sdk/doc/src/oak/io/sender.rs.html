@@ -107,6 +107,13 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -142,28 +149,35 @@
     <span class="ident">phantom</span>: <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 }
 
+<span class="doccomment">/// Trait for context-dependent functionality on a `Sender`.</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SenderExt</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Close the underlying channel used by the sender.</span>
+    <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Attempt to send a value on the sender.</span>
+    <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>;
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span><span class="op">&gt;</span> <span class="ident">SenderExt</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Close the underlying channel used by the sender.</span>
+    <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>)
+    }
+
+    <span class="doccomment">/// Attempt to send a value on the sender.</span>
+    <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">encode</span>()<span class="question-mark">?</span>;
+        <span class="kw">crate</span>::<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">handle</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>.<span class="ident">bytes</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>.<span class="ident">handles</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span><span class="op">&gt;</span> <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">handle</span>: <span class="ident">WriteHandle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">Sender</span> {
             <span class="ident">handle</span>,
             <span class="ident">phantom</span>: <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span>,
         }
-    }
-
-    <span class="doccomment">/// Close the underlying channel used by this sender.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">trivially_copy_pass_by_ref</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>)
-    }
-
-    <span class="doccomment">/// Attempt to send a value on this sender.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// See https://doc.rust-lang.org/std/sync/mpsc/struct.Sender.html#method.send</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">trivially_copy_pass_by_ref</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">encode</span>()<span class="question-mark">?</span>;
-        <span class="kw">crate</span>::<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">handle</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>.<span class="ident">bytes</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>.<span class="ident">handles</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(())
     }
 }
 
