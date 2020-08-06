@@ -1,9 +1,12 @@
 // See https://code.visualstudio.com/docs/remote/containers for details.
 {
-  "dockerFile": "Dockerfile",
+  "image": "gcr.io/oak-ci/oak:latest",
   "extensions": [
     "bazelbuild.vscode-bazel",
-    "xaver.clang-format",
-    "rust-lang.rust"
+    "bodil.prettier-toml",
+    "bungcip.better-toml",
+    "esbenp.prettier-vscode",
+    "matklad.rust-analyzer",
+    "xaver.clang-format"
   ]
 }

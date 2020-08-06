@@ -240,3 +240,24 @@ ARG deny_version=0.7.0
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny
+
+# Unset $CARGO_HOME so that the new user will use the default value for it, which will point it to
+# its own home folder.
+ENV CARGO_HOME ""
+
+# Placeholder args that are expected to be passed in at image build time.
+# See https://code.visualstudio.com/docs/remote/containers-advanced#_creating-a-nonroot-user
+ARG USERNAME=user-name-goes-here
+ARG USER_UID=1000
+ARG USER_GID=${USER_UID}
+
+# Create the specified user and group.
+#
+# Ignore errors if the user or group already exist (it should only happen if the image is being
+# built as root, which happens on GCB).
+RUN (groupadd --gid=${USER_GID} ${USERNAME} || true) \
+  && (useradd --shell=/bin/bash --uid=${USER_UID} --gid=${USER_GID} --create-home ${USERNAME} || true)
+
+# Set the default user as the newly created one, so that any operations performed from within the
+# Docker container will appear as if performed by the outside user, instead of root.
+USER ${USER_UID}
