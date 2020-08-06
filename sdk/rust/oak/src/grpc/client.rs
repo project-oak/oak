@@ -41,9 +41,7 @@ impl Client {
         let (invocation_sender, invocation_receiver) =
             crate::io::channel_create().expect("failed to create channel");
         let status = crate::node_create_with_label(config, label, invocation_receiver.handle);
-        invocation_receiver
-            .close()
-            .expect("failed to close channel");
+        crate::io::close_receiver(&invocation_receiver).expect("failed to close channel");
         match status {
             Ok(_) => {
                 info!(
@@ -63,7 +61,7 @@ impl Client {
 impl Drop for Client {
     fn drop(&mut self) {
         info!("Closing Client channel {:?}", self.invocation_sender.handle);
-        if let Err(status) = self.invocation_sender.close() {
+        if let Err(status) = crate::io::close_sender(&self.invocation_sender) {
             warn!(
                 "Failed to close Client channel {:?}: {:?}",
                 self.invocation_sender.handle, status

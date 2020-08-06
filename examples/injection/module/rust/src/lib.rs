@@ -66,7 +66,7 @@ mod proto {
 
 use oak::{
     grpc,
-    io::{Receiver, Sender},
+    io::{close_receiver, close_sender, receive, send, Receiver, Sender},
 };
 
 use proto::{
@@ -84,8 +84,8 @@ oak::entrypoint!(grpc_fe => |_in_channel| {
         .expect("Failed to create provider");
     oak::channel_close(to_provider_read_handle.handle).expect("Failed to close channel");
 
-    Sender::new(to_provider_write_handle)
-        .send(&BlobStoreProviderSender { sender: Some(Sender::new(from_provider_write_handle)) })
+    let sender = Sender::new(to_provider_write_handle);
+    send(&sender, &BlobStoreProviderSender { sender: Some(Sender::new(from_provider_write_handle)) })
         .expect("Failed to send handle to provider");
     oak::channel_close(from_provider_write_handle.handle).expect("Failed to close channel");
 
@@ -101,8 +101,9 @@ oak::entrypoint!(grpc_fe => |_in_channel| {
 
 oak::entrypoint!(provider => |frontend_read| {
     oak::logger::init_default();
+    let frontend_receiver = Receiver::<BlobStoreProviderSender>::new(frontend_read);
     let frontend_sender =
-        Receiver::<BlobStoreProviderSender>::new(frontend_read).receive()
+        receive(&frontend_receiver)
             .expect("Did not receive a decodable message")
             .sender
             .expect("No sender in received message");
@@ -112,8 +113,9 @@ oak::entrypoint!(provider => |frontend_read| {
 
 oak::entrypoint!(store => |reader| {
     oak::logger::init_default();
+    let receiver = Receiver::<BlobStoreSender>::new(reader);
     let sender =
-        Receiver::<BlobStoreSender>::new(reader).receive()
+        receive(&receiver)
             .expect("Did not receive a write handle")
             .sender
             .expect("No write handle in received message");
@@ -146,15 +148,11 @@ impl BlobStoreFrontend {
     fn get_interface(&mut self) -> &BlobStoreInterface {
         // Make sure it is cached
         if let BlobStoreAccess::BlobStoreProvider { sender, receiver } = &self.store {
-            sender
-                .send(&BlobStoreRequest {})
-                .expect("Failed to send BlobStoreRequest");
-            sender.close().expect("Failed to close sender");
+            send(&sender, &BlobStoreRequest {}).expect("Failed to send BlobStoreRequest");
+            close_sender(&sender).expect("Failed to close sender");
 
-            let iface = receiver
-                .receive()
-                .expect("Failed to receive BlobStoreInterface");
-            receiver.close().expect("Failed to close receiver");
+            let iface = receive(&receiver).expect("Failed to receive BlobStoreInterface");
+            close_receiver(&receiver).expect("Failed to close receiver");
 
             self.store = BlobStoreAccess::BlobStore(iface);
         };
@@ -167,18 +165,21 @@ impl BlobStoreFrontend {
 
     fn send(&mut self, request: &BlobRequest) -> BlobResponse {
         let iface = self.get_interface();
-        iface
-            .sender
-            .as_ref()
-            .expect("No sender present on interface")
-            .send(request)
-            .expect("Could not send request");
-        iface
-            .receiver
-            .as_ref()
-            .expect("No receiver present on interface")
-            .receive()
-            .expect("Could not receive response")
+        send(
+            iface
+                .sender
+                .as_ref()
+                .expect("No sender present on interface"),
+            request,
+        )
+        .expect("Could not send request");
+        receive(
+            iface
+                .receiver
+                .as_ref()
+                .expect("No receiver present on interface"),
+        )
+        .expect("Could not receive response")
     }
 }
 
@@ -217,15 +218,21 @@ impl oak::Node<BlobStoreRequest> for BlobStoreProvider {
         )?;
         oak::channel_close(to_store_read_handle.handle).expect("Failed to close channel");
 
-        Sender::new(to_store_write_handle).send(&BlobStoreSender {
-            sender: Some(Sender::new(from_store_write_handle)),
-        })?;
+        send(
+            &Sender::new(to_store_write_handle),
+            &BlobStoreSender {
+                sender: Some(Sender::new(from_store_write_handle)),
+            },
+        )?;
         oak::channel_close(from_store_write_handle.handle).expect("Failed to close channel");
 
-        self.sender.send(&BlobStoreInterface {
-            sender: Some(Sender::new(to_store_write_handle)),
-            receiver: Some(Receiver::new(from_store_read_handle)),
-        })
+        send(
+            &self.sender,
+            &BlobStoreInterface {
+                sender: Some(Sender::new(to_store_write_handle)),
+                receiver: Some(Receiver::new(from_store_read_handle)),
+            },
+        )
     }
 }
 
@@ -284,6 +291,6 @@ impl oak::Node<BlobRequest> for BlobStoreImpl {
             Some(Request::Put(req)) => self.put_blob(req),
             None => panic!("No inner request"),
         };
-        self.sender.send(&response)
+        send(&self.sender, &response)
     }
 }

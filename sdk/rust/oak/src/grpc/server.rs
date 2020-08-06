@@ -16,7 +16,11 @@
 
 //! Functionality to help Oak Nodes create gRPC server pseudo-Nodes.
 
-use crate::{grpc::Invocation, io::Receiver, OakStatus};
+use crate::{
+    grpc::Invocation,
+    io::{close_receiver, close_sender, send, Receiver},
+    OakStatus,
+};
 
 struct GrpcServerInit {
     invocation_sender: crate::io::Sender<Invocation>,
@@ -63,20 +67,16 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
         .expect("Couldn't create init channel to gRPC server pseudo-node");
     let config = crate::node_config::grpc_server(address);
     crate::node_create(&config, init_receiver.handle)?;
-    init_receiver
-        .close()
-        .expect("Couldn't close init channel to gRPC server pseudo-node");
+    close_receiver(&init_receiver).expect("Couldn't close init channel to gRPC server pseudo-node");
 
     // Create a separate channel for receiving invocations and pass it to a gRPC pseudo-Node.
     let (invocation_sender, invocation_receiver) =
         crate::io::channel_create::<Invocation>().expect("Couldn't create gRPC invocation channel");
 
     let grpc_server_init = GrpcServerInit { invocation_sender };
-    init_sender
-        .send(&grpc_server_init)
+    send(&init_sender, &grpc_server_init)
         .expect("Could not send init message to gRPC server pseudo-node");
-    init_sender
-        .close()
+    close_sender(&init_sender)
         .expect("Couldn't close init message channel to gRPC server pseudo-node");
 
     Ok(invocation_receiver)

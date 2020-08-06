@@ -433,8 +433,8 @@ pub trait Node<T: crate::io::Decodable> {
 /// initial channel.
 pub fn app_config_map(initial_handle: ReadHandle) -> Result<ConfigMap, OakError> {
     let receiver = crate::io::Receiver::new(initial_handle);
-    let result = receiver.receive();
-    if let Err(err) = receiver.close() {
+    let result = crate::io::receive(&receiver);
+    if let Err(err) = crate::io::close_receiver(&receiver) {
         error!("Failed to close initial channel: {:?}", err);
     }
     result
@@ -466,7 +466,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
         // will return `ErrTerminated`, which indicates that the event loop should be terminated.
         // For any other error raised while waiting is logged, we try and determine whether it is
         // transient or not, and then continue or terminate the event loop, respectively.
-        match receiver.wait() {
+        match crate::io::wait(&receiver) {
             Err(status) => {
                 use crate::OakStatus::*;
                 match status {
@@ -505,7 +505,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
                 }
             },
         }
-        match receiver.try_receive() {
+        match crate::io::try_receive(&receiver) {
             Ok(command) => {
                 info!("{:?}: received command", receiver);
                 if let Err(err) = node.handle_command(command) {

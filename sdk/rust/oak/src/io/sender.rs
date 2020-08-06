@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{io::Encodable, OakError, OakStatus, WriteHandle};
+use crate::{io::Encodable, WriteHandle};
 use prost::{
     bytes::{Buf, BufMut},
     encoding::{DecodeContext, WireType},
@@ -38,22 +38,6 @@ impl<T: Encodable> Sender<T> {
             handle,
             phantom: std::marker::PhantomData,
         }
-    }
-
-    /// Close the underlying channel used by this sender.
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn close(&self) -> Result<(), OakStatus> {
-        crate::channel_close(self.handle.handle)
-    }
-
-    /// Attempt to send a value on this sender.
-    ///
-    /// See https://doc.rust-lang.org/std/sync/mpsc/struct.Sender.html#method.send
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn send(&self, t: &T) -> Result<(), OakError> {
-        let message = t.encode()?;
-        crate::channel_write(self.handle, &message.bytes, &message.handles)?;
-        Ok(())
     }
 }
 

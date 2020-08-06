@@ -41,7 +41,7 @@ impl Log for OakChannelLogger {
             level: map_level(record.level()) as i32,
             message: format!("{}", record.args()),
         };
-        match self.channel.send(&log_msg) {
+        match crate::io::send(&self.channel, &log_msg) {
             Ok(()) => (),
             Err(crate::OakError::OakStatus(crate::OakStatus::ErrTerminated)) => (),
             Err(e) => panic!("could not send log message over log channel: {}", e),

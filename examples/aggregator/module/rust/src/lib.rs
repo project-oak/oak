@@ -174,9 +174,8 @@ oak::entrypoint!(oak_main => |_in_channel| {
         &oak::node_config::wasm("app", "grpc_worker"),
         invocation_receiver.handle,
     ).expect("could not create gRPC worker node");
-    while let Ok(invocation) = grpc_channel.receive() {
-        invocation_sender
-            .send(&invocation)
+    while let Ok(invocation) = oak::io::receive(&grpc_channel) {
+        oak::io::send(&invocation_sender, &invocation)
             .expect("could not send invocation to worker node");
     }
 });
