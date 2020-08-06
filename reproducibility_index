@@ -1,6 +1,6 @@
 e5e5f894607cf6700e74620fad891975e26087b4127c83b68229c6abda85c70b  ./examples/target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm
 720efd9f3912160cdbe185add0c6c9f0a38bc26deb048bde9f79dbeaf376739e  ./examples/target/wasm32-unknown-unknown/release/abitest_1_backend.wasm
-3809be7e8aed103d5fc82afa9c483c6e5cdf6f9bbb68f8479bf549a4bc34ed71  ./examples/target/wasm32-unknown-unknown/release/aggregator.wasm
+67d6325f0d22993f126a7b570378561321235a99b9e127e0d47a4e0dcfeede72  ./examples/target/wasm32-unknown-unknown/release/aggregator.wasm
 656fb3524d9993577fbf6001de6d51cb8d77471baa9b461b0c83ed03634a505c  ./examples/target/wasm32-unknown-unknown/release/chat.wasm
 32e396812b1baaa9a3c8af38dd5ee6ded62b07415cea052f9fa074aae19b419c  ./examples/target/wasm32-unknown-unknown/release/database_proxy.wasm
 bd778e4ffd954d7406e65ff422526cf9cc4a80200e8b73a81fb576f71df3e0e4  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
