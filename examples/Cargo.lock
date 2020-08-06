@@ -78,7 +78,9 @@ dependencies = [
  "oak_tests",
  "oak_utils",
  "prost",
+ "serde",
  "tokio",
+ "toml",
  "tonic",
 ]
 

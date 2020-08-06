@@ -76,10 +76,10 @@ int main(int argc, char** argv) {
   // When a new version of the aggregator module is "released", this value needs to be changed to
   // reflect the hash of the new module.
   //
-  // This particular value is taken from
-  // https://github.com/project-oak/oak/blob/abb0bbff11b60f90be4df2cc4446be58b98015ff/reproducibility_index#L3
+  // The particular value corresponds to the hash on the `aggregator.wasm` line in
+  // https://github.com/project-oak/oak/blob/hashes/reproducibility_index.
   oak::label::Label label = oak::WebAssemblyModuleLabel(
-      absl::HexStringToBytes("f2c6e041a2b1771800fa5657d62885ac9f2334cecc3d839b047dc6d16ec82e1c"));
+      absl::HexStringToBytes("b08b93cf5a92e9b31589f9bacbe378d33c104f53557ccfa930383b53fa4e67fa"));
   // Connect to the Oak Application.
   auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));

@@ -93,9 +93,7 @@ pub fn run_single_module(
     module_wasm_file_name: &str,
     entrypoint_name: &str,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
-    let combined_config =
-        runtime_config(module_wasm_file_name, entrypoint_name, ConfigMap::default());
-    oak_runtime::configure_and_run(combined_config)
+    run_single_module_with_config(module_wasm_file_name, entrypoint_name, ConfigMap::default())
 }
 
 /// Convenience helper to build and run a single-Node application with the given Wasm module file

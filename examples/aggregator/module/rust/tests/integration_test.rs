@@ -19,6 +19,7 @@ use aggregator_common::Monoid;
 use aggregator_grpc::proto::{aggregator_client::AggregatorClient, Sample, SerializedSparseVector};
 use assert_matches::assert_matches;
 use maplit::hashmap;
+use oak_abi::proto::oak::application::ConfigMap;
 use std::{
     collections::HashMap,
     convert::{From, TryFrom},
@@ -43,8 +44,16 @@ async fn submit_sample(
 async fn test_aggregator() {
     env_logger::init();
 
-    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
-        .expect("Unable to configure runtime with test wasm!");
+    let runtime = oak_tests::run_single_module_with_config(
+        MODULE_WASM_FILE_NAME,
+        "oak_main",
+        ConfigMap {
+            items: hashmap! {
+                "config".to_string() => br#"grpc_server_listen_address = "[::]:8080""#.iter().cloned().collect()
+            },
+        },
+    )
+    .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
     let mut client = AggregatorClient::with_interceptor(channel, interceptor);
