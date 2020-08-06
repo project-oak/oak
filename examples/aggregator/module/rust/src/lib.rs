@@ -29,7 +29,7 @@ pub mod proto {
 
 use aggregator_common::ThresholdAggregator;
 use data::SparseVector;
-use log::{debug, error};
+use log::{debug, error, info};
 use oak::{
     grpc,
     io::{ReceiverExt, SenderExt},
@@ -166,10 +166,19 @@ oak::entrypoint!(grpc_worker => |in_channel| {
     oak::run_event_loop(dispatcher, oak::io::Receiver::<grpc::Invocation>::new(in_channel));
 });
 
-oak::entrypoint!(oak_main => |_in_channel| {
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Config {
+    pub grpc_server_listen_address: String,
+}
+
+oak::entrypoint!(oak_main => |in_channel| {
     oak::logger::init_default();
+    let config_map = oak::app_config_map(in_channel).expect("Couldn't read config map");
+    let config: Config = toml::from_slice(&config_map.items.get("config").expect("Couldn't find config")).expect("Couldn't parse TOML config file");
+    info!("Parsed config: {:?}", config);
     let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
+        oak::grpc::server::init(&config.grpc_server_listen_address).expect("could not create gRPC server pseudo-Node");
     let (invocation_sender, invocation_receiver) =
         oak::io::channel_create::<oak::grpc::Invocation>()
             .expect("could not create gRPC invocation channel");
