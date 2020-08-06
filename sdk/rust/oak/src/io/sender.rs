@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{io::Encodable, WriteHandle};
+use crate::{io::Encodable, OakError, OakStatus, WriteHandle};
 use prost::{
     bytes::{Buf, BufMut},
     encoding::{DecodeContext, WireType},
@@ -30,6 +30,29 @@ use prost::{
 pub struct Sender<T: Encodable> {
     pub handle: WriteHandle,
     phantom: std::marker::PhantomData<T>,
+}
+
+/// Trait for context-dependent functionality on a `Sender`.
+pub trait SenderExt<T> {
+    /// Close the underlying channel used by the sender.
+    fn send(&self, t: &T) -> Result<(), OakError>;
+
+    /// Attempt to send a value on the sender.
+    fn close(&self) -> Result<(), OakStatus>;
+}
+
+impl<T: Encodable> SenderExt<T> for Sender<T> {
+    /// Close the underlying channel used by the sender.
+    fn close(&self) -> Result<(), OakStatus> {
+        crate::channel_close(self.handle.handle)
+    }
+
+    /// Attempt to send a value on the sender.
+    fn send(&self, t: &T) -> Result<(), OakError> {
+        let message = t.encode()?;
+        crate::channel_write(self.handle, &message.bytes, &message.handles)?;
+        Ok(())
+    }
 }
 
 impl<T: Encodable> Sender<T> {

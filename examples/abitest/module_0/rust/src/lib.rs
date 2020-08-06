@@ -22,7 +22,11 @@ use abitest_common::InternalMessage;
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq, expect_matches};
 use log::{debug, error, info, trace, warn};
-use oak::{grpc, ChannelReadStatus, OakError, OakStatus};
+use oak::{
+    grpc,
+    io::{ReceiverExt, SenderExt},
+    ChannelReadStatus, OakError, OakStatus,
+};
 use oak_abi::{
     label::Label,
     proto::oak::application::{
@@ -1625,7 +1629,8 @@ impl FrontendNode {
                 new_write.handle, internal_req,
             );
             let new_channel = oak::io::Sender::new(*new_write);
-            oak::io::send(&new_channel, &internal_req)
+            new_channel
+                .send(&internal_req)
                 .expect("could not send request over channel");
             oak::channel_close(new_write.handle).expect("could not close channel");
 
@@ -1750,7 +1755,7 @@ impl FrontendNode {
         // Close the only read-handle for the invocation handle, which should
         // trigger the gRPC server pseudo-Node to terminate (but we can't
         // check that here).
-        expect_eq!(Ok(()), oak::io::close_receiver(&invocation_receiver));
+        expect_eq!(Ok(()), invocation_receiver.close());
         Ok(())
     }
 
@@ -1868,7 +1873,7 @@ impl FrontendNode {
             .map_err(from_proto)?;
         let mut count = 0;
         loop {
-            match oak::io::receive(&receiver) {
+            match receiver.receive() {
                 Ok(grpc_rsp) => {
                     // TODO(#592): get typed response directly from receiver.
                     expect_eq!(
@@ -1886,7 +1891,7 @@ impl FrontendNode {
             }
         }
         expect_eq!(2, count);
-        oak::io::close_receiver(&receiver).expect("failed to close receiver");
+        receiver.close().expect("failed to close receiver");
 
         // Errored server-streaming method invocation of external service via
         // gRPC client pseudo-Node.
@@ -1900,7 +1905,7 @@ impl FrontendNode {
             .map_err(from_proto)?;
         let mut seen_err_code = false;
         loop {
-            match oak::io::receive(&receiver) {
+            match receiver.receive() {
                 Ok(grpc_rsp) => {
                     expect_eq!(
                         grpc::Code::FailedPrecondition as i32,
@@ -1914,7 +1919,7 @@ impl FrontendNode {
             }
         }
         expect!(seen_err_code);
-        oak::io::close_receiver(&receiver).expect("failed to close receiver");
+        receiver.close().expect("failed to close receiver");
         Ok(())
     }
 
@@ -1967,7 +1972,7 @@ impl FrontendNode {
         info!("absent.server_streaming_method()");
         let receiver = grpc_stub.server_streaming_method(req).map_err(from_proto)?;
         loop {
-            let result = oak::io::receive(&receiver);
+            let result = receiver.receive();
             info!("absent.server_streaming_method().receive() -> {:?}", result);
             match result {
                 Ok(grpc_rsp) => {
@@ -1978,7 +1983,7 @@ impl FrontendNode {
                 Err(e) => return Err(Box::new(e)),
             }
         }
-        oak::io::close_receiver(&receiver).expect("failed to close receiver");
+        receiver.close().expect("failed to close receiver");
 
         Ok(())
     }

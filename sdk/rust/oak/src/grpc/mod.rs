@@ -17,7 +17,7 @@
 //! Functionality to help Oak Nodes interact with gRPC.
 
 use crate::{
-    io::{close_receiver, close_sender, receive, send},
+    io::{ReceiverExt, SenderExt},
     OakError,
 };
 use log::{error, warn};
@@ -91,9 +91,9 @@ impl ChannelResponseWriter {
                 WriteMode::Close => true,
             },
         };
-        send(&self.sender, &grpc_rsp)?;
+        self.sender.send(&grpc_rsp)?;
         if mode == WriteMode::Close {
-            close_sender(&self.sender)?;
+            self.sender.close()?;
         }
         Ok(())
     }
@@ -109,9 +109,9 @@ impl ChannelResponseWriter {
                 WriteMode::Close => true,
             },
         };
-        send(&self.sender, &grpc_rsp)?;
+        self.sender.send(&grpc_rsp)?;
         if mode == WriteMode::Close {
-            close_sender(&self.sender)?;
+            self.sender.close()?;
         }
         Ok(())
     }
@@ -125,8 +125,8 @@ impl ChannelResponseWriter {
         if let Err(status) = result {
             grpc_rsp.status = Some(status);
         }
-        send(&self.sender, &grpc_rsp)?;
-        close_sender(&self.sender)?;
+        self.sender.send(&grpc_rsp)?;
+        self.sender.close()?;
         Ok(())
     }
 }
@@ -162,7 +162,7 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
         let response_writer = ChannelResponseWriter::new(invocation.response_sender);
 
         // Read a single encapsulated request message from the read half.
-        let req: GrpcRequest = receive(&invocation.request_receiver).map_err(|err| {
+        let req: GrpcRequest = invocation.request_receiver.receive().map_err(|err| {
             // TODO(#1078): If it's clear that the issue is caused by a too restrictive label
             // (permission denied), then return a more specific error to the gRPC client.
             warn!(
@@ -189,7 +189,7 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
 
         // Since we are expecting a single message, close the channel immediately.
         // This will change when we implement client streaming (#97).
-        close_receiver(&invocation.request_receiver)?;
+        invocation.request_receiver.close()?;
         if !req.last {
             // TODO(#97): Implement client streaming.
             panic!("Support for streaming requests not yet implemented");
@@ -235,8 +235,8 @@ where
     // message channel.
     let req =
         oak_abi::grpc::encap_request(req, method_name).expect("failed to serialize GrpcRequest");
-    send(&req_sender, &req).expect("failed to write to channel");
-    close_sender(&req_sender).expect("failed to close channel");
+    req_sender.send(&req).expect("failed to write to channel");
+    req_sender.close().expect("failed to close channel");
 
     // Create a new channel for responses to arrive on.
     let (rsp_sender, rsp_receiver) =
@@ -248,9 +248,11 @@ where
         request_receiver: req_receiver.clone(),
         response_sender: rsp_sender.clone(),
     };
-    send(&invocation_channel, &invocation).expect("failed to write invocation to channel");
-    close_receiver(&req_receiver).expect("failed to close channel");
-    close_sender(&rsp_sender).expect("failed to close channel");
+    invocation_channel
+        .send(&invocation)
+        .expect("failed to write invocation to channel");
+    req_receiver.close().expect("failed to close channel");
+    rsp_sender.close().expect("failed to close channel");
 
     Ok(rsp_receiver)
 }
@@ -269,8 +271,8 @@ where
 {
     let rsp_receiver = invoke_grpc_method_stream(method_name, req, invocation_channel)?;
     // Read a single encapsulated response.
-    let result = receive(&rsp_receiver);
-    close_receiver(&rsp_receiver).expect("failed to close channel");
+    let result = rsp_receiver.receive();
+    rsp_receiver.close().expect("failed to close channel");
     let grpc_rsp = result.map_err(|status| {
         error!("failed to receive response: {:?}", status);
         build_status(

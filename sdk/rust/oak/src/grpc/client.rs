@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::io::{ReceiverExt, SenderExt};
 use log::{info, warn};
 use oak_abi::{label::Label, proto::oak::application::NodeConfiguration};
 
@@ -41,7 +42,9 @@ impl Client {
         let (invocation_sender, invocation_receiver) =
             crate::io::channel_create().expect("failed to create channel");
         let status = crate::node_create_with_label(config, label, invocation_receiver.handle);
-        crate::io::close_receiver(&invocation_receiver).expect("failed to close channel");
+        invocation_receiver
+            .close()
+            .expect("failed to close channel");
         match status {
             Ok(_) => {
                 info!(
@@ -61,7 +64,7 @@ impl Client {
 impl Drop for Client {
     fn drop(&mut self) {
         info!("Closing Client channel {:?}", self.invocation_sender.handle);
-        if let Err(status) = crate::io::close_sender(&self.invocation_sender) {
+        if let Err(status) = self.invocation_sender.close() {
             warn!(
                 "Failed to close Client channel {:?}: {:?}",
                 self.invocation_sender.handle, status

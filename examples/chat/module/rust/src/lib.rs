@@ -17,7 +17,7 @@
 use log::info;
 use oak::{
     grpc,
-    io::{send, Sender},
+    io::{Sender, SenderExt},
 };
 use proto::{
     command::Command::{JoinRoom, SendMessage},
@@ -103,7 +103,7 @@ impl Chat for Node {
                 if e.get().admin_token == req.admin_token {
                     // Close the only input channel that reaches the per-room Node, which
                     // will trigger it to terminate.
-                    oak::io::close_sender(&e.get().sender).expect("could not close channel");
+                    e.get().sender.close().expect("could not close channel");
                     e.remove();
                     Ok(())
                 } else {
@@ -130,7 +130,9 @@ impl Chat for Node {
                 let command = Command {
                     command: Some(JoinRoom(Sender::new(writer.handle()))),
                 };
-                send(&room.sender, &command).expect("could not send command to room Node");
+                room.sender
+                    .send(&command)
+                    .expect("could not send command to room Node");
             }
         };
     }
@@ -144,7 +146,9 @@ impl Chat for Node {
                 let command = Command {
                     command: req.message.map(SendMessage),
                 };
-                send(&room.sender, &command).expect("could not send command to room Node");
+                room.sender
+                    .send(&command)
+                    .expect("could not send command to room Node");
                 Ok(())
             }
         }
