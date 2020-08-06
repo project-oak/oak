@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.storage;
 
-import "oak/proto/label.proto";
+import "oak_abi/proto/label.proto";
 
 // In all the request messages below, the storage_name field is used to partition data within an Oak
 // Module and is not exposed to the StorageProvider. The StorageChannel generates a unique storage

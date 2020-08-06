@@ -293,10 +293,11 @@ modules to load, what entrypoint to invoke. However, the Application may need
 some start-of-day configuration of its own, roughly equivalent to runtime
 options for a normal executable.
 
-Oak supports this using a [`ConfigMap`](/oak/proto/application.proto) message,
-holding arbitrary key:value data for initial configuration. At Application
-start-up, the Oak Runtime sends the serialized form of this message as a single
-message on the initial Node's initial channel (and then closes the channel).
+Oak supports this using a [`ConfigMap`](/oak_abi/proto/application.proto)
+message, holding arbitrary key:value data for initial configuration. At
+Application start-up, the Oak Runtime sends the serialized form of this message
+as a single message on the initial Node's initial channel (and then closes the
+channel).
 
 The initial Node of an Application can retrieve this configuration with the
 `oak::app_config_map` helper function.
