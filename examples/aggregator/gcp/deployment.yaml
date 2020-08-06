@@ -27,7 +27,7 @@ spec:
               mountPath: '/etc/oak-secrets'
               readOnly: true
           args:
-            - --application=config.bin
+            - --application=aggregator.oak
             - --grpc-tls-private-key=/etc/oak-secrets/gcp.key
             - --grpc-tls-certificate=/etc/oak-secrets/gcp.pem
             - --root-tls-certificate=/etc/oak-secrets/ca.pem

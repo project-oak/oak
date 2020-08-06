@@ -3,8 +3,8 @@ name = "chat"
 [applications]
 
 [applications.rust]
-manifest = "examples/chat/config/config.toml"
-out = "examples/chat/bin/config.bin"
+manifest = "examples/chat/oak_app_manifest.toml"
+out = "examples/chat/bin/chat.oak"
 
 [applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/chat/module/rust/Cargo.toml" } }

@@ -14,15 +14,17 @@
 // limitations under the License.
 //
 
-//! An utility for serializing an Oak application configuration.
+//! An utility for building an Oak application from a manifest file.
 //!
 //! Invoke with:
 //!
 //! ```shell
-//! cargo run --manifest-path=oak/server/rust/oak_config_serializer/Cargo.toml -- \
-//!     --input-file=<CONFIGURATION_FILE> \
-//!     --output-file=<OUTPUT_FILE>
+//! cargo run --manifest-path=oak/server/rust/oak_app_build/Cargo.toml -- \
+//!     --manifest-path=<OAK_APP_MANIFEST_FILE>
 //! ```
+//!
+//! The compiled Oak application will then be stored under a `bin` subdirectory from the manifest
+//! file location, named after the name field from the app manifest, and with an `.oak` extension.
 
 use anyhow::{anyhow, Context};
 use log::{debug, info};
@@ -33,22 +35,24 @@ use oak_abi::proto::oak::application::{
 use prost::Message;
 use reqwest::Url;
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, fs, path};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
 use structopt::StructOpt;
 
-/// Command line options for the Oak Application Configuration Serializer.
+/// Command line options for the Oak Application builder.
 #[derive(StructOpt, Clone, Debug)]
-#[structopt(about = "Oak Application Configuration Serializer")]
+#[structopt(about = "Oak Application Builder")]
 struct Opt {
-    #[structopt(long, help = "Input application configuration file in TOML format")]
-    input_file: String,
-    #[structopt(long, help = "Output file")]
-    output_file: String,
+    #[structopt(long, help = "Input application manifest file in TOML format")]
+    manifest_path: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Config {
+struct Manifest {
     name: String,
     modules: HashMap<String, Module>,
     #[serde(default)]
@@ -87,17 +91,27 @@ impl Default for InitialNodeConfig {
     }
 }
 
-/// Directory used to save downloaded Wasm modules.
-/// Created in the `std::env::current_dir()`.
-const CACHE_DIRECTORY: &str = ".oak";
+/// Directory used to save build artifacts.
+///
+/// Relative to the directory containing the app manifest file.
+const OUTPUT_DIRECTORY: &str = "bin";
 
-/// Get path for caching a downloaded file in the [`CACHE_DIRECTORY`].
+/// Directory used to save downloaded Wasm modules.
+///
+/// Relative to the directory containing the app manifest file.
+const CACHE_DIRECTORY: &str = "bin/cache";
+
+/// Get path for caching a downloaded file in [`CACHE_DIRECTORY`].
 /// Cache file is named after `sha256_sum`.
-fn get_module_cache_path(sha256_sum: &str) -> path::PathBuf {
-    let mut cache_path = std::env::current_dir().unwrap();
-    cache_path.push(CACHE_DIRECTORY);
-    cache_path.push(&sha256_sum);
-    cache_path
+fn get_module_cache_path(manifest_dir: &Path, module_sha256_sum: &str) -> PathBuf {
+    manifest_dir.join(CACHE_DIRECTORY).join(&module_sha256_sum)
+}
+
+/// Get path for the output application file in [`OUTPUT_DIRECTORY`].
+fn get_output_path(manifest_dir: &Path, app_name: &str) -> PathBuf {
+    manifest_dir
+        .join(OUTPUT_DIRECTORY)
+        .join(format!("{}.oak", app_name))
 }
 
 /// Computes SHA256 sum from `data` and returns it as a HEX encoded string.
@@ -126,14 +140,14 @@ async fn download_file_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
 
 /// Load Wasm module from file or URL if specified.
 /// If the file was downloaded from URL, it is cached in [`CACHE_DIRECTORY`].
-async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
+async fn load_module(manifest_dir: &Path, module: &Module) -> anyhow::Result<Vec<u8>> {
     match &module {
         Module::Path(path) => {
             fs::read(&path).with_context(|| format!("Couldn't read file {}", path))
         }
         Module::External(external) => {
             // Try to load module from cache, if failed, download it from URL.
-            let cache_path = get_module_cache_path(&external.sha256);
+            let cache_path = get_module_cache_path(&manifest_dir, &external.sha256);
             let data = match fs::read(&cache_path) {
                 Ok(data) => {
                     info!("Loaded module from cache {:?}", cache_path.as_path());
@@ -175,13 +189,14 @@ async fn load_module(module: &Module) -> anyhow::Result<Vec<u8>> {
 /// Serializes an application configuration from `app_config` and writes it into `filename`.
 pub fn write_config_to_file(
     app_config: &ApplicationConfiguration,
-    filename: &str,
+    filename: &Path,
 ) -> anyhow::Result<()> {
     let mut bytes = Vec::new();
     app_config
         .encode(&mut bytes)
         .context("Couldn't encode application configuration")?;
-    fs::write(filename, &bytes).with_context(|| format!("Couldn't write file {}", filename))?;
+    fs::write(filename, &bytes)
+        .with_context(|| format!("Couldn't write file {}", filename.display()))?;
     Ok(())
 }
 
@@ -192,14 +207,22 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
     debug!("Parsed opts: {:?}", opt);
 
-    let input_file = fs::read_to_string(opt.input_file).context("Couldn't read input file")?;
-    let config: Config = toml::from_str(&input_file).context("Couldn't parse TOML config file")?;
-    debug!("Parsed config file: {:?}", config);
+    let manifest_path = Path::new(&opt.manifest_path);
+    let manifest_dir = manifest_path
+        .parent()
+        .context("Couldn't find manifest directory")?;
+
+    let manifest_file = fs::read_to_string(manifest_path).context("Couldn't read manifest file")?;
+    let manifest: Manifest =
+        toml::from_str(&manifest_file).context("Couldn't parse manifest file as TOML")?;
+    debug!("Parsed manifest file: {:?}", manifest);
 
     // Load Wasm modules.
     let mut modules = HashMap::new();
-    for (name, module) in config.modules.iter() {
-        let loaded_module = load_module(&module).await.context("Couldn't load module")?;
+    for (name, module) in manifest.modules.iter() {
+        let loaded_module = load_module(&manifest_dir, &module)
+            .await
+            .context("Couldn't load module")?;
         modules.insert(name.to_string(), loaded_module);
     }
 
@@ -207,17 +230,18 @@ async fn main() -> anyhow::Result<()> {
     let app_config = ApplicationConfiguration {
         wasm_modules: modules,
         initial_node_configuration: Some(NodeConfiguration {
-            name: config.name,
+            name: manifest.name.clone(),
             config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
-                wasm_module_name: config.initial_node_configuration.wasm_module_name,
-                wasm_entrypoint_name: config.initial_node_configuration.wasm_entrypoint_name,
+                wasm_module_name: manifest.initial_node_configuration.wasm_module_name,
+                wasm_entrypoint_name: manifest.initial_node_configuration.wasm_entrypoint_name,
             })),
         }),
     };
 
-    // Serialize application configuration.
-    write_config_to_file(&app_config, &opt.output_file)
-        .context("Couldn't write serialized config")?;
+    let output_file = get_output_path(&manifest_dir, &manifest.name);
+
+    // Serialize application.
+    write_config_to_file(&app_config, &output_file).context("Couldn't write serialized config")?;
 
     Ok(())
 }

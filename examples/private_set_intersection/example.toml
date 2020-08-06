@@ -3,8 +3,8 @@ name = "private_set_intersection"
 [applications]
 
 [applications.rust]
-manifest = "examples/private_set_intersection/config.toml"
-out = "examples/private_set_intersection/bin/config.bin"
+manifest = "examples/private_set_intersection/oak_app_manifest.toml"
+out = "examples/private_set_intersection/bin/private_set_intersection.oak"
 
 [applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/private_set_intersection/module/rust/Cargo.toml" } }
