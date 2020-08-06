@@ -21,6 +21,7 @@
 
 // TODO(#544)
 
+use crate::io::SenderExt;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
 struct OakChannelLogger {

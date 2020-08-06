@@ -18,6 +18,7 @@
 //! underlying Oak platform functionality.
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
+use io::ReceiverExt;
 use log::{debug, error, info, trace, warn};
 use oak_abi::proto::oak::application::{ConfigMap, NodeConfiguration};
 use prost::Message;

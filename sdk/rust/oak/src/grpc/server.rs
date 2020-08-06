@@ -16,7 +16,11 @@
 
 //! Functionality to help Oak Nodes create gRPC server pseudo-Nodes.
 
-use crate::{grpc::Invocation, io::Receiver, OakStatus};
+use crate::{
+    grpc::Invocation,
+    io::{Receiver, ReceiverExt, SenderExt},
+    OakStatus,
+};
 
 struct GrpcServerInit {
     invocation_sender: crate::io::Sender<Invocation>,

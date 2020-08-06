@@ -27,8 +27,8 @@ mod sender;
 
 pub use decodable::Decodable;
 pub use encodable::Encodable;
-pub use receiver::Receiver;
-pub use sender::Sender;
+pub use receiver::{Receiver, ReceiverExt};
+pub use sender::{Sender, SenderExt};
 
 /// Create a new channel for transmission of `Encodable` and `Decodable` types.
 pub fn channel_create<T: Encodable + Decodable>() -> Result<(Sender<T>, Receiver<T>), OakStatus> {

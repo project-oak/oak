@@ -22,7 +22,11 @@ use abitest_common::InternalMessage;
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq, expect_matches};
 use log::{debug, error, info, trace, warn};
-use oak::{grpc, ChannelReadStatus, OakError, OakStatus};
+use oak::{
+    grpc,
+    io::{ReceiverExt, SenderExt},
+    ChannelReadStatus, OakError, OakStatus,
+};
 use oak_abi::{
     label::Label,
     proto::oak::application::{

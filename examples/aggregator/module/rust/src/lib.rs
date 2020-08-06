@@ -30,7 +30,10 @@ pub mod proto {
 use aggregator_common::ThresholdAggregator;
 use data::SparseVector;
 use log::{debug, error};
-use oak::grpc;
+use oak::{
+    grpc,
+    io::{ReceiverExt, SenderExt},
+};
 use oak_abi::label::Label;
 use proto::{Aggregator, AggregatorClient, AggregatorDispatcher, Sample};
 use std::{collections::HashMap, convert::TryFrom};

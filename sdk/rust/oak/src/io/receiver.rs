@@ -33,45 +33,37 @@ pub struct Receiver<T: Decodable> {
     phantom: std::marker::PhantomData<T>,
 }
 
-/// Manual implementation of [`std::fmt::Debug`] for any `T`.
-///
-/// The automatically derived implementation would only cover types `T` that are themselves
-/// `Display`, but we do not care about that bound, since there is never an actual element of type
-/// `T` to display.
-impl<T: Decodable> std::fmt::Debug for Receiver<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "Receiver({:?})", self.handle)
-    }
+pub trait ReceiverExt<T> {
+    /// Close the underlying channel used by the receiver.
+    fn close(&self) -> Result<(), OakStatus>;
+
+    /// Attempt to wait for a value on the receiver, blocking if necessary.
+    fn receive(&self) -> Result<T, OakError>;
+
+    /// Attempt to read a value from the receiver, without blocking.
+    fn try_receive(&self) -> Result<T, OakError>;
+
+    /// Wait for a value to be available from the receiver.
+    ///
+    /// Returns [`ChannelReadStatus`] of the wrapped handle, or `Err(OakStatus::ErrTerminated)` if
+    /// the Oak Runtime is terminating.
+    fn wait(&self) -> Result<ChannelReadStatus, OakStatus>;
 }
 
-impl<T: Decodable> Receiver<T> {
-    pub fn new(handle: ReadHandle) -> Self {
-        Receiver {
-            handle,
-            phantom: std::marker::PhantomData,
-        }
-    }
-
-    /// Close the underlying channel used by this receiver.
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn close(&self) -> Result<(), OakStatus> {
+impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
+    /// Close the underlying channel used by the receiver.
+    fn close(&self) -> Result<(), OakStatus> {
         crate::channel_close(self.handle.handle)
     }
 
-    /// Attempt to wait for a value on this receiver, blocking if necessary.
-    ///
-    /// See https://doc.rust-lang.org/std/sync/mpsc/struct.Receiver.html#method.recv
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn receive(&self) -> Result<T, OakError> {
+    /// Attempt to wait for a value on the receiver, blocking if necessary.
+    fn receive(&self) -> Result<T, OakError> {
         self.wait()?;
         self.try_receive()
     }
 
-    /// Attempt to read a value from this receiver, without blocking.
-    ///
-    /// See https://doc.rust-lang.org/std/sync/mpsc/struct.Receiver.html#method.try_recv
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn try_receive(&self) -> Result<T, OakError> {
+    /// Attempt to read a value from the receiver, without blocking.
+    fn try_receive(&self) -> Result<T, OakError> {
         let mut bytes = Vec::with_capacity(1024);
         let mut handles = Vec::with_capacity(16);
         crate::channel_read(self.handle, &mut bytes, &mut handles)?;
@@ -80,12 +72,11 @@ impl<T: Decodable> Receiver<T> {
         T::decode(&message)
     }
 
-    /// Wait for a value to be available from this receiver.
+    /// Wait for a value to be available from the receiver.
     ///
     /// Returns [`ChannelReadStatus`] of the wrapped handle, or `Err(OakStatus::ErrTerminated)` if
     /// the Oak Runtime is terminating.
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn wait(&self) -> Result<ChannelReadStatus, OakStatus> {
+    fn wait(&self) -> Result<ChannelReadStatus, OakStatus> {
         // TODO(#500): Consider creating the handle notification space once and for all in `new`.
         let read_handles = vec![self.handle];
         let mut space = crate::new_handle_space(&read_handles);
@@ -114,6 +105,26 @@ impl<T: Decodable> Receiver<T> {
                 error!("Should never get here. `wait_on_channels` should never return {:?}.", status);
                 Err(OakStatus::ErrInternal)
             }
+        }
+    }
+}
+
+/// Manual implementation of [`std::fmt::Debug`] for any `T`.
+///
+/// The automatically derived implementation would only cover types `T` that are themselves
+/// `Display`, but we do not care about that bound, since there is never an actual element of type
+/// `T` to display.
+impl<T: Decodable> std::fmt::Debug for Receiver<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "Receiver({:?})", self.handle)
+    }
+}
+
+impl<T: Decodable> Receiver<T> {
+    pub fn new(handle: ReadHandle) -> Self {
+        Receiver {
+            handle,
+            phantom: std::marker::PhantomData,
         }
     }
 }

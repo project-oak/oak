@@ -66,7 +66,7 @@ mod proto {
 
 use oak::{
     grpc,
-    io::{Receiver, Sender},
+    io::{Receiver, ReceiverExt, Sender, SenderExt},
 };
 
 use proto::{

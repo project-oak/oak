@@ -16,7 +16,10 @@
 
 //! Functionality to help Oak Nodes interact with gRPC.
 
-use crate::OakError;
+use crate::{
+    io::{ReceiverExt, SenderExt},
+    OakError,
+};
 use log::{error, warn};
 use oak_abi::proto::google::rpc;
 pub use oak_abi::proto::{

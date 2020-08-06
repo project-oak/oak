@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::io::{ReceiverExt, SenderExt};
 use log::{info, warn};
 use oak_abi::{label::Label, proto::oak::application::NodeConfiguration};
 

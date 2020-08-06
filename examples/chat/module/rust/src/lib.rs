@@ -15,7 +15,10 @@
 //
 
 use log::info;
-use oak::{grpc, io::Sender};
+use oak::{
+    grpc,
+    io::{Sender, SenderExt},
+};
 use proto::{
     command::Command::{JoinRoom, SendMessage},
     Chat, ChatDispatcher, Command, CreateRoomRequest, DestroyRoomRequest, SendMessageRequest,
