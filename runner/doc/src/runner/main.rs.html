@@ -1348,6 +1348,9 @@
 <span id="1348">1348</span>
 <span id="1349">1349</span>
 <span id="1350">1350</span>
+<span id="1351">1351</span>
+<span id="1352">1352</span>
+<span id="1353">1353</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -2052,10 +2055,9 @@
         <span class="string">&quot;cargo&quot;</span>,
         <span class="macro">vec</span><span class="macro">!</span>[
             <span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="string">&quot;--manifest-path=sdk/rust/oak_config_serializer/Cargo.toml&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="string">&quot;--manifest-path=sdk/rust/oak_app_build/Cargo.toml&quot;</span>.<span class="ident">to_string</span>(),
             <span class="string">&quot;--&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--input-file={}&quot;</span>, <span class="ident">application</span>.<span class="ident">manifest</span>),
-            <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--output-file={}&quot;</span>, <span class="ident">application</span>.<span class="ident">out</span>),
+            <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">application</span>.<span class="ident">manifest</span>),
         ],
     )
 }
@@ -2084,6 +2086,10 @@
                         <span class="string">&quot;build&quot;</span>,
                         <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--tag={}&quot;</span>, <span class="ident">example</span>.<span class="ident">name</span>),
                         <span class="string">&quot;--file=./examples/Dockerfile&quot;</span>,
+                        <span class="comment">// An example may have more than one application, and the applications may</span>
+                        <span class="comment">// have arbitrary names, so this is an approximation of the expected</span>
+                        <span class="comment">// application file name of one of them.</span>
+                        <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--build-arg=application_file_name={}.oak&quot;</span>, <span class="ident">example</span>.<span class="ident">name</span>),
                         <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;./examples/{}&quot;</span>, <span class="ident">example</span>.<span class="ident">name</span>),
                     ],
                 ),
