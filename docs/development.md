@@ -255,7 +255,7 @@ client of an example Oak Application (as [described above](#build-application)),
 and runs the client code locally.
 
 ```bash
-./scripts/runner run-examples --run-server=false --logs --example-name=hello_world
+./scripts/runner --logs run-examples --run-server=false --example-name=hello_world
 ```
 
 The `-s none` option indicates that the script expects to find an
