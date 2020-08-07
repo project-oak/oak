@@ -477,6 +477,37 @@ handle for the _write_ half of a different channel, which is then used for
 responses &ndash; so the new Node has a way of _sending_ externally, as well as
 receiving.
 
+For nodes that communicate by exchanging messages that are serialized protocol
+buffer messages, the Oak SDK allows encoding channel handles into protobuf
+messages:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/injection/proto/injection.proto Protobuf /^message BlobStoreSender/ /^}$/)
+```Protobuf
+message BlobStoreSender {
+  oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.examples.injection.BlobResponse"];
+}
+```
+<!-- prettier-ignore-end -->
+
+The `message_type` field option provided by the SDK specifies the fully
+qualified (with leading dot) name of the protobuf message passed over the
+channel.
+
+The above protobuf definition generates the following Rust data type:
+
+```Rust
+struct BlobStoreSender {
+  sender: ::oak::io::Sender<BlobResponse>,
+}
+```
+
+An `oak.handle.Receiver` type is also available for read handles.
+
+The generated struct is fully type safe, encoding the direction of the handle
+(`Sender` or `Receiver`) as well as the type of the message that is sent or
+received using `message_type`.
+
 ## Persistent Storage
 
 TODO: describe use of storage
