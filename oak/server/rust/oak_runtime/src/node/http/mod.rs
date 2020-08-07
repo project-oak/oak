@@ -296,12 +296,12 @@ impl HttpRequestHandler {
         let future = async move {
             let oak_label = get_oak_label(&request)?;
             info!(
-                "handling HTTP request; request size: {} bytes, label: {:?}",
+                "Handling HTTP request; request size: {} bytes, label: {:?}",
                 request.body.len(),
                 oak_label
             );
 
-            debug!("inject the request into the Oak Node");
+            debug!("Inject the request into the Oak Node");
             let response = handler
                 .inject_http_request(request, &oak_label)
                 .map_err(|_| OakStatus::ErrInternal)?;
@@ -423,7 +423,7 @@ impl Pipe {
     }
 }
 
-// TODO(#1279): Get the label from a JSON string instead of a binary label
+// TODO(#1279): Get the label from a JSON string instead of a binary label.
 fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
     match req.headers.get(oak_abi::OAK_LABEL_HTTP_KEY) {
         Some(label) => Label::decode(&label[..]).map_err(|err| {
@@ -431,8 +431,8 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
             OakStatus::ErrInvalidArgs
         }),
         None => {
-            warn!("No HTTP label found:");
-            Err(OakStatus::ErrInvalidArgs)
+            warn!("No HTTP label found: using public_untrusted.");
+            Ok(Label::public_untrusted())
         }
     }
 }

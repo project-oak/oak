@@ -99,6 +99,19 @@ function to services gRPC requests in a loop, invoking the trait's
 [`invoke()`](https://project-oak.github.io/oak/sdk/doc/oak/grpc/trait.ServerNode.html#tymethod.invoke)
 method for each request.
 
+### `oak::http` Module
+
+The [`oak::http`](https://project-oak.github.io/oak/sdk/doc/oak/http/index.html)
+module holds functionality that is helpful for interacting with the outside
+world over HTTP, via an explicitly created
+[HTTP server pseudo-Node](concepts.md#pseudo-nodes).
+
+An Oak Node that acts as an HTTP server is used with the
+[`oak::run_event_loop()`](https://project-oak.github.io/oak/sdk/doc/oak/fn.run_event_loop.html)
+function to services HTTP requests in a loop, calling the
+[`Node::handle_command()`](https://project-oak.github.io/oak/sdk/doc/oak/trait.Node.html#tymethod.handle_command)
+method for each request.
+
 ### `oak::storage` Module
 
 The

@@ -28,15 +28,13 @@ pub use oak_abi::proto::{
 };
 
 pub mod client;
-mod invocation;
 pub mod server;
-
-pub use invocation::Invocation;
 
 /// Result type that uses a [`Status`] type for error values.
 ///
 /// [`Status`]: oak_abi::proto::google::rpc::Status
 pub type Result<T> = std::result::Result<T, rpc::Status>;
+pub type Invocation = crate::invocations::Invocation<GrpcRequest, GrpcResponse>;
 
 /// Helper to create a gRPC status object.
 pub fn build_status(code: rpc::Code, msg: &str) -> rpc::Status {

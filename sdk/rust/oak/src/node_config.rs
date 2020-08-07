@@ -18,7 +18,7 @@
 
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, GrpcClientConfiguration, GrpcServerConfiguration,
-    LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
+    HttpServerConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };
 
 pub fn grpc_client(address: &str) -> NodeConfiguration {
@@ -34,6 +34,15 @@ pub fn grpc_server(address: &str) -> NodeConfiguration {
     NodeConfiguration {
         name: "grpc_server".to_string(),
         config_type: Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration {
+            address: address.to_string(),
+        })),
+    }
+}
+
+pub fn http_server(address: &str) -> NodeConfiguration {
+    NodeConfiguration {
+        name: "http_server".to_string(),
+        config_type: Some(ConfigType::HttpServerConfig(HttpServerConfiguration {
             address: address.to_string(),
         })),
     }
