@@ -20,6 +20,7 @@
 //! asynchronously.
 
 use crate::{
+    io::{ReceiverExt, SenderExt},
     node::{ConfigurationError, Node},
     ChannelHalfDirection, RuntimeProxy,
 };

@@ -16,7 +16,7 @@
 
 //! Functionality covering configuration of a Runtime instance.
 
-use crate::{Runtime, RuntimeConfiguration, RuntimeProxy};
+use crate::{io::SenderExt, Runtime, RuntimeConfiguration, RuntimeProxy};
 use log::{error, info};
 use oak_abi::OakStatus;
 use std::sync::Arc;

@@ -17,7 +17,7 @@
 //! Functionality for handling gRPC method invocations.
 
 use crate::{
-    io::{Decodable, Receiver, Sender},
+    io::{Decodable, Receiver, ReceiverExt, Sender, SenderExt},
     NodeMessage, RuntimeProxy,
 };
 use log::error;

@@ -69,14 +69,25 @@ impl<T: Decodable> Receiver<T> {
             phantom: std::marker::PhantomData,
         }
     }
+}
 
+/// Extension trait for runtime-specific Receiver functionality.
+pub trait ReceiverExt<T> {
     /// Close the underlying channel handle.
-    pub fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
+    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus>;
+
+    /// Waits, reads and decodes a message from the [`Receiver::handle`].
+    fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakStatus>;
+}
+
+impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
+    /// Close the underlying channel handle.
+    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
         runtime.channel_close(self.handle)
     }
 
     /// Waits, reads and decodes a message from the [`Receiver::handle`].
-    pub fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakStatus> {
+    fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakStatus> {
         let read_status = runtime.wait_on_channels(&[self.handle])?;
 
         match read_status[0] {
@@ -114,14 +125,25 @@ impl<T: Encodable> Sender<T> {
             phantom: std::marker::PhantomData,
         }
     }
+}
 
+/// Extension trait for runtime-specific Sender functionality.
+pub trait SenderExt<T> {
     /// Close the underlying channel handle.
-    pub fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
+    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus>;
+
+    /// Encodes and sends a message to the [`Sender::handle`].
+    fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakStatus>;
+}
+
+impl<T: Encodable> SenderExt<T> for Sender<T> {
+    /// Close the underlying channel handle.
+    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
         runtime.channel_close(self.handle)
     }
 
     /// Encodes and sends a message to the [`Sender::handle`].
-    pub fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
+    fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
         runtime.channel_write(self.handle, message.encode()?)
     }
 }

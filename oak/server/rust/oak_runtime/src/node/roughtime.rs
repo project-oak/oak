@@ -17,7 +17,7 @@
 //! Roughtime client pseudo-Node functionality.
 
 use crate::{
-    io::Receiver,
+    io::{Receiver, ReceiverExt},
     node::grpc::invocation::Invocation,
     time::{
         get_default_servers, RoughtimeClient, RoughtimeServer, DEFAULT_MAX_RADIUS_MICROSECONDS,
