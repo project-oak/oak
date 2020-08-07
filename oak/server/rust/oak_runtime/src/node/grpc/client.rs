@@ -17,7 +17,7 @@
 //! gRPC client pseudo-Node functionality.
 
 use crate::{
-    io::Receiver,
+    io::{Receiver, ReceiverExt},
     metrics::Metrics,
     node::{
         grpc::{codec::VecCodec, invocation::Invocation},
