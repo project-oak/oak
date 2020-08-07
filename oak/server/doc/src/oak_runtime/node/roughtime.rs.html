@@ -196,7 +196,7 @@
 <span class="doccomment">//! Roughtime client pseudo-Node functionality.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">io</span>::<span class="ident">Receiver</span>,
+    <span class="ident">io</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>},
     <span class="ident">node</span>::<span class="ident">grpc</span>::<span class="ident">invocation</span>::<span class="ident">Invocation</span>,
     <span class="ident">time</span>::{
         <span class="ident">get_default_servers</span>, <span class="ident">RoughtimeClient</span>, <span class="ident">RoughtimeServer</span>, <span class="ident">DEFAULT_MAX_RADIUS_MICROSECONDS</span>,

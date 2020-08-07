@@ -116,7 +116,7 @@
 <span class="doccomment">//! Functionality for handling gRPC method invocations.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">io</span>::{<span class="ident">Decodable</span>, <span class="ident">Receiver</span>, <span class="ident">Sender</span>},
+    <span class="ident">io</span>::{<span class="ident">Decodable</span>, <span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>, <span class="ident">Sender</span>, <span class="ident">SenderExt</span>},
     <span class="ident">NodeMessage</span>, <span class="ident">RuntimeProxy</span>,
 };
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">error</span>;

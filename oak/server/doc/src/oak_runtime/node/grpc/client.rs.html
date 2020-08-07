@@ -455,7 +455,7 @@
 <span class="doccomment">//! gRPC client pseudo-Node functionality.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">io</span>::<span class="ident">Receiver</span>,
+    <span class="ident">io</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>},
     <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
     <span class="ident">node</span>::{
         <span class="ident">grpc</span>::{<span class="ident">codec</span>::<span class="ident">VecCodec</span>, <span class="ident">invocation</span>::<span class="ident">Invocation</span>},

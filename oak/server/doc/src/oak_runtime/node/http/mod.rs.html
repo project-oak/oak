@@ -467,6 +467,7 @@
 <span id="467">467</span>
 <span id="468">468</span>
 <span id="469">469</span>
+<span id="470">470</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -490,6 +491,7 @@
 <span class="doccomment">//! asynchronously.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">io</span>::{<span class="ident">ReceiverExt</span>, <span class="ident">SenderExt</span>},
     <span class="ident">node</span>::{<span class="ident">ConfigurationError</span>, <span class="ident">Node</span>},
     <span class="ident">ChannelHalfDirection</span>, <span class="ident">RuntimeProxy</span>,
 };
