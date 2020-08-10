@@ -11,6 +11,7 @@ members = [
   "authentication/client",
   "chat/module/rust",
   "hello_world/grpc",
+  "hello_world/client/rust",
   "hello_world/module/rust",
   "injection/module/rust",
   "machine_learning/module/rust",
@@ -44,6 +45,7 @@ oak_utils = { path = "../oak_utils" }
 abitest_grpc = { path = "abitest/grpc" }
 aggregator_grpc = { path = "aggregator/grpc" }
 database_proxy = { path = "trusted_information_retrieval/module_1/rust" }
+hello_world_client = { path = "hello_world/client/rust" }
 hello_world_grpc = { path = "hello_world/grpc" }
 private_set_intersection_grpc = { path = "private_set_intersection/grpc" }
 running_average_grpc = { path = "running_average/grpc" }

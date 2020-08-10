@@ -656,6 +656,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "hello_world_client"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "futures",
+ "hello_world_grpc",
+ "log",
+ "oak_abi",
+ "oak_utils",
+ "prost",
+ "structopt",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
 name = "hello_world_grpc"
 version = "0.1.0"
 dependencies = [

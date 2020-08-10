@@ -1,0 +1,24 @@
+[package]
+name = "hello_world_client"
+version = "0.1.0"
+authors = ["Ionut-Victor Anghelcovici <iovi@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[[bin]]
+name = "hello_world_client_bin"
+path = "src/main.rs"
+
+[dependencies]
+env_logger = "*"
+futures = "*"
+log = "*"
+oak_abi = "=0.1.0"
+hello_world_grpc = "=0.1.0"
+prost = "*"
+structopt = "*"
+tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
+tonic = { version = "*", features = ["tls"] }
+
+[build-dependencies]
+oak_utils = "*"
