@@ -82,27 +82,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let worlds = vec!["WORLD", "MONDO", "世界", "MONDE"];
-    let mut tasks = Vec::new();
     info!("Sending requests");
-    for world in worlds {
-        let req = Request::new(HelloRequest {
-            greeting: String::from(world),
-        });
-        // https://docs.rs/tonic/0.3.0/tonic/client/index.html#concurrent-usage
-        let mut c = client.clone();
-        let task = tokio::spawn(async move {
-            // Process each request concurrently.
-            let result = c.say_hello(req).await;
-            match result {
-                Ok(res) => info!("Received response: {}", res.get_ref().reply),
-                Err(e) => panic!("Error sending request {:?}", e),
+    let responses = worlds
+        .iter()
+        .map(|world| {
+            let req = Request::new(HelloRequest {
+                greeting: String::from(*world),
+            });
+            // https://docs.rs/tonic/0.3.0/tonic/client/index.html#concurrent-usage
+            let mut c = client.clone();
+            async move {
+                // Process each request concurrently.
+                let result = c.say_hello(req).await;
+                match result {
+                    Ok(res) => {
+                        info!("Received response: {}", res.get_ref().reply);
+                        res.get_ref().reply.clone()
+                    }
+                    Err(e) => panic!("Error sending request {:?}", e),
+                }
             }
-        });
-        tasks.push(task);
-    }
+        })
+        .collect::<Vec<_>>();
 
     // Join all the tasks. NB: this is where the tasks are being run!
-    futures::future::join_all(tasks).await;
+    futures::future::join_all(responses).await;
 
     Ok(())
 }
