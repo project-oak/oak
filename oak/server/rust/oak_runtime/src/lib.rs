@@ -44,13 +44,13 @@ use oak_abi::{
 use prometheus::proto::MetricFamily;
 use rand::RngCore;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     string::String,
     sync::{Arc, Mutex, RwLock},
     thread,
     thread::JoinHandle,
 };
-use tokio::sync::{broadcast, oneshot};
+use tokio::sync::oneshot;
 use tonic::transport::{Certificate, Identity};
 
 pub use channel::{ChannelHalf, ChannelHalfDirection};
@@ -296,9 +296,8 @@ pub struct Runtime {
 
     aux_servers: Mutex<Vec<AuxServer>>,
 
-    /// Queue used to broadcast introspection events. The sender is used by the
-    /// runtime to send events, and can be subscribed to by aux servers.
-    introspection_event_sender: broadcast::Sender<Event>,
+    /// Queue of introspection events in chronological order.
+    introspection_event_queue: Mutex<VecDeque<Event>>,
 
     pub metrics_data: Metrics,
 }
