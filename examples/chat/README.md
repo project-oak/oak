@@ -46,5 +46,6 @@ Another party can then join the same chat room by using these arguments:
 ## CI Invocation
 
 Note that the normal/default invocation of this example (with
-`scripts/run_example -e chat`) just starts an instance of the application then
-immediately terminates it (this ensures that the CI runs work OK).
+`./scripts/runner --logs run-examples --run-server=false --example-name=chat`)
+just starts an instance of the application then immediately terminates it (this
+ensures that the CI runs work OK).
