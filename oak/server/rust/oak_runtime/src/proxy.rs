@@ -18,8 +18,8 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    message::NodeMessage, metrics::Metrics, proto::oak::introspection_events::Event, AuxServer,
-    ChannelHalfDirection, GrpcConfiguration, NodeId, NodePrivilege, NodeReadStatus, Runtime,
+    message::NodeMessage, metrics::Metrics, AuxServer, ChannelHalfDirection, GrpcConfiguration,
+    NodeId, NodePrivilege, NodeReadStatus, Runtime,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -59,7 +59,6 @@ impl RuntimeProxy {
         application_configuration: &ApplicationConfiguration,
         grpc_configuration: &GrpcConfiguration,
     ) -> RuntimeProxy {
-        let introspection_event_queue = Mutex::new(VecDeque::new());
         let runtime = Arc::new(Runtime {
             application_configuration: application_configuration.clone(),
             grpc_configuration: grpc_configuration.clone(),
@@ -68,7 +67,7 @@ impl RuntimeProxy {
             node_infos: RwLock::new(HashMap::new()),
             next_node_id: AtomicU64::new(0),
             aux_servers: Mutex::new(Vec::new()),
-            introspection_event_queue,
+            introspection_event_queue: Mutex::new(VecDeque::new()),
             metrics_data: Metrics::new(),
         });
         let proxy = runtime.proxy_for_new_node();
