@@ -29,7 +29,7 @@ use oak_abi::{
     ChannelReadStatus, OakStatus,
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     sync::{Arc, Mutex, RwLock},
 };
 
@@ -67,6 +67,7 @@ impl RuntimeProxy {
             node_infos: RwLock::new(HashMap::new()),
             next_node_id: AtomicU64::new(0),
             aux_servers: Mutex::new(Vec::new()),
+            introspection_event_queue: Mutex::new(VecDeque::new()),
             metrics_data: Metrics::new(),
         });
         let proxy = runtime.proxy_for_new_node();

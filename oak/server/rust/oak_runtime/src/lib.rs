@@ -28,8 +28,8 @@ use crate::{
     message::{Message, NodeMessage},
     metrics::Metrics,
     proto::oak::introspection_events::{
-        event::EventDetails, ChannelCreated, HandleCreated, HandleDestroyed, MessageDequeued,
-        MessageEnqueued, NodeCreated, NodeDestroyed,
+        event::EventDetails, ChannelCreated, Event, HandleCreated, HandleDestroyed,
+        MessageDequeued, MessageEnqueued, NodeCreated, NodeDestroyed,
     },
 };
 use auth::oidc_utils::ClientInfo;
@@ -44,7 +44,7 @@ use oak_abi::{
 use prometheus::proto::MetricFamily;
 use rand::RngCore;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     string::String,
     sync::{Arc, Mutex, RwLock},
     thread,
@@ -296,6 +296,9 @@ pub struct Runtime {
     next_node_id: AtomicU64,
 
     aux_servers: Mutex<Vec<AuxServer>>,
+
+    /// Queue of introspection events in chronological order.
+    introspection_event_queue: Mutex<VecDeque<Event>>,
 
     pub metrics_data: Metrics,
 }
