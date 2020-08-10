@@ -286,6 +286,7 @@
 <span id="286">286</span>
 <span id="287">287</span>
 <span id="288">288</span>
+<span id="289">289</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -318,7 +319,7 @@
     <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
 };
 <span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections</span>::<span class="ident">HashMap</span>,
+    <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">VecDeque</span>},
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>, <span class="ident">RwLock</span>},
 };
 
@@ -356,6 +357,7 @@
             <span class="ident">node_infos</span>: <span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()),
             <span class="ident">next_node_id</span>: <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>),
             <span class="ident">aux_servers</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">Vec</span>::<span class="ident">new</span>()),
+            <span class="ident">introspection_event_queue</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">VecDeque</span>::<span class="ident">new</span>()),
             <span class="ident">metrics_data</span>: <span class="ident">Metrics</span>::<span class="ident">new</span>(),
         });
         <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">proxy_for_new_node</span>();
