@@ -5,6 +5,7 @@ From OakIFC Require Import
     LowEquivalences.
 Require Import Coq.Lists.List.
 Import ListNotations.
+From mathcomp Require Import fintype.
 
 (* This file contains  *)
 
@@ -25,8 +26,8 @@ Inductive ev_low_eq: level -> event_l -> event_l -> Prop :=
             el1 = el2 ->
             ev_low_eq ell el1 el2
     | EvNoFlow ell el1 el2:
-        ~((lvl el2) << ell) ->
-        ~((lvl el1) << ell) ->
+        ~((lvl el2) <<L ell) ->
+        ~((lvl el1) <<L ell) ->
         ev_low_eq ell el1 el2.
 
 Definition trace := list (state * event_l).
