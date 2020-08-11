@@ -180,9 +180,7 @@ impl RuntimeProxy {
         label: &Label,
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
         debug!("{:?}: channel_create({:?})", self.node_id, label);
-        let result =
-            self.runtime
-                .channel_create(self.node_id, label, Arc::downgrade(&self.runtime));
+        let result = self.runtime.channel_create(self.node_id, label);
         debug!(
             "{:?}: channel_create({:?}) -> {:?}",
             self.node_id, label, result
