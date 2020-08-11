@@ -1,12 +1,12 @@
 Require Import Coq.Sets.Ensembles.
 Require Import List.
-Import ListNotations.
 From OakIFC Require Import
     Lattice
     Parameters
-    GenericMap
     RuntimeModel
     Events.
+From mathcomp Require Import all_ssreflect finmap.
+Import ListNotations.
 
 Arguments Ensembles.In {U}.
 Arguments Ensembles.Add {U}.
@@ -43,9 +43,9 @@ so the call is a piece of state that probably does not matter at the moment)
  and a downgrade event.
 *)
 
-Notation "s '[' id ']-->' msg":= (EvL (OutEv msg) (s.(nodes) id).(nlbl)) (at level 10).
-Notation "s '[' id ']<--' msg":= (EvL (InEv msg) (s.(nodes) id).(nlbl)) (at level 10).
-Notation "s '[' id ']_'":= (EvL NilEv (s.(nodes) id).(nlbl)) (at level 10).
+Notation "n '--->' msg":= (EvL (OutEv msg) n.(nlbl)) (at level 10).
+Notation "n '<---' msg":= (EvL (InEv msg) n.(nlbl)) (at level 10).
+Notation "n '---'":= (EvL NilEv n.(nlbl)) (at level 10).
 
 Definition msg_is_head (ch: channel)(m: message): Prop :=
     match ch.(ms) with
@@ -54,32 +54,38 @@ Definition msg_is_head (ch: channel)(m: message): Prop :=
     end. 
 
 Inductive step_node_ev: node_id -> call -> state -> trace -> state -> trace -> Prop :=
-    | SWriteChan s id han msg s' t:
+    | SWriteChan s id n han msg s' t:
+        s.(nodes) .[?id] = Some n ->
         step_node id (WriteChannel han msg) s s' ->
-        step_node_ev id (WriteChannel han msg) s t s' ((s', s [id]--> msg) :: t)
-    | SReadChan s id han chan msg s' t:
+        step_node_ev id (WriteChannel han msg) s t s' ((s',  n ---> msg) :: t)
+    | SReadChan s id n han chan msg s' t:
+        s.(nodes) .[?id] = Some n ->
         step_node id (ReadChannel han) s s' ->
         msg_is_head chan msg ->
-        step_node_ev id (ReadChannel han) s t s' ((s', s [id]<-- msg) :: t)
-    | SCreateChan s id lbl s' t:
+        step_node_ev id (ReadChannel han) s t s' ((s', n <--- msg) :: t)
+    | SCreateChan s id n lbl s' t:
             (* It seems clear that no event is needed since nodes only observe
             * contents of channels indirectly via reads *)
+        s.(nodes) .[?id] = Some n ->
         step_node id (CreateChannel lbl) s s' ->
-        step_node_ev id (CreateChannel lbl) s t s' ((s', s [id]_) :: t)
-    | SCreateNode s id lbl h s' t:
+        step_node_ev id (CreateChannel lbl) s t s' ((s', n --- ) :: t)
+    | SCreateNode s id n lbl h s' t:
             (* model observation that a node is created ?? *)
+        s.(nodes) .[?id] = Some n ->
         step_node id (CreateNode lbl h) s s' ->
-        step_node_ev id (CreateNode lbl h) s t s' ((s', s [id]_) :: t)
-    | SInternal s id s' t:
+        step_node_ev id (CreateNode lbl h) s t s' ((s', n ---) :: t)
+    | SInternal s id n s' t:
+        s.(nodes) .[?id] = Some n ->
         step_node id Internal s s' ->
-        step_node_ev id Internal s t s' ((s', s [id]_) :: t).
+        step_node_ev id Internal s t s' ((s', n ---) :: t).
 
 Inductive step_system_ev: state -> trace -> state -> trace -> Prop :=
     | ValidStep id n c c' s t s' t':
-        (s.(nodes) id) = n ->
+        s.(nodes) .[?id] = Some n ->
         n.(ncall) = c ->
         step_node_ev id c s t s' t' ->
-        step_system_ev s t (state_upd_call id c' s') t'.
+        step_system_ev s t 
+            (state_upd_node id (node_upd_call n c') s') t'.
 
 Inductive step_system_ev_multi: state -> trace -> state -> trace -> Prop :=
     | multi_system_ev_refl s t s' t':
