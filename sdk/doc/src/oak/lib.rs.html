@@ -547,58 +547,6 @@
 <span id="547">547</span>
 <span id="548">548</span>
 <span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -619,14 +567,14 @@
 <span class="doccomment">//! SDK functionality that provides idiomatic Rust wrappers around the</span>
 <span class="doccomment">//! underlying Oak platform functionality.</span>
 
-<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
+<span class="kw">use</span> <span class="ident">byteorder</span>::<span class="ident">WriteBytesExt</span>;
 <span class="kw">use</span> <span class="ident">io</span>::<span class="ident">ReceiverExt</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{<span class="ident">ConfigMap</span>, <span class="ident">NodeConfiguration</span>};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 
 <span class="comment">// Re-export ABI constants that are also visible as part of the SDK API.</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>};
 
 <span class="kw">mod</span> <span class="ident">error</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;macos&quot;</span>)]</span>
@@ -659,56 +607,6 @@
 
 <span class="comment">// TODO(#544): re-enable relevant SDK tests</span>
 
-<span class="doccomment">/// Handle used to identify read or write channel halves.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// These handles are used for all host function calls.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Handle</span> {
-    <span class="ident">id</span>: <span class="ident">u64</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">Handle</span> {
-    <span class="doccomment">/// When using the Oak SDK, this method should not need to be called directly</span>
-    <span class="doccomment">/// as `Handles` are directly provided via functions such as `channel_create`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_raw</span>(<span class="ident">id</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Handle</span> {
-        <span class="ident">Handle</span> { <span class="ident">id</span> }
-    }
-
-    <span class="doccomment">/// Check this handle is valid.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_valid</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">id</span> <span class="op">!</span><span class="op">=</span> <span class="ident">oak_abi</span>::<span class="ident">INVALID_HANDLE</span>
-    }
-
-    <span class="doccomment">/// Returns an intentionally invalid handle.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">invalid</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Handle</span> {
-        <span class="ident">Handle</span> {
-            <span class="ident">id</span>: <span class="ident">oak_abi</span>::<span class="ident">INVALID_HANDLE</span>,
-        }
-    }
-
-    <span class="doccomment">/// Pack a slice of `Handles` into the Wasm host ABI format.</span>
-    <span class="kw">fn</span> <span class="ident">pack</span>(<span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packed</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">handles</span>.<span class="ident">len</span>() <span class="op">*</span> <span class="number">8</span>);
-        <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">handles</span> {
-            <span class="ident">packed</span>
-                .<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>(<span class="ident">handle</span>.<span class="ident">id</span>)
-                .<span class="ident">unwrap</span>();
-        }
-        <span class="ident">packed</span>
-    }
-
-    <span class="doccomment">/// Unpack a slice of Handles from the Wasm host ABI format.</span>
-    <span class="kw">fn</span> <span class="ident">unpack</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">handle_count</span>: <span class="ident">u32</span>, <span class="ident">handles</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Handle</span><span class="op">&gt;</span>) {
-        <span class="ident">handles</span>.<span class="ident">clear</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">bytes</span>);
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">handle_count</span> {
-            <span class="ident">handles</span>.<span class="ident">push</span>(<span class="ident">Handle</span> {
-                <span class="ident">id</span>: <span class="ident">reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>(),
-            });
-        }
-    }
-}
-
 <span class="doccomment">/// Wrapper for a handle to the read half of a channel.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// For use when the underlying [`Handle`] is known to be for a receive half.</span>
@@ -719,7 +617,7 @@
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">ReadHandle</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;ReadHandle({})&quot;</span>, <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">id</span>)
+        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;ReadHandle({})&quot;</span>, <span class="self">self</span>.<span class="ident">handle</span>)
     }
 }
 
@@ -733,7 +631,7 @@
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">WriteHandle</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;WriteHandle({})&quot;</span>, <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">id</span>)
+        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;WriteHandle({})&quot;</span>, <span class="self">self</span>.<span class="ident">handle</span>)
     }
 }
 
@@ -743,7 +641,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">space</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">oak_abi</span>::<span class="ident">SPACE_BYTES_PER_HANDLE</span> <span class="op">*</span> <span class="ident">handles</span>.<span class="ident">len</span>());
     <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">handles</span> {
         <span class="ident">space</span>
-            .<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>(<span class="ident">handle</span>.<span class="ident">handle</span>.<span class="ident">id</span>)
+            .<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>(<span class="ident">handle</span>.<span class="ident">handle</span>)
             .<span class="ident">unwrap</span>();
         <span class="ident">space</span>.<span class="ident">push</span>(<span class="number">0x00</span>);
     }
@@ -812,7 +710,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">actual_handle_count</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">OakStatus</span>::<span class="ident">from_i32</span>(<span class="kw">unsafe</span> {
             <span class="ident">oak_abi</span>::<span class="ident">channel_read</span>(
-                <span class="ident">half</span>.<span class="ident">handle</span>.<span class="ident">id</span>,
+                <span class="ident">half</span>.<span class="ident">handle</span>,
                 <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>(),
                 <span class="ident">buf</span>.<span class="ident">capacity</span>(),
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">actual_size</span>,
@@ -834,7 +732,7 @@
                         <span class="comment">// actual_handle_count is number of handles not bytes</span>
                         <span class="ident">handles_buf</span>.<span class="ident">set_len</span>(<span class="ident">actual_handle_count</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">*</span> <span class="number">8</span>);
                     }
-                    <span class="ident">Handle</span>::<span class="ident">unpack</span>(<span class="kw-2">&amp;</span><span class="ident">handles_buf</span>, <span class="ident">actual_handle_count</span>, <span class="ident">handles</span>);
+                    <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">unpack</span>(<span class="kw-2">&amp;</span><span class="ident">handles_buf</span>, <span class="ident">actual_handle_count</span>, <span class="ident">handles</span>);
                     <span class="kw">if</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> {
                         <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
                     } <span class="kw">else</span> {
@@ -883,10 +781,10 @@
 
 <span class="doccomment">/// Write a message to a channel.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_write</span>(<span class="ident">half</span>: <span class="ident">WriteHandle</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">handle_buf</span> <span class="op">=</span> <span class="ident">Handle</span>::<span class="ident">pack</span>(<span class="ident">handles</span>);
+    <span class="kw">let</span> <span class="ident">handle_buf</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">pack</span>(<span class="ident">handles</span>);
     <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> {
         <span class="ident">oak_abi</span>::<span class="ident">channel_write</span>(
-            <span class="ident">half</span>.<span class="ident">handle</span>.<span class="ident">id</span>,
+            <span class="ident">half</span>.<span class="ident">handle</span>,
             <span class="ident">buf</span>.<span class="ident">as_ptr</span>(),
             <span class="ident">buf</span>.<span class="ident">len</span>(),
             <span class="ident">handle_buf</span>.<span class="ident">as_ptr</span>(),
@@ -911,16 +809,16 @@
 <span class="doccomment">/// write and read halves (respectively).</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create_with_label</span>(<span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">WriteHandle</span>, <span class="ident">ReadHandle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write</span> <span class="op">=</span> <span class="ident">WriteHandle</span> {
-        <span class="ident">handle</span>: <span class="ident">Handle</span>::<span class="ident">invalid</span>(),
+        <span class="ident">handle</span>: <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">invalid</span>(),
     };
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">read</span> <span class="op">=</span> <span class="ident">ReadHandle</span> {
-        <span class="ident">handle</span>: <span class="ident">Handle</span>::<span class="ident">invalid</span>(),
+        <span class="ident">handle</span>: <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">invalid</span>(),
     };
     <span class="kw">let</span> <span class="ident">label_bytes</span> <span class="op">=</span> <span class="ident">label</span>.<span class="ident">serialize</span>();
     <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> {
         <span class="ident">oak_abi</span>::<span class="ident">channel_create</span>(
-            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">write</span>.<span class="ident">handle</span>.<span class="ident">id</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
-            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">read</span>.<span class="ident">handle</span>.<span class="ident">id</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">write</span>.<span class="ident">handle</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">read</span>.<span class="ident">handle</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u64</span>,
             <span class="ident">label_bytes</span>.<span class="ident">as_ptr</span>(),
             <span class="ident">label_bytes</span>.<span class="ident">len</span>(),
         )
@@ -930,7 +828,7 @@
 
 <span class="doccomment">/// Close the specified channel [`Handle`].</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_close</span>(<span class="ident">handle</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">oak_abi</span>::<span class="ident">channel_close</span>(<span class="ident">handle</span>.<span class="ident">id</span>) };
+    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">oak_abi</span>::<span class="ident">channel_close</span>(<span class="ident">handle</span>) };
     <span class="ident">result_from_status</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">i32</span>, ())
 }
 
@@ -965,7 +863,7 @@
             <span class="ident">config_bytes</span>.<span class="ident">len</span>(),
             <span class="ident">label_bytes</span>.<span class="ident">as_ptr</span>(),
             <span class="ident">label_bytes</span>.<span class="ident">len</span>(),
-            <span class="ident">half</span>.<span class="ident">handle</span>.<span class="ident">id</span>,
+            <span class="ident">half</span>.<span class="ident">handle</span>,
         )
     };
     <span class="ident">result_from_status</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">i32</span>, ())
@@ -1059,7 +957,7 @@
     <span class="kw-2">mut</span> <span class="ident">node</span>: <span class="ident">N</span>,
     <span class="ident">receiver</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 ) {
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">receiver</span>.<span class="ident">handle</span>.<span class="ident">handle</span>.<span class="ident">is_valid</span>() {
+    <span class="kw">if</span> <span class="op">!</span><span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">is_valid</span>(<span class="ident">receiver</span>.<span class="ident">handle</span>.<span class="ident">handle</span>) {
         <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}: invalid input handle&quot;</span>, <span class="ident">receiver</span>);
         <span class="kw">return</span>;
     }
@@ -1193,9 +1091,7 @@
                 ::<span class="ident">oak</span>::<span class="ident">set_panic_hook</span>();
 
                 <span class="comment">// Run the Node&#39;s `main` function.</span>
-                <span class="kw">let</span> <span class="ident">in_channel</span> <span class="op">=</span> ::<span class="ident">oak</span>::<span class="ident">ReadHandle</span> {
-                    <span class="ident">handle</span>: ::<span class="ident">oak</span>::<span class="ident">Handle</span>::<span class="ident">from_raw</span>(<span class="ident">in_handle</span>),
-                };
+                <span class="kw">let</span> <span class="ident">in_channel</span> <span class="op">=</span> ::<span class="ident">oak</span>::<span class="ident">ReadHandle</span> { <span class="ident">handle</span>: <span class="ident">in_handle</span> };
                 <span class="macro-nonterminal">$</span><span class="macro-nonterminal">main_function</span>(<span class="ident">in_channel</span>);
             });
         }
