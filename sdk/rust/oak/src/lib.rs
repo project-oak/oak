@@ -17,14 +17,14 @@
 //! SDK functionality that provides idiomatic Rust wrappers around the
 //! underlying Oak platform functionality.
 
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use byteorder::WriteBytesExt;
 use io::ReceiverExt;
 use log::{debug, error, info, trace, warn};
 use oak_abi::proto::oak::application::{ConfigMap, NodeConfiguration};
 use prost::Message;
 
 // Re-export ABI constants that are also visible as part of the SDK API.
-pub use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
+pub use oak_abi::{label::Label, ChannelReadStatus, Handle, OakStatus};
 
 mod error;
 #[cfg(target_os = "macos")]
@@ -57,56 +57,6 @@ pub mod proto {
 
 // TODO(#544): re-enable relevant SDK tests
 
-/// Handle used to identify read or write channel halves.
-///
-/// These handles are used for all host function calls.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Handle {
-    id: u64,
-}
-
-impl Handle {
-    /// When using the Oak SDK, this method should not need to be called directly
-    /// as `Handles` are directly provided via functions such as `channel_create`.
-    pub fn from_raw(id: u64) -> Handle {
-        Handle { id }
-    }
-
-    /// Check this handle is valid.
-    pub fn is_valid(self) -> bool {
-        self.id != oak_abi::INVALID_HANDLE
-    }
-
-    /// Returns an intentionally invalid handle.
-    pub fn invalid() -> Handle {
-        Handle {
-            id: oak_abi::INVALID_HANDLE,
-        }
-    }
-
-    /// Pack a slice of `Handles` into the Wasm host ABI format.
-    fn pack(handles: &[Handle]) -> Vec<u8> {
-        let mut packed = Vec::with_capacity(handles.len() * 8);
-        for handle in handles {
-            packed
-                .write_u64::<byteorder::LittleEndian>(handle.id)
-                .unwrap();
-        }
-        packed
-    }
-
-    /// Unpack a slice of Handles from the Wasm host ABI format.
-    fn unpack(bytes: &[u8], handle_count: u32, handles: &mut Vec<Handle>) {
-        handles.clear();
-        let mut reader = std::io::Cursor::new(bytes);
-        for _ in 0..handle_count {
-            handles.push(Handle {
-                id: reader.read_u64::<byteorder::LittleEndian>().unwrap(),
-            });
-        }
-    }
-}
-
 /// Wrapper for a handle to the read half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
@@ -117,7 +67,7 @@ pub struct ReadHandle {
 
 impl std::fmt::Debug for ReadHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "ReadHandle({})", self.handle.id)
+        write!(f, "ReadHandle({})", self.handle)
     }
 }
 
@@ -131,7 +81,7 @@ pub struct WriteHandle {
 
 impl std::fmt::Debug for WriteHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "WriteHandle({})", self.handle.id)
+        write!(f, "WriteHandle({})", self.handle)
     }
 }
 
@@ -141,7 +91,7 @@ fn new_handle_space(handles: &[ReadHandle]) -> Vec<u8> {
     let mut space = Vec::with_capacity(oak_abi::SPACE_BYTES_PER_HANDLE * handles.len());
     for handle in handles {
         space
-            .write_u64::<byteorder::LittleEndian>(handle.handle.id)
+            .write_u64::<byteorder::LittleEndian>(handle.handle)
             .unwrap();
         space.push(0x00);
     }
@@ -210,7 +160,7 @@ pub fn channel_read(
         let mut actual_handle_count: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
             oak_abi::channel_read(
-                half.handle.id,
+                half.handle,
                 buf.as_mut_ptr(),
                 buf.capacity(),
                 &mut actual_size,
@@ -232,7 +182,7 @@ pub fn channel_read(
                         // actual_handle_count is number of handles not bytes
                         handles_buf.set_len(actual_handle_count as usize * 8);
                     }
-                    Handle::unpack(&handles_buf, actual_handle_count, handles);
+                    crate::handle::unpack(&handles_buf, actual_handle_count, handles);
                     if s == OakStatus::Ok {
                         return Ok(());
                     } else {
@@ -281,10 +231,10 @@ pub fn channel_read(
 
 /// Write a message to a channel.
 pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Result<(), OakStatus> {
-    let handle_buf = Handle::pack(handles);
+    let handle_buf = crate::handle::pack(handles);
     let status = unsafe {
         oak_abi::channel_write(
-            half.handle.id,
+            half.handle,
             buf.as_ptr(),
             buf.len(),
             handle_buf.as_ptr(),
@@ -309,16 +259,16 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
 /// write and read halves (respectively).
 pub fn channel_create_with_label(label: &Label) -> Result<(WriteHandle, ReadHandle), OakStatus> {
     let mut write = WriteHandle {
-        handle: Handle::invalid(),
+        handle: crate::handle::invalid(),
     };
     let mut read = ReadHandle {
-        handle: Handle::invalid(),
+        handle: crate::handle::invalid(),
     };
     let label_bytes = label.serialize();
     let status = unsafe {
         oak_abi::channel_create(
-            &mut write.handle.id as *mut u64,
-            &mut read.handle.id as *mut u64,
+            &mut write.handle as *mut u64,
+            &mut read.handle as *mut u64,
             label_bytes.as_ptr(),
             label_bytes.len(),
         )
@@ -328,7 +278,7 @@ pub fn channel_create_with_label(label: &Label) -> Result<(WriteHandle, ReadHand
 
 /// Close the specified channel [`Handle`].
 pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
-    let status = unsafe { oak_abi::channel_close(handle.id) };
+    let status = unsafe { oak_abi::channel_close(handle) };
     result_from_status(status as i32, ())
 }
 
@@ -363,7 +313,7 @@ pub fn node_create_with_label(
             config_bytes.len(),
             label_bytes.as_ptr(),
             label_bytes.len(),
-            half.handle.id,
+            half.handle,
         )
     };
     result_from_status(status as i32, ())
@@ -457,7 +407,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
     mut node: N,
     receiver: crate::io::Receiver<T>,
 ) {
-    if !receiver.handle.handle.is_valid() {
+    if !crate::handle::is_valid(receiver.handle.handle) {
         error!("{:?}: invalid input handle", receiver);
         return;
     }
@@ -591,9 +541,7 @@ macro_rules! entrypoint {
                 ::oak::set_panic_hook();
 
                 // Run the Node's `main` function.
-                let in_channel = ::oak::ReadHandle {
-                    handle: ::oak::Handle::from_raw(in_handle),
-                };
+                let in_channel = ::oak::ReadHandle { handle: in_handle };
                 $main_function(in_channel);
             });
         }

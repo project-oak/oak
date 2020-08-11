@@ -43,9 +43,7 @@ pub extern "C" fn backend_oak_main(in_handle: u64) {
 
 fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
     oak::logger::init(log::Level::Debug).expect("Couldn't initialize logging node!");
-    let in_channel = oak::ReadHandle {
-        handle: oak::Handle::from_raw(in_handle),
-    };
+    let in_channel = oak::ReadHandle { handle: in_handle };
 
     // We expect a single empty message holding a reply channel to already
     // be waiting on the channel.

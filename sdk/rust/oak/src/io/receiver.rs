@@ -130,8 +130,8 @@ impl<T: Decodable> Receiver<T> {
 }
 
 impl<T: Decodable> crate::handle::HandleVisit for Receiver<T> {
-    fn visit<F: FnMut(&mut crate::handle::Handle)>(&mut self, mut visitor: F) -> F {
-        visitor(&mut self.handle.handle.id);
+    fn visit<F: FnMut(&mut crate::Handle)>(&mut self, mut visitor: F) -> F {
+        visitor(&mut self.handle.handle);
         visitor
     }
 }
@@ -139,7 +139,7 @@ impl<T: Decodable> crate::handle::HandleVisit for Receiver<T> {
 impl<T: Decodable> Receiver<T> {
     pub fn as_proto_handle(&self) -> crate::handle::Receiver {
         crate::handle::Receiver {
-            id: self.handle.handle.id,
+            id: self.handle.handle,
         }
     }
 }
@@ -151,7 +151,7 @@ impl<T: Send + Sync + core::fmt::Debug + Decodable> prost::Message for Receiver<
     }
 
     fn clear(&mut self) {
-        self.handle.handle.id = 0;
+        self.handle.handle = crate::handle::invalid();
     }
 
     fn encode_raw<B: BufMut>(&self, buf: &mut B) {
@@ -167,7 +167,7 @@ impl<T: Send + Sync + core::fmt::Debug + Decodable> prost::Message for Receiver<
     ) -> Result<(), prost::DecodeError> {
         let mut proto = self.as_proto_handle();
         proto.merge_field(tag, wire_type, buf, ctx)?;
-        self.handle.handle.id = proto.id;
+        self.handle.handle = proto.id;
         Ok(())
     }
 }
@@ -175,7 +175,7 @@ impl<T: Send + Sync + core::fmt::Debug + Decodable> prost::Message for Receiver<
 impl<T: Decodable> Default for Receiver<T> {
     fn default() -> Receiver<T> {
         Receiver::new(ReadHandle {
-            handle: crate::Handle::invalid(),
+            handle: crate::handle::invalid(),
         })
     }
 }

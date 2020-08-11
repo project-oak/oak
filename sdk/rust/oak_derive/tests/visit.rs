@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak::handle::{Handle, HandleVisit};
+use oak::{handle::HandleVisit, Handle};
 
 #[derive(Default)]
 struct Visited(Handle);

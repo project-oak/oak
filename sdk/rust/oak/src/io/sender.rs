@@ -65,8 +65,8 @@ impl<T: Encodable> Sender<T> {
 }
 
 impl<T: Encodable> crate::handle::HandleVisit for Sender<T> {
-    fn visit<F: FnMut(&mut crate::handle::Handle)>(&mut self, mut visitor: F) -> F {
-        visitor(&mut self.handle.handle.id);
+    fn visit<F: FnMut(&mut crate::Handle)>(&mut self, mut visitor: F) -> F {
+        visitor(&mut self.handle.handle);
         visitor
     }
 }
@@ -74,7 +74,7 @@ impl<T: Encodable> crate::handle::HandleVisit for Sender<T> {
 impl<T: Encodable> Sender<T> {
     pub fn as_proto_handle(&self) -> crate::handle::Sender {
         crate::handle::Sender {
-            id: self.handle.handle.id,
+            id: self.handle.handle,
         }
     }
 }
@@ -86,7 +86,7 @@ impl<T: Send + Sync + core::fmt::Debug + Encodable> prost::Message for Sender<T>
     }
 
     fn clear(&mut self) {
-        self.handle.handle.id = 0;
+        self.handle.handle = crate::handle::invalid();
     }
 
     fn encode_raw<B: BufMut>(&self, buf: &mut B) {
@@ -102,7 +102,7 @@ impl<T: Send + Sync + core::fmt::Debug + Encodable> prost::Message for Sender<T>
     ) -> Result<(), prost::DecodeError> {
         let mut proto = self.as_proto_handle();
         proto.merge_field(tag, wire_type, buf, ctx)?;
-        self.handle.handle.id = proto.id;
+        self.handle.handle = proto.id;
         Ok(())
     }
 }
@@ -110,7 +110,7 @@ impl<T: Send + Sync + core::fmt::Debug + Encodable> prost::Message for Sender<T>
 impl<T: Encodable> Default for Sender<T> {
     fn default() -> Sender<T> {
         Sender::new(WriteHandle {
-            handle: crate::Handle::invalid(),
+            handle: crate::handle::invalid(),
         })
     }
 }

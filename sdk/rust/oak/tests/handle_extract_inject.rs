@@ -271,15 +271,11 @@ fn roundtrip() {
 }
 
 fn sender<T: oak::io::Encodable>(id: u64) -> Sender<T> {
-    Sender::new(oak::WriteHandle {
-        handle: oak::Handle::from_raw(id),
-    })
+    Sender::new(oak::WriteHandle { handle: id })
 }
 
 fn receiver<T: oak::io::Decodable>(id: u64) -> Receiver<T> {
-    Receiver::new(oak::ReadHandle {
-        handle: oak::Handle::from_raw(id),
-    })
+    Receiver::new(oak::ReadHandle { handle: id })
 }
 
 // Dummy hashing utilities to make the order of elements returned from a HashMap deterministic
