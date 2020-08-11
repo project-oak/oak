@@ -14,8 +14,13 @@
 // limitations under the License.
 //
 
-use crate::{graph::DotIdentifier, message::Message};
-use log::debug;
+use crate::{
+    graph::DotIdentifier,
+    message::Message,
+    proto::oak::introspection_events::{event::EventDetails, ChannelDestroyed},
+    Runtime,
+};
+use log::{debug, warn};
 use oak_abi::OakStatus;
 use std::{
     collections::{HashMap, VecDeque},
@@ -68,6 +73,9 @@ pub struct Channel {
     ///
     /// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
     pub label: oak_abi::label::Label,
+
+    /// Weak reference to the Runtime used for sending introspection events.
+    runtime_weak: Weak<Runtime>,
 }
 
 impl std::fmt::Debug for Channel {
@@ -239,6 +247,17 @@ impl DotIdentifier for ChannelId {
 impl Drop for Channel {
     fn drop(&mut self) {
         debug!("dropping Channel object {:?}", self);
+        match self.runtime_weak.upgrade() {
+            Some(runtime) => {
+                runtime.introspection_event(EventDetails::ChannelDestroyed(ChannelDestroyed {
+                    channel_id: self.id,
+                }));
+            }
+            None => {
+                warn!("Couldn't send ChannelDestroyed event, since the runtime has been dropped. {:?}", self);
+            }
+        }
+
         // There should be no waiters for this channel (a waiting Node would have
         // to have a `Handle` to wait on, which would be a reference that pins this
         // channel to existence) so no need to `wake_waiters()`.
@@ -248,7 +267,11 @@ impl Drop for Channel {
 }
 
 impl Channel {
-    pub fn new(id: ChannelId, label: &oak_abi::label::Label) -> Arc<Channel> {
+    pub fn new(
+        id: ChannelId,
+        label: &oak_abi::label::Label,
+        runtime_weak: Weak<Runtime>,
+    ) -> Arc<Channel> {
         debug!("create new Channel object with ID {}", id);
         Arc::new(Channel {
             id,
@@ -257,6 +280,7 @@ impl Channel {
             reader_count: AtomicU64::new(0),
             waiting_threads: Mutex::new(HashMap::new()),
             label: label.clone(),
+            runtime_weak,
         })
     }
 

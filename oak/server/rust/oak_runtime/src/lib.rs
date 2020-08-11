@@ -46,7 +46,7 @@ use rand::RngCore;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     string::String,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, Mutex, RwLock, Weak},
     thread,
     thread::JoinHandle,
 };
@@ -643,6 +643,7 @@ impl Runtime {
         &self,
         node_id: NodeId,
         label: &Label,
+        runtime_weak: Weak<Runtime>,
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
@@ -658,7 +659,7 @@ impl Runtime {
 
         // First get a pair of `ChannelHalf` objects.
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
-        let channel = Channel::new(channel_id, label);
+        let channel = Channel::new(channel_id, label, runtime_weak);
         let write_half = ChannelHalf::new(channel.clone(), ChannelHalfDirection::Write);
         let read_half = ChannelHalf::new(channel, ChannelHalfDirection::Read);
         trace!(
