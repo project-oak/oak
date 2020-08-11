@@ -57,7 +57,7 @@ impl<T: prost::Message> Encodable for T {
     }
 }
 
-/// Wrapper for a [`Handle`] that is responsible for reading messages from an Oak channel.
+/// Wrapper for a [`ReadHandle`] that is responsible for reading messages from an Oak channel.
 pub struct Receiver<T: Decodable> {
     handle: ReadHandle,
     phantom: std::marker::PhantomData<T>,
@@ -113,7 +113,7 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
     }
 }
 
-/// Wrapper for a [`Handle`] that is responsible for sending messages to an Oak channel.
+/// Wrapper for a [`WriteHandle`] that is responsible for sending messages to an Oak channel.
 pub struct Sender<T: Encodable> {
     handle: WriteHandle,
     phantom: std::marker::PhantomData<T>,
