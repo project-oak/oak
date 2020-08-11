@@ -24,7 +24,7 @@ pub trait Decodable: Sized {
 impl<T: crate::handle::HandleVisit + prost::Message + Default> Decodable for T {
     fn decode(message: &Message) -> Result<Self, OakError> {
         let mut value = T::decode(message.bytes.as_slice())?;
-        let handles: Vec<u64> = message.handles.iter().map(|h| h.id).collect();
+        let handles: Vec<u64> = message.handles.to_vec();
         crate::handle::inject_handles(&mut value, &handles)?;
         Ok(value)
     }

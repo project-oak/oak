@@ -23,15 +23,38 @@
 //! [`oak::io::Sender`](../io/struct.Sender.html).
 include!(concat!(env!("OUT_DIR"), "/oak.handle.rs"));
 
-use crate::OakError;
+use crate::{Handle, OakError};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 
-/// Raw handle identifier.
-///
-/// This is only meant to be used with the [HandleVisit](trait.HandleVisit.html) trait, for
-/// anything else [Handle](../struct.Handle.html) should be preferred.
-// Note to maintainers: users may not add oak_abi as an explicit dependency, so we re-export this
-// type here for the custom derive to use.
-pub type Handle = oak_abi::Handle;
+/// Check this handle is valid.
+pub fn is_valid(handle: Handle) -> bool {
+    handle != oak_abi::INVALID_HANDLE
+}
+
+/// Returns an intentionally invalid handle.
+pub fn invalid() -> Handle {
+    oak_abi::INVALID_HANDLE
+}
+
+/// Pack a slice of `Handles` into the Wasm host ABI format.
+pub(crate) fn pack(handles: &[Handle]) -> Vec<u8> {
+    let mut packed = Vec::with_capacity(handles.len() * 8);
+    for handle in handles {
+        packed
+            .write_u64::<byteorder::LittleEndian>(handle.to_owned())
+            .unwrap();
+    }
+    packed
+}
+
+/// Unpack a slice of Handles from the Wasm host ABI format.
+pub(crate) fn unpack(bytes: &[u8], handle_count: u32, handles: &mut Vec<Handle>) {
+    handles.clear();
+    let mut reader = std::io::Cursor::new(bytes);
+    for _ in 0..handle_count {
+        handles.push(reader.read_u64::<byteorder::LittleEndian>().unwrap());
+    }
+}
 
 /// Visit all handles present in a type.
 ///
@@ -55,7 +78,7 @@ pub type Handle = oak_abi::Handle;
 /// visit handles that are directly contained in a type.
 ///
 /// ```
-/// use oak::handle::{Handle, HandleVisit};
+/// use oak::{handle::HandleVisit, Handle};
 ///
 /// struct Thing {
 ///     handle: Handle,
@@ -109,7 +132,10 @@ handle_visit_blanket_impl!(
 /// [`inject_handles`](fn.inject_handles.html).
 ///
 /// ```
-/// use oak::handle::{extract_handles, Handle, HandleVisit};
+/// use oak::{
+///     handle::{extract_handles, HandleVisit},
+///     Handle,
+/// };
 ///
 /// struct Thing {
 ///     handle: Handle,
@@ -145,7 +171,10 @@ pub fn extract_handles<T: HandleVisit>(msg: &mut T) -> Vec<Handle> {
 /// into nested structs before moving on to the next field.
 ///
 /// ```
-/// use oak::handle::{inject_handles, Handle, HandleVisit};
+/// use oak::{
+///     handle::{inject_handles, HandleVisit},
+///     Handle,
+/// };
 ///
 /// # #[derive(Debug, PartialEq)]
 /// struct Thing {

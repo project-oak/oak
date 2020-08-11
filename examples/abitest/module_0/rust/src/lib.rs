@@ -24,6 +24,7 @@ use expect::{expect, expect_eq, expect_matches};
 use log::{debug, error, info, trace, warn};
 use oak::{
     grpc,
+    handle::is_valid,
     io::{ReceiverExt, SenderExt},
     ChannelReadStatus, OakError, OakStatus,
 };
@@ -580,10 +581,7 @@ impl FrontendNode {
         expect_eq!(Ok(()), oak::channel_close(w.handle));
         expect_eq!(Ok(()), oak::channel_close(r.handle));
         expect_eq!(Err(OakStatus::ErrBadHandle), oak::channel_close(w.handle));
-        expect_eq!(
-            Err(OakStatus::ErrBadHandle),
-            oak::channel_close(oak::Handle::from_raw(9_999_999))
-        );
+        expect_eq!(Err(OakStatus::ErrBadHandle), oak::channel_close(9_999_999));
 
         // Can close ends in either order.
         let (w, r) = oak::channel_create().unwrap();
@@ -729,9 +727,7 @@ impl FrontendNode {
         expect!(buffer.capacity() >= 8);
 
         // Reading from an invalid handle gives an error.
-        let bogus_channel = oak::ReadHandle {
-            handle: oak::Handle::from_raw(99999),
-        };
+        let bogus_channel = oak::ReadHandle { handle: 99999 };
         expect_eq!(
             Err(OakStatus::ErrBadHandle),
             oak::channel_read(bogus_channel, &mut buffer, &mut handles)
@@ -861,9 +857,7 @@ impl FrontendNode {
         expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
 
         // Writing to an invalid handle gives an error.
-        let bogus_channel = oak::WriteHandle {
-            handle: oak::Handle::from_raw(99999),
-        };
+        let bogus_channel = oak::WriteHandle { handle: 99999 };
         expect_eq!(
             Err(OakStatus::ErrBadHandle),
             oak::channel_write(bogus_channel, &data, &[])
@@ -1195,9 +1189,7 @@ impl FrontendNode {
                 oak::ReadHandle {
                     handle: out1.handle
                 },
-                oak::ReadHandle {
-                    handle: oak::Handle::from_raw(9_999_999)
-                }
+                oak::ReadHandle { handle: 9_999_999 }
             ]))?
         );
 
@@ -1256,9 +1248,7 @@ impl FrontendNode {
             status_convert(oak::wait_on_channels(&[
                 in1,
                 in2,
-                oak::ReadHandle {
-                    handle: oak::Handle::from_raw(9_999_999)
-                }
+                oak::ReadHandle { handle: 9_999_999 }
             ]))?
         );
 
@@ -1390,11 +1380,8 @@ impl FrontendNode {
             });
         }
 
-        expect_eq!(Ok(()), oak::channel_close(oak::Handle::from_raw(in_handle)));
-        expect_eq!(
-            Ok(()),
-            oak::channel_close(oak::Handle::from_raw(out_handle))
-        );
+        expect_eq!(Ok(()), oak::channel_close(in_handle));
+        expect_eq!(Ok(()), oak::channel_close(out_handle));
         Ok(())
     }
     fn test_node_create(&mut self) -> TestResult {
@@ -1427,7 +1414,7 @@ impl FrontendNode {
             oak::node_create(
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
                 oak::ReadHandle {
-                    handle: oak::Handle::from_raw(oak_abi::INVALID_HANDLE)
+                    handle: oak_abi::INVALID_HANDLE
                 }
             )
         );
@@ -1509,9 +1496,7 @@ impl FrontendNode {
         expect_eq!(
             Err(OakStatus::ErrBadHandle),
             oak::channel_read(
-                oak::ReadHandle {
-                    handle: oak::Handle::from_raw(9_987_123)
-                },
+                oak::ReadHandle { handle: 9_987_123 },
                 &mut buffer,
                 &mut handles
             )
@@ -1522,23 +1507,12 @@ impl FrontendNode {
                 ChannelReadStatus::ReadReady,
                 ChannelReadStatus::InvalidChannel
             ]),
-            oak::wait_on_channels(&[
-                in_handle,
-                oak::ReadHandle {
-                    handle: oak::Handle::from_raw(9_987_321)
-                }
-            ])
+            oak::wait_on_channels(&[in_handle, oak::ReadHandle { handle: 9_987_321 }])
         );
 
         // Close both of the previously mentioned invalid handles.
-        expect_eq!(
-            Err(OakStatus::ErrBadHandle),
-            oak::channel_close(oak::Handle::from_raw(9_987_123))
-        );
-        expect_eq!(
-            Err(OakStatus::ErrBadHandle),
-            oak::channel_close(oak::Handle::from_raw(9_987_321))
-        );
+        expect_eq!(Err(OakStatus::ErrBadHandle), oak::channel_close(9_987_123));
+        expect_eq!(Err(OakStatus::ErrBadHandle), oak::channel_close(9_987_321));
 
         expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
         expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
@@ -1563,7 +1537,7 @@ impl FrontendNode {
         oak::node_create(&oak::node_config::log(), read_handle).expect("could not create node");
         oak::channel_close(read_handle.handle).expect("could not close channel");
 
-        expect!(logging_handle.handle.is_valid());
+        expect!(is_valid(logging_handle.handle));
         let (out_handle, in_handle) = oak::channel_create().expect("could not create channel");
 
         oak::channel_write(
@@ -1641,13 +1615,11 @@ impl FrontendNode {
             // Expect exactly one of the backends to have received
             // the message.
             let mut buffer = Vec::<u8>::with_capacity(256);
-            let mut new_in_channel = oak::ReadHandle {
-                handle: oak::Handle::from_raw(0),
-            };
+            let mut new_in_channel = oak::ReadHandle { handle: 0 };
             for (j, ready) in readies.iter().enumerate() {
                 if *ready == ChannelReadStatus::ReadReady {
                     info!("got response from backend[{}]", j);
-                    expect_eq!(oak::Handle::from_raw(0), new_in_channel.handle);
+                    expect_eq!(0, new_in_channel.handle);
                     let mut handles = Vec::with_capacity(1);
                     expect_eq!(
                         Ok(()),

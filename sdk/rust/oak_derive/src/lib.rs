@@ -56,7 +56,7 @@ fn struct_impls(name: &Ident, data: &syn::DataStruct) -> TokenStream {
 
     quote! {
         impl ::oak::handle::HandleVisit for #name {
-            fn visit<F: FnMut(&mut ::oak::handle::Handle)>(&mut self, visitor: F) -> F {
+            fn visit<F: FnMut(&mut ::oak::Handle)>(&mut self, visitor: F) -> F {
                 #body
             }
         }
@@ -67,7 +67,7 @@ fn enum_impls(name: &Ident, data: &syn::DataEnum) -> TokenStream {
     let variants: Vec<TokenStream> = data.variants.iter().map(variant_impl).collect();
     quote! {
         impl ::oak::handle::HandleVisit for #name {
-            fn visit<F: FnMut(&mut ::oak::handle::Handle)>(&mut self, visitor: F) -> F {
+            fn visit<F: FnMut(&mut ::oak::Handle)>(&mut self, visitor: F) -> F {
                 match self {
                     #(
                         #name::#variants,
