@@ -1184,9 +1184,6 @@
 <span id="1184">1184</span>
 <span id="1185">1185</span>
 <span id="1186">1186</span>
-<span id="1187">1187</span>
-<span id="1188">1188</span>
-<span id="1189">1189</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1867,10 +1864,7 @@
             <span class="ident">read_handle</span>,
         );
 
-        <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails</span>::<span class="ident">ChannelCreated</span>(<span class="ident">ChannelCreated</span> {
-            <span class="ident">node_id</span>: <span class="ident">node_id</span>.<span class="number">0</span>,
-            <span class="ident">channel_id</span>,
-        }));
+        <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails</span>::<span class="ident">ChannelCreated</span>(<span class="ident">ChannelCreated</span> { <span class="ident">channel_id</span> }));
 
         <span class="prelude-val">Ok</span>((<span class="ident">write_handle</span>, <span class="ident">read_handle</span>))
     }
