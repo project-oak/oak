@@ -640,7 +640,7 @@ impl Runtime {
 
     /// Creates a new [`Channel`] and returns a `(writer, reader)` pair of [`oak_abi::Handle`]s.
     fn channel_create(
-        &self,
+        self: &Arc<Self>,
         node_id: NodeId,
         label: &Label,
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
@@ -658,7 +658,7 @@ impl Runtime {
 
         // First get a pair of `ChannelHalf` objects.
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
-        let channel = Channel::new(channel_id, label);
+        let channel = Channel::new(channel_id, label, Arc::downgrade(&self));
         let write_half = ChannelHalf::new(channel.clone(), ChannelHalfDirection::Write);
         let read_half = ChannelHalf::new(channel, ChannelHalfDirection::Read);
         trace!(
