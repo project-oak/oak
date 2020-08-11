@@ -1827,7 +1827,7 @@
 
     <span class="doccomment">/// Creates a new [`Channel`] and returns a `(writer, reader)` pair of [`oak_abi::Handle`]s.</span>
     <span class="kw">fn</span> <span class="ident">channel_create</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
@@ -1845,7 +1845,7 @@
 
         <span class="comment">// First get a pair of `ChannelHalf` objects.</span>
         <span class="kw">let</span> <span class="ident">channel_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">next_channel_id</span>.<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">SeqCst</span>);
-        <span class="kw">let</span> <span class="ident">channel</span> <span class="op">=</span> <span class="ident">Channel</span>::<span class="ident">new</span>(<span class="ident">channel_id</span>, <span class="ident">label</span>);
+        <span class="kw">let</span> <span class="ident">channel</span> <span class="op">=</span> <span class="ident">Channel</span>::<span class="ident">new</span>(<span class="ident">channel_id</span>, <span class="ident">label</span>, <span class="ident">Arc</span>::<span class="ident">downgrade</span>(<span class="kw-2">&amp;</span><span class="self">self</span>));
         <span class="kw">let</span> <span class="ident">write_half</span> <span class="op">=</span> <span class="ident">ChannelHalf</span>::<span class="ident">new</span>(<span class="ident">channel</span>.<span class="ident">clone</span>(), <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span>);
         <span class="kw">let</span> <span class="ident">read_half</span> <span class="op">=</span> <span class="ident">ChannelHalf</span>::<span class="ident">new</span>(<span class="ident">channel</span>, <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span>);
         <span class="macro">trace</span><span class="macro">!</span>(
