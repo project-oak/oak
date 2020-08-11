@@ -42,7 +42,7 @@ server using:
 ```bash
 ./scripts/runner run-examples \
     --example-name=hello_world \
-    --run-clients=false \
+    --client-variant=none \
     --server-additional-args=--oidc-client=./client_secret_691249393555-0h52jim9ni9clkpd5chi82q9ccn44ebm.apps.googleusercontent.com.json
 ```
 

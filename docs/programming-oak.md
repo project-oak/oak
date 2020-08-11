@@ -223,6 +223,23 @@ Application Configuration File.
 
 Each of these steps is described in the following sections.
 
+### Compiling to WASM Module
+
+In order to build a WebAssembly module for an Oak WebAssembly Node, written in
+Rust, `cargo build` should be used with `--target=wasm32-unknown-unknown`, as
+follows:
+
+```bash
+cargo -Zunstable-options build --release \
+  --target=wasm32-unknown-unknown \
+  --manifest-path=examples/hello_world/module/rust/Cargo.toml \
+  --out-dir=examples/hello_world/bin
+```
+
+The `--out-dir` option ensures that the resulting binary is copied into a
+specific directory to allow later steps to find it. Since `--out-dir` is
+unstable, `-Zunstable-options` is required as well.
+
 ### Creating a Configuration File
 
 In order to load an Oak Application into the Oak Server its configuration must
