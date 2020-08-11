@@ -20,7 +20,7 @@ use crate::{
     proto::oak::introspection_events::{event::EventDetails, ChannelDestroyed},
     Runtime,
 };
-use log::{debug, warn};
+use log::{debug, error};
 use oak_abi::OakStatus;
 use std::{
     collections::{HashMap, VecDeque},
@@ -254,7 +254,7 @@ impl Drop for Channel {
                 }));
             }
             None => {
-                warn!("Couldn't send ChannelDestroyed event, since the runtime has been dropped. {:?}", self);
+                error!("Couldn't send ChannelDestroyed event, since the runtime has been dropped. {:?}", self);
             }
         }
 
