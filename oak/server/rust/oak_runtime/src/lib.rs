@@ -677,10 +677,7 @@ impl Runtime {
             read_handle,
         );
 
-        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated {
-            node_id: node_id.0,
-            channel_id,
-        }));
+        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated { channel_id }));
 
         Ok((write_handle, read_handle))
     }

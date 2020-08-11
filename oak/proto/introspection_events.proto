@@ -47,15 +47,11 @@ message NodeDestroyed {
 }
 
 message ChannelCreated {
-  uint64 node_id = 1;
-
-  uint64 channel_id = 2;
+  uint64 channel_id = 1;
 }
 
 message ChannelDestroyed {
-  uint64 node_id = 1;
-
-  uint64 channel_id = 2;
+  uint64 channel_id = 1;
 }
 
 message HandleCreated {
