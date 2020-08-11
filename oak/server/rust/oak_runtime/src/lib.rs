@@ -46,7 +46,7 @@ use rand::RngCore;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     string::String,
-    sync::{Arc, Mutex, RwLock, Weak},
+    sync::{Arc, Mutex, RwLock},
     thread,
     thread::JoinHandle,
 };
