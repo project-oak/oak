@@ -37,6 +37,7 @@ use oak_abi::{
     },
     OakStatus,
 };
+use oak_io::handle::ReadHandle;
 use prost::Message;
 use tokio::sync::oneshot;
 
@@ -156,7 +157,7 @@ impl super::Node for RoughtimeClientNode {
     ) {
         info!("{}: Starting Roughtime pseudo-Node", self.node_name);
         // Create a [`Receiver`] used for reading gRPC invocations.
-        let receiver = Receiver::<Invocation>::new(handle);
+        let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
             debug!("Waiting for gRPC invocation");
             // Read a gRPC invocation from the [`Receiver`].

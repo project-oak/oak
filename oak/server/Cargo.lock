@@ -664,6 +664,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_io"
+version = "0.1.0"
+dependencies = [
+ "oak_abi 0.1.0",
+]
+
+[[package]]
 name = "oak_loader"
 version = "0.1.0"
 dependencies = [
@@ -701,6 +708,7 @@ dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak_abi 0.1.0",
+ "oak_io 0.1.0",
  "oak_utils 0.1.0",
  "prometheus 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1",

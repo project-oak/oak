@@ -34,6 +34,7 @@ use oak_abi::{
     },
     Handle, OakStatus,
 };
+use oak_io::handle::ReadHandle;
 use tokio::sync::oneshot;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
 
@@ -110,7 +111,7 @@ impl GrpcClientNode {
         handle: Handle,
     ) -> Result<(), OakStatus> {
         // Create a [`Receiver`] used for reading gRPC invocations.
-        let receiver = Receiver::<Invocation>::new(handle);
+        let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
             debug!("Waiting for gRPC invocation");
             // Read a gRPC invocation from the [`Receiver`].

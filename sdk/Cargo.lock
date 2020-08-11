@@ -831,6 +831,7 @@ dependencies = [
  "log",
  "oak_abi",
  "oak_derive",
+ "oak_io",
  "oak_utils",
  "prost",
  "prost-types",
@@ -879,6 +880,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_io"
+version = "0.1.0"
+dependencies = [
+ "oak_abi",
+]
+
+[[package]]
 name = "oak_runtime"
 version = "0.1.0"
 dependencies = [
@@ -896,6 +904,7 @@ dependencies = [
  "log",
  "maplit",
  "oak_abi",
+ "oak_io",
  "oak_utils",
  "prometheus",
  "prost",

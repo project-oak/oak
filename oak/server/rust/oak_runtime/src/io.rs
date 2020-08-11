@@ -18,7 +18,8 @@
 
 use crate::{NodeMessage, RuntimeProxy};
 use log::{error, info};
-use oak_abi::{ChannelReadStatus, Handle, OakStatus};
+use oak_abi::{ChannelReadStatus, OakStatus};
+use oak_io::handle::{ReadHandle, WriteHandle};
 
 /// A trait for objects that can be decoded from bytes + handles.
 pub trait Decodable: Sized {
@@ -58,12 +59,12 @@ impl<T: prost::Message> Encodable for T {
 
 /// Wrapper for a [`Handle`] that is responsible for reading messages from an Oak channel.
 pub struct Receiver<T: Decodable> {
-    handle: Handle,
+    handle: ReadHandle,
     phantom: std::marker::PhantomData<T>,
 }
 
 impl<T: Decodable> Receiver<T> {
-    pub fn new(handle: Handle) -> Self {
+    pub fn new(handle: ReadHandle) -> Self {
         Self {
             handle,
             phantom: std::marker::PhantomData,
@@ -83,16 +84,16 @@ pub trait ReceiverExt<T> {
 impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
     /// Close the underlying channel handle.
     fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
-        runtime.channel_close(self.handle)
+        runtime.channel_close(self.handle.handle)
     }
 
     /// Waits, reads and decodes a message from the [`Receiver::handle`].
     fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakStatus> {
-        let read_status = runtime.wait_on_channels(&[self.handle])?;
+        let read_status = runtime.wait_on_channels(&[self.handle.handle])?;
 
         match read_status[0] {
             ChannelReadStatus::ReadReady => runtime
-                .channel_read(self.handle)
+                .channel_read(self.handle.handle)
                 .and_then(|message| {
                     message.ok_or_else(|| {
                         error!("Channel read error {:?}: Empty message", self.handle);
@@ -114,12 +115,12 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
 
 /// Wrapper for a [`Handle`] that is responsible for sending messages to an Oak channel.
 pub struct Sender<T: Encodable> {
-    handle: Handle,
+    handle: WriteHandle,
     phantom: std::marker::PhantomData<T>,
 }
 
 impl<T: Encodable> Sender<T> {
-    pub fn new(handle: Handle) -> Self {
+    pub fn new(handle: WriteHandle) -> Self {
         Self {
             handle,
             phantom: std::marker::PhantomData,
@@ -139,11 +140,11 @@ pub trait SenderExt<T> {
 impl<T: Encodable> SenderExt<T> for Sender<T> {
     /// Close the underlying channel handle.
     fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
-        runtime.channel_close(self.handle)
+        runtime.channel_close(self.handle.handle)
     }
 
     /// Encodes and sends a message to the [`Sender::handle`].
     fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
-        runtime.channel_write(self.handle, message.encode()?)
+        runtime.channel_write(self.handle.handle, message.encode()?)
     }
 }

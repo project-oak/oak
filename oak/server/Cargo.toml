@@ -9,6 +9,7 @@ members = ["rust/oak_loader", "rust/oak_runtime"]
 [patch.crates-io]
 # Oak.
 oak_abi = { path = "../../oak_abi" }
+oak_io = { path = "../../oak_io" }
 oak_loader = { path = "rust/oak_loader" }
 oak_runtime = { path = "rust/oak_runtime" }
 oak_utils = { path = "../../oak_utils" }
