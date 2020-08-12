@@ -26,6 +26,9 @@ use prost::Message;
 // Re-export ABI constants that are also visible as part of the SDK API.
 pub use oak_abi::{label::Label, ChannelReadStatus, Handle, OakStatus};
 
+// Re-export oak_io structs that are also visible as part of the SDK API.
+pub use oak_io::handle::{ReadHandle, WriteHandle};
+
 mod error;
 #[cfg(target_os = "macos")]
 mod stubs;
@@ -56,34 +59,6 @@ pub mod proto {
 }
 
 // TODO(#544): re-enable relevant SDK tests
-
-/// Wrapper for a handle to the read half of a channel.
-///
-/// For use when the underlying [`Handle`] is known to be for a receive half.
-#[derive(Copy, Clone, PartialEq)]
-pub struct ReadHandle {
-    pub handle: Handle,
-}
-
-impl std::fmt::Debug for ReadHandle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "ReadHandle({})", self.handle)
-    }
-}
-
-/// Wrapper for a handle to the send half of a channel.
-///
-/// For use when the underlying [`Handle`] is known to be for a send half.
-#[derive(Copy, Clone, PartialEq)]
-pub struct WriteHandle {
-    pub handle: Handle,
-}
-
-impl std::fmt::Debug for WriteHandle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "WriteHandle({})", self.handle)
-    }
-}
 
 // Build a chunk of memory that is suitable for passing to oak_abi::wait_on_channels,
 // holding the given collection of channel handles.

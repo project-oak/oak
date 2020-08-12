@@ -19,6 +19,7 @@
 use crate::{io::SenderExt, Runtime, RuntimeConfiguration, RuntimeProxy};
 use log::{error, info};
 use oak_abi::OakStatus;
+use oak_io::handle::WriteHandle;
 use std::sync::Arc;
 use tonic::transport::Certificate;
 
@@ -33,7 +34,7 @@ pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, O
     let handle = proxy.start_runtime(config)?;
 
     // Pass in the config map over the initial channel.
-    let sender = crate::io::Sender::new(handle);
+    let sender = crate::io::Sender::new(WriteHandle { handle });
     info!("Send in initial config map");
     sender.send(config_map, &proxy)?;
 

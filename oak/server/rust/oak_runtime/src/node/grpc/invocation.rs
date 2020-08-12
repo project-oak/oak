@@ -25,6 +25,7 @@ use oak_abi::{
     proto::oak::encap::{GrpcRequest, GrpcResponse},
     OakStatus,
 };
+use oak_io::handle::{ReadHandle, WriteHandle};
 
 /// A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the
 /// client (wrapped in a [`Receiver`]), and one to write outgoing responses to the client (wrapped
@@ -48,8 +49,12 @@ impl Decodable for Invocation {
             return Err(OakStatus::ErrInternal);
         }
         Ok(Self {
-            receiver: Receiver::new(message.handles[0]),
-            sender: Sender::new(message.handles[1]),
+            receiver: Receiver::new(ReadHandle {
+                handle: message.handles[0],
+            }),
+            sender: Sender::new(WriteHandle {
+                handle: message.handles[1],
+            }),
         })
     }
 }

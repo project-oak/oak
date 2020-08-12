@@ -28,6 +28,7 @@ lazy_static = "*"
 log = { version = "*" }
 maplit = "*"
 oak_abi = "=0.1.0"
+oak_io = "=0.1.0"
 prometheus = { version = "0.8", features = [
   "nightly"
 ], default-features = false }

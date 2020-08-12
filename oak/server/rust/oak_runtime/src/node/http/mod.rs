@@ -37,6 +37,7 @@ use oak_abi::{
     },
     ChannelReadStatus, OakStatus,
 };
+use oak_io::handle::{ReadHandle, WriteHandle};
 use prost::Message;
 use std::{future::Future, net::SocketAddr, pin::Pin};
 use tokio::sync::oneshot;
@@ -368,7 +369,9 @@ impl Pipe {
 
     fn insert_message(&self, runtime: &RuntimeProxy, request: HttpRequest) -> Result<(), ()> {
         // Put the HTTP request message inside the per-invocation request channel.
-        let sender = crate::io::Sender::new(self.request_writer);
+        let sender = crate::io::Sender::new(WriteHandle {
+            handle: self.request_writer,
+        });
         sender.send(request, runtime).map_err(|err| {
             error!(
                 "Couldn't write the request to the HTTP request channel: {:?}",
@@ -441,7 +444,9 @@ struct HttpResponseIterator {
 
 impl HttpResponseIterator {
     fn read_response(&self) -> Result<HttpResponse, OakStatus> {
-        let response_receiver = crate::io::Receiver::<HttpResponse>::new(self.response_reader);
+        let response_receiver = crate::io::Receiver::<HttpResponse>::new(ReadHandle {
+            handle: self.response_reader,
+        });
         response_receiver.receive(&self.runtime)
     }
 
