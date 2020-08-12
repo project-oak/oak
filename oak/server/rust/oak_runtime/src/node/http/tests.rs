@@ -17,7 +17,7 @@
 use super::*;
 use maplit::hashmap;
 use oak_abi::{label::Label, proto::oak::application::ApplicationConfiguration};
-use std::{collections::HashMap, thread};
+use std::thread;
 
 #[tokio::test]
 #[ignore]
@@ -115,7 +115,7 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
             let resp = HttpResponse {
                 body: vec![],
                 status: http::status::StatusCode::OK.as_u16() as i32,
-                headers: HashMap::new(),
+                headers: hashmap! {},
             };
             let mut message = crate::NodeMessage {
                 data: vec![],

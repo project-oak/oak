@@ -1,0 +1,13 @@
+name = "http_server"
+
+[applications]
+
+[applications.rust]
+manifest = "examples/http_server/oak_app_manifest.toml"
+out = "examples/http_server/bin/http_server.oak"
+
+[applications.rust.modules]
+module = { Cargo = { cargo_manifest = "examples/http_server/module/Cargo.toml" } }
+
+[clients]
+shell = { Shell = { script = "examples/http_server/client/client" } }

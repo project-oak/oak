@@ -347,6 +347,12 @@ The available pseudo-Nodes are:
     for the Node to read.
   - A handle for the write half of a channel that the Node should write the
     corresponding response message(s) to.
+- **HTTP server pseudo-Node**: Provides a 'front door' for external interaction
+  with an Oak Application over HTTP. Similar to the gRPC server pseudo-Node,
+  requests sent to the server are delivered to a channel that connects from the
+  pseudo-Node to a Node of the Application. As in the case of gRPC server
+  pseudo-Node, a message with only two attached handles is sent over this
+  connection to the serving Node.
 - **Logging pseudo-Node**: Provides a logging mechanism for Nodes under
   development by including a single inbound channel; anything received on the
   channel will be logged. This Node should only be enabled during application
@@ -389,7 +395,8 @@ of the channel may be passed between Nodes (over channels).
 Typically, the first Application Node creates a
 [gRPC server pseudo-Node](#pseudo-nodes) and sets up a channel from the
 pseudo-Node to the Application, on which [gRPC method invocations](#invocations)
-are delivered.
+are delivered. Alternatively, an [HTTP server pseudo-Node](#pseudo-nodes) could
+be created to handle HTTP requests.
 
 The list of allowed WebAssembly modules that can be used to instantiate
 WebAssembly Nodes, and the initial Node to run, are specified by an
