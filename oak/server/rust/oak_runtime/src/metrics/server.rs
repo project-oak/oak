@@ -79,7 +79,7 @@ async fn make_server(
     runtime: Arc<Runtime>,
     termination_notificiation_receiver: tokio::sync::oneshot::Receiver<()>,
 ) {
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let addr = SocketAddr::from((std::net::Ipv6Addr::UNSPECIFIED, port));
 
     // A `Service` is needed for every connection, so this
     // creates one from the `serve_metrics` function.

@@ -145,14 +145,14 @@ async fn make_server(
     runtime: Arc<Runtime>,
     termination_notificiation_receiver: tokio::sync::oneshot::Receiver<()>,
 ) {
-    // Construct our SocketAddr to listen on...
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    // Initialize SocketAddr to listen on.
+    let addr = SocketAddr::from((std::net::Ipv6Addr::UNSPECIFIED, port));
     info!("starting introspection server on {:?}", addr);
 
-    // And a MakeService to handle each connection...
+    // Initialize MakeService to handle each connection.
     let make_service = make_service_fn(move |_| {
-        // The `Arc<Runtime>` is moved into this closure, but needs to be cloned
-        // because this closure is called for every connection.
+        // The `Arc<Runtime>` is moved into this closure, but it needs to be
+        // cloned because this closure is called for every connection.
         let runtime = runtime.clone();
 
         async move {
@@ -163,14 +163,14 @@ async fn make_server(
         }
     });
 
-    // Then bind and serve...
+    // Bind an address and serve incoming connections.
     let server = Server::bind(&addr).serve(make_service);
     let graceful = server.with_graceful_shutdown(async {
         // Treat notification failure the same as a notification.
         let _ = termination_notificiation_receiver.await;
     });
 
-    // And run until asked to terminate...
+    // Run until asked to terminate.
     let result = graceful.await;
     info!("introspection server terminated with {:?}", result);
 }
