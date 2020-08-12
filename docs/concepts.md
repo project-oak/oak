@@ -192,10 +192,12 @@ example when a Node sends a value over a Channel. Given two labels `L_a` and
 `L_a` can be sent to a destination labeled `L_b`. The "flows to" operator
 compares both confidentiality and integrity:
 
-- the **confidentiality** check ensures that the destination is permitted to
-  view any secrets that may have influenced the value
-- the **integrity** check ensures that the value sent is trusted by the
-  destination
+- the **confidentiality** check protects the source from leaking secret data. It
+  does this by checking that the destination is permitted to view any secrets
+  that may have influenced values sent by the source.
+- the **integrity** check protects the destination from receiving potentially
+  malicious or inaccurate data. It does this by checking that the source is
+  trusted by the destination.
 
 More concretely, if `L_a = (C_a, I_a)` (where `C_a` and `I_a` are the
 confidentiality and integrity components respectively), and `L_b = (C_b, I_b)`
