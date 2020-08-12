@@ -199,25 +199,20 @@ compares both confidentiality and integrity:
   malicious or inaccurate data. It does this by checking that the source is
   trusted by the destination.
 
+Intuitively, data can only flow from a source to a destination if:
+
+- the destination is **at least as secret** as the source
+- the source is **at least as trusted** as the destination
+
+Notably, the integrity part of the check is "flipped" by convention (see
+"Integrity Considerations for Secure Computer Systems" below). More fundamental
+than adhering to convention, by flipping the integrity order in this way, we can
+retain the intuitive meaning behind integrity tags as representing trust by a
+principal (trust by a user, trust on a subject, etc.).
+
 More concretely, if `L_a = (C_a, I_a)` (where `C_a` and `I_a` are the
 confidentiality and integrity components respectively), and `L_b = (C_b, I_b)`
-then `L_a ⊑ L_b` iff `C_a ⊆ C_b` and `I_a ⊇ I_b`. Notably, the integrity part of
-the check is "flipped" by convention (see "Integrity Considerations for Secure
-Computer Systems" below). More fundamental than adhering to convention, by
-flipping the integrity order in this way, we can retain the intuitive meaning
-behind integrity tags as representing trust by a principal (trust by a user,
-trust on a subject, etc.).
-
-Intuitively, data can only flow from `a` to `b` if:
-
-- `b` is **at least as secret** as `a`
-- `a` is **at least as trusted** as `b`
-
-The least privileged label is usually referred to as "public untrusted" (and
-represented as `⊥`, pronounced "bottom"), which corresponds to a Node or Channel
-which has only observed public data, and its inputs are not endorsed with any
-level of integrity; in this label, both confidentiality and integrity components
-are empty sets.
+then `L_a ⊑ L_b` iff `C_a ⊆ C_b` and `I_a ⊇ I_b`.
 
 As an example, if the `a`'s confidentiality is `{c_0, c_1}`, and `a`'s integrity
 is `{i_0, i_1}`, then:
@@ -254,6 +249,12 @@ It follows that bi-directional communication between Nodes `a` and `b` is only
 allowed (via two uni-directional Channels) if
 `(L_a ⊑ L_b) ∧ (L_b ⊑ L_a) ⇒ L_a = L_b`, i.e. if `a` and `b` have identical
 confidentiality and integrity.
+
+The least privileged label is usually referred to as "public untrusted" (and
+represented as `⊥`, pronounced "bottom"), which corresponds to a Node or Channel
+which has only observed public data, and its inputs are not endorsed with any
+level of integrity; in this label, both confidentiality and integrity components
+are empty sets.
 
 #### Node and Channel Creation
 
