@@ -205,7 +205,7 @@
     <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
     <span class="ident">termination_notificiation_receiver</span>: <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
 ) {
-    <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">SocketAddr</span>::<span class="ident">from</span>(([<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>], <span class="ident">port</span>));
+    <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">SocketAddr</span>::<span class="ident">from</span>((<span class="ident">std</span>::<span class="ident">net</span>::<span class="ident">Ipv6Addr</span>::<span class="ident">UNSPECIFIED</span>, <span class="ident">port</span>));
 
     <span class="comment">// A `Service` is needed for every connection, so this</span>
     <span class="comment">// creates one from the `serve_metrics` function.</span>
