@@ -468,6 +468,11 @@
 <span id="468">468</span>
 <span id="469">469</span>
 <span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -508,6 +513,7 @@
     },
     <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
 };
+<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future</span>::<span class="ident">Future</span>, <span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">pin</span>::<span class="ident">Pin</span>};
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
@@ -839,7 +845,9 @@
 
     <span class="kw">fn</span> <span class="ident">insert_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>, <span class="ident">request</span>: <span class="ident">HttpRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), ()<span class="op">&gt;</span> {
         <span class="comment">// Put the HTTP request message inside the per-invocation request channel.</span>
-        <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Sender</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">request_writer</span>);
+        <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Sender</span>::<span class="ident">new</span>(<span class="ident">WriteHandle</span> {
+            <span class="ident">handle</span>: <span class="self">self</span>.<span class="ident">request_writer</span>,
+        });
         <span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">request</span>, <span class="ident">runtime</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(
                 <span class="string">&quot;Couldn&#39;t write the request to the HTTP request channel: {:?}&quot;</span>,
@@ -912,7 +920,9 @@
 
 <span class="kw">impl</span> <span class="ident">HttpResponseIterator</span> {
     <span class="kw">fn</span> <span class="ident">read_response</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HttpResponse</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">response_receiver</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">HttpResponse</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">response_reader</span>);
+        <span class="kw">let</span> <span class="ident">response_receiver</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">HttpResponse</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">ReadHandle</span> {
+            <span class="ident">handle</span>: <span class="self">self</span>.<span class="ident">response_reader</span>,
+        });
         <span class="ident">response_receiver</span>.<span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">runtime</span>)
     }
 
