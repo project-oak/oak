@@ -151,8 +151,8 @@ async fn make_server(
 
     // Initialize MakeService to handle each connection.
     let make_service = make_service_fn(move |_| {
-        // The `Arc<Runtime>` is moved into this closure, but needs to be cloned
-        // because this closure is called for every connection.
+        // The `Arc<Runtime>` is moved into this closure, but it needs to be
+        // cloned because this closure is called for every connection.
         let runtime = runtime.clone();
 
         async move {
