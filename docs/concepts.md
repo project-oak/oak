@@ -202,11 +202,11 @@ Intuitively, data can only flow from a source to a destination if:
 - the destination is **at least as secret** as the source
 - the source is **at least as trusted** as the destination
 
-> Notably, the integrity part of the check is "flipped" by convention (see
-> "Integrity Considerations for Secure Computer Systems" below). More
-> fundamental than adhering to convention, by flipping the integrity order in
-> this way, we can retain the intuitive meaning behind integrity tags as
-> representing trust by a principal (trust by a user, trust on a subject, etc.).
+Notably, the integrity part of the check is "flipped" by convention (see
+"Integrity Considerations for Secure Computer Systems" below). More fundamental
+than adhering to convention, by flipping the integrity order in this way, we can
+retain the intuitive meaning behind integrity tags as representing trust by a
+principal (trust by a user, trust on a subject, etc.).
 
 More concretely, if `L_a = (C_a, I_a)` (where `C_a` and `I_a` are the
 confidentiality and integrity components respectively), and `L_b = (C_b, I_b)`
