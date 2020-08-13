@@ -667,6 +667,9 @@ impl Runtime {
             write_half,
             read_half,
         );
+
+        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated { channel_id }));
+
         // Insert them into the handle table and return the ABI handles to the caller.
         let write_handle = self.new_abi_handle(node_id, write_half);
         let read_handle = self.new_abi_handle(node_id, read_half);
@@ -676,8 +679,6 @@ impl Runtime {
             write_handle,
             read_handle,
         );
-
-        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated { channel_id }));
 
         Ok((write_handle, read_handle))
     }
