@@ -452,10 +452,14 @@ fn run_ci() -> Step {
                 application_variant: "rust".to_string(),
                 example_name: None,
                 run_server: None,
-                client_variant: ALL_CLIENTS.to_string(),
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
                 build_docker: false,
+                build_client: BuildClient {
+                    client_variant: ALL_CLIENTS.to_string(),
+                    client_rust_toolchain: None,
+                    client_rust_target: None,
+                },
                 build_server: BuildServer {
                     server_variant: "base".to_string(),
                     server_rust_toolchain: None,
@@ -467,10 +471,14 @@ fn run_ci() -> Step {
                 application_variant: "cpp".to_string(),
                 example_name: None,
                 run_server: None,
-                client_variant: ALL_CLIENTS.to_string(),
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
                 build_docker: false,
+                build_client: BuildClient {
+                    client_variant: ALL_CLIENTS.to_string(),
+                    client_rust_toolchain: None,
+                    client_rust_target: None,
+                },
                 build_server: BuildServer {
                     server_variant: "base".to_string(),
                     server_rust_toolchain: None,
@@ -483,10 +491,14 @@ fn run_ci() -> Step {
                 application_variant: "rust".to_string(),
                 example_name: Some("hello_world".to_string()),
                 run_server: Some(false),
-                client_variant: NO_CLIENTS.to_string(),
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
                 build_docker: true,
+                build_client: BuildClient {
+                    client_variant: NO_CLIENTS.to_string(),
+                    client_rust_toolchain: None,
+                    client_rust_target: None,
+                },
                 build_server: BuildServer {
                     server_variant: "base".to_string(),
                     server_rust_toolchain: None,
@@ -605,11 +617,18 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
         steps: example
             .clients
             .iter()
-            .filter(|(name, _)| match opt.client_variant.as_str() {
+            .filter(|(name, _)| match opt.build_client.client_variant.as_str() {
                 ALL_CLIENTS => true,
                 client => *name == client,
             })
-            .map(|(name, client)| run_client(name, &client, opt.client_additional_args.clone()))
+            .map(|(name, client)| {
+                run_client(
+                    name,
+                    &client,
+                    &opt.build_client,
+                    opt.client_additional_args.clone(),
+                )
+            })
             .collect(),
     };
 
@@ -622,7 +641,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     // clients in the foreground.
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
-        let run_server_clients = if opt.client_variant != NO_CLIENTS {
+        let run_server_clients = if opt.build_client.client_variant != NO_CLIENTS {
             Step::WithBackground {
                 name: "background server".to_string(),
                 background: run_server,
@@ -637,13 +656,13 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
         match &example.backend {
             Some(backend) => Step::WithBackground {
                 name: "background backend".to_string(),
-                background: run(&backend, Vec::new()),
+                background: run(&backend, &opt.build_client, Vec::new()),
                 foreground: Box::new(run_server_clients),
             },
             None => run_server_clients,
         }
     } else {
-        if opt.client_variant != NO_CLIENTS {
+        if opt.build_client.client_variant != NO_CLIENTS {
             run_clients
         } else {
             Step::Multiple {
@@ -681,7 +700,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
             match &example.backend {
                 Some(backend) => vec![Step::Single {
                     name: "build backend".to_string(),
-                    command: build(&backend.target),
+                    command: build(&backend.target, &opt.build_client),
                 }],
                 None => vec![],
             },
@@ -758,14 +777,19 @@ fn build_docker(example: &Example) -> Step {
     }
 }
 
-fn build(target: &Target) -> Box<dyn Runnable> {
+fn build(target: &Target, opt: &BuildClient) -> Box<dyn Runnable> {
     match target {
         Target::Cargo { cargo_manifest } => Cmd::new(
             "cargo",
             vec![
                 "build".to_string(),
                 "--release".to_string(),
-                format!("--target={}", DEFAULT_EXAMPLE_BACKEND_RUST_TARGET),
+                format!(
+                    "--target={}",
+                    opt.client_rust_target
+                        .as_deref()
+                        .unwrap_or(DEFAULT_EXAMPLE_BACKEND_RUST_TARGET)
+                ),
                 format!("--manifest-path={}", cargo_manifest),
             ],
         ),
@@ -792,14 +816,18 @@ fn build(target: &Target) -> Box<dyn Runnable> {
     }
 }
 
-fn run(executable: &Executable, additional_args: Vec<String>) -> Box<dyn Runnable> {
+fn run(
+    executable: &Executable,
+    opt: &BuildClient,
+    additional_args: Vec<String>,
+) -> Box<dyn Runnable> {
     match &executable.target {
         Target::Cargo { cargo_manifest } => Cmd::new(
             "cargo",
             spread![
                 "run".to_string(),
                 "--release".to_string(),
-                format!("--target={}", DEFAULT_EXAMPLE_BACKEND_RUST_TARGET),
+                format!("--target={}", opt.client_rust_target.as_deref().unwrap_or(DEFAULT_EXAMPLE_BACKEND_RUST_TARGET)),
                 format!("--manifest-path={}", cargo_manifest),
                 "--".to_string(),
                 ...executable.additional_args.clone(),
@@ -836,17 +864,22 @@ fn run(executable: &Executable, additional_args: Vec<String>) -> Box<dyn Runnabl
     }
 }
 
-fn run_client(name: &str, executable: &Executable, additional_args: Vec<String>) -> Step {
+fn run_client(
+    name: &str,
+    executable: &Executable,
+    opt: &BuildClient,
+    additional_args: Vec<String>,
+) -> Step {
     Step::Multiple {
         name: name.to_string(),
         steps: vec![
             Step::Single {
                 name: "build".to_string(),
-                command: build(&executable.target),
+                command: build(&executable.target, &opt),
             },
             Step::Single {
                 name: "run".to_string(),
-                command: run(executable, additional_args),
+                command: run(executable, &opt, additional_args),
             },
         ],
     }
