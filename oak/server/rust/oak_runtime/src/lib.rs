@@ -668,6 +668,9 @@ impl Runtime {
             read_half,
         );
 
+        // TODO(#913): Add automated tests that verify that ChannelCreated is
+        // always fired prior to any other introspection events related to the
+        // channel.
         self.introspection_event(EventDetails::ChannelCreated(ChannelCreated { channel_id }));
 
         // Insert them into the handle table and return the ABI handles to the caller.
@@ -1073,6 +1076,9 @@ impl Runtime {
             OakStatus::ErrInvalidArgs
         })?;
 
+        // TODO(#913): Add automated tests that verify that NodeCreated is
+        // always fired prior to any other introspection events related to the
+        // node.
         self.introspection_event(EventDetails::NodeCreated(NodeCreated {
             node_id: node_id.0,
         }));
