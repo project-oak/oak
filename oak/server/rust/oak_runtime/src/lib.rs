@@ -667,6 +667,12 @@ impl Runtime {
             write_half,
             read_half,
         );
+
+        // TODO(#913): Add automated tests that verify that ChannelCreated is
+        // always fired prior to any other introspection events related to the
+        // channel.
+        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated { channel_id }));
+
         // Insert them into the handle table and return the ABI handles to the caller.
         let write_handle = self.new_abi_handle(node_id, write_half);
         let read_handle = self.new_abi_handle(node_id, read_half);
@@ -676,8 +682,6 @@ impl Runtime {
             write_handle,
             read_handle,
         );
-
-        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated { channel_id }));
 
         Ok((write_handle, read_handle))
     }
@@ -1072,6 +1076,13 @@ impl Runtime {
             OakStatus::ErrInvalidArgs
         })?;
 
+        // TODO(#913): Add automated tests that verify that NodeCreated is
+        // always fired prior to any other introspection events related to the
+        // node.
+        self.introspection_event(EventDetails::NodeCreated(NodeCreated {
+            node_id: node_id.0,
+        }));
+
         let node_privilege = instance.get_privilege();
 
         self.node_configure_instance(new_node_id, &new_node_name, label, &node_privilege);
@@ -1093,10 +1104,6 @@ impl Runtime {
         // Insert the now running instance to the list of running instances (by moving it), so that
         // `Node::stop` will be called on it eventually.
         self.add_node_stopper(new_node_id, node_stopper);
-
-        self.introspection_event(EventDetails::NodeCreated(NodeCreated {
-            node_id: node_id.0,
-        }));
 
         Ok(())
     }
