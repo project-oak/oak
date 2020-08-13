@@ -21,11 +21,9 @@ use crate::{
     NodeMessage, RuntimeProxy,
 };
 use log::error;
-use oak_abi::{
-    proto::oak::encap::{GrpcRequest, GrpcResponse},
-    OakStatus,
-};
+use oak_abi::OakStatus;
 use oak_io::handle::{ReadHandle, WriteHandle};
+use oak_services::proto::oak::encap::{GrpcRequest, GrpcResponse};
 
 /// A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the
 /// client (wrapped in a [`Receiver`]), and one to write outgoing responses to the client (wrapped
@@ -82,7 +80,7 @@ impl Invocation {
     /// Send an error response for the invocation.
     pub fn send_error(
         &self,
-        code: oak_abi::proto::google::rpc::Code,
+        code: oak_services::proto::google::rpc::Code,
         msg: &str,
         runtime: &RuntimeProxy,
     ) {
@@ -90,7 +88,7 @@ impl Invocation {
         let _ = self.sender.send(
             GrpcResponse {
                 rsp_msg: vec![],
-                status: Some(oak_abi::proto::google::rpc::Status {
+                status: Some(oak_services::proto::google::rpc::Status {
                     code: code as i32,
                     message: msg.to_string(),
                     details: vec![],

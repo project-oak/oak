@@ -23,10 +23,10 @@ use crate::{
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
-use oak_abi::{
+use oak_abi::{ChannelReadStatus, OakStatus};
+use oak_services::{
     label::Label,
     proto::oak::application::{ApplicationConfiguration, NodeConfiguration},
-    ChannelReadStatus, OakStatus,
 };
 use std::{
     collections::{HashMap, VecDeque},

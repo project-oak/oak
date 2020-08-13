@@ -21,8 +21,8 @@ use crate::{
     OakError,
 };
 use log::{error, warn};
-use oak_abi::proto::google::rpc;
-pub use oak_abi::proto::{
+use oak_services::proto::google::rpc;
+pub use oak_services::proto::{
     google::rpc::*,
     oak::encap::{GrpcRequest, GrpcResponse},
 };
@@ -32,7 +32,7 @@ pub mod server;
 
 /// Result type that uses a [`Status`] type for error values.
 ///
-/// [`Status`]: oak_abi::proto::google::rpc::Status
+/// [`Status`]: oak_services::proto::google::rpc::Status
 pub type Result<T> = std::result::Result<T, rpc::Status>;
 pub type Invocation = crate::invocations::Invocation<GrpcRequest, GrpcResponse>;
 
@@ -231,8 +231,8 @@ where
 
     // Put the request in a GrpcRequest wrapper and send it into the request
     // message channel.
-    let req =
-        oak_abi::grpc::encap_request(req, method_name).expect("failed to serialize GrpcRequest");
+    let req = oak_services::grpc::encap_request(req, method_name)
+        .expect("failed to serialize GrpcRequest");
     req_sender.send(&req).expect("failed to write to channel");
     req_sender.close().expect("failed to close channel");
 

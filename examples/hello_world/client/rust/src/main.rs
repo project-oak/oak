@@ -21,7 +21,7 @@
 
 use hello_world_grpc::proto::{hello_world_client::HelloWorldClient, HelloRequest};
 use log::info;
-use oak_abi::label::Label;
+use oak_services::label::Label;
 use prost::Message;
 use structopt::StructOpt;
 use tonic::{
@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Creating a gRPC client");
     let client = HelloWorldClient::with_interceptor(channel, move |mut request: Request<()>| {
         request.metadata_mut().insert_bin(
-            oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
+            oak_services::OAK_LABEL_GRPC_METADATA_KEY,
             MetadataValue::from_bytes(label.as_ref()),
         );
         Ok(request)

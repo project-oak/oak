@@ -35,7 +35,7 @@ pub mod proto {
 
 use anyhow::{anyhow, Context};
 use oak::grpc;
-use oak_abi::label::Label;
+use oak_services::label::Label;
 pub use proto::DatabaseProxyClient;
 use proto::{
     DatabaseClient, DatabaseEntry, DatabaseProxy, DatabaseProxyDispatcher, GetDatabaseEntryRequest,

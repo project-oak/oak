@@ -36,10 +36,10 @@ use auth::oidc_utils::ClientInfo;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
-use oak_abi::{
+use oak_abi::{ChannelReadStatus, OakStatus};
+use oak_services::{
     label::{Label, Tag},
     proto::oak::application::{ApplicationConfiguration, ConfigMap, NodeConfiguration},
-    ChannelReadStatus, OakStatus,
 };
 use prometheus::proto::MetricFamily;
 use rand::RngCore;

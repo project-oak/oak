@@ -23,7 +23,7 @@ use crate::{
         StorageItem, StorageServiceClient,
     },
 };
-use oak_abi::proto::oak::application::{
+use oak_services::proto::oak::application::{
     node_configuration::ConfigType, NodeConfiguration, StorageProxyConfiguration,
 };
 

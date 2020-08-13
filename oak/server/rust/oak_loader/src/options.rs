@@ -20,11 +20,11 @@
 use anyhow::{anyhow, Context};
 use core::str::FromStr;
 use log::debug;
-use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 use oak_runtime::{
     auth::oidc_utils::{parse_client_info_json, ClientInfo},
     config::load_certificate,
 };
+use oak_services::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 use prost::Message;
 use std::{
     collections::HashMap,

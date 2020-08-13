@@ -23,7 +23,7 @@ use crate::{
     OakStatus,
 };
 
-use oak_abi::proto::oak::encap::{GrpcRequest, GrpcResponse};
+use oak_services::proto::oak::encap::{GrpcRequest, GrpcResponse};
 
 /// Initializes a gRPC server pseudo-Node listening on the provided address.
 ///

@@ -34,7 +34,7 @@ use oak::{
     grpc,
     io::{ReceiverExt, SenderExt},
 };
-use oak_abi::label::Label;
+use oak_services::label::Label;
 use proto::{Aggregator, AggregatorClient, AggregatorDispatcher, Sample};
 use std::{collections::HashMap, convert::TryFrom};
 

@@ -28,7 +28,7 @@ use oak::{
     io::{ReceiverExt, SenderExt},
     ChannelReadStatus, OakError, OakStatus,
 };
-use oak_abi::{
+use oak_services::{
     label::Label,
     proto::oak::application::{
         NodeConfiguration, RoughtimeClientConfiguration, StorageProxyConfiguration,
@@ -1315,10 +1315,10 @@ impl FrontendNode {
 
         let valid_label_bytes = Label::public_untrusted().serialize();
 
-        // This sequence of bytes should not deserialize as a [`oak_abi::proto::policy::Label`] or
-        // [`oak_abi::proto::oak::application::NodeConfiguration`] protobuf. We make sure
-        // here that this continues to be the case by making sure that [`Label::decode`] and
-        // [`NodeConfiguration::decode`] fail to parse these bytes.
+        // This sequence of bytes should not deserialize as a [`oak_services::proto::policy::Label`]
+        // or [`oak_services::proto::oak::application::NodeConfiguration`] protobuf. We make
+        // sure here that this continues to be the case by making sure that
+        // [`Label::decode`] and [`NodeConfiguration::decode`] fail to parse these bytes.
         let invalid_proto_bytes = vec![0, 88, 0];
         assert_eq!(false, Label::decode(invalid_proto_bytes.as_ref()).is_ok());
         assert_eq!(
@@ -1548,8 +1548,8 @@ impl FrontendNode {
         .expect("could not write to channel");
 
         let mut bytes = Vec::new();
-        oak_abi::proto::oak::log::LogMessage {
-            level: oak_abi::proto::oak::log::Level::Info as i32,
+        oak_services::proto::oak::log::LogMessage {
+            level: oak_services::proto::oak::log::Level::Info as i32,
             file: "abitest".to_string(),
             line: 1988,
             message: "Wellformed message sent direct to logging channel!".to_string(),

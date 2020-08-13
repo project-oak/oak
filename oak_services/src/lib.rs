@@ -14,18 +14,20 @@
 // limitations under the License.
 //
 
-// Keep clippy from complaining about a needless call to `Default::default()`.
-#[allow(clippy::needless_update)]
-fn main() {
-    oak_utils::compile_protos_with_options(
-        &["../oak_abi/proto/oak_abi.proto"],
-        &[".."],
-        oak_utils::ProtoOptions {
-            // Exclude generation of service code and HandleVisit auto-derive, as it would require a
-            // reference to the `oak_io` crate to compile.
-            generate_services: false,
-            derive_handle_visit: false,
-            ..Default::default()
-        },
-    );
-}
+//! Type, constant and Wasm host function definitions for the Oak application
+//! binary interface (ABI).
+
+pub mod grpc;
+pub mod label;
+pub mod proto;
+
+/// The key used for encoded Labels in gRPC metadata.
+///
+/// The `-bin` suffix allows sending binary data for this metadata key, see:
+///  https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
+///
+/// Keep in sync with /oak/common/label.cc.
+pub const OAK_LABEL_GRPC_METADATA_KEY: &str = "x-oak-label-bin";
+
+/// The header key used for encoded Labels in HTTP requests.
+pub const OAK_LABEL_HTTP_KEY: &str = "oak-label";

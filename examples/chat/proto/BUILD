@@ -28,7 +28,7 @@ proto_library(
     srcs = ["chat.proto"],
     deps = [
         "//oak/proto:handle_proto",
-        "//oak_abi/proto:grpc_encap_proto",
+        "//oak_services/proto:grpc_encap_proto",
         "@com_google_protobuf//:empty_proto",
     ],
 )

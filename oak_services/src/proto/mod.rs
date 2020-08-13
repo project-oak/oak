@@ -14,18 +14,30 @@
 // limitations under the License.
 //
 
-// Keep clippy from complaining about a needless call to `Default::default()`.
-#[allow(clippy::needless_update)]
-fn main() {
-    oak_utils::compile_protos_with_options(
-        &["../oak_abi/proto/oak_abi.proto"],
-        &[".."],
-        oak_utils::ProtoOptions {
-            // Exclude generation of service code and HandleVisit auto-derive, as it would require a
-            // reference to the `oak_io` crate to compile.
-            generate_services: false,
-            derive_handle_visit: false,
-            ..Default::default()
-        },
-    );
+pub mod google {
+    pub mod rpc {
+        include!(concat!(env!("OUT_DIR"), "/google.rpc.rs"));
+    }
+}
+
+pub mod oak {
+    pub mod application {
+        include!(concat!(env!("OUT_DIR"), "/oak.application.rs"));
+    }
+
+    pub mod encap {
+        include!(concat!(env!("OUT_DIR"), "/oak.encap.rs"));
+    }
+
+    pub mod label {
+        include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
+    }
+
+    pub mod log {
+        include!(concat!(env!("OUT_DIR"), "/oak.log.rs"));
+    }
+
+    pub mod roughtime {
+        include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
+    }
 }

@@ -16,7 +16,7 @@
 
 use super::*;
 use maplit::hashmap;
-use oak_abi::{label::Label, proto::oak::application::ApplicationConfiguration};
+use oak_services::{label::Label, proto::oak::application::ApplicationConfiguration};
 use std::thread;
 
 #[tokio::test]
@@ -134,13 +134,13 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
 
 async fn send_request() -> reqwest::Response {
     // Send a request, and wait for the response
-    let label = oak_abi::label::Label::public_untrusted();
+    let label = oak_services::label::Label::public_untrusted();
     let mut label_bytes = vec![];
     let _ = label.encode(&mut label_bytes);
 
     reqwest::Client::new()
         .get("http://localhost:2525")
-        .header(oak_abi::OAK_LABEL_HTTP_KEY, label_bytes)
+        .header(oak_services::OAK_LABEL_HTTP_KEY, label_bytes)
         .send()
         .await
         .expect("Error while awaiting response")

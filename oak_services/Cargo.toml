@@ -1,0 +1,24 @@
+[workspace]
+
+[package]
+name = "oak_services"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+log = "*"
+prost = "*"
+prost-types = "*"
+oak_abi = { path = "../oak_abi" }
+oak_io = { path = "../oak_io" }
+
+[build-dependencies]
+oak_utils = { path = "../oak_utils" }
+prost-build = "*"
+
+[patch.crates-io]
+prost-build = { path = "../third_party/prost/prost-build" }
+prost = { path = "../third_party/prost" }
+prost-types = { path = "../third_party/prost/prost-types" }

@@ -17,7 +17,7 @@
 use super::*;
 use crate::{GrpcConfiguration, RuntimeProxy};
 use maplit::hashmap;
-use oak_abi::{
+use oak_services::{
     label::Label,
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, WebAssemblyConfiguration,
@@ -44,7 +44,7 @@ fn start_node(wasm_module: Vec<u8>, entrypoint_name: &str) -> Result<(), OakStat
                 wasm_entrypoint_name: entrypoint_name.to_string(),
             })),
         },
-        &oak_abi::label::Label::public_untrusted(),
+        &Label::public_untrusted(),
         read_handle,
     );
 

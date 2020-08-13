@@ -16,7 +16,7 @@
 
 //! Helper methods for creating common [`NodeConfiguration`] instances.
 
-use oak_abi::proto::oak::application::{
+use oak_services::proto::oak::application::{
     node_configuration::ConfigType, GrpcClientConfiguration, GrpcServerConfiguration,
     HttpServerConfiguration, LogConfiguration, NodeConfiguration, WebAssemblyConfiguration,
 };

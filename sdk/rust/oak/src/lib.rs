@@ -20,11 +20,12 @@
 use byteorder::WriteBytesExt;
 use io::ReceiverExt;
 use log::{debug, error, info, trace, warn};
-use oak_abi::proto::oak::application::{ConfigMap, NodeConfiguration};
+use oak_services::proto::oak::application::{ConfigMap, NodeConfiguration};
 use prost::Message;
 
-// Re-export ABI constants that are also visible as part of the SDK API.
-pub use oak_abi::{label::Label, ChannelReadStatus, Handle, OakStatus};
+// Re-export ABI and Services constants and structs that are also visible as part of the SDK API.
+pub use oak_abi::{ChannelReadStatus, Handle, OakStatus};
+pub use oak_services::label::Label;
 
 // Re-export oak_io structs that are also visible as part of the SDK API.
 pub use oak_io::handle::{ReadHandle, WriteHandle};
@@ -50,7 +51,7 @@ pub mod proto {
     pub mod oak {
         // The storage protobuf messages use the label.Label type which is built
         // in the `oak_abi` crate, so make it available here too.
-        pub use oak_abi::proto::oak::{application, label};
+        pub use oak_services::proto::oak::{application, label};
         pub mod storage {
             include!(concat!(env!("OUT_DIR"), "/oak.storage.rs"));
         }

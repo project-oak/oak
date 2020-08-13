@@ -680,6 +680,7 @@ dependencies = [
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak_abi 0.1.0",
  "oak_runtime 0.1.0",
+ "oak_services 0.1.0",
  "oak_utils 0.1.0",
  "prost 0.6.1",
  "rustls 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -709,6 +710,7 @@ dependencies = [
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak_abi 0.1.0",
  "oak_io 0.1.0",
+ "oak_services 0.1.0",
  "oak_utils 0.1.0",
  "prometheus 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1",
@@ -726,6 +728,19 @@ dependencies = [
  "tonic 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasmi 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "wat 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "oak_services"
+version = "0.1.0"
+dependencies = [
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oak_abi 0.1.0",
+ "oak_io 0.1.0",
+ "oak_utils 0.1.0",
+ "prost 0.6.1",
+ "prost-build 0.6.1",
+ "prost-types 0.6.1",
 ]
 
 [[package]]

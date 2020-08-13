@@ -68,21 +68,21 @@ the Runtime, these opaque blobs of data are defined to take the form of
 serialized protocol buffer messages:
 
 - The label values included on Node and channel creation operations are in the
-  form of a serialized [`Label`](/oak_abi/proto/label.proto) message.
+  form of a serialized [`Label`](/oak_services/proto/label.proto) message.
 - The Node configuration information that is include on `node_create` operations
   is in the form of a serialized
-  [`NodeConfiguration`](/oak_abi/proto/application.proto) message.
+  [`NodeConfiguration`](/oak_services/proto/application.proto) message.
 - The sole initial message sent to the first Node of an Oak Application is in
-  the form of a serialized [`ConfigMap`](/oak_abi/proto/application.proto)
+  the form of a serialized [`ConfigMap`](/oak_services/proto/application.proto)
   message.
 
 Similarly, messages exchanged with the pseudo-Nodes provided by the Oak system
 are also defined to take the form of serialized protocol buffer messages. These
 include:
 
-- [Structured logging messages](/oak_abi/proto/log.proto).
-- [Encapsulated gRPC requests and responses](/oak_abi/proto/grpc_encap.proto).
-- [Roughtime messages](/oak_abi/proto/roughtime_service.proto).
+- [Structured logging messages](/oak_services/proto/log.proto).
+- [Encapsulated gRPC requests and responses](/oak_services/proto/grpc_encap.proto).
+- [Roughtime messages](/oak_services/proto/roughtime_service.proto).
 
 ## Exported Function
 
@@ -92,7 +92,7 @@ with signature `fn(u64) -> ()`. This function is invoked when the Oak Manager
 executes the Oak Node; a handle for the read half of an initial channel is
 passed in as a parameter. The name of this entrypoint function for a Node is
 provided as part of the
-[Application configuration](/oak_abi/proto/application.proto).
+[Application configuration](/oak_services/proto/application.proto).
 
 The entrypoint function for each Node should perform its own event loop, reading
 incoming messages that arrive on the read halves of its channels, sending
@@ -185,7 +185,7 @@ Creates a new unidirectional Channel assigning the label specified by `param[2]`
 and `param[3]` to the newly created Channel, and returns the Channel handles for
 its read and write halves as output parameters in `param[0]` and `param[1]`.
 
-The label is a serialized [`Label`](/oak_abi/proto/label.proto) protobuf
+The label is a serialized [`Label`](/oak_services/proto/label.proto) protobuf
 message.
 
 Because the label of the newly created Channel is effectively public, this
@@ -219,8 +219,8 @@ newly created Node, passing in an initial handle to the read half of a channel
 identified by `param[4]`.
 
 The Node configuration is a serialized
-[`NodeConfiguration`](/oak_abi/proto/application.proto) protobuf message, and
-the label is a serialized [`Label`](/oak_abi/proto/label.proto) protobuf
+[`NodeConfiguration`](/oak_services/proto/application.proto) protobuf message, and
+the label is a serialized [`Label`](/oak_services/proto/label.proto) protobuf
 message.
 
 Because the label of the newly created Node is effectively public, this function

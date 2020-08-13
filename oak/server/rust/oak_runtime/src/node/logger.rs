@@ -18,10 +18,8 @@
 
 use crate::RuntimeProxy;
 use log::{error, info, log};
-use oak_abi::{
-    proto::oak::log::{Level, LogMessage},
-    OakStatus,
-};
+use oak_abi::OakStatus;
+use oak_services::proto::oak::log::{Level, LogMessage};
 use prost::Message;
 use std::string::String;
 use tokio::sync::oneshot;

@@ -23,7 +23,7 @@ package(
 
 java_lite_proto_library(
     name = "label_java_proto_lite",
-    deps = ["//oak_abi/proto:label_proto"],
+    deps = ["//oak_services/proto:label_proto"],
 )
 
 android_library(

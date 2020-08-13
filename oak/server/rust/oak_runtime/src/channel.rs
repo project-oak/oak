@@ -72,7 +72,7 @@ pub struct Channel {
     /// This is set at channel creation time and does not change after that.
     ///
     /// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
-    pub label: oak_abi::label::Label,
+    pub label: oak_services::label::Label,
 
     /// Weak reference to the Runtime used for sending introspection events.
     runtime_weak: Weak<Runtime>,
@@ -269,7 +269,7 @@ impl Drop for Channel {
 impl Channel {
     pub fn new(
         id: ChannelId,
-        label: &oak_abi::label::Label,
+        label: &oak_services::label::Label,
         runtime_weak: Weak<Runtime>,
     ) -> Arc<Channel> {
         debug!("create new Channel object with ID {}", id);

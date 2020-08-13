@@ -16,13 +16,13 @@
 
 //! Functionality for gRPC pseudo-Nodes.
 
-use oak_abi::proto::google::rpc;
+use oak_services::proto::google::rpc;
 pub mod client;
 mod codec;
 pub mod invocation;
 pub mod server;
 
-/// Converts [`oak_abi::proto::google::rpc::Status`] to [`tonic::Status`].
+/// Converts [`rpc::Status`] to [`tonic::Status`].
 fn to_tonic_status(status: rpc::Status) -> tonic::Status {
     tonic::Status::new(tonic::Code::from_i32(status.code), status.message)
 }

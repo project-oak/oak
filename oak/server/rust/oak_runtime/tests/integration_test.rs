@@ -32,14 +32,12 @@ mod common {
     use hyper::{Client, Uri};
     use log::info;
     use maplit::hashmap;
-    use oak_abi::{
-        proto::oak::application::{
-            node_configuration::ConfigType, ApplicationConfiguration, ConfigMap, NodeConfiguration,
-            WebAssemblyConfiguration,
-        },
-        OakStatus,
-    };
+    use oak_abi::OakStatus;
     use oak_runtime::{config, GrpcConfiguration, Runtime};
+    use oak_services::proto::oak::application::{
+        node_configuration::ConfigType, ApplicationConfiguration, ConfigMap, NodeConfiguration,
+        WebAssemblyConfiguration,
+    };
     use std::sync::Arc;
     use wat::parse_str;
 
