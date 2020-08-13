@@ -1072,6 +1072,10 @@ impl Runtime {
             OakStatus::ErrInvalidArgs
         })?;
 
+        self.introspection_event(EventDetails::NodeCreated(NodeCreated {
+            node_id: node_id.0,
+        }));
+
         let node_privilege = instance.get_privilege();
 
         self.node_configure_instance(new_node_id, &new_node_name, label, &node_privilege);
@@ -1093,10 +1097,6 @@ impl Runtime {
         // Insert the now running instance to the list of running instances (by moving it), so that
         // `Node::stop` will be called on it eventually.
         self.add_node_stopper(new_node_id, node_stopper);
-
-        self.introspection_event(EventDetails::NodeCreated(NodeCreated {
-            node_id: node_id.0,
-        }));
 
         Ok(())
     }
