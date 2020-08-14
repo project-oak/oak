@@ -7,6 +7,7 @@ From OakIFC Require Import
     Events
     LowEquivalences.
 
+
 (*
 This is the top-level candidate security condition. This is a
 "possibilistic security condition". A possibilistic security condition
@@ -53,34 +54,108 @@ https://www.cs.cornell.edu/andru/papers/csfw03.pdf
     ***
 *)
 
-Definition conjecture_possibilistic_ni := forall ell s11 s21 s1n t1n,
-    (state_low_eq ell s11 s21) /\
-    (step_system_ev_multi s11 [] s1n t1n) ->
-    (exists s2n t2n,
-        (step_system_ev_multi s21 [] s2n t2n) /\
+Definition is_init(t: trace) := length t = 1.
+
+Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
+    (trace_low_eq ell t1_init t2_init) /\
+    (is_init t1_init) /\
+    (is_init t2_init) /\
+    (step_system_ev_multi t1_init t1n) ->
+    (exists t2n,
+        (step_system_ev_multi t2_init t2n) /\
         (trace_low_eq ell t1n t2n)).
 
-Theorem possibilistic_ni_1step: forall ell s11 s21 s12 t12,
-    (state_low_eq ell s11 s21) /\
-    (step_system_ev s11 [] s12 t12) ->
-    (exists s22 t22,
-        (step_system_ev s21 [] s22 t22) /\
-        (trace_low_eq ell t12 t22)).
+Theorem possibilistic_ni_1step: forall ell t1 t2 t1',
+    (trace_low_eq ell t1 t2) ->
+    (step_system_ev t1 t1') ->
+    (exists t2',
+        (step_system_ev t2 t2') /\
+        (trace_low_eq ell t1' t2')).
 Admitted. (* NOTE: work in progress *)
+
+(* Note: How can this be done more elegantly, or skipped? *)
+Theorem nil_cons_rev: forall (A : Type) (x : A) (l : list A), x :: l <> [].
+Proof.
+    unfold not. intros. symmetry in H. generalize dependent H.
+    apply nil_cons.
+Qed.
+
+Theorem t_upd_mono_nil: forall t s,
+    ~(t = nil) -> ~((trace_upd_head_state t s) = nil).
+Proof.
+    intros.
+    unfold trace_upd_head_state. destruct t. assumption.
+    replace (let (_, e) := p in (s, e) :: t) with
+        ((let (_, e) := p in (s, e)) :: t).
+    apply nil_cons_rev.
+    destruct p. reflexivity.
+Qed.
+
+Theorem no_steps_to_empty: forall t, 
+    ~(step_system_ev_multi t []).
+    unfold not. intros.
+    remember ([]: trace) as emp eqn:R.
+    induction H; subst.
+        - (* refl *) inversion H; subst. destruct t'.
+            + inversion H2. 
+            + apply t_upd_mono_nil in H0. assumption.
+            unfold not. intros. generalize dependent H4. apply nil_cons_rev.
+        - apply IHstep_system_ev_multi. reflexivity.
+Qed.
+
+Theorem step_system_backwards: forall t t' a,
+    step_system_ev_multi t (a :: t') ->
+    step_system_ev_multi t t'.
+Proof.
+Admitted.
+
+Theorem step_system_extends: forall t t' a,
+    step_system_ev_multi t (a :: t') ->
+    step_system_ev t' (a :: t').
+Proof.
+Admitted.
+
+Theorem step_system_transitive: forall t1 t2 t3,
+    step_system_ev_multi t1 t2 ->
+    step_system_ev_multi t2 t3 ->
+    step_system_ev_multi t1 t3.
+Proof.
+Admitted.
 
 Theorem possibilistic_ni: conjecture_possibilistic_ni. Proof.
 unfold conjecture_possibilistic_ni.
-intros ell s11 s21 s1n t1n [H1 H2].
+intros ell t1_init t2_init t1n [Hinit_tleq [Ht1_init [Ht2_init Ht1_mstep_t1n]]].
 remember ([]: trace) as emp eqn:R.
-induction H2 as [s11 t s12 t12 | s11 t s1' t1' s1n t1n]; rewrite R in *.
-- assert (E: (exists s22 t22,
-        (step_system_ev s21 [] s22 t22) /\
-        (trace_low_eq ell t12 t22))). {
-        apply (possibilistic_ni_1step ell s11 s21 s12 t12). split; assumption.
-}
-destruct E as [s22 E]. destruct E as [t22 [E1 E2]].
-exists s22, t22. split; try constructor; assumption.
-- (* no induction hypothesis *)(* induction on trace length instead  ? *)
-admit.
-(* NOTE: This is only admitted because it is work in progress *)
-Admitted.
+induction t1n.
+    - (* t1 is empty trace, which is not possible *)
+        exfalso. apply (no_steps_to_empty t1_init Ht1_mstep_t1n).
+    - (* inductive case *)
+    inversion Ht1_mstep_t1n ; subst.
+        + assert (E: exists t2n,
+            (step_system_ev t2_init t2n) /\
+            (trace_low_eq ell (a::t1n) t2n)) by
+            apply (possibilistic_ni_1step ell t1_init t2_init
+                (a::t1n) Hinit_tleq H).
+            destruct E as [t2n [E1 E2]].
+            exists t2n. split. constructor. assumption. assumption.
+        + rename Ht1_mstep_t1n into Ht1_mstep_at1n.
+        assert (E: step_system_ev_multi t2 t1n)
+            by apply (step_system_backwards t2 t1n a H0).
+        assert (H': step_system_ev_multi t1_init t2) by
+            (constructor; assumption).
+        assert (Ht1_mstep_t1n: step_system_ev_multi t1_init t1n)
+            by apply (step_system_transitive t1_init t2 t1n H' E).
+        apply IHt1n in Ht1_mstep_t1n as [t2n [Hm_t2_init_t2n Hleq_t1n_t2n]].
+        assert (E2: step_system_ev t1n (a::t1n))
+            by apply (step_system_extends t2 t1n a H0).
+            (*need to get non-multi from E2.  *)
+        assert (E3: exists t2n',
+            (step_system_ev t2n t2n') /\
+            (trace_low_eq ell (a::t1n) t2n')) by
+            apply (possibilistic_ni_1step ell t1n t2n (a::t1n) Hleq_t1n_t2n E2).
+            destruct E3 as [t2n' [Hs_t2n_t2n' Hleq_at1n_t2n']].
+        exists t2n'.
+        split.
+        + apply (step_system_transitive t2_init t2n t2n'). assumption.
+        constructor. assumption. assumption.
+Qed.
