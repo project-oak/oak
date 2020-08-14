@@ -16,7 +16,7 @@
 
 //! Functionality for different Node types.
 
-use crate::{GrpcConfiguration, NodePrivilege, RuntimeProxy, SignatureTable};
+use crate::{NodePrivilege, RuntimeProxy, SecureServerConfiguration, SignatureTable};
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
 };
@@ -92,7 +92,7 @@ impl std::fmt::Display for ConfigurationError {
 pub fn create_node(
     application_configuration: &ApplicationConfiguration,
     node_configuration: &NodeConfiguration,
-    grpc_configuration: &GrpcConfiguration,
+    secure_server_configuration: &SecureServerConfiguration,
     signature_table: &SignatureTable,
 ) -> Result<Box<dyn Node>, ConfigurationError> {
     let node_name = &node_configuration.name;
@@ -101,6 +101,10 @@ pub fn create_node(
             Ok(Box::new(logger::LogNode::new(node_name)))
         }
         Some(ConfigType::GrpcServerConfig(config)) => {
+            let grpc_configuration = secure_server_configuration
+                .clone()
+                .grpc_config
+                .expect("no gRPC identity provided to Oak Runtime");
             Ok(Box::new(grpc::server::GrpcServerNode::new(
                 node_name,
                 config.clone(),
@@ -119,6 +123,10 @@ pub fn create_node(
             signature_table,
         )?)),
         Some(ConfigType::GrpcClientConfig(config)) => {
+            let grpc_configuration = secure_server_configuration
+                .clone()
+                .grpc_config
+                .expect("no gRPC identity provided to Oak Runtime");
             Ok(Box::new(grpc::client::GrpcClientNode::new(
                 node_name,
                 config.clone(),
@@ -135,10 +143,18 @@ pub fn create_node(
         Some(ConfigType::StorageConfig(_config)) => {
             Ok(Box::new(storage::StorageNode::new(node_name)))
         }
-        Some(ConfigType::HttpServerConfig(config)) => Ok(Box::new(http::HttpServerNode::new(
-            node_name,
-            config.clone(),
-        )?)),
+        Some(ConfigType::HttpServerConfig(config)) => {
+            let tls_config = secure_server_configuration
+                .clone()
+                .http_config
+                .expect("no TLS configuration for HTTP servers provided to Oak Runtime")
+                .tls_config;
+            Ok(Box::new(http::HttpServerNode::new(
+                node_name,
+                config.clone(),
+                tls_config,
+            )?))
+        }
         None => Err(ConfigurationError::InvalidNodeConfiguration),
     }
 }

@@ -15,7 +15,7 @@
 //
 
 use super::*;
-use crate::{GrpcConfiguration, RuntimeProxy};
+use crate::{RuntimeProxy, SecureServerConfiguration};
 use maplit::hashmap;
 use oak_abi::{
     label::Label,
@@ -43,7 +43,7 @@ fn start_node(
     };
     let proxy = RuntimeProxy::create_runtime(
         &application_configuration,
-        &GrpcConfiguration::default(),
+        &SecureServerConfiguration::default(),
         &signature_table,
     );
     let (_write_handle, read_handle) = proxy.channel_create(&Label::public_untrusted())?;

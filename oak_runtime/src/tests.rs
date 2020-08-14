@@ -44,7 +44,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     info!("Create runtime for test");
     let proxy = crate::RuntimeProxy::create_runtime(
         &configuration,
-        &GrpcConfiguration::default(),
+        &SecureServerConfiguration::default(),
         &signature_table,
     );
 

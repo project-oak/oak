@@ -15,6 +15,7 @@ members = [
   "hello_world/client/rust",
   "hello_world/module/rust",
   "http_server/module",
+  "http_server/client",
   "injection/module/rust",
   "machine_learning/module/rust",
   "trusted_information_retrieval/backend",

@@ -9,5 +9,15 @@ out = "examples/http_server/bin/http_server.oak"
 [applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/http_server/module/Cargo.toml" } }
 
+[server]
+additional_args = [
+  "--http-tls-certificate=./examples/certs/local/local.pem",
+  "--http-tls-private-key=./examples/certs/local/local.key",
+]
+
 [clients]
-shell = { Shell = { script = "examples/http_server/client/client" } }
+rust = { Cargo = { cargo_manifest = "examples/http_server/client/Cargo.toml" }, additional_args = [
+  "--ca-cert=./examples/certs/local/ca.pem"
+] }
+# TODO: uncomment when we can pass labels as text/json
+# shell = { Shell = { script = "examples/http_server/client/client" } }

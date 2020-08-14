@@ -37,7 +37,7 @@ mod common {
         WebAssemblyConfiguration,
     };
     use oak_io::OakError;
-    use oak_runtime::{config, GrpcConfiguration, Runtime, SignatureTable};
+    use oak_runtime::{config, Runtime, SecureServerConfiguration, SignatureTable};
     use std::sync::Arc;
     use wat::parse_str;
 
@@ -70,7 +70,7 @@ mod common {
         config::configure_and_run(oak_runtime::RuntimeConfiguration {
             metrics_port: Some(crate::METRICS_PORT),
             introspect_port: None,
-            grpc_config: GrpcConfiguration::default(),
+            secure_server_configuration: SecureServerConfiguration::default(),
             app_config: application_configuration,
             sign_table: SignatureTable::default(),
             config_map: ConfigMap::default(),

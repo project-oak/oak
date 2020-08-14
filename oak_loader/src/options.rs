@@ -41,10 +41,15 @@ use tonic::transport::Identity;
 pub struct Opt {
     #[structopt(long, help = "Application configuration file.")]
     application: String,
-    #[structopt(long, help = "Private RSA key file used by gRPC server pseudo-Nodes.")]
+    #[structopt(
+        long,
+        default_value = "",
+        help = "Private RSA key file used by gRPC server pseudo-Nodes."
+    )]
     grpc_tls_private_key: String,
     #[structopt(
         long,
+        default_value = "",
         help = "PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes."
     )]
     grpc_tls_certificate: String,
@@ -68,6 +73,18 @@ pub struct Opt {
         OpenID Connect authentication will not be available if this parameter is not specified."
     )]
     oidc_client: Option<String>,
+    #[structopt(
+        long,
+        default_value = "",
+        help = "Private RSA key file used by HTTP server pseudo-Nodes."
+    )]
+    http_tls_private_key: String,
+    #[structopt(
+        long,
+        default_value = "",
+        help = "PEM encoded X.509 TLS certificate file used by HTTP server pseudo-Nodes."
+    )]
+    http_tls_certificate: String,
     #[structopt(long, default_value = "9090", help = "Metrics server port number.")]
     metrics_port: u16,
     #[structopt(long, help = "Starts the Runtime without a metrics server.")]
@@ -137,7 +154,7 @@ pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfigurati
     let app_config = create_app_config(&opt).context("could not create app config")?;
 
     // Create the overall gRPC configuration.
-    let grpc_config = create_grpc_config(&opt)?;
+    let secure_server_configuration = create_secure_server_config(&opt)?;
 
     // Create signature table.
     let sign_table = create_sign_table(&opt)?;
@@ -154,7 +171,7 @@ pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfigurati
         } else {
             None
         },
-        grpc_config,
+        secure_server_configuration,
         app_config,
         sign_table,
         config_map,
@@ -180,6 +197,24 @@ pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<Config
         );
     }
     Ok(ConfigMap { items: file_map })
+}
+
+/// Create [`oak_runtime::SecureServerConfiguration`] containing optional TLS configurations for
+/// HTTP and gRPC server nodes.
+fn create_secure_server_config(
+    opt: &Opt,
+) -> anyhow::Result<oak_runtime::SecureServerConfiguration> {
+    let grpc_config = create_grpc_config(&opt)
+        .map_err(|e| log::warn!("{}", e))
+        .ok();
+    let http_config = create_http_config(&opt)
+        .map_err(|e| log::warn!("{}", e))
+        .ok();
+
+    Ok(oak_runtime::SecureServerConfiguration {
+        grpc_config,
+        http_config,
+    })
 }
 
 /// Create the overall [`oak_runtime::GrpcConfiguration`] from the TLS certificate and private key
@@ -246,6 +281,25 @@ fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
     }
 
     Ok(sign_table)
+}
+
+/// Create the overall [`oak_runtime::HttpConfiguration`] from the TLS certificate and private key
+/// files.
+fn create_http_config(opt: &Opt) -> anyhow::Result<oak_runtime::HttpConfiguration> {
+    let http_tls_private_key_path = &opt.http_tls_private_key;
+    let http_tls_certificate_path = &opt.http_tls_certificate;
+
+    if http_tls_private_key_path.is_empty() || http_tls_certificate_path.is_empty() {
+        return Err(anyhow!(
+            "Missing configuration for TLS identity for HTTP server nodes."
+        ));
+    }
+    match oak_runtime::tls::TlsConfig::new(http_tls_certificate_path, http_tls_private_key_path) {
+        Some(tls_config) => Ok(oak_runtime::HttpConfiguration { tls_config }),
+        None => Err(anyhow!(
+            "Could not create TLS identity for HTTP server nodes."
+        )),
+    }
 }
 
 /// If `oak_debug` is enabled, read root TLS certificate from the specified file. Otherwise, return
