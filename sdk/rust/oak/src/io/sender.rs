@@ -35,10 +35,10 @@ pub struct Sender<T: Encodable> {
 /// Trait for context-dependent functionality on a `Sender`.
 pub trait SenderExt<T> {
     /// Close the underlying channel used by the sender.
-    fn send(&self, t: &T) -> Result<(), OakError>;
+    fn close(&self) -> Result<(), OakStatus>;
 
     /// Attempt to send a value on the sender.
-    fn close(&self) -> Result<(), OakStatus>;
+    fn send(&self, t: &T) -> Result<(), OakError>;
 }
 
 impl<T: Encodable> SenderExt<T> for Sender<T> {
