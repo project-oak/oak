@@ -26,7 +26,7 @@ fn main() {
         &[".."],
         oak_utils::ProtoOptions {
             // Exclude generation of service code and HandleVisit auto-derive, as it would require a
-            // reference to the `oak_io` crate to compile.
+            // reference to the Oak SDK to compile.
             generate_services: false,
             derive_handle_visit: false,
             ..Default::default()
