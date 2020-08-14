@@ -20,12 +20,12 @@ use crate::{node::ConfigurationError, NodeMessage, NodePrivilege, NodeReadStatus
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, trace, warn};
 use maplit::hashset;
-use oak_abi::OakStatus;
-use oak_services::{
+use oak_abi::{
     label::Label,
     proto::oak::application::{
         ApplicationConfiguration, NodeConfiguration, WebAssemblyConfiguration,
     },
+    OakStatus,
 };
 use prost::Message as _;
 use rand::RngCore;
@@ -830,8 +830,8 @@ fn wasm_node_privilege(wasm_module_bytes: &[u8]) -> NodePrivilege {
     let wasm_module_hash = hasher.finalize();
     debug!("Wasm module SHA-256 hash: {:x}", wasm_module_hash);
     NodePrivilege::new(
-        hashset! { oak_services::label::web_assembly_module_tag(&wasm_module_hash) },
-        hashset! { oak_services::label::web_assembly_module_tag(&wasm_module_hash) },
+        hashset! { oak_abi::label::web_assembly_module_tag(&wasm_module_hash) },
+        hashset! { oak_abi::label::web_assembly_module_tag(&wasm_module_hash) },
     )
 }
 

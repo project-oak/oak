@@ -17,7 +17,6 @@ path = "src/main.rs"
 env_logger = "*"
 log = "*"
 oak_abi = "=0.1.0"
-oak_services = "=0.1.0"
 prost = "*"
 structopt = "*"
 tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }

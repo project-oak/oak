@@ -121,7 +121,7 @@ handle_visit_blanket_impl!(
     oak_services::proto::oak::encap::GrpcResponse,
     oak_services::proto::oak::encap::GrpcRequest,
     oak_services::proto::oak::log::LogMessage,
-    oak_services::proto::oak::application::ConfigMap
+    oak_abi::proto::oak::application::ConfigMap
 );
 
 /// Return all handles in `T`.

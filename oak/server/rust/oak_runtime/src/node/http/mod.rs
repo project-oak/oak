@@ -29,15 +29,11 @@ use hyper::{
     Body, Request, Response, Server, StatusCode,
 };
 use log::{debug, error, info, warn};
-use oak_abi::{ChannelReadStatus, OakStatus};
-use oak_io::handle::{ReadHandle, WriteHandle};
-use oak_services::{
-    label::Label,
-    proto::oak::{
-        application::HttpServerConfiguration,
-        encap::{HttpRequest, HttpResponse},
-    },
+use oak_abi::{
+    label::Label, proto::oak::application::HttpServerConfiguration, ChannelReadStatus, OakStatus,
 };
+use oak_io::handle::{ReadHandle, WriteHandle};
+use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 use prost::Message;
 use std::{future::Future, net::SocketAddr, pin::Pin};
 use tokio::sync::oneshot;
@@ -425,7 +421,7 @@ impl Pipe {
 
 // TODO(#1279): Get the label from a JSON string instead of a binary label.
 fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
-    match req.headers.get(oak_services::OAK_LABEL_HTTP_KEY) {
+    match req.headers.get(oak_abi::OAK_LABEL_HTTP_KEY) {
         Some(label) => Label::decode(&label[..]).map_err(|err| {
             warn!("Could not parse HTTP label: {}", err);
             OakStatus::ErrInvalidArgs

@@ -17,7 +17,7 @@
 //! Wrappers for Oak SDK types to allow their use with [`std::io`].
 
 use crate::OakStatus;
-use oak_services::label::Label;
+use oak_abi::label::Label;
 use std::io;
 
 mod decodable;

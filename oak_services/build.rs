@@ -19,10 +19,8 @@
 fn main() {
     oak_utils::compile_protos_with_options(
         &[
-            "../oak_services/proto/application.proto",
             "../oak_services/proto/grpc_encap.proto",
             "../oak_services/proto/http_encap.proto",
-            "../oak_services/proto/label.proto",
             "../oak_services/proto/log.proto",
             "../oak_services/proto/roughtime_service.proto",
             "../third_party/google/rpc/code.proto",

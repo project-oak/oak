@@ -18,16 +18,4 @@
 //! binary interface (ABI).
 
 pub mod grpc;
-pub mod label;
 pub mod proto;
-
-/// The key used for encoded Labels in gRPC metadata.
-///
-/// The `-bin` suffix allows sending binary data for this metadata key, see:
-///  https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
-///
-/// Keep in sync with /oak/common/label.cc.
-pub const OAK_LABEL_GRPC_METADATA_KEY: &str = "x-oak-label-bin";
-
-/// The header key used for encoded Labels in HTTP requests.
-pub const OAK_LABEL_HTTP_KEY: &str = "oak-label";

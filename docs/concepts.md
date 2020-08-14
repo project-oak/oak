@@ -174,7 +174,7 @@ The following types of security principals are supported in Oak:
   running within an Oak Node
 
 Tags and Labels are represented as serialized
-[protobuf messages](/oak_services/proto/label.proto).
+[protobuf messages](/oak_abi/proto/label.proto).
 
 Any security principal may be used (as a tag) as part of confidentiality or
 integrity components, depending on the required use case.
@@ -400,7 +400,7 @@ be created to handle HTTP requests.
 
 The list of allowed WebAssembly modules that can be used to instantiate
 WebAssembly Nodes, and the initial Node to run, are specified by an
-[Application Configuration](/oak_services/proto/application.proto).
+[Application Configuration](/oak_abi/proto/application.proto).
 
 Once a new Oak Application is initialized and its gRPC endpoint available,
 clients may connect to it using individually end-to-end encrypted, authenticated

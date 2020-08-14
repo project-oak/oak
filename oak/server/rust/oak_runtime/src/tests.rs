@@ -16,7 +16,7 @@
 
 use super::*;
 use maplit::{hashmap, hashset};
-use oak_services::proto::oak::application::{
+use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
 };
 use std::sync::Once;
@@ -104,7 +104,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
 /// Returns a non-trivial label for testing.
 fn test_label() -> Label {
     Label {
-        confidentiality_tags: vec![oak_services::label::authorization_bearer_token_hmac_tag(&[
+        confidentiality_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
             1, 1, 1,
         ])],
         integrity_tags: vec![],
@@ -154,8 +154,8 @@ fn create_channel_same_label_err() {
 /// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
 fn create_channel_less_confidential_label_err() {
-    let tag_0 = oak_services::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_services::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0, tag_1.clone()],
         integrity_tags: vec![],
@@ -181,9 +181,9 @@ fn create_channel_less_confidential_label_err() {
 /// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
 fn create_channel_less_confidential_label_declassification_err() {
-    let tag_0 = oak_services::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_services::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
-    let other_tag = oak_services::label::authorization_bearer_token_hmac_tag(&[3, 3, 3]);
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let other_tag = oak_abi::label::authorization_bearer_token_hmac_tag(&[3, 3, 3]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone(), tag_1.clone()],
         integrity_tags: vec![],
@@ -214,8 +214,8 @@ fn create_channel_less_confidential_label_declassification_err() {
 /// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
 fn create_channel_less_confidential_label_no_privilege_err() {
-    let tag_0 = oak_services::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_services::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone(), tag_1.clone()],
         integrity_tags: vec![],
@@ -249,7 +249,7 @@ fn create_channel_less_confidential_label_no_privilege_err() {
 /// Data is always allowed to flow to more confidential labels.
 #[test]
 fn create_channel_with_more_confidential_label_from_public_untrusted_node_ok() {
-    let tag_0 = oak_services::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let initial_label = &Label::public_untrusted();
     let more_confidential_label = Label {
         confidentiality_tags: vec![tag_0],
@@ -294,7 +294,7 @@ fn create_channel_with_more_confidential_label_from_public_untrusted_node_ok() {
 ///   to the newly added privilege)
 #[test]
 fn create_channel_with_more_confidential_label_from_public_node_with_privilege_ok() {
-    let tag_0 = oak_services::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let initial_label = Label::public_untrusted();
     let more_confidential_label = Label {
         confidentiality_tags: vec![tag_0.clone()],
@@ -336,8 +336,8 @@ fn create_channel_with_more_confidential_label_from_public_node_with_privilege_o
 
 #[test]
 fn create_channel_with_more_confidential_label_from_non_public_node_with_privilege_err() {
-    let tag_0 = oak_services::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_services::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone()],
         integrity_tags: vec![],
@@ -410,7 +410,7 @@ fn create_node_invalid_configuration_err() {
 /// effects as a covert channel to exfiltrate confidential data.
 #[test]
 fn create_node_less_confidential_label_err() {
-    let tag_0 = oak_services::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0],
         integrity_tags: vec![],
@@ -440,8 +440,8 @@ fn create_node_less_confidential_label_err() {
 /// Create a test Node that creates a Node with a more confidential label and succeeds.
 #[test]
 fn create_node_more_confidential_label_ok() {
-    let tag_0 = oak_services::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_services::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone()],
         integrity_tags: vec![],

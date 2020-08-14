@@ -16,7 +16,7 @@
 
 use crate::io::{ReceiverExt, SenderExt};
 use log::{info, warn};
-use oak_services::{label::Label, proto::oak::application::NodeConfiguration};
+use oak_abi::{label::Label, proto::oak::application::NodeConfiguration};
 
 /// Client for a gRPC service in another Node.
 pub struct Client {

@@ -47,7 +47,7 @@ cc_library(
     hdrs = ["label.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//oak_services/proto:label_cc_proto",
+        "//oak_abi/proto:label_cc_proto",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/strings",
     ],

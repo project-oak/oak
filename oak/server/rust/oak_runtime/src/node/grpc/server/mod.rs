@@ -28,16 +28,12 @@ use crate::{
 use futures_util::stream;
 use hyper::service::Service;
 use log::{debug, error, info, trace, warn};
-use oak_abi::{ChannelReadStatus, OakStatus};
-use oak_services::{
-    label::Label,
-    proto::{
-        google::rpc,
-        oak::{
-            application::GrpcServerConfiguration,
-            encap::{GrpcRequest, GrpcResponse},
-        },
-    },
+use oak_abi::{
+    label::Label, proto::oak::application::GrpcServerConfiguration, ChannelReadStatus, OakStatus,
+};
+use oak_services::proto::{
+    google::rpc,
+    oak::encap::{GrpcRequest, GrpcResponse},
 };
 use prost::Message;
 use std::{
@@ -329,7 +325,7 @@ enum OakLabelError {
 ///   once conjunctions are supported
 fn get_oak_label(metadata_map: &MetadataMap) -> Result<Label, OakLabelError> {
     let labels = metadata_map
-        .get_all_bin(oak_services::OAK_LABEL_GRPC_METADATA_KEY)
+        .get_all_bin(oak_abi::OAK_LABEL_GRPC_METADATA_KEY)
         .iter()
         .collect::<Vec<_>>();
     if labels.is_empty() {
@@ -350,7 +346,7 @@ fn get_oak_label(metadata_map: &MetadataMap) -> Result<Label, OakLabelError> {
         warn!("could not convert gRPC label to bytes: {}", err);
         OakLabelError::InvalidLabel
     })?;
-    oak_services::proto::oak::label::Label::decode(label_bytes).map_err(|err| {
+    oak_abi::proto::oak::label::Label::decode(label_bytes).map_err(|err| {
         warn!("could not parse gRPC label: {}", err);
         OakLabelError::InvalidLabel
     })

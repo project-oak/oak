@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use oak_services::proto::oak::application::ConfigMap;
+use oak_abi::proto::oak::application::ConfigMap;
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]

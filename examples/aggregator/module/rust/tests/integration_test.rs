@@ -19,7 +19,7 @@ use aggregator_common::Monoid;
 use aggregator_grpc::proto::{aggregator_client::AggregatorClient, Sample, SerializedSparseVector};
 use assert_matches::assert_matches;
 use maplit::hashmap;
-use oak_services::proto::oak::application::ConfigMap;
+use oak_abi::proto::oak::application::ConfigMap;
 use std::{
     collections::HashMap,
     convert::{From, TryFrom},

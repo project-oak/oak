@@ -17,7 +17,7 @@
 //! Client for the Trusted Information Retrieval example.
 
 use log::info;
-use oak_services::label::Label;
+use oak_abi::label::Label;
 use prost::Message;
 use structopt::StructOpt;
 use tonic::{
@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         channel,
         move |mut request: Request<()>| {
             request.metadata_mut().insert_bin(
-                oak_services::OAK_LABEL_GRPC_METADATA_KEY,
+                oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
                 MetadataValue::from_bytes(label.as_ref()),
             );
             Ok(request)

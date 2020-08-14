@@ -21,7 +21,7 @@ const grpcProtoLoader = require('@grpc/proto-loader');
 
 const CERT_PATH = __dirname + '/../../../certs/local/ca.pem';
 const SERVICE_PROTO_PATH = __dirname + '/../../proto/hello_world.proto';
-const OAK_LABEL_PROTO_PATH = __dirname + '/../../../../oak_services/proto/label.proto';
+const OAK_LABEL_PROTO_PATH = __dirname + '/../../../../oak_abi/proto/label.proto';
 
 // Keep in sync with /oak/server/rust/oak_runtime/src/node/grpc/server/mod.rs.
 const oakLabelGrpcMetadataKey = 'x-oak-label-bin';

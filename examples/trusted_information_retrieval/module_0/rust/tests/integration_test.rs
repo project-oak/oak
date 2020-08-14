@@ -16,7 +16,7 @@
 
 use assert_matches::assert_matches;
 use maplit::hashmap;
-use oak_services::proto::oak::application::ConfigMap;
+use oak_abi::proto::oak::application::ConfigMap;
 use trusted_information_retrieval_client::proto::{
     trusted_information_retrieval_client::TrustedInformationRetrievalClient,
     GetPointOfInterestRequest, GetPointOfInterestResponse,

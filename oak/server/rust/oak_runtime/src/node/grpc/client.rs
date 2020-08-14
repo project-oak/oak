@@ -27,12 +27,9 @@ use crate::{
 };
 use log::{debug, error, info, trace, warn};
 use maplit::hashset;
-use oak_abi::{Handle, OakStatus};
+use oak_abi::{proto::oak::application::GrpcClientConfiguration, Handle, OakStatus};
 use oak_io::handle::ReadHandle;
-use oak_services::proto::{
-    google::rpc,
-    oak::{application::GrpcClientConfiguration, encap::GrpcResponse},
-};
+use oak_services::proto::{google::rpc, oak::encap::GrpcResponse};
 use tokio::sync::oneshot;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
 
@@ -64,8 +61,8 @@ fn grpc_client_node_privilege(uri: &Uri) -> NodePrivilege {
         // Authority is the host:port portion of the endpoint name.
         if let Some(authority) = uri.authority() {
             NodePrivilege::new(
-                hashset! { oak_services::label::tls_endpoint_tag(&authority.as_str()) },
-                hashset! { oak_services::label::tls_endpoint_tag(&authority.as_str()) },
+                hashset! { oak_abi::label::tls_endpoint_tag(&authority.as_str()) },
+                hashset! { oak_abi::label::tls_endpoint_tag(&authority.as_str()) },
             )
         } else {
             NodePrivilege::default()

@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	translator_pb "github.com/project-oak/oak/examples/translator/proto"
-	label_pb "github.com/project-oak/oak/oak_services/proto/label"
+	label_pb "github.com/project-oak/oak/oak_abi/proto/label"
 )
 
 var (

@@ -17,7 +17,7 @@
 use super::*;
 use crate::{GrpcConfiguration, RuntimeProxy};
 use maplit::hashmap;
-use oak_services::{
+use oak_abi::{
     label::Label,
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, WebAssemblyConfiguration,

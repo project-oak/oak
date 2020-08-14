@@ -19,7 +19,7 @@ use anyhow::Context;
 use assert_matches::assert_matches;
 use log::{debug, error, info};
 use maplit::hashmap;
-use oak_services::proto::oak::application::ConfigMap;
+use oak_abi::proto::oak::application::ConfigMap;
 use serial_test::serial;
 use std::{
     collections::HashMap,

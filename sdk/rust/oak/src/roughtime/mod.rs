@@ -20,7 +20,7 @@ use crate::{
     grpc,
     proto::oak::roughtime::{GetRoughtimeRequest, RoughtimeServiceClient},
 };
-use oak_services::proto::oak::application::{
+use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, NodeConfiguration, RoughtimeClientConfiguration,
 };
 
