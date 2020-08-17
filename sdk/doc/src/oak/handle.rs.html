@@ -380,9 +380,9 @@
 <span class="comment">// Provide an implementation for oak_abi types that an implementation cannot be derived for.</span>
 <span class="comment">// These do not contains handles, so a blanket impl is sufficient.</span>
 <span class="macro">handle_visit_blanket_impl</span><span class="macro">!</span>(
-    <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcResponse</span>,
-    <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcRequest</span>,
-    <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">log</span>::<span class="ident">LogMessage</span>,
+    <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcResponse</span>,
+    <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcRequest</span>,
+    <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">log</span>::<span class="ident">LogMessage</span>,
     <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">ConfigMap</span>
 );
 

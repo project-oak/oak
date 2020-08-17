@@ -45,13 +45,13 @@
 
 <span class="doccomment">//! Functionality for gRPC pseudo-Nodes.</span>
 
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>;
+<span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">client</span>;
 <span class="kw">mod</span> <span class="ident">codec</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">invocation</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">server</span>;
 
-<span class="doccomment">/// Converts [`oak_abi::proto::google::rpc::Status`] to [`tonic::Status`].</span>
+<span class="doccomment">/// Converts [`rpc::Status`] to [`tonic::Status`].</span>
 <span class="kw">fn</span> <span class="ident">to_tonic_status</span>(<span class="ident">status</span>: <span class="ident">rpc</span>::<span class="ident">Status</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">Status</span> {
     <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(<span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">from_i32</span>(<span class="ident">status</span>.<span class="ident">code</span>), <span class="ident">status</span>.<span class="ident">message</span>)
 }

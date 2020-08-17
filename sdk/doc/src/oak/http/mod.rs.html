@@ -90,7 +90,7 @@
     <span class="ident">io</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>, <span class="ident">SenderExt</span>},
     <span class="ident">OakStatus</span>,
 };
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">HttpRequest</span>, <span class="ident">HttpResponse</span>};
+<span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">HttpRequest</span>, <span class="ident">HttpResponse</span>};
 
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Invocation</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">invocations</span>::<span class="ident">Invocation</span><span class="op">&lt;</span><span class="ident">HttpRequest</span>, <span class="ident">HttpResponse</span><span class="op">&gt;</span>;
 
@@ -124,13 +124,13 @@
     <span class="prelude-val">Ok</span>(<span class="ident">invocation_receiver</span>)
 }
 
-<span class="kw">impl</span> <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span> <span class="kw">for</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">HttpRequest</span> {
+<span class="kw">impl</span> <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span> <span class="kw">for</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">HttpRequest</span> {
     <span class="kw">fn</span> <span class="ident">visit</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">crate</span>::<span class="ident">Handle</span>)<span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">visitor</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">F</span> {
         <span class="ident">visitor</span>
     }
 }
 
-<span class="kw">impl</span> <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span> <span class="kw">for</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">HttpResponse</span> {
+<span class="kw">impl</span> <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span> <span class="kw">for</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">HttpResponse</span> {
     <span class="kw">fn</span> <span class="ident">visit</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">crate</span>::<span class="ident">Handle</span>)<span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">visitor</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">F</span> {
         <span class="ident">visitor</span>
     }

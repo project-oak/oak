@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["google",""],["oak",""]]});
+initSidebarItems({"mod":[["oak",""]]});

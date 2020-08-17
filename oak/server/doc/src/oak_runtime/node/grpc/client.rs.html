@@ -431,11 +431,6 @@
 <span id="431">431</span>
 <span id="432">432</span>
 <span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -466,14 +461,9 @@
 };
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">maplit</span>::<span class="ident">hashset</span>;
-<span class="kw">use</span> <span class="ident">oak_abi</span>::{
-    <span class="ident">proto</span>::{
-        <span class="ident">google</span>::<span class="ident">rpc</span>,
-        <span class="ident">oak</span>::{<span class="ident">application</span>::<span class="ident">GrpcClientConfiguration</span>, <span class="ident">encap</span>::<span class="ident">GrpcResponse</span>},
-    },
-    <span class="ident">Handle</span>, <span class="ident">OakStatus</span>,
-};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">GrpcClientConfiguration</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>};
 <span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">ReadHandle</span>;
+<span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::{<span class="ident">google</span>::<span class="ident">rpc</span>, <span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcResponse</span>};
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>, <span class="ident">Uri</span>};
 
