@@ -27,14 +27,9 @@ use crate::{
 };
 use log::{debug, error, info, trace, warn};
 use maplit::hashset;
-use oak_abi::{
-    proto::{
-        google::rpc,
-        oak::{application::GrpcClientConfiguration, encap::GrpcResponse},
-    },
-    Handle, OakStatus,
-};
+use oak_abi::{proto::oak::application::GrpcClientConfiguration, Handle, OakStatus};
 use oak_io::handle::ReadHandle;
+use oak_services::proto::{google::rpc, oak::encap::GrpcResponse};
 use tokio::sync::oneshot;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
 

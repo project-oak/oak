@@ -21,7 +21,7 @@ use crate::{
     io::{Receiver, ReceiverExt, SenderExt},
     OakStatus,
 };
-use oak_abi::proto::oak::encap::{HttpRequest, HttpResponse};
+use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 
 pub type Invocation = crate::invocations::Invocation<HttpRequest, HttpResponse>;
 
@@ -55,13 +55,13 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
     Ok(invocation_receiver)
 }
 
-impl crate::handle::HandleVisit for oak_abi::proto::oak::encap::HttpRequest {
+impl crate::handle::HandleVisit for oak_services::proto::oak::encap::HttpRequest {
     fn visit<F: FnMut(&mut crate::Handle)>(&mut self, visitor: F) -> F {
         visitor
     }
 }
 
-impl crate::handle::HandleVisit for oak_abi::proto::oak::encap::HttpResponse {
+impl crate::handle::HandleVisit for oak_services::proto::oak::encap::HttpResponse {
     fn visit<F: FnMut(&mut crate::Handle)>(&mut self, visitor: F) -> F {
         visitor
     }

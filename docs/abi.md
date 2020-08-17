@@ -80,9 +80,9 @@ Similarly, messages exchanged with the pseudo-Nodes provided by the Oak system
 are also defined to take the form of serialized protocol buffer messages. These
 include:
 
-- [Structured logging messages](/oak_abi/proto/log.proto).
-- [Encapsulated gRPC requests and responses](/oak_abi/proto/grpc_encap.proto).
-- [Roughtime messages](/oak_abi/proto/roughtime_service.proto).
+- [Structured logging messages](/oak_services/proto/log.proto).
+- [Encapsulated gRPC requests and responses](/oak_services/proto/grpc_encap.proto).
+- [Roughtime messages](/oak_services/proto/roughtime_service.proto).
 
 ## Exported Function
 

@@ -118,9 +118,9 @@ handle_visit_blanket_impl!((), f64, f32, i32, i64, u32, u64, bool, String, Vec<u
 // Provide an implementation for oak_abi types that an implementation cannot be derived for.
 // These do not contains handles, so a blanket impl is sufficient.
 handle_visit_blanket_impl!(
-    oak_abi::proto::oak::encap::GrpcResponse,
-    oak_abi::proto::oak::encap::GrpcRequest,
-    oak_abi::proto::oak::log::LogMessage,
+    oak_services::proto::oak::encap::GrpcResponse,
+    oak_services::proto::oak::encap::GrpcRequest,
+    oak_services::proto::oak::log::LogMessage,
     oak_abi::proto::oak::application::ConfigMap
 );
 

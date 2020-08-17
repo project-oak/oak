@@ -23,7 +23,7 @@ use log::{debug, error, info, trace, warn};
 use oak_abi::proto::oak::application::{ConfigMap, NodeConfiguration};
 use prost::Message;
 
-// Re-export ABI constants that are also visible as part of the SDK API.
+// Re-export ABI and Services constants and structs that are also visible as part of the SDK API.
 pub use oak_abi::{label::Label, ChannelReadStatus, Handle, OakStatus};
 
 // Re-export oak_io structs that are also visible as part of the SDK API.

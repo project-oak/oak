@@ -30,14 +30,10 @@ use hyper::{
 };
 use log::{debug, error, info, warn};
 use oak_abi::{
-    label::Label,
-    proto::oak::{
-        application::HttpServerConfiguration,
-        encap::{HttpRequest, HttpResponse},
-    },
-    ChannelReadStatus, OakStatus,
+    label::Label, proto::oak::application::HttpServerConfiguration, ChannelReadStatus, OakStatus,
 };
 use oak_io::handle::{ReadHandle, WriteHandle};
+use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 use prost::Message;
 use std::{future::Future, net::SocketAddr, pin::Pin};
 use tokio::sync::oneshot;

@@ -18,6 +18,7 @@ dependencies = [
  "oak",
  "oak_abi",
  "oak_runtime",
+ "oak_services",
  "oak_tests",
  "oak_utils",
  "prost",
@@ -724,6 +725,7 @@ dependencies = [
  "maplit",
  "oak",
  "oak_abi",
+ "oak_services",
 ]
 
 [[package]]
@@ -1139,6 +1141,7 @@ dependencies = [
  "oak_abi",
  "oak_derive",
  "oak_io",
+ "oak_services",
  "oak_utils",
  "prost",
  "prost-types",
@@ -1191,6 +1194,7 @@ dependencies = [
  "maplit",
  "oak_abi",
  "oak_io",
+ "oak_services",
  "oak_utils",
  "prometheus",
  "prost",
@@ -1207,6 +1211,19 @@ dependencies = [
  "tokio",
  "tonic",
  "wasmi",
+]
+
+[[package]]
+name = "oak_services"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_abi",
+ "oak_io",
+ "oak_utils",
+ "prost",
+ "prost-build",
+ "prost-types",
 ]
 
 [[package]]

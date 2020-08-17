@@ -18,7 +18,7 @@
 //! by entities in the Oak system. The Oak Runtime allows Oak Nodes to manipulate
 //! labels, and so the labels need to be passed across the Oak ABI in a defined
 //! binary format.  That format is a serialized protocol buffer holding the
-//! `Label` message defined in the policy.proto file.
+//! `Label` message defined in the label.proto file.
 
 use prost::Message;
 use std::collections::HashSet;

@@ -46,7 +46,7 @@ cc_library(
         "storage_provider.h",
     ],
     deps = [
-        "//oak_abi/proto:storage_cc_proto",
+        "//oak_services/proto:storage_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )
@@ -61,7 +61,7 @@ cc_library(
     ],
     deps = [
         ":storage_provider",
-        "//oak_abi/proto:storage_cc_grpc",
+        "//oak_services/proto:storage_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )

@@ -14,15 +14,22 @@
 // limitations under the License.
 //
 
-//! Functionality for gRPC pseudo-Nodes.
+pub mod google {
+    pub mod rpc {
+        include!(concat!(env!("OUT_DIR"), "/google.rpc.rs"));
+    }
+}
 
-use oak_services::proto::google::rpc;
-pub mod client;
-mod codec;
-pub mod invocation;
-pub mod server;
+pub mod oak {
+    pub mod encap {
+        include!(concat!(env!("OUT_DIR"), "/oak.encap.rs"));
+    }
 
-/// Converts [`rpc::Status`] to [`tonic::Status`].
-fn to_tonic_status(status: rpc::Status) -> tonic::Status {
-    tonic::Status::new(tonic::Code::from_i32(status.code), status.message)
+    pub mod log {
+        include!(concat!(env!("OUT_DIR"), "/oak.log.rs"));
+    }
+
+    pub mod roughtime {
+        include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
+    }
 }

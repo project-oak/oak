@@ -29,15 +29,11 @@ use futures_util::stream;
 use hyper::service::Service;
 use log::{debug, error, info, trace, warn};
 use oak_abi::{
-    label::Label,
-    proto::{
-        google::rpc,
-        oak::{
-            application::GrpcServerConfiguration,
-            encap::{GrpcRequest, GrpcResponse},
-        },
-    },
-    ChannelReadStatus, OakStatus,
+    label::Label, proto::oak::application::GrpcServerConfiguration, ChannelReadStatus, OakStatus,
+};
+use oak_services::proto::{
+    google::rpc,
+    oak::encap::{GrpcRequest, GrpcResponse},
 };
 use prost::Message;
 use std::{

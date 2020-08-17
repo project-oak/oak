@@ -14,15 +14,8 @@
 // limitations under the License.
 //
 
-//! Functionality for gRPC pseudo-Nodes.
+//! Type, constant and Wasm host function definitions for the Oak application
+//! binary interface (ABI).
 
-use oak_services::proto::google::rpc;
-pub mod client;
-mod codec;
-pub mod invocation;
-pub mod server;
-
-/// Converts [`rpc::Status`] to [`tonic::Status`].
-fn to_tonic_status(status: rpc::Status) -> tonic::Status {
-    tonic::Status::new(tonic::Code::from_i32(status.code), status.message)
-}
+pub mod grpc;
+pub mod proto;

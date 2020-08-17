@@ -123,6 +123,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_io"
+version = "0.1.0"
+dependencies = [
+ "oak_abi",
+]
+
+[[package]]
+name = "oak_services"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_abi",
+ "oak_io",
+ "oak_utils",
+ "prost",
+ "prost-build",
+ "prost-types",
+]
+
+[[package]]
 name = "oak_utils"
 version = "0.1.0"
 dependencies = [

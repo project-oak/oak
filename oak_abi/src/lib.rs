@@ -17,7 +17,6 @@
 //! Type, constant and Wasm host function definitions for the Oak application
 //! binary interface (ABI).
 
-pub mod grpc;
 pub mod label;
 pub mod proto;
 

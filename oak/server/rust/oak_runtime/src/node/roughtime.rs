@@ -26,18 +26,15 @@ use crate::{
     RuntimeProxy,
 };
 use log::{debug, error, info};
-use oak_abi::{
-    proto::{
-        google::rpc::Code,
-        oak::{
-            application::RoughtimeClientConfiguration,
-            encap::GrpcResponse,
-            roughtime::{GetRoughtimeRequest, Roughtime},
-        },
-    },
-    OakStatus,
-};
+use oak_abi::{proto::oak::application::RoughtimeClientConfiguration, OakStatus};
 use oak_io::handle::ReadHandle;
+use oak_services::proto::{
+    google::rpc::Code,
+    oak::{
+        encap::GrpcResponse,
+        roughtime::{GetRoughtimeRequest, Roughtime},
+    },
+};
 use prost::Message;
 use tokio::sync::oneshot;
 

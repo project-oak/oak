@@ -19,7 +19,7 @@
 use log::info;
 use maplit::hashmap;
 use oak::{http::Invocation, Node, OakError};
-use oak_abi::proto::oak::encap::HttpResponse;
+use oak_services::proto::oak::encap::HttpResponse;
 
 oak::entrypoint!(oak_main => |_in_channel| {
     oak::logger::init_default();
