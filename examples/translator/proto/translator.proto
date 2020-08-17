@@ -16,7 +16,9 @@
 
 syntax = "proto3";
 
-package oak.examples.translator;
+// For this example, don't put the package in the "oak" top-level namespace
+// to check that arbitrary package names are supported.
+package examples.translator;
 option go_package = "github.com/project-oak/oak/examples/translator/proto";
 
 message TranslateRequest {

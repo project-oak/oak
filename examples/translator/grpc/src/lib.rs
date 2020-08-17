@@ -15,5 +15,5 @@
 //
 
 pub mod proto {
-    tonic::include_proto!("oak.examples.translator");
+    tonic::include_proto!("examples.translator");
 }

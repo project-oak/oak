@@ -15,7 +15,7 @@
 //
 
 pub mod proto {
-    include!(concat!(env!("OUT_DIR"), "/oak.examples.translator.rs"));
+    include!(concat!(env!("OUT_DIR"), "/examples.translator.rs"));
 }
 
 use log::{info, warn};
