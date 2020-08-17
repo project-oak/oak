@@ -257,7 +257,7 @@ struct HttpRequestHandler {
 
 /// Set a mandatory prefix for all gRPC requests processed by a gRPC pseudo-Node.
 impl NamedService for HttpRequestHandler {
-    const NAME: &'static str = "oak";
+    const NAME: &'static str = "";
 }
 
 impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
