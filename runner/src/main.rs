@@ -881,7 +881,8 @@ fn is_ignored_path(path: &PathBuf) -> bool {
 
 fn is_ignored_entry(entry: &walkdir::DirEntry) -> bool {
     let path = entry.clone().into_path();
-    is_ignored_path(&path)
+    // Simple heuristic to try and exclude generated files.
+    is_ignored_path(&path) || file_contains(&path, "DO NOT EDIT")
 }
 
 /// Return an iterator of all the first-party and non-ignored files in the repository, which can be
@@ -977,14 +978,25 @@ fn read_file(path: &PathBuf) -> String {
 /// Return whether the provided path refers to a workspace-level `Cargo.toml` file, by looking at
 /// the contents of the file.
 fn is_cargo_workspace_file(path: &PathBuf) -> bool {
-    let mut file = std::fs::File::open(path).expect("could not open file");
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .expect("could not read file contents");
     // We naively look for the `[workspace]` string to appear in the contents of the file. A better
     // alternative would be to actually parse the file as `toml` and figure out whether it has a
     // `workspace` section, but it seems overkill for now.
-    contents.contains("[workspace]")
+    file_contains(path, "[workspace]")
+}
+
+fn file_contains(path: &PathBuf, pattern: &str) -> bool {
+    if path.is_file() {
+        let mut file = std::fs::File::open(path).expect("could not open file");
+        let mut contents = String::new();
+        // Content may be non-UTF-8, in which case we just return false.
+        if file.read_to_string(&mut contents).is_ok() {
+            contents.contains(pattern)
+        } else {
+            false
+        }
+    } else {
+        false
+    }
 }
 
 fn is_shell_script(path: &PathBuf) -> bool {
