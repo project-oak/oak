@@ -15,10 +15,19 @@ readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
 readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
 
 readonly CACHE_DIR='bazel-cache'
-readonly SERVER_BIN_DIR="${PWD}/oak/server/bin"
+readonly SERVER_BIN_DIR="${PWD}/oak_loader/bin"
 
-# List all workspaces.
-declare -ar ALL_CRATES=("oak_utils" "oak_abi" "oak/server" "sdk" "examples" "runner" "experimental")
+# List all workspaces and stand-alone crates.
+declare -ar ALL_CRATES=(
+  examples
+  experimental
+  oak_abi
+  oak_loader
+  oak_runtime
+  oak_utils
+  runner
+  sdk
+)
 
 # To set up remote cache write credentials:
 # - navigate to https://pantheon.corp.google.com/iam-admin/serviceaccounts?project=oak-ci

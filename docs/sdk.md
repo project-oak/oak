@@ -129,8 +129,7 @@ as a `Duration` since the UNIX epoch.
 
 ### `oak::proto` Module
 
-The
-[`oak::proto`](https://project-oak.github.io/oak/sdk/doc/oak/proto/index.html)
+The [`oak::proto`](https://project-oak.github.io/oak/sdk/doc/proto/index.html)
 module holds auto-generated submodules for dealing with protocol buffers.
 
 ### `oak::logger` Module

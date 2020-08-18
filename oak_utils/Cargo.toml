@@ -10,19 +10,21 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 maplit = "*"
-prost = "*"
-tempfile = "*"
-quote = "*"
-walkdir = "*"
-prost-build = "*"
 proc-macro2 = "*"
+prost = { path = "../third_party/prost" }
+prost-build = { path = "../third_party/prost/prost-build" }
+quote = "*"
+tempfile = "*"
 # Disable the `rustfmt` feature, as it requires `rustfmt` which may not be supported for custom
 # toolchains.
 tonic-build = { version = "*", default-features = false, features = [
   "prost",
   "transport"
 ] }
+walkdir = "*"
 
 [patch.crates-io]
-prost-build = { path = "../third_party/prost/prost-build" }
 prost = { path = "../third_party/prost" }
+prost-build = { path = "../third_party/prost/prost-build" }
+prost-derive = { path = "../third_party/prost/prost-derive" }
+prost-types = { path = "../third_party/prost/prost-types" }

@@ -62,7 +62,7 @@ fn start_node(wasm_module: Vec<u8>, entrypoint_name: &str) -> Result<(), OakStat
 fn wasm_starting_module_without_content_fails() {
     // Loads an empty module that does not have the necessary entry point, so it should fail
     // immediately.
-    let binary = parse_file("../../testdata/empty.wat").unwrap();
+    let binary = parse_file("../testdata/empty.wat").unwrap();
 
     // An empty module is equivalent to: [0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]
     // From https://docs.rs/wasmi/0.6.2/wasmi/struct.Module.html#method.from_buffer:
@@ -76,28 +76,28 @@ fn wasm_starting_module_without_content_fails() {
 
 #[test]
 fn wasm_starting_minimal_module_succeeds() {
-    let binary = parse_file("../../testdata/minimal.wat").unwrap();
+    let binary = parse_file("../testdata/minimal.wat").unwrap();
     let result = start_node(binary, "oak_main");
     assert_eq!(true, result.is_ok());
 }
 
 #[test]
 fn wasm_starting_module_missing_an_export_fails() {
-    let binary = parse_file("../../testdata/missing.wat").unwrap();
+    let binary = parse_file("../testdata/missing.wat").unwrap();
     let result = start_node(binary, "oak_main");
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
 fn wasm_starting_module_with_wrong_export_fails() {
-    let binary = parse_file("../../testdata/minimal.wat").unwrap();
+    let binary = parse_file("../testdata/minimal.wat").unwrap();
     let result = start_node(binary, "oak_other_main");
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
 
 #[test]
 fn wasm_starting_module_with_wrong_signature_fails() {
-    let binary = parse_file("../../testdata/wrong.wat").unwrap();
+    let binary = parse_file("../testdata/wrong.wat").unwrap();
     let result = start_node(binary, "oak_main");
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }

@@ -35,7 +35,7 @@ var (
 	caCert  = flag.String("ca_cert", "", "Path to the PEM-encoded CA root certificate")
 )
 
-// Keep in sync with /oak/server/rust/oak_runtime/src/node/grpc/server/mod.rs.
+// Keep in sync with /oak_runtime/src/node/grpc/server/mod.rs.
 const oakLabelGrpcMetadataKey = "x-oak-label-bin"
 
 func translate(ctx context.Context, client translator_pb.TranslatorClient, text, fromLang, toLang string) {

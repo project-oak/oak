@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-import "oak/proto/handle.proto";
+import "proto/handle.proto";
 
 package oak.examples.injection;
 

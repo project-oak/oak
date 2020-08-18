@@ -317,7 +317,7 @@ fn build_server(opt: &BuildServer) -> Step {
                     name: "create bin folder".to_string(),
                     command: Cmd::new(
                         "mkdir",
-                        vec!["-p".to_string(), "oak/server/bin".to_string()],
+                        vec!["-p".to_string(), "oak_loader/bin".to_string()],
                     ),
                 },
                 Step::Single {
@@ -343,8 +343,8 @@ fn build_server(opt: &BuildServer) -> Step {
                                     "--release".to_string(),
                                 ]
                             },
-                            "--manifest-path=oak/server/rust/oak_loader/Cargo.toml".to_string(),
-                            "--out-dir=oak/server/bin".to_string(),
+                            "--manifest-path=oak_loader/Cargo.toml".to_string(),
+                            "--out-dir=oak_loader/bin".to_string(),
                             // `--out-dir` is unstable and requires `-Zunstable-options`.
                             "-Zunstable-options".to_string(),
                             ...if opt.server_variant == "logless" {
@@ -505,7 +505,7 @@ fn run_example_server(
     application_file: &str,
 ) -> Box<dyn Runnable> {
     Cmd::new_with_env(
-        "oak/server/bin/oak_loader",
+        "oak_loader/bin/oak_loader",
         spread![
             "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
             "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
@@ -719,8 +719,8 @@ fn build_docker(example: &Example) -> Step {
                     &[
                         "build",
                         "--tag=oak_docker",
-                        "--file=./oak/server/Dockerfile",
-                        "./oak/server",
+                        "--file=./oak_loader/Dockerfile",
+                        "./oak_loader",
                     ],
                 ),
             },

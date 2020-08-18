@@ -9,7 +9,7 @@ source "$SCRIPTS_DIR/common"
 
 # Generate coverage summary
 (
-    cd oak/server || exit 1
+    cd oak_loader || exit 1
     grcov ./target/debug/ \
           --source-dir=. \
           --llvm \

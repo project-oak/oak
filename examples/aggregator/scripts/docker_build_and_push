@@ -14,7 +14,7 @@ readonly BACKEND_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-aggregator-backend'
   # Build aggregator image
 
   # Build the base server.
-  docker build --tag=oak_docker --file=./oak/server/Dockerfile ./oak/server
+  docker build --tag=oak_docker --file=./oak_loader/Dockerfile ./oak_loader
   # Build and save the example
   docker build --tag=aggregator --file=./examples/Dockerfile "./examples/aggregator"
   docker tag aggregator "${AGGREGATOR_DOCKER_IMAGE_NAME}":latest

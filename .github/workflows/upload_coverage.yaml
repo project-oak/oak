@@ -35,4 +35,4 @@ jobs:
 
       - name: Upload to codecov.io
         run: |
-          bash <(curl -s https://codecov.io/bash) -f ./oak/server/target/debug/lcov.info
+          bash <(curl -s https://codecov.io/bash) -f ./oak_loader/target/debug/lcov.info

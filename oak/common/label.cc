@@ -24,7 +24,7 @@ namespace oak {
 //
 // See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
 //
-// Keep in sync with /oak/server/rust/oak_runtime/src/node/grpc/server/mod.rs.
+// Keep in sync with /oak_runtime/src/node/grpc/server/mod.rs.
 const char kOakLabelGrpcMetadataKey[] = "x-oak-label-bin";
 
 // The `-bin` suffix allows sending binary data for this metadata key.
