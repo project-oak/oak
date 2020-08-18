@@ -946,7 +946,7 @@
 
 <span class="doccomment">/// Set a mandatory prefix for all gRPC requests processed by a gRPC pseudo-Node.</span>
 <span class="kw">impl</span> <span class="ident">NamedService</span> <span class="kw">for</span> <span class="ident">HttpRequestHandler</span> {
-    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;oak&quot;</span>;
+    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;&quot;</span>;
 }
 
 <span class="kw">impl</span> <span class="ident">Service</span><span class="op">&lt;</span><span class="ident">http</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">hyper</span>::<span class="ident">Body</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">HttpRequestHandler</span> {
