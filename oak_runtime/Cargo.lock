@@ -729,7 +729,6 @@ dependencies = [
 name = "oak_abi"
 version = "0.1.0"
 dependencies = [
- "log",
  "oak_utils",
  "prost",
  "prost-build",
@@ -737,10 +736,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "oak_io"
 version = "0.1.0"
 dependencies = [
  "oak_abi",
+ "oak_derive",
+ "prost",
+ "prost-types",
 ]
 
 [[package]]

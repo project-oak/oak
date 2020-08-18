@@ -13,6 +13,7 @@ anyhow = "*"
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
+oak_io = "=0.1.0"
 prost = "*"
 
 [dev-dependencies]

@@ -19,7 +19,7 @@
 pub enum OakError {
     ProtobufDecodeError(Option<prost::DecodeError>),
     ProtobufEncodeError(Option<prost::EncodeError>),
-    OakStatus(crate::OakStatus),
+    OakStatus(oak_abi::OakStatus),
     IoError(std::io::Error),
 }
 
@@ -54,8 +54,8 @@ impl From<std::io::Error> for OakError {
     }
 }
 
-impl From<crate::OakStatus> for OakError {
-    fn from(status: crate::OakStatus) -> Self {
+impl From<oak_abi::OakStatus> for OakError {
+    fn from(status: oak_abi::OakStatus) -> Self {
         OakError::OakStatus(status)
     }
 }

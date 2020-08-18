@@ -12,6 +12,7 @@ crate-type = ["cdylib", "lib"]
 log = "*"
 abitest_common = { path = "../../abitest_common" }
 oak = "=0.1.0"
+oak_io = "=0.1.0"
 prost = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"

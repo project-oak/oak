@@ -57,7 +57,7 @@ impl super::Node for LogNode {
             let _ = runtime.wait_on_channels(&[handle]);
 
             match runtime.channel_read(handle) {
-                Ok(Some(message)) => match LogMessage::decode(&*message.data) {
+                Ok(Some(message)) => match LogMessage::decode(&*message.bytes) {
                     Ok(msg) => log!(
                         target: &format!("{}:{}", msg.file, msg.line),
                         to_level(msg.level),

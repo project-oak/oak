@@ -17,6 +17,7 @@ dependencies = [
  "maplit",
  "oak",
  "oak_abi",
+ "oak_io",
  "oak_runtime",
  "oak_services",
  "oak_tests",
@@ -39,6 +40,7 @@ dependencies = [
  "abitest_common",
  "log",
  "oak",
+ "oak_io",
  "prost",
  "serde",
  "serde_json",
@@ -75,6 +77,7 @@ dependencies = [
  "maplit",
  "oak",
  "oak_abi",
+ "oak_io",
  "oak_runtime",
  "oak_tests",
  "oak_utils",
@@ -282,7 +285,7 @@ name = "chat"
 version = "0.1.0"
 dependencies = [
  "assert_matches",
- "base64 0.11.0",
+ "base64",
  "bincode",
  "chat_grpc",
  "env_logger",
@@ -290,6 +293,7 @@ dependencies = [
  "log",
  "oak",
  "oak_abi",
+ "oak_io",
  "oak_runtime",
  "oak_tests",
  "oak_utils",
@@ -388,6 +392,7 @@ dependencies = [
  "log",
  "oak",
  "oak_abi",
+ "oak_io",
  "oak_runtime",
  "oak_tests",
  "oak_utils",
@@ -662,6 +667,7 @@ dependencies = [
  "hello_world_grpc",
  "log",
  "oak",
+ "oak_io",
  "oak_runtime",
  "oak_tests",
  "oak_utils",
@@ -847,6 +853,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "oak",
+ "oak_io",
  "oak_utils",
  "prost",
 ]
@@ -956,6 +963,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "oak",
+ "oak_io",
  "prost",
  "rand 0.7.3",
  "rand_distr",
@@ -1194,7 +1202,6 @@ dependencies = [
 name = "oak_abi"
 version = "0.1.0"
 dependencies = [
- "log",
  "oak_utils",
  "prost",
  "prost-build",
@@ -1215,6 +1222,9 @@ name = "oak_io"
 version = "0.1.0"
 dependencies = [
  "oak_abi",
+ "oak_derive",
+ "prost",
+ "prost-types",
 ]
 
 [[package]]
@@ -1473,6 +1483,7 @@ dependencies = [
  "env_logger",
  "log",
  "oak",
+ "oak_io",
  "oak_runtime",
  "oak_tests",
  "oak_utils",
@@ -1856,6 +1867,7 @@ dependencies = [
  "log",
  "oak",
  "oak_abi",
+ "oak_io",
  "oak_runtime",
  "oak_tests",
  "oak_utils",
@@ -2576,6 +2588,7 @@ dependencies = [
  "env_logger",
  "log",
  "oak",
+ "oak_io",
  "oak_runtime",
  "oak_tests",
  "prost",
@@ -2590,6 +2603,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "oak",
+ "oak_io",
  "oak_utils",
  "prost",
 ]
@@ -2615,6 +2629,7 @@ dependencies = [
  "maplit",
  "oak",
  "oak_abi",
+ "oak_io",
  "oak_runtime",
  "oak_tests",
  "oak_utils",

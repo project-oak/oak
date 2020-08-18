@@ -94,7 +94,7 @@ fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak
         .channel_create(&Label::public_untrusted())
         .expect("Could not create channel");
     let message = crate::NodeMessage {
-        data: vec![],
+        bytes: vec![],
         handles: vec![invocation_sender],
     };
 
@@ -122,7 +122,7 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
                 headers: hashmap! {},
             };
             let mut message = crate::NodeMessage {
-                data: vec![],
+                bytes: vec![],
                 handles: vec![],
             };
             let _ = resp.encode(&mut message.data);

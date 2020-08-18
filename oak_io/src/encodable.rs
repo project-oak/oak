@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{io::Message, OakError};
+use crate::{Message, OakError};
 
 /// A trait for objects that can be encoded as bytes + handles.
 pub trait Encodable {
@@ -27,6 +27,6 @@ impl<T: crate::handle::HandleVisit + prost::Message + Clone> Encodable for T {
         let handles = crate::handle::extract_handles(&mut msg);
         let mut bytes = Vec::new();
         self.encode(&mut bytes)?;
-        Ok(crate::io::Message { bytes, handles })
+        Ok(Message { bytes, handles })
     }
 }

@@ -16,46 +16,13 @@
 
 //! Helper types for data structures that can be transmitted over channels.
 
-use crate::{NodeMessage, RuntimeProxy};
+use crate::RuntimeProxy;
 use log::{error, info};
 use oak_abi::{ChannelReadStatus, OakStatus};
-use oak_io::handle::{ReadHandle, WriteHandle};
-
-/// A trait for objects that can be decoded from bytes + handles.
-pub trait Decodable: Sized {
-    fn decode(message: &NodeMessage) -> Result<Self, OakStatus>;
-}
-
-impl<T: prost::Message + std::default::Default> Decodable for T {
-    fn decode(message: &NodeMessage) -> Result<Self, OakStatus> {
-        if !message.handles.is_empty() {
-            error!("Non-empty handles field");
-            return Err(OakStatus::ErrInternal);
-        }
-        let value = T::decode(message.data.as_slice()).map_err(|error| {
-            error!("Couldn't decode Protobuf message: {}", error);
-            OakStatus::ErrInternal
-        })?;
-        Ok(value)
-    }
-}
-
-/// A trait for objects that can be encoded as bytes + handles.
-pub trait Encodable {
-    fn encode(&self) -> Result<NodeMessage, OakStatus>;
-}
-
-impl<T: prost::Message> Encodable for T {
-    fn encode(&self) -> Result<NodeMessage, OakStatus> {
-        let mut data = Vec::new();
-        self.encode(&mut data).map_err(|error| {
-            error!("Couldn't encode Protobuf message: {}", error);
-            OakStatus::ErrInternal
-        })?;
-        let handles = Vec::new();
-        Ok(NodeMessage { data, handles })
-    }
-}
+use oak_io::{
+    handle::{ReadHandle, WriteHandle},
+    Decodable, Encodable, OakError,
+};
 
 /// Wrapper for a [`ReadHandle`] that is responsible for reading messages from an Oak channel.
 pub struct Receiver<T: Decodable> {
@@ -75,20 +42,20 @@ impl<T: Decodable> Receiver<T> {
 /// Extension trait for runtime-specific Receiver functionality.
 pub trait ReceiverExt<T> {
     /// Close the underlying channel handle.
-    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus>;
+    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError>;
 
     /// Waits, reads and decodes a message from the [`Receiver::handle`].
-    fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakStatus>;
+    fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakError>;
 }
 
 impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
     /// Close the underlying channel handle.
-    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
-        runtime.channel_close(self.handle.handle)
+    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError> {
+        runtime.channel_close(self.handle.handle).map_err(|error| error.into())
     }
 
     /// Waits, reads and decodes a message from the [`Receiver::handle`].
-    fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakStatus> {
+    fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakError> {
         let read_status = runtime.wait_on_channels(&[self.handle.handle])?;
 
         match read_status[0] {
@@ -99,15 +66,15 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                         error!("Channel read error {:?}: Empty message", self.handle);
                         OakStatus::ErrInternal
                     })
-                })
+                }).map_err(|error| error.into())
                 .and_then(|message| T::decode(&message)),
             ChannelReadStatus::Orphaned => {
                 info!("Channel closed {:?}", self.handle);
-                Err(OakStatus::ErrChannelClosed)
+                Err(OakStatus::ErrChannelClosed.into())
             }
             status => {
                 error!("Channel read error {:?}: {:?}", self.handle, status);
-                Err(OakStatus::ErrInternal)
+                Err(OakStatus::ErrInternal.into())
             }
         }
     }
@@ -131,20 +98,20 @@ impl<T: Encodable> Sender<T> {
 /// Extension trait for runtime-specific Sender functionality.
 pub trait SenderExt<T> {
     /// Close the underlying channel handle.
-    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus>;
+    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError>;
 
     /// Encodes and sends a message to the [`Sender::handle`].
-    fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakStatus>;
+    fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError>;
 }
 
 impl<T: Encodable> SenderExt<T> for Sender<T> {
     /// Close the underlying channel handle.
-    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
-        runtime.channel_close(self.handle.handle)
+    fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError> {
+        runtime.channel_close(self.handle.handle).map_err(|error| error.into())
     }
 
     /// Encodes and sends a message to the [`Sender::handle`].
-    fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakStatus> {
-        runtime.channel_write(self.handle.handle, message.encode()?)
+    fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError> {
+        runtime.channel_write(self.handle.handle, message.encode()?).map_err(|error| error.into())
     }
 }

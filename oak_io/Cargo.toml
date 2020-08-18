@@ -9,6 +9,9 @@ license = "Apache-2.0"
 
 [dependencies]
 oak_abi = { path = "../oak_abi" }
+oak_derive = { path = "../sdk/rust/oak_derive" }
+prost = "*"
+prost-types = "*"
 
 [patch.crates-io]
 prost = { path = "../third_party/prost" }

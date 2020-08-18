@@ -29,6 +29,7 @@ use log::{debug, error, info, trace, warn};
 use maplit::hashset;
 use oak_abi::{proto::oak::application::GrpcClientConfiguration, Handle, OakStatus};
 use oak_io::handle::ReadHandle;
+use oak_io::OakError;
 use oak_services::proto::{google::rpc, oak::encap::GrpcResponse};
 use tokio::sync::oneshot;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
@@ -104,7 +105,7 @@ impl GrpcClientNode {
         &mut self,
         runtime: RuntimeProxy,
         handle: Handle,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<(), OakError> {
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
@@ -112,8 +113,8 @@ impl GrpcClientNode {
             // Read a gRPC invocation from the [`Receiver`].
             let invocation = receiver.receive(&runtime).map_err(|error| {
                 match error {
-                    OakStatus::ErrTerminated => debug!("gRPC client node is terminating."),
-                    OakStatus::ErrChannelClosed => info!("gRPC invocation channel closed"),
+                    OakError::OakStatus(OakStatus::ErrTerminated) => debug!("gRPC client node is terminating."),
+                    OakError::OakStatus(OakStatus::ErrChannelClosed) => info!("gRPC invocation channel closed"),
                     _ => error!("Couldn't receive the invocation: {:?}", error),
                 }
                 error
@@ -137,7 +138,7 @@ impl GrpcClientNode {
         &mut self,
         runtime: &RuntimeProxy,
         invocation: &Invocation,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<(), OakError> {
         let uri = self.uri.to_string();
         let record_completion_with_error = |method_name, error_code| {
             runtime
@@ -331,7 +332,7 @@ impl<'a> ResponseHandler<'a> {
         }
     }
 
-    async fn handle(&mut self) -> Result<(), OakStatus> {
+    async fn handle(&mut self) -> Result<(), OakError> {
         let body_stream = self.response_stream.get_mut();
         loop {
             let metrics_recorder = &mut self.metrics_recorder;

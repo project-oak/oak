@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 log = "*"
 oak = "=0.1.0"
+oak_io = "=0.1.0"
 prost = "*"
 translator_common = "=0.1.0"
 

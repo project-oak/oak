@@ -54,15 +54,3 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
 
     Ok(invocation_receiver)
 }
-
-impl crate::handle::HandleVisit for oak_services::proto::oak::encap::HttpRequest {
-    fn visit<F: FnMut(&mut crate::Handle)>(&mut self, visitor: F) -> F {
-        visitor
-    }
-}
-
-impl crate::handle::HandleVisit for oak_services::proto::oak::encap::HttpResponse {
-    fn visit<F: FnMut(&mut crate::Handle)>(&mut self, visitor: F) -> F {
-        visitor
-    }
-}

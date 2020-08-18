@@ -17,12 +17,16 @@
 //! Functionality for handling gRPC method invocations.
 
 use crate::{
-    io::{Decodable, Receiver, ReceiverExt, Sender, SenderExt},
+    io::{Receiver, ReceiverExt, Sender, SenderExt},
     NodeMessage, RuntimeProxy,
 };
 use log::error;
 use oak_abi::OakStatus;
-use oak_io::handle::{ReadHandle, WriteHandle};
+use oak_io::OakError;
+use oak_io::{
+    handle::{ReadHandle, WriteHandle},
+    Decodable,
+};
 use oak_services::proto::oak::encap::{GrpcRequest, GrpcResponse};
 
 /// A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the
@@ -34,17 +38,17 @@ pub struct Invocation {
 }
 
 impl Decodable for Invocation {
-    fn decode(message: &NodeMessage) -> Result<Self, OakStatus> {
-        if !message.data.is_empty() {
+    fn decode(message: &NodeMessage) -> Result<Self, OakError> {
+        if !message.bytes.is_empty() {
             error!("Non-empty data field");
-            return Err(OakStatus::ErrInternal);
+            return Err(OakStatus::ErrInternal.into());
         }
         if message.handles.len() != 2 {
             error!(
                 "Incorrect number of handles received: {} (expected: 2)",
                 message.handles.len()
             );
-            return Err(OakStatus::ErrInternal);
+            return Err(OakStatus::ErrInternal.into());
         }
         Ok(Self {
             receiver: Receiver::new(ReadHandle {
@@ -66,7 +70,7 @@ impl Invocation {
             error!("Failed to close sender channel in invocation: {:?}", err);
         }
     }
-    pub fn receive_request(&self, runtime: &RuntimeProxy) -> Result<GrpcRequest, OakStatus> {
+    pub fn receive_request(&self, runtime: &RuntimeProxy) -> Result<GrpcRequest, OakError> {
         self.receiver.receive(runtime)
     }
 
@@ -74,7 +78,7 @@ impl Invocation {
         &self,
         response: GrpcResponse,
         runtime: &RuntimeProxy,
-    ) -> Result<(), OakStatus> {
+    ) -> Result<(), OakError> {
         self.sender.send(response, runtime)
     }
     /// Send an error response for the invocation.

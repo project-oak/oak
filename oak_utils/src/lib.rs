@@ -226,7 +226,7 @@ where
     if options.derive_handle_visit {
         prost_config
             // Auto-derive the HandleVisit trait
-            .type_attribute(".", "#[derive(::oak::handle::HandleVisit)]")
+            .type_attribute(".", "#[derive(::oak_io::handle::HandleVisit)]")
             // Link relevant Oak protos to the Oak SDK types.
             .extern_path(".oak.handle", "::oak::handle")
             .extern_path(".oak.encap.GrpcRequest", "::oak::grpc::GrpcRequest")

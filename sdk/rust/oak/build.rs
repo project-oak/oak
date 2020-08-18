@@ -23,7 +23,6 @@ fn main() {
         ],
         &["../../.."],
         oak_utils::ProtoOptions {
-            // We can't derive the HandleVisit trait as we are defining it in this crate.
             derive_handle_visit: false,
             ..Default::default()
         },
