@@ -34,8 +34,7 @@ impl Runnable for CheckLicense {
     }
 
     fn run(self: Box<Self>, _opt: &Opt) -> Box<dyn Running> {
-        let file_content = std::fs::read_to_string(&self.path).expect("could not read file");
-        let result_value = if file_content.contains("Apache License") {
+        let result_value = if file_contains(&self.path.into(), "Apache License") {
             StatusResultValue::Ok
         } else {
             StatusResultValue::Error
