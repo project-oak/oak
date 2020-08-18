@@ -3,12 +3,12 @@ b8f14470d063daa3191af0cb7b09b58785a804d299e8d1427694b5267fb31a88  ./examples/tar
 784fe260b67f874e9340e3a4a8ac98bab00cae6f479139eae3236ea44a51f917  ./examples/target/wasm32-unknown-unknown/release/aggregator.wasm
 4013cc3313faebf34986a7d75b0d3195125b87deac108c113ac96822819f171c  ./examples/target/wasm32-unknown-unknown/release/chat.wasm
 dccbc7ce3b1de430019824b61611a10c2b638af30d0fc58d69464732d8fe27bc  ./examples/target/wasm32-unknown-unknown/release/database_proxy.wasm
-da900c27e079f527a24a759a7c5074fcef26c41e9a27803e1d6eb7b931bee682  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
+705bfadde9870201b55a9bf572863c9148da406225662e5a8025cdf51ef1b627  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
 3952e9874fcdf612235b016dc6133aefb0f7d79af3de18a9d39f9ed8320ae8d2  ./examples/target/wasm32-unknown-unknown/release/http_server.wasm
 2b80502982a744b980f9694223dbb58d33788078aea58bfc082d60346f0d2a2c  ./examples/target/wasm32-unknown-unknown/release/injection.wasm
 929ca52a81265081f0ad0fc7cda03ccdf0bb850c283666d4bedca2e7e81b7164  ./examples/target/wasm32-unknown-unknown/release/machine_learning.wasm
 cba804edbe9f2995e5a0866bc7244011eb0243c7de9b2a1d3af546fe07d83859  ./examples/target/wasm32-unknown-unknown/release/private_set_intersection.wasm
 0aeae2f99011270e2800f172fcd40c15b91f8f4b9794ab163673d33e8784bcb1  ./examples/target/wasm32-unknown-unknown/release/running_average.wasm
-f62099f376352ee1e8a417f4d697ffbbb15168ec0cc7c14cbeea2ef482ec3b1a  ./examples/target/wasm32-unknown-unknown/release/translator.wasm
+864f5f3a50d30dee889f8e891266a73641b0d398b8c8ba0698a965dd839e7706  ./examples/target/wasm32-unknown-unknown/release/translator.wasm
 1f00a776eeeb3513053cb1933dbec9688ea399207a03d0e32d182dce5f9f1ea4  ./examples/target/wasm32-unknown-unknown/release/trusted_information_retrieval.wasm
-87dec6f0616c4dbbf29917cb911c49f060b802d5463e16af4ab30594ffdcfb74  ./oak/server/target/x86_64-unknown-linux-musl/release/oak_loader
+2fea9d717bd2d74d8a7b115ff57c385a08b8bd2e2602caf896796f97d4f4e2e2  ./oak/server/target/x86_64-unknown-linux-musl/release/oak_loader
