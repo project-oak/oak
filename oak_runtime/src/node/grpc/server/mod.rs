@@ -25,7 +25,6 @@ use crate::{
     },
     ChannelHalfDirection, RuntimeProxy,
 };
-use futures_util::stream;
 use hyper::service::Service;
 use log::{debug, error, info, trace, warn};
 use oak_abi::{
@@ -40,7 +39,7 @@ use std::{
     net::SocketAddr,
     task::{Context, Poll},
 };
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tonic::{
     codegen::BoxFuture,
     metadata::MetadataMap,
@@ -269,8 +268,8 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
         Poll::Ready(Ok(()))
     }
 
-    /// Decodes an unary gRPC request using a [`VecCodec`] and processes it with
-    /// [`tonic::server::Grpc::unary`] and a [`GrpcInvocationHandler`].
+    /// Decodes a gRPC request using a [`VecCodec`] and processes it with
+    /// [`tonic::server::Grpc::server_streaming`] and an ephemeral [`GrpcInvocationHandler`].
     fn call(&mut self, request: http::Request<hyper::Body>) -> Self::Future {
         let grpc_handler = GrpcInvocationHandler::new(
             self.runtime.clone(),
@@ -363,17 +362,17 @@ struct GrpcInvocationHandler {
     method_name: String,
 }
 
+type SerializedResponseStream = mpsc::UnboundedReceiver<Result<Vec<u8>, tonic::Status>>;
+
 impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
     type Response = Vec<u8>;
-    type ResponseStream = std::pin::Pin<
-        Box<dyn futures_core::Stream<Item = Result<Self::Response, tonic::Status>> + Send + Sync>,
-    >;
-    type Future = BoxFuture<tonic::Response<Self::ResponseStream>, tonic::Status>;
+    type ResponseStream = SerializedResponseStream;
+    type Future = BoxFuture<tonic::Response<SerializedResponseStream>, tonic::Status>;
 
     fn call(&mut self, request: tonic::Request<Vec<u8>>) -> Self::Future {
         let handler = self.clone();
         let metrics_data = self.runtime.metrics_data();
-        // Build a future of type `Future<Output = Result<Self::ResponseStream, tonic::Status>>`
+        // Build a future of type `Future<Output = Result<SerializedResponseStream, tonic::Status>>`
         let future = async move {
             metrics_data
                 .grpc_server_metrics
@@ -402,25 +401,24 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
             let response_iter = handler
                 .inject_grpc_request(grpc_request, &oak_label)
                 .map_err(|()| tonic::Status::new(tonic::Code::Internal, ""))?;
+            let (tx, rx) = mpsc::unbounded_channel();
 
-            // First convert the `Iterator<Item = GrpcResponse>` to an
-            // `Iterator<Item = Result<Vec<u8>, tonic::Status>`.
-            let result_iter = response_iter.map(|response| {
-                debug!("Returning gRPC response: {:?}", response);
-                match response.status {
-                    None => Ok(response.rsp_msg),
-                    Some(status) if status.code == rpc::Code::Ok as i32 => Ok(response.rsp_msg),
-                    Some(status) => Err(to_tonic_status(status)),
+            // Spawn a separate thread to handle responses, because the underlying call to
+            // Runtime::wait_on_channels() blocks.
+            // TODO(#1376): make wait_on_channels() better integrated with `async` so we don't
+            // have to mix threads and async.
+            std::thread::spawn(move || {
+                for response in response_iter {
+                    debug!("Returning gRPC response: {:?}", response);
+                    let result = match response.status {
+                        None => Ok(response.rsp_msg),
+                        Some(status) if status.code == rpc::Code::Ok as i32 => Ok(response.rsp_msg),
+                        Some(status) => Err(to_tonic_status(status)),
+                    };
+                    tx.send(result).unwrap();
                 }
             });
-
-            // Now convert this to a streaming future of type
-            // `Stream<Item = Result<Vec<u8>, tonic::Status>`
-            // and then wrap it in Pin<Box<.>> to build a `Self::ResponseStream`.
-            let result_stream: Self::ResponseStream = Box::pin(stream::iter(result_iter));
-
-            // Finally, ensure this block returns an `Ok(tonic::Response<Self::ResponseStream>)`.
-            Ok(tonic::Response::new(result_stream))
+            Ok(tonic::Response::new(rx))
         };
 
         Box::pin(future)
