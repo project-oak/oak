@@ -1683,7 +1683,7 @@
                     <span class="ident">name</span>: <span class="string">&quot;create bin folder&quot;</span>.<span class="ident">to_string</span>(),
                     <span class="ident">command</span>: <span class="ident">Cmd</span>::<span class="ident">new</span>(
                         <span class="string">&quot;mkdir&quot;</span>,
-                        <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;-p&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;oak/server/bin&quot;</span>.<span class="ident">to_string</span>()],
+                        <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;-p&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;oak_loader/bin&quot;</span>.<span class="ident">to_string</span>()],
                     ),
                 },
                 <span class="ident">Step</span>::<span class="ident">Single</span> {
@@ -1709,8 +1709,8 @@
                                     <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
                                 ]
                             },
-                            <span class="string">&quot;--manifest-path=oak/server/rust/oak_loader/Cargo.toml&quot;</span>.<span class="ident">to_string</span>(),
-                            <span class="string">&quot;--out-dir=oak/server/bin&quot;</span>.<span class="ident">to_string</span>(),
+                            <span class="string">&quot;--manifest-path=oak_loader/Cargo.toml&quot;</span>.<span class="ident">to_string</span>(),
+                            <span class="string">&quot;--out-dir=oak_loader/bin&quot;</span>.<span class="ident">to_string</span>(),
                             <span class="comment">// `--out-dir` is unstable and requires `-Zunstable-options`.</span>
                             <span class="string">&quot;-Zunstable-options&quot;</span>.<span class="ident">to_string</span>(),
                             ...<span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;logless&quot;</span> {
@@ -1871,7 +1871,7 @@
     <span class="ident">application_file</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span> {
     <span class="ident">Cmd</span>::<span class="ident">new_with_env</span>(
-        <span class="string">&quot;oak/server/bin/oak_loader&quot;</span>,
+        <span class="string">&quot;oak_loader/bin/oak_loader&quot;</span>,
         <span class="macro">spread</span><span class="macro">!</span>[
             <span class="string">&quot;--grpc-tls-private-key=./examples/certs/local/local.key&quot;</span>.<span class="ident">to_string</span>(),
             <span class="string">&quot;--grpc-tls-certificate=./examples/certs/local/local.pem&quot;</span>.<span class="ident">to_string</span>(),
@@ -2085,8 +2085,8 @@
                     <span class="kw-2">&amp;</span>[
                         <span class="string">&quot;build&quot;</span>,
                         <span class="string">&quot;--tag=oak_docker&quot;</span>,
-                        <span class="string">&quot;--file=./oak/server/Dockerfile&quot;</span>,
-                        <span class="string">&quot;./oak/server&quot;</span>,
+                        <span class="string">&quot;--file=./oak_loader/Dockerfile&quot;</span>,
+                        <span class="string">&quot;./oak_loader&quot;</span>,
                     ],
                 ),
             },

@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_loader"] = [{"text":"impl Freeze for <a class=\"struct\" href=\"oak_loader/options/struct.Opt.html\" title=\"struct oak_loader::options::Opt\">Opt</a>","synthetic":true,"types":["oak_loader::options::Opt"]},{"text":"impl Freeze for <a class=\"struct\" href=\"oak_loader/options/struct.ConfigEntry.html\" title=\"struct oak_loader::options::ConfigEntry\">ConfigEntry</a>","synthetic":true,"types":["oak_loader::options::ConfigEntry"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
