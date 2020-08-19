@@ -53,6 +53,9 @@
 <span id="53">53</span>
 <span id="54">54</span>
 <span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -98,6 +101,7 @@
     <span class="comment">// Create a separate channel for receiving invocations and pass it to a gRPC pseudo-Node.</span>
     <span class="kw">let</span> (<span class="ident">invocation_sender</span>, <span class="ident">invocation_receiver</span>) <span class="op">=</span>
         <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">channel_create</span>::<span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create gRPC invocation channel&quot;</span>);
+    <span class="kw">let</span> <span class="ident">local_invocation_sender</span> <span class="op">=</span> <span class="ident">invocation_sender</span>.<span class="ident">handle</span>;
 
     <span class="kw">let</span> <span class="ident">grpc_server_init</span> <span class="op">=</span> <span class="ident">ServerInvocationChannel</span>::<span class="ident">new</span>(<span class="ident">invocation_sender</span>);
     <span class="ident">init_sender</span>
@@ -106,6 +110,8 @@
     <span class="ident">init_sender</span>
         .<span class="ident">close</span>()
         .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t close init message channel to gRPC server pseudo-node&quot;</span>);
+    <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">local_invocation_sender</span>.<span class="ident">handle</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t close invocation send channel copy&quot;</span>);
 
     <span class="prelude-val">Ok</span>(<span class="ident">invocation_receiver</span>)
 }
