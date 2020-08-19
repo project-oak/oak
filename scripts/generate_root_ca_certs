@@ -10,7 +10,7 @@ readonly COMMIT="be85a54767b3559e7bb262e4f1a78e1c5829e478"
 readonly DOWNLOAD_DIR="${SCRIPTS_DIR}/../downloads"
 readonly DOWNLOAD_FILE="${DOWNLOAD_DIR}/files.tar.gz"
 readonly EXTRACT_DIR="${DOWNLOAD_DIR}/files"
-readonly TARGET_FILE="${SCRIPTS_DIR}/../oak/server/rust/oak_loader/src/certs/roots.pem"
+readonly TARGET_FILE="${SCRIPTS_DIR}/../oak_loader/src/certs/roots.pem"
 
 if [[ -d "${DOWNLOAD_DIR}" ]]; then
     rm --recursive --force "${DOWNLOAD_DIR}"

@@ -27,7 +27,7 @@ proto_library(
     name = "injection_proto",
     srcs = ["injection.proto"],
     deps = [
-        "//oak/proto:handle_proto",
+        "//proto:handle_proto",
         "@com_google_protobuf//:empty_proto",
     ],
 )

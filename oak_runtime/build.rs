@@ -18,7 +18,7 @@ use oak_utils::{compile_protos_with_options, generate_grpc_code, CodegenOptions,
 
 fn main() {
     generate_grpc_code(
-        "../../../../oak/proto",
+        "../proto",
         &["authentication.proto"],
         CodegenOptions {
             build_server: true,
@@ -28,8 +28,8 @@ fn main() {
     .expect("Proto compilation failed.");
 
     compile_protos_with_options(
-        &["../../../../oak/proto/introspection_events.proto"],
-        &["../../../../oak/proto"],
+        &["../proto/introspection_events.proto"],
+        &["../proto"],
         ProtoOptions {
             // Exclude generation of HandleVisit auto-derive, as it would
             // require a reference to the Oak SDK to compile.

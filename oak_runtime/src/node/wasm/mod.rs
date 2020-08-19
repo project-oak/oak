@@ -554,7 +554,7 @@ fn oak_resolve_func(
     signature: &wasmi::Signature,
 ) -> Result<wasmi::FuncRef, wasmi::Error> {
     // The types in the signatures correspond to the parameters from
-    // /oak/server/rust/oak_abi/src/lib.rs
+    // /oak_abi/src/lib.rs
     let (index, sig) = match field_name {
         "node_create" => (
             NODE_CREATE,

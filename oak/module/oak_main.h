@@ -28,7 +28,7 @@ extern "C" void process_invocation(const uint8_t* req_buf, uint32_t req_size,
                                    oak_abi::Handle rsp_handle);
 
 // TODO(#422): Sort out inclusion of protobuf files
-// #include "oak/proto/oak_api.pb.h"
+// #include "proto/oak_api.pb.h"
 
 // Placeholder main entrypoint for C++ Oak Modules that have simple unary
 // method semantics.  The Oak Module needs to provide an implementation

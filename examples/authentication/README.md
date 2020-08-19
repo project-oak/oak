@@ -21,7 +21,7 @@ The Oak server can be run with the OpenID Connect authentication service enabled
 using the --oidc-client flag:
 
 ```bash
-cargo run --manifest-path=oak/server/rust/oak_loader/Cargo.toml -- \
+cargo run --manifest-path=oak_loader/Cargo.toml -- \
     --application=<APP_CONFIG_PATH> \
     --grpc-tls-private-key=<PRIVATE_KEY_PATH> \
     --grpc-tls-certificate=<CERTIFICATE_PATH> \

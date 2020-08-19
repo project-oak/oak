@@ -16,10 +16,10 @@ default = ["oak_debug"]
 anyhow = "*"
 env_logger = "*"
 log = "*"
-oak_abi = "=0.1.0"
-oak_runtime = "=0.1.0"
-oak_utils = "=0.1.0"
-prost = "*"
+oak_abi = { path = "../oak_abi" }
+oak_runtime = { path = "../oak_runtime" }
+oak_utils = { path = "../oak_utils" }
+prost = { path = "../third_party/prost" }
 rustls = "*"
 serde = { version = "*", features = ["derive"] }
 signal-hook = "*"
@@ -28,3 +28,9 @@ tonic = { version = "*", features = ["tls"] }
 
 [dev-dependencies]
 maplit = "*"
+
+[patch.crates-io]
+prost = { path = "../third_party/prost" }
+prost-derive = { path = "../third_party/prost/prost-derive" }
+prost-build = { path = "../third_party/prost/prost-build" }
+prost-types = { path = "../third_party/prost/prost-types" }

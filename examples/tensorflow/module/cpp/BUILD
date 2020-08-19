@@ -48,7 +48,7 @@ cc_binary(
         "//oak/module:oak_main",
         "//oak/module:placeholders",
         # TODO(#422): Sort out inclusion of protobuf files
-        # "//oak/proto:oak_api_cc_proto",
+        # "//proto:oak_api_cc_proto",
         "@org_tensorflow//tensorflow/lite:framework",
         "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
     ],
@@ -82,7 +82,7 @@ cc_binary(
         "//oak/module:oak_main",
         "//oak/module:placeholders",
         # TODO(#422): Sort out inclusion of protobuf files
-        # "//oak/proto:oak_api_cc_proto",
+        # "//proto:oak_api_cc_proto",
         "@org_tensorflow//tensorflow/lite/micro:micro_framework",
         "@org_tensorflow//tensorflow/lite/micro/kernels:all_ops_resolver",
     ],

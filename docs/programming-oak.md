@@ -292,7 +292,7 @@ the following script:
 The Oak Application is then started using the Oak Loader:
 
 ```bash
-./oak/server/target/x86_64-unknown-linux-musl/release/oak_loader --application=./examples/hello_world/bin/hello_world.oak
+./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader --application=./examples/hello_world/bin/hello_world.oak
 ```
 
 The Oak Loader will launch an [Oak Runtime](concepts.md#oak-runtime), and this

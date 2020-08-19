@@ -22,7 +22,7 @@ done
 cargo crev repo fetch all
 
 (
-  cd ./oak/server
+  cd ./oak_loader
   # Ignore status code from the verify command.
   cargo crev crate verify --show-all || true
 )

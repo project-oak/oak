@@ -19,7 +19,7 @@
 //! Invoke with:
 //!
 //! ```shell
-//! cargo run --manifest-path=oak/server/rust/oak_app_build/Cargo.toml -- \
+//! cargo run --manifest-path=sdk/rust/oak_app_build/Cargo.toml -- \
 //!     --manifest-path=<OAK_APP_MANIFEST_FILE>
 //! ```
 //!

@@ -18,7 +18,7 @@ use oak_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "../../../oak/proto",
+        "../../../proto",
         &["authentication.proto"],
         CodegenOptions {
             build_client: true,

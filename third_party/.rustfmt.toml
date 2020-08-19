@@ -1,0 +1,2 @@
+# Avoid automatically formatting any third party files.
+ignore = ['*']
