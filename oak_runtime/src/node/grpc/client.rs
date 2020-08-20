@@ -236,6 +236,7 @@ impl GrpcClientNode {
         // Connect to a remote gRPC service.
         let connection = Channel::builder(self.uri.clone())
             .tls_config(tls_config)
+            .expect("Couldn't create TLS configuration")
             .connect()
             .await?;
 
