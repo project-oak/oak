@@ -19,18 +19,18 @@ RUN apt-get --yes update \
   unzip \
   wget \
   zip \
-  zlib1g-dev
+  zlib1g-dev \
+  # Cleanup
+  && apt-get clean \
+  && rm --recursive --force /var/lib/apt/lists/*
 RUN git clone https://github.com/richfelker/musl-cross-make.git
-WORKDIR musl-cross-make
+WORKDIR /musl/musl-cross-make
 # Set the target
 RUN echo "TARGET=aarch64-linux-musl" > config.mak
 # Build the target - output ends up in 'output'
 RUN make install
-WORKDIR output
-RUN tar -czvf ../gcc-aarch64-linux-musl.tar.gz .
 
 # Bootstrap Bazel Stage
-#FROM docker.io/${TARGETARCH}${TARGETVARIANT}/debian:${debian_snapshot} AS bazel-bootstrap
 FROM debian:${debian_snapshot} AS bazel-bootstrap
 WORKDIR /bazel/bazel-dist
 RUN apt-get --yes update \
@@ -43,8 +43,10 @@ RUN apt-get --yes update \
   python3 \
   unzip \
   zip \
-  zlib1g-dev
-
+  zlib1g-dev \
+  # Cleanup
+  && apt-get clean \
+  && rm --recursive --force /var/lib/apt/lists/*
 ARG bazel_version
 RUN curl --location -k https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/bazel-${bazel_version}-dist.zip  -o bazel-${bazel_version}-dist.zip
 RUN  unzip bazel-${bazel_version}-dist.zip
@@ -58,7 +60,7 @@ RUN apt-get --yes update \
 WORKDIR /bazel/bazel-build
 ARG bazel_version
 RUN git clone -b ${bazel_version}  https://github.com/bazelbuild/bazel
-WORKDIR bazel 
+WORKDIR /bazel/bazel-build/bazel 
 COPY --from=bazel-bootstrap /bazel/bazel-dist/output/bazel ./bazel-bootstrap
 RUN SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) ./bazel-bootstrap build //src:bazel-dev --compilation_mode=opt
 
@@ -134,9 +136,7 @@ RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sou
 COPY --from=bazel-build /bazel/bazel-build/bazel /usr/bin/bazel
 
 # [aarch64] Pull in the musl compiler
-COPY --from=musl-build /musl/musl-cross-make/gcc-aarch64-linux-musl.tar.gz /tmp/gcc-aarch64-linux-musl.tar.gz
-# untar the archive to an executable position where Rust expects to find it
-RUN tar -zxvf /tmp/gcc-aarch64-linux-musl.tar.gz -C /usr
+COPY --from=musl-build /musl/musl-cross-make/output /usr
 
 # Install the necessary binaries and SDKs, ordering them from the less frequently changed to the
 # more frequently changed.
