@@ -1,0 +1,38 @@
+//
+// Copyright 2019 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+// Message definitions for internal messages within the Chat application.
+
+syntax = "proto3";
+
+package oak.examples.chat;
+
+import "chat.proto";
+import "proto/handle.proto";
+import "oak_services/proto/grpc_encap.proto";
+
+// Command sent to room nodes.
+//
+// This message is only used for inter-node communication, it is not exposed through gRPC.
+message Command {
+  oneof command {
+    // Sent when a new subscriber joins the room.
+    oak.handle.Sender join_room = 1 [(oak.handle.message_type) = ".oak.encap.GrpcResponse"];
+
+    // Command to send a message to the room (and thus to all subscribers).
+    Message send_message = 2;
+  }
+}
