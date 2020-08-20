@@ -18,5 +18,14 @@ rand_core = "*"
 rand = "*"
 serde = { version = "*", features = ["derive"] }
 
+[dev-dependencies]
+assert_matches = "*"
+chat_grpc = "=0.1.0"
+env_logger = "*"
+log = "*"
+oak_runtime = "=0.1.0"
+oak_tests = "=0.1.0"
+tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+
 [build-dependencies]
 oak_utils = "*"
