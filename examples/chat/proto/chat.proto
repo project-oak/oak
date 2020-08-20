@@ -19,8 +19,6 @@ syntax = "proto3";
 package oak.examples.chat;
 
 import "google/protobuf/empty.proto";
-import "proto/handle.proto";
-import "oak_services/proto/grpc_encap.proto";
 
 message CreateRoomRequest {
   // ID used to identify the room; knowledge of this value allows entry to the room. The client
@@ -67,17 +65,4 @@ service Chat {
 
   // Send a message to a chat room.
   rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty);
-}
-
-// Command sent to room nodes.
-//
-// This message is only used for inter-node communication, it is not exposed through gRPC.
-message Command {
-  oneof command {
-    // Sent when a new subscriber joins the room.
-    oak.handle.Sender join_room = 1 [(oak.handle.message_type) = ".oak.encap.GrpcResponse"];
-
-    // Command to send a message to the room (and thus to all subscribers).
-    Message send_message = 2;
-  }
 }
