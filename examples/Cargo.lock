@@ -305,15 +305,21 @@ checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 name = "chat"
 version = "0.1.0"
 dependencies = [
+ "assert_matches",
  "bincode",
+ "chat_grpc",
+ "env_logger",
  "log",
  "oak",
  "oak_abi",
+ "oak_runtime",
+ "oak_tests",
  "oak_utils",
  "prost",
  "rand 0.7.3",
  "rand_core 0.5.1",
  "serde",
+ "tokio",
 ]
 
 [[package]]
