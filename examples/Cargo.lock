@@ -317,6 +317,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "chat_grpc"
+version = "0.1.0"
+dependencies = [
+ "oak_utils",
+ "prost",
+ "tonic",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"

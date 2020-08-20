@@ -10,6 +10,7 @@ members = [
   "aggregator/module/rust",
   "authentication/client",
   "chat/module/rust",
+  "chat/grpc",
   "hello_world/grpc",
   "hello_world/client/rust",
   "hello_world/module/rust",
@@ -47,6 +48,7 @@ oak_utils = { path = "../oak_utils" }
 # Examples.
 abitest_grpc = { path = "abitest/grpc" }
 aggregator_grpc = { path = "aggregator/grpc" }
+chat_grpc = { path = "chat/grpc" }
 database_proxy = { path = "trusted_information_retrieval/module_1/rust" }
 hello_world_client = { path = "hello_world/client/rust" }
 hello_world_grpc = { path = "hello_world/grpc" }
