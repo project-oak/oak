@@ -20,12 +20,21 @@ serde = { version = "*", features = ["derive"] }
 
 [dev-dependencies]
 assert_matches = "*"
+base64 = "*"
 chat_grpc = "=0.1.0"
 env_logger = "*"
+futures = "*"
 log = "*"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
-tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+serial_test = "*"
+tonic = "*"
+tokio = { version = "*", features = [
+  "macros",
+  "rt-threaded",
+  "stream",
+  "sync"
+] }
 
 [build-dependencies]
 oak_utils = "*"
