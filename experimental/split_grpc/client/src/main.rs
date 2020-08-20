@@ -33,6 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let channel = Channel::from_static("https://[::1]:50051")
         .tls_config(tls_config)
+        .expect("Couldn't create TLS configuration")
         .connect()
         .await?;
 

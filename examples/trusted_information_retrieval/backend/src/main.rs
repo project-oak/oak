@@ -145,6 +145,7 @@ async fn main() -> anyhow::Result<()> {
     info!("Starting gRPC server at {:?}", address);
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))
+        .expect("Couldn't create TLS configuration")
         .add_service(DatabaseServer::new(handler))
         .serve_with_shutdown(address, tokio::signal::ctrl_c().map(|r| r.unwrap()))
         .await?;

@@ -168,7 +168,9 @@ pub async fn channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor
     let uri = RUNTIME_URI.parse().expect("Error parsing URI");
     let tls_config = ClientTlsConfig::new()
         .ca_certificate(Certificate::from_pem(include_str!("../certs/ca.pem")));
-    let builder = Channel::builder(uri).tls_config(tls_config);
+    let builder = Channel::builder(uri)
+        .tls_config(tls_config)
+        .expect("Couldn't create TLS configuration");
 
     // The Runtime may have just been started for a test, and make take some time
     // to come fully up, start a gRPC server and accept connections. Allow for
