@@ -431,6 +431,7 @@
 <span id="431">431</span>
 <span id="432">432</span>
 <span id="433">433</span>
+<span id="434">434</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -670,6 +671,7 @@
         <span class="comment">// Connect to a remote gRPC service.</span>
         <span class="kw">let</span> <span class="ident">connection</span> <span class="op">=</span> <span class="ident">Channel</span>::<span class="ident">builder</span>(<span class="self">self</span>.<span class="ident">uri</span>.<span class="ident">clone</span>())
             .<span class="ident">tls_config</span>(<span class="ident">tls_config</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create TLS configuration&quot;</span>)
             .<span class="ident">connect</span>()
             .<span class="kw">await</span><span class="question-mark">?</span>;
 

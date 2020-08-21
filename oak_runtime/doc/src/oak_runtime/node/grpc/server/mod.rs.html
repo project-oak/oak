@@ -684,6 +684,7 @@
 <span id="684">684</span>
 <span id="685">685</span>
 <span id="686">686</span>
+<span id="687">687</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -886,6 +887,7 @@
 
         <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Server</span>::<span class="ident">builder</span>()
             .<span class="ident">tls_config</span>(<span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">ServerTlsConfig</span>::<span class="ident">new</span>().<span class="ident">identity</span>(<span class="self">self</span>.<span class="ident">tls_identity</span>))
+            .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create TLS configuration&quot;</span>)
             <span class="comment">// The order for adding services are important. The namespaces of the services are</span>
             <span class="comment">// checked in the reverse order to which it was added. The `generic_handler` should</span>
             <span class="comment">// be added first so that it is checked last, otherwise it would handle requests</span>
