@@ -16,7 +16,7 @@
 
 use crate::{proto::oak::introspection_events::Events, Runtime};
 use hyper::{
-    header::{HeaderValue, CONTENT_TYPE},
+    header::CONTENT_TYPE,
     service::{make_service_fn, service_fn},
     Body, Error, Method, Request, Response, Server, StatusCode,
 };
@@ -138,7 +138,7 @@ fn handle_request(
             // There isn't a standardized content-type for protobuf messages
             // yet. We use the non-standard type used by Google's python API
             // client: https://github.com/googleapis/google-api-python-client/blob/master/googleapiclient/model.py
-            HeaderValue::from_static("application/x-protobuf"),
+            "application/x-protobuf".parse().unwrap(),
         );
 
         return Ok(response);
