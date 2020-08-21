@@ -53,45 +53,64 @@ Definition msg_is_head (ch: channel)(m: message): Prop :=
         | m' :: ms' => m' = m
     end. 
 
-Inductive step_node_ev: node_id -> call -> state -> trace -> state -> trace -> Prop :=
-    | SWriteChan s id n han msg s' t:
+Definition head_st (t: trace) :=
+    match t with 
+        | nil => None
+        | (s', _)::_ => Some s'
+    end.
+
+Inductive step_node_ev: node_id -> call -> trace -> trace -> Prop :=
+    | SWriteChan (t: trace) s id n han msg s' t:
+        head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (WriteChannel han msg) s s' ->
-        step_node_ev id (WriteChannel han msg) s t s' ((s',  n ---> msg) :: t)
-    | SReadChan s id n han chan msg s' t:
+        step_node_ev id (WriteChannel han msg) t ((s',  n ---> msg) :: t)
+    | SReadChan (t: trace) s id n han chan msg s' t:
+        head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (ReadChannel han) s s' ->
         msg_is_head chan msg ->
-        step_node_ev id (ReadChannel han) s t s' ((s', n <--- msg) :: t)
-    | SCreateChan s id n lbl s' t:
+        step_node_ev id (ReadChannel han) t ((s', n <--- msg) :: t)
+    | SCreateChan (t: trace) s id n lbl s' t:
             (* It seems clear that no event is needed since nodes only observe
             * contents of channels indirectly via reads *)
+        head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateChannel lbl) s s' ->
-        step_node_ev id (CreateChannel lbl) s t s' ((s', n --- ) :: t)
-    | SCreateNode s id n lbl h s' t:
+        step_node_ev id (CreateChannel lbl) t ((s', n --- ) :: t)
+    | SCreateNode (t: trace) s id n lbl h s' t:
             (* model observation that a node is created ?? *)
+        head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateNode lbl h) s s' ->
-        step_node_ev id (CreateNode lbl h) s t s' ((s', n ---) :: t)
-    | SInternal s id n s' t:
+        step_node_ev id (CreateNode lbl h) t ((s', n ---) :: t)
+    | SInternal (t: trace) s id n s' t:
+        head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id Internal s s' ->
-        step_node_ev id Internal s t s' ((s', n ---) :: t).
+        step_node_ev id Internal t ((s', n ---) :: t).
 
-Inductive step_system_ev: state -> trace -> state -> trace -> Prop :=
+Definition trace_upd_head_state (t: trace) (s: state) :=
+    match t with
+        | nil => nil
+        | (s', e) :: t' => (s, e) :: t'
+    end.
+
+Inductive step_system_ev: trace -> trace -> Prop :=
     | ValidStep id n c c' s t s' t':
+        head_st t  = Some s ->
+        head_st t' = Some s' ->
         s.(nodes) .[?id] = Some n ->
         n.(ncall) = c ->
-        step_node_ev id c s t s' t' ->
-        step_system_ev s t 
-            (state_upd_node id (node_upd_call n c') s') t'.
+        step_node_ev id c t t' ->
+        step_system_ev t (trace_upd_head_state t' (state_upd_node id
+            (node_upd_call n c') s')).
 
-Inductive step_system_ev_multi: state -> trace -> state -> trace -> Prop :=
-    | multi_system_ev_refl s t s' t':
-        step_system_ev s t s' t' ->
-        step_system_ev_multi s t s' t'
-    | multi_system_ev_tran s1 t1 s2 t2 s3 t3:
-        step_system_ev s1 t1 s2 t2 ->
-        step_system_ev_multi s2 t2 s3 t3 ->
-        step_system_ev_multi s1 t1 s3 t3.
+Inductive step_system_ev_multi: trace -> trace -> Prop :=
+    | multi_system_ev_refl t t':
+        step_system_ev t t' ->
+        step_system_ev_multi t t'
+    | multi_system_ev_tran t1 t2 t3:
+        step_system_ev t1 t2 ->
+        step_system_ev_multi t2 t3 ->
+        step_system_ev_multi t1 t3.
