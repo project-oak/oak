@@ -14,12 +14,14 @@
 // limitations under the License.
 //
 
-use crate::Runtime;
+use crate::{proto::oak::introspection_events::Events, Runtime};
 use hyper::{
+    header::CONTENT_TYPE,
     service::{make_service_fn, service_fn},
     Body, Error, Method, Request, Response, Server, StatusCode,
 };
 use log::info;
+use prost::Message;
 use regex::Regex;
 use std::{net::SocketAddr, sync::Arc};
 
@@ -120,6 +122,26 @@ fn handle_request(
             "Object Counts",
             &runtime.html_counts(),
         ))));
+    // Endpoint to load the list introspection events, serialized via protobuf
+    } else if path == "/introspection-events" {
+        let events_message = Events {
+            events: Vec::from(runtime.introspection_event_queue.lock().unwrap().clone()),
+        };
+
+        let mut buffer: Vec<u8> = Vec::new();
+        events_message.encode(&mut buffer).unwrap();
+
+        let mut response = Response::new(Body::from(buffer));
+
+        response.headers_mut().insert(
+            CONTENT_TYPE,
+            // There isn't a standardized content-type for protobuf messages
+            // yet. We use the non-standard type used by Google's python API
+            // client: https://github.com/googleapis/google-api-python-client/blob/master/googleapiclient/model.py
+            "application/x-protobuf".parse().unwrap(),
+        );
+
+        return Ok(response);
     } else if let Some(node_id) = find_id(path, "node") {
         if let Some(body) = runtime.html_for_node(node_id) {
             return Ok(Response::new(Body::from(html_wrap(
