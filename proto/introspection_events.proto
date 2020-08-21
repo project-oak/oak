@@ -20,6 +20,10 @@ import "google/protobuf/timestamp.proto";
 
 package oak.introspection_events;
 
+message Events {
+  repeated Event events = 1;
+}
+
 // This messages defines an event sent by the Oak Runtime to allow for dynamic
 // introspection in non-production enviroments. It provides a "schema" to
 // describe the creation/destruction of nodes, channels, handles, as well as the
