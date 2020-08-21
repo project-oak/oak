@@ -189,6 +189,28 @@
 <span id="189">189</span>
 <span id="190">190</span>
 <span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -206,12 +228,14 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Runtime</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::<span class="ident">Events</span>, <span class="ident">Runtime</span>};
 <span class="kw">use</span> <span class="ident">hyper</span>::{
+    <span class="ident">header</span>::<span class="ident">CONTENT_TYPE</span>,
     <span class="ident">service</span>::{<span class="ident">make_service_fn</span>, <span class="ident">service_fn</span>},
     <span class="ident">Body</span>, <span class="ident">Error</span>, <span class="ident">Method</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Server</span>, <span class="ident">StatusCode</span>,
 };
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
+<span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 
@@ -312,6 +336,26 @@
             <span class="string">&quot;Object Counts&quot;</span>,
             <span class="kw-2">&amp;</span><span class="ident">runtime</span>.<span class="ident">html_counts</span>(),
         ))));
+    <span class="comment">// Endpoint to load the list introspection events, serialized via protobuf</span>
+    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">path</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;/introspection-events&quot;</span> {
+        <span class="kw">let</span> <span class="ident">events_message</span> <span class="op">=</span> <span class="ident">Events</span> {
+            <span class="ident">events</span>: <span class="ident">Vec</span>::<span class="ident">from</span>(<span class="ident">runtime</span>.<span class="ident">introspection_event_queue</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">clone</span>()),
+        };
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+        <span class="ident">events_message</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>).<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">Body</span>::<span class="ident">from</span>(<span class="ident">buffer</span>));
+
+        <span class="ident">response</span>.<span class="ident">headers_mut</span>().<span class="ident">insert</span>(
+            <span class="ident">CONTENT_TYPE</span>,
+            <span class="comment">// There isn&#39;t a standardized content-type for protobuf messages</span>
+            <span class="comment">// yet. We use the non-standard type used by Google&#39;s python API</span>
+            <span class="comment">// client: https://github.com/googleapis/google-api-python-client/blob/master/googleapiclient/model.py</span>
+            <span class="string">&quot;application/x-protobuf&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
+        );
+
+        <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>);
     } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">node_id</span>) <span class="op">=</span> <span class="ident">find_id</span>(<span class="ident">path</span>, <span class="string">&quot;node&quot;</span>) {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">body</span>) <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">html_for_node</span>(<span class="ident">node_id</span>) {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">Body</span>::<span class="ident">from</span>(<span class="ident">html_wrap</span>(
