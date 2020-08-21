@@ -39,6 +39,14 @@ version = "=0.3.23"
 name = "rand"
 version = "=0.4.6"
 
+[[bans.skip]]
+name = "tokio-rustls"
+version = "=0.13.1"
+
+[[bans.skip]]
+name = "rustls"
+version = "=0.17.0"
+
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
