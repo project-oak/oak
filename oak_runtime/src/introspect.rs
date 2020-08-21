@@ -135,6 +135,9 @@ fn handle_request(
 
         response.headers_mut().insert(
             CONTENT_TYPE,
+            // There isn't a standardized content-type for protobuf messages
+            // yet. We use the non-standard type used by Google's python API
+            // client: https://github.com/googleapis/google-api-python-client/blob/master/googleapiclient/model.py
             HeaderValue::from_static("application/x-protobuf"),
         );
 
