@@ -78,6 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))
+        .expect("Couldn't create TLS configuration")
         .add_service(AggregatorServer::new(handler))
         .serve(address)
         .await?;

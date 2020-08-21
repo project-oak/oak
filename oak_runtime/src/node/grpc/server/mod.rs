@@ -199,6 +199,7 @@ impl Node for GrpcServerNode {
 
         let server = tonic::transport::Server::builder()
             .tls_config(tonic::transport::ServerTlsConfig::new().identity(self.tls_identity))
+            .expect("Couldn't create TLS configuration")
             // The order for adding services are important. The namespaces of the services are
             // checked in the reverse order to which it was added. The `generic_handler` should
             // be added first so that it is checked last, otherwise it would handle requests

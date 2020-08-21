@@ -34,6 +34,7 @@ pub async fn build_auth_client(
 
     let channel = Channel::from_shared(auth_server.to_owned())?
         .tls_config(tls_config)
+        .expect("Couldn't create TLS configuration")
         .connect()
         .await?;
 

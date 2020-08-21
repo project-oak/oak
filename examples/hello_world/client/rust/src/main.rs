@@ -61,6 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ClientTlsConfig::new().ca_certificate(Certificate::from_pem(root_tls_certificate));
     let channel = Channel::builder(uri)
         .tls_config(tls_config)
+        .expect("Couldn't create TLS configuration")
         .connect()
         .await
         .expect("Could not connect to Oak Application");

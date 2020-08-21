@@ -224,9 +224,9 @@ checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 
 [[package]]
 name = "base64"
-version = "0.12.1"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53d1ccbaf7d9ec9537465a97bf19edc1a4e158ecb49fc16178202238c569cc42"
+checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
 
 [[package]]
 name = "bincode"
@@ -777,9 +777,9 @@ dependencies = [
  "futures-util",
  "hyper",
  "log",
- "rustls",
+ "rustls 0.17.0",
  "tokio",
- "tokio-rustls",
+ "tokio-rustls 0.13.1",
  "webpki",
 ]
 
@@ -1179,7 +1179,7 @@ dependencies = [
 name = "oak_runtime"
 version = "0.1.0"
 dependencies = [
- "base64 0.12.1",
+ "base64 0.11.0",
  "byteorder",
  "bytes",
  "futures",
@@ -1204,7 +1204,7 @@ dependencies = [
  "regex",
  "reqwest",
  "roughenough",
- "rustls",
+ "rustls 0.17.0",
  "serde",
  "serde_json",
  "sha2",
@@ -1718,7 +1718,7 @@ version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b82c9238b305f26f53443e3a4bc8528d64b8d0bee408ec949eb7bf5635ec680"
 dependencies = [
- "base64 0.12.1",
+ "base64 0.12.3",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -1736,11 +1736,11 @@ dependencies = [
  "native-tls",
  "percent-encoding",
  "pin-project-lite",
- "rustls",
+ "rustls 0.17.0",
  "serde",
  "serde_urlencoded",
  "tokio",
- "tokio-rustls",
+ "tokio-rustls 0.13.1",
  "tokio-tls",
  "url",
  "wasm-bindgen",
@@ -1769,7 +1769,7 @@ dependencies = [
 name = "roughenough"
 version = "1.1.8"
 dependencies = [
- "base64 0.12.1",
+ "base64 0.11.0",
  "byteorder",
  "hex",
  "ring",
@@ -1819,6 +1819,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0d4a31f5d68413404705d6982529b0e11a9aacd4839d1d6222ee3b8cb4015e1"
 dependencies = [
  "base64 0.11.0",
+ "log",
+ "ring",
+ "sct",
+ "webpki",
+]
+
+[[package]]
+name = "rustls"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d1126dcf58e93cee7d098dbda643b5f92ed724f1f6a63007c1116eed6700c81"
+dependencies = [
+ "base64 0.12.3",
  "log",
  "ring",
  "sct",
@@ -2192,7 +2205,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15cb62a0d2770787abc96e99c1cd98fcf17f94959f3af63ca85bdfb203f051b4"
 dependencies = [
  "futures-core",
- "rustls",
+ "rustls 0.17.0",
+ "tokio",
+ "webpki",
+]
+
+[[package]]
+name = "tokio-rustls"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "228139ddd4fea3fa345a29233009635235833e52807af7ea6448ead03890d6a9"
+dependencies = [
+ "futures-core",
+ "rustls 0.18.1",
  "tokio",
  "webpki",
 ]
@@ -2232,13 +2257,13 @@ dependencies = [
 
 [[package]]
 name = "tonic"
-version = "0.2.1"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4afef9ce97ea39593992cf3fa00ff33b1ad5eb07665b31355df63a690e38c736"
+checksum = "74a5d6e7439ecf910463667080de772a9c7ddf26bc9fb4f3252ac3862e43337d"
 dependencies = [
  "async-stream",
  "async-trait",
- "base64 0.11.0",
+ "base64 0.12.3",
  "bytes",
  "futures-core",
  "futures-util",
@@ -2250,7 +2275,7 @@ dependencies = [
  "prost",
  "prost-derive",
  "tokio",
- "tokio-rustls",
+ "tokio-rustls 0.14.0",
  "tokio-util",
  "tower",
  "tower-balance",
