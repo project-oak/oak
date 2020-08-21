@@ -2244,12 +2244,8 @@ dependencies = [
 "checksum tokio-rustls 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)" = "15cb62a0d2770787abc96e99c1cd98fcf17f94959f3af63ca85bdfb203f051b4"
 "checksum tokio-rustls 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)" = "228139ddd4fea3fa345a29233009635235833e52807af7ea6448ead03890d6a9"
 "checksum tokio-util 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "be8242891f2b6cbef26a2d7e8605133c2c554cd35b3e4948ea892d6d68436499"
-<<<<<<< HEAD
-"checksum tonic 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "74a5d6e7439ecf910463667080de772a9c7ddf26bc9fb4f3252ac3862e43337d"
-=======
 "checksum toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)" = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
-"checksum tonic 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4afef9ce97ea39593992cf3fa00ff33b1ad5eb07665b31355df63a690e38c736"
->>>>>>> 7ca79584... Add Wasm module signature label
+"checksum tonic 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "74a5d6e7439ecf910463667080de772a9c7ddf26bc9fb4f3252ac3862e43337d"
 "checksum tonic-build 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "71d8d21cb568e802d77055ab7fcd43f0992206de5028de95c8d3a41118d32e8e"
 "checksum tower 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "fd3169017c090b7a28fce80abaad0ab4f5566423677c9331bb320af7e49cfe62"
 "checksum tower-balance 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a792277613b7052448851efcf98a2c433e6f1d01460832dc60bef676bc275d4c"
