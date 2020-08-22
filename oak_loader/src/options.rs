@@ -61,7 +61,7 @@ pub struct Opt {
         long,
         help = "Path to a TOML file containing information about Oak modules' signatures."
     )]
-    signature_manifest: Option<String>,
+    signatures_manifest: Option<String>,
     #[structopt(
         long,
         help = "Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
@@ -214,14 +214,14 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
 fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
     let mut sign_table = SignatureTable::default();
 
-    if let Some(signature_manifest) = &opt.signature_manifest {
-        let signature_manifest_file =
-            read_to_string(signature_manifest).context("Couldn't read signature manifest file")?;
-        let loaded_signature_manifest: SignatureManifest = toml::from_str(&signature_manifest_file)
+    if let Some(signatures_manifest) = &opt.signatures_manifest {
+        let signatures_manifest_file =
+            read_to_string(signatures_manifest).context("Couldn't read signature manifest file")?;
+        let loaded_signatures_manifest: SignatureManifest = toml::from_str(&signatures_manifest_file)
             .context("Couldn't parse signature manifest file as TOML")?;
-        debug!("Parsed signature manifest file: {:?}", signature_manifest);
+        debug!("Parsed signature manifest file: {:?}", signatures_manifest);
 
-        for (module_hash, signature_vec) in loaded_signature_manifest.signatures.iter() {
+        for (module_hash, signature_vec) in loaded_signatures_manifest.signatures.iter() {
             let mut parsed_signatures = vec![];
 
             for signature_item in signature_vec.iter() {
