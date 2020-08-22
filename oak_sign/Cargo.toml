@@ -1,0 +1,17 @@
+[workspace]
+
+[package]
+name = "oak_sign"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+log = "*"
+pem = "*"
+rand = "*"
+ring = "*"
+structopt = "*"
