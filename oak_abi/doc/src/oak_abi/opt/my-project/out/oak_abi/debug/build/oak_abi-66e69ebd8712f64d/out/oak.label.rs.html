@@ -71,6 +71,18 @@
 <span id="71">71</span>
 <span id="72">72</span>
 <span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// Label represents information flowing through a Node or channel.</span>
 <span class="doccomment">///</span>
@@ -94,7 +106,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Tag</span> {
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;tag::Tag&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;1, 2, 3&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;tag::Tag&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;1, 2, 3, 4&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">tag</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">tag</span>::<span class="ident">Tag</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// Nested message and enum types in `Tag`.</span>
@@ -107,6 +119,8 @@
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
         <span class="ident">WebAssemblyModuleTag</span>(<span class="kw">super</span>::<span class="ident">WebAssemblyModuleTag</span>),
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
+        <span class="ident">WebAssemblyModuleSignatureTag</span>(<span class="kw">super</span>::<span class="ident">WebAssemblyModuleSignatureTag</span>),
+        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;4&quot;</span>)]</span>
         <span class="ident">TlsEndpointTag</span>(<span class="kw">super</span>::<span class="ident">TlsEndpointTag</span>),
     }
 }
@@ -133,6 +147,16 @@
     <span class="doccomment">/// versions, based on a public verifiable log.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">web_assembly_module_hash_sha_256</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+}
+<span class="doccomment">/// Policies related to modules, referring to the signature of the native WebAssembly node.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WebAssemblyModuleSignatureTag</span> {
+    <span class="doccomment">/// Public key counterpart of the private key used to sign WebAssembly module.</span>
+    <span class="doccomment">/// In the current implementation is represented as a serialized `minisign` public key.</span>
+    <span class="doccomment">/// https://docs.rs/minisign/0.5.20/minisign/struct.PublicKey.html#method.to_bytes</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">public_key</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// Policies related to HTTPS communication.</span>
 <span class="doccomment">///</span>
