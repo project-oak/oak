@@ -256,10 +256,9 @@ RUN mkdir --parents ${minisign_dir}/build \
   && sha256sum --binary ${minisign_temp} && echo "${minisign_sha256} *${minisign_temp}" | sha256sum --check \
   && tar --extract --gzip --file=${minisign_temp} --directory=${minisign_dir} --strip-components=1 \
   && rm ${minisign_temp} \
-  && cd ${minisign_dir}/build \
-  && cmake .. \
-  && make \
-  && make install
+  && cmake -S ${minisign_dir} -B ${minisign_dir}/build \
+  && make --directory=${minisign_dir}/build \
+  && make install --directory=${minisign_dir}/build
 
 # Unset $CARGO_HOME so that the new user will use the default value for it, which will point it to
 # its own home folder.
