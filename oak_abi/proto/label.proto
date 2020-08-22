@@ -41,7 +41,8 @@ message Tag {
   oneof tag {
     GrpcTag grpc_tag = 1;
     WebAssemblyModuleTag web_assembly_module_tag = 2;
-    TlsEndpointTag tls_endpoint_tag = 3;
+    WebAssemblyModuleSignatureTag web_assembly_module_signature_tag = 3;
+    TlsEndpointTag tls_endpoint_tag = 4;
   }
 }
 
@@ -63,6 +64,14 @@ message WebAssemblyModuleTag {
   // TODO(#630): Replace this with identity assertions for multiple module
   // versions, based on a public verifiable log.
   bytes web_assembly_module_hash_sha_256 = 1;
+}
+
+// Policies related to modules, referring to the signature of the native WebAssembly node.
+message WebAssemblyModuleSignatureTag {
+  // Public key counterpart of the private key used to sign WebAssembly module.
+  // In the current implementation is represented as a serialized `minisign` public key.
+  // https://docs.rs/minisign/0.5.20/minisign/struct.PublicKey.html#method.to_bytes
+  bytes public_key = 1;
 }
 
 // Policies related to HTTPS communication.

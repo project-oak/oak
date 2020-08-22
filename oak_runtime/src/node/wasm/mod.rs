@@ -16,7 +16,10 @@
 
 //! WebAssembly Node functionality.
 
-use crate::{node::ConfigurationError, NodeMessage, NodePrivilege, NodeReadStatus, RuntimeProxy};
+use crate::{
+    node::ConfigurationError, sha_256_hex, NodeMessage, NodePrivilege, NodeReadStatus,
+    RuntimeProxy, Signature, SignatureTable,
+};
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, trace, warn};
 use maplit::hashset;
@@ -29,7 +32,6 @@ use oak_abi::{
 };
 use prost::Message as _;
 use rand::RngCore;
-use sha2::digest::Digest;
 use std::{string::String, sync::Arc};
 use tokio::sync::oneshot;
 use wasmi::ValueType;
@@ -798,11 +800,13 @@ impl WasmNode {
         node_name: &str,
         application_configuration: &ApplicationConfiguration,
         node_configuration: WebAssemblyConfiguration,
+        signature_table: &SignatureTable,
     ) -> Result<Self, ConfigurationError> {
         let wasm_module_bytes = application_configuration
             .wasm_modules
             .get(&node_configuration.wasm_module_name)
             .ok_or(ConfigurationError::IncorrectWebAssemblyModuleName)?;
+
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)
             .map_err(ConfigurationError::WasmiModuleInializationError)?;
         let entrypoint_name = node_configuration.wasm_entrypoint_name;
@@ -810,9 +814,17 @@ impl WasmNode {
             warn!("could not validate entrypoint: {:?}", err);
             ConfigurationError::IncorrectWebAssemblyModuleName
         })?;
+
+        let signatures = signature_table
+            .values
+            .get(&node_configuration.wasm_module_name)
+            .cloned()
+            .unwrap_or_default();
+
         // We compute the node privilege once and for all at start and just store it, since it does
         // not change throughout the node execution.
-        let node_privilege = wasm_node_privilege(&wasm_module_bytes);
+        let node_privilege = wasm_node_privilege(&wasm_module_bytes, signatures.as_ref());
+
         Ok(Self {
             node_name: node_name.to_string(),
             module: Arc::new(module),
@@ -824,15 +836,24 @@ impl WasmNode {
 
 /// Computes the [`NodePrivilege`] granted to a WebAssembly Node running the specified WebAssembly
 /// module.
-fn wasm_node_privilege(wasm_module_bytes: &[u8]) -> NodePrivilege {
-    let mut hasher = sha2::Sha256::new();
-    hasher.update(&wasm_module_bytes);
-    let wasm_module_hash = hasher.finalize();
-    debug!("Wasm module SHA-256 hash: {:x}", wasm_module_hash);
-    NodePrivilege::new(
-        hashset! { oak_abi::label::web_assembly_module_tag(&wasm_module_hash) },
-        hashset! { oak_abi::label::web_assembly_module_tag(&wasm_module_hash) },
-    )
+/// Created [`NodePrivilege`] consists of Wasm module hash and signature.
+fn wasm_node_privilege(wasm_module_bytes: &[u8], signatures: &[Signature]) -> NodePrivilege {
+    let module_hash = hex::decode(sha_256_hex(&wasm_module_bytes)).expect("Couldn't decode SHA-256 hex value");
+    debug!("Wasm module SHA-256 hash: {:?}", module_hash);
+    let hash_tag = oak_abi::label::web_assembly_module_tag(&module_hash);
+
+    let mut confidentiality_tags = hashset! { hash_tag.clone() };
+    let mut integrity_tags = hashset! { hash_tag };
+
+    for signature_item in signatures.iter() {
+        let signature_tag = oak_abi::label::web_assembly_module_signature_tag(
+            &signature_item.public_key.to_bytes(),
+        );
+        confidentiality_tags.insert(signature_tag.clone());
+        integrity_tags.insert(signature_tag);
+    }
+
+    NodePrivilege::new(confidentiality_tags, integrity_tags)
 }
 
 impl super::Node for WasmNode {

@@ -93,6 +93,20 @@ pub fn web_assembly_module_tag(web_assembly_module_hash_sha_256: &[u8]) -> Tag {
     }
 }
 
+/// Creates a [`Tag`] having as principal the provided WebAssembly module Ed25519 public key.
+/// https://ed25519.cr.yp.to
+///
+/// See https://github.com/project-oak/oak/blob/main/oak/proto/label.proto
+pub fn web_assembly_module_signature_tag(public_key: &[u8]) -> Tag {
+    Tag {
+        tag: Some(tag::Tag::WebAssemblyModuleSignatureTag(
+            WebAssemblyModuleSignatureTag {
+                public_key: public_key.into(),
+            },
+        )),
+    }
+}
+
 /// Creates a [`Tag`] having as principal the provided TLS authority.
 ///
 /// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto

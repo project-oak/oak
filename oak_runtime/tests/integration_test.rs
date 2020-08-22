@@ -39,7 +39,7 @@ mod common {
         },
         OakStatus,
     };
-    use oak_runtime::{config, GrpcConfiguration, Runtime};
+    use oak_runtime::{config, GrpcConfiguration, Runtime, SignatureTable};
     use std::sync::Arc;
     use wat::parse_str;
 
@@ -74,6 +74,7 @@ mod common {
             introspect_port: None,
             grpc_config: GrpcConfiguration::default(),
             app_config: application_configuration,
+            sign_table: SignatureTable::default(),
             config_map: ConfigMap::default(),
         })
     }

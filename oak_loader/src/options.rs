@@ -20,10 +20,12 @@
 use anyhow::{anyhow, Context};
 use core::str::FromStr;
 use log::debug;
+use minisign::{PublicKey, SignatureBox};
 use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 use oak_runtime::{
     auth::oidc_utils::{parse_client_info_json, ClientInfo},
     config::load_certificate,
+    Signature, SignatureTable,
 };
 use prost::Message;
 use std::{
@@ -57,6 +59,11 @@ pub struct Opt {
     root_tls_certificate: Option<String>,
     #[structopt(
         long,
+        help = "Path to a TOML file containing information about Oak modules' signatures."
+    )]
+    signatures_manifest: Option<String>,
+    #[structopt(
+        long,
         help = "Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
         OpenID Connect authentication will not be available if this parameter is not specified."
     )]
@@ -78,6 +85,21 @@ pub struct Opt {
         help = "Configuration files to expose to the Oak Application, each in key=filename format."
     )]
     config_files: Vec<ConfigEntry>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SignatureManifest {
+    // Maps each module hash to a vector of [`SignatureLocation`].
+    signatures: HashMap<String, Vec<SignatureLocation>>,
+}
+
+// Paths to public key and signature files.
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SignatureLocation {
+    public_key: String,
+    signature: String,
 }
 
 /// A specification of a configuration entry as human readable key and a path to a file whose
@@ -117,6 +139,9 @@ pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfigurati
     // Create the overall gRPC configuration.
     let grpc_config = create_grpc_config(&opt)?;
 
+    // Create signature table.
+    let sign_table = create_sign_table(&opt)?;
+
     // Create Runtime config.
     let runtime_configuration = oak_runtime::RuntimeConfiguration {
         metrics_port: if cfg!(feature = "oak_debug") && !opt.no_metrics {
@@ -131,6 +156,7 @@ pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfigurati
         },
         grpc_config,
         app_config,
+        sign_table,
         config_map,
     };
 
@@ -179,6 +205,46 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
     };
 
     Ok(grpc_config)
+}
+
+/// Create a signature table for Oak runtime.
+/// Returns an [`oak_runtime::SignatureTable`] that maps each module hash to a vector of
+/// [`oak_runtime::Signature`].
+/// Returned signatures are not verified yet, they are supposed to be verified by the `oak_runtime`.
+fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
+    let mut sign_table = SignatureTable::default();
+
+    if let Some(signatures_manifest) = &opt.signatures_manifest {
+        let signatures_manifest_file =
+            read_to_string(signatures_manifest).context("Couldn't read signature manifest file")?;
+        let loaded_signatures_manifest: SignatureManifest = toml::from_str(&signatures_manifest_file)
+            .context("Couldn't parse signature manifest file as TOML")?;
+        debug!("Parsed signature manifest file: {:?}", signatures_manifest);
+
+        for (module_hash, signature_vec) in loaded_signatures_manifest.signatures.iter() {
+            let mut parsed_signatures = vec![];
+
+            for signature_item in signature_vec.iter() {
+                debug!("Loading signature for {}", module_hash);
+                let public_key = PublicKey::from_file(&signature_item.public_key)
+                    .context("Couldn't parse public key file")?;
+                debug!("Parsed public key: {}", public_key.to_base64());
+                let signature = SignatureBox::from_file(&signature_item.signature)
+                    .context("Couldn't parse signature file")?;
+                debug!("Parsed signature: {}", signature.to_string());
+                parsed_signatures.push(Signature {
+                    public_key,
+                    signature,
+                });
+            }
+
+            sign_table
+                .values
+                .insert(module_hash.to_string(), parsed_signatures);
+        }
+    }
+
+    Ok(sign_table)
 }
 
 /// If `oak_debug` is enabled, read root TLS certificate from the specified file. Otherwise, return

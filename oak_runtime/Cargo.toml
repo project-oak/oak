@@ -20,6 +20,7 @@ base64 = "*"
 futures = "*"
 futures-core = "*"
 futures-util = "*"
+hex = "*"
 http = "*"
 hyper = "*"
 itertools = "*"
@@ -27,6 +28,7 @@ jsonwebtoken = "*"
 lazy_static = "*"
 log = { version = "*" }
 maplit = "*"
+minisign = "*"
 oak_abi = { path = "../oak_abi" }
 oak_io = { path = "../oak_io" }
 oak_services = { path = "../oak_services" }
@@ -56,6 +58,7 @@ wasmi = { version = "*", default-features = false, features = ["core"] }
 
 [dev-dependencies]
 env_logger = "*"
+minisign = "*"
 regex = "*"
 wat = "*"
 

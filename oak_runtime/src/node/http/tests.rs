@@ -27,9 +27,13 @@ async fn test_low_level_server_node() {
         wasm_modules: hashmap! {},
         initial_node_configuration: None,
     };
+    let signature_table = crate::SignatureTable::default();
     info!("Create runtime for test");
-    let runtime =
-        crate::RuntimeProxy::create_runtime(&configuration, &crate::GrpcConfiguration::default());
+    let runtime = crate::RuntimeProxy::create_runtime(
+        &configuration,
+        &crate::GrpcConfiguration::default(),
+        &signature_table,
+    );
 
     let (init_receiver, invocation_receiver) = create_communication_channel(&runtime);
 

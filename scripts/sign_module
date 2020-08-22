@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "${SCRIPTS_DIR}/common"
+
+secret_key="./examples/certs/minisign/minisign.key"
+public_key="./examples/certs/minisign/minisign.pub"
+while getopts "i:o:s:p:h" opt; do
+  case "${opt}" in
+    h)
+      echo -e "Usage: ${0} [-h] -i INPUT_FILE -o OUTPUT_FILE
+
+Sign Wasm module using Ed25519 scheme.
+
+Options:
+  -i    Input Wasm file
+  -o    Output signature file
+  -h    Print Help (this message) and exit"
+      exit 0;;
+    i)
+      readonly INPUT_FILE="${OPTARG}";;
+    o)
+      readonly OUTPUT_FILE="${OPTARG}";;
+    s)
+      secret_key="${OPTARG}";;
+    p)
+      public_key="${OPTARG}";;
+    *)
+      echo "Invalid argument: ${OPTARG}"
+      exit 1;;
+  esac
+done
+
+if [[ -z "${INPUT_FILE+z}" ]]; then
+  echo "Missing required option: -i INPUT_FILE"
+  exit 1
+fi
+
+if [[ -z "${OUTPUT_FILE+z}" ]]; then
+  echo "Missing required option: -o OUTPUT_FILE"
+  exit 1
+fi
+
+minisign -S -m "${INPUT_FILE}" -x "${OUTPUT_FILE}" \
+  -s "${secret_key}" -p "${public_key}"

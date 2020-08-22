@@ -158,6 +158,7 @@ pub fn runtime_config_wasm(
             }),
         },
         config_map,
+        sign_table: oak_runtime::SignatureTable::default(),
     }
 }
 

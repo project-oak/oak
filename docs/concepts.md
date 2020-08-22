@@ -172,6 +172,8 @@ The following types of security principals are supported in Oak:
   a user identity
 - **computation**: specified by a measurement (hash) of the WebAssembly module
   running within an Oak Node
+- **authority**: specified by a [Ed25519](https://ed25519.cr.yp.to/) public key
+  corresponding to a Wasm nodule signature
 
 Tags and Labels are represented as serialized
 [protobuf messages](/oak_abi/proto/label.proto).
