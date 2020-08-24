@@ -71,16 +71,6 @@
 <span id="71">71</span>
 <span id="72">72</span>
 <span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -104,13 +94,10 @@
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
 
-<span class="kw">mod</span> <span class="ident">decodable</span>;
-<span class="kw">mod</span> <span class="ident">encodable</span>;
 <span class="kw">mod</span> <span class="ident">receiver</span>;
 <span class="kw">mod</span> <span class="ident">sender</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">decodable</span>::<span class="ident">Decodable</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">encodable</span>::<span class="ident">Encodable</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_io</span>::{<span class="ident">Decodable</span>, <span class="ident">Encodable</span>, <span class="ident">Message</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">receiver</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sender</span>::{<span class="ident">Sender</span>, <span class="ident">SenderExt</span>};
 
@@ -125,13 +112,6 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> (<span class="ident">wh</span>, <span class="ident">rh</span>) <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">channel_create_with_label</span>(<span class="ident">label</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((<span class="ident">Sender</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">wh</span>), <span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">rh</span>)))
-}
-
-<span class="doccomment">/// A simple holder for bytes + handles, using internally owned buffers.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Message</span> {
-    <span class="kw">pub</span> <span class="ident">bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">Handle</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].</span>

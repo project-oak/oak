@@ -517,7 +517,7 @@
     <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">derive_handle_visit</span> {
         <span class="ident">prost_config</span>
             <span class="comment">// Auto-derive the HandleVisit trait</span>
-            .<span class="ident">type_attribute</span>(<span class="string">&quot;.&quot;</span>, <span class="string">&quot;#[derive(::oak::handle::HandleVisit)]&quot;</span>)
+            .<span class="ident">type_attribute</span>(<span class="string">&quot;.&quot;</span>, <span class="string">&quot;#[derive(::oak_io::handle::HandleVisit)]&quot;</span>)
             <span class="comment">// Link relevant Oak protos to the Oak SDK types.</span>
             .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.handle&quot;</span>, <span class="string">&quot;::oak::handle&quot;</span>)
             .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.encap.GrpcRequest&quot;</span>, <span class="string">&quot;::oak::grpc::GrpcRequest&quot;</span>)

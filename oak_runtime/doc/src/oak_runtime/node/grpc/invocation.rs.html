@@ -99,6 +99,10 @@
 <span id="99"> 99</span>
 <span id="100">100</span>
 <span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -119,12 +123,16 @@
 <span class="doccomment">//! Functionality for handling gRPC method invocations.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">io</span>::{<span class="ident">Decodable</span>, <span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>, <span class="ident">Sender</span>, <span class="ident">SenderExt</span>},
+    <span class="ident">io</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>, <span class="ident">Sender</span>, <span class="ident">SenderExt</span>},
     <span class="ident">NodeMessage</span>, <span class="ident">RuntimeProxy</span>,
 };
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">error</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
-<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
+<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">OakError</span>;
+<span class="kw">use</span> <span class="ident">oak_io</span>::{
+    <span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>},
+    <span class="ident">Decodable</span>,
+};
 <span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>};
 
 <span class="doccomment">/// A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the</span>
@@ -136,17 +144,17 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Decodable</span> <span class="kw">for</span> <span class="ident">Invocation</span> {
-    <span class="kw">fn</span> <span class="ident">decode</span>(<span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">NodeMessage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">message</span>.<span class="ident">data</span>.<span class="ident">is_empty</span>() {
+    <span class="kw">fn</span> <span class="ident">decode</span>(<span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">NodeMessage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">message</span>.<span class="ident">bytes</span>.<span class="ident">is_empty</span>() {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Non-empty data field&quot;</span>);
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>.<span class="ident">into</span>());
         }
         <span class="kw">if</span> <span class="ident">message</span>.<span class="ident">handles</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
             <span class="macro">error</span><span class="macro">!</span>(
                 <span class="string">&quot;Incorrect number of handles received: {} (expected: 2)&quot;</span>,
                 <span class="ident">message</span>.<span class="ident">handles</span>.<span class="ident">len</span>()
             );
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>.<span class="ident">into</span>());
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">receiver</span>: <span class="ident">Receiver</span>::<span class="ident">new</span>(<span class="ident">ReadHandle</span> {
@@ -168,7 +176,7 @@
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to close sender channel in invocation: {:?}&quot;</span>, <span class="ident">err</span>);
         }
     }
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">receive_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GrpcRequest</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">receive_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GrpcRequest</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">receiver</span>.<span class="ident">receive</span>(<span class="ident">runtime</span>)
     }
 
@@ -176,7 +184,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">response</span>: <span class="ident">GrpcResponse</span>,
         <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">response</span>, <span class="ident">runtime</span>)
     }
     <span class="doccomment">/// Send an error response for the invocation.</span>

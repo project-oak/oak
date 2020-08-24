@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["oak"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.StructuralEq.html\" title=\"trait core::marker::StructuralEq\">StructuralEq</a> for <a class=\"struct\" href=\"oak/io/struct.Message.html\" title=\"struct oak::io::Message\">Message</a>","synthetic":false,"types":["oak::io::Message"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

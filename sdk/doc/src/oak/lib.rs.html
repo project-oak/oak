@@ -524,6 +524,7 @@
 <span id="524">524</span>
 <span id="525">525</span>
 <span id="526">526</span>
+<span id="527">527</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -554,12 +555,13 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>};
 
 <span class="comment">// Re-export oak_io structs that are also visible as part of the SDK API.</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_io</span>::{
+    <span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>},
+    <span class="ident">OakError</span>,
+};
 
-<span class="kw">mod</span> <span class="ident">error</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;macos&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">stubs</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">error</span>::<span class="ident">OakError</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">grpc</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">handle</span>;

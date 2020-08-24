@@ -115,39 +115,6 @@
 <span id="115">115</span>
 <span id="116">116</span>
 <span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -167,46 +134,13 @@
 
 <span class="doccomment">//! Helper types for data structures that can be transmitted over channels.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">NodeMessage</span>, <span class="ident">RuntimeProxy</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">RuntimeProxy</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>};
-<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
-
-<span class="doccomment">/// A trait for objects that can be decoded from bytes + handles.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Decodable</span>: <span class="ident">Sized</span> {
-    <span class="kw">fn</span> <span class="ident">decode</span>(<span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">NodeMessage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>;
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">prost</span>::<span class="ident">Message</span> <span class="op">+</span> <span class="ident">std</span>::<span class="ident">default</span>::<span class="ident">Default</span><span class="op">&gt;</span> <span class="ident">Decodable</span> <span class="kw">for</span> <span class="ident">T</span> {
-    <span class="kw">fn</span> <span class="ident">decode</span>(<span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">NodeMessage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">message</span>.<span class="ident">handles</span>.<span class="ident">is_empty</span>() {
-            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Non-empty handles field&quot;</span>);
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>);
-        }
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">decode</span>(<span class="ident">message</span>.<span class="ident">data</span>.<span class="ident">as_slice</span>()).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t decode Protobuf message: {}&quot;</span>, <span class="ident">error</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
-        })<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">value</span>)
-    }
-}
-
-<span class="doccomment">/// A trait for objects that can be encoded as bytes + handles.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Encodable</span> {
-    <span class="kw">fn</span> <span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NodeMessage</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>;
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">prost</span>::<span class="ident">Message</span><span class="op">&gt;</span> <span class="ident">Encodable</span> <span class="kw">for</span> <span class="ident">T</span> {
-    <span class="kw">fn</span> <span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NodeMessage</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="self">self</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t encode Protobuf message: {}&quot;</span>, <span class="ident">error</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
-        })<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">handles</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="prelude-val">Ok</span>(<span class="ident">NodeMessage</span> { <span class="ident">data</span>, <span class="ident">handles</span> })
-    }
-}
+<span class="kw">use</span> <span class="ident">oak_io</span>::{
+    <span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>},
+    <span class="ident">Decodable</span>, <span class="ident">Encodable</span>, <span class="ident">OakError</span>,
+};
 
 <span class="doccomment">/// Wrapper for a [`ReadHandle`] that is responsible for reading messages from an Oak channel.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Decodable</span><span class="op">&gt;</span> {
@@ -226,20 +160,20 @@
 <span class="doccomment">/// Extension trait for runtime-specific Receiver functionality.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ReceiverExt</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Close the underlying channel handle.</span>
-    <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Waits, reads and decodes a message from the [`Receiver::handle`].</span>
-    <span class="kw">fn</span> <span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakError</span><span class="op">&gt;</span>;
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Decodable</span><span class="op">&gt;</span> <span class="ident">ReceiverExt</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Close the underlying channel handle.</span>
-    <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>)
+    <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
+        <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="ident">error</span>.<span class="ident">into</span>())
     }
 
     <span class="doccomment">/// Waits, reads and decodes a message from the [`Receiver::handle`].</span>
-    <span class="kw">fn</span> <span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">read_status</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">wait_on_channels</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>])<span class="question-mark">?</span>;
 
         <span class="kw">match</span> <span class="ident">read_status</span>[<span class="number">0</span>] {
@@ -250,15 +184,15 @@
                         <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Channel read error {:?}: Empty message&quot;</span>, <span class="self">self</span>.<span class="ident">handle</span>);
                         <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
                     })
-                })
+                }).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="ident">error</span>.<span class="ident">into</span>())
                 .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">message</span><span class="op">|</span> <span class="ident">T</span>::<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="ident">message</span>)),
             <span class="ident">ChannelReadStatus</span>::<span class="ident">Orphaned</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Channel closed {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">handle</span>);
-                <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>)
+                <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>.<span class="ident">into</span>())
             }
             <span class="ident">status</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Channel read error {:?}: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">handle</span>, <span class="ident">status</span>);
-                <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>)
+                <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>.<span class="ident">into</span>())
             }
         }
     }
@@ -282,21 +216,21 @@
 <span class="doccomment">/// Extension trait for runtime-specific Sender functionality.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SenderExt</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Close the underlying channel handle.</span>
-    <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Encodes and sends a message to the [`Sender::handle`].</span>
-    <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="ident">T</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="ident">T</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span>;
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span><span class="op">&gt;</span> <span class="ident">SenderExt</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Close the underlying channel handle.</span>
-    <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>)
+    <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
+        <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="ident">error</span>.<span class="ident">into</span>())
     }
 
     <span class="doccomment">/// Encodes and sends a message to the [`Sender::handle`].</span>
-    <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="ident">T</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="ident">runtime</span>.<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>, <span class="ident">message</span>.<span class="ident">encode</span>()<span class="question-mark">?</span>)
+    <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="ident">T</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
+        <span class="ident">runtime</span>.<span class="ident">channel_write</span>(<span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">handle</span>, <span class="ident">message</span>.<span class="ident">encode</span>()<span class="question-mark">?</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="ident">error</span>.<span class="ident">into</span>())
     }
 }
 </pre></div>

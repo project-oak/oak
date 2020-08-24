@@ -1254,6 +1254,7 @@
 <span id="1254">1254</span>
 <span id="1255">1255</span>
 <span id="1256">1256</span>
+<span id="1257">1257</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1282,7 +1283,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">channel</span>::{<span class="ident">with_reader_channel</span>, <span class="ident">with_writer_channel</span>, <span class="ident">Channel</span>},
-    <span class="ident">message</span>::{<span class="ident">Message</span>, <span class="ident">NodeMessage</span>},
+    <span class="ident">message</span>::<span class="ident">Message</span>,
     <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::{
         <span class="ident">event</span>::<span class="ident">EventDetails</span>, <span class="ident">ChannelCreated</span>, <span class="ident">Event</span>, <span class="ident">HandleCreated</span>, <span class="ident">HandleDestroyed</span>,
@@ -1299,6 +1300,7 @@
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{<span class="ident">ApplicationConfiguration</span>, <span class="ident">ConfigMap</span>, <span class="ident">NodeConfiguration</span>},
     <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
 };
+<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">Message</span> <span class="kw">as</span> <span class="ident">NodeMessage</span>;
 <span class="kw">use</span> <span class="ident">prometheus</span>::<span class="ident">proto</span>::<span class="ident">MetricFamily</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">RngCore</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -2127,7 +2129,7 @@
     <span class="doccomment">/// Translate the Node-relative handles in the `NodeMessage` to channel halves.</span>
     <span class="kw">fn</span> <span class="ident">message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_msg</span>: <span class="ident">NodeMessage</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Message</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">Message</span> {
-            <span class="ident">data</span>: <span class="ident">node_msg</span>.<span class="ident">data</span>,
+            <span class="ident">data</span>: <span class="ident">node_msg</span>.<span class="ident">bytes</span>,
             <span class="ident">channels</span>: <span class="ident">node_msg</span>
                 .<span class="ident">handles</span>
                 .<span class="ident">into_iter</span>()
@@ -2261,7 +2263,7 @@
     <span class="doccomment">/// internal channel references.</span>
     <span class="kw">fn</span> <span class="ident">node_message_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">msg</span>: <span class="ident">Message</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodeMessage</span> {
         <span class="ident">NodeMessage</span> {
-            <span class="ident">data</span>: <span class="ident">msg</span>.<span class="ident">data</span>,
+            <span class="ident">bytes</span>: <span class="ident">msg</span>.<span class="ident">data</span>,
             <span class="ident">handles</span>: <span class="ident">msg</span>
                 .<span class="ident">channels</span>
                 .<span class="ident">iter</span>()

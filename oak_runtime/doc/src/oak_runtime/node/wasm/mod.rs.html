@@ -1190,7 +1190,7 @@
             <span class="ident">handles_count</span>
         );
 
-        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">let</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">get_memory</span>()
             .<span class="ident">get</span>(<span class="ident">source</span>, <span class="ident">source_length</span> <span class="kw">as</span> <span class="ident">usize</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
@@ -1216,7 +1216,7 @@
             .<span class="ident">chunks</span>(<span class="number">8</span>)
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">bytes</span><span class="op">|</span> <span class="ident">LittleEndian</span>::<span class="ident">read_u64</span>(<span class="ident">bytes</span>))
             .<span class="ident">collect</span>();
-        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">NodeMessage</span> { <span class="ident">data</span>, <span class="ident">handles</span> };
+        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">NodeMessage</span> { <span class="ident">bytes</span>, <span class="ident">handles</span> };
 
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_write</span>(<span class="ident">writer_handle</span>, <span class="ident">msg</span>)<span class="question-mark">?</span>;
 
@@ -1260,7 +1260,7 @@
 
         <span class="kw">let</span> (<span class="ident">actual_length</span>, <span class="ident">actual_handle_count</span>) <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">msg</span> {
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="number">0</span>, <span class="number">0</span>),
-            <span class="prelude-val">Some</span>(<span class="ident">NodeReadStatus</span>::<span class="ident">Success</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">msg</span>.<span class="ident">data</span>.<span class="ident">len</span>(), <span class="ident">msg</span>.<span class="ident">handles</span>.<span class="ident">len</span>()),
+            <span class="prelude-val">Some</span>(<span class="ident">NodeReadStatus</span>::<span class="ident">Success</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">msg</span>.<span class="ident">bytes</span>.<span class="ident">len</span>(), <span class="ident">msg</span>.<span class="ident">handles</span>.<span class="ident">len</span>()),
             <span class="prelude-val">Some</span>(<span class="ident">NodeReadStatus</span>::<span class="ident">NeedsCapacity</span>(<span class="ident">a</span>, <span class="ident">b</span>)) <span class="op">=</span><span class="op">&gt;</span> (<span class="kw-2">*</span><span class="ident">a</span>, <span class="kw-2">*</span><span class="ident">b</span>),
         };
 
@@ -1290,7 +1290,7 @@
 
         <span class="kw">match</span> <span class="ident">msg</span> {
             <span class="prelude-val">Some</span>(<span class="ident">NodeReadStatus</span>::<span class="ident">Success</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">set</span>(<span class="ident">dest</span>, <span class="kw-2">&amp;</span><span class="ident">msg</span>.<span class="ident">data</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">set</span>(<span class="ident">dest</span>, <span class="kw-2">&amp;</span><span class="ident">msg</span>.<span class="ident">bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                     <span class="macro">error</span><span class="macro">!</span>(
                         <span class="string">&quot;{}: channel_read(): Unable to write destination buffer into guest memory: {:?}&quot;</span>,
                         <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">err</span>

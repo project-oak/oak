@@ -54,18 +54,6 @@
 <span id="54">54</span>
 <span id="55">55</span>
 <span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -122,18 +110,6 @@
         .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t close init message channel to HTTP server pseudo-node&quot;</span>);
 
     <span class="prelude-val">Ok</span>(<span class="ident">invocation_receiver</span>)
-}
-
-<span class="kw">impl</span> <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span> <span class="kw">for</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">HttpRequest</span> {
-    <span class="kw">fn</span> <span class="ident">visit</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">crate</span>::<span class="ident">Handle</span>)<span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">visitor</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">F</span> {
-        <span class="ident">visitor</span>
-    }
-}
-
-<span class="kw">impl</span> <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span> <span class="kw">for</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">HttpResponse</span> {
-    <span class="kw">fn</span> <span class="ident">visit</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">crate</span>::<span class="ident">Handle</span>)<span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">visitor</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">F</span> {
-        <span class="ident">visitor</span>
-    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "oak";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

@@ -300,7 +300,7 @@
 <span class="doccomment">/// the default name &quot;oak_main&quot; for its entrypoint.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module_default</span>(
     <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakError</span><span class="op">&gt;</span> {
     <span class="ident">run_single_module</span>(<span class="ident">module_config_name</span>, <span class="ident">DEFAULT_ENTRYPOINT_NAME</span>)
 }
 
@@ -309,7 +309,7 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module</span>(
     <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakError</span><span class="op">&gt;</span> {
     <span class="ident">run_single_module_with_config</span>(<span class="ident">module_wasm_file_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">ConfigMap</span>::<span class="ident">default</span>())
 }
 
@@ -319,7 +319,7 @@
     <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">config_map</span>: <span class="ident">ConfigMap</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakStatus</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span> <span class="ident">runtime_config</span>(<span class="ident">module_wasm_file_name</span>, <span class="ident">entrypoint_name</span>, <span class="ident">config_map</span>);
     <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">combined_config</span>)
 }

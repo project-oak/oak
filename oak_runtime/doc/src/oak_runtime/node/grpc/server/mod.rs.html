@@ -1154,16 +1154,16 @@
         <span class="comment">// This message should be in sync with the [`oak::grpc::Invocation`] from the Oak SDK:</span>
         <span class="comment">// the order of the `request_reader` and `response_writer` must be consistent.</span>
         <span class="kw">let</span> <span class="ident">invocation</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">NodeMessage</span> {
-            <span class="ident">data</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">bytes</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">handles</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">request_reader</span>, <span class="ident">response_writer</span>],
         };
 
         <span class="comment">// Serialize gRPC request into a message.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">message</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">NodeMessage</span> {
-            <span class="ident">data</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">bytes</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">handles</span>: <span class="macro">vec</span><span class="macro">!</span>[],
         };
-        <span class="ident">request</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">message</span>.<span class="ident">data</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+        <span class="ident">request</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">message</span>.<span class="ident">bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t serialize GrpcRequest message: {}&quot;</span>, <span class="ident">error</span>);
         })<span class="question-mark">?</span>;
 
@@ -1323,7 +1323,7 @@
 
         <span class="kw">if</span> <span class="ident">read_status</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">ChannelReadStatus</span>::<span class="ident">ReadReady</span> {
             <span class="kw">match</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">channel_read</span>(<span class="self">self</span>.<span class="ident">response_reader</span>) {
-                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">GrpcResponse</span>::<span class="ident">decode</span>(<span class="ident">msg</span>.<span class="ident">data</span>.<span class="ident">as_slice</span>()) {
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">GrpcResponse</span>::<span class="ident">decode</span>(<span class="ident">msg</span>.<span class="ident">bytes</span>.<span class="ident">as_slice</span>()) {
                     <span class="prelude-val">Ok</span>(<span class="ident">grpc_rsp</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="self">self</span>.<span class="ident">metrics_recorder</span>
                             .<span class="ident">observe_message_with_len</span>(<span class="ident">grpc_rsp</span>.<span class="ident">rsp_msg</span>.<span class="ident">len</span>());

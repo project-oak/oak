@@ -432,6 +432,7 @@
 <span id="432">432</span>
 <span id="433">433</span>
 <span id="434">434</span>
+<span id="435">435</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -464,6 +465,7 @@
 <span class="kw">use</span> <span class="ident">maplit</span>::<span class="ident">hashset</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">GrpcClientConfiguration</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>};
 <span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">ReadHandle</span>;
+<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">OakError</span>;
 <span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::{<span class="ident">google</span>::<span class="ident">rpc</span>, <span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">GrpcResponse</span>};
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>, <span class="ident">Uri</span>};
@@ -539,7 +541,7 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
         <span class="ident">handle</span>: <span class="ident">Handle</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
         <span class="comment">// Create a [`Receiver`] used for reading gRPC invocations.</span>
         <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">ReadHandle</span> { <span class="ident">handle</span> });
         <span class="kw">loop</span> {
@@ -547,8 +549,8 @@
             <span class="comment">// Read a gRPC invocation from the [`Receiver`].</span>
             <span class="kw">let</span> <span class="ident">invocation</span> <span class="op">=</span> <span class="ident">receiver</span>.<span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="kw">match</span> <span class="ident">error</span> {
-                    <span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;gRPC client node is terminating.&quot;</span>),
-                    <span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;gRPC invocation channel closed&quot;</span>),
+                    <span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;gRPC client node is terminating.&quot;</span>),
+                    <span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;gRPC invocation channel closed&quot;</span>),
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t receive the invocation: {:?}&quot;</span>, <span class="ident">error</span>),
                 }
                 <span class="ident">error</span>
@@ -572,7 +574,7 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>,
         <span class="ident">invocation</span>: <span class="kw-2">&amp;</span><span class="ident">Invocation</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">uri</span>.<span class="ident">to_string</span>();
         <span class="kw">let</span> <span class="ident">record_completion_with_error</span> <span class="op">=</span> <span class="op">|</span><span class="ident">method_name</span>, <span class="ident">error_code</span><span class="op">|</span> {
             <span class="ident">runtime</span>
@@ -766,7 +768,7 @@
         }
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">body_stream</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">response_stream</span>.<span class="ident">get_mut</span>();
         <span class="kw">loop</span> {
             <span class="kw">let</span> <span class="ident">metrics_recorder</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">metrics_recorder</span>;
