@@ -18,8 +18,8 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    message::NodeMessage, metrics::Metrics, AuxServer, ChannelHalfDirection, GrpcConfiguration,
-    NodeId, NodePrivilege, NodeReadStatus, Runtime, SignatureTable,
+    metrics::Metrics, AuxServer, ChannelHalfDirection, GrpcConfiguration, NodeId, NodeMessage,
+    NodePrivilege, NodeReadStatus, Runtime, SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;

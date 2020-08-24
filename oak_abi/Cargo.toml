@@ -8,7 +8,6 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-log = "*"
 prost = { path = "../third_party/prost" }
 prost-types = { path = "../third_party/prost/prost-types" }
 

@@ -83,7 +83,7 @@ const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500
 /// the default name "oak_main" for its entrypoint.
 pub fn run_single_module_default(
     module_config_name: &str,
-) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
+) -> Result<Arc<oak_runtime::Runtime>, oak::OakError> {
     run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME)
 }
 
@@ -92,7 +92,7 @@ pub fn run_single_module_default(
 pub fn run_single_module(
     module_wasm_file_name: &str,
     entrypoint_name: &str,
-) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
+) -> Result<Arc<oak_runtime::Runtime>, oak::OakError> {
     run_single_module_with_config(module_wasm_file_name, entrypoint_name, ConfigMap::default())
 }
 
@@ -102,7 +102,7 @@ pub fn run_single_module_with_config(
     module_wasm_file_name: &str,
     entrypoint_name: &str,
     config_map: ConfigMap,
-) -> Result<Arc<oak_runtime::Runtime>, oak::OakStatus> {
+) -> Result<Arc<oak_runtime::Runtime>, oak::OakError> {
     let combined_config = runtime_config(module_wasm_file_name, entrypoint_name, config_map);
     oak_runtime::configure_and_run(combined_config)
 }

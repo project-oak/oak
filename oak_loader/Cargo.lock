@@ -681,7 +681,6 @@ dependencies = [
 name = "oak_abi"
 version = "0.1.0"
 dependencies = [
- "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "oak_utils 0.1.0",
  "prost 0.6.1",
  "prost-build 0.6.1",
@@ -689,10 +688,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "oak_io"
 version = "0.1.0"
 dependencies = [
  "oak_abi 0.1.0",
+ "oak_derive 0.1.0",
+ "prost 0.6.1",
+ "prost-types 0.6.1",
 ]
 
 [[package]]

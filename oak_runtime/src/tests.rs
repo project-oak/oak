@@ -270,7 +270,7 @@ fn create_channel_with_more_confidential_label_from_public_untrusted_node_ok() {
             let (write_handle, read_handle) = result.unwrap();
 
             let message = NodeMessage {
-                data: vec![14, 12, 88],
+                bytes: vec![14, 12, 88],
                 handles: vec![],
             };
 
@@ -318,7 +318,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_privilege_o
             let (write_handle, read_handle) = result.unwrap();
 
             let message = NodeMessage {
-                data: vec![14, 12, 88],
+                bytes: vec![14, 12, 88],
                 handles: vec![],
             };
 

@@ -25,7 +25,7 @@
 
 use crate::{
     channel::{with_reader_channel, with_writer_channel, Channel},
-    message::{Message, NodeMessage},
+    message::Message,
     metrics::Metrics,
     proto::oak::introspection_events::{
         event::EventDetails, ChannelCreated, Event, HandleCreated, HandleDestroyed,
@@ -42,6 +42,7 @@ use oak_abi::{
     proto::oak::application::{ApplicationConfiguration, ConfigMap, NodeConfiguration},
     ChannelReadStatus, OakStatus,
 };
+use oak_io::Message as NodeMessage;
 use prometheus::proto::MetricFamily;
 use rand::RngCore;
 use std::{
@@ -870,7 +871,7 @@ impl Runtime {
     /// Translate the Node-relative handles in the `NodeMessage` to channel halves.
     fn message_from(&self, node_msg: NodeMessage, node_id: NodeId) -> Result<Message, OakStatus> {
         Ok(Message {
-            data: node_msg.data,
+            data: node_msg.bytes,
             channels: node_msg
                 .handles
                 .into_iter()
@@ -1004,7 +1005,7 @@ impl Runtime {
     /// internal channel references.
     fn node_message_from(&self, msg: Message, node_id: NodeId) -> NodeMessage {
         NodeMessage {
-            data: msg.data,
+            bytes: msg.data,
             handles: msg
                 .channels
                 .iter()

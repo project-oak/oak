@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use oak_io::{handle::HandleVisit, handle_visit_blanket_impl, Handle};
+
 pub mod google {
     pub mod rpc {
         include!(concat!(env!("OUT_DIR"), "/google.rpc.rs"));
@@ -33,3 +35,12 @@ pub mod oak {
         include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
     }
 }
+
+// These do not contain handles, so a blanket impl is sufficient.
+handle_visit_blanket_impl!(
+    oak::encap::GrpcResponse,
+    oak::encap::GrpcRequest,
+    oak::encap::HttpResponse,
+    oak::encap::HttpRequest,
+    oak::log::LogMessage
+);

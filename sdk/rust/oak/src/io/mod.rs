@@ -20,13 +20,10 @@ use crate::OakStatus;
 use oak_abi::label::Label;
 use std::io;
 
-mod decodable;
-mod encodable;
 mod receiver;
 mod sender;
 
-pub use decodable::Decodable;
-pub use encodable::Encodable;
+pub use oak_io::{Decodable, Encodable, Message};
 pub use receiver::{Receiver, ReceiverExt};
 pub use sender::{Sender, SenderExt};
 
@@ -41,13 +38,6 @@ pub fn channel_create_with_label<T: Encodable + Decodable>(
 ) -> Result<(Sender<T>, Receiver<T>), OakStatus> {
     let (wh, rh) = crate::channel_create_with_label(label)?;
     Ok((Sender::<T>::new(wh), Receiver::<T>::new(rh)))
-}
-
-/// A simple holder for bytes + handles, using internally owned buffers.
-#[derive(Debug, PartialEq, Eq)]
-pub struct Message {
-    pub bytes: Vec<u8>,
-    pub handles: Vec<crate::Handle>,
 }
 
 /// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].

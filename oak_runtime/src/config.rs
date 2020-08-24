@@ -18,7 +18,7 @@
 
 use crate::{io::SenderExt, Runtime, RuntimeConfiguration, RuntimeProxy};
 use log::{error, info};
-use oak_abi::OakStatus;
+use oak_io::OakError;
 use oak_io::handle::WriteHandle;
 use std::sync::Arc;
 use tonic::transport::Certificate;
@@ -28,7 +28,7 @@ use tonic::transport::Certificate;
 /// Returns a [`RuntimeProxy`] for an initial implicit Node, and a writeable [`oak_abi::Handle`] to
 /// send messages into the Runtime. Creating a new channel and passing the write [`oak_abi::Handle`]
 /// into the runtime will enable messages to be read back out from the [`RuntimeProxy`].
-pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, OakStatus> {
+pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, OakError> {
     let proxy =
         RuntimeProxy::create_runtime(&config.app_config, &config.grpc_config, &config.sign_table);
     let config_map = config.config_map.clone();

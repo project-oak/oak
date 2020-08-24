@@ -33,6 +33,7 @@ use oak_abi::{
     label::Label, proto::oak::application::HttpServerConfiguration, ChannelReadStatus, OakStatus,
 };
 use oak_io::handle::{ReadHandle, WriteHandle};
+use oak_io::OakError;
 use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 use prost::Message;
 use std::{future::Future, net::SocketAddr, pin::Pin};
@@ -384,7 +385,7 @@ impl Pipe {
         // Create an invocation message and attach the request specific channels to it.
         // TODO(#1186): Use a generic version of gRPC invocation, instead of serializing manually
         let invocation = crate::NodeMessage {
-            data: vec![],
+            bytes: vec![],
             handles: vec![self.request_reader, self.response_writer],
         };
 
@@ -439,7 +440,7 @@ struct HttpResponseIterator {
 }
 
 impl HttpResponseIterator {
-    fn read_response(&self) -> Result<HttpResponse, OakStatus> {
+    fn read_response(&self) -> Result<HttpResponse, OakError> {
         let response_receiver = crate::io::Receiver::<HttpResponse>::new(ReadHandle {
             handle: self.response_reader,
         });

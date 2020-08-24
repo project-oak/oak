@@ -27,12 +27,13 @@ use prost::Message;
 pub use oak_abi::{label::Label, ChannelReadStatus, Handle, OakStatus};
 
 // Re-export oak_io structs that are also visible as part of the SDK API.
-pub use oak_io::handle::{ReadHandle, WriteHandle};
+pub use oak_io::{
+    handle::{ReadHandle, WriteHandle},
+    OakError,
+};
 
-mod error;
 #[cfg(target_os = "macos")]
 mod stubs;
-pub use error::OakError;
 
 pub mod grpc;
 pub mod handle;

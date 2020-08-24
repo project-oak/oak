@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak::{handle::HandleVisit, Handle};
+use oak_io::{handle::HandleVisit, Handle};
 
 #[derive(Default)]
 struct Visited(Handle);
@@ -93,6 +93,12 @@ mod enums {
         Unit,
     }
 
+    #[derive(HandleVisit)]
+    enum Numeric {
+        One = 1,
+        Two = 2,
+    }
+
     #[test]
     fn named() {
         assert_visit(
@@ -112,6 +118,12 @@ mod enums {
     #[test]
     fn unit() {
         assert_visit(Enum::Unit, 0);
+    }
+
+    #[test]
+    fn numeric() {
+        assert_visit(Numeric::One, 0);
+        assert_visit(Numeric::Two, 0);
     }
 }
 

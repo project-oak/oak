@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{io::Message, OakError};
+use crate::{Message, OakError};
 
 /// A trait for objects that can be decoded from bytes + handles.
 pub trait Decodable: Sized {

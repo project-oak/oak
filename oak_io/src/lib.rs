@@ -16,6 +16,22 @@
 
 //! Shared data structures and functionality for inter-node communication.
 
+mod decodable;
+mod encodable;
+mod error;
 pub mod handle;
-// TODO(#1324): Move shared structs from the Runtime and SDK (like `Sender`, `Receiver`,
-// `Encodable`, `Decodable` and `Message`/`NodeMessage`) here as well.
+
+pub use decodable::Decodable;
+pub use encodable::Encodable;
+pub use error::OakError;
+pub use oak_abi::Handle;
+
+// TODO(#1324): Move additional shared structs from the Runtime and SDK (like `Sender`, `Receiver`)
+// here as well.
+
+/// A simple holder for bytes + handles, using internally owned buffers.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Message {
+    pub bytes: Vec<u8>,
+    pub handles: Vec<Handle>,
+}

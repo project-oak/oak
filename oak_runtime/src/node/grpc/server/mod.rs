@@ -466,16 +466,16 @@ impl GrpcInvocationHandler {
         // This message should be in sync with the [`oak::grpc::Invocation`] from the Oak SDK:
         // the order of the `request_reader` and `response_writer` must be consistent.
         let invocation = crate::NodeMessage {
-            data: vec![],
+            bytes: vec![],
             handles: vec![request_reader, response_writer],
         };
 
         // Serialize gRPC request into a message.
         let mut message = crate::NodeMessage {
-            data: vec![],
+            bytes: vec![],
             handles: vec![],
         };
-        request.encode(&mut message.data).map_err(|error| {
+        request.encode(&mut message.bytes).map_err(|error| {
             error!("Couldn't serialize GrpcRequest message: {}", error);
         })?;
 
@@ -635,7 +635,7 @@ impl Iterator for GrpcResponseIterator {
 
         if read_status[0] == ChannelReadStatus::ReadReady {
             match self.runtime.channel_read(self.response_reader) {
-                Ok(Some(msg)) => match GrpcResponse::decode(msg.data.as_slice()) {
+                Ok(Some(msg)) => match GrpcResponse::decode(msg.bytes.as_slice()) {
                     Ok(grpc_rsp) => {
                         self.metrics_recorder
                             .observe_message_with_len(grpc_rsp.rsp_msg.len());

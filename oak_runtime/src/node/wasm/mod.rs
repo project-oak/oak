@@ -283,7 +283,7 @@ impl WasmInterface {
             handles_count
         );
 
-        let data = self
+        let bytes = self
             .get_memory()
             .get(source, source_length as usize)
             .map_err(|err| {
@@ -309,7 +309,7 @@ impl WasmInterface {
             .chunks(8)
             .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
-        let msg = NodeMessage { data, handles };
+        let msg = NodeMessage { bytes, handles };
 
         self.runtime.channel_write(writer_handle, msg)?;
 
@@ -353,7 +353,7 @@ impl WasmInterface {
 
         let (actual_length, actual_handle_count) = match &msg {
             None => (0, 0),
-            Some(NodeReadStatus::Success(msg)) => (msg.data.len(), msg.handles.len()),
+            Some(NodeReadStatus::Success(msg)) => (msg.bytes.len(), msg.handles.len()),
             Some(NodeReadStatus::NeedsCapacity(a, b)) => (*a, *b),
         };
 
@@ -383,7 +383,7 @@ impl WasmInterface {
 
         match msg {
             Some(NodeReadStatus::Success(msg)) => {
-                self.get_memory().set(dest, &msg.data).map_err(|err| {
+                self.get_memory().set(dest, &msg.bytes).map_err(|err| {
                     error!(
                         "{}: channel_read(): Unable to write destination buffer into guest memory: {:?}",
                         self.pretty_name, err
