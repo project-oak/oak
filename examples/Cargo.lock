@@ -282,7 +282,7 @@ name = "chat"
 version = "0.1.0"
 dependencies = [
  "assert_matches",
- "base64 0.11.0",
+ "base64",
  "bincode",
  "chat_grpc",
  "env_logger",

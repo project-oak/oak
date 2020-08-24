@@ -120,7 +120,7 @@ fn main() -> anyhow::Result<()> {
                 .expect("Couldn't generate key pair");
             let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_key_bytes.as_ref())
                 .expect("Couldn't parse generated key pair");
-            let public_key_bytes = key_pair.public_key().as_ref();
+            let public_key_bytes = key_pair.public_key();
 
             // Encode key pair in PEM format
             let private_key_pem = create_pem(PRIVATE_KEY_TAG, private_key_bytes.as_ref());
@@ -149,7 +149,7 @@ fn main() -> anyhow::Result<()> {
             let key_pair =
                 signature::Ed25519KeyPair::from_pkcs8(&private_key_pem.contents.as_ref())
                     .expect("Couldn't parse PKCS encoded private key");
-            let public_key_bytes = key_pair.public_key().as_ref();
+            let public_key_bytes = key_pair.public_key();
             let signature_bytes = key_pair.sign(&module_bytes);
 
             // Encode signature in PEM format
