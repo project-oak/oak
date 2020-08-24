@@ -23,7 +23,7 @@
 //! cargo run --manifest-path=oak_sign/Cargo.toml -- \
 //!     generate \
 //!     --private-key=<PRIVATE_KEY_FILE>.key \
-//!     --public-key=<PUBLIC_KEY_FILE>.pem
+//!     --public-key=<PUBLIC_KEY_FILE>.pub
 //!
 //! cargo run --manifest-path=oak_sign/Cargo.toml -- \
 //!     sign \
