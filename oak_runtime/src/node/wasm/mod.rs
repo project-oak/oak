@@ -847,9 +847,8 @@ fn wasm_node_privilege(wasm_module_bytes: &[u8], signatures: &[Signature]) -> No
     let mut integrity_tags = hashset! { hash_tag };
 
     for signature_item in signatures.iter() {
-        let signature_tag = oak_abi::label::web_assembly_module_signature_tag(
-            &signature_item.public_key.to_bytes(),
-        );
+        let signature_tag =
+            oak_abi::label::web_assembly_module_signature_tag(&signature_item.public_key);
         confidentiality_tags.insert(signature_tag.clone());
         integrity_tags.insert(signature_tag);
     }

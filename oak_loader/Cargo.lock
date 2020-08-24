@@ -163,16 +163,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8aebca1129a03dc6dc2b127edd729435bbc4a37e1d5f4d7513165089ceb02634"
 
 [[package]]
-name = "crypto-mac"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58bcd97a54c7ca5ce2f6eb16f6bede5b0ab5f0055fedc17d2f0b4466e21671ca"
-dependencies = [
- "generic-array",
- "subtle",
-]
-
-[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -412,16 +402,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 
 [[package]]
-name = "hmac"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deae6d9dbb35ec2c502d62b8f7b1c000a0822c3b0794ba36b3149c0a1c840dff"
-dependencies = [
- "crypto-mac",
- "digest",
-]
-
-[[package]]
 name = "http"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -649,17 +629,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "minisign"
-version = "0.5.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b52dbb4633799074453a468c609b1a8e4839fdd4082cf27e154765d682520eb9"
-dependencies = [
- "getrandom",
- "rpassword",
- "scrypt",
-]
-
-[[package]]
 name = "mio"
 version = "0.6.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -789,7 +758,6 @@ dependencies = [
  "env_logger",
  "log",
  "maplit",
- "minisign",
  "oak_abi",
  "oak_runtime",
  "oak_utils",
@@ -820,11 +788,11 @@ dependencies = [
  "lazy_static",
  "log",
  "maplit",
- "minisign",
  "oak_abi",
  "oak_io",
  "oak_services",
  "oak_utils",
+ "pem",
  "prometheus",
  "prost",
  "prost-build",
@@ -832,6 +800,7 @@ dependencies = [
  "rand",
  "regex",
  "reqwest",
+ "ring",
  "roughenough",
  "rustls",
  "serde",
@@ -888,15 +857,6 @@ name = "parity-wasm"
 version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddfc878dac00da22f8f61e7af3157988424567ab01d9920b962ef7dcbd7cd865"
-
-[[package]]
-name = "pbkdf2"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7170d73bf11f39b4ce1809aabc95bf5c33564cdc16fc3200ddda17a5f6e5e48b"
-dependencies = [
- "crypto-mac",
-]
 
 [[package]]
 name = "pem"
@@ -1226,16 +1186,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpassword"
-version = "5.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d755237fc0f99d98641540e66abac8bc46a0652f19148ac9e21de2da06b326c9"
-dependencies = [
- "libc",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "rustls"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1261,17 +1211,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "scrypt"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3437654bbbe34054a268b3859fe41f871215069b39f0aef78808d85c37100696"
-dependencies = [
- "hmac",
- "pbkdf2",
- "sha2",
 ]
 
 [[package]]
@@ -1424,12 +1363,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "subtle"
-version = "2.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "502d53007c02d7605a05df1c1a73ee436952781653da5d0bf57ad608f66932c1"
 
 [[package]]
 name = "syn"

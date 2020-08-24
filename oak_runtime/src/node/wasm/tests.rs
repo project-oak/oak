@@ -73,15 +73,9 @@ fn start_node(
     result
 }
 
-fn create_signature(public_key_path: &str, signature_path: &str) -> Signature {
-    let public_key =
-        minisign::PublicKey::from_file(public_key_path).expect("Could not read public key file");
-    let signature =
-        minisign::SignatureBox::from_file(signature_path).expect("Could not read signature file");
-    Signature {
-        public_key,
-        signature,
-    }
+fn load_signature(signature_path: &str) -> Signature {
+    let signature_file = read(&signature_path).expect("Couldn't read signature file");
+    crate::parse_pem_signature(&signature_file).expect("Couldn't parse signature")
 }
 
 #[test]
@@ -166,7 +160,7 @@ fn wasm_starting_module_with_wrong_signature_3_fails() {
 #[test]
 fn wasm_verify_module_signature_succeeds() {
     let binary = read("testdata/minimal.wasm").expect("Couldn't read Wasm file");
-    let signature = create_signature("testdata/test.pub", "testdata/minimal.sign");
+    let signature = load_signature("testdata/minimal.sign");
     let result = start_node(binary, "oak_main", vec![signature].as_ref());
     assert_eq!(true, result.is_ok());
 }
@@ -174,7 +168,7 @@ fn wasm_verify_module_signature_succeeds() {
 #[test]
 fn wasm_verify_module_signature_fails() {
     let binary = read("testdata/minimal.wasm").expect("Couldn't read Wasm file");
-    let signature = create_signature("testdata/test.pub", "testdata/wrong.sign");
+    let signature = load_signature("testdata/wrong.sign");
     let result = start_node(binary, "oak_main", vec![signature].as_ref());
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
