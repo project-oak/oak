@@ -193,6 +193,8 @@ handle_visit_blanket_impl!(prost_types::Any);
 // It does not contain handles, so a blanket impl is sufficient.
 handle_visit_blanket_impl!(oak_abi::proto::oak::application::ConfigMap);
 
+// Make the HandleVisit derivation macro publicly available without having to explicictly reference
+// the oak_derive crate.
 pub use oak_derive::HandleVisit;
 
 // Implementations for the types generated from different field modifiers
