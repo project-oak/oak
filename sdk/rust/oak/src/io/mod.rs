@@ -23,9 +23,9 @@ use std::io;
 mod receiver;
 mod sender;
 
-pub use oak_io::{Decodable, Encodable, Message};
-pub use receiver::{Receiver, ReceiverExt};
-pub use sender::{Sender, SenderExt};
+pub use oak_io::{Decodable, Encodable, Message, Receiver, Sender};
+pub use receiver::ReceiverExt;
+pub use sender::SenderExt;
 
 /// Create a new channel for transmission of `Encodable` and `Decodable` types.
 pub fn channel_create<T: Encodable + Decodable>() -> Result<(Sender<T>, Receiver<T>), OakStatus> {

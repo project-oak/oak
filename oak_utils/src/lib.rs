@@ -227,10 +227,9 @@ where
         prost_config
             // Auto-derive the HandleVisit trait
             .type_attribute(".", "#[derive(::oak_io::handle::HandleVisit)]")
-            // Link relevant Oak protos to the Oak SDK types.
-            .extern_path(".oak.handle", "::oak::handle")
-            .extern_path(".oak.encap.GrpcRequest", "::oak::grpc::GrpcRequest")
-            .extern_path(".oak.encap.GrpcResponse", "::oak::grpc::GrpcResponse");
+            // Link relevant Oak protos to the appropirate oak_io and oak_services types.
+            .extern_path(".oak.handle", "::oak_io::handle")
+            .extern_path(".oak.encap", "::oak_services::proto::oak::encap");
     }
     if let Some(out_dir) = options.out_dir_override {
         prost_config.out_dir(out_dir);

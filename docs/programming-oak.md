@@ -515,7 +515,7 @@ The above protobuf definition generates the following Rust data type:
 
 ```Rust
 struct BlobStoreSender {
-  sender: ::oak::io::Sender<BlobResponse>,
+  sender: ::oak_io::Sender<BlobResponse>,
 }
 ```
 

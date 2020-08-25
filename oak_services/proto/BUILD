@@ -24,19 +24,6 @@ package(
 )
 
 proto_library(
-    name = "grpc_encap_proto",
-    srcs = ["grpc_encap.proto"],
-    deps = [
-        "//third_party/google/rpc:status_proto",
-    ],
-)
-
-cc_proto_library(
-    name = "grpc_encap_cc_proto",
-    deps = [":grpc_encap_proto"],
-)
-
-proto_library(
     name = "log_proto",
     srcs = ["log.proto"],
     deps = [],

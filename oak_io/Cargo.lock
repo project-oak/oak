@@ -136,7 +136,9 @@ version = "0.1.0"
 dependencies = [
  "oak_abi",
  "oak_derive",
+ "oak_utils",
  "prost",
+ "prost-build",
  "prost-types",
 ]
 

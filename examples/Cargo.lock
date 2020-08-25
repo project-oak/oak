@@ -295,6 +295,7 @@ dependencies = [
  "oak_abi",
  "oak_io",
  "oak_runtime",
+ "oak_services",
  "oak_tests",
  "oak_utils",
  "prost",
@@ -879,6 +880,7 @@ dependencies = [
  "log",
  "oak",
  "oak_io",
+ "oak_services",
  "oak_utils",
  "prost",
 ]
@@ -1248,7 +1250,9 @@ version = "0.1.0"
 dependencies = [
  "oak_abi",
  "oak_derive",
+ "oak_utils",
  "prost",
+ "prost-build",
  "prost-types",
 ]
 

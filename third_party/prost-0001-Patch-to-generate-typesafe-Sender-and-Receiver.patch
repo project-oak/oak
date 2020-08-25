@@ -9,7 +9,7 @@ Subject: [PATCH] Patch prost to generate typesafe Sender and Receiver.
  2 files changed, 16 insertions(+)
 
 diff --git a/prost-build/src/code_generator.rs b/prost-build/src/code_generator.rs
-index 7323eb6..f500791 100644
+index 7323eb6..9e2614b 100644
 --- a/prost-build/src/code_generator.rs
 +++ b/prost-build/src/code_generator.rs
 @@ -715,7 +715,20 @@ impl<'a> CodeGenerator<'a> {
@@ -23,7 +23,7 @@ index 7323eb6..f500791 100644
 +            ".oak.handle.Receiver" => Some("Receiver"),
 +            _ => None,
 +        }?;
-+        Some(format!("::oak::io::{}<{}>", direction, message_type))
++        Some(format!("::oak_io::{}<{}>", direction, message_type))
 +    }
 +
      fn resolve_type(&self, field: &FieldDescriptorProto) -> String {
