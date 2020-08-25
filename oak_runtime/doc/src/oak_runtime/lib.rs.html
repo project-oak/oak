@@ -1255,6 +1255,25 @@
 <span id="1255">1255</span>
 <span id="1256">1256</span>
 <span id="1257">1257</span>
+<span id="1258">1258</span>
+<span id="1259">1259</span>
+<span id="1260">1260</span>
+<span id="1261">1261</span>
+<span id="1262">1262</span>
+<span id="1263">1263</span>
+<span id="1264">1264</span>
+<span id="1265">1265</span>
+<span id="1266">1266</span>
+<span id="1267">1267</span>
+<span id="1268">1268</span>
+<span id="1269">1269</span>
+<span id="1270">1270</span>
+<span id="1271">1271</span>
+<span id="1272">1272</span>
+<span id="1273">1273</span>
+<span id="1274">1274</span>
+<span id="1275">1275</span>
+<span id="1276">1276</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1335,6 +1354,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">time</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tls</span>;
 
 <span class="doccomment">/// Configuration options that govern the behaviour of the Runtime and the Oak Application running</span>
 <span class="doccomment">/// inside it.</span>
@@ -1344,8 +1364,8 @@
     <span class="kw">pub</span> <span class="ident">metrics_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Port to run an introspection server on, if provided.</span>
     <span class="kw">pub</span> <span class="ident">introspect_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// gRPC-specific options.</span>
-    <span class="kw">pub</span> <span class="ident">grpc_config</span>: <span class="ident">GrpcConfiguration</span>,
+    <span class="doccomment">/// Security options for server pseudo-nodes.</span>
+    <span class="kw">pub</span> <span class="ident">secure_server_configuration</span>: <span class="ident">SecureServerConfiguration</span>,
     <span class="doccomment">/// Application configuration.</span>
     <span class="kw">pub</span> <span class="ident">app_config</span>: <span class="ident">ApplicationConfiguration</span>,
     <span class="doccomment">/// Table that contains signatures and public keys corresponding to Oak modules.</span>
@@ -1386,6 +1406,22 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SignatureTable</span> {
     <span class="doccomment">/// Keys in the table are Oak module hashes.</span>
     <span class="kw">pub</span> <span class="ident">values</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Signature</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+}
+
+<span class="doccomment">/// Configuration options related to HTTP pseudo-Nodes.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// `Debug` is intentionally not implemented in order to avoid accidentally logging secrets.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HttpConfiguration</span> {
+    <span class="doccomment">/// TLS identity to use for all HTTP Server Nodes.</span>
+    <span class="kw">pub</span> <span class="ident">tls_config</span>: <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">TlsConfig</span>,
+}
+
+<span class="doccomment">/// Configuration options for secure HTTP and gRPC pseudo-Nodes.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SecureServerConfiguration</span> {
+    <span class="kw">pub</span> <span class="ident">grpc_config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">GrpcConfiguration</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">http_config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">HttpConfiguration</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">struct</span> <span class="ident">NodeStopper</span> {
@@ -1564,7 +1600,9 @@
 <span class="doccomment">/// Runtime structure for configuring and running a set of Oak Nodes.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Runtime</span> {
     <span class="ident">application_configuration</span>: <span class="ident">ApplicationConfiguration</span>,
-    <span class="ident">grpc_configuration</span>: <span class="ident">GrpcConfiguration</span>,
+
+    <span class="ident">secure_server_configuration</span>: <span class="ident">SecureServerConfiguration</span>,
+
     <span class="ident">signature_table</span>: <span class="ident">SignatureTable</span>,
 
     <span class="ident">terminating</span>: <span class="ident">AtomicBool</span>,
@@ -2381,7 +2419,7 @@
         <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">node</span>::<span class="ident">create_node</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">application_configuration</span>,
             <span class="ident">config</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">grpc_configuration</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">secure_server_configuration</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signature_table</span>,
         )
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {

@@ -214,6 +214,10 @@
 <span id="214">214</span>
 <span id="215">215</span>
 <span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -354,15 +358,19 @@
     <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
         <span class="ident">metrics_port</span>: <span class="prelude-val">Some</span>(<span class="number">9090</span>),
         <span class="ident">introspect_port</span>: <span class="prelude-val">Some</span>(<span class="number">1909</span>),
-        <span class="ident">grpc_config</span>: <span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span> {
-            <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-val">Some</span>(<span class="ident">Identity</span>::<span class="ident">from_pem</span>(
-                <span class="macro">include_str</span><span class="macro">!</span>(<span class="string">&quot;../certs/local.pem&quot;</span>),
-                <span class="macro">include_str</span><span class="macro">!</span>(<span class="string">&quot;../certs/local.key&quot;</span>),
-            )),
-            <span class="ident">grpc_client_root_tls_certificate</span>: <span class="prelude-val">Some</span>(
-                <span class="ident">oak_runtime</span>::<span class="ident">config</span>::<span class="ident">load_certificate</span>(<span class="kw-2">&amp;</span><span class="macro">include_str</span><span class="macro">!</span>(<span class="string">&quot;../certs/ca.pem&quot;</span>)).<span class="ident">unwrap</span>(),
-            ),
-            <span class="ident">oidc_client_info</span>: <span class="prelude-val">None</span>,
+        <span class="ident">secure_server_configuration</span>: <span class="ident">oak_runtime</span>::<span class="ident">SecureServerConfiguration</span> {
+            <span class="ident">grpc_config</span>: <span class="prelude-val">Some</span>(<span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span> {
+                <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-val">Some</span>(<span class="ident">Identity</span>::<span class="ident">from_pem</span>(
+                    <span class="macro">include_str</span><span class="macro">!</span>(<span class="string">&quot;../certs/local.pem&quot;</span>),
+                    <span class="macro">include_str</span><span class="macro">!</span>(<span class="string">&quot;../certs/local.key&quot;</span>),
+                )),
+                <span class="ident">grpc_client_root_tls_certificate</span>: <span class="prelude-val">Some</span>(
+                    <span class="ident">oak_runtime</span>::<span class="ident">config</span>::<span class="ident">load_certificate</span>(<span class="kw-2">&amp;</span><span class="macro">include_str</span><span class="macro">!</span>(<span class="string">&quot;../certs/ca.pem&quot;</span>))
+                        .<span class="ident">unwrap</span>(),
+                ),
+                <span class="ident">oidc_client_info</span>: <span class="prelude-val">None</span>,
+            }),
+            <span class="ident">http_config</span>: <span class="prelude-val">None</span>,
         },
         <span class="ident">app_config</span>: <span class="ident">ApplicationConfiguration</span> {
             <span class="ident">wasm_modules</span>,

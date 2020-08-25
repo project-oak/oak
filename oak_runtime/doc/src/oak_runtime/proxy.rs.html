@@ -313,8 +313,8 @@
 <span class="doccomment">//! context of a specific Node or pseudo-Node.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">metrics</span>::<span class="ident">Metrics</span>, <span class="ident">AuxServer</span>, <span class="ident">ChannelHalfDirection</span>, <span class="ident">GrpcConfiguration</span>, <span class="ident">NodeId</span>, <span class="ident">NodeMessage</span>,
-    <span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>, <span class="ident">Runtime</span>, <span class="ident">SignatureTable</span>,
+    <span class="ident">metrics</span>::<span class="ident">Metrics</span>, <span class="ident">AuxServer</span>, <span class="ident">ChannelHalfDirection</span>, <span class="ident">NodeId</span>, <span class="ident">NodeMessage</span>, <span class="ident">NodePrivilege</span>,
+    <span class="ident">NodeReadStatus</span>, <span class="ident">Runtime</span>, <span class="ident">SecureServerConfiguration</span>, <span class="ident">SignatureTable</span>,
 };
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>};
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
@@ -352,12 +352,12 @@
     <span class="doccomment">/// Creates a [`Runtime`] instance with a single initial Node configured, and no channels.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_runtime</span>(
         <span class="ident">application_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationConfiguration</span>,
-        <span class="ident">grpc_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">GrpcConfiguration</span>,
+        <span class="ident">secure_server_configuration</span>: <span class="kw-2">&amp;</span><span class="ident">SecureServerConfiguration</span>,
         <span class="ident">signature_table</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureTable</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuntimeProxy</span> {
         <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Runtime</span> {
             <span class="ident">application_configuration</span>: <span class="ident">application_configuration</span>.<span class="ident">clone</span>(),
-            <span class="ident">grpc_configuration</span>: <span class="ident">grpc_configuration</span>.<span class="ident">clone</span>(),
+            <span class="ident">secure_server_configuration</span>: <span class="ident">secure_server_configuration</span>.<span class="ident">clone</span>(),
             <span class="ident">signature_table</span>: <span class="ident">signature_table</span>.<span class="ident">clone</span>(),
             <span class="ident">terminating</span>: <span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>),
             <span class="ident">next_channel_id</span>: <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>),

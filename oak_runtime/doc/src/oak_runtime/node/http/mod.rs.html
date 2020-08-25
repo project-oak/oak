@@ -472,6 +472,63 @@
 <span id="472">472</span>
 <span id="473">473</span>
 <span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -499,6 +556,8 @@
     <span class="ident">node</span>::{<span class="ident">ConfigurationError</span>, <span class="ident">Node</span>},
     <span class="ident">ChannelHalfDirection</span>, <span class="ident">RuntimeProxy</span>,
 };
+<span class="kw">use</span> <span class="ident">core</span>::<span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>};
+<span class="kw">use</span> <span class="ident">futures_util</span>::<span class="ident">stream</span>::<span class="ident">Stream</span>;
 <span class="kw">use</span> <span class="ident">hyper</span>::{
     <span class="ident">service</span>::{<span class="ident">make_service_fn</span>, <span class="ident">service_fn</span>},
     <span class="ident">Body</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Server</span>, <span class="ident">StatusCode</span>,
@@ -513,8 +572,18 @@
 };
 <span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">HttpRequest</span>, <span class="ident">HttpResponse</span>};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future</span>::<span class="ident">Future</span>, <span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">pin</span>::<span class="ident">Pin</span>};
-<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>, <span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">pin</span>::<span class="ident">Pin</span>};
+<span class="kw">use</span> <span class="ident">tokio</span>::{
+    <span class="ident">net</span>::{<span class="ident">TcpListener</span>, <span class="ident">TcpStream</span>},
+    <span class="ident">sync</span>::<span class="ident">oneshot</span>,
+};
+<span class="kw">use</span> <span class="ident">tokio_rustls</span>::<span class="ident">server</span>::<span class="ident">TlsStream</span>;
+
+<span class="kw">use</span> <span class="ident">futures_util</span>::{
+    <span class="ident">future</span>::<span class="ident">TryFutureExt</span>,
+    <span class="ident">stream</span>::{<span class="ident">StreamExt</span>, <span class="ident">TryStreamExt</span>},
+};
+<span class="kw">use</span> <span class="ident">tokio_rustls</span>::<span class="ident">TlsAcceptor</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests</span>;
@@ -528,12 +597,32 @@
     }
 }
 
+<span class="doccomment">/// Asynchronously accept incoming TLS connections.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TlsServer</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="ident">acceptor</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TlsStream</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span>, <span class="ident">io</span>::<span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">hyper</span>::<span class="ident">server</span>::<span class="ident">accept</span>::<span class="ident">Accept</span> <span class="kw">for</span> <span class="ident">TlsServer</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Conn</span> <span class="op">=</span> <span class="ident">TlsStream</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">io</span>::<span class="ident">Error</span>;
+
+    <span class="doccomment">/// Poll to accept the next connection.</span>
+    <span class="kw">fn</span> <span class="ident">poll_accept</span>(
+        <span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>,
+        <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Conn</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="ident">Pin</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">acceptor</span>).<span class="ident">poll_next</span>(<span class="ident">cx</span>)
+    }
+}
+
 <span class="doccomment">/// Struct that represents an HTTP server pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HttpServerNode</span> {
     <span class="doccomment">/// Pseudo-Node name.</span>
     <span class="ident">node_name</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Server address to listen client requests on.</span>
     <span class="ident">address</span>: <span class="ident">SocketAddr</span>,
+    <span class="doccomment">/// TLS certificate and private key for establishing secure connections.</span>
+    <span class="ident">tls_config</span>: <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">TlsConfig</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">HttpServerNode</span> {
@@ -541,12 +630,14 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">config</span>: <span class="ident">HttpServerConfiguration</span>,
+        <span class="ident">tls_config</span>: <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">TlsConfig</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">address</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
         <span class="ident">check_port</span>(<span class="kw-2">&amp;</span><span class="ident">address</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">node_name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
             <span class="ident">address</span>,
+            <span class="ident">tls_config</span>,
         })
     }
 
@@ -629,21 +720,23 @@
     ) {
         <span class="comment">// A `Service` is needed for every connection, so this</span>
         <span class="comment">// creates one from the `request_handler`.</span>
-        <span class="kw">let</span> <span class="ident">make_service</span> <span class="op">=</span> <span class="ident">make_service_fn</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">_conn</span><span class="op">|</span> {
+        <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="ident">make_service_fn</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">_conn</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">handler</span> <span class="op">=</span> <span class="ident">request_handler</span>.<span class="ident">clone</span>();
             <span class="kw">async</span> <span class="kw">move</span> {
                 <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">hyper</span>::<span class="ident">Error</span><span class="op">&gt;</span>(<span class="ident">service_fn</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">req</span><span class="op">|</span> {
                     <span class="kw">let</span> <span class="ident">handler</span> <span class="op">=</span> <span class="ident">handler</span>.<span class="ident">clone</span>();
-
-                    <span class="kw">async</span> <span class="kw">move</span> {
-                        <span class="kw">let</span> <span class="ident">http_request</span> <span class="op">=</span> <span class="ident">HttpServerNode</span>::<span class="ident">map_to_http_request</span>(<span class="ident">req</span>).<span class="kw">await</span>;
-                        <span class="ident">handler</span>.<span class="ident">handle</span>(<span class="ident">http_request</span>).<span class="kw">await</span>
-                    }
+                    <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">handler</span>.<span class="ident">handle</span>(<span class="ident">req</span>).<span class="kw">await</span> }
                 }))
             }
         });
 
-        <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server</span>::<span class="ident">bind</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">address</span>).<span class="ident">serve</span>(<span class="ident">make_service</span>);
+        <span class="comment">// Low-level server creation is needed, to be able to validate TLS streams.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tcp</span> <span class="op">=</span> <span class="ident">TcpListener</span>::<span class="ident">bind</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">address</span>)
+            .<span class="kw">await</span>
+            .<span class="ident">expect</span>(<span class="string">&quot;Could not create TCP listener.&quot;</span>);
+        <span class="kw">let</span> <span class="ident">tls_server</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_tls_server</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tcp</span>).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server</span>::<span class="ident">builder</span>(<span class="ident">tls_server</span>).<span class="ident">serve</span>(<span class="ident">service</span>);
+
         <span class="kw">let</span> <span class="ident">graceful_server</span> <span class="op">=</span> <span class="ident">server</span>.<span class="ident">with_graceful_shutdown</span>(<span class="kw">async</span> {
             <span class="comment">// Treat notification failure the same as a notification.</span>
             <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">notify_receiver</span>.<span class="kw">await</span>;
@@ -655,8 +748,38 @@
         );
 
         <span class="comment">// Run until asked to terminate...</span>
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">graceful_server</span>.<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">graceful_server</span>
+            <span class="comment">// Terminate the server only if a shutdown signal is received.</span>
+            <span class="comment">// In case of errors, only log them instead of terminating the server.</span>
+            .<span class="ident">or_else</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="kw">async</span> <span class="kw">move</span> {
+                <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;server error: {}&quot;</span>, <span class="ident">e</span>);
+                <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">hyper</span>::<span class="ident">Error</span><span class="op">&gt;</span>(())
+            })
+            .<span class="kw">await</span>;
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;HTTP server pseudo-node terminated with {:?}&quot;</span>, <span class="ident">result</span>);
+    }
+
+    <span class="doccomment">/// Build a server that checks incoming TCP connections for TLS handshake.</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">build_tls_server</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">tcp</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">TcpListener</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TlsServer</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">tls_cfg</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">to_server_config</span>(<span class="self">self</span>.<span class="ident">tls_config</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="ident">tls_acceptor</span> <span class="op">=</span> <span class="ident">TlsAcceptor</span>::<span class="ident">from</span>(<span class="ident">tls_cfg</span>);
+
+        <span class="kw">let</span> <span class="ident">incoming_tls_stream</span> <span class="op">=</span> <span class="ident">tcp</span>
+            .<span class="ident">incoming</span>()
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Incoming failed: {:?}&quot;</span>, <span class="ident">err</span>))
+            })
+            .<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">stream</span><span class="op">|</span> {
+                <span class="ident">tls_acceptor</span>.<span class="ident">accept</span>(<span class="ident">stream</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                    <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Client-connection error: {:?}&quot;</span>, <span class="ident">err</span>);
+                    <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TLS Error: {:?}&quot;</span>, <span class="ident">err</span>))
+                })
+            })
+            .<span class="ident">boxed</span>();
+
+        <span class="ident">TlsServer</span> {
+            <span class="ident">acceptor</span>: <span class="ident">incoming_tls_stream</span>,
+        }
     }
 
     <span class="comment">// Create an instance of HttpRequest, from the given Request.</span>
@@ -762,28 +885,21 @@
 }
 
 <span class="kw">impl</span> <span class="ident">HttpRequestHandler</span> {
-    <span class="kw">fn</span> <span class="ident">handle</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">request</span>: <span class="ident">HttpRequest</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">handler</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">future</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">let</span> <span class="ident">oak_label</span> <span class="op">=</span> <span class="ident">get_oak_label</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>)<span class="question-mark">?</span>;
-            <span class="macro">info</span><span class="macro">!</span>(
-                <span class="string">&quot;Handling HTTP request; request size: {} bytes, label: {:?}&quot;</span>,
-                <span class="ident">request</span>.<span class="ident">body</span>.<span class="ident">len</span>(),
-                <span class="ident">oak_label</span>
-            );
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">HttpServerNode</span>::<span class="ident">map_to_http_request</span>(<span class="ident">req</span>).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">oak_label</span> <span class="op">=</span> <span class="ident">get_oak_label</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>)<span class="question-mark">?</span>;
+        <span class="macro">info</span><span class="macro">!</span>(
+            <span class="string">&quot;Handling HTTP request; request size: {} bytes, label: {:?}&quot;</span>,
+            <span class="ident">request</span>.<span class="ident">body</span>.<span class="ident">len</span>(),
+            <span class="ident">oak_label</span>
+        );
 
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Inject the request into the Oak Node&quot;</span>);
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">handler</span>
-                .<span class="ident">inject_http_request</span>(<span class="ident">request</span>, <span class="kw-2">&amp;</span><span class="ident">oak_label</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>)<span class="question-mark">?</span>;
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Inject the request into the Oak Node&quot;</span>);
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">inject_http_request</span>(<span class="ident">request</span>, <span class="kw-2">&amp;</span><span class="ident">oak_label</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>)<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Ok</span>(<span class="ident">response</span>.<span class="ident">to_response</span>())
-        };
-
-        <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">future</span>)
+        <span class="prelude-val">Ok</span>(<span class="ident">response</span>.<span class="ident">to_response</span>())
     }
 
     <span class="kw">fn</span> <span class="ident">inject_http_request</span>(
@@ -905,8 +1021,8 @@
             <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
         }),
         <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;No HTTP label found: using public_untrusted.&quot;</span>);
-            <span class="prelude-val">Ok</span>(<span class="ident">Label</span>::<span class="ident">public_untrusted</span>())
+            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;No HTTP label found.&quot;</span>);
+            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)
         }
     }
 }
@@ -939,9 +1055,7 @@
             }
             <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Could not read response: {}&quot;</span>, <span class="ident">status</span>);
-                <span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">status_mut</span>() <span class="op">=</span>
-                    <span class="ident">StatusCode</span>::<span class="ident">from_u16</span>(<span class="ident">http</span>::<span class="ident">status</span>::<span class="ident">StatusCode</span>::<span class="ident">INTERNAL_SERVER_ERROR</span>.<span class="ident">as_u16</span>())
-                        .<span class="ident">expect</span>(<span class="string">&quot;Error when creating internal error (500) status code.&quot;</span>);
+                <span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode</span>::<span class="ident">INTERNAL_SERVER_ERROR</span>;
             }
         }
         <span class="ident">response</span>

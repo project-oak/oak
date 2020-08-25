@@ -56,6 +56,9 @@
 <span id="56">56</span>
 <span id="57">57</span>
 <span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -87,8 +90,11 @@
 <span class="doccomment">/// send messages into the Runtime. Creating a new channel and passing the write [`oak_abi::Handle`]</span>
 <span class="doccomment">/// into the runtime will enable messages to be read back out from the [`RuntimeProxy`].</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure_and_run</span>(<span class="ident">config</span>: <span class="ident">RuntimeConfiguration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span>
-        <span class="ident">RuntimeProxy</span>::<span class="ident">create_runtime</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">app_config</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">grpc_config</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">sign_table</span>);
+    <span class="kw">let</span> <span class="ident">proxy</span> <span class="op">=</span> <span class="ident">RuntimeProxy</span>::<span class="ident">create_runtime</span>(
+        <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">app_config</span>,
+        <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">secure_server_configuration</span>,
+        <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">sign_table</span>,
+    );
     <span class="kw">let</span> <span class="ident">config_map</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">config_map</span>.<span class="ident">clone</span>();
     <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">proxy</span>.<span class="ident">start_runtime</span>(<span class="ident">config</span>)<span class="question-mark">?</span>;
 
