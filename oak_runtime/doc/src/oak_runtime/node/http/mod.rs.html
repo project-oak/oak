@@ -470,6 +470,8 @@
 <span id="470">470</span>
 <span id="471">471</span>
 <span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -505,8 +507,10 @@
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
     <span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">HttpServerConfiguration</span>, <span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span>,
 };
-<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>};
-<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">OakError</span>;
+<span class="kw">use</span> <span class="ident">oak_io</span>::{
+    <span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>},
+    <span class="ident">OakError</span>,
+};
 <span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">HttpRequest</span>, <span class="ident">HttpResponse</span>};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future</span>::<span class="ident">Future</span>, <span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">pin</span>::<span class="ident">Pin</span>};

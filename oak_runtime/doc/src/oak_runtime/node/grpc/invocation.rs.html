@@ -102,7 +102,6 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
-<span id="105">105</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -128,10 +127,9 @@
 };
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">error</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
-<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">OakError</span>;
 <span class="kw">use</span> <span class="ident">oak_io</span>::{
     <span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>},
-    <span class="ident">Decodable</span>,
+    <span class="ident">Decodable</span>, <span class="ident">OakError</span>,
 };
 <span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">GrpcRequest</span>, <span class="ident">GrpcResponse</span>};
 

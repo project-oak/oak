@@ -174,7 +174,6 @@
 <span id="174">174</span>
 <span id="175">175</span>
 <span id="176">176</span>
-<span id="177">177</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -205,8 +204,7 @@
 };
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">RoughtimeClientConfiguration</span>, <span class="ident">OakStatus</span>};
-<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">ReadHandle</span>;
-<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">OakError</span>;
+<span class="kw">use</span> <span class="ident">oak_io</span>::{<span class="ident">handle</span>::<span class="ident">ReadHandle</span>, <span class="ident">OakError</span>};
 <span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::{
     <span class="ident">google</span>::<span class="ident">rpc</span>::<span class="ident">Code</span>,
     <span class="ident">oak</span>::{

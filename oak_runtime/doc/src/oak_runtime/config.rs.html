@@ -56,7 +56,6 @@
 <span id="56">56</span>
 <span id="57">57</span>
 <span id="58">58</span>
-<span id="59">59</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -78,8 +77,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">io</span>::<span class="ident">SenderExt</span>, <span class="ident">Runtime</span>, <span class="ident">RuntimeConfiguration</span>, <span class="ident">RuntimeProxy</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">OakError</span>;
-<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">WriteHandle</span>;
+<span class="kw">use</span> <span class="ident">oak_io</span>::{<span class="ident">handle</span>::<span class="ident">WriteHandle</span>, <span class="ident">OakError</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Certificate</span>;
 
