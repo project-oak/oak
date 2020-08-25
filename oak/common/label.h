@@ -48,7 +48,12 @@ oak::label::Label DeserializeLabel(const std::string& label_bytes);
 oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization_token_hmac);
 
 // Creates a label having as principal the provided WebAssembly module SHA-256 hash.
-oak::label::Label WebAssemblyModuleLabel(const std::string& web_asesemblymodule_hash_sha_256);
+oak::label::Label WebAssemblyModuleHashLabel(const std::string& web_asesemblymodule_hash_sha_256);
+
+// Creates a label having as principal the provided WebAssembly module Ed25519 public key.
+// https://ed25519.cr.yp.to
+oak::label::Label WebAssemblyModuleSignatureLabel(
+    const std::string& web_assembly_module_public_key);
 
 // Creates a label having as principal the provided TLS authority (host:port).
 oak::label::Label TlsEndpointLabel(const std::string& authority);

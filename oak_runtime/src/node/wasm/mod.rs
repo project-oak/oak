@@ -18,7 +18,7 @@
 
 use crate::{
     node::ConfigurationError, sha_256_hex, NodeMessage, NodePrivilege, NodeReadStatus,
-    RuntimeProxy, Signature, SignatureTable,
+    RuntimeProxy, SignatureTable,
 };
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, trace, warn};
@@ -815,15 +815,9 @@ impl WasmNode {
             ConfigurationError::IncorrectWebAssemblyModuleName
         })?;
 
-        let signatures = signature_table
-            .values
-            .get(&node_configuration.wasm_module_name)
-            .cloned()
-            .unwrap_or_default();
-
         // We compute the node privilege once and for all at start and just store it, since it does
         // not change throughout the node execution.
-        let node_privilege = wasm_node_privilege(&wasm_module_bytes, signatures.as_ref());
+        let node_privilege = wasm_node_privilege(&wasm_module_bytes, signature_table);
 
         Ok(Self {
             node_name: node_name.to_string(),
@@ -836,21 +830,29 @@ impl WasmNode {
 
 /// Computes the [`NodePrivilege`] granted to a WebAssembly Node running the specified WebAssembly
 /// module.
-/// Created [`NodePrivilege`] consists of Wasm module hash and signature.
-fn wasm_node_privilege(wasm_module_bytes: &[u8], signatures: &[Signature]) -> NodePrivilege {
-    let module_hash =
-        hex::decode(sha_256_hex(&wasm_module_bytes)).expect("Couldn't decode SHA-256 hex value");
+/// Created [`NodePrivilege`] consists of Wasm module hash and any matching signatures.
+fn wasm_node_privilege(
+    wasm_module_bytes: &[u8],
+    signature_table: &SignatureTable,
+) -> NodePrivilege {
+    let module_hash = sha_256_hex(&wasm_module_bytes);
     debug!("Wasm module SHA-256 hash: {:?}", module_hash);
-    let hash_tag = oak_abi::label::web_assembly_module_tag(&module_hash);
+
+    // Create hash tags.
+    let module_hash_bytes = hex::decode(&module_hash).expect("Couldn't decode SHA-256 hex value");
+    let hash_tag = oak_abi::label::web_assembly_module_tag(&module_hash_bytes);
 
     let mut confidentiality_tags = hashset! { hash_tag.clone() };
     let mut integrity_tags = hashset! { hash_tag };
 
-    for signature_item in signatures.iter() {
-        let signature_tag =
-            oak_abi::label::web_assembly_module_signature_tag(&signature_item.public_key);
-        confidentiality_tags.insert(signature_tag.clone());
-        integrity_tags.insert(signature_tag);
+    // Create signature tags.
+    if let Some(signatures) = signature_table.values.get(&module_hash) {
+        for signature_item in signatures.iter() {
+            let signature_tag =
+                oak_abi::label::web_assembly_module_signature_tag(&signature_item.public_key);
+            confidentiality_tags.insert(signature_tag.clone());
+            integrity_tags.insert(signature_tag);
+        }
     }
 
     NodePrivilege::new(confidentiality_tags, integrity_tags)
