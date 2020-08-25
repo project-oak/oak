@@ -28,8 +28,7 @@ use crate::{
 use log::{debug, error, info, trace, warn};
 use maplit::hashset;
 use oak_abi::{proto::oak::application::GrpcClientConfiguration, Handle, OakStatus};
-use oak_io::handle::ReadHandle;
-use oak_io::OakError;
+use oak_io::{handle::ReadHandle, OakError};
 use oak_services::proto::{google::rpc, oak::encap::GrpcResponse};
 use tokio::sync::oneshot;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Uri};
@@ -101,11 +100,7 @@ impl GrpcClientNode {
 
     /// Main loop that handles gRPC invocations from the `handle`, sends gRPC requests to an
     /// external gRPC service and writes gRPC responses back to the invocation channel.
-    async fn handle_loop(
-        &mut self,
-        runtime: RuntimeProxy,
-        handle: Handle,
-    ) -> Result<(), OakError> {
+    async fn handle_loop(&mut self, runtime: RuntimeProxy, handle: Handle) -> Result<(), OakError> {
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
@@ -113,8 +108,12 @@ impl GrpcClientNode {
             // Read a gRPC invocation from the [`Receiver`].
             let invocation = receiver.receive(&runtime).map_err(|error| {
                 match error {
-                    OakError::OakStatus(OakStatus::ErrTerminated) => debug!("gRPC client node is terminating."),
-                    OakError::OakStatus(OakStatus::ErrChannelClosed) => info!("gRPC invocation channel closed"),
+                    OakError::OakStatus(OakStatus::ErrTerminated) => {
+                        debug!("gRPC client node is terminating.")
+                    }
+                    OakError::OakStatus(OakStatus::ErrChannelClosed) => {
+                        info!("gRPC invocation channel closed")
+                    }
                     _ => error!("Couldn't receive the invocation: {:?}", error),
                 }
                 error

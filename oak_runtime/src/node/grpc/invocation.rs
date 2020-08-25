@@ -22,10 +22,9 @@ use crate::{
 };
 use log::error;
 use oak_abi::OakStatus;
-use oak_io::OakError;
 use oak_io::{
     handle::{ReadHandle, WriteHandle},
-    Decodable,
+    Decodable, OakError,
 };
 use oak_services::proto::oak::encap::{GrpcRequest, GrpcResponse};
 

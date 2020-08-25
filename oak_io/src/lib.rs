@@ -30,7 +30,7 @@ pub use oak_abi::Handle;
 // here as well.
 
 /// A simple holder for bytes + handles, using internally owned buffers.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Message {
     pub bytes: Vec<u8>,
     pub handles: Vec<Handle>,

@@ -29,7 +29,15 @@ version = "=0.11.0"
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
-allow = ["Apache-2.0", "BSD-3-Clause", "MPL-2.0", "ISC", "MIT", "OpenSSL"]
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-3-Clause",
+  "MPL-2.0",
+  "ISC",
+  "MIT",
+  "OpenSSL",
+]
 copyleft = "deny"
 
 [[licenses.clarify]]

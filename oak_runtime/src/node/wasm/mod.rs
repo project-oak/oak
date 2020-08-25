@@ -838,7 +838,8 @@ impl WasmNode {
 /// module.
 /// Created [`NodePrivilege`] consists of Wasm module hash and signature.
 fn wasm_node_privilege(wasm_module_bytes: &[u8], signatures: &[Signature]) -> NodePrivilege {
-    let module_hash = hex::decode(sha_256_hex(&wasm_module_bytes)).expect("Couldn't decode SHA-256 hex value");
+    let module_hash =
+        hex::decode(sha_256_hex(&wasm_module_bytes)).expect("Couldn't decode SHA-256 hex value");
     debug!("Wasm module SHA-256 hash: {:?}", module_hash);
     let hash_tag = oak_abi::label::web_assembly_module_tag(&module_hash);
 
