@@ -137,15 +137,19 @@ pub fn runtime_config_wasm(
     oak_runtime::RuntimeConfiguration {
         metrics_port: Some(9090),
         introspect_port: Some(1909),
-        grpc_config: oak_runtime::GrpcConfiguration {
-            grpc_server_tls_identity: Some(Identity::from_pem(
-                include_str!("../certs/local.pem"),
-                include_str!("../certs/local.key"),
-            )),
-            grpc_client_root_tls_certificate: Some(
-                oak_runtime::config::load_certificate(&include_str!("../certs/ca.pem")).unwrap(),
-            ),
-            oidc_client_info: None,
+        secure_server_configuration: oak_runtime::SecureServerConfiguration {
+            grpc_config: Some(oak_runtime::GrpcConfiguration {
+                grpc_server_tls_identity: Some(Identity::from_pem(
+                    include_str!("../certs/local.pem"),
+                    include_str!("../certs/local.key"),
+                )),
+                grpc_client_root_tls_certificate: Some(
+                    oak_runtime::config::load_certificate(&include_str!("../certs/ca.pem"))
+                        .unwrap(),
+                ),
+                oidc_client_info: None,
+            }),
+            http_config: None,
         },
         app_config: ApplicationConfiguration {
             wasm_modules,

@@ -17,10 +17,9 @@
 use super::*;
 use maplit::hashmap;
 use oak_abi::{label::Label, proto::oak::application::ApplicationConfiguration};
-use std::thread;
+use std::{fs, thread};
 
 #[tokio::test]
-#[ignore]
 // Might be unstable when running from `run-ci`. So it is ignored for now.
 async fn test_low_level_server_node() {
     let configuration = ApplicationConfiguration {
@@ -31,11 +30,16 @@ async fn test_low_level_server_node() {
     info!("Create runtime for test");
     let runtime = crate::RuntimeProxy::create_runtime(
         &configuration,
-        &crate::GrpcConfiguration::default(),
+        &crate::SecureServerConfiguration::default(),
         &signature_table,
     );
 
     let (init_receiver, invocation_receiver) = create_communication_channel(&runtime);
+    let tls_config = crate::tls::TlsConfig::new(
+        "../examples/certs/local/local.pem",
+        "../examples/certs/local/local.key",
+    )
+    .expect("Could not create TLS config from local certs.");
 
     // Create http server node
     let server_node = Box::new(
@@ -44,6 +48,7 @@ async fn test_low_level_server_node() {
             HttpServerConfiguration {
                 address: "[::]:2525".to_string(),
             },
+            tls_config,
         )
         .expect("Could not create server node"),
     );
@@ -136,16 +141,39 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
     }
 }
 
-async fn send_request() -> reqwest::Response {
+async fn send_request() -> http::response::Response<hyper::Body> {
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
     let mut label_bytes = vec![];
     let _ = label.encode(&mut label_bytes);
 
-    reqwest::Client::new()
-        .get("http://localhost:2525")
+    let path = "../examples/certs/local/ca.pem";
+    let ca_file = fs::File::open(path).unwrap_or_else(|e| panic!("failed to open {}: {}", path, e));
+    let mut ca = io::BufReader::new(ca_file);
+
+    // Build an HTTP connector which supports HTTPS too.
+    let mut http = hyper::client::HttpConnector::new();
+    http.enforce_http(false);
+    // Build a TLS client, using the custom CA store for lookups.
+    let mut tls = rustls::ClientConfig::new();
+    tls.root_store
+        .add_pem_file(&mut ca)
+        .expect("failed to load custom CA store");
+    // Join the above part into an HTTPS connector.
+    let https = hyper_rustls::HttpsConnector::from((http, tls));
+
+    let client: hyper::client::Client<_, hyper::Body> =
+        hyper::client::Client::builder().build(https);
+
+    let request = hyper::Request::builder()
+        .method("get")
+        .uri("https://localhost:2525")
         .header(oak_abi::OAK_LABEL_HTTP_KEY, label_bytes)
-        .send()
+        .body(hyper::Body::empty())
+        .unwrap();
+
+    client
+        .request(request)
         .await
         .expect("Error while awaiting response")
 }

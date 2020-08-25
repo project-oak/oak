@@ -47,6 +47,10 @@ version = "=0.13.1"
 name = "rustls"
 version = "=0.17.0"
 
+[[bans.skip]]
+name = "webpki-roots"
+version = "=0.19.0"
+
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]

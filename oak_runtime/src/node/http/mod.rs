@@ -24,6 +24,8 @@ use crate::{
     node::{ConfigurationError, Node},
     ChannelHalfDirection, RuntimeProxy,
 };
+use core::task::{Context, Poll};
+use futures_util::stream::Stream;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body, Request, Response, Server, StatusCode,
@@ -38,8 +40,18 @@ use oak_io::{
 };
 use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 use prost::Message;
-use std::{future::Future, net::SocketAddr, pin::Pin};
-use tokio::sync::oneshot;
+use std::{io, net::SocketAddr, pin::Pin};
+use tokio::{
+    net::{TcpListener, TcpStream},
+    sync::oneshot,
+};
+use tokio_rustls::server::TlsStream;
+
+use futures_util::{
+    future::TryFutureExt,
+    stream::{StreamExt, TryStreamExt},
+};
+use tokio_rustls::TlsAcceptor;
 
 #[cfg(test)]
 pub mod tests;
@@ -53,12 +65,32 @@ fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
     }
 }
 
+/// Asynchronously accept incoming TLS connections.
+pub struct TlsServer<'a> {
+    acceptor: Pin<Box<dyn Stream<Item = Result<TlsStream<TcpStream>, io::Error>> + 'a>>,
+}
+
+impl hyper::server::accept::Accept for TlsServer<'_> {
+    type Conn = TlsStream<TcpStream>;
+    type Error = io::Error;
+
+    /// Poll to accept the next connection.
+    fn poll_accept(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context,
+    ) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
+        Pin::new(&mut self.acceptor).poll_next(cx)
+    }
+}
+
 /// Struct that represents an HTTP server pseudo-Node.
 pub struct HttpServerNode {
     /// Pseudo-Node name.
     node_name: String,
     /// Server address to listen client requests on.
     address: SocketAddr,
+    /// TLS certificate and private key for establishing secure connections.
+    tls_config: crate::tls::TlsConfig,
 }
 
 impl HttpServerNode {
@@ -66,12 +98,14 @@ impl HttpServerNode {
     pub fn new(
         node_name: &str,
         config: HttpServerConfiguration,
+        tls_config: crate::tls::TlsConfig,
     ) -> Result<Self, ConfigurationError> {
         let address = config.address.parse()?;
         check_port(&address)?;
         Ok(Self {
             node_name: node_name.to_string(),
             address,
+            tls_config,
         })
     }
 
@@ -154,21 +188,23 @@ impl HttpServerNode {
     ) {
         // A `Service` is needed for every connection, so this
         // creates one from the `request_handler`.
-        let make_service = make_service_fn(move |_conn| {
+        let service = make_service_fn(move |_conn| {
             let handler = request_handler.clone();
             async move {
                 Ok::<_, hyper::Error>(service_fn(move |req| {
                     let handler = handler.clone();
-
-                    async move {
-                        let http_request = HttpServerNode::map_to_http_request(req).await;
-                        handler.handle(http_request).await
-                    }
+                    async move { handler.handle(req).await }
                 }))
             }
         });
 
-        let server = Server::bind(&self.address).serve(make_service);
+        // Low-level server creation is needed, to be able to validate TLS streams.
+        let mut tcp = TcpListener::bind(&self.address)
+            .await
+            .expect("Could not create TCP listener.");
+        let tls_server = self.build_tls_server(&mut tcp).await;
+        let server = Server::builder(tls_server).serve(service);
+
         let graceful_server = server.with_graceful_shutdown(async {
             // Treat notification failure the same as a notification.
             let _ = notify_receiver.await;
@@ -180,8 +216,38 @@ impl HttpServerNode {
         );
 
         // Run until asked to terminate...
-        let result = graceful_server.await;
+        let result = graceful_server
+            // Terminate the server only if a shutdown signal is received.
+            // In case of errors, only log them instead of terminating the server.
+            .or_else(|e| async move {
+                log::error!("server error: {}", e);
+                Ok::<_, hyper::Error>(())
+            })
+            .await;
         info!("HTTP server pseudo-node terminated with {:?}", result);
+    }
+
+    /// Build a server that checks incoming TCP connections for TLS handshake.
+    async fn build_tls_server<'a>(&'a self, tcp: &'a mut TcpListener) -> TlsServer<'a> {
+        let tls_cfg = crate::tls::to_server_config(self.tls_config.clone());
+        let tls_acceptor = TlsAcceptor::from(tls_cfg);
+
+        let incoming_tls_stream = tcp
+            .incoming()
+            .map_err(|err| {
+                io::Error::new(io::ErrorKind::Other, format!("Incoming failed: {:?}", err))
+            })
+            .and_then(move |stream| {
+                tls_acceptor.accept(stream).map_err(|err| {
+                    log::error!("Client-connection error: {:?}", err);
+                    io::Error::new(io::ErrorKind::Other, format!("TLS Error: {:?}", err))
+                })
+            })
+            .boxed();
+
+        TlsServer {
+            acceptor: incoming_tls_stream,
+        }
     }
 
     // Create an instance of HttpRequest, from the given Request.
@@ -287,28 +353,21 @@ struct HttpRequestHandler {
 }
 
 impl HttpRequestHandler {
-    fn handle(
-        &self,
-        request: HttpRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<Response<Body>, OakStatus>> + Send + Sync>> {
-        let handler = self.clone();
-        let future = async move {
-            let oak_label = get_oak_label(&request)?;
-            info!(
-                "Handling HTTP request; request size: {} bytes, label: {:?}",
-                request.body.len(),
-                oak_label
-            );
+    async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, OakStatus> {
+        let request = HttpServerNode::map_to_http_request(req).await;
+        let oak_label = get_oak_label(&request)?;
+        info!(
+            "Handling HTTP request; request size: {} bytes, label: {:?}",
+            request.body.len(),
+            oak_label
+        );
 
-            debug!("Inject the request into the Oak Node");
-            let response = handler
-                .inject_http_request(request, &oak_label)
-                .map_err(|_| OakStatus::ErrInternal)?;
+        debug!("Inject the request into the Oak Node");
+        let response = self
+            .inject_http_request(request, &oak_label)
+            .map_err(|_| OakStatus::ErrInternal)?;
 
-            Ok(response.to_response())
-        };
-
-        Box::pin(future)
+        Ok(response.to_response())
     }
 
     fn inject_http_request(
@@ -430,8 +489,8 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
             OakStatus::ErrInvalidArgs
         }),
         None => {
-            warn!("No HTTP label found: using public_untrusted.");
-            Ok(Label::public_untrusted())
+            warn!("No HTTP label found.");
+            Err(OakStatus::ErrInvalidArgs)
         }
     }
 }
@@ -464,9 +523,7 @@ impl HttpResponseIterator {
             }
             Err(status) => {
                 error!("Could not read response: {}", status);
-                *response.status_mut() =
-                    StatusCode::from_u16(http::status::StatusCode::INTERNAL_SERVER_ERROR.as_u16())
-                        .expect("Error when creating internal error (500) status code.");
+                *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
             }
         }
         response

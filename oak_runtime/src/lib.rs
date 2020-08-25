@@ -77,6 +77,7 @@ mod proxy;
 #[cfg(test)]
 mod tests;
 pub mod time;
+pub mod tls;
 
 /// Configuration options that govern the behaviour of the Runtime and the Oak Application running
 /// inside it.
@@ -86,8 +87,8 @@ pub struct RuntimeConfiguration {
     pub metrics_port: Option<u16>,
     /// Port to run an introspection server on, if provided.
     pub introspect_port: Option<u16>,
-    /// gRPC-specific options.
-    pub grpc_config: GrpcConfiguration,
+    /// Security options for server pseudo-nodes.
+    pub secure_server_configuration: SecureServerConfiguration,
     /// Application configuration.
     pub app_config: ApplicationConfiguration,
     /// Table that contains signatures and public keys corresponding to Oak modules.
@@ -128,6 +129,22 @@ pub struct Signature {
 pub struct SignatureTable {
     /// Keys in the table are Oak module hashes.
     pub values: HashMap<String, Vec<Signature>>,
+}
+
+/// Configuration options related to HTTP pseudo-Nodes.
+///
+/// `Debug` is intentionally not implemented in order to avoid accidentally logging secrets.
+#[derive(Default, Clone)]
+pub struct HttpConfiguration {
+    /// TLS identity to use for all HTTP Server Nodes.
+    pub tls_config: crate::tls::TlsConfig,
+}
+
+/// Configuration options for secure HTTP and gRPC pseudo-Nodes.
+#[derive(Default, Clone)]
+pub struct SecureServerConfiguration {
+    pub grpc_config: Option<GrpcConfiguration>,
+    pub http_config: Option<HttpConfiguration>,
 }
 
 struct NodeStopper {
@@ -306,7 +323,9 @@ impl Drop for AuxServer {
 /// Runtime structure for configuring and running a set of Oak Nodes.
 pub struct Runtime {
     application_configuration: ApplicationConfiguration,
-    grpc_configuration: GrpcConfiguration,
+
+    secure_server_configuration: SecureServerConfiguration,
+
     signature_table: SignatureTable,
 
     terminating: AtomicBool,
@@ -1123,7 +1142,7 @@ impl Runtime {
         let instance = node::create_node(
             &self.application_configuration,
             config,
-            &self.grpc_configuration,
+            &self.secure_server_configuration,
             &self.signature_table,
         )
         .map_err(|err| {

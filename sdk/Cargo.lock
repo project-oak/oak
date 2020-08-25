@@ -938,6 +938,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tokio",
+ "tokio-rustls 0.13.1",
  "tonic",
  "wasmi",
 ]

@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
+set -o xtrace
 
-curl localhost:8080
+cert_path="../../certs/local/ca.pem"
+curl --cacert "${cert_path}" https://localhost:8080

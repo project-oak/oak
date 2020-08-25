@@ -18,8 +18,8 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    metrics::Metrics, AuxServer, ChannelHalfDirection, GrpcConfiguration, NodeId, NodeMessage,
-    NodePrivilege, NodeReadStatus, Runtime, SignatureTable,
+    metrics::Metrics, AuxServer, ChannelHalfDirection, NodeId, NodeMessage, NodePrivilege,
+    NodeReadStatus, Runtime, SecureServerConfiguration, SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -57,12 +57,12 @@ impl RuntimeProxy {
     /// Creates a [`Runtime`] instance with a single initial Node configured, and no channels.
     pub fn create_runtime(
         application_configuration: &ApplicationConfiguration,
-        grpc_configuration: &GrpcConfiguration,
+        secure_server_configuration: &SecureServerConfiguration,
         signature_table: &SignatureTable,
     ) -> RuntimeProxy {
         let runtime = Arc::new(Runtime {
             application_configuration: application_configuration.clone(),
-            grpc_configuration: grpc_configuration.clone(),
+            secure_server_configuration: secure_server_configuration.clone(),
             signature_table: signature_table.clone(),
             terminating: AtomicBool::new(false),
             next_channel_id: AtomicU64::new(0),

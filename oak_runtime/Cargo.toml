@@ -55,11 +55,15 @@ tokio = { version = "*", features = [
   "time",
   "udp"
 ] }
+tokio-rustls = "*"
 tonic = { version = "*", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 
 [dev-dependencies]
 env_logger = "*"
+hyper-rustls = { version = "*", default-features = false, features = [
+  "webpki-tokio"
+] }
 minisign = "*"
 regex = "*"
 wat = "*"
