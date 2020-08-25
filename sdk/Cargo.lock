@@ -198,15 +198,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ct-logs"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d3686f5fa27dbc1d76c751300376e167c5a43387f44bb451fd1c24776e49113"
-dependencies = [
- "sct",
-]
-
-[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -547,12 +538,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac965ea399ec3a25ac7d13b8affd4b8f39325cca00858ddf5eb29b79e6b14b08"
 dependencies = [
  "bytes",
- "ct-logs",
  "futures-util",
  "hyper",
  "log",
  "rustls 0.17.0",
- "rustls-native-certs",
  "tokio",
  "tokio-rustls 0.13.1",
  "webpki",
@@ -926,7 +915,6 @@ dependencies = [
  "hex",
  "http",
  "hyper",
- "hyper-rustls",
  "itertools",
  "jsonwebtoken",
  "lazy_static",
@@ -946,7 +934,6 @@ dependencies = [
  "reqwest",
  "roughenough",
  "rustls 0.17.0",
- "rustls-native-certs",
  "serde",
  "serde_json",
  "sha2",
@@ -1440,18 +1427,6 @@ dependencies = [
  "ring",
  "sct",
  "webpki",
-]
-
-[[package]]
-name = "rustls-native-certs"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a75ffeb84a6bd9d014713119542ce415db3a3e4748f0bfce1e1416cd224a23a5"
-dependencies = [
- "openssl-probe",
- "rustls 0.17.0",
- "schannel",
- "security-framework",
 ]
 
 [[package]]

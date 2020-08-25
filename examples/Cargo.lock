@@ -832,10 +832,10 @@ dependencies = [
  "hyper",
  "log",
  "rustls",
- "rustls-native-certs",
  "tokio",
  "tokio-rustls",
  "webpki",
+ "webpki-roots 0.20.0",
 ]
 
 [[package]]
@@ -1116,8 +1116,8 @@ dependencies = [
  "openssl-probe",
  "openssl-sys",
  "schannel",
- "security-framework 0.4.4",
- "security-framework-sys 0.4.3",
+ "security-framework",
+ "security-framework-sys",
  "tempfile",
 ]
 
@@ -1265,7 +1265,6 @@ dependencies = [
  "hex",
  "http",
  "hyper",
- "hyper-rustls",
  "itertools",
  "jsonwebtoken",
  "lazy_static",
@@ -1285,7 +1284,6 @@ dependencies = [
  "reqwest",
  "roughenough",
  "rustls",
- "rustls-native-certs",
  "serde",
  "serde_json",
  "sha2",
@@ -1837,7 +1835,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots",
+ "webpki-roots 0.19.0",
  "winreg",
 ]
 
@@ -1928,18 +1926,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustls-native-certs"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "629d439a7672da82dd955498445e496ee2096fe2117b9f796558a43fdb9e59b8"
-dependencies = [
- "openssl-probe",
- "rustls",
- "schannel",
- "security-framework 1.0.0",
-]
-
-[[package]]
 name = "rusty-machine"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2012,20 +1998,7 @@ dependencies = [
  "core-foundation",
  "core-foundation-sys",
  "libc",
- "security-framework-sys 0.4.3",
-]
-
-[[package]]
-name = "security-framework"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad502866817f0575705bd7be36e2b2535cc33262d493aa733a2ec862baa2bc2b"
-dependencies = [
- "bitflags",
- "core-foundation",
- "core-foundation-sys",
- "libc",
- "security-framework-sys 1.0.0",
+ "security-framework-sys",
 ]
 
 [[package]]
@@ -2033,16 +2006,6 @@ name = "security-framework-sys"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17bf11d99252f512695eb468de5516e5cf75455521e69dfe343f3b74e4748405"
-dependencies = [
- "core-foundation-sys",
- "libc",
-]
-
-[[package]]
-name = "security-framework-sys"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51ceb04988b17b6d1dcd555390fa822ca5637b4a14e1f5099f13d351bed4d6c7"
 dependencies = [
  "core-foundation-sys",
  "libc",
@@ -2975,6 +2938,15 @@ name = "webpki-roots"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8eff4b7516a57307f9349c64bf34caa34b940b66fed4b2fb3136cb7386e5739"
+dependencies = [
+ "webpki",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f20dea7535251981a9670857150d571846545088359b28e4951d350bdaf179f"
 dependencies = [
  "webpki",
 ]

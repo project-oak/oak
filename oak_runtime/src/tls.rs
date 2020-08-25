@@ -51,9 +51,9 @@ pub(crate) fn to_server_config(tls_config: TlsConfig) -> Arc<ServerConfig> {
     let mut cfg = ServerConfig::new(NoClientAuth::new());
     // Select a certificate to use.
     let private_key = tls_config.keys[0].clone();
-    let _ = cfg
-        .set_single_cert(tls_config.certs, private_key)
-        .map_err(|e| log::error!("{}", e));
+    if let Err(error) = cfg.set_single_cert(tls_config.certs, private_key) {
+        log::warn!("{}", error);
+    };
     // Configure ALPN to accept HTTP/2, HTTP/1.1 in that order.
     cfg.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
     Arc::new(cfg)

@@ -7,7 +7,9 @@ license = "Apache-2.0"
 
 [dependencies]
 hyper = "*"
-hyper-rustls = "*"
+hyper-rustls = { version = "*", default-features = false, features = [
+  "webpki-tokio"
+] }
 log = "*"
 oak_abi = "=0.1.0"
 prost = "*"

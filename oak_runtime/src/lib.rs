@@ -87,7 +87,7 @@ pub struct RuntimeConfiguration {
     pub metrics_port: Option<u16>,
     /// Port to run an introspection server on, if provided.
     pub introspect_port: Option<u16>,
-    /// gRPC-specific options.
+    /// Security options for server pseudo-nodes.
     pub secure_server_configuration: SecureServerConfiguration,
     /// Application configuration.
     pub app_config: ApplicationConfiguration,

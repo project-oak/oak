@@ -44,7 +44,6 @@ regex = { version = "1", optional = true }
 reqwest = { version = "*", default-features = false, features = ["rustls-tls"] }
 roughenough = { path = "../third_party/roughenough" }
 rustls = "*"
-rustls-native-certs = "*"
 serde = "*"
 serde_json = "*"
 sha2 = "*"
@@ -57,12 +56,14 @@ tokio = { version = "*", features = [
   "udp"
 ] }
 tokio-rustls = "*"
-hyper-rustls = "*"
 tonic = { version = "*", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
 
 [dev-dependencies]
 env_logger = "*"
+hyper-rustls = { version = "*", default-features = false, features = [
+  "webpki-tokio"
+] }
 minisign = "*"
 regex = "*"
 wat = "*"

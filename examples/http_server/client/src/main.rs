@@ -34,7 +34,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
     let mut label_bytes = vec![];
-    let _ = label.encode(&mut label_bytes);
+    label
+        .encode(&mut label_bytes)
+        .expect("could not serialize label to bytes");
     let opt = Opt::from_args();
 
     let path = &opt.ca_cert;
