@@ -234,11 +234,13 @@ impl HttpServerNode {
 
         let incoming_tls_stream = tcp
             .incoming()
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Incoming failed: {:?}", e)))
-            .and_then(move |s| {
-                tls_acceptor.accept(s).map_err(|e| {
-                    log::error!("Client-connection error: {:?}", e);
-                    io::Error::new(io::ErrorKind::Other, format!("TLS Error: {:?}", e))
+            .map_err(|err| {
+                io::Error::new(io::ErrorKind::Other, format!("Incoming failed: {:?}", err))
+            })
+            .and_then(move |stream| {
+                tls_acceptor.accept(stream).map_err(|err| {
+                    log::error!("Client-connection error: {:?}", err);
+                    io::Error::new(io::ErrorKind::Other, format!("TLS Error: {:?}", err))
                 })
             })
             .boxed();

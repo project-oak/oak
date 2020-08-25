@@ -946,6 +946,7 @@ dependencies = [
  "reqwest",
  "roughenough",
  "rustls 0.17.0",
+ "rustls-native-certs",
  "serde",
  "serde_json",
  "sha2",

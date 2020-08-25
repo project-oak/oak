@@ -41,18 +41,13 @@ use tonic::transport::Identity;
 pub struct Opt {
     #[structopt(long, help = "Application configuration file.")]
     application: String,
+    #[structopt(long, help = "Private RSA key file used by gRPC server pseudo-Nodes.")]
+    grpc_tls_private_key: Option<String>,
     #[structopt(
         long,
-        default_value = "",
-        help = "Private RSA key file used by gRPC server pseudo-Nodes."
-    )]
-    grpc_tls_private_key: String,
-    #[structopt(
-        long,
-        default_value = "",
         help = "PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes."
     )]
-    grpc_tls_certificate: String,
+    grpc_tls_certificate: Option<String>,
     // Only support `root-tls-certificate` when `oak_debug` is enabled.
     #[cfg_attr(
         feature = "oak_debug",
@@ -73,18 +68,13 @@ pub struct Opt {
         OpenID Connect authentication will not be available if this parameter is not specified."
     )]
     oidc_client: Option<String>,
+    #[structopt(long, help = "Private RSA key file used by HTTP server pseudo-Nodes.")]
+    http_tls_private_key: Option<String>,
     #[structopt(
         long,
-        default_value = "",
-        help = "Private RSA key file used by HTTP server pseudo-Nodes."
-    )]
-    http_tls_private_key: String,
-    #[structopt(
-        long,
-        default_value = "",
         help = "PEM encoded X.509 TLS certificate file used by HTTP server pseudo-Nodes."
     )]
-    http_tls_certificate: String,
+    http_tls_certificate: Option<String>,
     #[structopt(long, default_value = "9090", help = "Metrics server port number.")]
     metrics_port: u16,
     #[structopt(long, help = "Starts the Runtime without a metrics server.")]
@@ -220,10 +210,14 @@ fn create_secure_server_config(
 /// Create the overall [`oak_runtime::GrpcConfiguration`] from the TLS certificate and private key
 /// files.
 fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguration> {
-    let grpc_tls_private_key =
-        read_to_string(&opt.grpc_tls_private_key).context("could not read gRPC TLS private key")?;
-    let grpc_tls_certificate =
-        read_to_string(&opt.grpc_tls_certificate).context("could not read gRPC TLS certificate")?;
+    let grpc_tls_private_key = match &opt.grpc_tls_private_key {
+        Some(path) => read_to_string(path).context("could not read gRPC TLS private key")?,
+        None => return Err(anyhow!("No gRPC TLS private key file provided.")),
+    };
+    let grpc_tls_certificate = match &opt.grpc_tls_certificate {
+        Some(path) => read_to_string(path).context("could not read gRPC TLS certificate")?,
+        None => return Err(anyhow!("No gRPC TLS certificate file provided.")),
+    };
     let root_tls_certificate = get_root_tls_certificate_or_default(&opt)?;
     let oidc_client_info = get_oidc_client_info(&opt)?;
 
@@ -286,14 +280,23 @@ fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
 /// Create the overall [`oak_runtime::HttpConfiguration`] from the TLS certificate and private key
 /// files.
 fn create_http_config(opt: &Opt) -> anyhow::Result<oak_runtime::HttpConfiguration> {
-    let http_tls_private_key_path = &opt.http_tls_private_key;
-    let http_tls_certificate_path = &opt.http_tls_certificate;
+    let http_tls_private_key_path = match &opt.http_tls_private_key {
+        Some(path) => path,
+        None => {
+            return Err(anyhow!(
+                "Missing configuration for TLS identity for HTTP server nodes."
+            ))
+        }
+    };
+    let http_tls_certificate_path = match &opt.http_tls_certificate {
+        Some(path) => path,
+        None => {
+            return Err(anyhow!(
+                "Missing configuration for TLS identity for HTTP server nodes."
+            ))
+        }
+    };
 
-    if http_tls_private_key_path.is_empty() || http_tls_certificate_path.is_empty() {
-        return Err(anyhow!(
-            "Missing configuration for TLS identity for HTTP server nodes."
-        ));
-    }
     match oak_runtime::tls::TlsConfig::new(http_tls_certificate_path, http_tls_private_key_path) {
         Some(tls_config) => Ok(oak_runtime::HttpConfiguration { tls_config }),
         None => Err(anyhow!(

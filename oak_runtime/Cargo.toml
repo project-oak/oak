@@ -24,7 +24,7 @@ futures-core = "*"
 futures-util = "*"
 hex = "*"
 http = "*"
-hyper = { version = "0.13.0", default-features = false }
+hyper = "*"
 itertools = "*"
 jsonwebtoken = "*"
 lazy_static = "*"
@@ -44,7 +44,7 @@ regex = { version = "1", optional = true }
 reqwest = { version = "*", default-features = false, features = ["rustls-tls"] }
 roughenough = { path = "../third_party/roughenough" }
 rustls = "*"
-rustls-native-certs = { version = "0.4.0", optional = true }
+rustls-native-certs = "*"
 serde = "*"
 serde_json = "*"
 sha2 = "*"

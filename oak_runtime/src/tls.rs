@@ -25,6 +25,7 @@ use tokio_rustls::rustls::{
     Certificate, NoClientAuth, PrivateKey, ServerConfig,
 };
 
+/// Represents TLS identity to use for HTTP server pseudo-nodes.
 #[derive(Default, Clone)]
 pub struct TlsConfig {
     certs: Vec<Certificate>,
