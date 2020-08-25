@@ -51,7 +51,9 @@ pub trait ReceiverExt<T> {
 impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
     /// Close the underlying channel handle.
     fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError> {
-        runtime.channel_close(self.handle.handle).map_err(|error| error.into())
+        runtime
+            .channel_close(self.handle.handle)
+            .map_err(|error| error.into())
     }
 
     /// Waits, reads and decodes a message from the [`Receiver::handle`].
@@ -66,7 +68,8 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                         error!("Channel read error {:?}: Empty message", self.handle);
                         OakStatus::ErrInternal
                     })
-                }).map_err(|error| error.into())
+                })
+                .map_err(|error| error.into())
                 .and_then(|message| T::decode(&message)),
             ChannelReadStatus::Orphaned => {
                 info!("Channel closed {:?}", self.handle);
@@ -107,11 +110,15 @@ pub trait SenderExt<T> {
 impl<T: Encodable> SenderExt<T> for Sender<T> {
     /// Close the underlying channel handle.
     fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError> {
-        runtime.channel_close(self.handle.handle).map_err(|error| error.into())
+        runtime
+            .channel_close(self.handle.handle)
+            .map_err(|error| error.into())
     }
 
     /// Encodes and sends a message to the [`Sender::handle`].
     fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError> {
-        runtime.channel_write(self.handle.handle, message.encode()?).map_err(|error| error.into())
+        runtime
+            .channel_write(self.handle.handle, message.encode()?)
+            .map_err(|error| error.into())
     }
 }

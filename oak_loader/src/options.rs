@@ -217,8 +217,9 @@ fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
     if let Some(signatures_manifest) = &opt.signatures_manifest {
         let signatures_manifest_file =
             read_to_string(signatures_manifest).context("Couldn't read signature manifest file")?;
-        let loaded_signatures_manifest: SignatureManifest = toml::from_str(&signatures_manifest_file)
-            .context("Couldn't parse signature manifest file as TOML")?;
+        let loaded_signatures_manifest: SignatureManifest =
+            toml::from_str(&signatures_manifest_file)
+                .context("Couldn't parse signature manifest file as TOML")?;
         debug!("Parsed signature manifest file: {:?}", signatures_manifest);
 
         for (module_hash, signature_vec) in loaded_signatures_manifest.signatures.iter() {

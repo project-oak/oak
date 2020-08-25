@@ -125,7 +125,7 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
                 bytes: vec![],
                 handles: vec![],
             };
-            let _ = resp.encode(&mut message.data);
+            let _ = resp.encode(&mut message.bytes);
 
             // Send the response over the response_writer channel
             let response_writer_handle = msg.handles[1];

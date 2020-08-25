@@ -32,8 +32,10 @@ use log::{debug, error, info, warn};
 use oak_abi::{
     label::Label, proto::oak::application::HttpServerConfiguration, ChannelReadStatus, OakStatus,
 };
-use oak_io::handle::{ReadHandle, WriteHandle};
-use oak_io::OakError;
+use oak_io::{
+    handle::{ReadHandle, WriteHandle},
+    OakError,
+};
 use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 use prost::Message;
 use std::{future::Future, net::SocketAddr, pin::Pin};

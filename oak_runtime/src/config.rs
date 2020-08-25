@@ -18,8 +18,7 @@
 
 use crate::{io::SenderExt, Runtime, RuntimeConfiguration, RuntimeProxy};
 use log::{error, info};
-use oak_io::OakError;
-use oak_io::handle::WriteHandle;
+use oak_io::{handle::WriteHandle, OakError};
 use std::sync::Arc;
 use tonic::transport::Certificate;
 

@@ -32,18 +32,16 @@ mod common {
     use hyper::{Client, Uri};
     use log::info;
     use maplit::hashmap;
-    use oak_abi::{
-        proto::oak::application::{
-            node_configuration::ConfigType, ApplicationConfiguration, ConfigMap, NodeConfiguration,
-            WebAssemblyConfiguration,
-        },
-        OakStatus,
+    use oak_abi::proto::oak::application::{
+        node_configuration::ConfigType, ApplicationConfiguration, ConfigMap, NodeConfiguration,
+        WebAssemblyConfiguration,
     };
+    use oak_io::OakError;
     use oak_runtime::{config, GrpcConfiguration, Runtime, SignatureTable};
     use std::sync::Arc;
     use wat::parse_str;
 
-    pub fn start_runtime() -> Result<Arc<Runtime>, OakStatus> {
+    pub fn start_runtime() -> Result<Arc<Runtime>, OakError> {
         let wat = r#"
         (module
             (type (;0;) (func (param i64)))

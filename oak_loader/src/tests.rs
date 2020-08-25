@@ -53,7 +53,7 @@ fn parse_config_map_multiple_ok() {
         },
         ConfigEntry {
             key: "authors".to_string(),
-            filename: "../../../../AUTHORS".to_string(),
+            filename: "../AUTHORS".to_string(),
         },
     ]);
     assert_eq!(
