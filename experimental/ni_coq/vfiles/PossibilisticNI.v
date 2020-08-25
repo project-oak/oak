@@ -5,7 +5,8 @@ From OakIFC Require Import
     RuntimeModel
     EvAugSemantics
     Events
-    LowEquivalences.
+    LowEquivalences
+    TraceTheorems.
 
 
 (*
@@ -73,54 +74,6 @@ Theorem possibilistic_ni_1step: forall ell t1 t2 t1',
         (trace_low_eq ell t1' t2')).
 Admitted. (* NOTE: work in progress *)
 
-(* Note: How can this be done more elegantly, or skipped? *)
-Theorem nil_cons_rev: forall (A : Type) (x : A) (l : list A), x :: l <> [].
-Proof.
-    unfold not. intros. symmetry in H. generalize dependent H.
-    apply nil_cons.
-Qed.
-
-Theorem t_upd_mono_nil: forall t s,
-    ~(t = nil) -> ~((trace_upd_head_state t s) = nil).
-Proof.
-    intros.
-    unfold trace_upd_head_state. destruct t. assumption.
-    replace (let (_, e) := p in (s, e) :: t) with
-        ((let (_, e) := p in (s, e)) :: t).
-    apply nil_cons_rev.
-    destruct p. reflexivity.
-Qed.
-
-Theorem no_steps_to_empty: forall t, 
-    ~(step_system_ev_multi t []).
-    unfold not. intros.
-    remember ([]: trace) as emp eqn:R.
-    induction H; subst.
-        - (* refl *) inversion H; subst. destruct t'.
-            + inversion H2. 
-            + apply t_upd_mono_nil in H0. assumption.
-            unfold not. intros. generalize dependent H4. apply nil_cons_rev.
-        - apply IHstep_system_ev_multi. reflexivity.
-Qed.
-
-Theorem step_system_backwards: forall t t' a,
-    step_system_ev_multi t (a :: t') ->
-    step_system_ev_multi t t'.
-Proof.
-Admitted.
-
-Theorem step_system_extends: forall t t' a,
-    step_system_ev_multi t (a :: t') ->
-    step_system_ev t' (a :: t').
-Proof.
-Admitted.
-
-Theorem step_system_transitive: forall t1 t2 t3,
-    step_system_ev_multi t1 t2 ->
-    step_system_ev_multi t2 t3 ->
-    step_system_ev_multi t1 t3.
-Proof.
-Admitted.
 
 Theorem possibilistic_ni: conjecture_possibilistic_ni. Proof.
 unfold conjecture_possibilistic_ni.
@@ -140,14 +93,14 @@ induction t1n.
             exists t2n. split. constructor. assumption. assumption.
         + rename Ht1_mstep_t1n into Ht1_mstep_at1n.
         assert (E: step_system_ev_multi t2 t1n)
-            by apply (step_system_backwards t2 t1n a H0).
+            by apply (step_system_multi_backwards t2 t1n a H0).
         assert (H': step_system_ev_multi t1_init t2) by
             (constructor; assumption).
         assert (Ht1_mstep_t1n: step_system_ev_multi t1_init t1n)
             by apply (step_system_transitive t1_init t2 t1n H' E).
         apply IHt1n in Ht1_mstep_t1n as [t2n [Hm_t2_init_t2n Hleq_t1n_t2n]].
         assert (E2: step_system_ev t1n (a::t1n))
-            by apply (step_system_extends t2 t1n a H0).
+            by apply (step_system_multi_extends t2 t1n a H0).
             (*need to get non-multi from E2.  *)
         assert (E3: exists t2n',
             (step_system_ev t2n t2n') /\
