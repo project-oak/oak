@@ -1,0 +1,32 @@
+# Configuration used for dependency checking with cargo-deny.
+#
+# For further details on all configuration options see:
+# https://embarkstudios.github.io/cargo-deny/checks/cfg.html
+targets = [{ triple = "x86_64-unknown-linux-musl" }]
+
+# Deny all advisories unless explicitly ignored.
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+yanked = "deny"
+notice = "deny"
+ignore = [
+  # TODO(#1268): Remove when ring and prometheus no longer depends on spin.
+  "RUSTSEC-2019-0031",
+]
+
+# Deny multiple versions unless explicitly skipped.
+[bans]
+multiple-versions = "deny"
+
+# List of allowed licenses.
+# For more detailsinformation see http://go/thirdpartylicenses
+[licenses]
+allow = ["Apache-2.0", "MIT", "ISC", "OpenSSL"]
+copyleft = "deny"
+
+[[licenses.clarify]]
+name = "ring"
+version = "*"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 3171872035 }]
