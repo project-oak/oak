@@ -18,7 +18,7 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = (env) => ({
-  entry: './index.ts',
+  entry: './index.tsx',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'index.js',
@@ -38,7 +38,7 @@ module.exports = (env) => ({
     ],
   },
   resolve: {
-    extensions: ['.ts', '.js'],
+    extensions: ['.ts', '.tsx', '.js'],
   },
   mode: env.NODE_ENV || 'none',
   devServer: {

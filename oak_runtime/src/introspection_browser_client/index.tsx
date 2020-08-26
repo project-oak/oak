@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+import React from 'react';
+import ReactDOM from 'react-dom';
 import introspectionEventsProto from './proto/introspection_events_pb';
 
 function loadSerializedEvents(): Promise<Uint8Array> {
@@ -36,11 +38,32 @@ function loadSerializedEvents(): Promise<Uint8Array> {
   });
 }
 
-// TODO(#913): Use these events to create a helpful UI with them
-(async () => {
-  const serializedEvents = await loadSerializedEvents();
-  let events = introspectionEventsProto.Events.deserializeBinary(
-    serializedEvents
-  ).toObject();
-  document.getElementById('app').innerHTML = JSON.stringify(events);
-})();
+const EventList = () => {
+  const [events, setEvents] = React.useState<introspectionEventsProto.Event[]>(
+    []
+  );
+  React.useEffect(() => {
+    async function loadEvents() {
+      const serializedEvents: Uint8Array = await loadSerializedEvents();
+      const events = introspectionEventsProto.Events.deserializeBinary(
+        serializedEvents
+      ).getEventsList();
+      setEvents(events);
+    }
+
+    loadEvents();
+  }, []);
+
+  return (
+    <ol>
+      {events.map((event, index) => (
+        // Usually it's not advisable to use the index as a key. However since
+        // the list of events is append-only it's fine in this case.
+        // Ref: https://reactjs.org/docs/lists-and-keys.html#keys
+        <li key={index}>{JSON.stringify(event.toObject())}</li>
+      ))}
+    </ol>
+  );
+};
+
+ReactDOM.render(<EventList />, document.getElementById('app'));
