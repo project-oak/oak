@@ -16,7 +16,7 @@
 
 import introspectionEventsProto from './proto/introspection_events_pb';
 
-function loadSerializedEvents() {
+function loadSerializedEvents(): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const eventsRequest = new XMLHttpRequest();
     eventsRequest.open(
