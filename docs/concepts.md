@@ -322,6 +322,71 @@ represented by a message containing two Channels handles:
     connection itself; this represents the actual authority of the caller.
   - an empty integrity component.
 
+### Signature labels
+
+Oak Wasm modules can be signed using [Ed25519](https://ed25519.cr.yp.to/)
+scheme. Such signatures may be created by an Oak module reviewer who then
+publishes signatures and corresponding public keys on a public resource. By
+signing a module reviewers endorse it's functionality and show that they trust
+this particular module not to have any undocumented functionality. The same
+reviewer may also use distinct keys for different purposes, for example to use a
+separate public key to sign a family of related modules.
+
+In case when a client trusts a certain reviewer, they can download a
+corresponding reviewer's public key and use it as a data label. This will allow
+an Oak server to download and use new versions of modules signed by the same
+reviewer without client's notice, i.e. client wouldn't need to constantly update
+module hashes in data labels. It will also allow new versions of Oak modules to
+access old client's data saved by Oak.
+
+Reviewer's public key can also be assigned to outgoing requests by the client
+library, which was created by the Oak application developer. In this case client
+doesn't need to manually download a public key, but they will need to trust that
+the client library assigns these public keys to outgoing requests correctly.
+
+In order to more clearly show how Oak module signatures are used, here is a
+possible life cycle of an Oak application: from development to usage.
+
+#### Oak signature life cycle
+
+The parties involved in the signature life cycle are:
+
+- Application developer
+  - Person/organization who writes an Oak application
+- Oak module developer
+  - Person/organization who develops and publishes Oak Wasm modules to be used
+    by the **Application developer**
+- Reviewer
+  - Person/organization who reviews and signs Oak modules
+- Operator
+  - Person/organization who deploys Oak applications on a production server
+- Client
+  - Person/organization who sends data to a deployed Oak application
+
+The cycle itself looks as follows:
+
+- **Reviewer**
+  - Reviews existing Oak modules and checks their behavior
+  - Signs Oak modules and publishes corresponding signatures (as well as public
+    keys used for signing)
+- **Application developer**:
+  - Chooses which third-party Oak modules to use
+  - Creates an Oak application using these third-party Oak modules
+  - Publishes the application
+- **Operator**
+  - Downloads an Oak application
+  - Downloads files containing Oak modules' signatures/keys
+  - Deploys the Oak application and passes it a list of Oak module
+    signatures/keys
+- **Client**
+  - Downloads and runs a designated client library
+  - Client library downloads corresponding reviewers' public keys
+  - Client library assigns these keys as labels to the data and sends it to a
+    deployed Oak application
+
+For a step-by-step description on how to sign Oak modules see
+[Signing Oak Wasm modules](/docs/development.md#signing-oak-wasm-modules).
+
 ## Pseudo-Nodes
 
 An Oak Node is limited to exchanging messages with other Nodes via Channels; to
