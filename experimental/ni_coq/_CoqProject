@@ -5,5 +5,6 @@ vfiles/GenericMap.v
 vfiles/RuntimeModel.v
 vfiles/LowEquivalences.v
 vfiles/Events.v
+vfiles/TraceTheorems.v
 vfiles/EvAugSemantics.v
 vfiles/PossibilisticNI.v
