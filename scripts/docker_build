@@ -12,10 +12,13 @@ source "$SCRIPTS_DIR/common"
 readonly DOCKER_UID="${UID:-0}"
 readonly DOCKER_GID="$(id -g)"
 readonly DOCKER_USER="${USER:-root}"
+# Use the Docker BuildKit backend: Useful for quicker builds, and multi-arch 
+# builds, as it expands the automatic variables available to the container.
+declare -x DOCKER_BUILDKIT=1
 
 docker build \
-  --cache-from="$DOCKER_IMAGE_NAME:latest" \
-  --tag="$DOCKER_IMAGE_NAME:latest" \
+  --cache-from="$DOCKER_IMAGE_NAME:latest_buildkit" \
+  --tag="$DOCKER_IMAGE_NAME:latest_buildkit" \
   --build-arg=USERNAME="$DOCKER_USER" \
   --build-arg=USER_UID="$DOCKER_UID" \
   --build-arg=USER_GID="$DOCKER_GID" \

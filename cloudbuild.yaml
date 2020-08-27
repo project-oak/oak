@@ -6,7 +6,7 @@ steps:
     id: pull_image
     waitFor: ['-']
     timeout: 10m
-    args: ['pull', 'gcr.io/oak-ci/oak:latest']
+    args: ['pull', 'gcr.io/oak-ci/oak:latest_buildkit']
   # Build Docker image based on current Dockerfile, if necessary.
   - name: 'gcr.io/cloud-builders/docker'
     id: build_image
@@ -18,28 +18,28 @@ steps:
   # See: https://cloud.google.com/cloud-build/docs/create-custom-build-steps
   # Init .git repository used by check_generated
   # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
-  - name: 'gcr.io/oak-ci/oak:latest'
+  - name: 'gcr.io/oak-ci/oak:latest_buildkit'
     id: git_init
     entrypoint: 'bash'
     waitFor: ['build_image']
     timeout: 5m
     args: ['./scripts/git_init']
 
-  - name: 'gcr.io/oak-ci/oak:latest'
+  - name: 'gcr.io/oak-ci/oak:latest_buildkit'
     id: cargo_crev
     entrypoint: 'bash'
     waitFor: ['git_init']
     timeout: 5m
     args: ['./scripts/run_cargo_crev']
 
-  - name: 'gcr.io/oak-ci/oak:latest'
+  - name: 'gcr.io/oak-ci/oak:latest_buildkit'
     id: runner_ci
     waitFor: ['git_init']
     timeout: 90m
     entrypoint: 'bash'
     args: ['./scripts/runner', '--commands', 'run-ci']
 
-  - name: 'gcr.io/oak-ci/oak:latest'
+  - name: 'gcr.io/oak-ci/oak:latest_buildkit'
     id: generate_root_ca_certs
     waitFor: ['git_init']
     timeout: 5m
@@ -48,7 +48,7 @@ steps:
 
   # Check whether any of the previous steps resulted in file diffs that were not checked in or
   # ignored by git.
-  - name: 'gcr.io/oak-ci/oak:latest'
+  - name: 'gcr.io/oak-ci/oak:latest_buildkit'
     id: git_check_diff
     waitFor: ['git_init', 'runner_ci', 'generate_root_ca_certs']
     timeout: 5m

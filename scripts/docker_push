@@ -14,4 +14,4 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-docker push "$DOCKER_IMAGE_NAME:latest"
+docker push "$DOCKER_IMAGE_NAME:latest_buildkit"

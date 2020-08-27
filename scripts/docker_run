@@ -45,7 +45,7 @@ fi
 
 if [[ "$1" == '--detach' ]]; then
   docker_run_flags+=('--detach')
-  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest" "${@:2}"
+  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest_buildkit" "${@:2}"
 else
-  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest" "$@"
+  docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest_buildkit" "$@"
 fi
