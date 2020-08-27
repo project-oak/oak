@@ -4,7 +4,17 @@ Require Import Coq.Sets.Ensembles.
 From OakIFC Require Import
     Lattice
     Parameters.
+(* finmap is a library for finite maps.
+* it comes with nice notations and some built-in theorems.
+* Since this is all that is used from ssreflect, we could cut ssreflect
+* if it becomes too much trouble*)
 From mathcomp Require Import all_ssreflect finmap.
+(* RecordUpdate is a conveninece feature that provides functional updates for
+* records with notation: https://github.com/tchajed/coq-record-update *)
+(* To work with record updates from this library in proofs "unfold set" quickly
+* changes goals back to normal Coq built-in record updates *)
+From RecordUpdate Require Import RecordSet.
+Import RecordSetNotations.
 
 (* This file is the top-level model of the Oak runtime *)
 
@@ -25,6 +35,11 @@ Record channel := Chan {
     clbl: level;
     ms: list message
 }.
+
+(* etachannel just enumerates the fields of the record, as provided
+* by https://github.com/tchajed/coq-record-update *)
+(* When a new field is added to channel, be sure to add it here as well *)
+Instance etachannel : Settable _ := settable! Chan<clbl; ms>.
 
 (* ABI Calls *)
 Inductive call: Type :=
@@ -47,6 +62,8 @@ Record node := Node {
     write_handles: Ensemble handle;
     ncall: call
 }.
+Instance etanode: Settable _ :=
+    settable! Node<nlbl; read_handles; write_handles; ncall>.
 
 Definition node_state := {fmap node_id -> node}.
 Definition chan_state := {fmap handle -> channel}.
@@ -55,81 +72,38 @@ Record state := State {
     chans: chan_state
 }.
 
-(*============================================================================
-* Empty
-============================================================================*)
-Definition empty_chan := {| clbl := top; ms := []; |}.
-Definition empty_node := {|
-        nlbl := top;
-        read_handles := Empty_set handle;
-        write_handles := Empty_set handle;
-        ncall := Internal;
-    |}.
+Instance etastate: Settable _ :=
+    settable! State<nodes; chans>.
 
 (*============================================================================
 * Utils
 ============================================================================*)
-(*
-TODO look into this:  https://github.com/tchajed/coq-record-update
-or other record libraries more deeply since records are used often.
-*)
 Definition chan_append (c: channel)(m: message): channel :=
-    {| clbl := c.(clbl); ms := (m :: c.(ms)) |}.
+    c <|ms := m :: c.(ms)|>.
 
 (* this is used in channel read where there is a premise
 * that checks that the channel is not empty *)
 Definition chan_pop (c: channel): channel :=
-    {| 
-        clbl := c.(clbl); 
-        ms := match c.(ms) with
+    c <| ms := match c.(ms) with
             | nil => nil
             | m :: ms' => ms'
-        end;
-    |}.
+        end |>.
 
 Definition state_upd_node (nid: node_id)(n: node)(s: state): state :=
-    {| 
-        nodes := s.(nodes) .[ nid <- n ]; 
-        chans := s.(chans)
-    |}.
+    s <| nodes := s.(nodes) .[ nid <- n ] |>.
 
 
 Definition state_upd_chan (h: handle)(ch: channel)(s: state): state :=
-    {|
-        nodes := s.(nodes);
-        chans := s.(chans) .[ h <- ch ];
-    |}.
-
-Definition node_upd_call (old_n: node)(c: call): node := {|
-        nlbl := old_n.(nlbl);
-        read_handles := old_n.(read_handles);
-        write_handles := old_n.(write_handles);
-        ncall := c;
-    |}.
+    s <| chans := s.(chans) .[ h <- ch ] |>.
 
 Definition node_add_rhan (h: handle)(n: node): node:=
-    {|
-        nlbl  := n.(nlbl);
-        read_handles := Ensembles.Add n.(read_handles) h;
-        write_handles := n.(write_handles);
-        ncall := n.(ncall);
-    |}.
+    n <| read_handles := Ensembles.Add n.(read_handles) h |>.
 
-Definition node_add_whan (h: handle)(old_n: node): node :=
-    {|
-        nlbl  := old_n.(nlbl);
-        read_handles := old_n.(read_handles);
-        write_handles := Ensembles.Add old_n.(write_handles) h;
-        ncall := old_n.(ncall);
-    |}.
+Definition node_add_whan (h: handle)(n: node): node :=
+    n <| write_handles := Ensembles.Add n.(write_handles) h |>.
 
-Definition node_del_rhan (h: handle)(old_n: node): node :=
-    {|
-        nlbl  := old_n.(nlbl);
-        read_handles := Ensembles.Subtract old_n.(read_handles) h;
-        write_handles := old_n.(write_handles);
-        ncall := old_n.(ncall);
-    |}.
+Definition node_del_rhan (h: handle)(n: node): node :=
+    n <| read_handles := Ensembles.Subtract n.(read_handles) h |>.
 
 Definition handle_fresh (s: state)(h: handle): Prop :=
     s.(chans) .[?h] = None.
@@ -208,4 +182,4 @@ Inductive step_system: state -> state -> Prop :=
         s.(nodes) .[?id] = Some n ->
         n.(ncall) = c ->
         step_node id c s s' ->
-        step_system s (state_upd_node id (node_upd_call n c') s').
+        step_system s (state_upd_node id (n <|ncall := c'|>) s').

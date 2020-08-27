@@ -18,10 +18,13 @@ is in vfiles/RuntimeModel.v. Both are evolving.
 
 ## Instructions
 
-The following are dependencies of this project: coq (8.11.0) coq-mathcomp-finmap
-(1.5.0)
+The following are dependencies of this project:
 
-Both of the above may be installed with [opam](https://opam.ocaml.org/).
+- coq (8.11.0)
+- coq-mathcomp-finmap (1.5.0)
+- coq-record-update (0.2.0)
+
+All of the above may be installed with [opam](https://opam.ocaml.org/).
 
 The included makefile has been generated with CoqProject: (see also:
 [the instructions for CoqProject](https://coq.inria.fr/refman/practical-tools/utilities.html))
