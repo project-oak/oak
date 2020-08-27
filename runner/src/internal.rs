@@ -66,21 +66,37 @@ pub struct RunExamples {
     )]
     pub example_name: Option<String>,
     #[structopt(flatten)]
+    pub build_client: BuildClient,
+    #[structopt(flatten)]
     pub build_server: BuildServer,
     #[structopt(long, help = "run server [default: true]")]
     pub run_server: Option<bool>,
-    #[structopt(
-        long,
-        help = "client variant: [all, rust, cpp, go, nodejs, none] [default: all]",
-        default_value = "all"
-    )]
-    pub client_variant: String,
     #[structopt(long, help = "additional arguments to pass to clients")]
     pub client_additional_args: Vec<String>,
     #[structopt(long, help = "additional arguments to pass to server")]
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
+}
+
+#[derive(StructOpt, Clone)]
+pub struct BuildClient {
+    #[structopt(
+        long,
+        help = "client variant: [all, rust, cpp, go, nodejs, none] [default: all]",
+        default_value = "all"
+    )]
+    pub client_variant: String,
+    #[structopt(
+        long,
+        help = "rust toolchain override to use for the client compilation [e.g. stable, nightly, stage2]"
+    )]
+    pub client_rust_toolchain: Option<String>,
+    #[structopt(
+        long,
+        help = "rust target to use for the client compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
+    )]
+    pub client_rust_target: Option<String>,
 }
 
 #[derive(StructOpt, Clone)]
