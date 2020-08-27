@@ -42,13 +42,14 @@ impl HttpServerTester {
 
         // Simulate an Oak node that responds with 200 (OK) to every request it receives
         // TODO(#1186): Use tokio instead of spawning a thread.
-        let mut oak_node_simulator_thread = None;
-        if with_simulator_thread {
+        let oak_node_simulator_thread = if with_simulator_thread {
             let runtime_proxy = runtime.clone();
-            oak_node_simulator_thread = Some(std::thread::spawn(move || {
+            Some(std::thread::spawn(move || {
                 oak_node_simulator(&runtime_proxy, invocation_receiver);
-            }));
-        }
+            }))
+        } else {
+            None
+        };
 
         HttpServerTester {
             runtime,
@@ -64,11 +65,12 @@ impl HttpServerTester {
                 debug!("Test node already dropped `notify_receiver`.");
             })
         }
-        let _ = self.server_node_thread_handle.take().map(JoinHandle::join);
-        let _ = self
-            .oak_node_simulator_thread_handle
-            .take()
-            .map(JoinHandle::join);
+        if let Some(handle) = self.server_node_thread_handle.take() {
+            let _ = handle.join();
+        };
+        if let Some(handle) = self.oak_node_simulator_thread_handle.take() {
+            let _ = handle.join();
+        };
 
         // stop the runtime and any servers it is running
         self.runtime.runtime.stop();
