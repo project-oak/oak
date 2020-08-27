@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use prost::Message;
+use anyhow::Context;
 use std::{fs, io};
 use structopt::StructOpt;
 
@@ -33,10 +33,9 @@ pub struct Opt {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
-    let mut label_bytes = vec![];
-    label
-        .encode(&mut label_bytes)
-        .expect("could not serialize label to bytes");
+    let label_bytes = serde_json::to_string(&label)
+        .context("Could not serialize public/untrusted label to JSON.")?
+        .into_bytes();
     let opt = Opt::from_args();
 
     let path = &opt.ca_cert;

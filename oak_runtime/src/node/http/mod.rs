@@ -39,7 +39,6 @@ use oak_io::{
     OakError,
 };
 use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
-use prost::Message;
 use std::{io, net::SocketAddr, pin::Pin};
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -481,18 +480,28 @@ impl Pipe {
     }
 }
 
-// TODO(#1279): Get the label from a JSON string instead of a binary label.
 fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
     match req.headers.get(oak_abi::OAK_LABEL_HTTP_KEY) {
-        Some(label) => Label::decode(&label[..]).map_err(|err| {
-            warn!("Could not parse HTTP label: {}", err);
-            OakStatus::ErrInvalidArgs
-        }),
+        Some(label_str) => parse_json_label(label_str.to_vec()),
         None => {
             warn!("No HTTP label found.");
             Err(OakStatus::ErrInvalidArgs)
         }
     }
+}
+
+fn parse_json_label(label_str: Vec<u8>) -> Result<Label, OakStatus> {
+    let label_str = String::from_utf8(label_str).map_err(|err| {
+        warn!(
+            "The label must be a valid UTF-8 JSON-formatted string: {}",
+            err
+        );
+        OakStatus::ErrInvalidArgs
+    })?;
+    serde_json::from_str(&label_str).map_err(|err| {
+        warn!("Could not parse HTTP label: {}", err);
+        OakStatus::ErrInvalidArgs
+    })
 }
 
 struct HttpResponseIterator {

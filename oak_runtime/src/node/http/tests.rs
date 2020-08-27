@@ -17,6 +17,7 @@
 use super::*;
 use maplit::hashmap;
 use oak_abi::{label::Label, proto::oak::application::ApplicationConfiguration};
+use prost::Message;
 use std::{fs, option::Option, thread::JoinHandle};
 
 struct HttpServerTester {
@@ -202,8 +203,9 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
 async fn send_request(uri: &str) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
-    let mut label_bytes = vec![];
-    let _ = label.encode(&mut label_bytes);
+    let label_bytes = serde_json::to_string(&label)
+        .expect("Could not serialize the label to JSON")
+        .into_bytes();
 
     let path = "../examples/certs/local/ca.pem";
     let ca_file = fs::File::open(path).unwrap_or_else(|e| panic!("failed to open {}: {}", path, e));

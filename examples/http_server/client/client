@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -o xtrace
 
-cert_path="../../certs/local/ca.pem"
-curl --cacert "${cert_path}" https://localhost:8080
+cert_path='./examples/certs/local/ca.pem'
+curl --cacert "${cert_path}" --header 'oak-label: {"confidentialityTags":[],"integrityTags":[]}' https://localhost:8080

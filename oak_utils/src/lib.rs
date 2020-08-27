@@ -238,6 +238,11 @@ where
         // We require label-related types to be comparable and hashable so that they can be used in
         // hash-based collections.
         .type_attribute(".oak.label", "#[derive(Eq, Hash)]")
+        .type_attribute(
+            ".oak.label",
+            "#[derive(serde::Deserialize, serde::Serialize)]",
+        )
+        .type_attribute(".oak.label", "#[serde(rename_all = \"camelCase\")]")
         .compile_protos(inputs, includes)
         .expect("could not run prost-build");
 }
