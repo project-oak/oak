@@ -12,8 +12,7 @@ From OakIFC Require Import
 (* Note: How can this be done more elegantly, or skipped? *)
 Theorem nil_cons_rev: forall {A : Type} (x : A) (l : list A), x :: l <> [].
 Proof.
-    unfold not. intros. symmetry in H. generalize dependent H.
-    apply nil_cons.
+    unfold not. intros. inversion H.
 Qed.
 
 Theorem t_upd_mono_nil: forall t s,

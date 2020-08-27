@@ -12,6 +12,8 @@ Arguments Ensembles.In {U}.
 Arguments Ensembles.Add {U}.
 Arguments Ensembles.Subtract {U}.
 Arguments Ensembles.Singleton {U}.
+From RecordUpdate Require Import RecordSet.
+Import RecordSetNotations.
 
 (*
 The top-level security condition compares traces involving both states (as
@@ -104,7 +106,7 @@ Inductive step_system_ev: trace -> trace -> Prop :=
         n.(ncall) = c ->
         step_node_ev id c t t' ->
         step_system_ev t (trace_upd_head_state t' (state_upd_node id
-            (node_upd_call n c') s')).
+            (n<| ncall := c'|>) s')).
 
 Inductive step_system_ev_multi: trace -> trace -> Prop :=
     | multi_system_ev_refl t t':
