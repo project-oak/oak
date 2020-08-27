@@ -49,11 +49,6 @@ Notation "n '--->' msg":= (EvL (OutEv msg) n.(nlbl)) (at level 10).
 Notation "n '<---' msg":= (EvL (InEv msg) n.(nlbl)) (at level 10).
 Notation "n '---'":= (EvL NilEv n.(nlbl)) (at level 10).
 
-Definition msg_is_head (ch: channel)(m: message): Prop :=
-    match ch.(ms) with
-        | [] => False
-        | m' :: ms' => m' = m
-    end. 
 
 Definition head_st (t: trace) :=
     match t with 
@@ -61,32 +56,33 @@ Definition head_st (t: trace) :=
         | (s', _)::_ => Some s'
     end.
 
-Inductive step_node_ev: node_id -> call -> trace -> trace -> Prop :=
-    | SWriteChan (t: trace) s id n han msg s' t:
+Inductive step_node_ev (id: node_id): call -> trace -> trace -> Prop :=
+    | SWriteChan (t: trace) s n han msg s' t:
         head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (WriteChannel han msg) s s' ->
-        step_node_ev id (WriteChannel han msg) t ((s',  n ---> msg) :: t)
-    | SReadChan (t: trace) s id n han chan msg s' t:
+        step_node_ev id (WriteChannel han msg) t
+            ((s',  n ---> msg) :: t)
+    | SReadChan (t: trace) s n han chan msg s' t:
         head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (ReadChannel han) s s' ->
         msg_is_head chan msg ->
         step_node_ev id (ReadChannel han) t ((s', n <--- msg) :: t)
-    | SCreateChan (t: trace) s id n lbl s' t:
+    | SCreateChan (t: trace) s n lbl s' t:
             (* It seems clear that no event is needed since nodes only observe
             * contents of channels indirectly via reads *)
         head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateChannel lbl) s s' ->
         step_node_ev id (CreateChannel lbl) t ((s', n --- ) :: t)
-    | SCreateNode (t: trace) s id n lbl h s' t:
+    | SCreateNode (t: trace) s n lbl h s' t:
             (* model observation that a node is created ?? *)
         head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateNode lbl h) s s' ->
         step_node_ev id (CreateNode lbl h) t ((s', n ---) :: t)
-    | SInternal (t: trace) s id n s' t:
+    | SInternal (t: trace) s n s' t:
         head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id Internal s s' ->

@@ -13,6 +13,7 @@ Inductive event: Type :=
     | NilEv: event
     | InEv (m: message): event
     | OutEv (m: message): event.
+(* note that messages include the bytes and handles sent via channels *)
 (* eventually, downgrades will also be represented by events *)
 
 Inductive event_l: Type :=

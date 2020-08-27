@@ -24,7 +24,12 @@ The following are dependencies of this project:
 - coq-mathcomp-finmap (1.5.0)
 - coq-record-update (0.2.0)
 
-All of the above may be installed with [opam](https://opam.ocaml.org/).
+All of the above may be installed with [opam](https://opam.ocaml.org/), and the
+names given above are opam package names. The coq package repo should first be
+added with by running:
+
+opam repo add coq-released
+[https://coq.inria.fr/opam/released](https://coq.inria.fr/opam/released)
 
 The included makefile has been generated with CoqProject: (see also:
 [the instructions for CoqProject](https://coq.inria.fr/refman/practical-tools/utilities.html))

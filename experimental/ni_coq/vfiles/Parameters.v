@@ -11,7 +11,8 @@ In this case, labels are syntactic objects and levels are the security domains.
 Class params := {
     (* Assumed types, most with decidable equality *)
     level: finType; 
-    message: finType;
+    data: finType;      (* this is a generic piece of data, for example the
+                            bytes sent over a channel *)
     node_id: finType;
     handle: finType;
 }.
