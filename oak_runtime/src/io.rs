@@ -22,6 +22,12 @@ use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_io::{Decodable, Encodable, OakError};
 pub use oak_io::{Receiver, Sender};
 
+/// Wrapper for storing a decodable message and the size of the original encoded version.
+pub struct MessageWithSize<T> {
+    pub message: T,
+    pub size: usize,
+}
+
 /// Extension trait for runtime-specific Receiver functionality.
 pub trait ReceiverExt<T> {
     /// Close the underlying channel handle.
@@ -29,6 +35,10 @@ pub trait ReceiverExt<T> {
 
     /// Waits, reads and decodes a message from the [`Receiver::handle`].
     fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakError>;
+
+    /// Waits, reads and decodes a message from the [`Receiver::handle`] and includes the original
+    /// encoding size.
+    fn receive_with_size(&self, runtime: &RuntimeProxy) -> Result<MessageWithSize<T>, OakError>;
 }
 
 impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
@@ -39,8 +49,9 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
             .map_err(|error| error.into())
     }
 
-    /// Waits, reads and decodes a message from the [`Receiver::handle`].
-    fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakError> {
+    /// Waits, reads and decodes a message from the [`Receiver::handle`]. and includes the original
+    /// encoding size.
+    fn receive_with_size(&self, runtime: &RuntimeProxy) -> Result<MessageWithSize<T>, OakError> {
         let read_status = runtime.wait_on_channels(&[self.handle.handle])?;
 
         match read_status[0] {
@@ -53,7 +64,12 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                     })
                 })
                 .map_err(|error| error.into())
-                .and_then(|message| T::decode(&message)),
+                .and_then(|message| {
+                    T::decode(&message).map(|decoded| MessageWithSize::<T> {
+                        message: decoded,
+                        size: message.bytes.len(),
+                    })
+                }),
             ChannelReadStatus::Orphaned => {
                 info!("Channel closed {:?}", self.handle);
                 Err(OakStatus::ErrChannelClosed.into())
@@ -63,6 +79,12 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                 Err(OakStatus::ErrInternal.into())
             }
         }
+    }
+
+    /// Waits, reads and decodes a message from the [`Receiver::handle`].
+    fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakError> {
+        self.receive_with_size(runtime)
+            .map(|message_with_size| message_with_size.message)
     }
 }
 

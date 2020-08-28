@@ -38,7 +38,6 @@ mod stubs;
 pub mod grpc;
 pub mod handle;
 pub mod http;
-pub mod invocations;
 pub mod io;
 pub mod logger;
 pub mod node_config;
@@ -52,6 +51,9 @@ pub mod proto {
         // The storage protobuf messages use the label.Label type which is built
         // in the `oak_abi` crate, so make it available here too.
         pub use oak_abi::proto::oak::{application, label};
+        pub mod invocation {
+            include!(concat!(env!("OUT_DIR"), "/oak.invocation.rs"));
+        }
         pub mod storage {
             include!(concat!(env!("OUT_DIR"), "/oak.storage.rs"));
         }

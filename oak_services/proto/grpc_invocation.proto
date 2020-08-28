@@ -1,0 +1,38 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.invocation;
+
+import "oak_services/proto/grpc_encap.proto";
+import "proto/handle.proto";
+
+// A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the
+// client (wrapped in a [`Receiver`]), and one to write outgoing responses to the client (wrapped
+// in a [`Sender`]).
+//
+// [`Receiver`]: oak_io::Receiver
+// [`Sender`]: oak_io::Sender
+message GrpcInvocation {
+  oak.handle.Receiver receiver = 1 [(oak.handle.message_type) = ".oak.encap.GrpcRequest"];
+  oak.handle.Sender sender = 2 [(oak.handle.message_type) = ".oak.encap.GrpcResponse"];
+}
+
+// A wrapper for sending a [`GrpcInvocation`] over a channel.
+message GrpcInvocationSender {
+  oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.invocation.GrpcInvocation"];
+}

@@ -18,7 +18,7 @@
 
 use crate::{
     io::{ReceiverExt, SenderExt},
-    OakError,
+    OakError, OakStatus,
 };
 use log::{error, warn};
 use oak_services::proto::google::rpc;
@@ -34,7 +34,7 @@ pub mod server;
 ///
 /// [`Status`]: oak_services::proto::google::rpc::Status
 pub type Result<T> = std::result::Result<T, rpc::Status>;
-pub type Invocation = crate::invocations::Invocation<GrpcRequest, GrpcResponse>;
+pub type Invocation = crate::proto::oak::invocation::GrpcInvocation;
 
 /// Helper to create a gRPC status object.
 pub fn build_status(code: rpc::Code, msg: &str) -> rpc::Status {
@@ -157,10 +157,17 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
     ///
     /// [`invoke`]: ServerNode::invoke
     fn handle_command(&mut self, invocation: Invocation) -> std::result::Result<(), OakError> {
-        let response_writer = ChannelResponseWriter::new(invocation.response_sender);
+        let response_writer = ChannelResponseWriter::new(
+            invocation
+                .sender
+                .ok_or(OakError::OakStatus(OakStatus::ErrBadHandle))?,
+        );
 
+        let request_receiver = invocation
+            .receiver
+            .ok_or(OakError::OakStatus(OakStatus::ErrBadHandle))?;
         // Read a single encapsulated request message from the read half.
-        let req: GrpcRequest = invocation.request_receiver.receive().map_err(|err| {
+        let req: GrpcRequest = request_receiver.receive().map_err(|err| {
             // TODO(#1078): If it's clear that the issue is caused by a too restrictive label
             // (permission denied), then return a more specific error to the gRPC client.
             warn!(
@@ -171,8 +178,9 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
             // gRPC error response back to the gRPC client, rather than just returning from this
             // method with `?`, since otherwise that would leave the gRPC client hanging
             // forever.
-            // If sending this gRPC request also fails, we just log the error here and discard it,
-            // but we still return the original error to the caller of this function.
+            // If sending this gRPC request also fails, we just log the error here and discard
+            // it, but we still return the original error to the caller of this
+            // function.
             if let Err(err) = response_writer.close(Result::Err(build_status(
                 rpc::Code::InvalidArgument,
                 "could not process gRPC request",
@@ -187,7 +195,7 @@ impl<T: ServerNode> crate::Node<Invocation> for T {
 
         // Since we are expecting a single message, close the channel immediately.
         // This will change when we implement client streaming (#97).
-        invocation.request_receiver.close()?;
+        request_receiver.close()?;
         if !req.last {
             // TODO(#97): Implement client streaming.
             panic!("Support for streaming requests not yet implemented");
@@ -243,8 +251,8 @@ where
     // Build an Invocation holding the two channels and send it down the
     // specified channel.
     let invocation = Invocation {
-        request_receiver: req_receiver.clone(),
-        response_sender: rsp_sender.clone(),
+        receiver: Some(req_receiver.clone()),
+        sender: Some(rsp_sender.clone()),
     };
     invocation_channel
         .send(&invocation)

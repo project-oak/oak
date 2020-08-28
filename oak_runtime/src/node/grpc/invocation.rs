@@ -16,61 +16,41 @@
 
 //! Functionality for handling gRPC method invocations.
 
+pub use crate::proto::oak::invocation::GrpcInvocation as Invocation;
 use crate::{
-    io::{Receiver, ReceiverExt, Sender, SenderExt},
-    NodeMessage, RuntimeProxy,
+    io::{ReceiverExt, SenderExt},
+    RuntimeProxy,
 };
 use log::error;
 use oak_abi::OakStatus;
-use oak_io::{
-    handle::{ReadHandle, WriteHandle},
-    Decodable, OakError,
-};
+use oak_io::OakError;
 use oak_services::proto::oak::encap::{GrpcRequest, GrpcResponse};
-
-/// A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the
-/// client (wrapped in a [`Receiver`]), and one to write outgoing responses to the client (wrapped
-/// in a [`Sender`]).
-pub struct Invocation {
-    receiver: Receiver<GrpcRequest>,
-    sender: Sender<GrpcResponse>,
-}
-
-impl Decodable for Invocation {
-    fn decode(message: &NodeMessage) -> Result<Self, OakError> {
-        if !message.bytes.is_empty() {
-            error!("Non-empty data field");
-            return Err(OakStatus::ErrInternal.into());
-        }
-        if message.handles.len() != 2 {
-            error!(
-                "Incorrect number of handles received: {} (expected: 2)",
-                message.handles.len()
-            );
-            return Err(OakStatus::ErrInternal.into());
-        }
-        Ok(Self {
-            receiver: Receiver::new(ReadHandle {
-                handle: message.handles[0],
-            }),
-            sender: Sender::new(WriteHandle {
-                handle: message.handles[1],
-            }),
-        })
-    }
-}
 
 impl Invocation {
     pub fn close(self, runtime: &RuntimeProxy) {
-        if let Err(err) = self.receiver.close(runtime) {
-            error!("Failed to close receiver channel in invocation: {:?}", err);
-        }
-        if let Err(err) = self.sender.close(runtime) {
-            error!("Failed to close sender channel in invocation: {:?}", err);
-        }
+        match self.receiver {
+            Some(receiver) => {
+                if let Err(err) = receiver.close(runtime) {
+                    error!("Failed to close receiver channel in invocation: {:?}", err);
+                }
+            }
+            None => error!("No receiver on invocation."),
+        };
+        match self.sender {
+            Some(sender) => {
+                if let Err(err) = sender.close(runtime) {
+                    error!("Failed to close sender channel in invocation: {:?}", err);
+                }
+            }
+            None => error!("No sender on invocation."),
+        };
     }
+
     pub fn receive_request(&self, runtime: &RuntimeProxy) -> Result<GrpcRequest, OakError> {
-        self.receiver.receive(runtime)
+        match &self.receiver {
+            Some(receiver) => receiver.receive(runtime),
+            None => Err(OakError::OakStatus(OakStatus::ErrBadHandle)),
+        }
     }
 
     pub fn send_response(
@@ -78,8 +58,12 @@ impl Invocation {
         response: GrpcResponse,
         runtime: &RuntimeProxy,
     ) -> Result<(), OakError> {
-        self.sender.send(response, runtime)
+        match &self.sender {
+            Some(sender) => sender.send(response, runtime),
+            None => Err(OakError::OakStatus(OakStatus::ErrBadHandle)),
+        }
     }
+
     /// Send an error response for the invocation.
     pub fn send_error(
         &self,
@@ -88,7 +72,7 @@ impl Invocation {
         runtime: &RuntimeProxy,
     ) {
         error!("Fail invocation with {:?} '{}'", code, msg);
-        let _ = self.sender.send(
+        let _ = self.send_response(
             GrpcResponse {
                 rsp_msg: vec![],
                 status: Some(oak_services::proto::google::rpc::Status {

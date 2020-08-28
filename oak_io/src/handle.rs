@@ -187,12 +187,15 @@ macro_rules! handle_visit_blanket_impl {
 // See: https://github.com/danburkert/prost#scalar-values
 handle_visit_blanket_impl!((), f64, f32, i32, i64, u32, u64, bool, String, Vec<u8>);
 
-// Provide an implementation for the Any type in Prost.
-handle_visit_blanket_impl!(prost_types::Any);
+// Provide an implementation for the Any and Timestamp types in Prost.
+handle_visit_blanket_impl!(prost_types::Any, prost_types::Timestamp);
 
 // Provide an implementation for oak_abi type that an implementation cannot be derived for.
 // It does not contain handles, so a blanket impl is sufficient.
-handle_visit_blanket_impl!(oak_abi::proto::oak::application::ConfigMap);
+handle_visit_blanket_impl!(
+    oak_abi::proto::oak::application::ConfigMap,
+    oak_abi::proto::oak::label::Label
+);
 
 // Make the HandleVisit derivation macro publicly available without having to explicictly reference
 // the oak_derive crate.

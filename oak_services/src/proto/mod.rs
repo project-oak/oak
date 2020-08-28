@@ -41,6 +41,5 @@ handle_visit_blanket_impl!(
     oak::encap::GrpcResponse,
     oak::encap::GrpcRequest,
     oak::encap::HttpResponse,
-    oak::encap::HttpRequest,
-    oak::log::LogMessage
+    oak::encap::HttpRequest
 );

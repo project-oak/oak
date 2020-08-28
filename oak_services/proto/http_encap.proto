@@ -18,8 +18,6 @@ syntax = "proto3";
 
 package oak.encap;
 
-import "third_party/google/rpc/status.proto";
-
 // Protocol buffer encoding representing an HTTP request.
 message HttpRequest {
   // The path to which the request was sent.
