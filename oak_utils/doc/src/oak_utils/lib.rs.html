@@ -287,7 +287,6 @@
 <span id="287">287</span>
 <span id="288">288</span>
 <span id="289">289</span>
-<span id="290">290</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -518,10 +517,9 @@
         <span class="ident">prost_config</span>
             <span class="comment">// Auto-derive the HandleVisit trait</span>
             .<span class="ident">type_attribute</span>(<span class="string">&quot;.&quot;</span>, <span class="string">&quot;#[derive(::oak_io::handle::HandleVisit)]&quot;</span>)
-            <span class="comment">// Link relevant Oak protos to the Oak SDK types.</span>
-            .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.handle&quot;</span>, <span class="string">&quot;::oak::handle&quot;</span>)
-            .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.encap.GrpcRequest&quot;</span>, <span class="string">&quot;::oak::grpc::GrpcRequest&quot;</span>)
-            .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.encap.GrpcResponse&quot;</span>, <span class="string">&quot;::oak::grpc::GrpcResponse&quot;</span>);
+            <span class="comment">// Link relevant Oak protos to the appropirate oak_io and oak_services types.</span>
+            .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.handle&quot;</span>, <span class="string">&quot;::oak_io::handle&quot;</span>)
+            .<span class="ident">extern_path</span>(<span class="string">&quot;.oak.encap&quot;</span>, <span class="string">&quot;::oak_services::proto::oak::encap&quot;</span>);
     }
     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">out_dir</span>) <span class="op">=</span> <span class="ident">options</span>.<span class="ident">out_dir_override</span> {
         <span class="ident">prost_config</span>.<span class="ident">out_dir</span>(<span class="ident">out_dir</span>);

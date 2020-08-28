@@ -55,7 +55,6 @@
 <span id="55">55</span>
 <span id="56">56</span>
 <span id="57">57</span>
-<span id="58">58</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -80,11 +79,10 @@
 <span class="doccomment">//! and extracting and injecting handles is taken care of by</span>
 <span class="doccomment">//! [`oak::io::Receiver`](../io/struct.Receiver.html) and</span>
 <span class="doccomment">//! [`oak::io::Sender`](../io/struct.Sender.html).</span>
-<span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.handle.rs&quot;</span>));
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Handle</span>;
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::{<span class="ident">extract_handles</span>, <span class="ident">inject_handles</span>, <span class="ident">HandleVisit</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::{<span class="ident">extract_handles</span>, <span class="ident">inject_handles</span>, <span class="ident">HandleVisit</span>, <span class="ident">Receiver</span>, <span class="ident">Sender</span>};
 
 <span class="doccomment">/// Check this handle is valid.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_valid</span>(<span class="ident">handle</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
