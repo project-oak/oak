@@ -66,9 +66,9 @@ mod proto {
 
 use oak::{
     grpc,
-    io::{Receiver, ReceiverExt, Sender, SenderExt},
+    io::{ReceiverExt, SenderExt},
 };
-
+use oak_io::{Receiver, Sender};
 use proto::{
     blob_request::Request, BlobRequest, BlobResponse, BlobStore, BlobStoreDispatcher,
     BlobStoreInterface, BlobStoreProviderSender, BlobStoreRequest, BlobStoreSender, GetBlobRequest,

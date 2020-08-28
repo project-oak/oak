@@ -13,6 +13,10 @@ oak_derive = { path = "../sdk/rust/oak_derive" }
 prost = "*"
 prost-types = "*"
 
+[build-dependencies]
+oak_utils = { path = "../oak_utils" }
+prost-build = { path = "../third_party/prost/prost-build" }
+
 [patch.crates-io]
 prost = { path = "../third_party/prost" }
 prost-build = { path = "../third_party/prost/prost-build" }

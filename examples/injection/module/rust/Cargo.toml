@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 log = "*"
 oak = "=0.1.0"
 oak_io = "=0.1.0"
+oak_services = "=0.1.0"
 prost = "*"
 
 [build-dependencies]

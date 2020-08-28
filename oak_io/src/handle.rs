@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+include!(concat!(env!("OUT_DIR"), "/oak.handle.rs"));
 
 use crate::OakError;
 use oak_abi::Handle;

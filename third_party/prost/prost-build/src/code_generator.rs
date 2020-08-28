@@ -722,7 +722,7 @@ impl<'a> CodeGenerator<'a> {
             ".oak.handle.Receiver" => Some("Receiver"),
             _ => None,
         }?;
-        Some(format!("::oak::io::{}<{}>", direction, message_type))
+        Some(format!("::oak_io::{}<{}>", direction, message_type))
     }
 
     fn resolve_type(&self, field: &FieldDescriptorProto) -> String {

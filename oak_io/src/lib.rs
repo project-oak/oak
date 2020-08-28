@@ -20,14 +20,16 @@ mod decodable;
 mod encodable;
 mod error;
 pub mod handle;
+mod receiver;
+mod sender;
 
 pub use decodable::Decodable;
 pub use encodable::Encodable;
 pub use error::OakError;
+use handle::{ReadHandle, WriteHandle};
 pub use oak_abi::Handle;
-
-// TODO(#1324): Move additional shared structs from the Runtime and SDK (like `Sender`, `Receiver`)
-// here as well.
+pub use receiver::Receiver;
+pub use sender::Sender;
 
 /// A simple holder for bytes + handles, using internally owned buffers.
 #[derive(Clone, Debug, PartialEq, Eq)]

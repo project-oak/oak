@@ -19,25 +19,8 @@
 use crate::RuntimeProxy;
 use log::{error, info};
 use oak_abi::{ChannelReadStatus, OakStatus};
-use oak_io::{
-    handle::{ReadHandle, WriteHandle},
-    Decodable, Encodable, OakError,
-};
-
-/// Wrapper for a [`ReadHandle`] that is responsible for reading messages from an Oak channel.
-pub struct Receiver<T: Decodable> {
-    handle: ReadHandle,
-    phantom: std::marker::PhantomData<T>,
-}
-
-impl<T: Decodable> Receiver<T> {
-    pub fn new(handle: ReadHandle) -> Self {
-        Self {
-            handle,
-            phantom: std::marker::PhantomData,
-        }
-    }
-}
+use oak_io::{Decodable, Encodable, OakError};
+pub use oak_io::{Receiver, Sender};
 
 /// Extension trait for runtime-specific Receiver functionality.
 pub trait ReceiverExt<T> {
@@ -79,21 +62,6 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                 error!("Channel read error {:?}: {:?}", self.handle, status);
                 Err(OakStatus::ErrInternal.into())
             }
-        }
-    }
-}
-
-/// Wrapper for a [`WriteHandle`] that is responsible for sending messages to an Oak channel.
-pub struct Sender<T: Encodable> {
-    handle: WriteHandle,
-    phantom: std::marker::PhantomData<T>,
-}
-
-impl<T: Encodable> Sender<T> {
-    pub fn new(handle: WriteHandle) -> Self {
-        Self {
-            handle,
-            phantom: std::marker::PhantomData,
         }
     }
 }

@@ -21,11 +21,10 @@
 //! and extracting and injecting handles is taken care of by
 //! [`oak::io::Receiver`](../io/struct.Receiver.html) and
 //! [`oak::io::Sender`](../io/struct.Sender.html).
-include!(concat!(env!("OUT_DIR"), "/oak.handle.rs"));
 
 use crate::Handle;
 use byteorder::{ReadBytesExt, WriteBytesExt};
-pub use oak_io::handle::{extract_handles, inject_handles, HandleVisit};
+pub use oak_io::handle::{extract_handles, inject_handles, HandleVisit, Receiver, Sender};
 
 /// Check this handle is valid.
 pub fn is_valid(handle: Handle) -> bool {
