@@ -1923,7 +1923,7 @@
             <span class="comment">// TODO(#396): Add `--oidc-client` support.</span>
             <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--application={}&quot;</span>, <span class="ident">application_file</span>),
             ...<span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;logless&quot;</span> {
-                <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--no-default-features&quot;</span>.<span class="ident">to_string</span>()]
+                <span class="macro">vec</span><span class="macro">!</span>[]
             } <span class="kw">else</span> {
                 <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--root-tls-certificate=./examples/certs/local/ca.pem&quot;</span>.<span class="ident">to_string</span>()]
             },
