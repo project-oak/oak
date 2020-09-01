@@ -1150,13 +1150,6 @@ impl Runtime {
             OakStatus::ErrInvalidArgs
         })?;
 
-        // TODO(#913): Add automated tests that verify that NodeCreated is
-        // always fired prior to any other introspection events related to the
-        // node.
-        self.introspection_event(EventDetails::NodeCreated(NodeCreated {
-            node_id: node_id.0,
-        }));
-
         let node_privilege = instance.get_privilege();
 
         self.node_configure_instance(new_node_id, &new_node_name, label, &node_privilege);
@@ -1229,6 +1222,13 @@ impl Runtime {
         label: &Label,
         privilege: &NodePrivilege,
     ) {
+        // TODO(#913): Add automated tests that verify that NodeCreated is
+        // always fired prior to any other introspection events related to the
+        // node.
+        self.introspection_event(EventDetails::NodeCreated(NodeCreated {
+            node_id: node_id.0,
+        }));
+
         self.add_node_info(
             node_id,
             NodeInfo {
