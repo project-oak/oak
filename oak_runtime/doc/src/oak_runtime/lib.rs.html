@@ -2427,13 +2427,6 @@
             <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
         })<span class="question-mark">?</span>;
 
-        <span class="comment">// TODO(#913): Add automated tests that verify that NodeCreated is</span>
-        <span class="comment">// always fired prior to any other introspection events related to the</span>
-        <span class="comment">// node.</span>
-        <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails</span>::<span class="ident">NodeCreated</span>(<span class="ident">NodeCreated</span> {
-            <span class="ident">node_id</span>: <span class="ident">node_id</span>.<span class="number">0</span>,
-        }));
-
         <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">get_privilege</span>();
 
         <span class="self">self</span>.<span class="ident">node_configure_instance</span>(<span class="ident">new_node_id</span>, <span class="kw-2">&amp;</span><span class="ident">new_node_name</span>, <span class="ident">label</span>, <span class="kw-2">&amp;</span><span class="ident">node_privilege</span>);
@@ -2506,6 +2499,13 @@
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">privilege</span>: <span class="kw-2">&amp;</span><span class="ident">NodePrivilege</span>,
     ) {
+        <span class="comment">// TODO(#913): Add automated tests that verify that NodeCreated is</span>
+        <span class="comment">// always fired prior to any other introspection events related to the</span>
+        <span class="comment">// node.</span>
+        <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails</span>::<span class="ident">NodeCreated</span>(<span class="ident">NodeCreated</span> {
+            <span class="ident">node_id</span>: <span class="ident">node_id</span>.<span class="number">0</span>,
+        }));
+
         <span class="self">self</span>.<span class="ident">add_node_info</span>(
             <span class="ident">node_id</span>,
             <span class="ident">NodeInfo</span> {
