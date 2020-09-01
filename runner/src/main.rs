@@ -524,7 +524,7 @@ fn run_example_server(
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
             ...if opt.server_variant == "logless" {
-                vec!["--no-default-features".to_string()]
+                vec![]
             } else {
                 vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()]
             },
