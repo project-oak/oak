@@ -287,6 +287,11 @@
 <span id="287">287</span>
 <span id="288">288</span>
 <span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -528,6 +533,11 @@
         <span class="comment">// We require label-related types to be comparable and hashable so that they can be used in</span>
         <span class="comment">// hash-based collections.</span>
         .<span class="ident">type_attribute</span>(<span class="string">&quot;.oak.label&quot;</span>, <span class="string">&quot;#[derive(Eq, Hash)]&quot;</span>)
+        .<span class="ident">type_attribute</span>(
+            <span class="string">&quot;.oak.label&quot;</span>,
+            <span class="string">&quot;#[derive(serde::Deserialize, serde::Serialize)]&quot;</span>,
+        )
+        .<span class="ident">type_attribute</span>(<span class="string">&quot;.oak.label&quot;</span>, <span class="string">&quot;#[serde(rename_all = \&quot;camelCase\&quot;)]&quot;</span>)
         .<span class="ident">compile_protos</span>(<span class="ident">inputs</span>, <span class="ident">includes</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;could not run prost-build&quot;</span>);
 }
