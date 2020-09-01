@@ -1,23 +1,27 @@
 [workspace]
 
 [package]
-name = "oak_io"
+name = "oak_derive"
 version = "0.1.0"
-authors = ["Conrad Grobler <grobler@google.com>"]
+authors = ["Daan de Graaf <daagra@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
-[dependencies]
-oak_abi = { path = "../oak_abi" }
-oak_derive = { path = "../oak_derive" }
-prost = "*"
-prost-types = "*"
+[lib]
+proc-macro = true
 
-[build-dependencies]
-oak_utils = { path = "../oak_utils" }
-prost-build = { path = "../third_party/prost/prost-build" }
+[dependencies]
+syn = "1.0"
+quote = "1.0"
+proc-macro2 = "1.0"
+
+[dev-dependencies]
+oak_io = "*"
 
 [patch.crates-io]
+# Oak.
+oak_io = { path = "../oak_io" }
+# Third party.
 prost = { path = "../third_party/prost" }
 prost-build = { path = "../third_party/prost/prost-build" }
 prost-derive = { path = "../third_party/prost/prost-derive" }
