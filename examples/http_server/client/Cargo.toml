@@ -6,6 +6,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "*"
 hyper = "*"
 hyper-rustls = { version = "*", default-features = false, features = [
   "webpki-tokio"
@@ -14,5 +15,6 @@ log = "*"
 oak_abi = "=0.1.0"
 prost = "*"
 rustls = "*"
+serde_json = "*"
 structopt = "*"
 tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }

@@ -10,6 +10,7 @@ license = "Apache-2.0"
 [dependencies]
 prost = { path = "../third_party/prost" }
 prost-types = { path = "../third_party/prost/prost-types" }
+serde = { version = "*", features = ["derive"] }
 
 [build-dependencies]
 oak_utils = { path = "../oak_utils" }

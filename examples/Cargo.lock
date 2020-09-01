@@ -778,12 +778,14 @@ checksum = "cd179ae861f0c2e53da70d892f5f3029f9594be0c41dc5269cd371691b1dc2f9"
 name = "https_client"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "hyper",
  "hyper-rustls",
  "log",
  "oak_abi",
  "prost",
  "rustls",
+ "serde_json",
  "structopt",
  "tokio",
 ]
@@ -1233,6 +1235,7 @@ dependencies = [
  "prost",
  "prost-build",
  "prost-types",
+ "serde",
 ]
 
 [[package]]
