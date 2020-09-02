@@ -1,0 +1,60 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.examples.trusted_database;
+
+import "google/protobuf/empty.proto";
+
+message Location {
+  float latitude_degrees = 1;
+  float longitude_degrees = 2;
+}
+
+message PointOfInterest {
+  string name = 1;
+  Location location = 2;
+}
+
+message ListPointsOfInterestRequest {
+  Location location = 1;
+}
+
+message ListPointsOfInterestResponse {
+  PointOfInterest point_of_interest = 2;
+}
+
+service TrustedDatabase {
+  // Find the nearest Point Of Interest based on linear search in the database.
+  rpc ListPointsOfInterest(ListPointsOfInterestRequest) returns (ListPointsOfInterestResponse);
+}
+
+message DatabaseEntry {
+  string id = 1;
+  string name = 2;
+  string terminal_name = 3;
+  float latitude_degrees = 4;
+  float longitude_degrees = 5;
+  bool installed = 6;
+  bool locked = 7;
+  string install_date = 8;
+  string removal_date = 9;
+  bool temporary = 10;
+  uint32 number_of_bikes = 11;
+  uint32 number_of_empty_docks = 12;
+  uint32 number_of_docks = 13;
+}

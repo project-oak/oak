@@ -36,3 +36,8 @@ message GrpcInvocation {
 message GrpcInvocationSender {
   oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.invocation.GrpcInvocation"];
 }
+
+// A wrapper for receiving a [`GrpcInvocation`] from a channel.
+message GrpcInvocationReceiver {
+  oak.handle.Receiver receiver = 1 [(oak.handle.message_type) = ".oak.invocation.GrpcInvocation"];
+}
