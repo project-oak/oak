@@ -984,6 +984,16 @@ fn is_yaml_file(path: &PathBuf) -> bool {
     filename.ends_with(".yaml")
 }
 
+fn is_javascript_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".js") || filename.ends_with(".mjs")
+}
+
+fn is_typescript_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".ts") || filename.ends_with(".tsx")
+}
+
 /// Return whether the provided path refers to a `Cargo.toml` file. Note that it does not
 /// differentiate between workspace-level and crate-level files.
 fn is_cargo_toml_file(path: &PathBuf) -> bool {
@@ -1078,7 +1088,13 @@ fn run_prettier(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "prettier".to_string(),
         steps: source_files()
-            .filter(|path| is_markdown_file(path) || is_yaml_file(path) || is_toml_file(path))
+            .filter(|path| {
+                is_markdown_file(path)
+                    || is_yaml_file(path)
+                    || is_toml_file(path)
+                    || is_javascript_file(path)
+                    || is_typescript_file(path)
+            })
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),

@@ -21,7 +21,8 @@ const grpcProtoLoader = require('@grpc/proto-loader');
 
 const CERT_PATH = __dirname + '/../../../certs/local/ca.pem';
 const SERVICE_PROTO_PATH = __dirname + '/../../proto/hello_world.proto';
-const OAK_LABEL_PROTO_PATH = __dirname + '/../../../../oak_abi/proto/label.proto';
+const OAK_LABEL_PROTO_PATH =
+  __dirname + '/../../../../oak_abi/proto/label.proto';
 
 // Keep in sync with /oak_runtime/src/node/grpc/server/mod.rs.
 const oakLabelGrpcMetadataKey = 'x-oak-label-bin';
@@ -35,7 +36,7 @@ async function main() {
     // Hence we use grpcProtoLoader for gRPC services, and protobufjs
     // for all other protos.
     protobufjs.load(OAK_LABEL_PROTO_PATH),
-    grpcProtoLoader.load(SERVICE_PROTO_PATH),
+    grpcProtoLoader.load(SERVICE_PROTO_PATH)
   ]);
 
   function getGrpcMetadata() {
@@ -52,7 +53,8 @@ async function main() {
     return metaData;
   }
 
-  const helloWorldProto = grpc.loadPackageDefinition(helloWorldDefinition).oak.examples.hello_world;
+  const helloWorldProto = grpc.loadPackageDefinition(helloWorldDefinition).oak
+    .examples.hello_world;
   const credentials = grpc.credentials.createSsl(fs.readFileSync(CERT_PATH));
 
   const client = new helloWorldProto.HelloWorld('localhost:8080', credentials);
@@ -60,21 +62,22 @@ async function main() {
   // For documentation on client calls see the `@grpc/grpc-js` documentation:
   // https://grpc.github.io/grpc/node/grpc.Client.html#~CallProperties
   client.sayHello(
-      // The arguments passed to the gRPC service. Corresponds to the
-      // `HelloRequest` message type in hello_world.proto file.
-      {greeting: 'Node.js'},
-      // The metadata for this gRPC call.
-      getGrpcMetadata(),
-      // Callback invoked with the response.
-      (error, response) => {
-        if (error) {
-          console.error(error);
-          process.exit(1);
-        } else {
-          console.log(response.reply);
-          process.exit(0);
-        }
-      });
+    // The arguments passed to the gRPC service. Corresponds to the
+    // `HelloRequest` message type in hello_world.proto file.
+    { greeting: 'Node.js' },
+    // The metadata for this gRPC call.
+    getGrpcMetadata(),
+    // Callback invoked with the response.
+    (error, response) => {
+      if (error) {
+        console.error(error);
+        process.exit(1);
+      } else {
+        console.log(response.reply);
+        process.exit(0);
+      }
+    }
+  );
 }
 
 main();
