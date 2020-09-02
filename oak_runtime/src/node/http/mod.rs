@@ -50,6 +50,7 @@ use futures_util::{
     future::TryFutureExt,
     stream::{StreamExt, TryStreamExt},
 };
+use prost::Message;
 use tokio_rustls::TlsAcceptor;
 
 #[cfg(test)]
@@ -480,11 +481,24 @@ impl Pipe {
     }
 }
 
+// HTTP requests can either provide JSON formatted labels or protobuf encoded labels. But exactly
+// one of these should be provided. This method checks that exactly one label is provided in a
+// header in the request and extracts it for use for further handling of the request.
 fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
-    match req.headers.get(oak_abi::OAK_LABEL_HTTP_KEY) {
-        Some(label_str) => parse_json_label(label_str.to_vec()),
-        None => {
-            warn!("No HTTP label found.");
+    let headers = (
+        req.headers.get(oak_abi::OAK_LABEL_HTTP_JSON_KEY),
+        req.headers.get(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY),
+    );
+
+    match headers {
+        (Some(json_label), None) => parse_json_label(json_label.to_vec()),
+        (None, Some(protobuf_label)) => parse_protobuf_label(&protobuf_label[..]),
+        _ => {
+            warn!(
+                "Exactly one header must be provided as an {} or {} header.",
+                oak_abi::OAK_LABEL_HTTP_JSON_KEY,
+                oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY
+            );
             Err(OakStatus::ErrInvalidArgs)
         }
     }
@@ -499,6 +513,13 @@ fn parse_json_label(label_str: Vec<u8>) -> Result<Label, OakStatus> {
         OakStatus::ErrInvalidArgs
     })?;
     serde_json::from_str(&label_str).map_err(|err| {
+        warn!("Could not parse HTTP label: {}", err);
+        OakStatus::ErrInvalidArgs
+    })
+}
+
+fn parse_protobuf_label(protobuf_label: &[u8]) -> Result<Label, OakStatus> {
+    Label::decode(protobuf_label).map_err(|err| {
         warn!("Could not parse HTTP label: {}", err);
         OakStatus::ErrInvalidArgs
     })

@@ -203,9 +203,10 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
 async fn send_request(uri: &str) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
-    let label_bytes = serde_json::to_string(&label)
-        .expect("Could not serialize the label to JSON")
-        .into_bytes();
+    let mut label_bytes = vec![];
+    if let Err(err) = label.encode(&mut label_bytes) {
+        panic!("Failed to encode label: {}", err);
+    }
 
     let path = "../examples/certs/local/ca.pem";
     let ca_file = fs::File::open(path).unwrap_or_else(|e| panic!("failed to open {}: {}", path, e));
@@ -228,7 +229,7 @@ async fn send_request(uri: &str) -> Result<http::response::Response<hyper::Body>
     let request = hyper::Request::builder()
         .method("get")
         .uri(uri)
-        .header(oak_abi::OAK_LABEL_HTTP_KEY, label_bytes)
+        .header(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY, label_bytes)
         .body(hyper::Body::empty())
         .unwrap();
 

@@ -59,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let request = hyper::Request::builder()
         .method("get")
         .uri("https://localhost:8080")
-        .header(oak_abi::OAK_LABEL_HTTP_KEY, label_bytes)
+        .header(oak_abi::OAK_LABEL_HTTP_JSON_KEY, label_bytes)
         .body(hyper::Body::empty())
         .unwrap();
 
