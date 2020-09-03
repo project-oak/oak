@@ -2,20 +2,12 @@
 #
 # Build browser introspection client.
 
-# TODO(#913): Implement introspection client
+# Install npm modules
+npm ci
 
-readonly DIR=./dist
-mkdir -p $DIR
+# Generate JavaScript code from the introspection_events proto
+mkdir -p proto
+protoc --proto_path=../../../proto --js_out=import_style=commonjs,binary:proto ../../../proto/introspection_events.proto
 
-readonly INDEXJS=$DIR/index.js
-readonly INDEXHTML=$DIR/index.html
-
-if [[ ! -f $INDEXJS ]]
-then
-  touch $INDEXJS
-fi
-
-if [[ ! -f $INDEXHTML ]]
-then
-  touch $INDEXHTML
-fi
+# Build JavaScript bundle
+npx webpack

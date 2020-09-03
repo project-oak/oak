@@ -1,8 +1,17 @@
 {
   "name": "oak-introspection-js-client",
   "version": "1.0.0",
+  "main": "index.js",
   "scripts": {
     "build": "./build"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "copy-webpack-plugin": "^6.0.3",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12"
+  },
+  "dependencies": {
+    "google-protobuf": "^3.13.0"
+  }
 }
