@@ -33,6 +33,7 @@ function loadSerializedEvents(): Promise<Uint8Array> {
       true
     );
     eventsRequest.responseType = 'arraybuffer';
+    eventsRequest.timeout = 10000;
 
     eventsRequest.addEventListener('load', () =>
       resolve(eventsRequest.response)
