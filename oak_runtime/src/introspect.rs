@@ -95,6 +95,34 @@ fn find_ids(path: &str, kind: &str) -> Option<(u64, u64)> {
     Some((id, subid))
 }
 
+#[cfg(not(feature = "oak_introspection_client"))]
+fn find_client_file(_path: &str) -> Option<(Vec<u8>, String)> {
+    None
+}
+
+// Looks for a matching file used by the browser client and returns it
+#[cfg(feature = "oak_introspection_client")]
+fn find_client_file(path: &str) -> Option<(Vec<u8>, String)> {
+    let filepath = Regex::new(r"^/dynamic/(?P<filepath>[^\s]+)$")
+        .unwrap()
+        .captures(path)?
+        .name("filepath")
+        .unwrap()
+        .as_str();
+
+    match filepath {
+        "index.html" => Some((
+            include_bytes!("introspection_browser_client/dist/index.html").to_vec(),
+            "text/html".to_string(),
+        )),
+        "index.js" => Some((
+            include_bytes!("introspection_browser_client/dist/index.js").to_vec(),
+            "application/javascript".to_string(),
+        )),
+        _ => None,
+    }
+}
+
 // Handler for a single HTTP request to the introspection server.
 fn handle_request(
     req: Request<Body>,
@@ -140,6 +168,13 @@ fn handle_request(
             // client: https://github.com/googleapis/google-api-python-client/blob/master/googleapiclient/model.py
             "application/x-protobuf".parse().unwrap(),
         );
+
+        return Ok(response);
+    } else if let Some((file, content_type)) = find_client_file(path) {
+        let mut response = Response::new(Body::from(file));
+        response
+            .headers_mut()
+            .insert(CONTENT_TYPE, content_type.parse().unwrap());
 
         return Ok(response);
     } else if let Some(node_id) = find_id(path, "node") {
