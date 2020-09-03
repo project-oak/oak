@@ -18,6 +18,8 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import introspectionEventsProto from './proto/introspection_events_pb';
 
+// Requests the list of introspection events provided by the Oak runtime's
+// auxiliary introspection server.
 function loadSerializedEvents(): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const eventsRequest = new XMLHttpRequest();
