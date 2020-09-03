@@ -1412,6 +1412,22 @@
 <span id="1412">1412</span>
 <span id="1413">1413</span>
 <span id="1414">1414</span>
+<span id="1415">1415</span>
+<span id="1416">1416</span>
+<span id="1417">1417</span>
+<span id="1418">1418</span>
+<span id="1419">1419</span>
+<span id="1420">1420</span>
+<span id="1421">1421</span>
+<span id="1422">1422</span>
+<span id="1423">1423</span>
+<span id="1424">1424</span>
+<span id="1425">1425</span>
+<span id="1426">1426</span>
+<span id="1427">1427</span>
+<span id="1428">1428</span>
+<span id="1429">1429</span>
+<span id="1430">1430</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1728,14 +1744,28 @@
         <span class="string">&quot;base&quot;</span> <span class="op">|</span> <span class="string">&quot;logless&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Step</span>::<span class="ident">Multiple</span> {
             <span class="ident">name</span>: <span class="string">&quot;server&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">steps</span>: <span class="macro">vec</span><span class="macro">!</span>[
-                <span class="ident">Step</span>::<span class="ident">Single</span> {
+                <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Step</span>::<span class="ident">Single</span> {
                     <span class="ident">name</span>: <span class="string">&quot;create bin folder&quot;</span>.<span class="ident">to_string</span>(),
                     <span class="ident">command</span>: <span class="ident">Cmd</span>::<span class="ident">new</span>(
                         <span class="string">&quot;mkdir&quot;</span>,
                         <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;-p&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;oak_loader/bin&quot;</span>.<span class="ident">to_string</span>()],
                     ),
+                }],
+                <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;logless&quot;</span> {
+                    <span class="macro">vec</span><span class="macro">!</span>[]
+                } <span class="kw">else</span> {
+                    <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Step</span>::<span class="ident">Single</span> {
+                        <span class="ident">name</span>: <span class="string">&quot;build introspection browser client&quot;</span>.<span class="ident">to_string</span>(),
+                        <span class="ident">command</span>: <span class="ident">Cmd</span>::<span class="ident">new</span>(<span class="string">&quot;npm&quot;</span>,
+                        <span class="macro">vec</span><span class="macro">!</span>[
+                            <span class="string">&quot;--prefix&quot;</span>,
+                            <span class="string">&quot;oak_runtime/src/introspection_browser_client&quot;</span>,
+                            <span class="string">&quot;run&quot;</span>,
+                            <span class="string">&quot;build&quot;</span>,
+                        ])
+                    }]
                 },
-                <span class="ident">Step</span>::<span class="ident">Single</span> {
+                <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Step</span>::<span class="ident">Single</span> {
                     <span class="ident">name</span>: <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;build server ({})&quot;</span>, <span class="ident">opt</span>.<span class="ident">server_variant</span>),
                     <span class="ident">command</span>: <span class="ident">Cmd</span>::<span class="ident">new_with_env</span>(
                         <span class="string">&quot;cargo&quot;</span>,
@@ -1765,7 +1795,7 @@
                             ...<span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;logless&quot;</span> {
                                 <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--no-default-features&quot;</span>.<span class="ident">to_string</span>()]
                             } <span class="kw">else</span> {
-                                <span class="macro">vec</span><span class="macro">!</span>[]
+                               <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak_introspection_client&quot;</span>.<span class="ident">to_string</span>()]
                             },
                         ],
                         <span class="kw-2">&amp;</span><span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">coverage</span> {
@@ -1780,8 +1810,10 @@
                             <span class="macro">hashmap</span><span class="macro">!</span> {}
                         },
                     ),
-                },
-            ],
+                }],
+            ].<span class="ident">into_iter</span>()
+            .<span class="ident">flatten</span>()
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
         },
         <span class="ident">v</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unknown server variant: {}&quot;</span>, <span class="ident">v</span>),
     }
