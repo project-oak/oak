@@ -69,8 +69,8 @@ message WebAssemblyModuleTag {
 // Policies related to modules, referring to the signature of the native WebAssembly node.
 message WebAssemblyModuleSignatureTag {
   // Public key counterpart of the private key used to sign WebAssembly module.
-  // In the current implementation is represented as a serialized `minisign` public key.
-  // https://docs.rs/minisign/0.5.20/minisign/struct.PublicKey.html#method.to_bytes
+  // In the current implementation is represented as a serialized Ed25519 public key.
+  // https://ed25519.cr.yp.to
   bytes public_key = 1;
 }
 

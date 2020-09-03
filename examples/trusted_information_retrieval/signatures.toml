@@ -1,5 +1,4 @@
-[signatures]
-# database_proxy
-3606a86d9fa01d223dc3cb092c1aceb9e3afe0ed9799ac5d5b214b1610209f8f = [
+signatures = [
+  # database_proxy
   { path = "examples/trusted_information_retrieval/database_proxy.sign" },
 ]

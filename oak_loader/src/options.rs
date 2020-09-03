@@ -96,8 +96,7 @@ pub struct Opt {
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SignatureManifest {
-    // Maps each module hash to a vector of paths to signature files.
-    signatures: HashMap<String, Vec<SignatureLocation>>,
+    signatures: Vec<SignatureLocation>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -211,11 +210,11 @@ fn create_secure_server_config(
 /// files.
 fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguration> {
     let grpc_tls_private_key = match &opt.grpc_tls_private_key {
-        Some(path) => read_to_string(path).context("could not read gRPC TLS private key")?,
+        Some(path) => read_to_string(path).context("Couldn't read gRPC TLS private key")?,
         None => return Err(anyhow!("No gRPC TLS private key file provided.")),
     };
     let grpc_tls_certificate = match &opt.grpc_tls_certificate {
-        Some(path) => read_to_string(path).context("could not read gRPC TLS certificate")?,
+        Some(path) => read_to_string(path).context("Couldn't read gRPC TLS certificate")?,
         None => return Err(anyhow!("No gRPC TLS certificate file provided.")),
     };
     let root_tls_certificate = get_root_tls_certificate_or_default(&opt)?;
@@ -228,7 +227,7 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
         )),
         grpc_client_root_tls_certificate: Some(
             load_certificate(&root_tls_certificate)
-                .map_err(|()| anyhow!("could not parse TLS certificate"))?,
+                .map_err(|()| anyhow!("Couldn't parse TLS certificate"))?,
         ),
         oidc_client_info,
     };
@@ -251,27 +250,28 @@ fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
                 .context("Couldn't parse signature manifest file as TOML")?;
         debug!("Parsed signature manifest file: {:?}", signatures_manifest);
 
-        for (module_hash, signature_vec) in loaded_signatures_manifest.signatures.iter() {
-            let mut loaded_signatures = vec![];
-            for signature_location in signature_vec.iter() {
-                debug!("Loading signature for {}", module_hash);
-                let loaded_signature = match &signature_location {
-                    SignatureLocation::Path(path) => {
-                        let signature_file = read(&path)
-                            .with_context(|| format!("Couldn't read signature file {}", &path))?;
-                        parse_pem_signature(&signature_file)
-                            .with_context(|| format!("Couldn't parse signature file {}", &path))?
-                    }
-                    SignatureLocation::Url(_url) => {
-                        // TODO(#1379): Download certificates from Web.
-                        todo!()
-                    }
-                };
-                loaded_signatures.push(loaded_signature);
+        for signature_location in loaded_signatures_manifest.signatures.iter() {
+            let (module_hash, loaded_signature) = match &signature_location {
+                SignatureLocation::Path(path) => {
+                    debug!("Loading signature file {}", &path);
+                    let signature_file = read(&path)
+                        .with_context(|| format!("Couldn't read signature file {}", &path))?;
+                    parse_pem_signature(&signature_file)
+                        .with_context(|| format!("Couldn't parse signature file {}", &path))?
+                }
+                SignatureLocation::Url(_url) => {
+                    // TODO(#1379): Download certificates from Web.
+                    todo!()
+                }
+            };
+            match sign_table.values.get_mut(&module_hash) {
+                Some(signatures) => signatures.push(loaded_signature),
+                None => {
+                    sign_table
+                        .values
+                        .insert(module_hash.to_string(), vec![loaded_signature]);
+                }
             }
-            sign_table
-                .values
-                .insert(module_hash.to_string(), loaded_signatures);
         }
     }
 

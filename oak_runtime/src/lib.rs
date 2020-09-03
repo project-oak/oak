@@ -1276,10 +1276,13 @@ pub fn sha_256_hex(bytes: &[u8]) -> String {
 // PEM file tags.
 pub(crate) const PUBLIC_KEY_TAG: &str = "PUBLIC KEY";
 pub(crate) const SIGNATURE_TAG: &str = "SIGNATURE";
+pub(crate) const HASH_TAG: &str = "HASH";
 
 /// Parses public key and signature encoded using PEM format.
 /// https://tools.ietf.org/html/rfc1421
-pub fn parse_pem_signature(signature_pem: &[u8]) -> Result<Signature, OakStatus> {
+///
+/// Returns a pair of hex encoded SHA-256 digest and [`Signature`].
+pub fn parse_pem_signature(signature_pem: &[u8]) -> Result<(String, Signature), OakStatus> {
     let signature_content =
         parse_many(signature_pem)
             .iter()
@@ -1295,8 +1298,15 @@ pub fn parse_pem_signature(signature_pem: &[u8]) -> Result<Signature, OakStatus>
         error!("Signature file doesn't contain signature");
         OakStatus::ErrInvalidArgs
     })?;
-    Ok(Signature {
-        public_key: public_key.to_vec(),
-        signature: signature.to_vec(),
-    })
+    let hash = signature_content.get(HASH_TAG).ok_or_else(|| {
+        error!("Signature file doesn't contain hash");
+        OakStatus::ErrInvalidArgs
+    })?;
+    Ok((
+        hex::encode(hash),
+        Signature {
+            public_key: public_key.to_vec(),
+            signature: signature.to_vec(),
+        },
+    ))
 }
