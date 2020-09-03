@@ -13,6 +13,7 @@ license = "Apache-2.0"
 [features]
 test_build = []
 oak_debug = ["regex"]
+oak_introspection_client = []
 default = ["oak_debug"]
 
 [dependencies]

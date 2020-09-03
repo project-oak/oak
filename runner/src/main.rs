@@ -313,14 +313,28 @@ fn build_server(opt: &BuildServer) -> Step {
         "base" | "logless" => Step::Multiple {
             name: "server".to_string(),
             steps: vec![
-                Step::Single {
+                vec![Step::Single {
                     name: "create bin folder".to_string(),
                     command: Cmd::new(
                         "mkdir",
                         vec!["-p".to_string(), "oak_loader/bin".to_string()],
                     ),
+                }],
+                if opt.server_variant == "logless" {
+                    vec![]
+                } else {
+                    vec![Step::Single {
+                        name: "build introspection browser client".to_string(),
+                        command: Cmd::new("npm",
+                        vec![
+                            "--prefix",
+                            "oak_runtime/src/introspection_browser_client",
+                            "run",
+                            "build",
+                        ])
+                    }]
                 },
-                Step::Single {
+                vec![Step::Single {
                     name: format!("build server ({})", opt.server_variant),
                     command: Cmd::new_with_env(
                         "cargo",
@@ -350,7 +364,7 @@ fn build_server(opt: &BuildServer) -> Step {
                             ...if opt.server_variant == "logless" {
                                 vec!["--no-default-features".to_string()]
                             } else {
-                                vec![]
+                               vec!["--features=oak_introspection_client".to_string()]
                             },
                         ],
                         &if opt.coverage {
@@ -365,8 +379,10 @@ fn build_server(opt: &BuildServer) -> Step {
                             hashmap! {}
                         },
                     ),
-                },
-            ],
+                }],
+            ].into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
         },
         v => panic!("unknown server variant: {}", v),
     }
