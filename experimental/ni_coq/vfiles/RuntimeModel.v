@@ -150,6 +150,11 @@ Definition nid_fresh (s: state)(nid: node_id): Prop :=
 Definition new_chan (lbl: level): channel :=
     {| clbl := lbl; ms := [] |}.
 
+Definition s_set_call s id c :=
+    match s.(nodes).[?id] with
+        | None => s
+        | Some n => state_upd_node id (n <|ncall := c|>) s
+    end.
 
 (*============================================================================
 * Single Call Semantics
@@ -229,10 +234,11 @@ than the ABI calls is modeled as simply returning an arbitrary continuation
 (* Errors might later be modeled by choosing a different continuation based
 on whether or not a call was successful, in this case, the resulting
 continuation likely needs to be moved into the local transition relation *)
+
 Inductive step_system: state -> state -> Prop :=
     (* possibly also a termination case *)
     | ValidStep id n c c' s s':
         s.(nodes) .[?id] = Some n ->
         n.(ncall) = c ->
         step_node id c s s' ->
-        step_system s (state_upd_node id (n <|ncall := c'|>) s').
+        step_system s (s_set_call s id c').

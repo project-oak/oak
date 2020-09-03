@@ -6,25 +6,46 @@ From OakIFC Require Import
     Events
     EvAugSemantics.
 
-(* In this file 'Theorem's are used in PossibilisticNI.v whereas
-   'Lemmas' are just used to prove Theorems or other Lemmas in this file
-*)
-
-(* Note: How can this be done more elegantly, or skipped? *)
 Theorem nil_cons_rev: forall {A : Type} (x : A) (l : list A), x :: l <> [].
 Proof.
     unfold not. intros. inversion H.
 Qed.
 
-Theorem t_upd_mono_nil: forall t s,
-    ~(t = nil) -> ~((trace_upd_head_state t s) = nil).
+Lemma head_set_call_preserves_len: forall t t' id c,
+    head_set_call t id c = t' ->
+    length t = length t'.
 Proof.
-    intros.
-    unfold trace_upd_head_state. destruct t. assumption.
-    replace (let (_, e) := p in (s, e) :: t) with
-        ((let (_, e) := p in (s, e)) :: t).
+    intros; destruct t; destruct t'.
+    - reflexivity.
+    - inversion H.
+    - inversion H. destruct p. inversion H1.
+    - inversion H. destruct p. inversion H1. subst. reflexivity.
+Qed. 
+
+Theorem head_set_call_not_nil: forall t id c,
+    t <> nil -> (head_set_call t id c) <> nil.
+Proof.
+    intros. unfold head_set_call. unfold s_set_call.
+    destruct t. assumption.
+    destruct p. destruct (finmap.fnd (finmap.ffun_of_fmap (nodes s)) id);
     apply nil_cons_rev.
-    destruct p. reflexivity.
+Qed.
+
+Lemma head_set_call_preserves_tail: forall t id c,
+    tl (head_set_call t id c) = tl t.
+Proof.
+    intros; destruct t; (reflexivity || destruct p; reflexivity).
+Qed.
+
+Theorem no_steps_from_empty: forall t,
+    ~(step_system_ev [] t).
+Proof.
+Admitted. (* WIP *)
+
+Theorem node_no_steps_to_empty: forall t id c,
+    ~(step_node_ev id c t []).
+Proof.
+    unfold not. intros. inversion H.
 Qed.
 
 Theorem no_steps_to_empty: forall t, 
@@ -34,7 +55,7 @@ Theorem no_steps_to_empty: forall t,
     induction H; subst.
         - (* refl *) inversion H; subst. destruct t'.
             + inversion H2. 
-            + apply t_upd_mono_nil in H0. assumption.
+            + apply head_set_call_not_nil in H0. assumption.
             unfold not. intros. generalize dependent H4. apply nil_cons_rev.
         - apply IHstep_system_ev_multi. reflexivity.
 Qed.
@@ -51,19 +72,6 @@ Proof.
         apply (multi_system_ev_tran t1 t2 t3); assumption.
 Qed.
 
-
-Lemma trace_upd_head_preserves_tail: forall t t' a s,
-    trace_upd_head_state t s = a :: t' ->
-    exists a', t = a' :: t'.
-Proof.
-    intros. destruct t.
-    - inversion H.
-    - destruct t'. simpl in H. destruct p. inversion H. subst.
-    exists (s0, e). reflexivity.
-    - unfold trace_upd_head_state in H. destruct p. inversion H.
-    subst. exists (s0, e). reflexivity.
-Qed.
-
 Lemma no_node_steps_end_in_one: forall t t' id c,
     length t' = 1 ->
     ~(step_node_ev id c t t').
@@ -71,17 +79,6 @@ Proof.
     unfold not. intros. destruct t.
     - inversion H0; inversion H1.
     - inversion H0; subst; inversion H.
-Qed.
-
-Lemma state_upd_node_preserves_len: forall t t' s,
-    trace_upd_head_state t s = t' ->
-    length t = length t'.
-Proof.
-    intros; destruct t; destruct t'.
-    - reflexivity.
-    - inversion H.
-    - inversion H. destruct p. inversion H1.
-    - inversion H. destruct p. inversion H1. subst. reflexivity. 
 Qed.
 
 Lemma no_steps_end_in_one: forall t t',
@@ -100,7 +97,7 @@ Proof.
         inversion H0.
         assert (E1: length t'0 = 1). {
             assert (E': length t'0 = length (p0 :: t'))
-                by apply (state_upd_node_preserves_len _ _ _ H1).
+                by apply (head_set_call_preserves_len _ _ _ _ H1).
             rewrite H in E'. assumption.
         }
         apply (no_node_steps_end_in_one (p::t) t'0 id c E1 H8).
@@ -115,10 +112,9 @@ Proof.
     - exfalso. apply (no_steps_end_in_one t [a]). trivial. assumption.
     - assert (E: t = a0::t'). {
         inversion H; subst.
-        assert (E1: exists a', t'0 = a' :: a0 :: t') by
-            apply (trace_upd_head_preserves_tail _ _ _ _ H0).
-        destruct E1. rewrite H4 in H6.
-        inversion H6; subst; reflexivity.
+        specialize (head_set_call_preserves_tail t'0 id c') as E.
+        rewrite H0 in E. inversion E.
+        inversion H6; subst; simpl in E; congruence.
     }
     rewrite E in H. assumption.
 Qed.
@@ -132,12 +128,6 @@ Proof.
         - apply (step_system_extends t t' a); assumption.
         - apply IHstep_system_ev_multi. reflexivity.
 Qed.
-
-Theorem step_ev_adds_one: forall t t',
-    step_system_ev t t' ->
-    exists a, t' = a::t.
-Proof.
-Admitted. (* WIP *)
 
 Theorem step_system_multi_backwards: forall t t' a,
     step_system_ev_multi t (a :: t') ->
