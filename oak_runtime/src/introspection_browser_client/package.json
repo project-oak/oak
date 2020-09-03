@@ -1,8 +1,0 @@
-{
-  "name": "oak-introspection-js-client",
-  "version": "1.0.0",
-  "scripts": {
-    "build": "./build"
-  },
-  "license": "Apache-2.0"
-}

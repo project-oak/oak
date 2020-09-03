@@ -16,7 +16,7 @@
 
 use crate::{proto::oak::introspection_events::Events, Runtime};
 use hyper::{
-    header::CONTENT_TYPE,
+    header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE},
     service::{make_service_fn, service_fn},
     Body, Error, Method, Request, Response, Server, StatusCode,
 };
@@ -112,11 +112,11 @@ fn find_client_file(path: &str) -> Option<(Vec<u8>, String)> {
 
     match filepath {
         "index.html" => Some((
-            include_bytes!("introspection_browser_client/dist/index.html").to_vec(),
+            include_bytes!("../introspection_browser_client/dist/index.html").to_vec(),
             "text/html".to_string(),
         )),
         "index.js" => Some((
-            include_bytes!("introspection_browser_client/dist/index.js").to_vec(),
+            include_bytes!("../introspection_browser_client/dist/index.js").to_vec(),
             "application/javascript".to_string(),
         )),
         _ => None,
@@ -161,6 +161,11 @@ fn handle_request(
 
         let mut response = Response::new(Body::from(buffer));
 
+        response
+            .headers_mut()
+            // Allow browsers from any origin (such as the introspection client
+            // dev server) to access this resource. https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
+            .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
         response.headers_mut().insert(
             CONTENT_TYPE,
             // There isn't a standardized content-type for protobuf messages
