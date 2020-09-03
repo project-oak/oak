@@ -12,7 +12,7 @@ license = "Apache-2.0"
 
 [features]
 oak_debug = []
-# Enabling this feature in enables the feature of the same name in the
+# Enabling this feature enables the feature of the same name in the
 # oak_runtime create. https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 oak_introspection_client = ["oak_runtime/oak_introspection_client"]
 default = ["oak_debug"]
