@@ -25,7 +25,11 @@ function loadSerializedEvents(): Promise<Uint8Array> {
     const eventsRequest = new XMLHttpRequest();
     eventsRequest.open(
       'GET',
-      'http://localhost:1909/introspection-events',
+      // In the development enviroment the introspection client is served by
+      // a different server, hence the port of the Oak runtime's auxiliary
+      // introspection server must be specified.
+      (process.env.NODE_ENV === 'development' ? 'http://localhost:1909' : '') +
+        '/introspection-events',
       true
     );
     eventsRequest.responseType = 'arraybuffer';
