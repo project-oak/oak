@@ -29,6 +29,7 @@ Context {lat: Lattice level}.
 Infix "⊔" := join (at level 40, left associativity).
 Infix "⊓" := meet (at level 40, left associativity).
 Infix "<<L" := ord (at level 50).
+Infix "<<?" := ord_dec (at level 50).
 
 Notation "'LETOPT' x <== e1 'IN' e2"
    := (match e1 with

@@ -94,6 +94,13 @@ Definition trace_upd_head_state (t: trace) (s: state) :=
         | (s', e) :: t' => (s, e) :: t'
     end.
 
+Definition head_set_call t id c: trace :=
+    match t with 
+        | nil => nil (* this case never happens in the 
+                context where this is used *)
+        | (s, e) :: t' => (s_set_call s id c, e) :: t'
+    end.
+
 Inductive step_system_ev: trace -> trace -> Prop :=
     | ValidStep id n c c' s t s' t':
         head_st t  = Some s ->
@@ -101,8 +108,7 @@ Inductive step_system_ev: trace -> trace -> Prop :=
         s.(nodes) .[?id] = Some n ->
         n.(ncall) = c ->
         step_node_ev id c t t' ->
-        step_system_ev t (trace_upd_head_state t' (state_upd_node id
-            (n<| ncall := c'|>) s')).
+        step_system_ev t (head_set_call t' id c').
 
 Inductive step_system_ev_multi: trace -> trace -> Prop :=
     | multi_system_ev_refl t t':
