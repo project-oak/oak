@@ -328,7 +328,7 @@ fn build_server(opt: &BuildServer) -> Step {
                         command: Cmd::new("npm",
                         vec![
                             "--prefix",
-                            "oak_runtime/src/introspection_browser_client",
+                            "oak_runtime/introspection_browser_client",
                             "run",
                             "build",
                         ])
