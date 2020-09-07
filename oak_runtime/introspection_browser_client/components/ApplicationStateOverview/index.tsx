@@ -40,7 +40,8 @@ export default function ApplicationStateOverview({
                   {[...nodeInfo.abiHandles.entries()].map(
                     ([handle, channelHalf]) => (
                       <li key={handle}>
-                        {handle} pointing to channel {channelHalf.channelId}
+                        {handle} pointing to channel {channelHalf.channelId}{' '}
+                        {channelHalf.direction}
                       </li>
                     )
                   )}
