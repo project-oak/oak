@@ -6,9 +6,9 @@
 npm ci
 
 # Generate JavaScript code from the introspection_events proto
-mkdir -p proto
+mkdir -p ./protoc_out
 readonly PROTOC_GEN_TS_PATH="./node_modules/.bin/protoc-gen-ts"
-readonly PROTO_OUT_DIR="./proto"
+readonly PROTO_OUT_DIR="./protoc_out"
 protoc \
     --proto_path=../../proto \
     --plugin="protoc-gen-ts=${PROTOC_GEN_TS_PATH}" \

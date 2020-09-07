@@ -16,7 +16,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom';
-import introspectionEventsProto from './proto/introspection_events_pb';
+import introspectionEventsProto from './protoc_out/introspection_events_pb';
 
 // Requests the list of introspection events provided by the Oak runtime's
 // auxiliary introspection server.
