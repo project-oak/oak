@@ -60,7 +60,7 @@ interface NodeInfo {
 type ChannelID = number;
 enum ChannelHalfDirection {
   Read,
-  Write
+  Write,
 }
 interface ChannelHalf {
   channelId: ChannelID;
@@ -86,7 +86,7 @@ function eventReducer(
   switch (eventType) {
     case EventDetailsCase.NODE_CREATED:
       applicationState.nodeInfos.set(event.getNodeCreated().getNodeId(), {
-        abiHandles: new Map()
+        abiHandles: new Map(),
       });
 
       break;
@@ -99,7 +99,7 @@ function eventReducer(
         const channelId = event.getChannelCreated().getChannelId();
         applicationState.channels.set(channelId, {
           id: channelId,
-          messages: []
+          messages: [],
         });
       }
 
@@ -117,9 +117,10 @@ function eventReducer(
           .get(details.getNodeId())
           .abiHandles.set(details.getHandle(), {
             channelId: details.getChannelId(),
-            direction: 0
+            direction: 0,
           });
       }
+
       break;
     case EventDetailsCase.HANDLE_DESTROYED:
       {
@@ -128,12 +129,15 @@ function eventReducer(
           .get(details.getNodeId())
           .abiHandles.delete(details.getHandle());
       }
+
       break;
     case EventDetailsCase.MESSAGE_ENQUEUED:
       // TODO(#913): Add support for displaying messages
+
       break;
     case EventDetailsCase.MESSAGE_DEQUEUED:
       // TODO(#913): Add support for displaying messages
+
       break;
     default:
       // This should never happen
@@ -162,7 +166,7 @@ const EventList = () => {
     (): OakApplicationState =>
       events.reduce(eventReducer, {
         nodeInfos: new Map(),
-        channels: new Map()
+        channels: new Map(),
       }),
     [events]
   );
