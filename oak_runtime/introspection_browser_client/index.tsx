@@ -45,6 +45,142 @@ function loadSerializedEvents(): Promise<Uint8Array> {
   });
 }
 
+interface OakApplicationState {
+  nodeInfos: NodeInfos;
+  channels: Channels;
+}
+
+type NodeId = number;
+type AbiHandle = number;
+type NodeInfos = Map<NodeId, NodeInfo>;
+interface NodeInfo {
+  abiHandles: Map<AbiHandle, ChannelHalf>;
+}
+
+type ChannelID = number;
+enum ChannelHalfDirection {
+  Read,
+  Write
+}
+interface ChannelHalf {
+  channelId: ChannelID;
+  direction: ChannelHalfDirection;
+}
+interface Message {
+  data: Uint8Array;
+  channels: ChannelHalf[];
+}
+interface Channel {
+  id: ChannelID;
+  messages: Message[];
+}
+type Channels = Map<ChannelID, Channel>;
+
+function eventReducer(
+  applicationState: OakApplicationState,
+  event: introspectionEventsProto.Event
+) {
+  const eventType = event.getEventDetailsCase();
+  const { EventDetailsCase } = introspectionEventsProto.Event;
+
+  switch (eventType) {
+    case EventDetailsCase.NODE_CREATED:
+      applicationState.nodeInfos.set(event!.getNodeCreated()!.getNodeId(), {
+        abiHandles: new Map()
+      });
+
+      break;
+    case EventDetailsCase.NODE_DESTROYED:
+      {
+        const nodeId = event!.getNodeDestroyed()!.getNodeId();
+        if (applicationState.nodeInfos.delete(nodeId) === false) {
+          throw new Error(
+            `Couldn't delete Node with id "${nodeId}", as it does not exist.`
+          );
+        }
+      }
+
+      break;
+    case EventDetailsCase.CHANNEL_CREATED:
+      {
+        const channelId = event!.getChannelCreated()!.getChannelId();
+        applicationState.channels.set(channelId, {
+          id: channelId,
+          messages: []
+        });
+      }
+
+      break;
+    case EventDetailsCase.CHANNEL_DESTROYED:
+      {
+        const channelId = event!.getChannelDestroyed()!.getChannelId();
+        if (applicationState.channels.delete(channelId) === false) {
+          throw new Error(
+            `Couldn't delete Channel with id "${channelId}", as it does not exist.`
+          );
+        }
+      }
+
+      break;
+    case EventDetailsCase.HANDLE_CREATED:
+      {
+        const details = event.getHandleCreated();
+        const nodeId = details!.getNodeId();
+        const node = applicationState.nodeInfos.get(nodeId);
+
+        if (node === undefined) {
+          throw new Error(
+            `Couldn't get Node with id "${nodeId}", as it does not exist.`
+          );
+        }
+
+        node.abiHandles.set(details!.getHandle(), {
+          channelId: details!.getChannelId(),
+          // TODO(#913): Add a direction property in the introspection
+          // event and use the real value here.
+          direction: 0
+        });
+      }
+
+      break;
+    case EventDetailsCase.HANDLE_DESTROYED:
+      {
+        const details = event.getHandleDestroyed();
+        const nodeId = details!.getNodeId();
+        const node = applicationState.nodeInfos.get(nodeId);
+
+        if (node === undefined) {
+          throw new Error(
+            `Couldn't get Node with id "${nodeId}", as it does not exist.`
+          );
+        }
+
+        const handle = details!.getHandle();
+
+        if (node.abiHandles.delete(handle) === false) {
+          throw new Error(
+            `Couldn't delete ABI handle "${handle}" on Node with id "${nodeId}", as it does not exist.`
+          );
+        }
+      }
+
+      break;
+    case EventDetailsCase.MESSAGE_ENQUEUED:
+      // TODO(#913): Add support for displaying messages
+
+      break;
+    case EventDetailsCase.MESSAGE_DEQUEUED:
+      // TODO(#913): Add support for displaying messages
+
+      break;
+    default:
+      // This should never happen
+      throw new Error(`Encountered unhandled event of type ${eventType}`);
+  }
+
+  return applicationState;
+}
+
 const EventList = () => {
   const [events, setEvents] = React.useState<introspectionEventsProto.Event[]>(
     []
@@ -60,16 +196,55 @@ const EventList = () => {
 
     loadEvents();
   }, []);
+  const applicationState = React.useMemo(
+    (): OakApplicationState =>
+      events.reduce(eventReducer, {
+        nodeInfos: new Map(),
+        channels: new Map()
+      }),
+    [events]
+  );
 
   return (
-    <ol>
-      {events.map((event, index) => (
-        // Usually it's not advisable to use the index as a key. However since
-        // the list of events is append-only it's fine in this case.
-        // Ref: https://reactjs.org/docs/lists-and-keys.html#keys
-        <li key={index}>{JSON.stringify(event.toObject())}</li>
-      ))}
-    </ol>
+    <>
+      <section>
+        <strong>Application State</strong>
+        <p>{applicationState.nodeInfos.size} Nodes:</p>
+        <ul>
+          {[...applicationState.nodeInfos.entries()].map(([id, nodeInfo]) => (
+            <li key={id}>
+              <dl>
+                <dt>ID:</dt>
+                <dd>{id}</dd>
+                <dt>Handles:</dt>
+                <dd>
+                  <ul>
+                    {[...nodeInfo.abiHandles.entries()].map(
+                      ([handle, channelHalf]) => (
+                        <li key={handle}>
+                          {handle} pointing to channel {channelHalf.channelId}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </dd>
+              </dl>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section>
+        <strong>Events List</strong>
+        <ol>
+          {events.map((event, index) => (
+            // Usually it's not advisable to use the index as a key. However since
+            // the list of events is append-only it's fine in this case.
+            // Ref: https://reactjs.org/docs/lists-and-keys.html#keys
+            <li key={index}>{JSON.stringify(event.toObject())}</li>
+          ))}
+        </ol>
+      </section>
+    </>
   );
 };
 
