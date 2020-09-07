@@ -21,16 +21,12 @@ RUN apt-get --yes update \
   build-essential \
   ca-certificates \
   clang-tidy \
-  # `cmake` is needed for `minisign`.
-  cmake \
   curl \
   git \
   gnupg2 \
   gnupg-agent \
   libfl2 \
   libncurses5 \
-  # `libsodium-dev` is needed for `minisign`.
-  libsodium-dev \
   libssl-dev \
   musl-tools \
   pkg-config \
@@ -244,21 +240,6 @@ ARG deny_version=0.7.0
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny
-
-# Install minisign.
-# https://github.com/jedisct1/minisign
-ARG minisign_version=0.9
-ARG minisign_sha256=220383976aacb642c1f2946ec574f6ff4cc2470f59352ed618185353f7762cc1
-ARG minisign_dir=/usr/local/minisign
-ARG minisign_temp=/tmp/minisign.tar.gz
-RUN mkdir --parents ${minisign_dir}/build \
-  && curl --location https://github.com/jedisct1/minisign/releases/download/${minisign_version}/minisign-${minisign_version}.tar.gz > ${minisign_temp} \
-  && sha256sum --binary ${minisign_temp} && echo "${minisign_sha256} *${minisign_temp}" | sha256sum --check \
-  && tar --extract --gzip --file=${minisign_temp} --directory=${minisign_dir} --strip-components=1 \
-  && rm ${minisign_temp} \
-  && cmake -S ${minisign_dir} -B ${minisign_dir}/build \
-  && make --directory=${minisign_dir}/build \
-  && make install --directory=${minisign_dir}/build
 
 # Unset $CARGO_HOME so that the new user will use the default value for it, which will point it to
 # its own home folder.

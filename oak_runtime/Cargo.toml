@@ -31,10 +31,10 @@ jsonwebtoken = "*"
 lazy_static = "*"
 log = { version = "*" }
 maplit = "*"
-minisign = "*"
 oak_abi = { path = "../oak_abi" }
 oak_io = { path = "../oak_io" }
 oak_services = { path = "../oak_services" }
+pem = "*"
 prometheus = { version = "0.8", features = [
   "nightly"
 ], default-features = false }
@@ -43,6 +43,7 @@ prost-types = { path = "../third_party/prost/prost-types" }
 rand = "*"
 regex = { version = "1", optional = true }
 reqwest = { version = "*", default-features = false, features = ["rustls-tls"] }
+ring = "*"
 roughenough = { path = "../third_party/roughenough" }
 rustls = "*"
 serde = "*"

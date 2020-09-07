@@ -20,12 +20,11 @@
 use anyhow::{anyhow, Context};
 use core::str::FromStr;
 use log::debug;
-use minisign::{PublicKey, SignatureBox};
 use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 use oak_runtime::{
     auth::oidc_utils::{parse_client_info_json, ClientInfo},
     config::load_certificate,
-    Signature, SignatureTable,
+    parse_pem_signature, SignatureTable,
 };
 use prost::Message;
 use std::{
@@ -97,16 +96,16 @@ pub struct Opt {
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SignatureManifest {
-    // Maps each module hash to a vector of [`SignatureLocation`].
-    signatures: HashMap<String, Vec<SignatureLocation>>,
+    signatures: Vec<SignatureLocation>,
 }
 
-// Paths to public key and signature files.
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-struct SignatureLocation {
-    public_key: String,
-    signature: String,
+enum SignatureLocation {
+    #[serde(rename = "path")]
+    Path(String),
+    #[serde(rename = "url")]
+    Url(String),
 }
 
 /// A specification of a configuration entry as human readable key and a path to a file whose
@@ -211,11 +210,11 @@ fn create_secure_server_config(
 /// files.
 fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguration> {
     let grpc_tls_private_key = match &opt.grpc_tls_private_key {
-        Some(path) => read_to_string(path).context("could not read gRPC TLS private key")?,
+        Some(path) => read_to_string(path).context("Couldn't read gRPC TLS private key")?,
         None => return Err(anyhow!("No gRPC TLS private key file provided.")),
     };
     let grpc_tls_certificate = match &opt.grpc_tls_certificate {
-        Some(path) => read_to_string(path).context("could not read gRPC TLS certificate")?,
+        Some(path) => read_to_string(path).context("Couldn't read gRPC TLS certificate")?,
         None => return Err(anyhow!("No gRPC TLS certificate file provided.")),
     };
     let root_tls_certificate = get_root_tls_certificate_or_default(&opt)?;
@@ -228,7 +227,7 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
         )),
         grpc_client_root_tls_certificate: Some(
             load_certificate(&root_tls_certificate)
-                .map_err(|()| anyhow!("could not parse TLS certificate"))?,
+                .map_err(|()| anyhow!("Couldn't parse TLS certificate"))?,
         ),
         oidc_client_info,
     };
@@ -251,26 +250,28 @@ fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
                 .context("Couldn't parse signature manifest file as TOML")?;
         debug!("Parsed signature manifest file: {:?}", signatures_manifest);
 
-        for (module_hash, signature_vec) in loaded_signatures_manifest.signatures.iter() {
-            let mut parsed_signatures = vec![];
-
-            for signature_item in signature_vec.iter() {
-                debug!("Loading signature for {}", module_hash);
-                let public_key = PublicKey::from_file(&signature_item.public_key)
-                    .context("Couldn't parse public key file")?;
-                debug!("Parsed public key: {}", public_key.to_base64());
-                let signature = SignatureBox::from_file(&signature_item.signature)
-                    .context("Couldn't parse signature file")?;
-                debug!("Parsed signature: {}", signature.to_string());
-                parsed_signatures.push(Signature {
-                    public_key,
-                    signature,
-                });
+        for signature_location in loaded_signatures_manifest.signatures.iter() {
+            let (module_hash, loaded_signature) = match &signature_location {
+                SignatureLocation::Path(path) => {
+                    debug!("Loading signature file {}", &path);
+                    let signature_file = read(&path)
+                        .with_context(|| format!("Couldn't read signature file {}", &path))?;
+                    parse_pem_signature(&signature_file)
+                        .with_context(|| format!("Couldn't parse signature file {}", &path))?
+                }
+                SignatureLocation::Url(_url) => {
+                    // TODO(#1379): Download certificates from Web.
+                    todo!()
+                }
+            };
+            match sign_table.values.get_mut(&module_hash) {
+                Some(signatures) => signatures.push(loaded_signature),
+                None => {
+                    sign_table
+                        .values
+                        .insert(module_hash.to_string(), vec![loaded_signature]);
+                }
             }
-
-            sign_table
-                .values
-                .insert(module_hash.to_string(), parsed_signatures);
         }
     }
 

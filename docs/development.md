@@ -288,5 +288,8 @@ In order create a signature `hello_world.sign` for a Wasm module
 `hello_world.wasm` use the following script:
 
 ```bash
-./scripts/sign_module -i examples/hello_world/bin/hello_world.wasm -o examples/hello_world/bin/hello_world.sign
+./scripts/oak_sign sign \
+  --private-key=examples/certs/ed25519/test.key \
+  --input-file=examples/hello_world/bin/hello_world.wasm \
+  --signature=examples/hello_world/bin/hello_world.sign
 ```

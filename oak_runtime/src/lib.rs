@@ -36,15 +36,16 @@ use auth::oidc_utils::ClientInfo;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
-use minisign::{verify, PublicKey, SignatureBox};
 use oak_abi::{
     label::{Label, Tag},
     proto::oak::application::{ApplicationConfiguration, ConfigMap, NodeConfiguration},
     ChannelReadStatus, OakStatus,
 };
 use oak_io::Message as NodeMessage;
+use pem::parse_many;
 use prometheus::proto::MetricFamily;
 use rand::RngCore;
+use ring::signature::{UnparsedPublicKey, ED25519};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     string::String,
@@ -114,14 +115,14 @@ pub struct GrpcConfiguration {
 }
 
 /// Configuration options related to Wasm module signatures.
-/// Consists of parsed `minisign::PublicKey` and `minisign::SignatureBox`.
+/// Consists of parsed Ed25519 public key and signature bytes.
 /// This structure contains a public key and a signature that have not yet been
 /// verified since it's an argument passed to `oak_runtime`.
 /// The verification takes place in the `verify_module_signatures` function.
 #[derive(Clone)]
 pub struct Signature {
-    pub public_key: PublicKey,
-    pub signature: SignatureBox,
+    pub public_key: Vec<u8>,
+    pub signature: Vec<u8>,
 }
 
 #[derive(Default, Clone)]
@@ -471,27 +472,24 @@ impl Runtime {
     /// Since such signatures are optional - tries to find corresponding signatures by module names
     /// and verifies them if found.
     pub(crate) fn verify_module_signatures(&self) -> Result<(), OakStatus> {
-        for (name, module) in &self.application_configuration.wasm_modules {
-            let module_hash = sha_256_hex(&module);
+        for (name, module_bytes) in &self.application_configuration.wasm_modules {
+            let module_hash = sha_256_hex(&module_bytes);
             // Get signature by module name.
             if let Some(signatures) = self.signature_table.values.get(&module_hash) {
                 for signature_item in signatures.iter() {
-                    let public_key = &signature_item.public_key;
-                    let signature = &signature_item.signature;
-                    let data_reader = std::io::Cursor::new(module);
+                    let public_key_bytes = &signature_item.public_key;
+                    let signature_bytes = &signature_item.signature;
 
-                    // Output status information to `stderr`.
-                    // https://docs.rs/minisign/0.5.20/minisign/fn.verify.html#arguments
-                    const QUIET: bool = true;
-                    // Output a copy of the data to `stdout`.
-                    const OUTPUT: bool = false;
-                    verify(public_key, signature, data_reader, QUIET, OUTPUT).map_err(|error| {
-                        error!(
-                            "Wasm module signature verification failed for {}: {}",
-                            name, error
-                        );
-                        OakStatus::ErrInvalidArgs
-                    })?;
+                    let public_key = UnparsedPublicKey::new(&ED25519, public_key_bytes);
+                    public_key
+                        .verify(&module_bytes, &signature_bytes)
+                        .map_err(|error| {
+                            error!(
+                                "Wasm module signature verification failed for {}: {}",
+                                name, error
+                            );
+                            OakStatus::ErrInvalidArgs
+                        })?;
                 }
             }
         }
@@ -1273,4 +1271,42 @@ pub fn sha_256_hex(bytes: &[u8]) -> String {
     hasher.update(&bytes);
     let hash_value = hasher.finalize();
     hex::encode(hash_value)
+}
+
+// PEM file tags.
+pub(crate) const PUBLIC_KEY_TAG: &str = "PUBLIC KEY";
+pub(crate) const SIGNATURE_TAG: &str = "SIGNATURE";
+pub(crate) const HASH_TAG: &str = "HASH";
+
+/// Parses public key and signature encoded using PEM format.
+/// https://tools.ietf.org/html/rfc1421
+///
+/// Returns a pair of hex encoded SHA-256 digest and [`Signature`].
+pub fn parse_pem_signature(signature_pem: &[u8]) -> Result<(String, Signature), OakStatus> {
+    let signature_content =
+        parse_many(signature_pem)
+            .iter()
+            .fold(HashMap::new(), |mut content, entry| {
+                content.insert(entry.tag.to_string(), entry.contents.to_vec());
+                content
+            });
+    let public_key = signature_content.get(PUBLIC_KEY_TAG).ok_or_else(|| {
+        error!("Signature file doesn't contain public key");
+        OakStatus::ErrInvalidArgs
+    })?;
+    let signature = signature_content.get(SIGNATURE_TAG).ok_or_else(|| {
+        error!("Signature file doesn't contain signature");
+        OakStatus::ErrInvalidArgs
+    })?;
+    let hash = signature_content.get(HASH_TAG).ok_or_else(|| {
+        error!("Signature file doesn't contain hash");
+        OakStatus::ErrInvalidArgs
+    })?;
+    Ok((
+        hex::encode(hash),
+        Signature {
+            public_key: public_key.to_vec(),
+            signature: signature.to_vec(),
+        },
+    ))
 }

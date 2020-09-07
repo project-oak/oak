@@ -1,4 +1,12 @@
-untrusted comment: signature from minisign secret key
-RWTdfGocqvKfGWhWjqcrQDSBUwIn3yP3P9g0kb1xknK3ir/iifo1uFWzFRp+m/AkZr9Nk+ygR/A0vb9e4kswc2iQ2ry2uBKEKwE=
-trusted comment: timestamp:1597152961	file:minimal.wasm
-nGuGcBIMwTJKjNN6OzwscLm2lSFpNQvmqmO2RAMptg7JEvuGXs2j3nre2epwioUuHn8wpcv1aC23gnVYrbfLAw==
+-----BEGIN PUBLIC KEY-----
+f41SClNtR4i46v2Tuh1fQLbt/ZqRr1lENajCW92jyP4=
+-----END PUBLIC KEY-----
+
+-----BEGIN SIGNATURE-----
+MEWMw5TNzIVQI4Nh5oAdhPe6nDnGy7/9ctjqvIP5XMeAEJ3wDPhfgLI66ifJNsaX
+DBZ7SYDZkyuw+XLj6eP2BQ==
+-----END SIGNATURE-----
+
+-----BEGIN HASH-----
+GqGN9fNNkmjbCogOZBVMCPDNaV9Iq+9Ie5l8foQi5nM=
+-----END HASH-----

@@ -37,7 +37,7 @@
 //!     --signature=<SIGNATURE_FILE>.sign
 //! ```
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use log::info;
 use pem::{encode, encode_many, parse, parse_many, Pem};
 use ring::{
@@ -82,14 +82,14 @@ struct Sign {
     pub private_key: String,
     #[structopt(long, help = "Input file path")]
     pub input_file: String,
-    #[structopt(long, help = "Output PEM encoded Ed25519 signature path")]
+    #[structopt(long, help = "Output PEM encoded Ed25519 signature file path")]
     pub signature: String,
 }
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Verify input file signature")]
 struct Verify {
-    #[structopt(long, help = "Input PEM encoded Ed25519 signature path")]
+    #[structopt(long, help = "Input PEM encoded Ed25519 signature file path")]
     pub signature: String,
     #[structopt(long, help = "Input file path")]
     pub input_file: String,
@@ -99,6 +99,7 @@ struct Verify {
 const PRIVATE_KEY_TAG: &str = "PRIVATE KEY";
 const PUBLIC_KEY_TAG: &str = "PUBLIC KEY";
 const SIGNATURE_TAG: &str = "SIGNATURE";
+const HASH_TAG: &str = "HASH";
 
 /// Creates a PEM structure for encoding.
 fn create_pem(tag: &str, contents: &[u8]) -> Pem {
@@ -106,6 +107,14 @@ fn create_pem(tag: &str, contents: &[u8]) -> Pem {
         tag: tag.to_string(),
         contents: contents.to_vec(),
     }
+}
+
+/// Computes a SHA-256 digest of `bytes` and returns it in a for of raw bytes.
+pub fn get_sha256(bytes: &[u8]) -> Vec<u8> {
+    use sha2::digest::Digest;
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(&bytes);
+    hasher.finalize().to_vec()
 }
 
 /// Main execution point for `oak_sign`.
@@ -152,11 +161,13 @@ fn main() -> anyhow::Result<()> {
                     .expect("Couldn't parse PKCS8 encoded private key");
             let public_key_bytes = key_pair.public_key();
             let signature_bytes = key_pair.sign(&input_file_bytes);
+            let hash_bytes = get_sha256(&input_file_bytes);
 
             // Encode signature in PEM format.
             let public_key_pem = create_pem(PUBLIC_KEY_TAG, public_key_bytes.as_ref());
             let signature_pem = create_pem(SIGNATURE_TAG, signature_bytes.as_ref());
-            let encoded_signature = encode_many(&[public_key_pem, signature_pem]);
+            let hash_pem = create_pem(HASH_TAG, hash_bytes.as_ref());
+            let encoded_signature = encode_many(&[public_key_pem, signature_pem, hash_pem]);
 
             // Write signature file.
             write(&opt.signature, &encoded_signature)
@@ -184,8 +195,20 @@ fn main() -> anyhow::Result<()> {
             let signature_bytes = signature_content
                 .get(SIGNATURE_TAG)
                 .context("Signature file doesn't contain signature")?;
+            let hash_bytes = signature_content
+                .get(HASH_TAG)
+                .context("Signature file doesn't contain hash")?;
 
             // Verify input file signature.
+            let hash = hex::encode(hash_bytes);
+            let expected_hash = hex::encode(get_sha256(&input_file_bytes));
+            if hash != expected_hash {
+                return Err(anyhow!(
+                    "Wrong SHA-256 sum: expected {}, presented {}",
+                    hash,
+                    expected_hash
+                ));
+            }
             let public_key =
                 signature::UnparsedPublicKey::new(&signature::ED25519, public_key_bytes);
             public_key
