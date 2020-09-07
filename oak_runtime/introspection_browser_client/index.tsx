@@ -60,7 +60,7 @@ interface NodeInfo {
 type ChannelID = number;
 enum ChannelHalfDirection {
   Read,
-  Write,
+  Write
 }
 interface ChannelHalf {
   channelId: ChannelID;
@@ -86,7 +86,7 @@ function eventReducer(
   switch (eventType) {
     case EventDetailsCase.NODE_CREATED:
       applicationState.nodeInfos.set(event.getNodeCreated().getNodeId(), {
-        abiHandles: new Map(),
+        abiHandles: new Map()
       });
 
       break;
@@ -99,7 +99,7 @@ function eventReducer(
         const channelId = event.getChannelCreated().getChannelId();
         applicationState.channels.set(channelId, {
           id: channelId,
-          messages: [],
+          messages: []
         });
       }
 
@@ -117,7 +117,7 @@ function eventReducer(
           .get(details.getNodeId())
           .abiHandles.set(details.getHandle(), {
             channelId: details.getChannelId(),
-            direction: 0,
+            direction: 0
           });
       }
       break;
@@ -162,7 +162,7 @@ const EventList = () => {
     (): OakApplicationState =>
       events.reduce(eventReducer, {
         nodeInfos: new Map(),
-        channels: new Map(),
+        channels: new Map()
       }),
     [events]
   );
