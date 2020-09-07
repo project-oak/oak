@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Invocation","An invocation, consisting of exactly two channels: one to read incoming requests from the client, and one to write outgoing responses to the client."],["ServerInvocationChannel","Wrapper for a sender that can be used to send invocations to an Oak node that will handle the requests."]]});

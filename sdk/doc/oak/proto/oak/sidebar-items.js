@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["application",""],["label",""],["roughtime",""],["storage",""]]});
+initSidebarItems({"mod":[["application",""],["invocation",""],["label",""],["roughtime",""],["storage",""]]});

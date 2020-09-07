@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["init","Initializes an HTTP server pseudo-Node listening on the provided address."]],"type":[["Invocation",""]]});
+initSidebarItems({"fn":[["init","Initializes an HTTP server pseudo-Node listening on the provided address."]],"struct":[["HttpRequest","Protocol buffer encoding representing an HTTP request."],["HttpResponse","Protocol buffer encoding representing an HTTP/2 response."]],"type":[["Invocation",""]]});

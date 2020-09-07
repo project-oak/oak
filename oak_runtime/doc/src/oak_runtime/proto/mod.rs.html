@@ -25,6 +25,10 @@
 <span id="25">25</span>
 <span id="26">26</span>
 <span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -51,6 +55,10 @@
 
     <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">introspection_events</span> {
         <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.introspection_events.rs&quot;</span>));
+    }
+
+    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">invocation</span> {
+        <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.invocation.rs&quot;</span>));
     }
 }
 </pre></div>
