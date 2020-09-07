@@ -75,7 +75,9 @@ fn start_node(
 
 fn load_signature(signature_path: &str) -> Signature {
     let signature_file = read(&signature_path).expect("Couldn't read signature file");
-    crate::parse_pem_signature(&signature_file).expect("Couldn't parse signature")
+    let (_, signature) =
+        crate::parse_pem_signature(&signature_file).expect("Couldn't parse signature");
+    signature
 }
 
 #[test]

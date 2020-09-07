@@ -203,11 +203,11 @@ fn main() -> anyhow::Result<()> {
             let hash = hex::encode(hash_bytes);
             let expected_hash = hex::encode(get_sha256(&input_file_bytes));
             if hash != expected_hash {
-                Err(anyhow!(
+                return Err(anyhow!(
                     "Wrong SHA-256 sum: expected {}, presented {}",
                     hash,
                     expected_hash
-                ))?;
+                ));
             }
             let public_key =
                 signature::UnparsedPublicKey::new(&signature::ED25519, public_key_bytes);
