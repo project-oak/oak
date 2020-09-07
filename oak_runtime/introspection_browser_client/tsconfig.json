@@ -5,6 +5,7 @@
     "target": "ES2015",
     "jsx": "react",
     "esModuleInterop": true,
-    "noImplicitAny": true
+    "noImplicitAny": true,
+    "strictNullChecks": true
   }
 }
