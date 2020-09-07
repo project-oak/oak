@@ -91,7 +91,14 @@ function eventReducer(
 
       break;
     case EventDetailsCase.NODE_DESTROYED:
-      applicationState.nodeInfos.delete(event.getNodeDestroyed().getNodeId());
+      {
+        const nodeId = event.getNodeDestroyed().getNodeId();
+        if (applicationState.nodeInfos.delete(nodeId) === false) {
+          throw new Error(
+            `Couldn't delete Node with id "${nodeId}", as it does not exist.`
+          );
+        }
+      }
 
       break;
     case EventDetailsCase.CHANNEL_CREATED:
@@ -105,31 +112,56 @@ function eventReducer(
 
       break;
     case EventDetailsCase.CHANNEL_DESTROYED:
-      applicationState.channels.delete(
-        event.getChannelDestroyed().getChannelId()
-      );
+      {
+        const channelId = event.getChannelDestroyed().getChannelId();
+        if (applicationState.channels.delete(channelId) === false) {
+          throw new Error(
+            `Couldn't delete Channel with id "${channelId}", as it does not exist.`
+          );
+        }
+      }
 
       break;
     case EventDetailsCase.HANDLE_CREATED:
       {
         const details = event.getHandleCreated();
-        applicationState.nodeInfos
-          .get(details.getNodeId())
-          .abiHandles.set(details.getHandle(), {
-            channelId: details.getChannelId(),
-            // TODO(#913): Add a direction property in the introspection
-            // event and use the real value here.
-            direction: 0,
-          });
+        const nodeId = details.getNodeId();
+        const node = applicationState.nodeInfos.get(nodeId);
+
+        if (node === undefined) {
+          throw new Error(
+            `Couldn't get Node with id "${nodeId}", as it does not exist.`
+          );
+        }
+
+        node.abiHandles.set(details.getHandle(), {
+          channelId: details.getChannelId(),
+          // TODO(#913): Add a direction property in the introspection
+          // event and use the real value here.
+          direction: 0,
+        });
       }
 
       break;
     case EventDetailsCase.HANDLE_DESTROYED:
       {
         const details = event.getHandleDestroyed();
-        applicationState.nodeInfos
-          .get(details.getNodeId())
-          .abiHandles.delete(details.getHandle());
+        const nodeId = details.getNodeId();
+        const node = applicationState.nodeInfos.get(nodeId);
+
+        if (node === undefined) {
+          throw new Error(
+            `Couldn't get Node with id "${nodeId}", as it does not exist.`
+          );
+        }
+
+        const handle = details.getHandle();
+
+        if (node.abiHandles.delete(handle) === false) {
+          throw new Error(
+            `Couldn't delete ABI handle "${handle}" on Node with id "${nodeId}", as it does not exist.`
+          );
+        }
       }
 
       break;
