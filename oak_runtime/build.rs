@@ -28,12 +28,13 @@ fn main() {
     .expect("Proto compilation failed.");
 
     compile_protos_with_options(
-        &["../proto/introspection_events.proto"],
-        &["../proto"],
+        &[
+            "../oak_services/proto/grpc_invocation.proto",
+            "../oak_services/proto/http_invocation.proto",
+            "../proto/introspection_events.proto",
+        ],
+        &[".."],
         ProtoOptions {
-            // Exclude generation of HandleVisit auto-derive, as it would
-            // require a reference to the Oak SDK to compile.
-            derive_handle_visit: false,
             ..Default::default()
         },
     );

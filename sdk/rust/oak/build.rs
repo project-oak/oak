@@ -17,12 +17,13 @@
 fn main() {
     oak_utils::compile_protos_with_options(
         &[
+            "../../../oak_services/proto/grpc_invocation.proto",
+            "../../../oak_services/proto/http_invocation.proto",
             "../../../oak_services/proto/storage_service.proto",
             "../../../oak_services/proto/roughtime_service.proto",
         ],
         &["../../.."],
         oak_utils::ProtoOptions {
-            derive_handle_visit: false,
             ..Default::default()
         },
     );

@@ -24,4 +24,8 @@ pub mod oak {
     pub mod introspection_events {
         include!(concat!(env!("OUT_DIR"), "/oak.introspection_events.rs"));
     }
+
+    pub mod invocation {
+        include!(concat!(env!("OUT_DIR"), "/oak.invocation.rs"));
+    }
 }

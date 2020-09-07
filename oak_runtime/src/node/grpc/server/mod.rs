@@ -18,17 +18,21 @@
 
 use crate::{
     auth::oidc_utils::ClientInfo,
+    io::{ReceiverExt, SenderExt},
     metrics::Metrics,
     node::{
         grpc::{codec::VecCodec, to_tonic_status},
         ConfigurationError, Node,
     },
-    ChannelHalfDirection, RuntimeProxy,
+    proto::oak::invocation::{GrpcInvocation, GrpcInvocationSender},
+    RuntimeProxy,
 };
 use hyper::service::Service;
 use log::{debug, error, info, trace, warn};
-use oak_abi::{
-    label::Label, proto::oak::application::GrpcServerConfiguration, ChannelReadStatus, OakStatus,
+use oak_abi::{label::Label, proto::oak::application::GrpcServerConfiguration, OakStatus};
+use oak_io::{
+    handle::{ReadHandle, WriteHandle},
+    OakError, Receiver, Sender,
 };
 use oak_services::proto::{
     google::rpc,
@@ -89,66 +93,30 @@ impl GrpcServerNode {
         })
     }
 
-    /// Reads the [`oak_abi::Handle`] for the write half of an invocation from a startup channel.
-    /// Returns an error if the startup channel couldn't be read, or if the initial message
-    /// is invalid (doesn't contain exactly one write handle).
+    /// Reads the [`WriteHandle`] (to be used for sending new invocations) from a startup channel.
+    /// Returns an error if the startup channel couldn't be read, or if the initial message is
+    /// invalid (it must be an encoded [`GrpcInvocationSender`]).
     fn get_invocation_channel(
         runtime: &RuntimeProxy,
         startup_handle: oak_abi::Handle,
-    ) -> Result<oak_abi::Handle, OakStatus> {
-        let read_status = runtime
-            .wait_on_channels(&[startup_handle])
-            .map_err(|error| {
-                error!("Couldn't wait on the initial reader handle: {:?}", error);
-                OakStatus::ErrInternal
-            })?;
-
-        // TODO(#389): Automatically generate this code.
-        let invocation_channel = if read_status[0] == ChannelReadStatus::ReadReady {
-            runtime
-                .channel_read(startup_handle)
-                .map_err(|error| {
-                    error!("Couldn't read from the initial reader handle {:?}", error);
-                    OakStatus::ErrInternal
-                })
-                .and_then(|message| {
-                    message
-                        .ok_or_else(|| {
-                            error!("Empty message");
-                            OakStatus::ErrInternal
-                        })
-                        .and_then(|m| {
-                            if m.handles.len() == 1 {
-                                let handle = m.handles[0];
-                                match runtime.channel_direction(handle)? {
-                                    ChannelHalfDirection::Write => Ok(handle),
-                                    ChannelHalfDirection::Read => {
-                                        error!(
-                                            "gRPC server pseudo-node should receive a writer handle, found reader handle {}",
-                                            handle
-                                        );
-                                        Err(OakStatus::ErrBadHandle)
-                                    },
-                                }
-                            } else {
-                                error!(
-                                    "gRPC server pseudo-node should receive a single writer handle, found {}",
-                                    m.handles.len()
-                                );
-                                Err(OakStatus::ErrInternal)
-                            }
-                        })
-                })
-        } else {
-            error!("Couldn't read channel: {:?}", read_status[0]);
-            Err(OakStatus::ErrInternal)
-        }?;
-
-        info!(
-            "Invocation channel write handle received: {}",
-            invocation_channel
-        );
-        Ok(invocation_channel)
+    ) -> Result<WriteHandle, OakError> {
+        let startup_receiver = Receiver::<GrpcInvocationSender>::new(ReadHandle {
+            handle: startup_handle,
+        });
+        let invocation_channel = startup_receiver.receive(&runtime)?;
+        match &invocation_channel.sender {
+            Some(invocation_sender) => {
+                info!(
+                    "Invocation channel write handle received: {}",
+                    invocation_sender.handle.handle
+                );
+                Ok(invocation_sender.handle)
+            }
+            None => {
+                error!("Couldn't receive the invocation sender.");
+                Err(OakError::OakStatus(OakStatus::ErrBadHandle))
+            }
+        }
     }
 }
 
@@ -252,7 +220,7 @@ struct HttpRequestHandler {
     /// Reference to the Runtime in the context of this gRPC server pseudo-Node.
     runtime: RuntimeProxy,
     /// Channel handle used for writing gRPC invocations.
-    invocation_channel: oak_abi::Handle,
+    invocation_channel: WriteHandle,
 }
 
 /// Set a mandatory prefix for all gRPC requests processed by a gRPC pseudo-Node.
@@ -274,7 +242,7 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
     fn call(&mut self, request: http::Request<hyper::Body>) -> Self::Future {
         let grpc_handler = GrpcInvocationHandler::new(
             self.runtime.clone(),
-            self.invocation_channel,
+            Sender::<GrpcInvocation>::new(self.invocation_channel),
             request.uri().path().to_string(),
         );
 
@@ -358,7 +326,7 @@ struct GrpcInvocationHandler {
     /// Reference to the Runtime in the context of this gRPC server pseudo-Node.
     runtime: RuntimeProxy,
     /// Channel handle used for writing gRPC invocations.
-    invocation_channel: oak_abi::Handle,
+    invocation_channel: Sender<GrpcInvocation>,
     /// Name of the gRPC method being invoked.
     method_name: String,
 }
@@ -429,7 +397,7 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
 impl GrpcInvocationHandler {
     fn new(
         runtime: RuntimeProxy,
-        invocation_channel: oak_abi::Handle,
+        invocation_channel: Sender<GrpcInvocation>,
         method_name: String,
     ) -> Self {
         Self {
@@ -461,37 +429,30 @@ impl GrpcInvocationHandler {
                 warn!("could not create gRPC response channel: {:?}", err);
             })?;
 
-        // Create an invocation message and attach the method-invocation specific channels to it.
-        //
-        // This message should be in sync with the [`oak::grpc::Invocation`] from the Oak SDK:
-        // the order of the `request_reader` and `response_writer` must be consistent.
-        let invocation = crate::NodeMessage {
-            bytes: vec![],
-            handles: vec![request_reader, response_writer],
+        let invocation = GrpcInvocation {
+            receiver: Some(Receiver::<GrpcRequest>::new(ReadHandle {
+                handle: request_reader,
+            })),
+            sender: Some(Sender::<GrpcResponse>::new(WriteHandle {
+                handle: response_writer,
+            })),
         };
-
-        // Serialize gRPC request into a message.
-        let mut message = crate::NodeMessage {
-            bytes: vec![],
-            handles: vec![],
-        };
-        request.encode(&mut message.bytes).map_err(|error| {
-            error!("Couldn't serialize GrpcRequest message: {}", error);
-        })?;
 
         // Put the gRPC request message inside the per-invocation request channel.
-        self.runtime
-            .channel_write(request_writer, message)
-            .map_err(|error| {
-                error!(
-                    "Couldn't write message to the gRPC request channel: {:?}",
-                    error
-                );
-            })?;
+        Sender::<GrpcRequest>::new(WriteHandle {
+            handle: request_writer,
+        })
+        .send(request, &self.runtime)
+        .map_err(|error| {
+            error!(
+                "Couldn't write message to the gRPC request channel: {:?}",
+                error
+            );
+        })?;
 
         // Send an invocation message (with attached handles) to the Oak Node.
-        self.runtime
-            .channel_write(self.invocation_channel, invocation)
+        self.invocation_channel
+            .send(invocation, &self.runtime)
             .map_err(|error| {
                 error!("Couldn't write gRPC invocation message: {:?}", error);
             })?;
@@ -518,7 +479,9 @@ impl GrpcInvocationHandler {
 
         Ok(GrpcResponseIterator::new(
             self.runtime.clone(),
-            response_reader,
+            ReadHandle {
+                handle: response_reader,
+            },
             self.method_name.clone(),
         ))
     }
@@ -574,7 +537,7 @@ impl Drop for MetricsRecorder {
 
 struct GrpcResponseIterator {
     runtime: RuntimeProxy,
-    response_reader: oak_abi::Handle,
+    response_reader: Option<Receiver<GrpcResponse>>,
     method_name: String,
     // The lifetime of the metrics_recorder matches the lifetime of the
     // iterator, updating the metrics when the iterator is dropped.
@@ -583,13 +546,14 @@ struct GrpcResponseIterator {
 }
 
 impl GrpcResponseIterator {
-    fn new(runtime: RuntimeProxy, response_reader: oak_abi::Handle, method_name: String) -> Self {
+    fn new(runtime: RuntimeProxy, response_read_handle: ReadHandle, method_name: String) -> Self {
         trace!(
             "Create new GrpcResponseIterator for '{}', reading from {}",
             method_name,
-            response_reader
+            response_read_handle.handle
         );
         let metrics_recorder = MetricsRecorder::new(runtime.clone(), method_name.clone());
+        let response_reader = Some(Receiver::<GrpcResponse>::new(response_read_handle));
         GrpcResponseIterator {
             runtime,
             response_reader,
@@ -604,13 +568,15 @@ impl GrpcResponseIterator {
 /// is always closed.
 impl Drop for GrpcResponseIterator {
     fn drop(&mut self) {
-        trace!(
-            "Dropping GrpcResponseIterator for '{}': close channel {}",
-            self.method_name,
-            self.response_reader
-        );
-        if let Err(err) = self.runtime.channel_close(self.response_reader) {
-            error!("Failed to close gRPC response reader channel: {:?}", err);
+        if let Some(receiver) = self.response_reader.take() {
+            trace!(
+                "Dropping GrpcResponseIterator for '{}': close channel {}",
+                self.method_name,
+                receiver.handle.handle
+            );
+            if let Err(err) = receiver.close(&self.runtime) {
+                error!("Failed to close gRPC response reader channel: {:?}", err);
+            }
         }
         // Note that dropping self.metrics_recorder will record the duration, and update the
         // `grpc_server_msg_sent_total` metric.
@@ -625,17 +591,9 @@ impl Iterator for GrpcResponseIterator {
         if self.done {
             return None;
         }
-        let read_status = self
-            .runtime
-            .wait_on_channels(&[self.response_reader])
-            .map_err(|error| {
-                error!("Couldn't wait on the gRPC response channel: {:?}", error);
-            })
-            .ok()?;
-
-        if read_status[0] == ChannelReadStatus::ReadReady {
-            match self.runtime.channel_read(self.response_reader) {
-                Ok(Some(msg)) => match GrpcResponse::decode(msg.bytes.as_slice()) {
+        match &self.response_reader {
+            Some(receiver) => {
+                match receiver.receive(&self.runtime) {
                     Ok(grpc_rsp) => {
                         self.metrics_recorder
                             .observe_message_with_len(grpc_rsp.rsp_msg.len());
@@ -659,29 +617,13 @@ impl Iterator for GrpcResponseIterator {
                         );
                         Some(grpc_rsp)
                     }
-                    Err(err) => {
-                        error!("Couldn't parse the GrpcResponse message: {}", err);
+                    Err(error) => {
+                        error!("Error reading gRPC response: {:?}", error);
                         None
                     }
-                },
-                Ok(None) => {
-                    error!("No message available on gRPC response channel");
-                    None
-                }
-                Err(status) => {
-                    error!("Couldn't read from the gRPC response channel: {:?}", status);
-                    None
                 }
             }
-        } else if read_status[0] == ChannelReadStatus::Orphaned {
-            debug!("gRPC response channel closed");
-            None
-        } else {
-            error!(
-                "Couldn't read from the gRPC response channel: {:?}",
-                read_status[0]
-            );
-            None
+            None => None,
         }
     }
 }

@@ -69,7 +69,16 @@ WASM_EXPORT void oak_main(oak_abi::Handle _handle) {
   if (result != oak_abi::OakStatus::OK) {
     return;
   }
-  result = channel_write(write_handle, nullptr, 0, (uint8_t*)&grpc_out_handle, 1);
+
+  // Manually create a GrpcInvocationSender protobuf and send it with the handle. The id is a
+  // placeholder that will be replaced with the actual handle.
+  //    0a                     b00001.010 = tag 1 (GrpcInvocationSender.sender), length-delimited
+  //    09                     length=9
+  //      09                   b00001.001 = tag 1 (Sender.id), fixed-length 64 bit
+  //        0100000000000000   1 (little-endian byte order)
+  uint8_t invocation_sender[] = "\x0a\x09\x09\x01\x00\x00\x00\x00\x00\x00\x00";
+  result = channel_write(write_handle, invocation_sender, sizeof(invocation_sender) - 1,
+                         (uint8_t*)&grpc_out_handle, 1);
   if (result != oak_abi::OakStatus::OK) {
     return;
   }
@@ -95,12 +104,14 @@ WASM_EXPORT void oak_main(oak_abi::Handle _handle) {
       return;
     }
 
-    // Reading from main channel should give no data and a (read, write) pair of handles.
+    // Reading from main channel should give a (read, write) pair of handles.
+    // Ignoring the data, as it is the encoded GrpcInvocation proto.
+    uint8_t proto[100];
     uint32_t actual_size;
     uint32_t handle_count;
     oak_abi::Handle handles[2];
-    channel_read(grpc_in_handle, nullptr, 0, &actual_size, handles, 2, &handle_count);
-    if ((actual_size != 0) || (handle_count != 2)) {
+    channel_read(grpc_in_handle, proto, sizeof(proto), &actual_size, handles, 2, &handle_count);
+    if (handle_count != 2) {
       return;
     }
     oak_abi::Handle req_handle = handles[0];

@@ -22,7 +22,8 @@
 use crate::{
     io::{ReceiverExt, SenderExt},
     node::{ConfigurationError, Node},
-    ChannelHalfDirection, RuntimeProxy,
+    proto::oak::invocation::{HttpInvocation, HttpInvocationSender},
+    RuntimeProxy,
 };
 use core::task::{Context, Poll};
 use futures_util::stream::Stream;
@@ -31,12 +32,10 @@ use hyper::{
     Body, Request, Response, Server, StatusCode,
 };
 use log::{debug, error, info, warn};
-use oak_abi::{
-    label::Label, proto::oak::application::HttpServerConfiguration, ChannelReadStatus, OakStatus,
-};
+use oak_abi::{label::Label, proto::oak::application::HttpServerConfiguration, OakStatus};
 use oak_io::{
     handle::{ReadHandle, WriteHandle},
-    OakError,
+    OakError, Receiver, Sender,
 };
 use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 use std::{io, net::SocketAddr, pin::Pin};
@@ -107,77 +106,6 @@ impl HttpServerNode {
             address,
             tls_config,
         })
-    }
-
-    /// Reads the [`oak_abi::Handle`] for the write half of an invocation from a startup channel.
-    /// Returns an error if the startup channel couldn't be read, or if the initial message
-    /// is invalid (doesn't contain exactly one write handle).
-    fn try_get_invocation_channel(
-        runtime: &RuntimeProxy,
-        startup_handle: oak_abi::Handle,
-    ) -> Result<oak_abi::Handle, OakStatus> {
-        // Wait until a message is available on the startup channel
-        let read_status = runtime
-            .wait_on_channels(&[startup_handle])
-            .map_err(|error| {
-                error!("Couldn't wait on the initial reader handle: {:?}", error);
-                OakStatus::ErrInternal
-            })?;
-
-        // TODO(#389): Automatically generate this code.
-        let invocation_channel = if read_status[0] == ChannelReadStatus::ReadReady {
-            HttpServerNode::get_invocation_channel(runtime, startup_handle)
-        } else {
-            error!("Couldn't read channel: {:?}", read_status[0]);
-            Err(OakStatus::ErrInternal)
-        }?;
-
-        info!(
-            "Invocation channel write handle received: {}",
-            invocation_channel
-        );
-        Ok(invocation_channel)
-    }
-
-    fn get_invocation_channel(
-        runtime: &RuntimeProxy,
-        startup_handle: oak_abi::Handle,
-    ) -> Result<oak_abi::Handle, OakStatus> {
-        runtime.channel_read(startup_handle)
-                .map_err(|error| {
-                    error!("Couldn't read from the initial reader handle {:?}", error);
-                    OakStatus::ErrInternal
-                })
-                .and_then(|message| {
-                    message
-                        .ok_or_else(|| {
-                            error!("Empty message");
-                            OakStatus::ErrInternal
-                        })
-                        .and_then(|m| {
-                            // TODO(#1186): create an Init object and define encode/decode for it
-                            // Ref: https://github.com/project-oak/oak/pull/1261#discussion_r457943479
-                            if m.handles.len() == 1 {
-                                let handle = m.handles[0];
-                                match runtime.channel_direction(handle)? {
-                                    ChannelHalfDirection::Write => Ok(handle),
-                                    ChannelHalfDirection::Read => {
-                                        error!(
-                                            "Http server pseudo-node should receive a writer handle, found reader handle {}",
-                                            handle
-                                        );
-                                        Err(OakStatus::ErrBadHandle)
-                                    },
-                                }
-                            } else {
-                                error!(
-                                    "Http server pseudo-node should receive a single writer handle, found {}",
-                                    m.handles.len()
-                                );
-                                Err(OakStatus::ErrInternal)
-                            }
-                        })
-                })
     }
 
     // Make a server, with graceful shutdown, from the given [`HttpRequestHandler`].
@@ -289,9 +217,18 @@ impl Node for HttpServerNode {
         // At start-of-day we need/expect to receive a write handle for an invocation channel
         // to use for all subsequent activity.
         info!("{}: Waiting for invocation channel", self.node_name);
+        let startup_receiver = Receiver::<HttpInvocationSender>::new(ReadHandle {
+            handle: startup_handle,
+        });
         let invocation_channel =
-            match HttpServerNode::try_get_invocation_channel(&runtime, startup_handle) {
-                Ok(writer) => writer,
+            match startup_receiver
+                .receive(&runtime)
+                .and_then(|invocation_sender| {
+                    invocation_sender
+                        .sender
+                        .ok_or(OakError::OakStatus(OakStatus::ErrBadHandle))
+                }) {
+                Ok(sender) => sender.handle.handle,
                 Err(status) => {
                     error!(
                         "Failed to retrieve invocation channel write handle: {:?}",
@@ -300,7 +237,7 @@ impl Node for HttpServerNode {
                     return;
                 }
             };
-        if let Err(err) = runtime.channel_close(startup_handle) {
+        if let Err(err) = startup_receiver.close(&runtime) {
             error!(
                 "Failed to close initial inbound channel {}: {:?}",
                 startup_handle, err
@@ -443,16 +380,20 @@ impl Pipe {
         runtime: &RuntimeProxy,
         invocation_channel: oak_abi::Handle,
     ) -> Result<(), ()> {
-        // Create an invocation message and attach the request specific channels to it.
-        // TODO(#1186): Use a generic version of gRPC invocation, instead of serializing manually
-        let invocation = crate::NodeMessage {
-            bytes: vec![],
-            handles: vec![self.request_reader, self.response_writer],
+        // Create an invocation containing request-specific channels.
+        let invocation = HttpInvocation {
+            receiver: Some(Receiver::new(ReadHandle {
+                handle: self.request_reader,
+            })),
+            sender: Some(Sender::new(WriteHandle {
+                handle: self.response_writer,
+            })),
         };
-
-        // Send an invocation message (with attached handles) to the Oak Node.
-        runtime
-            .channel_write(invocation_channel, invocation)
+        let invocation_sender = crate::io::Sender::new(WriteHandle {
+            handle: invocation_channel,
+        });
+        invocation_sender
+            .send(invocation, runtime)
             .map_err(|error| {
                 error!("Couldn't write the invocation message: {:?}", error);
             })

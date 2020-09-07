@@ -17,7 +17,6 @@
 use super::*;
 use maplit::hashmap;
 use oak_abi::{label::Label, proto::oak::application::ApplicationConfiguration};
-use prost::Message;
 use std::{fs, option::Option, thread::JoinHandle};
 
 struct HttpServerTester {
@@ -156,48 +155,41 @@ fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak
     let (invocation_sender, invocation_receiver) = runtime
         .channel_create(&Label::public_untrusted())
         .expect("Could not create channel");
-    let message = crate::NodeMessage {
-        bytes: vec![],
-        handles: vec![invocation_sender],
+    let invocation_sender = HttpInvocationSender {
+        sender: Some(Sender::<HttpInvocation>::new(WriteHandle {
+            handle: invocation_sender,
+        })),
     };
+    let init_sender = Sender::<HttpInvocationSender>::new(WriteHandle {
+        handle: init_sender,
+    });
 
-    let _ = runtime
-        .channel_write(init_sender, message)
-        .map_err(|err| panic!("Could not write to the `init_sender` channel: {}", err));
-    let _ = runtime
-        .channel_close(init_sender)
-        .map_err(|err| panic!("Could not close the `init_sender` channel: {}.", err));
+    if let Err(error) = init_sender.send(invocation_sender, runtime) {
+        panic!("Could not write to the `init_sender` channel: {}", error);
+    }
+    if let Err(error) = init_sender.close(runtime) {
+        panic!("Could not close the `init_sender` channel: {}", error);
+    }
 
     (init_receiver, invocation_receiver)
 }
 
 fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Handle) {
     // Get invocation message that contains the response_writer handle.
-    let read_status = runtime
-        .wait_on_channels(&[invocation_receiver])
-        .expect("Error while waiting on invocation_receiver");
-    if read_status[0] == ChannelReadStatus::ReadReady {
-        if let Ok(Some(msg)) = runtime.channel_read(invocation_receiver) {
-            // Prepare the response
-            let resp = HttpResponse {
-                body: vec![],
-                status: http::status::StatusCode::OK.as_u16() as i32,
-                headers: hashmap! {},
-            };
-            let mut message = crate::NodeMessage {
-                bytes: vec![],
-                handles: vec![],
-            };
-            resp.encode(&mut message.bytes)
-                .expect("could not serialize response to bytes");
-
-            // Send the response over the response_writer channel
-            let response_writer_handle = msg.handles[1];
-            let _ = runtime.channel_write(response_writer_handle, message);
-        }
-    } else {
-        panic!("Error while waiting for message on invocation_receiver");
-    }
+    let invocation_receiver = Receiver::<HttpInvocation>::new(ReadHandle {
+        handle: invocation_receiver,
+    });
+    let invocation = invocation_receiver.receive(runtime).unwrap();
+    let resp = HttpResponse {
+        body: vec![],
+        status: http::status::StatusCode::OK.as_u16() as i32,
+        headers: hashmap! {},
+    };
+    invocation
+        .sender
+        .expect("Empty sender on invocation.")
+        .send(resp, runtime)
+        .unwrap();
 }
 
 async fn send_request(uri: &str) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
