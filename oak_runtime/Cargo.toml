@@ -35,7 +35,7 @@ oak_abi = { path = "../oak_abi" }
 oak_io = { path = "../oak_io" }
 oak_services = { path = "../oak_services" }
 pem = "*"
-prometheus = { version = "0.8", features = [
+prometheus = { version = "0.10", features = [
   "nightly"
 ], default-features = false }
 prost = { path = "../third_party/prost" }
