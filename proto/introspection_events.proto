@@ -58,12 +58,19 @@ message ChannelDestroyed {
   uint64 channel_id = 1;
 }
 
+enum Direction {
+  READ = 0;
+  WRITE = 1;
+}
+
 message HandleCreated {
   uint64 node_id = 1;
 
   uint64 channel_id = 2;
 
   uint64 handle = 3;
+
+  Direction direction = 4;
 }
 
 message HandleDestroyed {
