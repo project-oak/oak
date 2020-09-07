@@ -179,6 +179,9 @@
 <span id="179">179</span>
 <span id="180">180</span>
 <span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -220,8 +223,11 @@
 <span class="doccomment">/// Keep in sync with /oak/common/label.cc.</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">OAK_LABEL_GRPC_METADATA_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;x-oak-label-bin&quot;</span>;
 
-<span class="doccomment">/// The header key used for encoded Labels in HTTP requests.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">OAK_LABEL_HTTP_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;oak-label&quot;</span>;
+<span class="doccomment">/// The header key used for JSON formatted Labels in HTTP requests.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">OAK_LABEL_HTTP_JSON_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;oak-label&quot;</span>;
+
+<span class="doccomment">/// The header key used for protobuf encoded Labels in HTTP requests.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">OAK_LABEL_HTTP_PROTOBUF_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;oak-label-bin&quot;</span>;
 
 <span class="doccomment">/// Handle used to identify read or write channel halves.</span>
 <span class="doccomment">///</span>
