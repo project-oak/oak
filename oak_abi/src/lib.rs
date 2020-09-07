@@ -38,8 +38,11 @@ impl std::error::Error for OakStatus {}
 /// Keep in sync with /oak/common/label.cc.
 pub const OAK_LABEL_GRPC_METADATA_KEY: &str = "x-oak-label-bin";
 
-/// The header key used for encoded Labels in HTTP requests.
-pub const OAK_LABEL_HTTP_KEY: &str = "oak-label";
+/// The header key used for JSON formatted Labels in HTTP requests.
+pub const OAK_LABEL_HTTP_JSON_KEY: &str = "oak-label";
+
+/// The header key used for protobuf encoded Labels in HTTP requests.
+pub const OAK_LABEL_HTTP_PROTOBUF_KEY: &str = "oak-label-bin";
 
 /// Handle used to identify read or write channel halves.
 ///
