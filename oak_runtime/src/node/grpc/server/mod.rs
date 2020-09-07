@@ -588,11 +588,10 @@ impl Iterator for GrpcResponseIterator {
         if self.done {
             return None;
         }
-        match Receiver::<GrpcResponse>::new(self.response_reader).receive_with_size(&self.runtime) {
-            Ok(message_with_size) => {
-                let grpc_rsp = message_with_size.message;
+        match Receiver::<GrpcResponse>::new(self.response_reader).receive(&self.runtime) {
+            Ok(grpc_rsp) => {
                 self.metrics_recorder
-                    .observe_message_with_len(message_with_size.size);
+                    .observe_message_with_len(grpc_rsp.rsp_msg.len());
                 if grpc_rsp.last {
                     // The Node has definitively marked this as the last response for this
                     // invocation; keep track of this and don't bother attempting to read
@@ -607,7 +606,7 @@ impl Iterator for GrpcResponseIterator {
                 }
                 trace!(
                     "Return response of size {}, status={:?} last={}",
-                    message_with_size.size,
+                    grpc_rsp.rsp_msg.len(),
                     grpc_rsp.status,
                     grpc_rsp.last
                 );
