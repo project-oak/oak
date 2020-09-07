@@ -351,6 +351,7 @@
 <span id="351">351</span>
 <span id="352">352</span>
 <span id="353">353</span>
+<span id="354">354</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -374,12 +375,11 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
-<span class="kw">use</span> <span class="ident">minisign</span>::{<span class="ident">PublicKey</span>, <span class="ident">SignatureBox</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{<span class="ident">ApplicationConfiguration</span>, <span class="ident">ConfigMap</span>};
 <span class="kw">use</span> <span class="ident">oak_runtime</span>::{
     <span class="ident">auth</span>::<span class="ident">oidc_utils</span>::{<span class="ident">parse_client_info_json</span>, <span class="ident">ClientInfo</span>},
     <span class="ident">config</span>::<span class="ident">load_certificate</span>,
-    <span class="ident">Signature</span>, <span class="ident">SignatureTable</span>,
+    <span class="ident">parse_pem_signature</span>, <span class="ident">SignatureTable</span>,
 };
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -451,16 +451,16 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">struct</span> <span class="ident">SignatureManifest</span> {
-    <span class="comment">// Maps each module hash to a vector of [`SignatureLocation`].</span>
-    <span class="ident">signatures</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignatureLocation</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">signatures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignatureLocation</span><span class="op">&gt;</span>,
 }
 
-<span class="comment">// Paths to public key and signature files.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">struct</span> <span class="ident">SignatureLocation</span> {
-    <span class="ident">public_key</span>: <span class="ident">String</span>,
-    <span class="ident">signature</span>: <span class="ident">String</span>,
+<span class="kw">enum</span> <span class="ident">SignatureLocation</span> {
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;path&quot;</span>)]</span>
+    <span class="ident">Path</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;url&quot;</span>)]</span>
+    <span class="ident">Url</span>(<span class="ident">String</span>),
 }
 
 <span class="doccomment">/// A specification of a configuration entry as human readable key and a path to a file whose</span>
@@ -565,11 +565,11 @@
 <span class="doccomment">/// files.</span>
 <span class="kw">fn</span> <span class="ident">create_grpc_config</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_to_string</span>(<span class="ident">path</span>).<span class="ident">context</span>(<span class="string">&quot;could not read gRPC TLS private key&quot;</span>)<span class="question-mark">?</span>,
+        <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_to_string</span>(<span class="ident">path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read gRPC TLS private key&quot;</span>)<span class="question-mark">?</span>,
         <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No gRPC TLS private key file provided.&quot;</span>)),
     };
     <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_to_string</span>(<span class="ident">path</span>).<span class="ident">context</span>(<span class="string">&quot;could not read gRPC TLS certificate&quot;</span>)<span class="question-mark">?</span>,
+        <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_to_string</span>(<span class="ident">path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read gRPC TLS certificate&quot;</span>)<span class="question-mark">?</span>,
         <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No gRPC TLS certificate file provided.&quot;</span>)),
     };
     <span class="kw">let</span> <span class="ident">root_tls_certificate</span> <span class="op">=</span> <span class="ident">get_root_tls_certificate_or_default</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>)<span class="question-mark">?</span>;
@@ -582,7 +582,7 @@
         )),
         <span class="ident">grpc_client_root_tls_certificate</span>: <span class="prelude-val">Some</span>(
             <span class="ident">load_certificate</span>(<span class="kw-2">&amp;</span><span class="ident">root_tls_certificate</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span>()<span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;could not parse TLS certificate&quot;</span>))<span class="question-mark">?</span>,
+                .<span class="ident">map_err</span>(<span class="op">|</span>()<span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t parse TLS certificate&quot;</span>))<span class="question-mark">?</span>,
         ),
         <span class="ident">oidc_client_info</span>,
     };
@@ -605,26 +605,28 @@
                 .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse signature manifest file as TOML&quot;</span>)<span class="question-mark">?</span>;
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Parsed signature manifest file: {:?}&quot;</span>, <span class="ident">signatures_manifest</span>);
 
-        <span class="kw">for</span> (<span class="ident">module_hash</span>, <span class="ident">signature_vec</span>) <span class="kw">in</span> <span class="ident">loaded_signatures_manifest</span>.<span class="ident">signatures</span>.<span class="ident">iter</span>() {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">parsed_signatures</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-
-            <span class="kw">for</span> <span class="ident">signature_item</span> <span class="kw">in</span> <span class="ident">signature_vec</span>.<span class="ident">iter</span>() {
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Loading signature for {}&quot;</span>, <span class="ident">module_hash</span>);
-                <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">PublicKey</span>::<span class="ident">from_file</span>(<span class="kw-2">&amp;</span><span class="ident">signature_item</span>.<span class="ident">public_key</span>)
-                    .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse public key file&quot;</span>)<span class="question-mark">?</span>;
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Parsed public key: {}&quot;</span>, <span class="ident">public_key</span>.<span class="ident">to_base64</span>());
-                <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">SignatureBox</span>::<span class="ident">from_file</span>(<span class="kw-2">&amp;</span><span class="ident">signature_item</span>.<span class="ident">signature</span>)
-                    .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse signature file&quot;</span>)<span class="question-mark">?</span>;
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Parsed signature: {}&quot;</span>, <span class="ident">signature</span>.<span class="ident">to_string</span>());
-                <span class="ident">parsed_signatures</span>.<span class="ident">push</span>(<span class="ident">Signature</span> {
-                    <span class="ident">public_key</span>,
-                    <span class="ident">signature</span>,
-                });
+        <span class="kw">for</span> <span class="ident">signature_location</span> <span class="kw">in</span> <span class="ident">loaded_signatures_manifest</span>.<span class="ident">signatures</span>.<span class="ident">iter</span>() {
+            <span class="kw">let</span> (<span class="ident">module_hash</span>, <span class="ident">loaded_signature</span>) <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">signature_location</span> {
+                <span class="ident">SignatureLocation</span>::<span class="ident">Path</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Loading signature file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>);
+                    <span class="kw">let</span> <span class="ident">signature_file</span> <span class="op">=</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)
+                        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read signature file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>))<span class="question-mark">?</span>;
+                    <span class="ident">parse_pem_signature</span>(<span class="kw-2">&amp;</span><span class="ident">signature_file</span>)
+                        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t parse signature file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>))<span class="question-mark">?</span>
+                }
+                <span class="ident">SignatureLocation</span>::<span class="ident">Url</span>(<span class="ident">_url</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="comment">// TODO(#1379): Download certificates from Web.</span>
+                    <span class="macro">todo</span><span class="macro">!</span>()
+                }
+            };
+            <span class="kw">match</span> <span class="ident">sign_table</span>.<span class="ident">values</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">module_hash</span>) {
+                <span class="prelude-val">Some</span>(<span class="ident">signatures</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">signatures</span>.<span class="ident">push</span>(<span class="ident">loaded_signature</span>),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">sign_table</span>
+                        .<span class="ident">values</span>
+                        .<span class="ident">insert</span>(<span class="ident">module_hash</span>.<span class="ident">to_string</span>(), <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">loaded_signature</span>]);
+                }
             }
-
-            <span class="ident">sign_table</span>
-                .<span class="ident">values</span>
-                .<span class="ident">insert</span>(<span class="ident">module_hash</span>.<span class="ident">to_string</span>(), <span class="ident">parsed_signatures</span>);
         }
     }
 

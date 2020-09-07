@@ -179,8 +179,8 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WebAssemblyModuleSignatureTag</span> {
     <span class="doccomment">/// Public key counterpart of the private key used to sign WebAssembly module.</span>
-    <span class="doccomment">/// In the current implementation is represented as a serialized `minisign` public key.</span>
-    <span class="doccomment">/// https://docs.rs/minisign/0.5.20/minisign/struct.PublicKey.html#method.to_bytes</span>
+    <span class="doccomment">/// In the current implementation is represented as a serialized Ed25519 public key.</span>
+    <span class="doccomment">/// https://ed25519.cr.yp.to</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">public_key</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
