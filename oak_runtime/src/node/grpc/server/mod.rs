@@ -537,7 +537,7 @@ impl Drop for MetricsRecorder {
 
 struct GrpcResponseIterator {
     runtime: RuntimeProxy,
-    response_reader: ReadHandle,
+    response_reader: Option<Receiver<GrpcResponse>>,
     method_name: String,
     // The lifetime of the metrics_recorder matches the lifetime of the
     // iterator, updating the metrics when the iterator is dropped.
@@ -546,13 +546,14 @@ struct GrpcResponseIterator {
 }
 
 impl GrpcResponseIterator {
-    fn new(runtime: RuntimeProxy, response_reader: ReadHandle, method_name: String) -> Self {
+    fn new(runtime: RuntimeProxy, response_read_handle: ReadHandle, method_name: String) -> Self {
         trace!(
             "Create new GrpcResponseIterator for '{}', reading from {}",
             method_name,
-            response_reader.handle
+            response_read_handle.handle
         );
         let metrics_recorder = MetricsRecorder::new(runtime.clone(), method_name.clone());
+        let response_reader = Some(Receiver::<GrpcResponse>::new(response_read_handle));
         GrpcResponseIterator {
             runtime,
             response_reader,
@@ -567,13 +568,15 @@ impl GrpcResponseIterator {
 /// is always closed.
 impl Drop for GrpcResponseIterator {
     fn drop(&mut self) {
-        trace!(
-            "Dropping GrpcResponseIterator for '{}': close channel {}",
-            self.method_name,
-            self.response_reader.handle
-        );
-        if let Err(err) = self.runtime.channel_close(self.response_reader.handle) {
-            error!("Failed to close gRPC response reader channel: {:?}", err);
+        if let Some(receiver) = self.response_reader.take() {
+            trace!(
+                "Dropping GrpcResponseIterator for '{}': close channel {}",
+                self.method_name,
+                receiver.handle.handle
+            );
+            if let Err(err) = receiver.close(&self.runtime) {
+                error!("Failed to close gRPC response reader channel: {:?}", err);
+            }
         }
         // Note that dropping self.metrics_recorder will record the duration, and update the
         // `grpc_server_msg_sent_total` metric.
@@ -588,34 +591,39 @@ impl Iterator for GrpcResponseIterator {
         if self.done {
             return None;
         }
-        match Receiver::<GrpcResponse>::new(self.response_reader).receive(&self.runtime) {
-            Ok(grpc_rsp) => {
-                self.metrics_recorder
-                    .observe_message_with_len(grpc_rsp.rsp_msg.len());
-                if grpc_rsp.last {
-                    // The Node has definitively marked this as the last response for this
-                    // invocation; keep track of this and don't bother attempting to read
-                    // from the response channel next time around.
-                    //
-                    // Note that the reverse isn't always true: the final response for a
-                    // server-streaming method might *not* have last=true; in that case the
-                    // next attempt to read from the response channel will find a closed
-                    // channel, and so we treat that as the end of the method invocation
-                    // (below).
-                    self.done = true;
+        match &self.response_reader {
+            Some(receiver) => {
+                match receiver.receive(&self.runtime) {
+                    Ok(grpc_rsp) => {
+                        self.metrics_recorder
+                            .observe_message_with_len(grpc_rsp.rsp_msg.len());
+                        if grpc_rsp.last {
+                            // The Node has definitively marked this as the last response for this
+                            // invocation; keep track of this and don't bother attempting to read
+                            // from the response channel next time around.
+                            //
+                            // Note that the reverse isn't always true: the final response for a
+                            // server-streaming method might *not* have last=true; in that case the
+                            // next attempt to read from the response channel will find a closed
+                            // channel, and so we treat that as the end of the method invocation
+                            // (below).
+                            self.done = true;
+                        }
+                        trace!(
+                            "Return response of size {}, status={:?} last={}",
+                            grpc_rsp.rsp_msg.len(),
+                            grpc_rsp.status,
+                            grpc_rsp.last
+                        );
+                        Some(grpc_rsp)
+                    }
+                    Err(error) => {
+                        error!("Error reading gRPC response: {:?}", error);
+                        None
+                    }
                 }
-                trace!(
-                    "Return response of size {}, status={:?} last={}",
-                    grpc_rsp.rsp_msg.len(),
-                    grpc_rsp.status,
-                    grpc_rsp.last
-                );
-                Some(grpc_rsp)
             }
-            Err(error) => {
-                error!("Error reading gRPC response: {:?}", error);
-                None
-            }
+            None => None,
         }
     }
 }
