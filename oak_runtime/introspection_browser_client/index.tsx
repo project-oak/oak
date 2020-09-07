@@ -117,6 +117,8 @@ function eventReducer(
           .get(details.getNodeId())
           .abiHandles.set(details.getHandle(), {
             channelId: details.getChannelId(),
+            // TODO(#913): Add a direction property in the introspection
+            // event and use the real value here.
             direction: 0,
           });
       }
