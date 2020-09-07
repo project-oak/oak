@@ -27,6 +27,9 @@ use oak_io::OakError;
 use oak_services::proto::oak::encap::{GrpcRequest, GrpcResponse};
 
 impl Invocation {
+    /// Closes the channels used by the sender and receiver fields.
+    ///
+    /// Any errors while trying to close the sender or receive are logged, but otherwise ignored.
     pub fn close(self, runtime: &RuntimeProxy) {
         match self.receiver {
             Some(receiver) => {
