@@ -22,7 +22,7 @@ type ApplicationStateOverviewProps = {
 };
 
 export default function ApplicationStateOverview({
-  applicationState
+  applicationState,
 }: ApplicationStateOverviewProps) {
   return (
     <section>

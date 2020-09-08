@@ -262,6 +262,7 @@ name = "hello_world"
 [modules]
 app = { path = "examples/hello_world/bin/hello_world.wasm" }
 translator = { path = "examples/hello_world/bin/translator.wasm" }
+
 ```
 
 All these steps are implemented as a part of the
@@ -278,6 +279,7 @@ name = "hello_world"
 [modules]
 app = { external = { url = "https://storage.googleapis.com/oak-modules/hello_world/57ba0bcebf2c01389d0413736b0a3bb261312bcf0d6e87181359e402df751d50", sha256 = "57ba0bcebf2c01389d0413736b0a3bb261312bcf0d6e87181359e402df751d50" } }
 translator = { path = "examples/hello_world/bin/translator.wasm" }
+
 ```
 
 It is also possible to save compiled Wasm modules to Google Cloud Storage using

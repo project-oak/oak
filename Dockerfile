@@ -136,7 +136,7 @@ RUN go get github.com/raviqqe/liche@f57a5d1 \
 # This will use the Node version installed by emscripten.
 # https://prettier.io/
 # https://github.com/igorshubovych/markdownlint-cli
-ARG prettier_version=1.19.1
+ARG prettier_version=2.1.1
 ARG prettier_plugin_toml_version=0.3.1
 ARG markdownlint_version=0.22.0
 RUN npm install --global \
