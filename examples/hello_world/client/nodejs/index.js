@@ -36,7 +36,7 @@ async function main() {
     // Hence we use grpcProtoLoader for gRPC services, and protobufjs
     // for all other protos.
     protobufjs.load(OAK_LABEL_PROTO_PATH),
-    grpcProtoLoader.load(SERVICE_PROTO_PATH)
+    grpcProtoLoader.load(SERVICE_PROTO_PATH),
   ]);
 
   function getGrpcMetadata() {
