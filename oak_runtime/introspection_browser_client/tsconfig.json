@@ -6,6 +6,11 @@
     "jsx": "react",
     "esModuleInterop": true,
     "noImplicitAny": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "moduleResolution": "node",
+    "baseUrl": "",
+    "paths": {
+      "~/*": ["./*"]
+    }
   }
 }
