@@ -270,7 +270,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::<span class="ident">Events</span>, <span class="ident">Runtime</span>};
 <span class="kw">use</span> <span class="ident">hyper</span>::{
-    <span class="ident">header</span>::{<span class="ident">ACCESS_CONTROL_ALLOW_ORIGIN</span>, <span class="ident">CONTENT_TYPE</span>},
+    <span class="ident">header</span>::{<span class="ident">ACCESS_CONTROL_ALLOW_ORIGIN</span>, <span class="ident">CONTENT_ENCODING</span>, <span class="ident">CONTENT_TYPE</span>},
     <span class="ident">service</span>::{<span class="ident">make_service_fn</span>, <span class="ident">service_fn</span>},
     <span class="ident">Body</span>, <span class="ident">Error</span>, <span class="ident">Method</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Server</span>, <span class="ident">StatusCode</span>,
 };
@@ -366,11 +366,11 @@
 
     <span class="kw">match</span> <span class="ident">filepath</span> {
         <span class="string">&quot;index.html&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
-            <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../introspection_browser_client/dist/index.html&quot;</span>).<span class="ident">to_vec</span>(),
+            <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../introspection_browser_client/dist/index.html.gz&quot;</span>).<span class="ident">to_vec</span>(),
             <span class="string">&quot;text/html&quot;</span>.<span class="ident">to_string</span>(),
         )),
         <span class="string">&quot;index.js&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
-            <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../introspection_browser_client/dist/index.js&quot;</span>).<span class="ident">to_vec</span>(),
+            <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../introspection_browser_client/dist/index.js.gz&quot;</span>).<span class="ident">to_vec</span>(),
             <span class="string">&quot;application/javascript&quot;</span>.<span class="ident">to_string</span>(),
         )),
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
@@ -431,9 +431,9 @@
         <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>);
     } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">file</span>, <span class="ident">content_type</span>)) <span class="op">=</span> <span class="ident">find_client_file</span>(<span class="ident">path</span>) {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">Body</span>::<span class="ident">from</span>(<span class="ident">file</span>));
-        <span class="ident">response</span>
-            .<span class="ident">headers_mut</span>()
-            .<span class="ident">insert</span>(<span class="ident">CONTENT_TYPE</span>, <span class="ident">content_type</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">headers_mut</span>();
+        <span class="ident">headers</span>.<span class="ident">insert</span>(<span class="ident">CONTENT_TYPE</span>, <span class="ident">content_type</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
+        <span class="ident">headers</span>.<span class="ident">insert</span>(<span class="ident">CONTENT_ENCODING</span>, <span class="string">&quot;gzip&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
 
         <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>);
     } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">node_id</span>) <span class="op">=</span> <span class="ident">find_id</span>(<span class="ident">path</span>, <span class="string">&quot;node&quot;</span>) {
