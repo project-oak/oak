@@ -28,7 +28,7 @@ use crate::{
     message::Message,
     metrics::Metrics,
     proto::oak::introspection_events::{
-        event::EventDetails, ChannelCreated, Event, HandleCreated, HandleDestroyed,
+        event::EventDetails, ChannelCreated, Direction, Event, HandleCreated, HandleDestroyed,
         MessageDequeued, MessageEnqueued, NodeCreated, NodeDestroyed,
     },
 };
@@ -374,6 +374,10 @@ impl Runtime {
                     node_id: node_id.0,
                     handle: candidate,
                     channel_id: half.get_channel_id(),
+                    direction: match half.direction {
+                        ChannelHalfDirection::Read => Direction::Read as i32,
+                        ChannelHalfDirection::Write => Direction::Write as i32,
+                    },
                 };
 
                 node_info.abi_handles.insert(candidate, half);
@@ -1225,6 +1229,7 @@ impl Runtime {
         // node.
         self.introspection_event(EventDetails::NodeCreated(NodeCreated {
             node_id: node_id.0,
+            name: node_name.to_string(),
         }));
 
         self.add_node_info(
