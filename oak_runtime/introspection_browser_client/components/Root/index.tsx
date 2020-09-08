@@ -20,6 +20,7 @@ import EventList from '~/components/EventList';
 import introspectionEventsProto, {
   DirectionMap,
 } from '~/protoc_out/proto/introspection_events_pb';
+import { Label } from '~/protoc_out/oak_abi/proto/label_pb.d';
 
 // Requests the list of introspection events provided by the Oak runtime's
 // auxiliary introspection server.
@@ -54,6 +55,7 @@ type NodeInfos = Map<NodeId, NodeInfo>;
 interface NodeInfo {
   name: string;
   abiHandles: Map<AbiHandle, ChannelHalf>;
+  label: Label;
 }
 
 type ChannelID = number;
@@ -72,6 +74,7 @@ interface Message {
 interface Channel {
   id: ChannelID;
   messages: Message[];
+  label: Label;
 }
 type Channels = Map<ChannelID, Channel>;
 
@@ -103,6 +106,7 @@ function eventReducer(
       applicationState.nodeInfos.set(event!.getNodeCreated()!.getNodeId(), {
         name: event!.getNodeCreated()!.getName(),
         abiHandles: new Map(),
+        label: event!.getNodeCreated()!.getLabel()!,
       });
 
       break;
@@ -119,10 +123,12 @@ function eventReducer(
       break;
     case EventDetailsCase.CHANNEL_CREATED:
       {
-        const channelId = event!.getChannelCreated()!.getChannelId();
+        const channel = event!.getChannelCreated()!;
+        const channelId = channel.getChannelId();
         applicationState.channels.set(channelId, {
           id: channelId,
           messages: [],
+          label: channel.getLabel()!,
         });
       }
 
