@@ -856,7 +856,6 @@ dependencies = [
 name = "oak_derive"
 version = "0.1.0"
 dependencies = [
- "oak_io",
  "proc-macro2",
  "quote",
  "syn",
