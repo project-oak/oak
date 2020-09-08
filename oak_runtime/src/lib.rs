@@ -746,7 +746,10 @@ impl Runtime {
         // TODO(#913): Add automated tests that verify that ChannelCreated is
         // always fired prior to any other introspection events related to the
         // channel.
-        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated { channel_id }));
+        self.introspection_event(EventDetails::ChannelCreated(ChannelCreated {
+            channel_id,
+            label: Some(label.clone()),
+        }));
 
         // Insert them into the handle table and return the ABI handles to the caller.
         let write_handle = self.new_abi_handle(node_id, write_half);
@@ -1230,6 +1233,7 @@ impl Runtime {
         self.introspection_event(EventDetails::NodeCreated(NodeCreated {
             node_id: node_id.0,
             name: node_name.to_string(),
+            label: Some(label.clone()),
         }));
 
         self.add_node_info(

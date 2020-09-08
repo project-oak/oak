@@ -36,6 +36,8 @@ export default function ApplicationStateOverview({
               <dd>{id}</dd>
               <dt>Name:</dt>
               <dd>{nodeInfo.name}</dd>
+              <dt>Labels:</dt>
+              <dd>{JSON.stringify(nodeInfo.label.toObject())}</dd>
               <dt>Handles:</dt>
               <dd>
                 <ul>
