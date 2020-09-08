@@ -52,6 +52,7 @@ type NodeId = number;
 type AbiHandle = number;
 type NodeInfos = Map<NodeId, NodeInfo>;
 interface NodeInfo {
+  name: string;
   abiHandles: Map<AbiHandle, ChannelHalf>;
 }
 
@@ -100,6 +101,7 @@ function eventReducer(
   switch (eventType) {
     case EventDetailsCase.NODE_CREATED:
       applicationState.nodeInfos.set(event!.getNodeCreated()!.getNodeId(), {
+        name: event!.getNodeCreated()!.getName(),
         abiHandles: new Map(),
       });
 

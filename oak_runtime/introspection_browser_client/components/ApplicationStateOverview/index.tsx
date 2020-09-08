@@ -22,7 +22,7 @@ type ApplicationStateOverviewProps = {
 };
 
 export default function ApplicationStateOverview({
-  applicationState
+  applicationState,
 }: ApplicationStateOverviewProps) {
   return (
     <section>
@@ -34,6 +34,8 @@ export default function ApplicationStateOverview({
             <dl>
               <dt>ID:</dt>
               <dd>{id}</dd>
+              <dt>Name:</dt>
+              <dd>{nodeInfo.name}</dd>
               <dt>Handles:</dt>
               <dd>
                 <ul>
