@@ -11,8 +11,36 @@ set -o pipefail
 export RUST_LOG="${RUST_LOG:-info}"
 
 # See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
-readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
-readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
+# Select the correct Dockerfile for the underlying arch.
+# Note that these can all be overridden from the environment as desired.
+# Docker's target types align wih Go, and not with bash/linux, hence the
+# hard coded transposition implicit here (i.e. aarch64->arm64v8)
+if [[ "${MACHTYPE}" == "x86_64"* ]]; then
+  # x86_64 is the default for Oak.
+  readonly DOCKER_ARCH="${DOCKER_ARCH:-""}"
+  readonly DOCKER_ARCH_PREFIX=""
+  readonly DOCKER_ARCH_SUFFIX=""
+else
+  if [[ "${MACHTYPE}" == "aarch64"* ]] || [[ "${MACHTYPE}" == "arm64"* ]]; then
+    # aarch64 requires transposition to Docker arch types:
+    readonly DOCKER_ARCH="${DOCKER_ARCH:-"arm64v8"}"
+  else
+  # This will use the full target triple under Linux, or just the Arch
+  # under Macos, due to the differnt expansions of $MACHTYPE under bash.
+    readonly DOCKER_ARCH="${DOCKER_ARCH:-${MACHTYPE}}"
+fi
+  # Construct the Dockerfile prefix and the image suffixes.
+  # We use := here, as above we can set the PREFIX/SUFFIX to empty.
+  readonly DOCKER_ARCH_PREFIX="${DOCKER_ARCH_PREFIX:="${DOCKER_ARCH}."}"
+  readonly DOCKER_ARCH_SUFFIX="${DOCKER_ARCH_SUFFIX:="-${DOCKER_ARCH}"}"
+fi
+
+# Default to the Google Cloud servers, Note the trailing slash.
+# Override DOCKER_REPO with "" to perform a local build
+readonly DOCKER_REPO="${DOCKER_REPO:-"gcr.io/oak-ci/"}"
+readonly DOCKER_FILE="${DOCKER_FILE:-"${DOCKER_ARCH_PREFIX}Dockerfile"}"
+readonly DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME:-"${DOCKER_REPO}oak${DOCKER_ARCH_SUFFIX}"}"
+readonly SERVER_DOCKER_IMAGE_NAME="${SERVER_DOCKER_IMAGE_NAME:-"${DOCKER_REPO}oak-server${DOCKER_ARCH_SUFFIX}"}"
 
 readonly CACHE_DIR='bazel-cache'
 readonly SERVER_BIN_DIR="${PWD}/oak_loader/bin"
@@ -98,14 +126,17 @@ else
   # static binaries from a Rust program.  However, musl is explicitly built
   # on the Linux syscalll layer, and so is not available on macOS.
   cargo_build_flags+=(
-    '--target=x86_64-unknown-linux-musl'
+    "--target=$MACHTYPE-unknown-linux-musl"
   )
 fi
 
+# Choose the correct Rust host target.
+# Note that $MACHTYPE and $HOSTTYPE behave differently between darwin and
+# linux.
 if [[ "${OSTYPE}" == "darwin"*  ]]; then
-  readonly RUST_HOST_TARGET="${RUST_HOST_TARGET:-x86_64-apple-darwin}"
+  readonly RUST_HOST_TARGET="${RUST_HOST_TARGET:-$MACHTYPE-apple-darwin}"
 else
-  readonly RUST_HOST_TARGET="${RUST_HOST_TARGET:-x86_64-unknown-linux-gnu}"
+  readonly RUST_HOST_TARGET="${RUST_HOST_TARGET:-$HOSTTYPE-unknown-linux-gnu}"
 fi
 
 # kill_pid tries to kill the given pid(s), first softly then more aggressively.

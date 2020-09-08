@@ -28,7 +28,7 @@
 use colored::*;
 use maplit::hashmap;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};
+use std::{collections::HashMap, env::var, io::Read, path::PathBuf, sync::Mutex};
 use structopt::StructOpt;
 
 #[macro_use]
@@ -43,16 +43,6 @@ use check_license::CheckLicense;
 
 mod check_build_licenses;
 use check_build_licenses::CheckBuildLicenses;
-
-#[cfg(target_os = "macos")]
-const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-apple-darwin";
-#[cfg(not(target_os = "macos"))]
-const DEFAULT_SERVER_RUST_TARGET: &str = "x86_64-unknown-linux-musl";
-
-#[cfg(target_os = "macos")]
-const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-apple-darwin";
-#[cfg(not(target_os = "macos"))]
-const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 
 static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 const ALL_CLIENTS: &str = "all";
@@ -358,7 +348,7 @@ fn build_rust_binary<T: RustBinaryOptions>(
                     vec![]
                 },
                 ...if opt.build_release() {
-                    vec![format!("--target={}", opt.server_rust_target().as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                    vec![format!("--target={}", opt.server_rust_target().as_deref().unwrap()),
                     "--release".to_string() ]} else {vec![]},
             ],
             env,
@@ -430,6 +420,14 @@ fn check_format() -> Step {
 }
 
 fn run_ci() -> Step {
+    // The CI should always use the architechture's default targets for the server and
+    // client, and disregard overrides on the command line.
+    // As the default for the server is not usually the same as the default of the client,
+    // nor the same as the default toolchain target, it is necessary to be explicit here.
+    //
+    // The environment variables SERVER_RUST_TARGET and CLIENT_RUST_TARGET are set
+    // by build.rs after probing the environment.
+
     Step::Multiple {
         name: "ci".to_string(),
         steps: vec![
@@ -439,17 +437,17 @@ fn run_ci() -> Step {
             build_server(&BuildServer {
                 server_variant: ServerVariant::Base,
                 server_rust_toolchain: None,
-                server_rust_target: None,
+                server_rust_target: var("SERVER_RUST_TARGET").ok(),
             }),
             build_server(&BuildServer {
                 server_variant: ServerVariant::NoIntrospectionClient,
                 server_rust_toolchain: None,
-                server_rust_target: None,
+                server_rust_target: var("SERVER_RUST_TARGET").ok(),
             }),
             build_server(&BuildServer {
                 server_variant: ServerVariant::Unsafe,
                 server_rust_toolchain: None,
-                server_rust_target: None,
+                server_rust_target: var("SERVER_RUST_TARGET").ok(),
             }),
             build_server(&BuildServer {
                 server_variant: ServerVariant::Coverage,
@@ -459,7 +457,7 @@ fn run_ci() -> Step {
             build_server(&BuildServer {
                 server_variant: ServerVariant::Experimental,
                 server_rust_toolchain: None,
-                server_rust_target: None,
+                server_rust_target: var("SERVER_RUST_TARGET").ok(),
             }),
             run_tests(),
             run_tests_tsan(),
@@ -474,12 +472,12 @@ fn run_ci() -> Step {
                 build_client: BuildClient {
                     client_variant: ALL_CLIENTS.to_string(),
                     client_rust_toolchain: None,
-                    client_rust_target: None,
+                    client_rust_target: var("CLIENT_RUST_TARGET").ok(),
                 },
                 build_server: BuildServer {
                     server_variant: ServerVariant::Experimental,
                     server_rust_toolchain: None,
-                    server_rust_target: None,
+                    server_rust_target: var("SERVER_RUST_TARGET").ok(),
                 },
             }),
             run_examples(&RunExamples {
@@ -493,12 +491,12 @@ fn run_ci() -> Step {
                 build_client: BuildClient {
                     client_variant: ALL_CLIENTS.to_string(),
                     client_rust_toolchain: None,
-                    client_rust_target: None,
+                    client_rust_target: var("CLIENT_RUST_TARGET").ok(),
                 },
                 build_server: BuildServer {
                     server_variant: ServerVariant::Unsafe,
                     server_rust_toolchain: None,
-                    server_rust_target: None,
+                    server_rust_target: var("SERVER_RUST_TARGET").ok(),
                 },
             }),
             // Package the Hello World application in a Docker image.
@@ -513,12 +511,12 @@ fn run_ci() -> Step {
                 build_client: BuildClient {
                     client_variant: NO_CLIENTS.to_string(),
                     client_rust_toolchain: None,
-                    client_rust_target: None,
+                    client_rust_target: var("CLIENT_RUST_TARGET").ok(),
                 },
                 build_server: BuildServer {
                     server_variant: ServerVariant::Base,
                     server_rust_toolchain: None,
-                    server_rust_target: None,
+                    server_rust_target: var("SERVER_RUST_TARGET").ok(),
                 },
             }),
             run_examples(&RunExamples {
@@ -855,12 +853,7 @@ fn build(target: &Target, opt: &BuildClient) -> Box<dyn Runnable> {
             spread![
                 "build".to_string(),
                 "--release".to_string(),
-                format!(
-                    "--target={}",
-                    opt.client_rust_target
-                        .as_deref()
-                        .unwrap_or(DEFAULT_EXAMPLE_BACKEND_RUST_TARGET)
-                ),
+                format!("--target={}", opt.client_rust_target.as_ref().unwrap()),
                 format!("--manifest-path={}", cargo_manifest),
                 ...additional_build_args,
             ],
@@ -902,7 +895,7 @@ fn run(
             spread![
                 "run".to_string(),
                 "--release".to_string(),
-                format!("--target={}", opt.client_rust_target.as_deref().unwrap_or(DEFAULT_EXAMPLE_BACKEND_RUST_TARGET)),
+                format!("--target={}", opt.client_rust_target.as_ref().unwrap()),
                 format!("--manifest-path={}", cargo_manifest),
                 ...additional_build_args,
                 "--".to_string(),
@@ -1453,7 +1446,7 @@ fn run_cargo_test_tsan() -> Step {
                 "-Zbuild-std",
                 "test",
                 "--manifest-path=./examples/abitest/module_0/rust/Cargo.toml",
-                "--target=x86_64-unknown-linux-gnu",
+                format!("--target={}", &var("HOST_RUST_TARGET").unwrap()).as_str(),
                 "--verbose",
                 "--",
                 "--nocapture",

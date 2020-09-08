@@ -49,3 +49,4 @@ if [[ "$1" == '--detach' ]]; then
 else
   docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest" "$@"
 fi
+

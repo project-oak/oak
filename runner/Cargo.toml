@@ -7,12 +7,17 @@ authors = ["Tiziano Santoro <tzn@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[build-dependencies]
+platforms = "*"
+
 [dependencies]
 async-recursion = "*"
 async-trait = "*"
 chrono = "*"
 clap = "*"
 colored = "*"
+platforms = "*"
+lazy_static = "*"
 maplit = "*"
 nix = "*"
 once_cell = "*"

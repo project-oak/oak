@@ -11,10 +11,26 @@ source "$SCRIPTS_DIR/common"
 # https://github.com/googleapis/google-cloud-cpp/blob/a186208b79d900b4ec71c6f9df3acf7638f01dc6/ci/kokoro/docker/build.sh#L147-L152
 readonly DOCKER_UID="${UID:-0}"
 readonly DOCKER_GID="$(id -g)"
-
+readonly DOCKER_USER="${USER:-root}"
+# We always cache from the base Oak image unless overridden
+# aarch64 is hardwired here to the target names in the Dockerfile, as it uses more and larger stages.
+# TODO: Find some mechanistic way of caching from all Dockerfile named targets.
+if [[ "${MACHTYPE}" == "aarch64"* ]] || [[ "${MACHTYPE}" == "arm64"* ]]; then
 docker build \
-  --cache-from="$DOCKER_IMAGE_NAME:latest" \
+  --cache-from="${DOCKER_REPO}musl-build${DOCKER_ARCH_SUFFIX}:latest" \
+  --cache-from="${DOCKER_REPO}bazel-bootstrap${DOCKER_ARCH_SUFFIX}:latest" \
+  --cache-from="${DOCKER_REPO}bazel-build${DOCKER_ARCH_SUFFIX}:latest" \
+  --cache-from="${DOCKER_IMAGE_NAME}:latest" \
+  --tag="$DOCKER_IMAGE_NAME:latest" \
+  --build-arg=USERNAME="$DOCKER_USER" \
+  --build-arg=USER_UID="$DOCKER_UID" \
+  --build-arg=USER_GID="$DOCKER_GID" \
+  --file="${DOCKER_FILE}" . 1>&2
+else
+docker build \
+  --cache-from="${DOCKER_IMAGE_NAME}:latest" \
   --tag="$DOCKER_IMAGE_NAME:latest" \
   --build-arg=USER_UID="$DOCKER_UID" \
   --build-arg=USER_GID="$DOCKER_GID" \
-  . 1>&2
+  --file="${DOCKER_FILE}" . 1>&2
+fi
