@@ -16,6 +16,7 @@
 
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
+const CompressionPlugin = require('compression-webpack-plugin');
 
 module.exports = (env) => ({
   entry: './index.tsx',
@@ -27,6 +28,9 @@ module.exports = (env) => ({
     new CopyPlugin({
       patterns: [{ from: 'static' }],
     }),
+    ...(env.NODE_ENV === 'production'
+      ? [new CompressionPlugin({ deleteOriginalAssets: true })]
+      : []),
   ],
   module: {
     rules: [
