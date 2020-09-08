@@ -16,7 +16,7 @@
 
 use crate::{proto::oak::introspection_events::Events, Runtime};
 use hyper::{
-    header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE},
+    header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_ENCODING, CONTENT_TYPE},
     service::{make_service_fn, service_fn},
     Body, Error, Method, Request, Response, Server, StatusCode,
 };
@@ -112,11 +112,11 @@ fn find_client_file(path: &str) -> Option<(Vec<u8>, String)> {
 
     match filepath {
         "index.html" => Some((
-            include_bytes!("../introspection_browser_client/dist/index.html").to_vec(),
+            include_bytes!("../introspection_browser_client/dist/index.html.gz").to_vec(),
             "text/html".to_string(),
         )),
         "index.js" => Some((
-            include_bytes!("../introspection_browser_client/dist/index.js").to_vec(),
+            include_bytes!("../introspection_browser_client/dist/index.js.gz").to_vec(),
             "application/javascript".to_string(),
         )),
         _ => None,
@@ -177,9 +177,9 @@ fn handle_request(
         return Ok(response);
     } else if let Some((file, content_type)) = find_client_file(path) {
         let mut response = Response::new(Body::from(file));
-        response
-            .headers_mut()
-            .insert(CONTENT_TYPE, content_type.parse().unwrap());
+        let headers = response.headers_mut();
+        headers.insert(CONTENT_TYPE, content_type.parse().unwrap());
+        headers.insert(CONTENT_ENCODING, "gzip".parse().unwrap());
 
         return Ok(response);
     } else if let Some(node_id) = find_id(path, "node") {
