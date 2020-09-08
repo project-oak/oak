@@ -115,6 +115,6 @@ Inductive step_system_ev_multi: trace -> trace -> Prop :=
         step_system_ev t t' ->
         step_system_ev_multi t t'
     | multi_system_ev_tran t1 t2 t3:
-        step_system_ev t1 t2 ->
-        step_system_ev_multi t2 t3 ->
+        step_system_ev t2 t3 ->
+        step_system_ev_multi t1 t2 ->
         step_system_ev_multi t1 t3.

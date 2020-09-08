@@ -48,16 +48,25 @@ Proof.
     unfold not. intros. inversion H.
 Qed.
 
+Lemma system_no_steps_to_empty: forall t,
+    ~(step_system_ev t []).
+Proof.
+  intros. intro Hstep.
+  remember ([]: trace) as emp eqn:R.
+  inversion Hstep.
+  cbv [head_set_call] in *.
+  destruct t'; subst.
+  - inversion H0.
+  - destruct p; congruence.
+Qed.
+
 Theorem no_steps_to_empty: forall t, 
     ~(step_system_ev_multi t []).
     unfold not. intros.
     remember ([]: trace) as emp eqn:R.
-    induction H; subst.
-        - (* refl *) inversion H; subst. destruct t'.
-            + inversion H2. 
-            + apply head_set_call_not_nil in H0. assumption.
-            unfold not. intros. generalize dependent H4. apply nil_cons_rev.
-        - apply IHstep_system_ev_multi. reflexivity.
+    inversion H; subst.
+    - eapply system_no_steps_to_empty; eauto.
+    - eapply system_no_steps_to_empty; eauto.
 Qed.
 
 Theorem step_system_transitive: forall t1 t2 t3,
@@ -65,10 +74,9 @@ Theorem step_system_transitive: forall t1 t2 t3,
     step_system_ev_multi t2 t3 ->
     step_system_ev_multi t1 t3.
 Proof.
-    intros.
-    induction H.
-        - apply (multi_system_ev_tran t t' t3); assumption.
-        - apply IHstep_system_ev_multi in H0.
+    induction 2; intros.
+        - apply (multi_system_ev_tran t1 t t'); assumption.
+        - apply IHstep_system_ev_multi in H.
         apply (multi_system_ev_tran t1 t2 t3); assumption.
 Qed.
 
@@ -119,20 +127,18 @@ Proof.
     rewrite E in H. assumption.
 Qed.
 
-Theorem step_system_multi_extends: forall t t' a,
-    step_system_ev_multi t (a :: t') ->
-    step_system_ev t' (a :: t').
+Theorem step_system_ev_uncons: forall t1 t2,
+    step_system_ev t1 t2 ->
+    t1 = tl t2.
 Proof.
-    intros. remember (a::t') as t1 eqn:Ht1.
-    induction H; subst.
-        - apply (step_system_extends t t' a); assumption.
-        - apply IHstep_system_ev_multi. reflexivity.
+  induction 1; intros; subst.
+  inversion H3; subst; reflexivity.
 Qed.
 
-Theorem step_system_multi_backwards: forall t t' a,
-    step_system_ev_multi t (a :: t') ->
-    step_system_ev_multi t t'.
+Theorem step_system_multi_extends: forall t t',
+    step_system_ev_multi t t' ->
+    step_system_ev (tl t') t'.
 Proof.
-Admitted. (* WIP *)
-
-
+  inversion 1; intros; subst;
+    erewrite <-step_system_ev_uncons; eauto.
+Qed.
