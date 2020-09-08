@@ -175,12 +175,13 @@ induction t1n.
             (a::t1n) Hinit_tleq H) as [t2n [E1 E2]].
             exists t2n. split. constructor. assumption. assumption.
         + rename Ht1_mstep_t1n into Ht1_mstep_at1n.
-        specialize (step_system_multi_backwards t2 t1n a H0) as E.
-        assert (H': step_system_ev_multi t1_init t2) by
-            (constructor; assumption).
-        specialize (IHt1n (step_system_transitive t1_init t2 t1n H' E))
+          match goal with
+            H : _ |- _ =>
+            apply step_system_ev_uncons in H end.
+          cbn [tl] in *; subst.
+          specialize (IHt1n ltac:(assumption))
             as [t2n [Hm_t2_init_t2n Hleq_t1n_t2n]].
-        specialize (step_system_multi_extends t2 t1n a H0) as E2.
+        specialize (step_system_multi_extends _ (a::t1n) ltac:(eauto)) as E2.
         specialize (possibilistic_ni_1step ell t1n t2n (a::t1n) Hleq_t1n_t2n E2)
             as [t2n' [Hs_t2n_t2n' Hleq_at1n_t2n']].
         exists t2n'. split.
