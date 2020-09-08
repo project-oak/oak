@@ -1229,6 +1229,7 @@ impl Runtime {
         // node.
         self.introspection_event(EventDetails::NodeCreated(NodeCreated {
             node_id: node_id.0,
+            name: node_name.to_string(),
         }));
 
         self.add_node_info(

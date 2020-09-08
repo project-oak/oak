@@ -44,6 +44,8 @@ message Event {
 
 message NodeCreated {
   uint64 node_id = 1;
+
+  string name = 2;
 }
 
 message NodeDestroyed {
