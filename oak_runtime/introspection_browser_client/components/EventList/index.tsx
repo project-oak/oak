@@ -15,7 +15,7 @@
 //
 
 import React from 'react';
-import introspectionEventsProto from '~/protoc_out/introspection_events_pb';
+import introspectionEventsProto from '~/protoc_out/proto/introspection_events_pb';
 
 type EventListProps = { events: introspectionEventsProto.Event[] };
 

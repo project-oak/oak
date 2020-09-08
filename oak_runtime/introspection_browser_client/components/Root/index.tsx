@@ -19,7 +19,7 @@ import ApplicationStateOverview from '~/components/ApplicationStateOverview';
 import EventList from '~/components/EventList';
 import introspectionEventsProto, {
   DirectionMap,
-} from '~/protoc_out/introspection_events_pb';
+} from '~/protoc_out/proto/introspection_events_pb';
 
 // Requests the list of introspection events provided by the Oak runtime's
 // auxiliary introspection server.
