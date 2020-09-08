@@ -28,4 +28,12 @@ pub mod oak {
     pub mod invocation {
         include!(concat!(env!("OUT_DIR"), "/oak.invocation.rs"));
     }
+
+    // Add a refernce to the label proto to ensure that `super::label::Label`
+    // can be resolved. Prost references it in the code genereated from the
+    // introspection_events proto and expects the module to resolve.
+    // Ref: https://github.com/danburkert/prost/issues/142
+    pub mod label {
+        pub use oak_abi::proto::oak::label::Label;
+    }
 }
