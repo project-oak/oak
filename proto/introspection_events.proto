@@ -17,6 +17,7 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
+import "oak_abi/proto/label.proto";
 
 package oak.introspection_events;
 
@@ -46,6 +47,8 @@ message NodeCreated {
   uint64 node_id = 1;
 
   string name = 2;
+
+  oak.label.Label label = 3;
 }
 
 message NodeDestroyed {
@@ -54,6 +57,8 @@ message NodeDestroyed {
 
 message ChannelCreated {
   uint64 channel_id = 1;
+
+  oak.label.Label label = 2;
 }
 
 message ChannelDestroyed {

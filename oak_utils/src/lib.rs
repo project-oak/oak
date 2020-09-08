@@ -229,7 +229,8 @@ where
             .type_attribute(".", "#[derive(::oak_io::handle::HandleVisit)]")
             // Link relevant Oak protos to the appropirate oak_io and oak_services types.
             .extern_path(".oak.handle", "::oak_io::handle")
-            .extern_path(".oak.encap", "::oak_services::proto::oak::encap");
+            .extern_path(".oak.encap", "::oak_services::proto::oak::encap")
+            .extern_path(".oak.label", "::oak_abi::proto::oak::label");
     }
     if let Some(out_dir) = options.out_dir_override {
         prost_config.out_dir(out_dir);

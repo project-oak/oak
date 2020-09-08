@@ -11,10 +11,12 @@ readonly PROTOC_GEN_TS_PATH="./node_modules/.bin/protoc-gen-ts"
 readonly PROTO_OUT_DIR="./protoc_out"
 protoc \
     --proto_path=../../proto \
+    --proto_path=../../ \
     --plugin="protoc-gen-ts=${PROTOC_GEN_TS_PATH}" \
     --js_out="import_style=commonjs,binary:${PROTO_OUT_DIR}" \
     --ts_out="${PROTO_OUT_DIR}" \
-    ../../proto/introspection_events.proto
+    ../../proto/introspection_events.proto \
+    ../../oak_abi/proto/label.proto
 
 # Build JavaScript bundle
 npx webpack --env.NODE_ENV=production
