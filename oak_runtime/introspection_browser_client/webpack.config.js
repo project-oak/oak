@@ -17,35 +17,35 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
-module.exports = env => ({
+module.exports = (env) => ({
   entry: './index.tsx',
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'index.js'
+    filename: 'index.js',
   },
   plugins: [
     new CopyPlugin({
-      patterns: [{ from: 'static' }]
-    })
+      patterns: [{ from: 'static' }],
+    }),
   ],
   module: {
     rules: [
       {
         test: /\.tsx?$/,
         use: 'ts-loader',
-        exclude: /node_modules/
-      }
-    ]
+        exclude: /node_modules/,
+      },
+    ],
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
     alias: {
-      '~': path.resolve(__dirname)
-    }
+      '~': path.resolve(__dirname),
+    },
   },
   mode: env.NODE_ENV || 'none',
   devServer: {
     inline: true,
-    liveReload: false
-  }
+    liveReload: false,
+  },
 });
