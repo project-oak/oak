@@ -103,6 +103,17 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
@@ -150,6 +161,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodeCreated</span> {
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">node_id</span>: <span class="ident">u64</span>,
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">name</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
@@ -178,6 +191,8 @@
     <span class="kw">pub</span> <span class="ident">channel_id</span>: <span class="ident">u64</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">handle</span>: <span class="ident">u64</span>,
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">enumeration</span><span class="op">=</span><span class="string">&quot;Direction&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;4&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">direction</span>: <span class="ident">i32</span>,
 }
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
@@ -208,6 +223,13 @@
     <span class="kw">pub</span> <span class="ident">channel_id</span>: <span class="ident">u64</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">repeated</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">acquired_handles</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+}
+<span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>, ::<span class="ident">prost</span>::<span class="ident">Enumeration</span>)]</span>
+<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">i32</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Direction</span> {
+    <span class="ident">Read</span> <span class="op">=</span> <span class="number">0</span>,
+    <span class="ident">Write</span> <span class="op">=</span> <span class="number">1</span>,
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../../../../../../../";window.currentCrate = "oak_runtime";</script><script src="../../../../../../../../../../main.js"></script><script src="../../../../../../../../../../source-script.js"></script><script src="../../../../../../../../../../source-files.js"></script><script defer src="../../../../../../../../../../search-index.js"></script></body></html>

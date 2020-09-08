@@ -1310,6 +1310,11 @@
 <span id="1310">1310</span>
 <span id="1311">1311</span>
 <span id="1312">1312</span>
+<span id="1313">1313</span>
+<span id="1314">1314</span>
+<span id="1315">1315</span>
+<span id="1316">1316</span>
+<span id="1317">1317</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1341,7 +1346,7 @@
     <span class="ident">message</span>::<span class="ident">Message</span>,
     <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::{
-        <span class="ident">event</span>::<span class="ident">EventDetails</span>, <span class="ident">ChannelCreated</span>, <span class="ident">Event</span>, <span class="ident">HandleCreated</span>, <span class="ident">HandleDestroyed</span>,
+        <span class="ident">event</span>::<span class="ident">EventDetails</span>, <span class="ident">ChannelCreated</span>, <span class="ident">Direction</span>, <span class="ident">Event</span>, <span class="ident">HandleCreated</span>, <span class="ident">HandleDestroyed</span>,
         <span class="ident">MessageDequeued</span>, <span class="ident">MessageEnqueued</span>, <span class="ident">NodeCreated</span>, <span class="ident">NodeDestroyed</span>,
     },
 };
@@ -1687,6 +1692,10 @@
                     <span class="ident">node_id</span>: <span class="ident">node_id</span>.<span class="number">0</span>,
                     <span class="ident">handle</span>: <span class="ident">candidate</span>,
                     <span class="ident">channel_id</span>: <span class="ident">half</span>.<span class="ident">get_channel_id</span>(),
+                    <span class="ident">direction</span>: <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
+                        <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Direction</span>::<span class="ident">Read</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                        <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Direction</span>::<span class="ident">Write</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                    },
                 };
 
                 <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">insert</span>(<span class="ident">candidate</span>, <span class="ident">half</span>);
@@ -2538,6 +2547,7 @@
         <span class="comment">// node.</span>
         <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails</span>::<span class="ident">NodeCreated</span>(<span class="ident">NodeCreated</span> {
             <span class="ident">node_id</span>: <span class="ident">node_id</span>.<span class="number">0</span>,
+            <span class="ident">name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
         }));
 
         <span class="self">self</span>.<span class="ident">add_node_info</span>(
