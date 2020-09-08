@@ -18,7 +18,7 @@ import React from 'react';
 import ApplicationStateOverview from '~/components/ApplicationStateOverview';
 import EventList from '~/components/EventList';
 import introspectionEventsProto, {
-  DirectionMap,
+  DirectionMap
 } from '~/protoc_out/introspection_events_pb';
 
 // Requests the list of introspection events provided by the Oak runtime's
@@ -59,7 +59,7 @@ interface NodeInfo {
 type ChannelID = number;
 enum ChannelHalfDirection {
   Read = 'READ',
-  Write = 'WRITE',
+  Write = 'WRITE'
 }
 interface ChannelHalf {
   channelId: ChannelID;
@@ -102,7 +102,7 @@ function eventReducer(
     case EventDetailsCase.NODE_CREATED:
       applicationState.nodeInfos.set(event!.getNodeCreated()!.getNodeId(), {
         name: event!.getNodeCreated()!.getName(),
-        abiHandles: new Map(),
+        abiHandles: new Map()
       });
 
       break;
@@ -122,7 +122,7 @@ function eventReducer(
         const channelId = event!.getChannelCreated()!.getChannelId();
         applicationState.channels.set(channelId, {
           id: channelId,
-          messages: [],
+          messages: []
         });
       }
 
@@ -154,7 +154,7 @@ function eventReducer(
           channelId: details!.getChannelId(),
           direction: protoDirectionToChannelHalfDirection(
             details!.getDirection()
-          ),
+          )
         });
       }
 
@@ -222,7 +222,7 @@ export default function Root() {
     (): OakApplicationState =>
       events.reduce(eventReducer, {
         nodeInfos: new Map(),
-        channels: new Map(),
+        channels: new Map()
       }),
     [events]
   );
