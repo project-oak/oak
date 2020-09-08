@@ -127,7 +127,7 @@ Proof.
     rewrite E in H. assumption.
 Qed.
 
-Lemma step_system_ev_uncons: forall t1 t2,
+Theorem step_system_ev_uncons: forall t1 t2,
     step_system_ev t1 t2 ->
     t1 = tl t2.
 Proof.
