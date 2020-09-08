@@ -56,7 +56,7 @@ interface NodeInfo {
 type ChannelID = number;
 enum ChannelHalfDirection {
   Read,
-  Write,
+  Write
 }
 interface ChannelHalf {
   channelId: ChannelID;
@@ -82,7 +82,7 @@ function eventReducer(
   switch (eventType) {
     case EventDetailsCase.NODE_CREATED:
       applicationState.nodeInfos.set(event!.getNodeCreated()!.getNodeId(), {
-        abiHandles: new Map(),
+        abiHandles: new Map()
       });
 
       break;
@@ -102,7 +102,7 @@ function eventReducer(
         const channelId = event!.getChannelCreated()!.getChannelId();
         applicationState.channels.set(channelId, {
           id: channelId,
-          messages: [],
+          messages: []
         });
       }
 
@@ -134,7 +134,7 @@ function eventReducer(
           channelId: details!.getChannelId(),
           // TODO(#913): Add a direction property in the introspection
           // event and use the real value here.
-          direction: 0,
+          direction: 0
         });
       }
 
@@ -202,7 +202,7 @@ export default function Root() {
     (): OakApplicationState =>
       events.reduce(eventReducer, {
         nodeInfos: new Map(),
-        channels: new Map(),
+        channels: new Map()
       }),
     [events]
   );
