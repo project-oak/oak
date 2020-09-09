@@ -119,6 +119,10 @@ fn find_client_file(path: &str) -> Option<(Vec<u8>, String)> {
             include_bytes!("../introspection_browser_client/dist/index.js.gz").to_vec(),
             "application/javascript".to_string(),
         )),
+        "graphvizlib.wasm" => Some((
+            include_bytes!("../introspection_browser_client/dist/graphvizlib.wasm.gz").to_vec(),
+            "application/wasm".to_string(),
+        )),
         _ => None,
     }
 }

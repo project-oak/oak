@@ -15,6 +15,7 @@
 //
 
 import React from 'react';
+import { graphviz } from 'd3-graphviz';
 import {
   OakApplicationState,
   ChannelHalfDirection,
@@ -22,10 +23,6 @@ import {
   ChannelID,
   AbiHandle,
 } from '~/components/Root';
-
-type StateGraphProps = {
-  applicationState: OakApplicationState;
-};
 
 // Generate a Graphviz dot graph that shows the shape of the Nodes and Channels
 function getGraphFromState(applicationState: OakApplicationState) {
@@ -91,14 +88,16 @@ function getGraphFromState(applicationState: OakApplicationState) {
   `;
 }
 
+type StateGraphProps = {
+  applicationState: OakApplicationState;
+};
+
 export default function StateGraph({ applicationState }: StateGraphProps) {
-  return (
-    <section
-      dangerouslySetInnerHTML={{
-        __html: getGraphFromState(applicationState)
-          .replace(/ /g, '&nbsp;')
-          .replace(/\n/g, '<br/>'),
-      }}
-    ></section>
-  );
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const dotGraph = getGraphFromState(applicationState);
+    graphviz(ref.current).renderDot(dotGraph);
+  }, [applicationState]);
+
+  return <div ref={ref} />;
 }

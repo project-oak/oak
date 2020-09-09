@@ -26,7 +26,13 @@ module.exports = (env) => ({
   },
   plugins: [
     new CopyPlugin({
-      patterns: [{ from: 'static' }],
+      patterns: [
+        { from: './static', to: './' },
+        {
+          from: './node_modules/@hpcc-js/wasm/dist/graphvizlib.wasm',
+          to: './',
+        },
+      ],
     }),
     ...(env.NODE_ENV === 'production'
       ? [new CompressionPlugin({ deleteOriginalAssets: true })]
