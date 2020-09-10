@@ -500,6 +500,15 @@
 <span id="500">500</span>
 <span id="501">501</span>
 <span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -581,7 +590,22 @@
         <span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Conn</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">Pin</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">acceptor</span>).<span class="ident">poll_next</span>(<span class="ident">cx</span>)
+        <span class="kw">let</span> <span class="ident">connection</span> <span class="op">=</span> <span class="ident">Pin</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">acceptor</span>).<span class="ident">poll_next</span>(<span class="ident">cx</span>);
+        <span class="kw">match</span> <span class="ident">connection</span> {
+            <span class="comment">// When a connections fails, for example due to a `CertificateUnknown` error, we want to</span>
+            <span class="comment">// keep the server alive and waiting for new connections. The `poll_accept` method has</span>
+            <span class="comment">// to return `Poll::Pending` in these cases, to in turn cause the `poll` method of the</span>
+            <span class="comment">// hyper server to return `Poll::Pending`, making the server wait for the next</span>
+            <span class="comment">// connection. The `poll_watch` method in `hyper::server::conn::SpawnAll`,</span>
+            <span class="comment">// which calls `poll_accept` will make sure that the server is scheduled to</span>
+            <span class="comment">// be awoken when there is a new incoming connection, by calling `wake` on</span>
+            <span class="comment">// the `waker` in the context `cx`.</span>
+            <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(<span class="ident">e</span>))) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error when processing TLS stream: {:?}&quot;</span>, <span class="ident">e</span>);
+                <span class="ident">Poll</span>::<span class="ident">Pending</span>
+            }
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">connection</span>,
+        }
     }
 }
 
@@ -633,7 +657,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tcp</span> <span class="op">=</span> <span class="ident">TcpListener</span>::<span class="ident">bind</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">address</span>)
             .<span class="kw">await</span>
             .<span class="ident">expect</span>(<span class="string">&quot;Could not create TCP listener.&quot;</span>);
-        <span class="kw">let</span> <span class="ident">tls_server</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_tls_server</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tcp</span>).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">tls_server</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_tls_server</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tcp</span>);
         <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server</span>::<span class="ident">builder</span>(<span class="ident">tls_server</span>).<span class="ident">serve</span>(<span class="ident">service</span>);
 
         <span class="kw">let</span> <span class="ident">graceful_server</span> <span class="op">=</span> <span class="ident">server</span>.<span class="ident">with_graceful_shutdown</span>(<span class="kw">async</span> {
@@ -647,19 +671,12 @@
         );
 
         <span class="comment">// Run until asked to terminate...</span>
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">graceful_server</span>
-            <span class="comment">// Terminate the server only if a shutdown signal is received.</span>
-            <span class="comment">// In case of errors, only log them instead of terminating the server.</span>
-            .<span class="ident">or_else</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="kw">async</span> <span class="kw">move</span> {
-                <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;server error: {}&quot;</span>, <span class="ident">e</span>);
-                <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">hyper</span>::<span class="ident">Error</span><span class="op">&gt;</span>(())
-            })
-            .<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">graceful_server</span>.<span class="kw">await</span>;
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;HTTP server pseudo-node terminated with {:?}&quot;</span>, <span class="ident">result</span>);
     }
 
     <span class="doccomment">/// Build a server that checks incoming TCP connections for TLS handshake.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">build_tls_server</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">tcp</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">TcpListener</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TlsServer</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">build_tls_server</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">tcp</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">TcpListener</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TlsServer</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">tls_cfg</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">to_server_config</span>(<span class="self">self</span>.<span class="ident">tls_config</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="ident">tls_acceptor</span> <span class="op">=</span> <span class="ident">TlsAcceptor</span>::<span class="ident">from</span>(<span class="ident">tls_cfg</span>);
 
@@ -669,6 +686,7 @@
                 <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Incoming failed: {:?}&quot;</span>, <span class="ident">err</span>))
             })
             .<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">stream</span><span class="op">|</span> {
+                <span class="ident">log</span>::<span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Received incoming TLS stream: {:?}&quot;</span>, <span class="ident">stream</span>);
                 <span class="ident">tls_acceptor</span>.<span class="ident">accept</span>(<span class="ident">stream</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                     <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Client-connection error: {:?}&quot;</span>, <span class="ident">err</span>);
                     <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TLS Error: {:?}&quot;</span>, <span class="ident">err</span>))
