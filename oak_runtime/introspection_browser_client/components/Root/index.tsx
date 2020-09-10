@@ -16,6 +16,7 @@
 
 import React from 'react';
 import ApplicationStateOverview from '~/components/ApplicationStateOverview';
+import StateGraph from '~/components/StateGraph';
 import EventList from '~/components/EventList';
 import introspectionEventsProto, {
   DirectionMap,
@@ -49,8 +50,8 @@ export interface OakApplicationState {
   channels: Channels;
 }
 
-type NodeId = number;
-type AbiHandle = number;
+export type NodeId = number;
+export type AbiHandle = number;
 type NodeInfos = Map<NodeId, NodeInfo>;
 interface NodeInfo {
   name: string;
@@ -58,8 +59,8 @@ interface NodeInfo {
   label: Label;
 }
 
-type ChannelID = number;
-enum ChannelHalfDirection {
+export type ChannelID = number;
+export enum ChannelHalfDirection {
   Read = 'READ',
   Write = 'WRITE',
 }
@@ -236,6 +237,7 @@ export default function Root() {
   return (
     <>
       <ApplicationStateOverview applicationState={applicationState} />
+      <StateGraph applicationState={applicationState} />
       <EventList events={events} />
     </>
   );
