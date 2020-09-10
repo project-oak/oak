@@ -16,7 +16,7 @@
 
 //! Simple example starting an Oak Application serving a static page over HTTP.
 
-use log::info;
+use log::{info, warn};
 use maplit::hashmap;
 use oak::{http::Invocation, Node, OakError};
 use oak_services::proto::oak::encap::HttpResponse;
@@ -37,15 +37,37 @@ impl Node<Invocation> for StaticHttpServer {
     fn handle_command(&mut self, invocation: Invocation) -> Result<(), OakError> {
         let request = invocation.receive()?;
 
-        info!("Handling a request to {}.", request.path);
+        info!("Handling a request to {}.", request.uri);
 
-        let http_response = HttpResponse {
-            body: "Hello from HTTP server!\n".to_string().into_bytes(),
-            status: 200,
-            headers: hashmap! {},
+        // Workaround for https://rust-lang.github.io/rust-clippy/master/index.html#borrow_interior_mutable_const.
+        static CONTENT_TYPE: http::header::HeaderName = http::header::CONTENT_TYPE;
+
+        let response = match request.uri.parse::<http::Uri>() {
+            Ok(uri) => match uri.path().as_ref() {
+                "/" => HttpResponse {
+                    body: include_bytes!("../static/index.html").to_vec(),
+                    status: http::StatusCode::OK.as_u16() as i32,
+                    headers: hashmap! {
+                        CONTENT_TYPE.as_str().to_string() => "text/html; charset=UTF-8".to_string().into_bytes(),
+                    },
+                },
+                _ => HttpResponse {
+                    body: "not found".to_string().into_bytes(),
+                    status: http::StatusCode::NOT_FOUND.as_u16() as i32,
+                    headers: hashmap! {},
+                },
+            },
+            Err(err) => {
+                warn!("could not parse URI: {}", err);
+                HttpResponse {
+                    body: "invalid URI".to_string().into_bytes(),
+                    status: http::StatusCode::BAD_REQUEST.as_u16() as i32,
+                    headers: hashmap! {},
+                }
+            }
         };
 
-        let res = invocation.send(&http_response);
+        let res = invocation.send(&response);
         invocation.close_channels();
         res
     }

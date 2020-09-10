@@ -9,6 +9,7 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+http = "*"
 log = "*"
 maplit = "*"
 oak = "=0.1.0"

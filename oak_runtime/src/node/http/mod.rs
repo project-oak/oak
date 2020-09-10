@@ -189,7 +189,7 @@ impl HttpServerNode {
 
     // Create an instance of HttpRequest, from the given Request.
     async fn map_to_http_request(req: Request<Body>) -> HttpRequest {
-        let path = req.uri().to_string();
+        let uri = req.uri().to_string();
         let method = req.method().as_str().to_string();
         let req_headers = req.headers();
         let headers = req_headers
@@ -207,7 +207,7 @@ impl HttpServerNode {
             .to_vec();
 
         HttpRequest {
-            path,
+            uri,
             method,
             body,
             headers,
