@@ -124,6 +124,27 @@ class ApplicationClient {
     }
     return utils::read_file(root_cert_path);
   }
+
+  // Loads the PEM-encoded public key.
+  static std::string LoadPublicKey(std::string public_key_path) {
+    std::string public_key = utils::read_file(public_key_path);
+
+    // Parse key file.
+    auto patterns = {"-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----", "\r", "\n"};
+    for (std::string pattern : patterns) {
+      size_t substring = public_key.find(pattern);
+      if (substring != std::string::npos) {
+        public_key.erase(substring, pattern.length());
+      }
+    }
+
+    // Decode Base64 key.
+    std::string decoded_public_key;
+    if (!absl::Base64Unescape(public_key, &decoded_public_key)) {
+      LOG(FATAL) << "Could not decode public key: " << public_key;
+    }
+    return decoded_public_key;
+  }
 };
 
 }  // namespace oak

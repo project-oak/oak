@@ -59,7 +59,6 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // TODO(#1066): Use a more restrictive Label.
-  // TODO(#1344): Add Wasm module signature Label.
   oak::label::Label label = oak::PublicUntrustedLabel();
   // Connect to the Oak Application.
   auto stub = TrustedInformationRetrieval::NewStub(oak::ApplicationClient::CreateChannel(

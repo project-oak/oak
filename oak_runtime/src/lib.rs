@@ -478,6 +478,7 @@ impl Runtime {
     pub(crate) fn verify_module_signatures(&self) -> Result<(), OakStatus> {
         for (name, module_bytes) in &self.application_configuration.wasm_modules {
             let module_hash = sha_256_hex(&module_bytes);
+
             // Get signature by module name.
             if let Some(signatures) = self.signature_table.values.get(&module_hash) {
                 for signature_item in signatures.iter() {

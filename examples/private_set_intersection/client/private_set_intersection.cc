@@ -25,22 +25,20 @@
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, public_key, "", "Path to the PEM-encoded public key used as a data label");
 
 using ::oak::examples::private_set_intersection::GetIntersectionResponse;
 using ::oak::examples::private_set_intersection::PrivateSetIntersection;
 using ::oak::examples::private_set_intersection::SubmitSetRequest;
 
-void SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::string> set) {
+grpc::Status SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::string> set) {
   grpc::ClientContext context;
   SubmitSetRequest request;
   for (auto item : set) {
     request.add_values(item);
   }
   google::protobuf::Empty response;
-  grpc::Status status = stub->SubmitSet(&context, request, &response);
-  if (!status.ok()) {
-    LOG(FATAL) << "Could not submit set: " << status.error_code() << ": " << status.error_message();
-  }
+  return stub->SubmitSet(&context, request, &response);
 }
 
 std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub) {
@@ -68,7 +66,8 @@ int main(int argc, char** argv) {
 
   // TODO(#1066): Use a more restrictive Label, based on a bearer token shared between the two
   // clients.
-  oak::label::Label label = oak::PublicUntrustedLabel();
+  std::string public_key = oak::ApplicationClient::LoadPublicKey(absl::GetFlag(FLAGS_public_key));
+  oak::label::Label label = oak::WebAssemblyModuleSignatureLabel(public_key);
 
   auto stub_0 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
@@ -78,14 +77,37 @@ int main(int argc, char** argv) {
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};
-  SubmitSet(stub_0.get(), set_0);
+  auto submit_status_0 = SubmitSet(stub_0.get(), set_0);
+  if (!submit_status_0.ok()) {
+    LOG(FATAL) << "Could not submit set: " << submit_status_0.error_code() << ": "
+               << submit_status_0.error_message();
+  }
 
   std::vector<std::string> set_1{"b", "c", "d"};
-  SubmitSet(stub_1.get(), set_1);
+  auto submit_status_1 = SubmitSet(stub_1.get(), set_1);
+  if (!submit_status_1.ok()) {
+    LOG(FATAL) << "Could not submit set: " << submit_status_1.error_code() << ": "
+               << submit_status_1.error_message();
+  }
 
-  std::set<std::string> expected_set{"b", "c"};
+  // Use an invalid public key.
+  std::string invalid_public_key_base64 = "vpxqTZOUq1FjcaB9uJYCuv4kAg+AsgMwubA6WE+2pmk=";
+  std::string invalid_public_key;
+  if (!absl::Base64Unescape(invalid_public_key_base64, &invalid_public_key)) {
+    LOG(FATAL) << "Could not decode public key: " << invalid_public_key_base64;
+  }
+  oak::label::Label invalid_label = oak::WebAssemblyModuleSignatureLabel(invalid_public_key);
+  auto invalid_stub = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), invalid_label));
+  std::vector<std::string> set_2{"c", "d", "e"};
+  auto submit_status_2 = SubmitSet(invalid_stub.get(), set_2);
+  // Error code `3` means `could not process gRPC request`.
+  if (submit_status_2.error_code() != 3) {
+    LOG(FATAL) << "Invalid public key was accepted";
+  }
 
   // Retrieve intersection.
+  std::set<std::string> expected_set{"b", "c"};
   std::vector<std::string> intersection_0 = RetrieveIntersection(stub_0.get());
   LOG(INFO) << "client 0 intersection:";
   for (auto item : intersection_0) {

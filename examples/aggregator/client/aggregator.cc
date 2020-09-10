@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
   //
   // The particular value corresponds to the hash on the `aggregator.wasm` line in
   // https://github.com/project-oak/oak/blob/hashes/reproducibility_index.
-  oak::label::Label label = oak::WebAssemblyModuleLabel(
+  oak::label::Label label = oak::WebAssemblyModuleHashLabel(
       absl::HexStringToBytes("c995a15ab48aa7e091b65e8bb8d7b67c71f4a10c236b8eaa0599fe7439053530"));
   // Connect to the Oak Application.
   auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(

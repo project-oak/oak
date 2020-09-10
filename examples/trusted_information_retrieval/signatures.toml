@@ -1,4 +1,0 @@
-signatures = [
-  # database_proxy
-  { path = "examples/trusted_information_retrieval/database_proxy.sign" },
-]

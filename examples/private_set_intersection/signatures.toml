@@ -1,0 +1,3 @@
+signatures = [
+  { path = "examples/private_set_intersection/private_set_intersection.sign" },
+]

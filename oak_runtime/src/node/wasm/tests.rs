@@ -15,7 +15,7 @@
 //
 
 use super::*;
-use crate::{RuntimeProxy, SecureServerConfiguration};
+use crate::{RuntimeProxy, SecureServerConfiguration, Signature};
 use maplit::hashmap;
 use oak_abi::{
     label::Label,
