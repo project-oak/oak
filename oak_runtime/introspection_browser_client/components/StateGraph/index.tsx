@@ -16,6 +16,7 @@
 
 import React from 'react';
 import { graphviz } from 'd3-graphviz';
+import { makeStyles } from '@material-ui/core/styles';
 import {
   OakApplicationState,
   ChannelHalfDirection,
@@ -72,6 +73,7 @@ function getGraphFromState(applicationState: OakApplicationState) {
     .flat();
 
   return `digraph Runtime {
+    graph [bgcolor=transparent]
     {
       node [shape=box style=filled fillcolor=red fontsize=24]
       ${oakNodes.join('\n      ')}
@@ -93,12 +95,22 @@ type StateGraphProps = {
   applicationState: OakApplicationState;
 };
 
+const useStyles = makeStyles(() => ({
+  root: {
+    width: '100%',
+    height: '100%',
+
+    '& > svg': { width: '100%', height: '100%' },
+  },
+}));
+
 export default function StateGraph({ applicationState }: StateGraphProps) {
+  const classes = useStyles();
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     const dotGraph = getGraphFromState(applicationState);
-    graphviz(ref.current).renderDot(dotGraph);
+    graphviz(ref.current).scale(0.9).renderDot(dotGraph);
   }, [applicationState]);
 
-  return <div ref={ref} />;
+  return <div className={classes.root} ref={ref} />;
 }
