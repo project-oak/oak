@@ -26,10 +26,11 @@ import {
 
 // Generate a Graphviz dot graph that shows the shape of the Nodes and Channels
 function getGraphFromState(applicationState: OakApplicationState) {
-  const getNodeDotId = (nodeId: NodeId) => `node${nodeId}`;
-  const getChannelDotId = (channelId: ChannelID) => `channel${channelId}`;
+  const getNodeDotId = (nodeId: NodeId) => `node${nodeId.toString()}`;
+  const getChannelDotId = (channelId: ChannelID) =>
+    `channel${channelId.toString()}`;
   const getHandleDotId = (nodeId: NodeId, handle: AbiHandle) =>
-    `node${nodeId}_${handle}`;
+    `node${nodeId.toString()}_${handle.toString()}`;
 
   const oakNodes = [...applicationState.nodeInfos.entries()].map(
     ([nodeId, nodeInfo]) => `${getNodeDotId(nodeId)} [label="${nodeInfo.name}"]`

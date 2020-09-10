@@ -50,8 +50,8 @@ export interface OakApplicationState {
   channels: Channels;
 }
 
-export type NodeId = number;
-export type AbiHandle = number;
+export type NodeId = bigint;
+export type AbiHandle = bigint;
 type NodeInfos = Map<NodeId, NodeInfo>;
 interface NodeInfo {
   name: string;
@@ -59,7 +59,7 @@ interface NodeInfo {
   label: Label;
 }
 
-export type ChannelID = number;
+export type ChannelID = bigint;
 export enum ChannelHalfDirection {
   Read = 'READ',
   Write = 'WRITE',
@@ -104,16 +104,19 @@ function eventReducer(
 
   switch (eventType) {
     case EventDetailsCase.NODE_CREATED:
-      applicationState.nodeInfos.set(event!.getNodeCreated()!.getNodeId(), {
-        name: event!.getNodeCreated()!.getName(),
-        abiHandles: new Map(),
-        label: event!.getNodeCreated()!.getLabel()!,
-      });
+      applicationState.nodeInfos.set(
+        BigInt(event!.getNodeCreated()!.getNodeId()),
+        {
+          name: event!.getNodeCreated()!.getName(),
+          abiHandles: new Map(),
+          label: event!.getNodeCreated()!.getLabel()!,
+        }
+      );
 
       break;
     case EventDetailsCase.NODE_DESTROYED:
       {
-        const nodeId = event!.getNodeDestroyed()!.getNodeId();
+        const nodeId = BigInt(event!.getNodeDestroyed()!.getNodeId());
         if (applicationState.nodeInfos.delete(nodeId) === false) {
           throw new Error(
             `Couldn't delete Node with id "${nodeId}", as it does not exist.`
@@ -125,7 +128,7 @@ function eventReducer(
     case EventDetailsCase.CHANNEL_CREATED:
       {
         const channel = event!.getChannelCreated()!;
-        const channelId = channel.getChannelId();
+        const channelId = BigInt(channel.getChannelId());
         applicationState.channels.set(channelId, {
           id: channelId,
           messages: [],
@@ -136,7 +139,7 @@ function eventReducer(
       break;
     case EventDetailsCase.CHANNEL_DESTROYED:
       {
-        const channelId = event!.getChannelDestroyed()!.getChannelId();
+        const channelId = BigInt(event!.getChannelDestroyed()!.getChannelId());
         if (applicationState.channels.delete(channelId) === false) {
           throw new Error(
             `Couldn't delete Channel with id "${channelId}", as it does not exist.`
@@ -148,7 +151,7 @@ function eventReducer(
     case EventDetailsCase.HANDLE_CREATED:
       {
         const details = event.getHandleCreated();
-        const nodeId = details!.getNodeId();
+        const nodeId = BigInt(details!.getNodeId());
         const node = applicationState.nodeInfos.get(nodeId);
 
         if (node === undefined) {
@@ -157,8 +160,8 @@ function eventReducer(
           );
         }
 
-        const direction = node.abiHandles.set(details!.getHandle(), {
-          channelId: details!.getChannelId(),
+        const direction = node.abiHandles.set(BigInt(details!.getHandle()), {
+          channelId: BigInt(details!.getChannelId()),
           direction: protoDirectionToChannelHalfDirection(
             details!.getDirection()
           ),
@@ -169,7 +172,7 @@ function eventReducer(
     case EventDetailsCase.HANDLE_DESTROYED:
       {
         const details = event.getHandleDestroyed();
-        const nodeId = details!.getNodeId();
+        const nodeId = BigInt(details!.getNodeId());
         const node = applicationState.nodeInfos.get(nodeId);
 
         if (node === undefined) {
@@ -178,7 +181,7 @@ function eventReducer(
           );
         }
 
-        const handle = details!.getHandle();
+        const handle = BigInt(details!.getHandle());
 
         if (node.abiHandles.delete(handle) === false) {
           throw new Error(

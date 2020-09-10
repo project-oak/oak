@@ -30,10 +30,10 @@ export default function ApplicationStateOverview({
       <p>{applicationState.nodeInfos.size} Nodes:</p>
       <ul>
         {[...applicationState.nodeInfos.entries()].map(([id, nodeInfo]) => (
-          <li key={id}>
+          <li key={id.toString()}>
             <dl>
               <dt>ID:</dt>
-              <dd>{id}</dd>
+              <dd>{id.toString()}</dd>
               <dt>Name:</dt>
               <dd>{nodeInfo.name}</dd>
               <dt>Labels:</dt>
@@ -43,8 +43,9 @@ export default function ApplicationStateOverview({
                 <ul>
                   {[...nodeInfo.abiHandles.entries()].map(
                     ([handle, channelHalf]) => (
-                      <li key={handle}>
-                        {handle} pointing to channel {channelHalf.channelId}{' '}
+                      <li key={handle.toString()}>
+                        {handle.toString()} pointing to channel{' '}
+                        {channelHalf.channelId.toString()}{' '}
                         {channelHalf.direction}
                       </li>
                     )
