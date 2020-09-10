@@ -44,7 +44,12 @@ message Event {
 }
 
 message NodeCreated {
-  uint64 node_id = 1;
+  // By default the generated JavaScript code converts all 64bit integer types
+  // to the JS `number` type. A potentially lossy conversion since `number` only
+  // supports integers up to 2^53 - 1. This is remedied via the [jstype =
+  // JS_STRING] annotation. Ref:
+  // https://github.com/protocolbuffers/protobuf/issues/3666
+  uint64 node_id = 1 [jstype = JS_STRING];
 
   string name = 2;
 
@@ -52,17 +57,17 @@ message NodeCreated {
 }
 
 message NodeDestroyed {
-  uint64 node_id = 1;
+  uint64 node_id = 1 [jstype = JS_STRING];
 }
 
 message ChannelCreated {
-  uint64 channel_id = 1;
+  uint64 channel_id = 1 [jstype = JS_STRING];
 
   oak.label.Label label = 2;
 }
 
 message ChannelDestroyed {
-  uint64 channel_id = 1;
+  uint64 channel_id = 1 [jstype = JS_STRING];
 }
 
 enum Direction {
@@ -71,35 +76,46 @@ enum Direction {
 }
 
 message HandleCreated {
-  uint64 node_id = 1;
+  uint64 node_id = 1 [jstype = JS_STRING];
 
-  uint64 channel_id = 2;
+  uint64 channel_id = 2 [jstype = JS_STRING];
 
-  uint64 handle = 3;
+  uint64 handle = 3 [jstype = JS_STRING];
 
   Direction direction = 4;
 }
 
 message HandleDestroyed {
-  uint64 node_id = 1;
+  uint64 node_id = 1 [jstype = JS_STRING];
 
-  uint64 channel_id = 2;
+  uint64 channel_id = 2 [jstype = JS_STRING];
 
-  uint64 handle = 3;
+  uint64 handle = 3 [jstype = JS_STRING];
 }
 
 message MessageEnqueued {
-  uint64 node_id = 1;
+  uint64 node_id = 1 [jstype = JS_STRING];
 
-  uint64 channel_id = 2;
+  uint64 channel_id = 2 [jstype = JS_STRING];
 
-  repeated uint64 included_handles = 3;
+  // These fields must be explicitly marked as packed = false, since depending
+  // on being interpreted as either standard uint64 vs as a string type they
+  // are respectively packed and not packed by default.
+  // Ref: https://developers.google.com/protocol-buffers/docs/encoding#packed
+  // If these are not explicitly set as not packed, the the JS parser
+  // (google-protobuf) will produce an error when interpreting the packed
+  // integer field as a non packed string field. This is since it seems
+  // to not have implemented the protobuf parser spec of being able to
+  // "parse repeated fields that were compiled as packed as if they were not
+  // packed, and vice versa". Ref:
+  // https://github.com/protocolbuffers/protobuf/issues/3571#issuecomment-575543049
+  repeated uint64 included_handles = 3 [jstype = JS_STRING, packed = false];
 }
 
 message MessageDequeued {
-  uint64 node_id = 1;
+  uint64 node_id = 1 [jstype = JS_STRING];
 
-  uint64 channel_id = 2;
+  uint64 channel_id = 2 [jstype = JS_STRING];
 
-  repeated uint64 acquired_handles = 3;
+  repeated uint64 acquired_handles = 3 [jstype = JS_STRING, packed = false];
 }
