@@ -19,6 +19,9 @@ use maplit::hashmap;
 use oak_abi::{label::Label, proto::oak::application::ApplicationConfiguration};
 use std::{fs, option::Option, thread::JoinHandle};
 
+static LOCAL_CA: &str = "../examples/certs/local/ca.pem";
+static GCP_CA: &str = "../examples/certs/gcp/ca.pem";
+
 struct HttpServerTester {
     runtime: RuntimeProxy,
     server_node_thread_handle: Option<JoinHandle<()>>,
@@ -82,13 +85,15 @@ async fn test_https_server_can_serve_https_requests() {
     // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
     // HTTP requests.
     let mut http_server_tester = HttpServerTester::new(2525, true);
+
     // Send an HTTPS request, and check that response has StatusCode::OK
-    let resp = send_request("https://localhost:2525").await;
+    let resp = send_request("https://localhost:2525", LOCAL_CA).await;
     assert!(resp.is_ok());
     assert_eq!(
         resp.unwrap().status(),
         http::status::StatusCode::OK.as_u16()
     );
+
     // Stop the runtime and the servers
     http_server_tester.cleanup();
 }
@@ -100,9 +105,27 @@ async fn test_https_server_cannot_serve_http_requests() {
     // result in the thread being blocked for ever. So, we set up the test without an
     // oak-node-simulator thread.
     let mut http_server_tester = HttpServerTester::new(2526, false);
+
     // Send an HTTP request, and check that the server responds with an error
-    let resp = send_request("http://localhost:2526").await;
+    let resp = send_request("http://localhost:2526", LOCAL_CA).await;
     assert!(resp.is_err());
+
+    // Stop the runtime and the servers
+    http_server_tester.cleanup();
+}
+
+#[tokio::test]
+async fn test_https_server_does_not_terminate_after_a_bad_request() {
+    let mut http_server_tester = HttpServerTester::new(2527, true);
+
+    // Send an HTTPS request with invalid certificate, and check that the server responds with error
+    let resp = send_request("https://localhost:2527", GCP_CA).await;
+    assert!(resp.is_err());
+
+    // Send a second request, and check that the server is alive and responsive
+    let resp = send_request("https://localhost:2527", LOCAL_CA).await;
+    assert!(resp.is_ok());
+
     // Stop the runtime and the servers
     http_server_tester.cleanup();
 }
@@ -192,7 +215,10 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
         .unwrap();
 }
 
-async fn send_request(uri: &str) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
+async fn send_request(
+    uri: &str,
+    ca_path: &str,
+) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
     let mut label_bytes = vec![];
@@ -200,8 +226,8 @@ async fn send_request(uri: &str) -> Result<http::response::Response<hyper::Body>
         panic!("Failed to encode label: {}", err);
     }
 
-    let path = "../examples/certs/local/ca.pem";
-    let ca_file = fs::File::open(path).unwrap_or_else(|e| panic!("failed to open {}: {}", path, e));
+    let ca_file =
+        fs::File::open(ca_path).unwrap_or_else(|e| panic!("failed to open {}: {}", ca_path, e));
     let mut ca = io::BufReader::new(ca_file);
 
     // Build an HTTP connector which supports HTTPS too.

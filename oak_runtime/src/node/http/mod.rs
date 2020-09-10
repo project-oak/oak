@@ -78,7 +78,22 @@ impl hyper::server::accept::Accept for TlsServer<'_> {
         mut self: Pin<&mut Self>,
         cx: &mut Context,
     ) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
-        Pin::new(&mut self.acceptor).poll_next(cx)
+        let connection = Pin::new(&mut self.acceptor).poll_next(cx);
+        match connection {
+            // When a connections fails, for example due to a `CertificateUnknown` error, we want to
+            // keep the server alive and waiting for new connections. The `poll_accept` method has
+            // to return `Poll::Pending` in these cases, to in turn cause the `poll` method of the
+            // hyper server to return `Poll::Pending`, making the server wait for the next
+            // connection. The `poll_watch` method in `hyper::server::conn::SpawnAll`,
+            // which calls `poll_accept` will make sure that the server is scheduled to
+            // be awoken when there is a new incoming connection, by calling `wake` on
+            // the `waker` in the context `cx`.
+            Poll::Ready(Some(Err(e))) => {
+                log::error!("Error when processing TLS stream: {:?}", e);
+                Poll::Pending
+            }
+            _ => connection,
+        }
     }
 }
 
@@ -130,7 +145,7 @@ impl HttpServerNode {
         let mut tcp = TcpListener::bind(&self.address)
             .await
             .expect("Could not create TCP listener.");
-        let tls_server = self.build_tls_server(&mut tcp).await;
+        let tls_server = self.build_tls_server(&mut tcp);
         let server = Server::builder(tls_server).serve(service);
 
         let graceful_server = server.with_graceful_shutdown(async {
@@ -144,19 +159,12 @@ impl HttpServerNode {
         );
 
         // Run until asked to terminate...
-        let result = graceful_server
-            // Terminate the server only if a shutdown signal is received.
-            // In case of errors, only log them instead of terminating the server.
-            .or_else(|e| async move {
-                log::error!("server error: {}", e);
-                Ok::<_, hyper::Error>(())
-            })
-            .await;
+        let result = graceful_server.await;
         info!("HTTP server pseudo-node terminated with {:?}", result);
     }
 
     /// Build a server that checks incoming TCP connections for TLS handshake.
-    async fn build_tls_server<'a>(&'a self, tcp: &'a mut TcpListener) -> TlsServer<'a> {
+    fn build_tls_server<'a>(&'a self, tcp: &'a mut TcpListener) -> TlsServer<'a> {
         let tls_cfg = crate::tls::to_server_config(self.tls_config.clone());
         let tls_acceptor = TlsAcceptor::from(tls_cfg);
 
@@ -166,6 +174,7 @@ impl HttpServerNode {
                 io::Error::new(io::ErrorKind::Other, format!("Incoming failed: {:?}", err))
             })
             .and_then(move |stream| {
+                log::debug!("Received incoming TLS stream: {:?}", stream);
                 tls_acceptor.accept(stream).map_err(|err| {
                     log::error!("Client-connection error: {:?}", err);
                     io::Error::new(io::ErrorKind::Other, format!("TLS Error: {:?}", err))
