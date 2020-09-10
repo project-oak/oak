@@ -741,6 +741,7 @@ dependencies = [
 name = "http_server"
 version = "0.1.0"
 dependencies = [
+ "http",
  "log",
  "maplit",
  "oak",

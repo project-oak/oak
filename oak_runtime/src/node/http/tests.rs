@@ -245,7 +245,7 @@ async fn send_request(
         hyper::client::Client::builder().build(https);
 
     let request = hyper::Request::builder()
-        .method("get")
+        .method(http::Method::GET)
         .uri(uri)
         .header(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY, label_bytes)
         .body(hyper::Body::empty())
