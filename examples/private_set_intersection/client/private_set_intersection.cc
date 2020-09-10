@@ -25,6 +25,7 @@
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, public_key, "", "Path to the PEM-encoded public key used as a data label");
 
 using ::oak::examples::private_set_intersection::GetIntersectionResponse;
 using ::oak::examples::private_set_intersection::PrivateSetIntersection;
@@ -65,12 +66,7 @@ int main(int argc, char** argv) {
 
   // TODO(#1066): Use a more restrictive Label, based on a bearer token shared between the two
   // clients.
-  // Public key is stored in the `examples/keys/ed25519/test.pub` file.
-  std::string public_key_base64 = "f41SClNtR4i46v2Tuh1fQLbt/ZqRr1lENajCW92jyP4=";
-  std::string public_key;
-  if (!absl::Base64Unescape(public_key_base64, &public_key)) {
-    LOG(FATAL) << "Could not decode public key: " << public_key_base64;
-  }
+  std::string public_key = oak::ApplicationClient::LoadPublicKey(absl::GetFlag(FLAGS_public_key));
   oak::label::Label label = oak::WebAssemblyModuleSignatureLabel(public_key);
 
   auto stub_0 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
@@ -105,7 +101,8 @@ int main(int argc, char** argv) {
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), invalid_label));
   std::vector<std::string> set_2{"c", "d", "e"};
   auto submit_status_2 = SubmitSet(invalid_stub.get(), set_2);
-  if (submit_status_2.ok()) {
+  // Error code `3` means `could not process gRPC request`.
+  if (submit_status_2.error_code() != 3) {
     LOG(FATAL) << "Invalid public key was accepted";
   }
 
