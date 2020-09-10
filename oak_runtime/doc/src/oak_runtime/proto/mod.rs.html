@@ -29,6 +29,14 @@
 <span id="29">29</span>
 <span id="30">30</span>
 <span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -59,6 +67,14 @@
 
     <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">invocation</span> {
         <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.invocation.rs&quot;</span>));
+    }
+
+    <span class="comment">// Add a refernce to the label proto to ensure that `super::label::Label`</span>
+    <span class="comment">// can be resolved. Prost references it in the code genereated from the</span>
+    <span class="comment">// introspection_events proto and expects the module to resolve.</span>
+    <span class="comment">// Ref: https://github.com/danburkert/prost/issues/142</span>
+    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">label</span> {
+        <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">label</span>::<span class="ident">Label</span>;
     }
 }
 </pre></div>

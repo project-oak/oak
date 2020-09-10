@@ -1315,6 +1315,10 @@
 <span id="1315">1315</span>
 <span id="1316">1316</span>
 <span id="1317">1317</span>
+<span id="1318">1318</span>
+<span id="1319">1319</span>
+<span id="1320">1320</span>
+<span id="1321">1321</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -2064,7 +2068,10 @@
         <span class="comment">// TODO(#913): Add automated tests that verify that ChannelCreated is</span>
         <span class="comment">// always fired prior to any other introspection events related to the</span>
         <span class="comment">// channel.</span>
-        <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails</span>::<span class="ident">ChannelCreated</span>(<span class="ident">ChannelCreated</span> { <span class="ident">channel_id</span> }));
+        <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails</span>::<span class="ident">ChannelCreated</span>(<span class="ident">ChannelCreated</span> {
+            <span class="ident">channel_id</span>,
+            <span class="ident">label</span>: <span class="prelude-val">Some</span>(<span class="ident">label</span>.<span class="ident">clone</span>()),
+        }));
 
         <span class="comment">// Insert them into the handle table and return the ABI handles to the caller.</span>
         <span class="kw">let</span> <span class="ident">write_handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_abi_handle</span>(<span class="ident">node_id</span>, <span class="ident">write_half</span>);
@@ -2548,6 +2555,7 @@
         <span class="self">self</span>.<span class="ident">introspection_event</span>(<span class="ident">EventDetails</span>::<span class="ident">NodeCreated</span>(<span class="ident">NodeCreated</span> {
             <span class="ident">node_id</span>: <span class="ident">node_id</span>.<span class="number">0</span>,
             <span class="ident">name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
+            <span class="ident">label</span>: <span class="prelude-val">Some</span>(<span class="ident">label</span>.<span class="ident">clone</span>()),
         }));
 
         <span class="self">self</span>.<span class="ident">add_node_info</span>(

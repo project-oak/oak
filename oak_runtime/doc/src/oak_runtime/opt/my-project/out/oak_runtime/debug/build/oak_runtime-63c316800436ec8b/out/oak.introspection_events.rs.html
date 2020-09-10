@@ -114,6 +114,10 @@
 <span id="114">114</span>
 <span id="115">115</span>
 <span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
@@ -163,6 +167,8 @@
     <span class="kw">pub</span> <span class="ident">node_id</span>: <span class="ident">u64</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">name</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">label</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">label</span>::<span class="ident">Label</span><span class="op">&gt;</span>,
 }
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
@@ -175,6 +181,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ChannelCreated</span> {
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">channel_id</span>: <span class="ident">u64</span>,
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">label</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">label</span>::<span class="ident">Label</span><span class="op">&gt;</span>,
 }
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
