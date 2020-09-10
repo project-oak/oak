@@ -760,6 +760,7 @@ name = "https_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "env_logger",
  "hyper",
  "hyper-rustls",
  "log",

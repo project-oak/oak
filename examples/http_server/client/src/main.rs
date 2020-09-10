@@ -31,6 +31,7 @@ pub struct Opt {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
     let label_bytes = serde_json::to_string(&label)
@@ -68,6 +69,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("Error while awaiting response");
 
-    log::info!("Got response: {:?}", resp);
+    log::info!("response: {:?}", resp);
+    log::info!(
+        "response body: {:?}",
+        hyper::body::to_bytes(resp.into_body())
+            .await
+            .expect("could not read response body")
+    );
     Ok(())
 }
