@@ -251,6 +251,10 @@
 <span id="251">251</span>
 <span id="252">252</span>
 <span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -372,6 +376,10 @@
         <span class="string">&quot;index.js&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
             <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../introspection_browser_client/dist/index.js.gz&quot;</span>).<span class="ident">to_vec</span>(),
             <span class="string">&quot;application/javascript&quot;</span>.<span class="ident">to_string</span>(),
+        )),
+        <span class="string">&quot;graphvizlib.wasm&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
+            <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../introspection_browser_client/dist/graphvizlib.wasm.gz&quot;</span>).<span class="ident">to_vec</span>(),
+            <span class="string">&quot;application/wasm&quot;</span>.<span class="ident">to_string</span>(),
         )),
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
     }

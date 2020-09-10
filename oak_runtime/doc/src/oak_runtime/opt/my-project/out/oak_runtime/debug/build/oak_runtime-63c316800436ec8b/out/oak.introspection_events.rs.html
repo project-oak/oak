@@ -118,6 +118,22 @@
 <span id="118">118</span>
 <span id="119">119</span>
 <span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
@@ -163,6 +179,11 @@
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodeCreated</span> {
+    <span class="doccomment">/// By default the generated JavaScript code converts all 64bit integer types</span>
+    <span class="doccomment">/// to the JS `number` type. A potentially lossy conversion since `number` only</span>
+    <span class="doccomment">/// supports integers up to 2^53 - 1. This is remedied via the [jstype =</span>
+    <span class="doccomment">/// JS_STRING] annotation. Ref:</span>
+    <span class="doccomment">/// https://github.com/protocolbuffers/protobuf/issues/3666</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">node_id</span>: <span class="ident">u64</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
@@ -219,7 +240,18 @@
     <span class="kw">pub</span> <span class="ident">node_id</span>: <span class="ident">u64</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">channel_id</span>: <span class="ident">u64</span>,
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">repeated</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
+    <span class="doccomment">/// These fields must be explicitly marked as packed = false, since depending</span>
+    <span class="doccomment">/// on being interpreted as either standard uint64 vs as a string type they</span>
+    <span class="doccomment">/// are respectively packed and not packed by default.</span>
+    <span class="doccomment">/// Ref: https://developers.google.com/protocol-buffers/docs/encoding#packed</span>
+    <span class="doccomment">/// If these are not explicitly set as not packed, the the JS parser</span>
+    <span class="doccomment">/// (google-protobuf) will produce an error when interpreting the packed</span>
+    <span class="doccomment">/// integer field as a non packed string field. This is since it seems</span>
+    <span class="doccomment">/// to not have implemented the protobuf parser spec of being able to</span>
+    <span class="doccomment">/// &quot;parse repeated fields that were compiled as packed as if they were not</span>
+    <span class="doccomment">/// packed, and vice versa&quot;. Ref:</span>
+    <span class="doccomment">/// https://github.com/protocolbuffers/protobuf/issues/3571#issuecomment-575543049</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">repeated</span>, <span class="ident">packed</span><span class="op">=</span><span class="string">&quot;false&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">included_handles</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 }
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
@@ -229,7 +261,7 @@
     <span class="kw">pub</span> <span class="ident">node_id</span>: <span class="ident">u64</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">channel_id</span>: <span class="ident">u64</span>,
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">repeated</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">uint64</span>, <span class="ident">repeated</span>, <span class="ident">packed</span><span class="op">=</span><span class="string">&quot;false&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">acquired_handles</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 }
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
