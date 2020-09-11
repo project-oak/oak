@@ -30,7 +30,11 @@ struct HttpServerTester {
 }
 
 impl HttpServerTester {
-    fn new(port: u32, with_simulator_thread: bool) -> HttpServerTester {
+    /// Create a new runtime and test server.
+    /// port: The port on which the server is started
+    /// number_of_requests: the number of requests the server expects to receive. This parameter is
+    /// passed to `oak_node_simulator` to set up the Oak node that servers the requests.
+    fn new(port: u32, number_of_requests: i32) -> HttpServerTester {
         let runtime = create_runtime();
         let server_node = create_server_node(port);
         let (init_receiver, invocation_receiver) = create_communication_channel(&runtime);
@@ -45,14 +49,10 @@ impl HttpServerTester {
 
         // Simulate an Oak node that responds with 200 (OK) to every request it receives
         // TODO(#1186): Use tokio instead of spawning a thread.
-        let oak_node_simulator_thread = if with_simulator_thread {
-            let runtime_proxy = runtime.clone();
-            Some(std::thread::spawn(move || {
-                oak_node_simulator(&runtime_proxy, invocation_receiver);
-            }))
-        } else {
-            None
-        };
+        let runtime_proxy = runtime.clone();
+        let oak_node_simulator_thread = Some(std::thread::spawn(move || {
+            oak_node_simulator(number_of_requests, &runtime_proxy, invocation_receiver);
+        }));
 
         HttpServerTester {
             runtime,
@@ -80,14 +80,24 @@ impl HttpServerTester {
     }
 }
 
+fn init_logger() {
+    // Ignore the result. We don't want to panic if the logger cannot be initialized, or is being
+    // initialized more than once. Also, if the logger is not initialized, we cannot log an
+    // error!
+    let _res = env_logger::builder().is_test(true).try_init();
+}
+
 #[tokio::test]
 async fn test_https_server_can_serve_https_requests() {
+    init_logger();
+
     // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
     // HTTP requests.
-    let mut http_server_tester = HttpServerTester::new(2525, true);
+    let mut http_server_tester = HttpServerTester::new(2525, 1);
+    let client_with_valid_tls = create_client(LOCAL_CA);
 
     // Send an HTTPS request, and check that response has StatusCode::OK
-    let resp = send_request("https://localhost:2525", LOCAL_CA).await;
+    let resp = send_request(client_with_valid_tls, "https://localhost:2525").await;
     assert!(resp.is_ok());
     assert_eq!(
         resp.unwrap().status(),
@@ -100,14 +110,17 @@ async fn test_https_server_can_serve_https_requests() {
 
 #[tokio::test]
 async fn test_https_server_cannot_serve_http_requests() {
+    init_logger();
+
     // Start a runtime with an HTTP server node. The HTTP server in this case rejects the requests,
     // and would not send anything to the Oak node. Creating a thread to simulate the Oak node will
     // result in the thread being blocked for ever. So, we set up the test without an
     // oak-node-simulator thread.
-    let mut http_server_tester = HttpServerTester::new(2526, false);
+    let mut http_server_tester = HttpServerTester::new(2526, 0);
+    let client_with_valid_tls = create_client(LOCAL_CA);
 
     // Send an HTTP request, and check that the server responds with an error
-    let resp = send_request("http://localhost:2526", LOCAL_CA).await;
+    let resp = send_request(client_with_valid_tls, "http://localhost:2526").await;
     assert!(resp.is_err());
 
     // Stop the runtime and the servers
@@ -116,14 +129,25 @@ async fn test_https_server_cannot_serve_http_requests() {
 
 #[tokio::test]
 async fn test_https_server_does_not_terminate_after_a_bad_request() {
-    let mut http_server_tester = HttpServerTester::new(2527, true);
+    init_logger();
+
+    // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
+    // HTTP requests.
+    let mut http_server_tester = HttpServerTester::new(2527, 2);
+    let client_with_valid_tls = create_client(LOCAL_CA);
+    let client_with_invalid_tls = create_client(GCP_CA);
+
+    // Send a valid request, making sure that the server is started
+    let resp = send_request(client_with_valid_tls.clone(), "https://localhost:2527").await;
+    assert!(resp.is_ok());
 
     // Send an HTTPS request with invalid certificate, and check that the server responds with error
-    let resp = send_request("https://localhost:2527", GCP_CA).await;
+    let resp = send_request(client_with_invalid_tls, "https://localhost:2527").await;
     assert!(resp.is_err());
 
-    // Send a second request, and check that the server is alive and responsive
-    let resp = send_request("https://localhost:2527", LOCAL_CA).await;
+    // Send another valid request, and check that the server is alive and responsive
+    // let client_with_valid_tls = create_client(LOCAL_CA);
+    let resp = send_request(client_with_valid_tls, "https://localhost:2527").await;
     assert!(resp.is_ok());
 
     // Stop the runtime and the servers
@@ -197,35 +221,40 @@ fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak
     (init_receiver, invocation_receiver)
 }
 
-fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Handle) {
+// Simulate an Oak node that responds to the specified number of requests. Since the Oak node blocks
+// until a new request is received, we need to know the number of requests that the test sends
+// beforehand. Alternatively, the node simulator could listen for incoming requests in an infinite
+// loop and have a termination mechanism that could be signalled from outside. However, specifying
+// the exact number of expected requests is more appropriate for testing purposes.
+fn oak_node_simulator(
+    number_of_requests: i32,
+    runtime: &RuntimeProxy,
+    invocation_receiver: oak_abi::Handle,
+) {
     // Get invocation message that contains the response_writer handle.
     let invocation_receiver = Receiver::<HttpInvocation>::new(ReadHandle {
         handle: invocation_receiver,
     });
-    let invocation = invocation_receiver.receive(runtime).unwrap();
-    let resp = HttpResponse {
-        body: vec![],
-        status: http::status::StatusCode::OK.as_u16() as i32,
-        headers: hashmap! {},
-    };
-    invocation
-        .sender
-        .expect("Empty sender on invocation.")
-        .send(resp, runtime)
-        .unwrap();
+
+    for _counter in 0..number_of_requests {
+        let invocation = invocation_receiver.receive(runtime).unwrap();
+        let resp = HttpResponse {
+            body: vec![],
+            status: http::status::StatusCode::OK.as_u16() as i32,
+            headers: hashmap! {},
+        };
+        invocation
+            .sender
+            .expect("Empty sender on invocation.")
+            .send(resp, runtime)
+            .unwrap();
+    }
 }
 
-async fn send_request(
-    uri: &str,
+// Build a TLS client, using the given CA store
+fn create_client(
     ca_path: &str,
-) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
-    // Send a request, and wait for the response
-    let label = oak_abi::label::Label::public_untrusted();
-    let mut label_bytes = vec![];
-    if let Err(err) = label.encode(&mut label_bytes) {
-        panic!("Failed to encode label: {}", err);
-    }
-
+) -> hyper::client::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>> {
     let ca_file =
         fs::File::open(ca_path).unwrap_or_else(|e| panic!("failed to open {}: {}", ca_path, e));
     let mut ca = io::BufReader::new(ca_file);
@@ -241,15 +270,47 @@ async fn send_request(
     // Join the above part into an HTTPS connector.
     let https = hyper_rustls::HttpsConnector::from((http, tls));
 
-    let client: hyper::client::Client<_, hyper::Body> =
-        hyper::client::Client::builder().build(https);
+    hyper::client::Client::builder().build(https)
+}
 
-    let request = hyper::Request::builder()
-        .method(http::Method::GET)
-        .uri(uri)
-        .header(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY, label_bytes)
-        .body(hyper::Body::empty())
-        .unwrap();
+async fn send_request(
+    client: hyper::client::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
+    uri: &str,
+) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
+    // Send a request, and wait for the response
+    let label = oak_abi::label::Label::public_untrusted();
+    let mut label_bytes = vec![];
+    if let Err(err) = label.encode(&mut label_bytes) {
+        panic!("Failed to encode label: {}", err);
+    }
 
-    client.request(request).await
+    // The client thread may start sending the requests before the server is up. In this case, the
+    // request will be rejected with a "ConnectError". To make the tests are stable, we need to
+    // retry sending the requests until the server is up. To distinguish between these cases and
+    // actual errors (e.g., errors due to invalid TLS certificates), we need to check the cause of
+    // the error.
+    loop {
+        let request = hyper::Request::builder()
+            .method(http::Method::GET)
+            .uri(uri)
+            .header(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY, label_bytes.clone())
+            .body(hyper::Body::empty())
+            .unwrap();
+
+        match client.request(request).await {
+            Ok(reps) => return Ok(reps),
+            Err(error) => {
+                // We cannot access the cause of the error, so we need to check the string instead.
+                let error_str = format!("{:?}", error);
+                // If the cause is `ConnectError` (https://github.com/hyperium/hyper/blob/66fc127c8d4f81aed9300c9d0f13246b8206067a/src/client/connect/http.rs#L392)
+                // it means that a connection to the server cannot be made. Retry sending the
+                // request in this case.
+                if error_str.contains("ConnectError") {
+                    continue;
+                } else {
+                    return Err(error);
+                }
+            }
+        }
+    }
 }
