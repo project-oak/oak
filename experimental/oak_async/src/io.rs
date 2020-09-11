@@ -34,6 +34,8 @@ impl<T: Decodable> Future for ChannelRead<T> {
     type Output = Result<T, OakError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        // Check for ready data on the channel before scheduling a wakeup from the executor, in case
+        // we don't need to wait.
         if let Some(data) = channel_read_message(self.handle) {
             Poll::Ready(data)
         } else {
@@ -47,6 +49,8 @@ impl<T: Decodable> Drop for ChannelRead<T> {
     fn drop(&mut self) {
         with_executor(|e| {
             debug!("Dropping reader {}", self.reader_id);
+            // Remove the reader from the waiting set, or the executor will keep waiting for
+            // data on this channel (which might never come).
             e.remove_waiting_reader(self.reader_id)
         })
     }

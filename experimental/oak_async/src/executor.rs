@@ -19,9 +19,14 @@ struct WaitingReader {
     waker: Waker,
 }
 
+/// Global executor context.
+///
+/// `with_executor` provides a way to get a handle to the global executor instance.
 #[derive(Default)]
 pub struct Executor {
+    /// Used to assign a unique id to each reader. It is incremented by every newly created reader
     reader_id_counter: ReaderId,
+    /// Set of readers waiting for data. All handles in this map are polled in `wait_on_channels`.
     // Why not HashMap<Handle, Vec<Waker>>? When a future asks to be removed from the waiting list
     // (i.e. when it is dropped), we need to be able to remove their Waker from the map.
     waiting_readers: HashMap<ReaderId, WaitingReader>,
@@ -57,7 +62,9 @@ impl Executor {
 
     pub fn new_id(&mut self) -> usize {
         let id = self.reader_id_counter;
-        self.reader_id_counter += 1;
+        // Collissions are technically possible, but only if one read is very slow and many async
+        // reads are requested in quick succession.
+        self.reader_id_counter = self.reader_id_counter.wrapping_add(1);
         id
     }
 
@@ -72,6 +79,7 @@ impl Executor {
             .collect()
     }
 
+    /// Remove a reader from the waiting set and wake it
     pub fn wake_reader(&mut self, reader_id: usize) {
         self.waiting_readers
             .remove(&reader_id)
@@ -81,11 +89,14 @@ impl Executor {
     }
 }
 
+/// Obtain a handle to the global executor.
 pub fn with_executor<F: FnOnce(&mut Executor) -> R, R>(f: F) -> R {
     EXECUTOR.with(|executor| f(&mut executor.borrow_mut()))
 }
 
 /// Block the current thread until the provided `Future` has been `poll`ed to completion.
+///
+/// Returns `Err(_)` if the call to `wait_on_channels` fails.
 pub fn block_on<F: Future + 'static>(f: F) -> Result<F::Output, OakStatus> {
     let mut pool = LocalPool::new();
     let spawner = pool.spawner();
@@ -93,12 +104,16 @@ pub fn block_on<F: Future + 'static>(f: F) -> Result<F::Output, OakStatus> {
         .spawn_local_with_handle(f)
         .expect("Failed to spawn main future");
     loop {
+        // Poll futures in the pool until none of them can make any progress.
         pool.run_until_stalled();
 
         // We could not make more progress but no handles are waiting: we should be done!
         if with_executor(|e| e.none_waiting()) {
             break;
         }
+
+        // There are pending futures but none of them could make progress, which means they are all
+        // waiting for channels to become ready.
 
         // O(n log(n)) where n = executor.pending_handles.len().
         // Dominated by `pending_handles()` which makes a unique mapping of Handle -> ReaderId.
