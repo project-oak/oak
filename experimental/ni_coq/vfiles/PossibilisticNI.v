@@ -82,13 +82,85 @@ Theorem possibilistic_ni_1step_node: forall ell id t1 t2 s1 s2 n1 n2 t1',
 Proof.
 Admitted. (* WIP *)
 
+Theorem state_upd_node_eq: forall id n s,
+    (state_upd_node id n s).(nodes).[? id] = Some n.
+intros.
+rewrite fnd_set. 
+rewrite (introT (@eqP node_id id id)); congruence.
+Qed.
+
+Theorem state_upd_node_neq: forall id id' n s,
+    id' <> id ->
+    (state_upd_node id n s).(nodes).[?id'] = s.(nodes).[?id'].
+intros.
+rewrite fnd_set. 
+specialize (Bool.ReflectF (id' = id) H) as H1.
+Admitted. (* WIP *)
+
+Theorem state_upd_unwind_from_leqn:
+    forall ell id n1 n2 s1 s2,
+    node_low_eq ell n1 n2 ->
+    state_low_eq ell s1 s2 ->
+    state_low_eq ell (state_upd_node id n1 s1) (state_upd_node id n2 s2).
+Proof.
+    intros. inversion H0. 
+    split.
+    - (* nodes *) 
+        intros id'. destruct (id' =P id). 
+        + (* eq *) 
+            rewrite e;
+            rewrite !state_upd_node_eq; assumption.
+        + (* neq *) 
+            rewrite !state_upd_node_neq.
+            apply (H1 id').  assumption. assumption.
+    - (* chans *)
+        assumption.
+Qed.
+
+Theorem set_call_unwind: forall ell id c s1 s2,
+    state_low_eq ell s1 s2 ->
+    state_low_eq ell (s_set_call s1 id c) (s_set_call s2 id c).
+Proof.
+    intros. inversion H; subst.
+    unfold s_set_call.
+    destruct (s1.(nodes).[? id]) eqn:E1; destruct (s2.(nodes).[? id]) eqn:E2.
+    - (* some, some *)
+        assert (E: node_low_eq ell 
+            (n <| ncall ::= (fun=> c) |>)
+            (n0 <| ncall ::= (fun=> c) |>)).
+        {
+            specialize (H0 id). rewrite E1 E2 in H0.
+            inversion H0; subst.
+            constructor; reflexivity.
+            constructor 2; assumption.
+        }
+        eapply state_upd_unwind_from_leqn; assumption.
+    - (* some, none *)
+        exfalso. specialize (H0 id).
+        rewrite E1 E2 in H0.
+        assumption.
+    - (* none, some *)
+        exfalso. specialize (H0 id).
+        rewrite E1 E2 in H0.
+        assumption.
+    - split; assumption.
+Qed.
+
 Theorem call_havoc_unwind: forall ell id c t1 t2 t1' t2',
     (trace_low_eq ell t1 t2) ->
     (t1' = head_set_call t1 id c) ->
     (t2' = head_set_call t2 id c) ->
     (trace_low_eq ell t1' t2').
 Proof.
-Admitted. (* WIP *)
+    intros.
+    destruct t1, t2; simpl in *; subst.
+    - (* nil, nil *) constructor.
+    - (* nil, not nil *) inversion H.
+    - (* not nil, nil *) inversion H.
+    - destruct p. destruct p0. inversion H; subst.
+    constructor 2; try assumption.
+    eapply set_call_unwind; assumption.
+Qed.
 
 Theorem trace_loweq_to_deref_node: forall ell t1 t2 id s1 n1,
 (* If two traces are low-equivalent and in the first trace:
