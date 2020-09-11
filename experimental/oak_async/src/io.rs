@@ -7,6 +7,7 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
+use log::debug;
 use oak::{
     io::{Decodable, Message},
     OakError, OakStatus, ReadHandle,
@@ -43,7 +44,10 @@ impl<T: Decodable> Future for ChannelRead<T> {
 
 impl<T: Decodable> Drop for ChannelRead<T> {
     fn drop(&mut self) {
-        with_executor(|e| e.remove_waiting_reader(self.reader_id))
+        with_executor(|e| {
+            debug!("Dropping reader {}", self.reader_id);
+            e.remove_waiting_reader(self.reader_id)
+        })
     }
 }
 

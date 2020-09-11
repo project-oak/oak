@@ -2,7 +2,7 @@
 
 use core::{cell::RefCell, future::Future, task::Waker};
 use futures::{executor::LocalPool, task::LocalSpawnExt};
-use log::{error, trace};
+use log::{debug, trace};
 use oak::{ChannelReadStatus, Handle, OakStatus, ReadHandle};
 use std::collections::HashMap;
 
@@ -46,7 +46,9 @@ impl Executor {
     pub fn remove_waiting_reader(&mut self, id: usize) {
         trace!("Remove waiting reader {}", id);
         if self.waiting_readers.remove(&id).is_none() {
-            error!(
+            // This is usually not an error. If a Future is dropped as a result of it being woken up
+            // and then resolving, we expect the reader_id to not be present in the waiting set.
+            debug!(
                 "Attempted to remove waiting reader {}, but no such reader was in the waiting set",
                 id
             )
@@ -106,6 +108,13 @@ pub fn block_on<F: Future + 'static>(f: F) -> Result<F::Output, OakStatus> {
                 .map(|(handle, reader_id)| (ReadHandle { handle }, reader_id))
                 .unzip();
 
+            trace!(
+                "{} readers ({:?}) waiting on handles: {:?}",
+                reader_ids.len(),
+                reader_ids,
+                read_handles
+            );
+
             let channel_statuses = oak::wait_on_channels(&read_handles)?;
             for (status, reader_id) in channel_statuses.into_iter().zip(reader_ids) {
                 match status {
@@ -118,7 +127,7 @@ pub fn block_on<F: Future + 'static>(f: F) -> Result<F::Output, OakStatus> {
                         executor.wake_reader(reader_id);
                     }
                     err => {
-                        error!(
+                        debug!(
                             "Channel wait returned error for reader id {}: {:?}",
                             reader_id, err
                         );
