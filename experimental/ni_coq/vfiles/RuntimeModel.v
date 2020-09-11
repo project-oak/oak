@@ -115,10 +115,7 @@ Definition msg_is_head (ch: channel)(m: message): Prop :=
         | [] => False
         | m' :: ms' => m' = m
     end. 
-(*
-Definition chan_clear_hans (c: channel): channel :=
-    c <| rhs := Empty_set handle |> <| whs := Empty_set handle|>.
-*)
+
 Definition node_get_hans (n: node)(m: message): node :=
     n <| read_handles := (Union n.(read_handles) m.(rhs)) |>
       <| write_handles := (Union n.(write_handles) m.(whs)) |>.
