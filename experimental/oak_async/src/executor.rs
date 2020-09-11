@@ -85,6 +85,7 @@ pub fn with_executor<F: FnOnce(&mut Executor) -> R, R>(f: F) -> R {
     EXECUTOR.with(|executor| f(&mut executor.borrow_mut()))
 }
 
+/// Block the current thread until the provided `Future` has been `poll`ed to completion.
 pub fn block_on<F: Future + 'static>(f: F) -> Result<F::Output, OakStatus> {
     let mut pool = LocalPool::new();
     let spawner = pool.spawner();

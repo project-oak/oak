@@ -1,3 +1,5 @@
+//! Provides implementations of Oak ABI functions to test the async executor against.
+
 use core::cell::RefCell;
 use oak::io::Encodable;
 use oak_abi::{

@@ -13,6 +13,7 @@ use oak::{
     OakError, OakStatus, ReadHandle,
 };
 
+/// `Future` representing an asynchronous read from a channel.
 pub struct ChannelRead<T: Decodable> {
     reader_id: usize,
     handle: ReadHandle,
@@ -63,8 +64,13 @@ fn channel_read_message<T: Decodable>(handle: ReadHandle) -> Option<Result<T, Oa
     }
 }
 
+/// Extension trait to allow asynchronous reads from a `Receiver`.
 pub trait ReceiverAsync {
     type Message: Decodable;
+
+    /// Asynchronously receive a message.
+    ///
+    /// The returned `Future` resolves to either a message or an `OakError`.
     fn receive_async(&self) -> ChannelRead<Self::Message>;
 }
 

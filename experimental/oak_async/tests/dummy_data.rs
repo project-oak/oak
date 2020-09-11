@@ -3,6 +3,9 @@ use oak::{
     OakError,
 };
 
+/// Wrapper around `String` to make it implement `Encodable` and `Decodable`.
+///
+/// Used as a dummy message payload.
 #[derive(Debug, PartialEq)]
 pub struct DummyData(pub String);
 
