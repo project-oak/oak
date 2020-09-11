@@ -26,22 +26,28 @@ pub use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 
 pub type Invocation = crate::proto::oak::invocation::HttpInvocation;
 
-impl Invocation {
-    pub fn receive(&self) -> std::result::Result<HttpRequest, crate::OakError> {
+pub trait InvocationExt {
+    fn receive(&self) -> std::result::Result<HttpRequest, crate::OakError>;
+    fn send(&self, response: &HttpResponse) -> std::result::Result<(), crate::OakError>;
+    fn close_channels(&self);
+}
+
+impl InvocationExt for Invocation {
+    fn receive(&self) -> std::result::Result<HttpRequest, crate::OakError> {
         self.receiver
             .as_ref()
             .ok_or(OakError::OakStatus(OakStatus::ErrBadHandle))?
             .receive()
     }
 
-    pub fn send(&self, response: &HttpResponse) -> std::result::Result<(), crate::OakError> {
+    fn send(&self, response: &HttpResponse) -> std::result::Result<(), crate::OakError> {
         self.sender
             .as_ref()
             .ok_or(OakError::OakStatus(OakStatus::ErrBadHandle))?
             .send(response)
     }
 
-    pub fn close_channels(&self) {
+    fn close_channels(&self) {
         match self.receiver.as_ref() {
             Some(receiver) => {
                 if let Err(error) = receiver.close() {

@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.invocation;
 
-import "oak_services/proto/http_encap.proto";
+import "http_encap.proto";
 import "proto/handle.proto";
 
 // An HTTP invocation, consisting of exactly two channels: one to read incoming requests from the

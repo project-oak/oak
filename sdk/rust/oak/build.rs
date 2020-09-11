@@ -17,17 +17,14 @@
 fn main() {
     oak_utils::compile_protos_with_options(
         &[
-            "../../../oak_services/proto/grpc_invocation.proto",
-            "../../../oak_services/proto/http_invocation.proto",
-            "../../../oak_services/proto/storage_service.proto",
             "../../../oak_services/proto/roughtime_service.proto",
+            "../../../oak_services/proto/storage_service.proto",
         ],
         &["../../.."],
         oak_utils::ProtoOptions {
             ..Default::default()
         },
     );
-
     let mut handle_tests_out = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
     handle_tests_out.push("handle_tests");
     std::fs::create_dir_all(&handle_tests_out).unwrap();

@@ -23,16 +23,21 @@ pub mod google {
 }
 
 pub mod oak {
+    pub use oak_abi::proto::oak::label;
     pub mod encap {
         include!(concat!(env!("OUT_DIR"), "/oak.encap.rs"));
     }
-
+    pub mod invocation {
+        include!(concat!(env!("OUT_DIR"), "/oak.invocation.rs"));
+    }
     pub mod log {
         include!(concat!(env!("OUT_DIR"), "/oak.log.rs"));
     }
-
     pub mod roughtime {
         include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
+    }
+    pub mod storage {
+        include!(concat!(env!("OUT_DIR"), "/oak.storage.rs"));
     }
 }
 
@@ -41,5 +46,9 @@ handle_visit_blanket_impl!(
     oak::encap::GrpcResponse,
     oak::encap::GrpcRequest,
     oak::encap::HttpResponse,
-    oak::encap::HttpRequest
+    oak::encap::HttpRequest,
+    oak::invocation::HttpInvocation,
+    oak::invocation::HttpInvocationSender,
+    oak::invocation::GrpcInvocation,
+    oak::invocation::GrpcInvocationSender
 );

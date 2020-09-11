@@ -19,12 +19,15 @@
 fn main() {
     oak_utils::compile_protos_with_options(
         &[
-            "../oak_services/proto/grpc_encap.proto",
-            "../oak_services/proto/http_encap.proto",
+            "proto/http_encap.proto",
+            "proto/http_invocation.proto",
+            "proto/grpc_encap.proto",
+            "proto/grpc_invocation.proto",
+            "proto/storage_service.proto",
             "../third_party/google/rpc/code.proto",
             "../third_party/google/rpc/status.proto",
         ],
-        &[".."],
+        &["..", "proto"],
         oak_utils::ProtoOptions {
             // Exclude generation of service code as it would require a reference to the Oak SDK to
             // compile.
@@ -37,15 +40,13 @@ fn main() {
         },
     );
     oak_utils::compile_protos_with_options(
-        &[
-            "../oak_services/proto/log.proto",
-            "../oak_services/proto/roughtime_service.proto",
-        ],
-        &[".."],
+        &["proto/log.proto", "proto/roughtime_service.proto"],
+        &["..", "proto"],
         oak_utils::ProtoOptions {
             // Exclude generation of service code as it would require a reference to the Oak SDK to
             // compile.
             generate_services: false,
+            derive_handle_visit: true,
             ..Default::default()
         },
     );

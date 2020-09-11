@@ -51,14 +51,14 @@ pub mod proto {
         // The storage protobuf messages use the label.Label type which is built
         // in the `oak_abi` crate, so make it available here too.
         pub use oak_abi::proto::oak::{application, label};
-        pub mod invocation {
-            include!(concat!(env!("OUT_DIR"), "/oak.invocation.rs"));
+        pub use oak_services::proto::oak::invocation;
+        pub mod roughtime {
+            pub use oak_services::proto::oak::roughtime::*;
+            include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
         }
         pub mod storage {
+            pub use oak_services::proto::oak::storage::*;
             include!(concat!(env!("OUT_DIR"), "/oak.storage.rs"));
-        }
-        pub mod roughtime {
-            include!(concat!(env!("OUT_DIR"), "/oak.roughtime.rs"));
         }
     }
 }

@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.invocation;
 
-import "oak_services/proto/grpc_encap.proto";
+import "grpc_encap.proto";
 import "proto/handle.proto";
 
 // A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the
