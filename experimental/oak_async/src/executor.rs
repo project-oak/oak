@@ -111,6 +111,10 @@ pub fn block_on<F: Future + 'static>(f: F) -> Result<F::Output, OakStatus> {
                 match status {
                     ChannelReadStatus::NotReady => { /* Nothing */ }
                     ChannelReadStatus::ReadReady => {
+                        trace!(
+                            "Waking reader with id {} because channel was ReadReady",
+                            reader_id
+                        );
                         executor.wake_reader(reader_id);
                     }
                     err => {
