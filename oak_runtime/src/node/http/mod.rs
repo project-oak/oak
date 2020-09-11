@@ -301,19 +301,45 @@ struct HttpRequestHandler {
 impl HttpRequestHandler {
     async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, OakStatus> {
         let request = HttpServerNode::map_to_http_request(req).await;
-        let oak_label = get_oak_label(&request)?;
-        info!(
-            "Handling HTTP request; request size: {} bytes, label: {:?}",
-            request.body.len(),
-            oak_label
-        );
+        match get_oak_label(&request) {
+            Ok(oak_label) => {
+                info!(
+                    "Handling HTTP request; request body size: {} bytes, label: {:?}",
+                    request.body.len(),
+                    oak_label
+                );
 
-        debug!("Inject the request into the Oak Node");
-        let response = self
-            .inject_http_request(request, &oak_label)
-            .map_err(|_| OakStatus::ErrInternal)?;
+                debug!("Injecting the request into the Oak Node");
+                let response = self
+                    .inject_http_request(request, &oak_label)
+                    .map_err(|err| {
+                        warn!(
+                            "Error when injecting the request into the Oak Node: {:?}",
+                            err
+                        );
+                        OakStatus::ErrInternal
+                    })?;
 
-        Ok(response.to_response())
+                response.to_response().map_err(|e| {
+                    warn!("Could not create response: {}", e);
+                    OakStatus::ErrInternal
+                })
+            }
+            Err(OakStatus::ErrInvalidArgs) => http::response::Builder::new()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::from("Invalid or missing Oak label."))
+                .map_err(|e| {
+                    warn!("Could not create response: {}", e);
+                    OakStatus::ErrInternal
+                }),
+            Err(_oak_status) => http::response::Builder::new()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::from("Internal server error."))
+                .map_err(|e| {
+                    warn!("Could not create response: {}", e);
+                    OakStatus::ErrInternal
+                }),
+        }
     }
 
     fn inject_http_request(
@@ -488,24 +514,21 @@ impl HttpResponseIterator {
         response_receiver.receive(&self.runtime)
     }
 
-    fn to_response(&self) -> Response<Body> {
+    fn to_response(&self) -> Result<Response<Body>, http::Error> {
         info!(
             "Generating response for runtime {} and reader {:?}.",
             self.runtime.node_id.0, self.response_reader
         );
-        let mut response = Response::new(Body::empty());
         match self.read_response() {
-            Ok(http_response) => {
-                let status_code = http_response.status as u16;
-                *response.body_mut() = Body::from(http_response.body);
-                *response.status_mut() = StatusCode::from_u16(status_code)
-                    .unwrap_or_else(|_| panic!("Error when creating status code {}", status_code));
-            }
+            Ok(http_response) => http::response::Builder::new()
+                .status(http_response.status as u16)
+                .body(Body::from(http_response.body)),
             Err(status) => {
                 error!("Could not read response: {}", status);
-                *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                http::response::Builder::new()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body(Body::empty())
             }
         }
-        response
     }
 }
