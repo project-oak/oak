@@ -23,7 +23,7 @@ export default function EventList({ events }: EventListProps) {
   return (
     <section>
       <strong>Events List</strong>
-      <ol>
+      <ol reversed>
         {events.map((event, index) => (
           // Usually it's not advisable to use the index as a key. However since
           // the list of events is append-only it's fine in this case.
