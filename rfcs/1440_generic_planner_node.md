@@ -29,25 +29,155 @@ include:
   to detect potential problems.
 - It would usualy be easier to reason about the security of a static node graph.
 
+## Overview
+
 Moving all node and channel creation to a configuration-based mechanism is a
 significant and potentially disruptive change. This RFC proposes a more gradual
 approach by implementing a re-usable WASM-based planner node that uses a
 manifest file to do the node and channel creation. The functionality can be
 expanded over time to support more complex scenarios.
 
-## Overview
-
-The
+The planner node will be responsible for creating nodes, creating channels,
+sending channel handles to the created nodes to ensure that the full node graph
+is created on start-up. It will will also act as a message router, which would
+route HTTP- and GRPC invocations to other nodes based on the associated labels.
 
 ## Detailed Design
 
-### Planner node
+### Planner Node
+
+The planner node will the the initial node created for an application. The
+manifest file will be passed to the planner node as part of the application's
+`ConfigMap`.
+
+The planner node will create all the nodes and channels as specified with the
+appropriate labels. It will send initialisation messages to each of the nodes,
+providing additional configuration and handles to channels. It is the
+responsibility of each of the nodes to store these channels for future
+communications with other nodes. It will send a filtered version of the config
+map as part of the initialisation message, based on the configuration keys
+specified in the `config_files` field.
+
+### Invocation Routing
+
+The planner node will also be responsible for routing invocations from the gRPC-
+and HTTP server pseudo nodes to the right receiver node based on the associated
+labels. Since it would be possible for multiple nodes to have the same Label,
+the planner node would need an indication of which node should be the invocation
+recipient for a specific label.
 
 ### Manifest File
 
+The manifest file will be will be passed to the application as part of the
+initial configuation map as a TOML file. The file will be deserialised into the
+following structure:
+
+```rust
+
+struct Node {
+  /// Unique name for the node.
+  name: String,
+
+  /// The label associated with the node.
+  label: Label,
+
+  /// The keys of the files from the config map that must be passed to the node
+  /// as part of the initialisation message. This will be used to generate a
+  /// filtered view of the map that will be sent as part of the initialisation
+  /// message.
+  config_files: vec<String>,
+
+  /// Whether this node will accept gRPC invocations targeted at the specified
+  /// label.
+  grpc_invocation_receiver: bool,
+
+  /// Whether this node will accept HTTP invocations targeted at the specified
+  /// label.
+  http_invocation_receiver: bool,
+}
+
+struct Channel {
+  /// Unique name of the chanel.
+  name: String,
+
+  /// The label associated with the channel.
+  label: Label,
+
+  /// The name of the node that will receive the handle for the receiver half
+  /// of the channel.
+  ///
+  /// Note: this is in anticipation of changing channels to a multi-producer,
+  /// single-consumer model to resolve #1197.
+  receiverNode: String,
+
+  /// The nodes that will receive handles to the write-half of the channel.
+  senderNodes: vec<String>,
+}
+
+struct NodeGraph {
+  /// The nodes that will be created.
+  nodes: vec<Node>,
+
+  /// The channels that will be created.
+  channels: vec<Channel>,
+}
+
+```
+
 ### Initialising New Nodes
 
+After creating a new WASM node the planner node will send an initialisation
+message to the new node over the initial channel. These initialisation messages
+will provide other channels and additional configuration files to the node in a
+standard format. The additional configuration files will be a per-node filtered
+view of the `ConfigMap` that was passed to the application on start-up.
+
+```proto
+
+Message SenderChannelInfo {
+  // The name of the channel for the handle.
+  string channel_name = 1,
+
+  // The Sender wrapping a write-half of the channel.
+  // Question: How do we define message_type?
+  oak.handle.Sender sender = 2;
+}
+
+Message ReceiverChannelInfo {
+  // The name of the channel for the handle.
+  string channel_name = 1,
+
+  // The Receiver wrapping the read-half of the channel.
+  // Question: How do we define message_type?
+  oak.handle.Receiver receiver = 2;
+}
+
+Message NodeInitialisation {
+  // The Senders that the node expects.
+  repeated SenderChannelInfo = 1,
+
+  // The Receivers that the node expects.
+  repeated ReceiverChannelInfo = 2,
+
+  // A filtered map of config entries intended for the node.
+  ConfigMap config = 3
+}
+
+```
+
 ### Accessing Channels
+
+All the channels needed by a node will be passed as part of the initialisation
+message. The channels are represented as repeating of `SenderChannelInfo`s and
+`ReceiverChannelInfo`s. The keys for each will be the name of the channel. This
+means that channels would need unique names in the manifest file. The downside
+of this approach is that the code needs to be aware of the names of the channels
+in the manifest file.
+
+This is not ideal, but we could work around it by adding a mapping as a config
+entry between internal names that the code understand and the channels names in
+the manifest file. We can then use this to support modification of the manifest
+file without having to recompile the WASM nodes.
 
 ## Planning
 
@@ -59,8 +189,9 @@ test that the nodes were created as expected.
 
 Once the intial implementation is done, some of the common reusable code will be
 moved to the SDK. The fist example of such reusable code is support for node to
-accept an `init` proto that contains a list of `Sender`s and `Receiver`s that
-wrap the handles for channels that should be available to the node.
+accept an initial proto that contains a list of `Sender`s and `Receiver`s that
+wrap the handles for channels that should be available to the node, and
+potentially additional configuration files.
 
 The next step would be to update the existing examples to reuse the
 configuration-based `planner` node.
@@ -69,6 +200,38 @@ configuration-based `planner` node.
 
 ### Static analysis tools
 
+We can support application developers in finding potential issues in their
+applications through static analysis tools that can help detect common problems:
+
+- Check that all node and channel names are unique
+- Check that there is only one gRPC invocation receiver for each label
+- Check that there is only one HTTP invocation receiver for each label
+- Check that all nodes can write to handles they receive
+- Check that all nodes can read from handles they receive
+- Hihglight points where data is declassified to `Public`
+- Find nodes that can never receive data (unneeded nodes)
+- Find nodes where data will get stuck (dead ends)
+- Find risky patterns (e.g. diamond shaped graph)
+
 ### Dynamic sub-graph creation
 
+The first example will be dynamic creation of user-specific nodes and connect
+them to the appropriate channels in the graph. In future this will be extended
+to support teplate-based definition of subgraphs. The entire sub-graph will then
+be dynamically generated (e.g. a user-specific sub-graph consisting of multiple
+nodes each).
+
 ### Declaration of supported message types
+
+Each node will be able to declare which message types it can read and write.
+Each channel will be annotated with the message types is can handle. This will
+allow us to build additional static analysis tools to make sure each node can
+handle the messages it will receive and all messages that it might send will go
+to a node that can understand those messages.
+
+We might consider making this part of the initial version:
+
+- It could help with providing a strongly typed mechanism for sending the
+  additional channels during initialisation
+- It might allow us to automatically determine which channesl are required
+  without having to specify channels in the manifest
