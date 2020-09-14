@@ -40,14 +40,14 @@ expanded over time to support more complex scenarios.
 
 The planner node will be responsible for creating nodes, creating channels,
 sending channel handles to the created nodes to ensure that the full node graph
-is created on start-up. It will will also act as a message router, which would
-route HTTP- and GRPC invocations to other nodes based on the associated labels.
+is created on start-up. It will also act as a message router, which would route
+HTTP- and GRPC invocations to other nodes based on the associated labels.
 
 ## Detailed Design
 
 ### Planner Node
 
-The planner node will the the initial node created for an application. The
+The planner node will be the initial node created for an application. The
 manifest file will be passed to the planner node as part of the application's
 `ConfigMap`.
 
@@ -69,8 +69,8 @@ recipient for a specific label.
 
 ### Manifest File
 
-The manifest file will be will be passed to the application as part of the
-initial configuration map as a TOML file. The file will be deserialised into the
+The manifest file will be passed to the application as part of the initial
+configuration map as a TOML file. The file will be deserialised into the
 following structure:
 
 ```rust
