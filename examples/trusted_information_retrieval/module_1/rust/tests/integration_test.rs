@@ -38,7 +38,7 @@ async fn get_database_entry(
 
 #[tokio::test(core_threads = 2)]
 async fn test_database_proxy_for_unavailable_database() {
-    env_logger::init();
+    let _ = env_logger::builder().is_test(true).try_init();
 
     let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, MODULE_ENTRYPOINT_NAME)
         .expect("Unable to configure runtime with test wasm!");

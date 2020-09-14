@@ -39,7 +39,7 @@ async fn get_point_of_interest(
 
 #[tokio::test(core_threads = 2)]
 async fn test_trusted_information_retrieval_for_unavailable_database() {
-    env_logger::init();
+    let _ = env_logger::builder().is_test(true).try_init();
 
     // Send test database as a start-of-day config map.
     let config_map = ConfigMap {

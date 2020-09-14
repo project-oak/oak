@@ -21,10 +21,7 @@ use log::{debug, error, info};
 use maplit::hashmap;
 use oak_abi::proto::oak::application::ConfigMap;
 use serial_test::serial;
-use std::{
-    collections::HashMap,
-    sync::{Arc, Once},
-};
+use std::{collections::HashMap, sync::Arc};
 
 // Constants for Node config names that should match those in the textproto
 // config held in ../../../config.
@@ -45,16 +42,11 @@ fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
     })
 }
 
-static LOG_INIT_ONCE: Once = Once::new();
-
 async fn setup() -> (
     Arc<oak_runtime::Runtime>,
     OakAbiTestServiceClient<tonic::transport::Channel>,
 ) {
-    LOG_INIT_ONCE.call_once(|| {
-        // Logger panics if it is initalized more than once.
-        env_logger::init();
-    });
+    let _ = env_logger::builder().is_test(true).try_init();
 
     let wasm_modules = build_wasm().expect("failed to build wasm modules");
     let config = oak_tests::runtime_config_wasm(

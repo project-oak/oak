@@ -42,7 +42,7 @@ async fn submit_sample(
 
 #[tokio::test(core_threads = 2)]
 async fn test_aggregator() {
-    env_logger::init();
+    let _ = env_logger::builder().is_test(true).try_init();
 
     let runtime = oak_tests::run_single_module_with_config(
         MODULE_WASM_FILE_NAME,

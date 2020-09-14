@@ -29,7 +29,7 @@ async fn submit_sample(client: &mut RunningAverageClient<tonic::transport::Chann
 
 #[tokio::test(core_threads = 2)]
 async fn test_running_average() {
-    env_logger::init();
+    let _ = env_logger::builder().is_test(true).try_init();
 
     let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
         .expect("Unable to configure runtime with test wasm!");

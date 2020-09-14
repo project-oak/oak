@@ -30,7 +30,7 @@ const MODULE_WASM_FILE_NAME: &str = "chat.wasm";
 #[tokio::test(core_threads = 2)]
 #[serial]
 async fn test_room_create() {
-    let _ = env_logger::try_init();
+    let _ = env_logger::builder().is_test(true).try_init();
 
     let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "grpc_oak_main")
         .expect("Unable to configure runtime with test wasm!");
@@ -75,7 +75,7 @@ async fn test_room_create() {
 #[tokio::test(core_threads = 4)]
 #[serial]
 async fn test_chat() {
-    let _ = env_logger::try_init();
+    let _ = env_logger::builder().is_test(true).try_init();
 
     let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "grpc_oak_main")
         .expect("Unable to configure runtime with test wasm!");

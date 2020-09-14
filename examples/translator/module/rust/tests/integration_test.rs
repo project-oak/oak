@@ -22,7 +22,7 @@ const MODULE_WASM_FILE_NAME: &str = "translator.wasm";
 
 #[tokio::test(core_threads = 2)]
 async fn test_translate() {
-    env_logger::init();
+    let _ = env_logger::builder().is_test(true).try_init();
 
     let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "grpc_oak_main")
         .expect("Unable to configure runtime with test wasm!");
