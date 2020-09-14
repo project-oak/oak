@@ -553,7 +553,7 @@ framework via the Oak Runtime:
 // Test invoking the SayHello Node service method via the Oak runtime.
 #[tokio::test(core_threads = 2)]
 async fn test_say_hello() {
-    env_logger::init();
+    let _ = env_logger::builder().is_test(true).try_init();
 
     let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
         .expect("Unable to configure runtime with test wasm!");
