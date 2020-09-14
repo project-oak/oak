@@ -10,8 +10,8 @@ analysis.
 An Oak application creates an initial node and calls the entry point on that
 node. A typical pattern is to use this initial node as a "Planner Node",
 responsible for creating all other nodes and channels. The creation of the nodes
-an channels is done through code. For simple cases it is easy to figure out what
-the graph can look like by inspecting the code, but it becomes increasingly
+and channels is done through code. For simple cases it is easy to figure out
+what the graph can look like by inspecting the code, but it becomes increasingly
 difficult as the complexity of the logic of the planner node increases to cope
 with more complex node graphs. Another drawback of the code-based dynamic node
 creation is that we have to run the code to use the introspection mechanism to
@@ -27,13 +27,14 @@ include:
   the application.
 - It would be easier to build tools to perform static analysis of the node graph
   to detect potential problems.
-- It would usualy be easier to reason about the security of a static node graph.
+- It would usually be easier to reason about the security of a static node
+  graph.
 
 ## Overview
 
 Moving all node and channel creation to a configuration-based mechanism is a
 significant and potentially disruptive change. This RFC proposes a more gradual
-approach by implementing a re-usable WASM-based planner node that uses a
+approach by implementing a re-usable Wasm-based planner node that uses a
 manifest file to do the node and channel creation. The functionality can be
 expanded over time to support more complex scenarios.
 
@@ -62,14 +63,14 @@ specified in the `config_files` field.
 
 The planner node will also be responsible for routing invocations from the gRPC-
 and HTTP server pseudo nodes to the right receiver node based on the associated
-labels. Since it would be possible for multiple nodes to have the same Label,
+labels. Since it would be possible for multiple nodes to have the same label,
 the planner node would need an indication of which node should be the invocation
 recipient for a specific label.
 
 ### Manifest File
 
 The manifest file will be will be passed to the application as part of the
-initial configuation map as a TOML file. The file will be deserialised into the
+initial configuration map as a TOML file. The file will be deserialised into the
 following structure:
 
 ```rust
@@ -85,7 +86,7 @@ struct Node {
   /// as part of the initialisation message. This will be used to generate a
   /// filtered view of the map that will be sent as part of the initialisation
   /// message.
-  config_files: vec<String>,
+  config_files: Vec<String>,
 
   /// Whether this node will accept gRPC invocations targeted at the specified
   /// label.
@@ -97,7 +98,7 @@ struct Node {
 }
 
 struct Channel {
-  /// Unique name of the chanel.
+  /// Unique name of the channel.
   name: String,
 
   /// The label associated with the channel.
@@ -108,25 +109,25 @@ struct Channel {
   ///
   /// Note: this is in anticipation of changing channels to a multi-producer,
   /// single-consumer model to resolve #1197.
-  receiverNode: String,
+  receiver_node: String,
 
   /// The nodes that will receive handles to the write-half of the channel.
-  senderNodes: vec<String>,
+  sender_nodes: Vec<String>,
 }
 
 struct NodeGraph {
   /// The nodes that will be created.
-  nodes: vec<Node>,
+  nodes: Vec<Node>,
 
   /// The channels that will be created.
-  channels: vec<Channel>,
+  channels: Vec<Channel>,
 }
 
 ```
 
 ### Initialising New Nodes
 
-After creating a new WASM node the planner node will send an initialisation
+After creating a new Wasm node the planner node will send an initialisation
 message to the new node over the initial channel. These initialisation messages
 will provide other channels and additional configuration files to the node in a
 standard format. The additional configuration files will be a per-node filtered
@@ -134,7 +135,7 @@ view of the `ConfigMap` that was passed to the application on start-up.
 
 ```proto
 
-Message SenderChannelInfo {
+message SenderChannelInfo {
   // The name of the channel for the handle.
   string channel_name = 1,
 
@@ -143,7 +144,7 @@ Message SenderChannelInfo {
   oak.handle.Sender sender = 2;
 }
 
-Message ReceiverChannelInfo {
+message ReceiverChannelInfo {
   // The name of the channel for the handle.
   string channel_name = 1,
 
@@ -152,12 +153,12 @@ Message ReceiverChannelInfo {
   oak.handle.Receiver receiver = 2;
 }
 
-Message NodeInitialisation {
+message NodeInitialisation {
   // The Senders that the node expects.
-  repeated SenderChannelInfo = 1,
+  repeated SenderChannelInfo senders = 1,
 
   // The Receivers that the node expects.
-  repeated ReceiverChannelInfo = 2,
+  repeated ReceiverChannelInfo receivers = 2,
 
   // A filtered map of config entries intended for the node.
   ConfigMap config = 3
@@ -177,7 +178,7 @@ in the manifest file.
 This is not ideal, but we could work around it by adding a mapping as a config
 entry between internal names that the code understand and the channels names in
 the manifest file. We can then use this to support modification of the manifest
-file without having to recompile the WASM nodes.
+file without having to recompile the Wasm nodes.
 
 ## Planning
 
@@ -217,9 +218,9 @@ applications through static analysis tools that can help detect common problems:
 
 The first example will be dynamic creation of user-specific nodes and connect
 them to the appropriate channels in the graph. In future this will be extended
-to support teplate-based definition of subgraphs. The entire sub-graph will then
-be dynamically generated (e.g. a user-specific sub-graph consisting of multiple
-nodes each).
+to support template-based definition of subgraphs. The entire sub-graph will
+then be dynamically generated (e.g. a user-specific sub-graph consisting of
+multiple nodes each).
 
 ### Declaration of supported message types
 
@@ -233,5 +234,5 @@ We might consider making this part of the initial version:
 
 - It could help with providing a strongly typed mechanism for sending the
   additional channels during initialisation
-- It might allow us to automatically determine which channesl are required
+- It might allow us to automatically determine which channels are required
   without having to specify channels in the manifest
