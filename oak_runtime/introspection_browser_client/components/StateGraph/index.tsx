@@ -16,6 +16,8 @@
 
 import React from 'react';
 import { graphviz } from 'd3-graphviz';
+import { transition } from 'd3-transition';
+import { easeLinear } from 'd3-ease';
 import { makeStyles } from '@material-ui/core/styles';
 import {
   OakApplicationState,
@@ -109,7 +111,9 @@ export default function StateGraph({ applicationState }: StateGraphProps) {
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     const dotGraph = getGraphFromState(applicationState);
-    graphviz(ref.current).scale(0.9).renderDot(dotGraph);
+    // Type as any to fix type mismatch caused by incorrect typings.
+    const transiton: any = transition().duration(300).ease(easeLinear);
+    graphviz(ref.current).transition(transiton).scale(0.9).renderDot(dotGraph);
   }, [applicationState]);
 
   return <div className={classes.root} ref={ref} />;
