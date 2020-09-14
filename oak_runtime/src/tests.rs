@@ -19,15 +19,9 @@ use maplit::{hashmap, hashset};
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
 };
-use std::sync::Once;
-
-static LOG_INIT_ONCE: Once = Once::new();
 
 pub fn init_logging() {
-    LOG_INIT_ONCE.call_once(|| {
-        // Logger panics if it is initalized more than once.
-        env_logger::init();
-    });
+    let _ = env_logger::builder().is_test(true).try_init();
 }
 
 type NodeBody = dyn Fn(RuntimeProxy) -> Result<(), OakStatus> + Send + Sync;

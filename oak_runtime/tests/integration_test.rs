@@ -15,17 +15,12 @@
 //
 
 use oak_runtime::time::{RoughtimeClient, DEFAULT_MAX_RADIUS_MICROSECONDS};
-use std::{sync::Once, time::SystemTime};
-
-static LOG_INIT_ONCE: Once = Once::new();
+use std::time::SystemTime;
 
 const METRICS_PORT: u16 = 9876;
 
 fn init_logging() {
-    LOG_INIT_ONCE.call_once(|| {
-        // Logger panics if it is initalized more than once.
-        env_logger::init();
-    });
+    let _ = env_logger::builder().is_test(true).try_init();
 }
 
 mod common {
