@@ -34,6 +34,8 @@ pub struct Opt {
     commands: bool,
     #[structopt(long, help = "show logs of commands")]
     logs: bool,
+    #[structopt(long, help = "continue execution after error")]
+    keep_going: bool,
     #[structopt(subcommand)]
     pub cmd: Command,
 }
@@ -359,7 +361,11 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
                 step_result
                     .failed_steps_prefixes
                     .append(&mut result.failed_steps_prefixes);
-                run_status.update(&context, result.values.contains(&StatusResultValue::Error));
+                let failed = result.values.contains(&StatusResultValue::Error);
+                run_status.update(&context, failed);
+                if failed && !context.opt.keep_going {
+                    break;
+                }
             }
             let end = Instant::now();
             let elapsed = end.duration_since(start);
