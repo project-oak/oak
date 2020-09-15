@@ -699,10 +699,14 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                     name: "build application".to_string(),
                     command: build_application(&application),
                 },
+            ],
+            if opt.run_server.unwrap_or(true) {
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
-                build_server(&opt.build_server),
-            ],
+                vec![build_server(&opt.build_server)]
+            } else {
+                vec![]
+            },
             if opt.build_docker {
                 vec![build_docker(&example)]
             } else {
