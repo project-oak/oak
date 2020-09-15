@@ -47,35 +47,40 @@ impl super::Node for LogNode {
         handle: oak_abi::Handle,
         _notify_receiver: oneshot::Receiver<()>,
     ) {
-        loop {
-            // An error indicates the Runtime is terminating. We ignore it here and keep trying to
-            // read in case a Wasm Node wants to emit remaining messages. We will return
-            // once the channel is closed.
-            //
-            // TODO(#1100): Investigate option for improving code clarity and not busy-waiting
-            // during runtime termination.
-            let _ = runtime.wait_on_channels(&[handle]);
+        'wait: loop {
+            let result = runtime.wait_on_channels(&[handle]);
 
-            match runtime.channel_read(handle) {
-                Ok(Some(message)) => match LogMessage::decode(&*message.bytes) {
-                    Ok(msg) => log!(
-                        target: &format!("{}:{}", msg.file, msg.line),
-                        to_level(msg.level),
-                        "{}",
-                        msg.message,
-                    ),
-                    Err(error) => {
-                        error!("{} Could not parse LogMessage: {}", self.node_name, error)
+            // Read all available log messages (even if the Runtime is terminating).
+            'read: loop {
+                match runtime.channel_read(handle) {
+                    Ok(Some(message)) => match LogMessage::decode(&*message.bytes) {
+                        Ok(msg) => log!(
+                            target: &format!("{}:{}", msg.file, msg.line),
+                            to_level(msg.level),
+                            "{}",
+                            msg.message,
+                        ),
+                        Err(error) => {
+                            error!("{} Could not parse LogMessage: {}", self.node_name, error)
+                        }
+                    },
+                    Ok(None) => {
+                        // No more log messages to read, go back to waiting.
+                        break 'read;
                     }
-                },
-                Ok(None) => {}
-                Err(OakStatus::ErrChannelClosed) => {
-                    break;
+                    Err(OakStatus::ErrChannelClosed) => {
+                        info!("{} channel closed by remote", self.node_name);
+                        break 'wait;
+                    }
+                    Err(status) => {
+                        error!("{} Failed channel read: {:?}", self.node_name, status);
+                        break 'wait;
+                    }
                 }
-                Err(status) => {
-                    error!("{} Failed channel read: {:?}", self.node_name, status);
-                    break;
-                }
+            }
+
+            if result == Err(OakStatus::ErrTerminated) {
+                break 'wait;
             }
         }
         info!("{} logger execution complete", self.node_name);
