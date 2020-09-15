@@ -1303,7 +1303,7 @@ fn run_cargo_fmt(mode: FormatMode) -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new(
+                command: Cmd::new_with_env(
                     "cargo",
                     spread![
                         "fmt",
@@ -1314,6 +1314,12 @@ fn run_cargo_fmt(mode: FormatMode) -> Step {
                             FormatMode::Fix => vec![],
                         },
                     ],
+                    &hashmap! {
+                        // rustfmt emits copious debug logs, leading to multi-minute
+                        // runs if the user's env happens to have RUST_LOG=debug, so
+                        // force a higher log level.
+                        "RUST_LOG".to_string() => "warn".to_string(),
+                    },
                 ),
             })
             .collect(),
