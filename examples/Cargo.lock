@@ -1237,6 +1237,7 @@ dependencies = [
  "base64",
  "byteorder",
  "bytes",
+ "chrono",
  "futures",
  "futures-core",
  "futures-util",

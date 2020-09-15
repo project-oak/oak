@@ -17,7 +17,7 @@
 //! Logging pseudo-Node functionality.
 
 use crate::RuntimeProxy;
-use log::{error, info, log};
+use log::{error, info};
 use oak_abi::OakStatus;
 use oak_services::proto::oak::log::{Level, LogMessage};
 use prost::Message;
@@ -54,12 +54,23 @@ impl super::Node for LogNode {
             'read: loop {
                 match runtime.channel_read(handle) {
                     Ok(Some(message)) => match LogMessage::decode(&*message.bytes) {
-                        Ok(msg) => log!(
-                            target: &format!("{}:{}", msg.file, msg.line),
-                            to_level(msg.level),
-                            "{}",
-                            msg.message,
-                        ),
+                        Ok(msg) => {
+                            // Log messages that arrive from Oak applications over a logging channel
+                            // are controlled by IFC, and so need to be emitted independently of
+                            // whether the Runtime has been built with the `oak_debug` feature
+                            // enabled (and thus whether log! is connected up to anything or not).
+                            // So send to stderr.
+                            let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
+                            let timestamp = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+                            eprintln!(
+                                "{{{} {} {}:{}}} {}",
+                                timestamp,
+                                level_to_string(msg.level),
+                                msg.file,
+                                msg.line,
+                                msg.message
+                            );
+                        }
                         Err(error) => {
                             error!("{} Could not parse LogMessage: {}", self.node_name, error)
                         }
@@ -88,15 +99,15 @@ impl super::Node for LogNode {
     }
 }
 
-/// Translate a log level as encoded in a `LogMessage` into the corresponding
-/// enum value from the [`log` crate](https://crates.io/crates/log).
-fn to_level(level: i32) -> log::Level {
+/// Translate a log level as encoded in a `LogMessage` into a string
+fn level_to_string(level: i32) -> &'static str {
+    // Pad all the strings to 5 characters to try to line things up.
     match Level::from_i32(level).unwrap_or(Level::UnknownLevel) {
-        Level::UnknownLevel => log::Level::Error,
-        Level::Error => log::Level::Error,
-        Level::Warn => log::Level::Warn,
-        Level::Info => log::Level::Info,
-        Level::Debugging => log::Level::Debug,
-        Level::Trace => log::Level::Trace,
+        Level::UnknownLevel => " N/A ",
+        Level::Error => "ERROR",
+        Level::Warn => "WARN ",
+        Level::Info => "INFO ",
+        Level::Debugging => "DEBUG",
+        Level::Trace => "TRACE",
     }
 }

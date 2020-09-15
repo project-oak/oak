@@ -775,6 +775,7 @@ dependencies = [
  "base64",
  "byteorder",
  "bytes",
+ "chrono",
  "env_logger",
  "futures",
  "futures-core",

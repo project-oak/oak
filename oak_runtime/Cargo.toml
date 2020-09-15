@@ -19,6 +19,7 @@ default = ["oak_debug"]
 byteorder = { version = "*", default-features = false }
 bytes = "*"
 base64 = "*"
+chrono = "*"
 futures = "*"
 futures-core = "*"
 futures-util = "*"
