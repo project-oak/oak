@@ -880,6 +880,7 @@ dependencies = [
  "base64 0.11.0",
  "byteorder",
  "bytes",
+ "chrono",
  "futures",
  "futures-core",
  "futures-util",
