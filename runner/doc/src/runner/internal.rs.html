@@ -728,6 +728,35 @@
 <span id="728">728</span>
 <span id="729">729</span>
 <span id="730">730</span>
+<span id="731">731</span>
+<span id="732">732</span>
+<span id="733">733</span>
+<span id="734">734</span>
+<span id="735">735</span>
+<span id="736">736</span>
+<span id="737">737</span>
+<span id="738">738</span>
+<span id="739">739</span>
+<span id="740">740</span>
+<span id="741">741</span>
+<span id="742">742</span>
+<span id="743">743</span>
+<span id="744">744</span>
+<span id="745">745</span>
+<span id="746">746</span>
+<span id="747">747</span>
+<span id="748">748</span>
+<span id="749">749</span>
+<span id="750">750</span>
+<span id="751">751</span>
+<span id="752">752</span>
+<span id="753">753</span>
+<span id="754">754</span>
+<span id="755">755</span>
+<span id="756">756</span>
+<span id="757">757</span>
+<span id="758">758</span>
+<span id="759">759</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -765,6 +794,8 @@
     <span class="ident">commands</span>: <span class="ident">bool</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;show logs of commands&quot;</span>)]</span>
     <span class="ident">logs</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;continue execution after error&quot;</span>)]</span>
+    <span class="ident">keep_going</span>: <span class="ident">bool</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">subcommand</span>)]</span>
     <span class="kw">pub</span> <span class="ident">cmd</span>: <span class="ident">Command</span>,
 }
@@ -830,10 +861,33 @@
     <span class="kw">pub</span> <span class="ident">client_rust_target</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ServerVariant</span> {
+    <span class="ident">Base</span>,
+    <span class="ident">Logless</span>,
+    <span class="ident">NoIntrospectionClient</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span> <span class="kw">for</span> <span class="ident">ServerVariant</span> {
+    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">String</span>;
+    <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">variant</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="self">Self</span>::<span class="prelude-val">Err</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="ident">variant</span> {
+            <span class="string">&quot;base&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Base</span>),
+            <span class="string">&quot;logless&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Logless</span>),
+            <span class="string">&quot;no-introspection-client&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">NoIntrospectionClient</span>),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Failed to parse server variant {}&quot;</span>, <span class="ident">variant</span>)),
+        }
+    }
+}
+
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildServer</span> {
-    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, logless]&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;base&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">server_variant</span>: <span class="ident">String</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(
+        <span class="ident">long</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, logless, no-introspection-client]&quot;</span>,
+        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;base&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]&quot;</span>
@@ -1067,7 +1121,11 @@
                 <span class="ident">step_result</span>
                     .<span class="ident">failed_steps_prefixes</span>
                     .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">result</span>.<span class="ident">failed_steps_prefixes</span>);
-                <span class="ident">run_status</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">result</span>.<span class="ident">values</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">StatusResultValue</span>::<span class="ident">Error</span>));
+                <span class="kw">let</span> <span class="ident">failed</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">values</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">StatusResultValue</span>::<span class="ident">Error</span>);
+                <span class="ident">run_status</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">failed</span>);
+                <span class="kw">if</span> <span class="ident">failed</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">keep_going</span> {
+                    <span class="kw">break</span>;
+                }
             }
             <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
             <span class="kw">let</span> <span class="ident">elapsed</span> <span class="op">=</span> <span class="ident">end</span>.<span class="ident">duration_since</span>(<span class="ident">start</span>);
