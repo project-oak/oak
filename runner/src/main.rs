@@ -309,82 +309,78 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
 }
 
 fn build_server(opt: &BuildServer) -> Step {
-    match opt.server_variant.as_str() {
-        "base" | "logless" => Step::Multiple {
-            name: "server".to_string(),
-            steps: vec![
-                vec![Step::Single {
-                    name: "create bin folder".to_string(),
-                    command: Cmd::new(
-                        "mkdir",
-                        vec!["-p".to_string(), "oak_loader/bin".to_string()],
-                    ),
+    Step::Multiple {
+        name: "server".to_string(),
+        steps: vec![
+            vec![Step::Single {
+                name: "create bin folder".to_string(),
+                command: Cmd::new(
+                    "mkdir",
+                    vec!["-p".to_string(), "oak_loader/bin".to_string()],
+                ),
+            }],
+            match opt.server_variant {
+                ServerVariant::Base => vec![Step::Single {
+                    name: "build introspection browser client".to_string(),
+                    command: Cmd::new("npm",
+                                      vec![
+                                          "--prefix",
+                                          "oak_runtime/introspection_browser_client",
+                                          "run",
+                                          "build",
+                                      ])
                 }],
-                if opt.server_variant == "logless" {
-                    vec![]
-                } else {
-                    vec![Step::Single {
-                        name: "build introspection browser client".to_string(),
-                        command: Cmd::new("npm",
-                        vec![
-                            "--prefix",
-                            "oak_runtime/introspection_browser_client",
-                            "run",
-                            "build",
-                        ])
-                    }]
-                },
-                vec![Step::Single {
-                    name: format!("build server ({})", opt.server_variant),
-                    command: Cmd::new_with_env(
-                        "cargo",
-                        spread![
-                            ...match &opt.server_rust_toolchain {
-                                // This overrides the toolchain used by `rustup` to invoke the actual
-                                // `cargo` binary.
-                                // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
-                                Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
-                                None => vec![],
-                            },
-                            "build".to_string(),
-                            // If building in coverage mode, use the default target from the host, and build
-                            // in debug mode.
-                            ...if opt.coverage {
-                                vec![]
-                            } else {
-                                vec![
-                                    format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                                    "--release".to_string(),
-                                ]
-                            },
-                            "--manifest-path=oak_loader/Cargo.toml".to_string(),
-                            "--out-dir=oak_loader/bin".to_string(),
-                            // `--out-dir` is unstable and requires `-Zunstable-options`.
-                            "-Zunstable-options".to_string(),
-                            ...if opt.server_variant == "logless" {
-                                vec!["--no-default-features".to_string()]
-                            } else {
-                               vec!["--features=oak_introspection_client".to_string()]
-                            },
-                        ],
-                        &if opt.coverage {
-                            hashmap! {
-                                // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
-                                "CARGO_INCREMENTAL".to_string() => "0".to_string(),
-                                "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
-                                // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
-                                "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
-                            }
-                        } else {
-                            hashmap! {}
+                _ => vec![]
+            },
+            vec![Step::Single {
+                name: format!("build server ({:?})", opt.server_variant),
+                command: Cmd::new_with_env(
+                    "cargo",
+                    spread![
+                        ...match &opt.server_rust_toolchain {
+                            // This overrides the toolchain used by `rustup` to invoke the actual
+                            // `cargo` binary.
+                            // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
+                            Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
+                            None => vec![],
                         },
-                    ),
-                }],
-            ].into_iter()
+                        "build".to_string(),
+                        // If building in coverage mode, use the default target from the host, and build
+                        // in debug mode.
+                        ...if opt.coverage {
+                            vec![]
+                        } else {
+                            vec![
+                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                                "--release".to_string(),
+                            ]
+                        },
+                        "--manifest-path=oak_loader/Cargo.toml".to_string(),
+                        "--out-dir=oak_loader/bin".to_string(),
+                        // `--out-dir` is unstable and requires `-Zunstable-options`.
+                        "-Zunstable-options".to_string(),
+                        ...match opt.server_variant {
+                            ServerVariant::Logless => vec!["--no-default-features".to_string()],
+                            ServerVariant::NoIntrospectionClient => vec![],
+                            ServerVariant::Base => vec!["--features=oak_introspection_client".to_string()],
+                        },
+                    ],
+                    &if opt.coverage {
+                        hashmap! {
+                            // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
+                            "CARGO_INCREMENTAL".to_string() => "0".to_string(),
+                            "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
+                            // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
+                            "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
+                        }
+                    } else {
+                        hashmap! {}
+                    },
+                ),
+            }],
+        ].into_iter()
             .flatten()
             .collect::<Vec<_>>()
-        },
-        v => panic!("unknown server variant: {}", v),
     }
 }
 
@@ -451,13 +447,13 @@ fn run_ci() -> Step {
             check_format(),
             run_cargo_deny(),
             build_server(&BuildServer {
-                server_variant: "base".to_string(),
+                server_variant: ServerVariant::Base,
                 server_rust_toolchain: None,
                 server_rust_target: None,
                 coverage: false,
             }),
             build_server(&BuildServer {
-                server_variant: "logless".to_string(),
+                server_variant: ServerVariant::Logless,
                 server_rust_toolchain: None,
                 server_rust_target: None,
                 coverage: false,
@@ -477,7 +473,7 @@ fn run_ci() -> Step {
                     client_rust_target: None,
                 },
                 build_server: BuildServer {
-                    server_variant: "base".to_string(),
+                    server_variant: ServerVariant::Base,
                     server_rust_toolchain: None,
                     server_rust_target: None,
                     coverage: false,
@@ -496,7 +492,7 @@ fn run_ci() -> Step {
                     client_rust_target: None,
                 },
                 build_server: BuildServer {
-                    server_variant: "base".to_string(),
+                    server_variant: ServerVariant::Base,
                     server_rust_toolchain: None,
                     server_rust_target: None,
                     coverage: false,
@@ -516,7 +512,7 @@ fn run_ci() -> Step {
                     client_rust_target: None,
                 },
                 build_server: BuildServer {
-                    server_variant: "base".to_string(),
+                    server_variant: ServerVariant::Base,
                     server_rust_toolchain: None,
                     server_rust_target: None,
                     coverage: false,
@@ -539,10 +535,9 @@ fn run_example_server(
             "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
-            ...if opt.server_variant == "logless" {
-                vec![]
-            } else {
-                vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()]
+            ...match opt.server_variant {
+                ServerVariant::Logless => vec![],
+                _ => vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()],
             },
             ...example_server.additional_args.clone(),
             ...server_additional_args,

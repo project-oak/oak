@@ -99,10 +99,33 @@ pub struct BuildClient {
     pub client_rust_target: Option<String>,
 }
 
+#[derive(Clone, Debug)]
+pub enum ServerVariant {
+    Base,
+    Logless,
+    NoIntrospectionClient,
+}
+
+impl std::str::FromStr for ServerVariant {
+    type Err = String;
+    fn from_str(variant: &str) -> Result<Self, Self::Err> {
+        match variant {
+            "base" => Ok(ServerVariant::Base),
+            "logless" => Ok(ServerVariant::Logless),
+            "no-introspection-client" => Ok(ServerVariant::NoIntrospectionClient),
+            _ => Err(format!("Failed to parse server variant {}", variant)),
+        }
+    }
+}
+
 #[derive(StructOpt, Clone)]
 pub struct BuildServer {
-    #[structopt(long, help = "server variant: [base, logless]", default_value = "base")]
-    pub server_variant: String,
+    #[structopt(
+        long,
+        help = "server variant: [base, logless, no-introspection-client]",
+        default_value = "base"
+    )]
+    pub server_variant: ServerVariant,
     #[structopt(
         long,
         help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
