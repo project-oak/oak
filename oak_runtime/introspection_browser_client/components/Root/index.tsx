@@ -21,6 +21,7 @@ import ApplicationStateOverview from '~/components/ApplicationStateOverview';
 import StateGraph from '~/components/StateGraph';
 import EventList from '~/components/EventList';
 import MainTabs from '~/components/MainTabs';
+import TimeTravelControls from '~/components/TimeTravelControls';
 import introspectionEventsProto, {
   DirectionMap,
 } from '~/protoc_out/proto/introspection_events_pb';
@@ -211,9 +212,16 @@ function eventReducer(
 }
 
 function useEvents() {
+  // Total list of all introspection events in chronological order
   const [events, setEvents] = React.useState<introspectionEventsProto.Event[]>(
     []
   );
+  // Index of the event representing the last state change. Setting it lower
+  // than the number of events enables inspecting past application states.
+  const [presentEventIndex, setPresentEventIndex] = React.useState<number>(
+    events.length - 1
+  );
+
   React.useEffect(() => {
     async function loadEvents() {
       const serializedEvents: Uint8Array = await loadSerializedEvents();
@@ -221,24 +229,27 @@ function useEvents() {
         serializedEvents
       ).getEventsList();
       setEvents(events);
+      setPresentEventIndex(events.length - 1);
     }
 
     loadEvents();
   }, []);
 
-  return events;
+  return { totalEvents: events, presentEventIndex, setPresentEventIndex };
 }
 
 export default function Root() {
-  const events = useEvents();
-  const applicationState = React.useMemo(
-    (): OakApplicationState =>
-      events.reduce(eventReducer, {
-        nodeInfos: new Map(),
-        channels: new Map(),
-      }),
-    [events]
-  );
+  // The entirety of introspection events
+  const { totalEvents, presentEventIndex, setPresentEventIndex } = useEvents();
+
+  // Subset of events representing the inspected point in time
+  const events = totalEvents.slice(0, presentEventIndex + 1);
+
+  // Application state based of the current point in time
+  const applicationState: OakApplicationState = events.reduce(eventReducer, {
+    nodeInfos: new Map(),
+    channels: new Map(),
+  });
 
   return (
     <>
@@ -266,6 +277,24 @@ export default function Root() {
             ),
           },
         ]}
+      />
+      <TimeTravelControls
+        back={() => (
+          <button
+            disabled={presentEventIndex === 0}
+            onClick={() => setPresentEventIndex((index) => index - 1)}
+          >
+            Go to back in time
+          </button>
+        )}
+        forth={() => (
+          <button
+            disabled={presentEventIndex + 1 >= totalEvents.length}
+            onClick={() => setPresentEventIndex((index) => index + 1)}
+          >
+            Go forward in time
+          </button>
+        )}
       />
     </>
   );

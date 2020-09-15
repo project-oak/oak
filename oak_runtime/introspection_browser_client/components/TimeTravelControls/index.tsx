@@ -15,22 +15,32 @@
 //
 
 import React from 'react';
-import introspectionEventsProto from '~/protoc_out/proto/introspection_events_pb';
+import { makeStyles } from '@material-ui/core/styles';
 
-type EventListProps = { events: introspectionEventsProto.Event[] };
+const useStyles = makeStyles(() => ({
+  wrapper: {
+    position: 'fixed',
+    right: '10px',
+    bottom: '10px',
+    display: 'flex',
+    padding: '5px',
+  },
 
-export default function EventList({ events }: EventListProps) {
+  backWrapper: {
+    margin: '5px',
+  },
+
+  forthWrapper: { margin: '5px' },
+}));
+
+type EventListProps = { back: () => JSX.Element; forth: () => JSX.Element };
+
+export default function EventList({ back, forth }: EventListProps) {
+  const classes = useStyles();
   return (
-    <section>
-      <strong>Events List</strong>
-      <ol reversed>
-        {events.map((event, index) => (
-          // Usually it's not advisable to use the index as a key. However since
-          // the list of events is append-only it's fine in this case.
-          // Ref: https://reactjs.org/docs/lists-and-keys.html#keys
-          <li key={index}>{JSON.stringify(event.toObject())}</li>
-        ))}
-      </ol>
-    </section>
+    <div className={classes.wrapper}>
+      <div className={classes.backWrapper}>{back()}</div>
+      <div className={classes.forthWrapper}>{forth()}</div>
+    </div>
   );
 }
