@@ -61,17 +61,44 @@ specified in the `config_files` field.
 
 ### Invocation Routing
 
-The planner node will also be responsible for routing invocations from the gRPC-
-and HTTP server pseudo nodes to the right receiver node based on the associated
-labels. Since it would be possible for multiple nodes to have the same label,
-the planner node would need an indication of which node should be the invocation
-recipient for a specific label.
+The planner node will be responsible for creating the required pseudo nodes as
+well. In the specific cases of HTTP- and gRPC pseudo nodes each pseudo node will
+send all invocations over a single dedicated invocation channel. The planner
+node will, by default, have the handle to receive these invocations and
+therefore be responsible for routing them to the right Wasm nodes based on the
+associated labels (specifically the label associated with the request receiver
+channel should match the label of the target Wasm node). Since it would be
+possible for multiple Wasm nodes to share the same label, the planner node would
+need an indication of which Wasm node should receive invocations with a specific
+label on the request receiver channel.
+
+If more advanced routing is required, the planner node could forward the
+invocation receiver channel to another node that can do the routing. The problem
+in this case is that the new node would have to be responsible for creating any
+per-label nodes as well if these nodes must be dynamically created, seeing that
+the planner node will no longer be able to see incoming invocations.
+
+Questions:
+
+- Would there be a requirement for multiple gRPC server pseudo nodes running on
+  different ports to each have a different configuration for Invocation routing?
+- Should we use special handling of channel types to determine the targets for
+  routing, or should we mark specific nodes as targeted invocation receivers?
+- Should we support overriding all routing so that the planner node still
+  receives all invocations, but always forward it to a single specified node
+  that is responsible for the routing?
 
 ### Manifest File
 
 The manifest file will be passed to the application as part of the initial
-configuration map as a TOML file. The file will be deserialised into the
-following structure:
+configuration map as a TOML file. The assumption is that each application will
+have one unique node graph manifest file, which will be maintained by the
+developer of the application. The node graph manifest should be consistent with
+the application configuration file and the defense-in-depth restrictions. As
+part of the future work we plan on building analysis tools to validate that this
+is the case.
+
+The file will be deserialised into the following structure:
 
 ```rust
 
@@ -88,12 +115,20 @@ struct Node {
   /// message.
   config_files: Vec<String>,
 
-  /// Whether this node will accept gRPC invocations targeted at the specified
-  /// label.
+  /// Whether this node should be the target node for all gRPC invocations
+  /// targeted at the specified label. This is only used if the planner node is
+  /// also responsible for invocation routing.
+  ///
+  /// Note: it should be validated that this value is only true for one node
+  /// per label.
   grpc_invocation_receiver: bool,
 
-  /// Whether this node will accept HTTP invocations targeted at the specified
-  /// label.
+  /// Whether this node should be the target node for all HTTP invocations
+  /// targeted at the specified label. This is only used if the planner node is
+  /// also responsible for invocation routing.
+  ///
+  /// Note: it should be validated that this value is only true for one node
+  /// per label.
   http_invocation_receiver: bool,
 }
 
@@ -132,6 +167,16 @@ message to the new node over the initial channel. These initialisation messages
 will provide other channels and additional configuration files to the node in a
 standard format. The additional configuration files will be a per-node filtered
 view of the `ConfigMap` that was passed to the application on start-up.
+
+Nodes should support multiple initialisation messages. This would be required if
+per-label dynamic node and channel creation is supported. If a new dynamic
+channel is created, one of the channel halves are likely to end up in an
+existing node, and so would be passed in as an additional initialisation
+message.
+
+Question: if multiple initialisation messages are supported should we change it
+to using `oneof` and send a separate initialisation message for the config map,
+follow by one message for each sender and receiver channel?
 
 ```proto
 
@@ -182,16 +227,21 @@ file without having to recompile the Wasm nodes.
 
 ## Planning
 
-The initial implementation will be done as a `planner` example. It will create
-multiple test nodes and channels and connect these together. The example will
-also expose a gRPC method to the client so the client can request the manifest
-file. The client will compare the manifest file to the introspection data to
-test that the nodes were created as expected.
+The initial implementation will be done as a static `planner` example. It will
+create multiple test nodes and channels and connect these together. The example
+will also expose a gRPC method to the client so the client can request the
+manifest file. The client will compare the manifest file to the introspection
+data to test that the nodes were created as expected.
 
-Once the intial implementation is done, some of the common reusable code will be
-moved to the SDK. The fist example of such reusable code is support for node to
-accept an initial proto that contains a list of `Sender`s and `Receiver`s that
-wrap the handles for channels that should be available to the node, and
+The next step would be to extend the planner node to support per-label dynamic
+node creation. This could be used to implement an alternative version of the
+private database example as a proof of concept for per-user node creation and
+gRPC invocation routing.
+
+Once the intial implementations are done, some of the common reusable code will
+be moved to the SDK. The fist example of such reusable code is support for node
+to accept an initial proto that contains a list of `Sender`s and `Receiver`s
+that wrap the handles for channels that should be available to the node, and
 potentially additional configuration files.
 
 The next step would be to update the existing examples to reuse the
@@ -204,15 +254,27 @@ configuration-based `planner` node.
 We can support application developers in finding potential issues in their
 applications through static analysis tools that can help detect common problems:
 
+- Check for consistency between application configuration and node graph
+  manifest
 - Check that all node and channel names are unique
 - Check that there is only one gRPC invocation receiver for each label
 - Check that there is only one HTTP invocation receiver for each label
 - Check that all nodes can write to handles they receive
 - Check that all nodes can read from handles they receive
+- Check that the node graph manifest does not violate defense-in-depth
+  restritcions
 - Hihglight points where data is declassified to `Public`
 - Find nodes that can never receive data (unneeded nodes)
 - Find nodes where data will get stuck (dead ends)
-- Find risky patterns (e.g. diamond shaped graph)
+- Find risky patterns (e.g. diamond shaped graph with declassification in each
+  path)
+
+Note: The static analysis tools that focus on the structure of the node graph
+will only be able to analyse the initial state. It is possible for nodes to send
+channel handles to other nodes embedded in protobuf messages, which would mean
+that additional connections might be created over time. Nodes could also close
+channels and nodes could terminate. This means that while the initial setup
+might be static it does not guarantee that the node structure will never change.
 
 ### Dynamic sub-graph creation
 
@@ -224,11 +286,13 @@ multiple nodes each).
 
 ### Declaration of supported message types
 
-Each node will be able to declare which message types it can read and write.
-Each channel will be annotated with the message types is can handle. This will
-allow us to build additional static analysis tools to make sure each node can
-handle the messages it will receive and all messages that it might send will go
-to a node that can understand those messages.
+Each node will be able to declare which protobuf message types it can read and
+write. Each channel will be annotated with the single message type it is
+intended for. If a channel should carry multiple message types, it can be done
+using a wrapper message and `oneof`. This will allow us to build additional
+static analysis tools to make sure each node can handle the messages it will
+receive and all messages that it might send will go to a node that can
+understand those messages.
 
 We might consider making this part of the initial version:
 
