@@ -1,5 +1,6 @@
 # Build output
 /dist
+/dist_tmp
 # Programmatically generated code from protobufs
 /protoc_out
 /protoc_tmp_out

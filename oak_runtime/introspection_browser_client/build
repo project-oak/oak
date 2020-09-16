@@ -2,6 +2,25 @@
 #
 # Build browser introspection client.
 
+#######################################
+# Copies a directory without overwriting identical files at the destination.
+# Arguments:
+#   A source directory, a destination directory.
+#######################################
+function copy_directory_nondestructively() {
+  local SOURCE_DIR=$1
+  local DESTINTAION_DIR=$2
+
+  for file in $( (cd "${SOURCE_DIR}" && find . -type f) ); do
+    local SOURCE_FILE="${SOURCE_DIR}/${file}"
+    local DESTINATION_FILE="${DESTINTAION_DIR}/${file}"
+    if ! cmp --silent "${SOURCE_FILE}" "${DESTINATION_FILE}"; then
+      mkdir -p "$(dirname "${DESTINATION_FILE}")"
+      cp -f "${SOURCE_FILE}" "${DESTINATION_FILE}"
+    fi
+  done
+}
+
 # Install npm modules if needed
 readonly CURRENT_PACKAGE_LOCK="./package-lock.json"
 readonly LAST_INSTALLED_PACKAGE_LOCK="./node_modules/.cache/last-install-package-lock.json"
@@ -29,17 +48,25 @@ protoc \
 # Copy each generated file into the actual output directory, but do not
 # overwrite identical files. Doing this preserves the last modified date,
 # allowing for caching of webpack build steps down the line.
-for file in $( (cd "${PROTO_TMP_OUT_DIR}" && find . -type f) ); do
-  TMP_PROTO_PATH="${PROTO_TMP_OUT_DIR}/${file}"
-  OUTPUT_PROTO_PATH="${PROTO_OUT_DIR}/${file}"
-  if ! cmp --silent "${TMP_PROTO_PATH}" "${OUTPUT_PROTO_PATH}"; then
-    mkdir -p "$(dirname "${OUTPUT_PROTO_PATH}")"
-    cp -f "${TMP_PROTO_PATH}" "${OUTPUT_PROTO_PATH}"
-  fi
-done
+copy_directory_nondestructively "${PROTO_TMP_OUT_DIR}" "${PROTO_OUT_DIR}"
 
 # Finally delete the temporary protobuf directory.
 rm -rf "${PROTO_TMP_OUT_DIR}"
 
 # Build JavaScript bundle
-npx webpack --env.NODE_ENV=production
+readonly WEBPACK_TMP_OUT_DIR="./dist_tmp"
+readonly WEBPACK_OUT_DIR="./dist"
+
+mkdir -p "${WEBPACK_TMP_OUT_DIR}"
+mkdir -p "${WEBPACK_OUT_DIR}"
+
+npx webpack --env.NODE_ENV="production" --env.OUTPUT_PATH="${WEBPACK_TMP_OUT_DIR}"
+
+# Copy each generated file into the actual output directory, but do not
+# overwrite identical files. Preserves the last modified date of unchanged
+# outputs, thereby preventing cargo from rebuilding crates that include them.
+# Ref: https://github.com/project-oak/oak/issues/1456
+copy_directory_nondestructively "${WEBPACK_TMP_OUT_DIR}" "${WEBPACK_OUT_DIR}"
+
+# Finally delete the temporary output directory.
+rm -rf "${WEBPACK_TMP_OUT_DIR}"
