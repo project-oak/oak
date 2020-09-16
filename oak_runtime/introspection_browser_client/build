@@ -10,16 +10,36 @@ if ! cmp --silent "$CURRENT_PACKAGE_LOCK" "$LAST_INSTALLED_PACKAGE_LOCK"; then
 fi
 
 # Generate JavaScript code from the introspection_events proto
-mkdir -p ./protoc_out
 readonly PROTOC_GEN_TS_PATH="./node_modules/.bin/protoc-gen-ts"
+readonly PROTO_TMP_OUT_DIR="./protoc_tmp_out"
 readonly PROTO_OUT_DIR="./protoc_out"
+
+mkdir -p "${PROTO_TMP_OUT_DIR}"
+mkdir -p "${PROTO_OUT_DIR}"
+
+# Initially write the generated code to a temporary directory.
 protoc \
     --proto_path=../../ \
     --plugin="protoc-gen-ts=${PROTOC_GEN_TS_PATH}" \
-    --js_out="import_style=commonjs,binary:${PROTO_OUT_DIR}" \
-    --ts_out="${PROTO_OUT_DIR}" \
+    --js_out="import_style=commonjs,binary:${PROTO_TMP_OUT_DIR}" \
+    --ts_out="${PROTO_TMP_OUT_DIR}" \
     ../../proto/introspection_events.proto \
     ../../oak_abi/proto/label.proto
+
+# Copy each generated file into the actual output directory, but do not
+# overwrite identical files. Doing this preserves the last modified date,
+# allowing for caching of webpack build steps down the line.
+for file in $( (cd "${PROTO_TMP_OUT_DIR}" && find . -type f) ); do
+  TMP_PROTO_PATH="${PROTO_TMP_OUT_DIR}/${file}"
+  OUTPUT_PROTO_PATH="${PROTO_OUT_DIR}/${file}"
+  if ! cmp --silent "${TMP_PROTO_PATH}" "${OUTPUT_PROTO_PATH}"; then
+    mkdir -p "$(dirname "${OUTPUT_PROTO_PATH}")"
+    cp -f "${TMP_PROTO_PATH}" "${OUTPUT_PROTO_PATH}"
+  fi
+done
+
+# Finally delete the temporary protobuf directory.
+rm -rf "${PROTO_TMP_OUT_DIR}"
 
 # Build JavaScript bundle
 npx webpack --env.NODE_ENV=production
