@@ -102,9 +102,10 @@ pub struct BuildClient {
     pub client_rust_target: Option<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ServerVariant {
     Base,
+    Coverage,
     Logless,
     NoIntrospectionClient,
 }
@@ -114,6 +115,7 @@ impl std::str::FromStr for ServerVariant {
     fn from_str(variant: &str) -> Result<Self, Self::Err> {
         match variant {
             "base" => Ok(ServerVariant::Base),
+            "coverage" => Ok(ServerVariant::Coverage),
             "logless" => Ok(ServerVariant::Logless),
             "no-introspection-client" => Ok(ServerVariant::NoIntrospectionClient),
             _ => Err(format!("Failed to parse server variant {}", variant)),
@@ -125,7 +127,7 @@ impl std::str::FromStr for ServerVariant {
 pub struct BuildServer {
     #[structopt(
         long,
-        help = "server variant: [base, logless, no-introspection-client]",
+        help = "server variant: [base, coverage, logless, no-introspection-client]",
         default_value = "base"
     )]
     pub server_variant: ServerVariant,
@@ -139,8 +141,6 @@ pub struct BuildServer {
         help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     )]
     pub server_rust_target: Option<String>,
-    #[structopt(long, help = "produce coverage report")]
-    pub coverage: bool,
 }
 
 /// A construct to keep track of the status of the execution. It only cares about the top-level
