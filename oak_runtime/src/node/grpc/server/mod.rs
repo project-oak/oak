@@ -384,7 +384,10 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
                         Some(status) if status.code == rpc::Code::Ok as i32 => Ok(response.rsp_msg),
                         Some(status) => Err(to_tonic_status(status)),
                     };
-                    tx.send(result).unwrap();
+                    if let Err(err) = tx.send(result) {
+                        error!("Failed to send gRPC response: {:?}", err);
+                        break;
+                    }
                 }
             });
             Ok(tonic::Response::new(rx))
