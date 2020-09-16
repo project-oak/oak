@@ -106,8 +106,8 @@ void SendLoop(Chat::Stub* stub, const RoomId& room_id, const std::string& user_h
     msg->set_text(text);
     grpc::Status status = stub->SendMessage(&context, req, &rsp);
     if (!status.ok()) {
-      LOG(WARNING) << "Could not SendMessage(): " << status.error_code() << ": "
-                   << status.error_message();
+      LOG(WARNING) << "Could not SendMessage(): " << oak::status_code_to_string(status.error_code())
+                   << ": " << status.error_message();
       break;
     }
     Prompt(user_handle);
@@ -149,7 +149,8 @@ class Room {
     grpc::Status status = stub_->CreateRoom(&context, req_, &rsp);
     if (!status.ok()) {
       LOG(FATAL) << "Could not CreateRoom('" << absl::Base64Escape(room_id_string)
-                 << "'): " << status.error_code() << ": " << status.error_message();
+                 << "'): " << oak::status_code_to_string(status.error_code()) << ": "
+                 << status.error_message();
     }
   }
   ~Room() {
@@ -160,8 +161,8 @@ class Room {
     google::protobuf::Empty rsp;
     grpc::Status status = stub_->DestroyRoom(&context, req, &rsp);
     if (!status.ok()) {
-      LOG(WARNING) << "Could not DestroyRoom(): " << status.error_code() << ": "
-                   << status.error_message();
+      LOG(WARNING) << "Could not DestroyRoom(): " << oak::status_code_to_string(status.error_code())
+                   << ": " << status.error_message();
     }
   }
   const RoomId& Id() const { return req_.room_id(); }

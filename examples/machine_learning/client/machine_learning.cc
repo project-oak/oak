@@ -38,8 +38,8 @@ std::string send_data(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Data(&context, data, &response);
   if (!status.ok()) {
-    LOG(FATAL) << "Could not submit data: " << status.error_code() << ": "
-               << status.error_message();
+    LOG(FATAL) << "Could not submit data: " << oak::status_code_to_string(status.error_code())
+               << ": " << status.error_message();
   }
   return response.message();
 }
@@ -50,7 +50,8 @@ std::string learn(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Learn(&context, learn, &response);
   if (!status.ok()) {
-    LOG(FATAL) << "Could not learn: " << status.error_code() << ": " << status.error_message();
+    LOG(FATAL) << "Could not learn: " << oak::status_code_to_string(status.error_code()) << ": "
+               << status.error_message();
   }
   return response.message();
 }
@@ -61,7 +62,8 @@ std::string predict(MachineLearning::Stub* stub) {
   MLResponse response;
   ::grpc::Status status = stub->Predict(&context, predict, &response);
   if (!status.ok()) {
-    LOG(FATAL) << "Could not predict: " << status.error_code() << ": " << status.error_message();
+    LOG(FATAL) << "Could not predict: " << oak::status_code_to_string(status.error_code()) << ": "
+               << status.error_message();
   }
   return response.message();
 }

@@ -42,8 +42,8 @@ void get_point_of_interest(TrustedInformationRetrieval::Stub* stub, std::string 
   GetPointOfInterestResponse response;
   grpc::Status status = stub->GetPointOfInterest(&context, request, &response);
   if (!status.ok()) {
-    LOG(FATAL) << "Could not get point of interest: " << status.error_code() << ": "
-               << status.error_message();
+    LOG(FATAL) << "Could not get point of interest: "
+               << oak::status_code_to_string(status.error_code()) << ": " << status.error_message();
   }
   LOG(INFO) << "Response:";
   LOG(INFO) << " - name: " << response.point_of_interest().name();

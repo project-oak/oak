@@ -53,7 +53,8 @@ int main(int argc, char** argv) {
   BlobResponse putResponse;
   grpc::Status putStatus = stub->PutBlob(&putContext, putRequest, &putResponse);
   if (!putStatus.ok()) {
-    LOG(FATAL) << "PutBlob failed: " << putStatus.error_code() << ": " << putStatus.error_message();
+    LOG(FATAL) << "PutBlob failed: " << oak::status_code_to_string(putStatus.error_code()) << ": "
+               << putStatus.error_message();
   }
   LOG(INFO) << "Blob stored at id: " << putResponse.id();
 
@@ -63,7 +64,8 @@ int main(int argc, char** argv) {
   BlobResponse getResponse;
   grpc::Status getStatus = stub->GetBlob(&getContext, getRequest, &getResponse);
   if (!getStatus.ok()) {
-    LOG(FATAL) << "GetBlob failed: " << getStatus.error_code() << ": " << getStatus.error_message();
+    LOG(FATAL) << "GetBlob failed: " << oak::status_code_to_string(getStatus.error_code()) << ": "
+               << getStatus.error_message();
   }
   LOG(INFO) << "Successfully retrieved Blob";
 

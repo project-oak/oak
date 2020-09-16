@@ -68,7 +68,8 @@ bool run_abi_tests(OakABITestService::Stub* stub, const std::string& include,
   ABITestResponse response;
   grpc::Status status = stub->RunTests(&context, request, &response);
   if (!status.ok()) {
-    LOG(WARNING) << "Could not call RunTests('" << include << "'): " << status.error_code() << ": "
+    LOG(WARNING) << "Could not call RunTests('" << include
+                 << "'): " << oak::status_code_to_string(status.error_code()) << ": "
                  << status.error_message();
     return false;
   }
