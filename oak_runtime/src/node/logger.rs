@@ -16,11 +16,14 @@
 
 //! Logging pseudo-Node functionality.
 
-use crate::RuntimeProxy;
-use log::{error, info};
+use crate::{
+    io::{Receiver, ReceiverExt},
+    RuntimeProxy,
+};
+use log::{error, info, warn};
 use oak_abi::OakStatus;
+use oak_io::{handle::ReadHandle, OakError};
 use oak_services::proto::oak::log::{Level, LogMessage};
-use prost::Message;
 use std::string::String;
 use tokio::sync::oneshot;
 
@@ -47,51 +50,40 @@ impl super::Node for LogNode {
         handle: oak_abi::Handle,
         _notify_receiver: oneshot::Receiver<()>,
     ) {
-        'wait: loop {
-            let result = runtime.wait_on_channels(&[handle]);
-
-            // Read all available log messages (even if the Runtime is terminating).
-            'read: loop {
-                match runtime.channel_read(handle) {
-                    Ok(Some(message)) => match LogMessage::decode(&*message.bytes) {
-                        Ok(msg) => {
-                            // Log messages that arrive from Oak applications over a logging channel
-                            // are controlled by IFC, and so need to be emitted independently of
-                            // whether the Runtime has been built with the `oak_debug` feature
-                            // enabled (and thus whether log! is connected up to anything or not).
-                            // So send to stderr.
-                            let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
-                            let timestamp = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-                            eprintln!(
-                                "{{{} {} {}:{}}} {}",
-                                timestamp,
-                                level_to_string(msg.level),
-                                msg.file,
-                                msg.line,
-                                msg.message
-                            );
-                        }
-                        Err(error) => {
-                            error!("{} Could not parse LogMessage: {}", self.node_name, error)
-                        }
-                    },
-                    Ok(None) => {
-                        // No more log messages to read, go back to waiting.
-                        break 'read;
-                    }
-                    Err(OakStatus::ErrChannelClosed) => {
-                        info!("{} channel closed by remote", self.node_name);
-                        break 'wait;
-                    }
-                    Err(status) => {
-                        error!("{} Failed channel read: {:?}", self.node_name, status);
-                        break 'wait;
-                    }
+        let receiver = Receiver::<LogMessage>::new(ReadHandle { handle });
+        loop {
+            match receiver.receive(&runtime) {
+                Ok(msg) => {
+                    // Log messages that arrive from Oak applications over a logging channel
+                    // are controlled by IFC, and so need to be emitted independently of
+                    // whether the Runtime has been built with the `oak_debug` feature
+                    // enabled (and thus whether log! is connected up to anything or not).
+                    // So send to stderr.
+                    let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
+                    let timestamp = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+                    eprintln!(
+                        "{{{} {} {}:{}}} {}",
+                        timestamp,
+                        level_to_string(msg.level),
+                        msg.file,
+                        msg.line,
+                        msg.message
+                    );
                 }
-            }
-
-            if result == Err(OakStatus::ErrTerminated) {
-                break 'wait;
+                // Recoverable errors:
+                Err(OakError::ProtobufDecodeError(err)) => {
+                    warn!("{} failed to decode log message: {:?}", self.node_name, err);
+                }
+                // Errors that lead to Node termination:
+                Err(OakError::OakStatus(OakStatus::ErrTerminated)) => break,
+                Err(OakError::OakStatus(OakStatus::ErrChannelClosed)) => {
+                    info!("{} channel closed", self.node_name);
+                    break;
+                }
+                Err(err) => {
+                    error!("{} failed channel receive: {:?}", self.node_name, err);
+                    break;
+                }
             }
         }
         info!("{} logger execution complete", self.node_name);
