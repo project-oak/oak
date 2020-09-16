@@ -320,7 +320,7 @@ fn build_server(opt: &BuildServer) -> Step {
                 ),
             }],
             match opt.server_variant {
-                ServerVariant::Base => vec![Step::Single {
+                ServerVariant::Base | ServerVariant::Coverage => vec![Step::Single {
                     name: "build introspection browser client".to_string(),
                     command: Cmd::new("npm",
                                       vec![
@@ -345,27 +345,29 @@ fn build_server(opt: &BuildServer) -> Step {
                             None => vec![],
                         },
                         "build".to_string(),
-                        // If building in coverage mode, use the default target from the host, and build
-                        // in debug mode.
-                        ...if opt.coverage {
-                            vec![]
-                        } else {
-                            vec![
-                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                                "--release".to_string(),
-                            ]
-                        },
                         "--manifest-path=oak_loader/Cargo.toml".to_string(),
                         "--out-dir=oak_loader/bin".to_string(),
                         // `--out-dir` is unstable and requires `-Zunstable-options`.
                         "-Zunstable-options".to_string(),
                         ...match opt.server_variant {
-                            ServerVariant::Logless => vec!["--no-default-features".to_string()],
-                            ServerVariant::NoIntrospectionClient => vec![],
-                            ServerVariant::Base => vec!["--features=oak_introspection_client".to_string()],
+                            ServerVariant::Logless => vec!["--no-default-features".to_string(),
+                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                                "--release".to_string(),
+                            ],
+                            ServerVariant::NoIntrospectionClient => vec![
+                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                                "--release".to_string(),
+                            ],
+                            ServerVariant::Base => vec!["--features=oak_introspection_client".to_string(),
+                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                                "--release".to_string(),
+                            ],
+                        // If building in coverage mode, use the default target from the host, and build
+                        // in debug mode.
+                            ServerVariant::Coverage => vec!["--features=oak_introspection_client".to_string()],
                         },
                     ],
-                    &if opt.coverage {
+                    &if opt.server_variant == ServerVariant::Coverage {
                         hashmap! {
                             // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
                             "CARGO_INCREMENTAL".to_string() => "0".to_string(),
@@ -450,13 +452,11 @@ fn run_ci() -> Step {
                 server_variant: ServerVariant::Base,
                 server_rust_toolchain: None,
                 server_rust_target: None,
-                coverage: false,
             }),
             build_server(&BuildServer {
                 server_variant: ServerVariant::Logless,
                 server_rust_toolchain: None,
                 server_rust_target: None,
-                coverage: false,
             }),
             run_tests(),
             run_tests_tsan(),
@@ -476,7 +476,6 @@ fn run_ci() -> Step {
                     server_variant: ServerVariant::Base,
                     server_rust_toolchain: None,
                     server_rust_target: None,
-                    coverage: false,
                 },
             }),
             run_examples(&RunExamples {
@@ -495,7 +494,6 @@ fn run_ci() -> Step {
                     server_variant: ServerVariant::Base,
                     server_rust_toolchain: None,
                     server_rust_target: None,
-                    coverage: false,
                 },
             }),
             // Package the Hello World application in a Docker image.
@@ -515,7 +513,6 @@ fn run_ci() -> Step {
                     server_variant: ServerVariant::Base,
                     server_rust_toolchain: None,
                     server_rust_target: None,
-                    coverage: false,
                 },
             }),
         ],
@@ -542,7 +539,7 @@ fn run_example_server(
             ...example_server.additional_args.clone(),
             ...server_additional_args,
         ],
-        &if opt.coverage {
+        &if opt.server_variant == ServerVariant::Coverage {
             hashmap! {
                 // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
                 "CARGO_INCREMENTAL".to_string() => "0".to_string(),
