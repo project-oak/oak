@@ -15,7 +15,7 @@
 //
 
 use crate::proto::SerializedSparseVector;
-use aggregator_common::Monoid;
+use frunk::{Monoid, Semigroup};
 use std::{
     collections::HashMap,
     convert::{From, TryFrom},
@@ -41,7 +41,7 @@ impl TryFrom<&SerializedSparseVector> for SparseVector {
     fn try_from(src: &SerializedSparseVector) -> Result<Self, Self::Error> {
         if src.indices.len() == src.values.len() {
             src.indices.iter().zip(src.values.iter()).try_fold(
-                SparseVector::identity(),
+                SparseVector::empty(),
                 |mut svec, (&i, &v)| {
                     use std::collections::hash_map::Entry;
                     match svec.entries.entry(i) {
@@ -76,11 +76,7 @@ impl From<SparseVector> for SerializedSparseVector {
     }
 }
 
-impl Monoid for SparseVector {
-    fn identity() -> Self {
-        SparseVector::new(HashMap::new())
-    }
-
+impl Semigroup for SparseVector {
     /// Combines two Sparse Vectors by adding up values corresponding to the same keys.
     fn combine(&self, other: &Self) -> Self {
         other
@@ -90,5 +86,11 @@ impl Monoid for SparseVector {
                 *svec.entries.entry(i).or_insert(0.0) += v;
                 svec
             })
+    }
+}
+
+impl Monoid for SparseVector {
+    fn empty() -> Self {
+        SparseVector::new(HashMap::new())
     }
 }

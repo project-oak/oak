@@ -14,15 +14,8 @@
 // limitations under the License.
 //
 
+use frunk::Monoid;
 use std::mem::replace;
-
-/// Represents a data structure with a single associative binary operation (`combine`)
-/// and an `identity` element.
-/// https://en.wikipedia.org/wiki/Monoid
-pub trait Monoid {
-    fn identity() -> Self;
-    fn combine(&self, other: &Self) -> Self;
-}
 
 /// Generic data structure that combines data values and counts the number of provided data samples.
 /// It can also reveal an aggregated value only when there are enough data samples
@@ -40,7 +33,7 @@ pub struct ThresholdAggregator<T: Monoid> {
 impl<T: Monoid> ThresholdAggregator<T> {
     pub fn new(threshold: u64) -> Self {
         ThresholdAggregator {
-            current_value: Monoid::identity(),
+            current_value: Monoid::empty(),
             sample_count: 0,
             sample_threshold: threshold,
         }
@@ -68,7 +61,7 @@ impl<T: Monoid> ThresholdAggregator<T> {
     pub fn take(&mut self) -> Option<T> {
         if self.sample_count >= self.sample_threshold {
             self.sample_count = 0;
-            Some(replace(&mut self.current_value, Monoid::identity()))
+            Some(replace(&mut self.current_value, Monoid::empty()))
         } else {
             None
         }
