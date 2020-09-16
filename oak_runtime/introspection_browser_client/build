@@ -25,12 +25,12 @@ protoc \
 # Copy each generated file into the actual output directory, but do not
 # overwrite identical files. Doing this preserves the last modified date,
 # allowing for caching of webpack build steps down the line.
-for file in $( (cd "${PROTO_TMP_OUT_DIR}" && find . -type f) | sed "s|^\\./||" ); do
+for file in $( (cd "${PROTO_TMP_OUT_DIR}" && find . -type f) ); do
   TMP_PROTO_PATH="${PROTO_TMP_OUT_DIR}/${file}"
   OUTPUT_PROTO_PATH="${PROTO_OUT_DIR}/${file}"
   if ! cmp --silent "${TMP_PROTO_PATH}" "${OUTPUT_PROTO_PATH}"; then
     mkdir -p "$(dirname "${OUTPUT_PROTO_PATH}")"
-    cp -rf "${TMP_PROTO_PATH}" "${OUTPUT_PROTO_PATH}"
+    cp -f "${TMP_PROTO_PATH}" "${OUTPUT_PROTO_PATH}"
   fi
 done
 
