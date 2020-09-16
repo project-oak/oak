@@ -158,6 +158,9 @@
 <span id="158">158</span>
 <span id="159">159</span>
 <span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -193,6 +196,9 @@
 
 <span class="doccomment">/// Trait encapsulating execution of a Node or pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Node</span>: <span class="ident">Send</span> {
+    <span class="doccomment">/// Return a name for this type of Node.</span>
+    <span class="kw">fn</span> <span class="ident">node_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+
     <span class="doccomment">/// Execute the Node, using the provided `Runtime` reference and initial handle.  The method</span>
     <span class="doccomment">/// should continue execution until the Node terminates.</span>
     <span class="doccomment">///</span>

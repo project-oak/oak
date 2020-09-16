@@ -532,6 +532,10 @@
 <span id="532">532</span>
 <span id="533">533</span>
 <span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -752,6 +756,10 @@
 
 <span class="doccomment">/// Oak Node implementation for the HTTP server.</span>
 <span class="kw">impl</span> <span class="ident">Node</span> <span class="kw">for</span> <span class="ident">HttpServerNode</span> {
+    <span class="kw">fn</span> <span class="ident">node_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+        <span class="string">&quot;http-server&quot;</span>
+    }
+
     <span class="kw">fn</span> <span class="ident">run</span>(
         <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,

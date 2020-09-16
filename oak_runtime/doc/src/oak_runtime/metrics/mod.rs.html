@@ -233,6 +233,13 @@
 <span id="233">233</span>
 <span id="234">234</span>
 <span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -253,7 +260,8 @@
 <span class="doccomment">//! Functionality to expose metrics from a running Runtime.</span>
 
 <span class="kw">use</span> <span class="ident">prometheus</span>::{
-    <span class="ident">proto</span>::<span class="ident">MetricFamily</span>, <span class="ident">HistogramOpts</span>, <span class="ident">HistogramVec</span>, <span class="ident">IntCounterVec</span>, <span class="ident">IntGauge</span>, <span class="ident">Opts</span>, <span class="ident">Registry</span>,
+    <span class="ident">proto</span>::<span class="ident">MetricFamily</span>, <span class="ident">HistogramOpts</span>, <span class="ident">HistogramVec</span>, <span class="ident">IntCounterVec</span>, <span class="ident">IntGauge</span>, <span class="ident">IntGaugeVec</span>, <span class="ident">Opts</span>,
+    <span class="ident">Registry</span>,
 };
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">server</span>;
@@ -287,7 +295,7 @@
 <span class="doccomment">/// Struct that collects all metrics for monitoring the Oak Runtime.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RuntimeMetrics</span> {
-    <span class="kw">pub</span> <span class="ident">runtime_nodes_total</span>: <span class="ident">IntGauge</span>,
+    <span class="kw">pub</span> <span class="ident">runtime_nodes_by_type</span>: <span class="ident">IntGaugeVec</span>,
     <span class="kw">pub</span> <span class="ident">runtime_health_check</span>: <span class="ident">IntGauge</span>,
 }
 
@@ -326,6 +334,11 @@
 <span class="kw">fn</span> <span class="ident">int_gauge</span>(<span class="ident">metric_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">help</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">IntGauge</span> {
     <span class="kw">let</span> <span class="ident">opts</span> <span class="op">=</span> <span class="ident">Opts</span>::<span class="ident">new</span>(<span class="ident">metric_name</span>, <span class="ident">help</span>);
     <span class="ident">IntGauge</span>::<span class="ident">with_opts</span>(<span class="ident">opts</span>).<span class="ident">unwrap</span>()
+}
+
+<span class="kw">fn</span> <span class="ident">int_gauge_vec</span>(<span class="ident">metric_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">labels</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>], <span class="ident">help</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">IntGaugeVec</span> {
+    <span class="kw">let</span> <span class="ident">opts</span> <span class="op">=</span> <span class="ident">Opts</span>::<span class="ident">new</span>(<span class="ident">metric_name</span>, <span class="ident">help</span>);
+    <span class="ident">IntGaugeVec</span>::<span class="ident">new</span>(<span class="ident">opts</span>, <span class="ident">labels</span>).<span class="ident">unwrap</span>()
 }
 
 <span class="kw">impl</span> <span class="ident">GrpcServerMetrics</span> {
@@ -436,9 +449,10 @@
 <span class="kw">impl</span> <span class="ident">RuntimeMetrics</span> {
     <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">builder</span>: <span class="kw-2">&amp;</span><span class="ident">MetricsBuilder</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">RuntimeMetrics</span> {
-            <span class="ident">runtime_nodes_total</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">int_gauge</span>(
+            <span class="ident">runtime_nodes_by_type</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">int_gauge_vec</span>(
                 <span class="string">&quot;runtime_nodes_total&quot;</span>,
-                <span class="string">&quot;Number of nodes in the runtime.&quot;</span>,
+                <span class="kw-2">&amp;</span>[<span class="string">&quot;node_type&quot;</span>],
+                <span class="string">&quot;Number of nodes in the runtime, by node type.&quot;</span>,
             )),
             <span class="ident">runtime_health_check</span>: <span class="ident">builder</span>.<span class="ident">register</span>(<span class="ident">int_gauge</span>(
                 <span class="string">&quot;runtime_health_check&quot;</span>,
