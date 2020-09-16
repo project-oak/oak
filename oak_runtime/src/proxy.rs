@@ -75,6 +75,7 @@ impl RuntimeProxy {
         let proxy = runtime.proxy_for_new_node();
         proxy.runtime.node_configure_instance(
             proxy.node_id,
+            "implicit",
             "implicit.initial",
             &Label::public_untrusted(),
             &NodePrivilege::default(),

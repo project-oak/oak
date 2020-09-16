@@ -32,6 +32,9 @@ mod wasm;
 
 /// Trait encapsulating execution of a Node or pseudo-Node.
 pub trait Node: Send {
+    /// Return a name for this type of Node.
+    fn node_type(&self) -> &'static str;
+
     /// Execute the Node, using the provided `Runtime` reference and initial handle.  The method
     /// should continue execution until the Node terminates.
     ///

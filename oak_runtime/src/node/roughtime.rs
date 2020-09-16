@@ -145,6 +145,10 @@ impl RoughtimeClientNode {
 }
 
 impl super::Node for RoughtimeClientNode {
+    fn node_type(&self) -> &'static str {
+        "roughtime-client"
+    }
+
     /// Runs the node.
     fn run(
         self: Box<Self>,

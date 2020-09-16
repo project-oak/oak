@@ -17,7 +17,8 @@
 //! Functionality to expose metrics from a running Runtime.
 
 use prometheus::{
-    proto::MetricFamily, HistogramOpts, HistogramVec, IntCounterVec, IntGauge, Opts, Registry,
+    proto::MetricFamily, HistogramOpts, HistogramVec, IntCounterVec, IntGauge, IntGaugeVec, Opts,
+    Registry,
 };
 
 pub mod server;
@@ -51,7 +52,7 @@ pub struct GrpcClientMetrics {
 /// Struct that collects all metrics for monitoring the Oak Runtime.
 #[derive(Clone)]
 pub struct RuntimeMetrics {
-    pub runtime_nodes_total: IntGauge,
+    pub runtime_nodes_by_type: IntGaugeVec,
     pub runtime_health_check: IntGauge,
 }
 
@@ -90,6 +91,11 @@ fn histogram_vec(metric_name: &str, labels: &[&str], help: &str) -> HistogramVec
 fn int_gauge(metric_name: &str, help: &str) -> IntGauge {
     let opts = Opts::new(metric_name, help);
     IntGauge::with_opts(opts).unwrap()
+}
+
+fn int_gauge_vec(metric_name: &str, labels: &[&str], help: &str) -> IntGaugeVec {
+    let opts = Opts::new(metric_name, help);
+    IntGaugeVec::new(opts, labels).unwrap()
 }
 
 impl GrpcServerMetrics {
@@ -200,9 +206,10 @@ impl GrpcClientMetrics {
 impl RuntimeMetrics {
     fn new(builder: &MetricsBuilder) -> Self {
         RuntimeMetrics {
-            runtime_nodes_total: builder.register(int_gauge(
+            runtime_nodes_by_type: builder.register(int_gauge_vec(
                 "runtime_nodes_total",
-                "Number of nodes in the runtime.",
+                &["node_type"],
+                "Number of nodes in the runtime, by node type.",
             )),
             runtime_health_check: builder.register(int_gauge(
                 "runtime_health_check",

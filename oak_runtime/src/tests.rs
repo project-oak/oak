@@ -48,6 +48,9 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     };
 
     impl crate::node::Node for TestNode {
+        fn node_type(&self) -> &'static str {
+            "test"
+        }
         fn run(
             self: Box<Self>,
             runtime: RuntimeProxy,
@@ -69,6 +72,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     let new_node_name = format!("TestNode({})", new_node_id.0);
     proxy.runtime.node_configure_instance(
         new_node_id,
+        "test",
         "test_module.test_function",
         node_label,
         node_privilege,

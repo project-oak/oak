@@ -217,6 +217,10 @@ impl HttpServerNode {
 
 /// Oak Node implementation for the HTTP server.
 impl Node for HttpServerNode {
+    fn node_type(&self) -> &'static str {
+        "http-server"
+    }
+
     fn run(
         self: Box<Self>,
         runtime: RuntimeProxy,

@@ -42,6 +42,10 @@ impl LogNode {
 }
 
 impl super::Node for LogNode {
+    fn node_type(&self) -> &'static str {
+        "logger"
+    }
+
     /// Main execution loop for the logging pseudo-Node just waits for incoming
     /// `LogMessage`s and outputs them.
     fn run(

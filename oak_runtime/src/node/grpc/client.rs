@@ -372,6 +372,10 @@ impl<'a> ResponseHandler<'a> {
 
 /// Oak Node implementation for the gRPC client pseudo-Node.
 impl Node for GrpcClientNode {
+    fn node_type(&self) -> &'static str {
+        "grpc-client"
+    }
+
     fn run(
         mut self: Box<Self>,
         runtime: RuntimeProxy,

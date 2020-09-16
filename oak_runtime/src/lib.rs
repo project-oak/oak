@@ -193,6 +193,9 @@ struct NodeInfo {
     /// Name for the Node in debugging output.
     name: String,
 
+    /// Name for the type of this Node, for metrics output.
+    node_type: &'static str,
+
     /// The Label associated with this Node.
     ///
     /// This is set at Node creation time and does not change after that.
@@ -1054,12 +1057,15 @@ impl Runtime {
     /// Remove a Node by [`NodeId`] from the [`Runtime`].
     fn remove_node_id(&self, node_id: NodeId) {
         // Close any remaining handles
-        let remaining_handles: Vec<_> = {
+        let (remaining_handles, node_type): (Vec<_>, &'static str) = {
             let node_infos = self.node_infos.read().unwrap();
             let node_info = node_infos
                 .get(&node_id)
                 .unwrap_or_else(|| panic!("remove_node_id: No such node_id {:?}", node_id));
-            node_info.abi_handles.keys().copied().collect()
+            (
+                node_info.abi_handles.keys().copied().collect(),
+                node_info.node_type,
+            )
         };
 
         debug!(
@@ -1077,7 +1083,7 @@ impl Runtime {
             .unwrap()
             .remove(&node_id)
             .expect("remove_node_id: Node didn't exist!");
-        self.update_nodes_count_metric();
+        self.update_nodes_count_metric(node_type, -1);
 
         self.introspection_event(EventDetails::NodeDestroyed(NodeDestroyed {
             node_id: node_id.0,
@@ -1087,11 +1093,12 @@ impl Runtime {
     /// Add an [`NodeId`] [`NodeInfo`] pair to the [`Runtime`]. This method temporarily holds the
     /// [`Runtime::node_infos`] write lock.
     fn add_node_info(&self, node_id: NodeId, node_info: NodeInfo) {
+        let node_type = node_info.node_type;
         self.node_infos
             .write()
             .expect("could not acquire lock on node_infos")
             .insert(node_id, node_info);
-        self.update_nodes_count_metric();
+        self.update_nodes_count_metric(node_type, 1);
     }
 
     /// Add the [`NodeStopper`] for a running Node to `NodeInfo`.
@@ -1157,15 +1164,22 @@ impl Runtime {
         })?;
 
         let node_privilege = instance.get_privilege();
+        let node_type = instance.node_type();
 
-        self.node_configure_instance(new_node_id, &new_node_name, label, &node_privilege);
+        self.node_configure_instance(
+            new_node_id,
+            node_type,
+            &new_node_name,
+            label,
+            &node_privilege,
+        );
         let initial_handle = new_node_proxy
             .runtime
             .new_abi_handle(new_node_proxy.node_id, reader);
 
         info!(
-            "{:?}: start node instance {:?} with privilege {:?}",
-            node_id, new_node_id, node_privilege
+            "{:?}: start node instance {:?} of type {} with privilege {:?}",
+            node_id, new_node_id, node_type, node_privilege
         );
         let node_stopper = self.clone().node_start_instance(
             &new_node_name,
@@ -1224,6 +1238,7 @@ impl Runtime {
     fn node_configure_instance(
         &self,
         node_id: NodeId,
+        node_type: &'static str,
         node_name: &str,
         label: &Label,
         privilege: &NodePrivilege,
@@ -1241,6 +1256,7 @@ impl Runtime {
             node_id,
             NodeInfo {
                 name: node_name.to_string(),
+                node_type,
                 label: label.clone(),
                 privilege: privilege.clone(),
                 abi_handles: HashMap::new(),
@@ -1259,18 +1275,12 @@ impl Runtime {
     }
 
     /// Update the node count metric with the current value.
-    fn update_nodes_count_metric(&self) {
+    fn update_nodes_count_metric(&self, node_type: &'static str, delta: i64) {
         self.metrics_data
             .runtime_metrics
-            .runtime_nodes_total
-            .set(self.get_nodes_count());
-    }
-
-    fn get_nodes_count(&self) -> i64 {
-        self.node_infos
-            .read()
-            .expect("could not acquire lock on node_infos")
-            .len() as i64
+            .runtime_nodes_by_type
+            .with_label_values(&[node_type])
+            .add(delta);
     }
 }
 
