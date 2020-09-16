@@ -17,6 +17,7 @@
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use colored::*;
+use nix::sys::signal::Signal;
 use std::{
     collections::{HashMap, HashSet},
     time::Instant,
@@ -592,12 +593,34 @@ impl Runnable for Cmd {
     }
 }
 
-pub fn kill_process(pid: i32) {
-    // TODO(#396): Send increasingly stronger signals if the process fails to terminate
-    // within a given amount of time.
-    let pid = nix::unistd::Pid::from_raw(pid);
-    // Ignore errors.
-    let _ = nix::sys::signal::kill(pid, nix::sys::signal::Signal::SIGINT);
+pub fn process_gone(raw_pid: i32) -> bool {
+    // Shell out to `ps` as there's no portable Rust equivalent.
+    let mut cmd = std::process::Command::new("ps");
+    cmd.args(&["-p", &format!("{}", raw_pid)]);
+    let mut child = cmd
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap_or_else(|err| panic!("could not spawn command: {:?}: {}", cmd, err));
+    let output = child.wait().expect("could not get exit status");
+    // ps -p has success exit code if the pid exists.
+    !output.success()
+}
+
+pub fn kill_process(raw_pid: i32) {
+    let pid = nix::unistd::Pid::from_raw(raw_pid);
+    for i in 0..5 {
+        if process_gone(raw_pid) {
+            return;
+        }
+
+        // Ignore errors.
+        let _ = nix::sys::signal::kill(pid, Signal::SIGINT);
+
+        std::thread::sleep(std::time::Duration::from_millis(200 * i));
+    }
+    let _ = nix::sys::signal::kill(pid, Signal::SIGKILL);
 }
 
 struct RunningCmd {
