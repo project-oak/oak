@@ -42,7 +42,7 @@ module.exports = (env) => ({
     rules: [
       {
         test: /\.tsx?$/,
-        use: 'ts-loader',
+        use: ['cache-loader', 'ts-loader'],
         exclude: /node_modules/,
       },
     ],
