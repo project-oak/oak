@@ -21,7 +21,7 @@ const CompressionPlugin = require('compression-webpack-plugin');
 module.exports = (env) => ({
   entry: './index.tsx',
   output: {
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, env.OUTPUT_PATH || './dist'),
     filename: 'index.js',
   },
   plugins: [
