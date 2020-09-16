@@ -43,6 +43,12 @@ sending channel handles to the created nodes to ensure that the full node graph
 is created on start-up. It will also act as a message router, which would route
 HTTP- and GRPC invocations to other nodes based on the associated labels.
 
+Some applications require dynamic creation of nodes and channels based on the
+labels associated with incoming invocations. A sub-graph template mechanism will
+be implemented to support dynamic node creation. The typical scenario where this
+is required is the case where a per-user node must be created to support
+per-user labels.
+
 ## Detailed Design
 
 ### Planner Node
@@ -58,6 +64,50 @@ responsibility of each of the nodes to store these channels for future
 communications with other nodes. It will send a filtered version of the config
 map as part of the initialisation message, based on the configuration keys
 specified in the `config_files` field.
+
+### Node and Channel Creation
+
+Creation of static nodes and channels is straight-forward. The planner node will
+read these on start-up and use the values specified in the manifest to create
+the nodes and channels and send the read- and write handles to the appropriate
+nodes.
+
+Dynamic node creation will be supported by parameterised sub-graph templates.
+The template will specify a label pattern to match. The pattern will include
+information on extracting the parameter values from the incoming labels. The
+trigger for dynamic node creation will be incoming invocations. The label of the
+channel associated with the request receiver will be used to match the template
+label pattern and extract the parameters.
+
+A sub-graph template will also be able to define whether it is persistent or
+not. If it is persistent, an instance will be created the first time it is
+needed for a specific label. For future instances of the same label it will
+reuse the already-created nodes and channels. If it is not persistent, the
+subgraph will be recreated every time a matching label arrives. It is the
+responsibility of the nodes in question to close the channels and terminate once
+processing is complete to avoid running out of resources.
+
+The template will contain definitions of nodes and channels to be created. These
+definitions can use the parameters for specifying labels, names etc. The
+template will support a formatting mechanism to replace placeholders with
+parameter values. In most cases the parameter values will be byte arrays. The
+formatting will allow specification of conversions to strings so that it could
+be used in names etc. Initially only base64 encoding will be supported for
+converting from bytes to strings.
+
+As an example, if a parameter named `user_id` is extracted for the template, a
+user-specific node can use the base64 encoding of the user id to create a unique
+name:
+
+```Toml
+[node]
+name = "user_{base64($user_id)}"
+```
+
+The initial impementation of dynamic node creation will focus only on support
+for user labels, as it is the first motivating example we have. Each extracted
+parameter will be the matching bytes that represent the user identity (currently
+the HMAC of the bearer token, but in future it would be the user's public key).
 
 ### Invocation Routing
 
@@ -102,11 +152,14 @@ The file will be deserialised into the following structure:
 
 ```rust
 
+/// A static node definition.
 struct Node {
   /// Unique name for the node.
   name: String,
 
   /// The label associated with the node.
+  ///
+  /// Note The `Label` type is the same type defined in label.proto.
   label: Label,
 
   /// The keys of the files from the config map that must be passed to the node
@@ -132,6 +185,7 @@ struct Node {
   http_invocation_receiver: bool,
 }
 
+/// A static channel definition.
 struct Channel {
   /// Unique name of the channel.
   name: String,
@@ -146,8 +200,75 @@ struct Channel {
   /// single-consumer model to resolve #1197.
   receiver_node: String,
 
-  /// The nodes that will receive handles to the write-half of the channel.
+  /// The names of nodes that will receive handles to the write-half of the
+  /// channel.
   sender_nodes: Vec<String>,
+}
+
+/// A dyanimc node definition template.
+struct NodeTemplate {
+  /// Unique name for the node.
+  name: String,
+
+  /// The template for constructing the label associated with the node using
+  /// the extracted paramters.
+  label: LabelTemplate,
+
+  /// The keys of the files from the config map that must be passed to the node
+  /// as part of the initialisation message. This will be used to generate a
+  /// filtered view of the map that will be sent as part of the initialisation
+  /// message.
+  config_files: Vec<String>,
+
+  /// Whether this node should be the target node for all gRPC invocations
+  /// targeted at the specified label. This is only used if the planner node is
+  /// also responsible for invocation routing.
+  ///
+  /// Note: it should be validated that this value is only true for one node
+  /// per label.
+  grpc_invocation_receiver: bool,
+
+  /// Whether this node should be the target node for all HTTP invocations
+  /// targeted at the specified label. This is only used if the planner node is
+  /// also responsible for invocation routing.
+  ///
+  /// Note: it should be validated that this value is only true for one node
+  /// per label.
+  http_invocation_receiver: bool,
+}
+
+/// A static channel definition.
+struct ChannelTemplate {
+  /// Unique name of the channel.
+  name: String,
+
+  /// The template for constructing the label associated with the channel using
+  /// the extracted parameters.
+  label: LabelTemplate,
+
+  /// The name of the node that will receive the handle for the receiver half
+  /// of the channel.
+  ///
+  /// Note: this is in anticipation of changing channels to a multi-producer,
+  /// single-consumer model to resolve #1197.
+  receiver_node: String,
+
+  /// The names of nodes that will receive handles to the write-half of the
+  /// channel.
+  sender_nodes: Vec<String>,
+}
+
+/// A sub-graph template for dynamically creating nodes and channels based on
+/// parameters extract from the label matching process.
+struct Template {
+  /// The template used for matching the label and extracting parameters.
+  label: LabelTemplate,
+
+  /// The template nodes to create.
+  nodes: Vec<NodeTemplate>,
+
+  /// The template channels to create.
+  channels: Vec<ChannelTemplate>,
 }
 
 struct NodeGraph {
@@ -156,7 +277,12 @@ struct NodeGraph {
 
   /// The channels that will be created.
   channels: Vec<Channel>,
+
+  /// The per label sub-graph templates used for dynamic node creation.
+  templates: Vec<Template>,
 }
+
+
 
 ```
 
@@ -234,7 +360,7 @@ manifest file. The client will compare the manifest file to the introspection
 data to test that the nodes were created as expected.
 
 The next step would be to extend the planner node to support per-label dynamic
-node creation. This could be used to implement an alternative version of the
+node creation. This will be used to implement an alternative version of the
 private database example as a proof of concept for per-user node creation and
 gRPC invocation routing.
 
@@ -275,14 +401,6 @@ channel handles to other nodes embedded in protobuf messages, which would mean
 that additional connections might be created over time. Nodes could also close
 channels and nodes could terminate. This means that while the initial setup
 might be static it does not guarantee that the node structure will never change.
-
-### Dynamic sub-graph creation
-
-The first example will be dynamic creation of user-specific nodes and connect
-them to the appropriate channels in the graph. In future this will be extended
-to support template-based definition of subgraphs. The entire sub-graph will
-then be dynamically generated (e.g. a user-specific sub-graph consisting of
-multiple nodes each).
 
 ### Declaration of supported message types
 
