@@ -43,12 +43,14 @@ impl Node<Command> for Room {
             Some(SendMessage(message)) => {
                 self.messages.push(message.clone());
                 info!("fan out message to {} clients", self.clients.len());
-                for writer in &mut self.clients {
-                    // TODO(#746): Improve error handling.
-                    writer
-                        .write(&message, oak::grpc::WriteMode::KeepOpen)
-                        .expect("could not write to channel");
-                }
+                self.clients.retain(|writer| {
+                    let result = writer.write(&message, oak::grpc::WriteMode::KeepOpen);
+                    // Only retain clients we can write to successfully.
+                    if result.is_err() {
+                        warn!("Failed to write to client, dropping for future SendMessage invocations");
+                    }
+                    result.is_ok()
+                });
                 Ok(())
             }
             None => {
