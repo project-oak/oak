@@ -5,7 +5,7 @@
 # Install npm modules if needed
 readonly CURRENT_PACKAGE_LOCK="./package-lock.json"
 readonly LAST_INSTALLED_PACKAGE_LOCK="./node_modules/.cache/last-install-package-lock.json"
-if ! cmp -s "$CURRENT_PACKAGE_LOCK" "$LAST_INSTALLED_PACKAGE_LOCK"; then
+if ! cmp --silent "$CURRENT_PACKAGE_LOCK" "$LAST_INSTALLED_PACKAGE_LOCK"; then
   npm ci
 fi
 
