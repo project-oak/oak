@@ -147,6 +147,48 @@ class ApplicationClient {
   }
 };
 
+// Convert a grpc::StatusCode into human-readable string.
+std::string status_code_to_string(grpc::StatusCode code) {
+  switch (code) {
+    case grpc::StatusCode::OK:
+      return "OK";
+    case grpc::StatusCode::CANCELLED:
+      return "Canceled";
+    case grpc::StatusCode::UNKNOWN:
+      return "Unknown";
+    case grpc::StatusCode::INVALID_ARGUMENT:
+      return "InvalidArgument";
+    case grpc::StatusCode::DEADLINE_EXCEEDED:
+      return "DeadlineExceeded";
+    case grpc::StatusCode::NOT_FOUND:
+      return "NotFound";
+    case grpc::StatusCode::ALREADY_EXISTS:
+      return "AlreadyExists";
+    case grpc::StatusCode::PERMISSION_DENIED:
+      return "PermissionDenied";
+    case grpc::StatusCode::RESOURCE_EXHAUSTED:
+      return "ResourceExhausted";
+    case grpc::StatusCode::FAILED_PRECONDITION:
+      return "FailedPrecondition";
+    case grpc::StatusCode::ABORTED:
+      return "Aborted";
+    case grpc::StatusCode::OUT_OF_RANGE:
+      return "OutOfRange";
+    case grpc::StatusCode::UNIMPLEMENTED:
+      return "Unimplemented";
+    case grpc::StatusCode::INTERNAL:
+      return "Internal";
+    case grpc::StatusCode::UNAVAILABLE:
+      return "Unavailable";
+    case grpc::StatusCode::DATA_LOSS:
+      return "DataLoss";
+    case grpc::StatusCode::UNAUTHENTICATED:
+      return "Unauthenticated";
+    default:
+      return absl::StrCat("Code(", code, ")");
+  }
+}
+
 }  // namespace oak
 
 #endif  // OAK_CLIENT_APPLICATION_CLIENT_H_

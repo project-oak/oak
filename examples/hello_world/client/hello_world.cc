@@ -38,7 +38,8 @@ void say_hello(HelloWorld::Stub* stub, std::string name) {
   HelloResponse response;
   grpc::Status status = stub->SayHello(&context, request, &response);
   if (!status.ok()) {
-    LOG(FATAL) << "Could not call SayHello('" << name << "'): " << status.error_code() << ": "
+    LOG(FATAL) << "Could not call SayHello('" << name
+               << "'): " << oak::status_code_to_string(status.error_code()) << ": "
                << status.error_message();
   }
   LOG(INFO) << "Response: " << response.reply();

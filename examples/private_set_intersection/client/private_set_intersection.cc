@@ -48,8 +48,8 @@ std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub
   GetIntersectionResponse response;
   grpc::Status status = stub->GetIntersection(&context, request, &response);
   if (!status.ok()) {
-    LOG(FATAL) << "Could not retrieve intersection: " << status.error_code() << ": "
-               << status.error_message();
+    LOG(FATAL) << "Could not retrieve intersection: "
+               << oak::status_code_to_string(status.error_code()) << ": " << status.error_message();
   }
   for (auto item : response.values()) {
     values.push_back(item);
