@@ -2,8 +2,12 @@
 #
 # Build browser introspection client.
 
-# Install npm modules
-npm ci
+# Install npm modules if needed
+readonly CURRENT_PACKAGE_LOCK="./package-lock.json"
+readonly LAST_INSTALLED_PACKAGE_LOCK="./node_modules/.cache/last-install-package-lock.json"
+if ! cmp --silent "$CURRENT_PACKAGE_LOCK" "$LAST_INSTALLED_PACKAGE_LOCK"; then
+  npm ci
+fi
 
 # Generate JavaScript code from the introspection_events proto
 mkdir -p ./protoc_out

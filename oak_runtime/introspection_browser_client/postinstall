@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+# Maintains a copy representing the package-lock.json at the time of the
+# last NPM install in ./node_modules/.cache/last-install-package-lock.json.
+# Doing this permits the build script to skip npm installs on subsequent runs
+# if dependencies did not change.
+
+# Copy the package-lock.json at the time of install
+mkdir -p ./node_modules/.cache/
+cp -rf ./package-lock.json ./node_modules/.cache/last-install-package-lock.json
