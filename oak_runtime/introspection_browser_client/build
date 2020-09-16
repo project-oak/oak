@@ -8,8 +8,8 @@
 #   A source directory, a destination directory.
 #######################################
 function copy_directory_nondestructively() {
-  local readonly SOURCE_DIR="$1"
-  local readonly DESTINTAION_DIR="$2"
+  local SOURCE_DIR="$1"
+  local DESTINTAION_DIR="$2"
 
   for file in $( (cd "${SOURCE_DIR}" && find . -type f) ); do
     local SOURCE_FILE="${SOURCE_DIR}/${file}"
