@@ -63,12 +63,14 @@ wasmi = { version = "*", default-features = false, features = ["core"] }
 
 [dev-dependencies]
 env_logger = "*"
+h2 = "*"
 hyper-rustls = { version = "*", default-features = false, features = [
   "webpki-tokio"
 ] }
 minisign = "*"
 regex = "*"
 wat = "*"
+webpki = "*"
 
 [build-dependencies]
 oak_utils = { path = "../oak_utils" }

@@ -19,6 +19,15 @@ use maplit::hashmap;
 use oak_abi::{label::Label, proto::oak::application::ApplicationConfiguration};
 use std::{fs, option::Option, thread::JoinHandle};
 
+use tokio_rustls::TlsConnector;
+
+use rustls::Session;
+use webpki::DNSNameRef;
+
+use std::net::ToSocketAddrs;
+
+use std::{thread, time};
+
 static LOCAL_CA: &str = "../examples/certs/local/ca.pem";
 static GCP_CA: &str = "../examples/certs/gcp/ca.pem";
 
@@ -82,12 +91,16 @@ impl HttpServerTester {
 
 #[tokio::test]
 async fn test_https_server_can_serve_https_requests() {
+    let delay = time::Duration::from_millis(1000);
+    thread::sleep(delay);
+
     // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
     // HTTP requests.
     let mut http_server_tester = HttpServerTester::new(2525, true);
 
     // Send an HTTPS request, and check that response has StatusCode::OK
     let resp = send_request("https://localhost:2525", LOCAL_CA).await;
+    log::info!("Resp is: {:?}", resp);
     assert!(resp.is_ok());
     assert_eq!(
         resp.unwrap().status(),
@@ -116,6 +129,9 @@ async fn test_https_server_cannot_serve_http_requests() {
 
 #[tokio::test]
 async fn test_https_server_does_not_terminate_after_a_bad_request() {
+    let delay = time::Duration::from_millis(3 * 1000);
+    thread::sleep(delay);
+
     let mut http_server_tester = HttpServerTester::new(2527, true);
 
     // Send an HTTPS request with invalid certificate, and check that the server responds with error
@@ -124,6 +140,7 @@ async fn test_https_server_does_not_terminate_after_a_bad_request() {
 
     // Send a second request, and check that the server is alive and responsive
     let resp = send_request("https://localhost:2527", LOCAL_CA).await;
+    log::info!("Resp is: {:?}", resp);
     assert!(resp.is_ok());
 
     // Stop the runtime and the servers
@@ -215,10 +232,12 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
         .unwrap();
 }
 
+const ALPN_H2: &str = "h2";
+
 async fn send_request(
     uri: &str,
     ca_path: &str,
-) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
+) -> Result<http::response::Response<h2::RecvStream>, OakStatus> {
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
     let mut label_bytes = vec![];
@@ -234,22 +253,57 @@ async fn send_request(
     let mut http = hyper::client::HttpConnector::new();
     http.enforce_http(false);
     // Build a TLS client, using the custom CA store for lookups.
-    let mut tls = rustls::ClientConfig::new();
-    tls.root_store
+    let mut tls_config = rustls::ClientConfig::new();
+    tls_config
+        .root_store
         .add_pem_file(&mut ca)
         .expect("failed to load custom CA store");
-    // Join the above part into an HTTPS connector.
-    let https = hyper_rustls::HttpsConnector::from((http, tls));
 
-    let client: hyper::client::Client<_, hyper::Body> =
-        hyper::client::Client::builder().build(https);
+    // Create HTTP/2 client with TLS similar to https://github.com/hyperium/h2/blob/e7e75bf1171d33ca2cf7ce34733ee86f4f9b7ae5/examples/akamai.rs
+    // See also https://github.com/hyperium/h2/blob/e7e75bf1171d33ca2cf7ce34733ee86f4f9b7ae5/src/client.rs
+    let tls_config = std::sync::Arc::new(tls_config);
 
-    let request = hyper::Request::builder()
+    // with uri that starts with "https" the following line fails with  "failed to lookup address
+    // information: Name or service not known". Using uris that do not start with "https" gives
+    // connection error.
+    let addr = uri.to_socket_addrs().unwrap().next().unwrap();
+    log::info!("ADDR: {:?}", &addr);
+
+    let tcp = TcpStream::connect(&addr).await.map_err(|err| {
+        log::error!("Connect error: {:?}", err);
+        OakStatus::ErrInternal
+    })?;
+
+    let dns_name = DNSNameRef::try_from_ascii_str("localhost").unwrap();
+    let connector = TlsConnector::from(tls_config);
+    let res = connector.connect(dns_name, tcp).await;
+    let tls = res.unwrap();
+    {
+        let (_, session) = tls.get_ref();
+        let negotiated_protocol = session.get_alpn_protocol();
+        assert_eq!(
+            Some(ALPN_H2.as_bytes()),
+            negotiated_protocol.as_ref().map(|x| &**x)
+        );
+    }
+
+    let (mut client, _connection) = h2::client::handshake(tls).await.map_err(|err| {
+        log::error!("handshake error: {:?}", err);
+        OakStatus::ErrInternal
+    })?;
+
+    let request = http::Request::builder()
         .method(http::Method::GET)
         .uri(uri)
         .header(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY, label_bytes)
-        .body(hyper::Body::empty())
+        .body(())
         .unwrap();
 
-    client.request(request).await
+    // client.request(request).await
+    let (response, _stream) = client.send_request(request, true).unwrap();
+
+    response.await.map_err(|err| {
+        log::error!("response error: {:?}", err);
+        OakStatus::ErrInternal
+    })
 }

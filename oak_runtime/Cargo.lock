@@ -779,6 +779,7 @@ dependencies = [
  "futures",
  "futures-core",
  "futures-util",
+ "h2",
  "hex",
  "http",
  "hyper",
@@ -812,6 +813,7 @@ dependencies = [
  "tonic",
  "wasmi",
  "wat",
+ "webpki",
 ]
 
 [[package]]

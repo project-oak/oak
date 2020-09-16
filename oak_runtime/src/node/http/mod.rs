@@ -146,7 +146,10 @@ impl HttpServerNode {
             .await
             .expect("Could not create TCP listener.");
         let tls_server = self.build_tls_server(&mut tcp);
-        let server = Server::builder(tls_server).serve(service);
+        let server = Server::builder(tls_server)
+            // All HTTP servers in Oak only allow HTTP/2 requests.
+            .http2_only(true)
+            .serve(service);
 
         let graceful_server = server.with_graceful_shutdown(async {
             // Treat notification failure the same as a notification.
