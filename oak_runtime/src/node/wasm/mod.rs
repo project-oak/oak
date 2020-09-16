@@ -859,6 +859,10 @@ fn wasm_node_privilege(
 }
 
 impl super::Node for WasmNode {
+    fn node_type(&self) -> &'static str {
+        "wasm"
+    }
+
     /// Runs this instance of a Wasm Node.
     fn run(
         self: Box<Self>,

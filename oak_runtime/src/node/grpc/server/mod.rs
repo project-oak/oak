@@ -122,6 +122,10 @@ impl GrpcServerNode {
 
 /// Oak Node implementation for the gRPC server.
 impl Node for GrpcServerNode {
+    fn node_type(&self) -> &'static str {
+        "grpc-server"
+    }
+
     fn run(
         self: Box<Self>,
         runtime: RuntimeProxy,

@@ -35,6 +35,10 @@ impl StorageNode {
 }
 
 impl super::Node for StorageNode {
+    fn node_type(&self) -> &'static str {
+        "storage"
+    }
+
     fn run(
         self: Box<Self>,
         _runtime: RuntimeProxy,

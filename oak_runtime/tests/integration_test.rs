@@ -107,8 +107,10 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
         .block_on(common::read_metrics())
         .expect("Reading the metrics failed.");
 
-    let value = get_int_metric_value(&res, "runtime_nodes_total");
-    assert_eq!(value, Some(2), "{}", &res);
+    let value = get_int_metric_value(&res, "runtime_nodes_total\\{node_type=\"implicit\"\\}");
+    assert_eq!(value, Some(1), "{}", &res);
+    let value = get_int_metric_value(&res, "runtime_nodes_total\\{node_type=\"wasm\"\\}");
+    assert_eq!(value, Some(1), "{}", &res);
 
     let value = get_int_metric_value(&res, "runtime_health_check");
     assert_eq!(value, Some(1), "{}", &res);
