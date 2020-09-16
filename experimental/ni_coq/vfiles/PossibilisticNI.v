@@ -1,12 +1,15 @@
 Require Import Coq.Lists.List.
 Import ListNotations.
 From OakIFC Require Import
+    Lattice
     Parameters
     RuntimeModel
     EvAugSemantics
     Events
     LowEquivalences
-    TraceTheorems.
+    TraceTheorems
+    NIUtilTheorems
+    Unwind.
 From mathcomp Require Import all_ssreflect finmap.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
@@ -80,124 +83,65 @@ Theorem possibilistic_ni_1step_node: forall ell id t1 t2 s1 s2 n1 n2 t1',
         (step_node_ev id (ncall n2) t2 t2') /\
         (trace_low_eq ell t1' t2')).
 Proof.
+    intros.
+    assert (Hsleq_s1s2: state_low_eq ell s1 s2) by
+        (eapply trace_leq_imples_head_st_leq; eassumption).
+    inversion H4; subst.
+    - (* WriteChannel *)
+        inversion H8. assert (s = s1) by congruence.
+        assert (n0 = n) by congruence. subst.
+        assert (n = n1) by congruence. subst.
+        destruct (ord_dec (nlbl n1) (ell)) eqn:Hflows.
+        + (* flows *)
+        assert (n1=n2) by
+            (eapply state_leq_and_flowsto_to_node_eq; eassumption).
+        rename n2 into n. subst.
+        (* todo need to uncons the right channel from s2 and use it
+        here instead of ch'*)
+
+        rename ch into ch1. rename ch' into ch1'.
+        specialize (other_chan_exists_from_chans_leq ell s1 s2 han ch1) as [ch2 [Hch2 Hchanleq]].
+            apply Hsleq_s1s2. assumption.
+        (*
+            note that the channels could be different because we have
+            nlbl n <<L ell  and    nlbl n <<L clbl ch1    and   nlbl n <<L clbl ch2
+            but these do not imply that clbl ch1 <<L clbl ch2 or vice versa 
+        *)
+        remember (chan_append ch2 msg) as ch2'.
+        remember (state_upd_chan han ch2'
+            (state_upd_node id n' s2)) as s2'.
+        exists ((s2', n ---> msg) :: t2). split.
+        --  (* the step happens *)
+            assert ((ncall n) = WriteChannel han msg) by congruence.
+            rewrite H9.
+            eapply SWriteChan; auto; try eassumption; try congruence.
+            rewrite Heqs2'. (* replace n' with (node_del_rhans (rhs msg) n ) in *. *)
+            rewrite Heqch2'.
+            eapply RuntimeModel.SWriteChan; auto; try eassumption; try congruence.
+            inversion Hchanleq; subst; congruence.
+        -- (* the traces are low-equivalent*)
+            constructor; try congruence.
+            constructor. reflexivity. constructor. rewrite Heqs2'.
+            * (* node_state_leq *) 
+                eapply state_upd_chan_preserves_node_state_leq.
+                eapply leq_node_updates_preserve_node_state_leq; try congruence.
+                apply Hsleq_s1s2. eapply node_low_eq_reflexive.
+            * (* chan_state_leq *)
+                rewrite Heqs2'. 
+                eapply leq_chan_updates_preserve_chan_state_leq.
+                eapply state_upd_node_preserves_chan_state_leq. apply Hsleq_s1s2.
+                assert (ch1' = chan_append ch1 msg) by
+                    (destruct (chan_append ch1 msg ); reflexivity).
+                rewrite H9 Heqch2'.
+                eapply chan_append_unwind.
+                    (* chan_low_eq ell ch1 ch2 *) (* TODO make theorem*)
+                inversion Hsleq_s1s2. specialize (H16 han).
+                    rewrite H13 in H16. rewrite Hch2 in H16. assumption.
+        + (* NOT flows *)
 Admitted. (* WIP *)
 
-Theorem state_upd_node_eq: forall id n s,
-    (state_upd_node id n s).(nodes).[? id] = Some n.
-intros.
-rewrite fnd_set. 
-rewrite (introT (@eqP node_id id id)); congruence.
-Qed.
 
-Theorem state_upd_node_neq: forall id id' n s,
-    id' <> id ->
-    (state_upd_node id n s).(nodes).[?id'] = s.(nodes).[?id'].
-intros.
-rewrite fnd_set. 
-specialize (Bool.ReflectF (id' = id) H) as H1.
-Admitted. (* WIP *)
 
-Theorem state_upd_unwind_from_leqn:
-    forall ell id n1 n2 s1 s2,
-    node_low_eq ell n1 n2 ->
-    state_low_eq ell s1 s2 ->
-    state_low_eq ell (state_upd_node id n1 s1) (state_upd_node id n2 s2).
-Proof.
-    intros. inversion H0. 
-    split.
-    - (* nodes *) 
-        intros id'. destruct (id' =P id). 
-        + (* eq *) 
-            rewrite e;
-            rewrite !state_upd_node_eq; assumption.
-        + (* neq *) 
-            rewrite !state_upd_node_neq.
-            apply (H1 id').  assumption. assumption.
-    - (* chans *)
-        assumption.
-Qed.
-
-Theorem set_call_unwind: forall ell id c s1 s2,
-    state_low_eq ell s1 s2 ->
-    state_low_eq ell (s_set_call s1 id c) (s_set_call s2 id c).
-Proof.
-    intros. inversion H; subst.
-    unfold s_set_call.
-    destruct (s1.(nodes).[? id]) eqn:E1; destruct (s2.(nodes).[? id]) eqn:E2.
-    - (* some, some *)
-        assert (E: node_low_eq ell 
-            (n <| ncall ::= (fun=> c) |>)
-            (n0 <| ncall ::= (fun=> c) |>)).
-        {
-            specialize (H0 id). rewrite E1 E2 in H0.
-            inversion H0; subst.
-            constructor; reflexivity.
-            constructor 2; assumption.
-        }
-        eapply state_upd_unwind_from_leqn; assumption.
-    - (* some, none *)
-        exfalso. specialize (H0 id).
-        rewrite E1 E2 in H0.
-        assumption.
-    - (* none, some *)
-        exfalso. specialize (H0 id).
-        rewrite E1 E2 in H0.
-        assumption.
-    - split; assumption.
-Qed.
-
-Theorem call_havoc_unwind: forall ell id c t1 t2 t1' t2',
-    (trace_low_eq ell t1 t2) ->
-    (t1' = head_set_call t1 id c) ->
-    (t2' = head_set_call t2 id c) ->
-    (trace_low_eq ell t1' t2').
-Proof.
-    intros.
-    destruct t1, t2; simpl in *; subst.
-    - (* nil, nil *) constructor.
-    - (* nil, not nil *) inversion H.
-    - (* not nil, nil *) inversion H.
-    - destruct p. destruct p0. inversion H; subst.
-    constructor 2; try assumption.
-    eapply set_call_unwind; assumption.
-Qed.
-
-Theorem trace_loweq_to_deref_node: forall ell t1 t2 id s1 n1,
-(* If two traces are low-equivalent and in the first trace:
-    - the head element has some state (it's not an emty trace)
-    - and in the head state, id can be dereferenced to some node
-    then:
-    - there must be some head state in the other trace (s2)
-    - and we must be able to also dereference id in s2 to some node 
-Mostly, this is just a consequence of the def of trace-low-equivalence.
-*)
-    (trace_low_eq ell t1 t2) ->
-    (head_st t1 = Some s1) ->
-    ((nodes s1).[? id] = Some n1) ->
-    (exists s2 n2,
-        head_st t2 = Some s2 /\ 
-        (nodes s2).[? id] = Some n2 ).
-Proof.
-    intros.
-    destruct (head_st t2) eqn:Ht2head.
-    - (* some s *)
-        destruct (nodes s).[? id] eqn:Hsid.
-            + (* some n *)
-                exists s. exists n.
-                split; (reflexivity || assumption).
-            + (* none *)
-                inversion H; subst.
-                * (* t1 = [] and t2 = [] *) discriminate H0.
-                * exfalso. inversion H4; subst. simpl in Ht2head.
-                 unfold node_state_low_eq in H5.
-                 inversion Ht2head. rewrite H8 in H5. specialize (H5 id).
-                 rewrite Hsid in H5. simpl in H0. inversion H0.
-                 rewrite H9 in H5. rewrite H1 in H5. assumption.
-    - (* none *)
-        inversion H; subst. 
-            + discriminate H0.
-            + inversion Ht2head.
-Qed.
  
 Theorem possibilistic_ni_1step: forall ell t1 t2 t1',
     (trace_low_eq ell t1 t2) ->

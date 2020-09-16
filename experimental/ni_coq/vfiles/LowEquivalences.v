@@ -26,6 +26,8 @@ Inductive chan_low_eq: level -> channel -> channel -> Prop :=
     | ChNoFlow ell ch1 ch2
         (* if the level is not high enough to read either channel,
         * they both look the same to observers at this level *)
+        (Hlbl_eq: ch1.(clbl) = ch2.(clbl))  
+                (* Hlbl_eq makes the labels of channels publicly observable *)
         (H1: ~(ch1.(clbl) <<L ell))
         (H2: ~(ch2.(clbl) <<L ell)):
         chan_low_eq ell ch1 ch2.
@@ -33,12 +35,12 @@ Inductive chan_low_eq: level -> channel -> channel -> Prop :=
 Inductive node_low_eq: level -> node -> node -> Prop :=
     | NodeEq ell n1 n2 (H: n1 = n2): node_low_eq ell n1 n2
     | NodeNoFlow ell n1 n2
+        (Hlbl_eq: n1.(nlbl) = n2.(nlbl))
+                (* Hlbl_eq makes the labels of nodes publicly observable *)
         (H1: ~(n1.(nlbl) <<L ell))
         (H2: ~(n2.(nlbl) <<L ell)):
         node_low_eq ell n1 n2.
 
-(* Is there may a better way to write these using the finset / finmap
-* libs *)
 Definition chan_state_low_eq (ell: level)(chs1 chs2: chan_state): Prop :=
     forall h, (match (chs1 .[?h]), (chs2 .[?h]) with
         | None, None => True
