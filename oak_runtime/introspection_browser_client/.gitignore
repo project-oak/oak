@@ -2,3 +2,4 @@
 /dist
 # Programmatically generated code from protobufs
 /protoc_out
+/protoc_tmp_out
