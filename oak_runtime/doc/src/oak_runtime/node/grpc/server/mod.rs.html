@@ -631,6 +631,9 @@
 <span id="631">631</span>
 <span id="632">632</span>
 <span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1022,7 +1025,10 @@
                         <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="kw">if</span> <span class="ident">status</span>.<span class="ident">code</span> <span class="op">=</span><span class="op">=</span> <span class="ident">rpc</span>::<span class="ident">Code</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>.<span class="ident">rsp_msg</span>),
                         <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">to_tonic_status</span>(<span class="ident">status</span>)),
                     };
-                    <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">result</span>).<span class="ident">unwrap</span>();
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">result</span>) {
+                        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to send gRPC response: {:?}&quot;</span>, <span class="ident">err</span>);
+                        <span class="kw">break</span>;
+                    }
                 }
             });
             <span class="prelude-val">Ok</span>(<span class="ident">tonic</span>::<span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">rx</span>))
