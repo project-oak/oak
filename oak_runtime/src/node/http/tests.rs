@@ -16,7 +16,13 @@
 
 use super::*;
 use maplit::hashmap;
-use oak_abi::{label::Label, proto::oak::application::ApplicationConfiguration};
+use oak_abi::{
+    label::Label,
+    proto::oak::application::{
+        node_configuration::ConfigType, ApplicationConfiguration, HttpServerConfiguration,
+        NodeConfiguration,
+    },
+};
 use std::{fs, option::Option, thread::JoinHandle};
 
 static LOCAL_CA: &str = "../examples/certs/local/ca.pem";
@@ -24,59 +30,39 @@ static GCP_CA: &str = "../examples/certs/gcp/ca.pem";
 
 struct HttpServerTester {
     runtime: RuntimeProxy,
-    server_node_thread_handle: Option<JoinHandle<()>>,
     oak_node_simulator_thread_handle: Option<JoinHandle<()>>,
-    notify_sender: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
 impl HttpServerTester {
-    /// Create a new runtime and test server.
-    /// port: The port on which the server is started
-    /// number_of_requests: the number of requests the server expects to receive. This parameter is
-    /// passed to `oak_node_simulator` to set up the Oak node that servers the requests.
-    fn new(port: u32, number_of_requests: i32) -> HttpServerTester {
+    /// Test setup. Creates an Oak runtime, a test HTTP server node on the given port, and an Oak
+    /// node simulator thread.
+    fn new(port: u32) -> HttpServerTester {
         let runtime = create_runtime();
-        let server_node = create_server_node(port);
-        let (init_receiver, invocation_receiver) = create_communication_channel(&runtime);
+        let invocation_receiver = create_server_node(&runtime, port);
 
-        // Start the server node
-        let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
-        let runtime_proxy = runtime.clone();
-        // TODO(#1186): Use tokio instead of spawning a thread.
-        let server_node_thread = std::thread::spawn(move || {
-            server_node.run(runtime_proxy, init_receiver, notify_receiver)
-        });
-
-        // Simulate an Oak node that responds with 200 (OK) to every request it receives
+        // Simulate an Oak node that responds with 200 (OK) to every request it receives. Instead of
+        // using `Runtime::node_create` which would require WebAssembly code, create and start the
+        // Oak node directly in a separate thread.
+        //
         // TODO(#1186): Use tokio instead of spawning a thread.
         let runtime_proxy = runtime.clone();
         let oak_node_simulator_thread = Some(std::thread::spawn(move || {
-            oak_node_simulator(number_of_requests, &runtime_proxy, invocation_receiver);
+            oak_node_simulator(&runtime_proxy, invocation_receiver);
         }));
 
         HttpServerTester {
             runtime,
-            server_node_thread_handle: Some(server_node_thread),
             oak_node_simulator_thread_handle: oak_node_simulator_thread,
-            notify_sender: Some(notify_sender),
         }
     }
 
     fn cleanup(&mut self) {
-        if let Some(sender) = self.notify_sender.take() {
-            sender.send(()).unwrap_or_else(|()| {
-                debug!("Test node already dropped `notify_receiver`.");
-            })
-        }
-        if let Some(handle) = self.server_node_thread_handle.take() {
-            let _ = handle.join();
-        };
+        // stop the runtime and any servers it is running
+        self.runtime.runtime.stop();
+
         if let Some(handle) = self.oak_node_simulator_thread_handle.take() {
             let _ = handle.join();
         };
-
-        // stop the runtime and any servers it is running
-        self.runtime.runtime.stop();
     }
 }
 
@@ -93,7 +79,7 @@ async fn test_https_server_can_serve_https_requests() {
 
     // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
     // HTTP requests.
-    let mut http_server_tester = HttpServerTester::new(2525, 1);
+    let mut http_server_tester = HttpServerTester::new(2525);
     let client_with_valid_tls = create_client(LOCAL_CA);
 
     // Send an HTTPS request, and check that response has StatusCode::OK
@@ -116,7 +102,7 @@ async fn test_https_server_cannot_serve_http_requests() {
     // and would not send anything to the Oak node. Creating a thread to simulate the Oak node will
     // result in the thread being blocked for ever. So, we set up the test without an
     // oak-node-simulator thread.
-    let mut http_server_tester = HttpServerTester::new(2526, 0);
+    let mut http_server_tester = HttpServerTester::new(2526);
     let client_with_valid_tls = create_client(LOCAL_CA);
 
     // Send an HTTP request, and check that the server responds with an error
@@ -133,7 +119,7 @@ async fn test_https_server_does_not_terminate_after_a_bad_request() {
 
     // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
     // HTTP requests.
-    let mut http_server_tester = HttpServerTester::new(2527, 2);
+    let mut http_server_tester = HttpServerTester::new(2527);
     let client_with_valid_tls = create_client(LOCAL_CA);
     let client_with_invalid_tls = create_client(GCP_CA);
 
@@ -159,34 +145,35 @@ fn create_runtime() -> RuntimeProxy {
         wasm_modules: hashmap! {},
         initial_node_configuration: None,
     };
-    let signature_table = crate::SignatureTable::default();
-    info!("Create runtime for test");
-
-    crate::RuntimeProxy::create_runtime(
-        &configuration,
-        &crate::SecureServerConfiguration::default(),
-        &signature_table,
-    )
-}
-
-fn create_server_node(port: u32) -> Box<HttpServerNode> {
     let tls_config = crate::tls::TlsConfig::new(
         "../examples/certs/local/local.pem",
         "../examples/certs/local/local.key",
     )
     .expect("Could not create TLS config from local certs.");
+    let secure_server_config = crate::SecureServerConfiguration {
+        grpc_config: None,
+        http_config: Some(crate::HttpConfiguration { tls_config }),
+    };
+    let signature_table = crate::SignatureTable::default();
+    info!("Create runtime for test");
 
-    // Create http server node
-    Box::new(
-        HttpServerNode::new(
-            "test-node",
-            HttpServerConfiguration {
-                address: format!("[::]:{}", port),
-            },
-            tls_config,
-        )
-        .expect("Could not create server node"),
-    )
+    crate::RuntimeProxy::create_runtime(&configuration, &secure_server_config, &signature_table)
+}
+
+fn create_server_node(runtime: &RuntimeProxy, port: u32) -> oak_abi::Handle {
+    let (init_receiver, invocation_receiver) = create_communication_channel(runtime);
+    let server_config = NodeConfiguration {
+        name: "test_server".to_string(),
+        config_type: Some(ConfigType::HttpServerConfig(HttpServerConfiguration {
+            address: format!("[::]:{}", port),
+        })),
+    };
+
+    runtime
+        .node_create(&server_config, &Label::public_untrusted(), init_receiver)
+        .expect("Could not create HTTP server node!");
+
+    invocation_receiver
 }
 
 fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak_abi::Handle) {
@@ -221,23 +208,14 @@ fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak
     (init_receiver, invocation_receiver)
 }
 
-// Simulate an Oak node that responds to the specified number of requests. Since the Oak node blocks
-// until a new request is received, we need to know the number of requests that the test sends
-// beforehand. Alternatively, the node simulator could listen for incoming requests in an infinite
-// loop and have a termination mechanism that could be signalled from outside. However, specifying
-// the exact number of expected requests is more appropriate for testing purposes.
-fn oak_node_simulator(
-    number_of_requests: i32,
-    runtime: &RuntimeProxy,
-    invocation_receiver: oak_abi::Handle,
-) {
+// Simulate an Oak node that responds to incoming requests.
+fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Handle) {
     // Get invocation message that contains the response_writer handle.
     let invocation_receiver = Receiver::<HttpInvocation>::new(ReadHandle {
         handle: invocation_receiver,
     });
 
-    for _counter in 0..number_of_requests {
-        let invocation = invocation_receiver.receive(runtime).unwrap();
+    while let Ok(invocation) = invocation_receiver.receive(runtime) {
         let resp = HttpResponse {
             body: vec![],
             status: http::status::StatusCode::OK.as_u16() as i32,
