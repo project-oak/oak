@@ -1,4 +1,3 @@
-From mathcomp Require Import fintype eqtype.
 Require Import OakIFC.Lattice.
 
 (*
@@ -10,11 +9,14 @@ In this case, labels are syntactic objects and levels are the security domains.
 
 Class params := {
     (* Assumed types, most with decidable equality *)
-    level: finType; 
-    data: finType;      (* this is a generic piece of data, for example the
-                            bytes sent over a channel *)
-    node_id: finType;
-    handle: finType;
+    level: Type; 
+    dec_eq_lev: forall x y: level, {x=y} + {x <> y};
+    data: Type;
+    dec_eq_msg: forall x y: data, {x=y} + {x <> y};
+    node_id: Type;
+    dec_eq_nid: forall x y: node_id, {x=y} + {x <> y};
+    handle: Type;
+    dec_eq_h: forall x y: handle, {x=y} + {x <> y};
 }.
 (* these things need to be ssreflect.fintype for compatability with
    ssreflect.finmap. finTypes have decidable equality which you can get

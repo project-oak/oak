@@ -3,12 +3,9 @@ Import ListNotations.
 Require Import Coq.Sets.Ensembles.
 From OakIFC Require Import
     Lattice
-    Parameters.
-(* finmap is a library for finite maps.
-* it comes with nice notations and some built-in theorems.
-* Since this is all that is used from ssreflect, we could cut ssreflect
-* if it becomes too much trouble*)
-From mathcomp Require Import all_ssreflect finmap.
+    Parameters
+    GenericMap.
+
 (* RecordUpdate is a conveninece feature that provides functional updates for
 * records with notation: https://github.com/tchajed/coq-record-update *)
 (* To work with record updates from this library in proofs "unfold set" quickly
@@ -26,10 +23,6 @@ Arguments Ensembles.Singleton {U}.
 Arguments Ensembles.Union {U}.
 Arguments Ensembles.Setminus{U}.
 Arguments Ensembles.Included{U}.
-
-(* Needed for most finite map notation *)
-Open Scope fmap_scope.
-Open Scope fset_scope.
 
 (*============================================================================
  Commands, State, Etc.
@@ -86,8 +79,16 @@ Record node := Node {
 Instance etanode: Settable _ :=
     settable! Node<nlbl; read_handles; write_handles; ncall>.
 
-Definition node_state := {fmap node_id -> node}.
-Definition chan_state := {fmap handle -> channel}.
+Instance Knid: KeyT := {
+    t := node_id; 
+    eq_dec := dec_eq_nid;
+}.
+Instance Khandle: KeyT := {
+    t := handle;
+    eq_dec := dec_eq_h;
+}.
+Definition node_state := pg_map Knid node.
+Definition chan_state := pg_map Khandle channel.
 Record state := State {
     nodes: node_state;
     chans: chan_state

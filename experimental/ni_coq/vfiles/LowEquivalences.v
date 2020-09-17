@@ -1,9 +1,9 @@
 Require Import Coq.Lists.List.
 Import ListNotations.
-From mathcomp Require Import all_ssreflect finmap.
 From OakIFC Require Import
     RuntimeModel
-    Parameters.
+    Parameters
+    GenericMap.
 
 (*=============================================================================
 * Low Equivalences

@@ -76,7 +76,12 @@ Notation "x '|->' v ';' m" := (pg_update m x v)
   (at level 100, v at next level, right associativity).
 Notation "x '|->' v" := (pg_update pg_empty x v)
   (at level 100).
-Notation "m '[' k '-->' v ']'" := (pg_update m k v)
-  (at level 100).
 
-(* undoubtedly theorems *)
+(* Make the notation compatible with ssreflect finmap to 
+* deal with laziness of me *)
+Notation "m '.[' k '<-' v ']'" := (pg_update m k v)
+  (at level 100).
+Definition fnd {KT: KeyT}{VT: Type} (m: (pg_map KT VT)) k :=  (m k).
+Notation "m '.[?' k ']'" := (fnd m k) 
+(at level 2, k at level 200, format "m .[?  k ]").
+

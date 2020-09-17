@@ -1,13 +1,13 @@
 From OakIFC Require Import
+        Lattice
         Parameters
+        GenericMap
         RuntimeModel
         EvAugSemantics
         Events
-        LowEquivalences
-        Lattice.
+        LowEquivalences.
 Require Import Coq.Lists.List.
 Import ListNotations.
-From mathcomp Require Import all_ssreflect finmap.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 
@@ -40,7 +40,9 @@ Theorem state_leq_and_flowsto_to_node_eq: forall ell s1 s2 id n1 n2,
     (nlbl n1 <<L ell) ->
     n1 = n2.
 Proof.
-    inversion 3. specialize (H2 id). rewrite H H0 in H2.
+    inversion 3. specialize (H2 id).
+    (* hmmm, I used to be able to do rewrite H H0 in H2 as one tactic here *)
+    rewrite H in H2. rewrite H0 in H2.
     inversion H2. subst. reflexivity. contradiction.
 Qed.
 
@@ -95,18 +97,16 @@ Admitted. (* WIP // TODO *)
 
 Theorem state_upd_node_eq: forall id n s,
     (state_upd_node id n s).(nodes).[? id] = Some n.
-intros.
-rewrite fnd_set. 
-rewrite (introT (@eqP node_id id id)); congruence.
+Proof.
+    intros. eapply upd_eq.
 Qed.
 
-Theorem state_upd_node_neq: forall id id' n s,
+Theorem state_upd_node_neq: forall (id id': node_id) n s,
     id' <> id ->
     (state_upd_node id n s).(nodes).[?id'] = s.(nodes).[?id'].
-intros.
-rewrite fnd_set. 
-specialize (Bool.ReflectF (id' = id) H) as H1.
-Admitted. (* WIP *) (* I am stuck with this one. Come back to it later. *)
+Proof.
+    intros. eapply upd_neq. congruence.
+Qed.
 
 Theorem trace_loweq_to_deref_node: forall ell t1 t2 id s1 n1,
 (* If two traces are low-equivalent and in the first trace:

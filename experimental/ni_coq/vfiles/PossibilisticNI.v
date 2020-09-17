@@ -3,6 +3,7 @@ Import ListNotations.
 From OakIFC Require Import
     Lattice
     Parameters
+    GenericMap
     RuntimeModel
     EvAugSemantics
     Events
@@ -10,7 +11,6 @@ From OakIFC Require Import
     TraceTheorems
     NIUtilTheorems
     Unwind.
-From mathcomp Require Import all_ssreflect finmap.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 
@@ -132,16 +132,13 @@ Proof.
                 eapply state_upd_node_preserves_chan_state_leq. apply Hsleq_s1s2.
                 assert (ch1' = chan_append ch1 msg) by
                     (destruct (chan_append ch1 msg ); reflexivity).
-                rewrite H9 Heqch2'.
+                rewrite H9. rewrite Heqch2'.
                 eapply chan_append_unwind.
                     (* chan_low_eq ell ch1 ch2 *) (* TODO make theorem*)
                 inversion Hsleq_s1s2. specialize (H16 han).
                     rewrite H13 in H16. rewrite Hch2 in H16. assumption.
         + (* NOT flows *)
 Admitted. (* WIP *)
-
-
-
  
 Theorem possibilistic_ni_1step: forall ell t1 t2 t1',
     (trace_low_eq ell t1 t2) ->

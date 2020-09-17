@@ -1,14 +1,14 @@
 Require Import Coq.Lists.List.
 Import ListNotations.
 From OakIFC Require Import
+    Lattice
     Parameters
+    GenericMap
     RuntimeModel
     EvAugSemantics
     Events
     LowEquivalences
-    Lattice
     NIUtilTheorems.
-From mathcomp Require Import all_ssreflect finmap.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 
@@ -48,7 +48,7 @@ Proof.
     intros. inversion H0. 
     split.
     - (* nodes *) 
-        intros id'. destruct (id' =P id). 
+        intros id'. destruct (dec_eq_nid id' id).
         + (* eq *) 
             rewrite e;
             rewrite !state_upd_node_eq; assumption.
@@ -68,10 +68,11 @@ Proof.
     destruct (s1.(nodes).[? id]) eqn:E1; destruct (s2.(nodes).[? id]) eqn:E2.
     - (* some, some *)
         assert (E: node_low_eq ell 
-            (n <| ncall ::= (fun=> c) |>)
-            (n0 <| ncall ::= (fun=> c) |>)).
+            (n <| ncall ::= (fun x=> c) |>)
+            (n0 <| ncall ::= (fun x=> c) |>)).
         {
-            specialize (H0 id). rewrite E1 E2 in H0.
+            specialize (H0 id). rewrite E1 in H0.
+            rewrite E2 in H0.
             inversion H0; subst.
             constructor; reflexivity.
             constructor 2; assumption.
@@ -79,11 +80,11 @@ Proof.
         eapply state_upd_unwind_from_leqn; assumption.
     - (* some, none *)
         exfalso. specialize (H0 id).
-        rewrite E1 E2 in H0.
+        rewrite E1 in H0. rewrite E2 in H0.
         assumption.
     - (* none, some *)
         exfalso. specialize (H0 id).
-        rewrite E1 E2 in H0.
+        rewrite E1 in H0. rewrite E2 in H0.
         assumption.
     - split; assumption.
 Qed.

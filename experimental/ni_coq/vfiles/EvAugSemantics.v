@@ -3,9 +3,9 @@ Require Import List.
 From OakIFC Require Import
     Lattice
     Parameters
+    GenericMap
     RuntimeModel
     Events.
-From mathcomp Require Import all_ssreflect finmap.
 Import ListNotations.
 
 Arguments Ensembles.In {U}.
