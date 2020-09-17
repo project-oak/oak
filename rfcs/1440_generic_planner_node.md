@@ -2,7 +2,7 @@
 
 ## Objective
 
-Make the node graph easier to set up, reason about and amenable to static
+Make the node graph easier to set up and reason about, and amenable to static
 analysis.
 
 ## Background
@@ -47,7 +47,10 @@ Some applications require dynamic creation of nodes and channels based on the
 labels associated with incoming invocations. A sub-graph template mechanism will
 be implemented to support dynamic node creation. The typical scenario where this
 is required is the case where a per-user node must be created to support
-per-user labels.
+per-user labels. Although this means that the entire node graph cannot be
+created up-front and that the node graph will not be static, it should still be
+easier to reason about each of the sub-graphs and the overall node graph is
+still strongly constrained.
 
 ## Detailed Design
 
@@ -76,8 +79,8 @@ Dynamic node creation will be supported by parameterised sub-graph templates.
 The template will specify a label pattern to match. The pattern will include
 information on extracting the parameter values from the incoming labels. The
 trigger for dynamic node creation will be incoming invocations. The label of the
-channel associated with the request receiver will be used to match the template
-label pattern and extract the parameters.
+channel associated with the request receiver on the invocation will be used to
+match the template label pattern and extract the parameters.
 
 A sub-graph template will also be able to define whether it is persistent or
 not. If it is persistent, an instance will be created the first time it is
@@ -95,19 +98,79 @@ formatting will allow specification of conversions to strings so that it could
 be used in names etc. Initially only base64 encoding will be supported for
 converting from bytes to strings.
 
-As an example, if a parameter named `user_id` is extracted for the template, a
+As an example, if a parameter named `user_id` is extracted for the label, a
 user-specific node can use the base64 encoding of the user id to create a unique
 name:
 
-```Toml
-[node]
+```toml
+[node_template]
 name = "user_{base64($user_id)}"
 ```
 
 The initial impementation of dynamic node creation will focus only on support
-for user labels, as it is the first motivating example we have. Each extracted
-parameter will be the matching bytes that represent the user identity (currently
-the HMAC of the bearer token, but in future it would be the user's public key).
+for per-user labels, as it is the first motivating example we have. Each
+extracted parameter will be the matching bytes that represent the user identity
+(currently the HMAC of the bearer token, but in future it would be the user's
+public key).
+
+A new LabelTemplate protobuf object will be implemented to support parameterised
+labels. It will reuse the existing tags from the Label, but also add templated
+tags. These can be used for matching labels and extracting parameters, as well
+as generating concrete label instances given a parameter value.
+
+```proto
+
+// Template for generating labels given parameter values, or matching labels
+// and extracting parameter values.
+message LabelTemplate {
+  repeated TagTemplate confidentiality_tags = 1;
+  repeated TagTemplate integrity_tags = 2;
+}
+
+// Template for generating a user-specific gRPC tag given a user ID, or for
+// extracting a user ID parameter from a matched gRPC tag.
+message GrpcTagTemplate {
+  string user_id_parameter_name = 1;
+}
+
+
+// Templated tags for supporting templated labels.
+message TagTemplate {
+  oneof tag {
+    GrpcTag grpc_tag = 1;
+    GrpcTagTemplate grpc_tag_template = 1;
+    WebAssemblyModuleTag web_assembly_module_tag = 2;
+    WebAssemblyModuleSignatureTag web_assembly_module_signature_tag = 3;
+    TlsEndpointTag tls_endpoint_tag = 4;
+  }
+}
+
+```
+
+As an example, the following can be used to define a label template matching a
+user-specific gRPC confidentiality tag and extracting the byte-array content of
+the tag as a parameter named user_id:
+
+```toml
+
+[[label_template.confidentiality_tags]]
+[label_template.confidentiality_tags.tag.grpc_tag_template]
+user_id_parameter_name = "user_id"
+
+```
+
+Note: I am unsure about the exact TOML representation for this.
+
+Question: In general TOML is not great for deeply nested object hierarchies, so
+we should perhaps consider a different serialisation format. Prost does not
+support text-serialised protos. JSON is an option, but not that great for human
+readable config. YAML can handle the complex object hierarchies, but the
+specification is very complex and parsing YAML is considered risky due to
+potential of injection vulnerabilities that is common when trying to support
+dynamic local object creation as defined by the specification. The application
+configuration is in TOML format, so having to deal with multiple serialisation
+formats when creating an application is not a great developer experience. Is
+there a suitable format that will work for everything?
 
 ### Invocation Routing
 
@@ -281,8 +344,6 @@ struct NodeGraph {
   /// The per label sub-graph templates used for dynamic node creation.
   templates: Vec<Template>,
 }
-
-
 
 ```
 
