@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "Oak",
+  "version": "0.0.0",
+  "permissions": [
+    "activeTab",
+    "webRequest",
+    "webRequestBlocking",
+    "https://*/*",
+    "http://*/*",
+    "ws://*/*",
+    "wss://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://*/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  }
+}
