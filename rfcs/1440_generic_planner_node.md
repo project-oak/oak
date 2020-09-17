@@ -105,6 +105,7 @@ name:
 ```toml
 [node_template]
 name = "user_{base64($user_id)}"
+
 ```
 
 The initial impementation of dynamic node creation will focus only on support
@@ -152,8 +153,8 @@ user-specific gRPC confidentiality tag and extracting the byte-array content of
 the tag as a parameter named user_id:
 
 ```toml
-
 [[label_template.confidentiality_tags]]
+
 [label_template.confidentiality_tags.tag.grpc_tag_template]
 user_id_parameter_name = "user_id"
 
