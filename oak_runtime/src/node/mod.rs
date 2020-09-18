@@ -91,73 +91,90 @@ impl std::fmt::Display for ConfigurationError {
     }
 }
 
-/// Create a new [`Node`] instance based on the provided configuration information.
-pub fn create_node(
-    application_configuration: &ApplicationConfiguration,
-    node_configuration: &NodeConfiguration,
-    secure_server_configuration: &SecureServerConfiguration,
-    signature_table: &SignatureTable,
-) -> Result<Box<dyn Node>, ConfigurationError> {
-    let node_name = &node_configuration.name;
-    match &node_configuration.config_type {
-        Some(ConfigType::LogConfig(LogConfiguration {})) => {
-            Ok(Box::new(logger::LogNode::new(node_name)))
-        }
-        Some(ConfigType::GrpcServerConfig(config)) => {
-            let grpc_configuration = secure_server_configuration
-                .clone()
-                .grpc_config
-                .expect("no gRPC identity provided to Oak Runtime");
-            Ok(Box::new(grpc::server::GrpcServerNode::new(
+/// Implementation of [`NodeFactory`] for server-like Oak applications running on cloud
+/// environments with WebAssembly support.
+pub struct ServerNodeFactory {
+    pub application_configuration: ApplicationConfiguration,
+    pub secure_server_configuration: SecureServerConfiguration,
+    pub signature_table: SignatureTable,
+}
+
+impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
+    fn create_node(
+        &self,
+        node_configuration: &NodeConfiguration,
+    ) -> Result<Box<dyn Node>, ConfigurationError> {
+        let node_name = &node_configuration.name;
+        match &node_configuration.config_type {
+            Some(ConfigType::LogConfig(LogConfiguration {})) => {
+                Ok(Box::new(logger::LogNode::new(node_name)))
+            }
+            Some(ConfigType::GrpcServerConfig(config)) => {
+                let grpc_configuration = self
+                    .secure_server_configuration
+                    .grpc_config
+                    .clone()
+                    .expect("no gRPC identity provided to Oak Runtime");
+                Ok(Box::new(grpc::server::GrpcServerNode::new(
+                    node_name,
+                    config.clone(),
+                    grpc_configuration
+                        .grpc_server_tls_identity
+                        .as_ref()
+                        .expect("no gRPC server TLS identity provided to Oak Runtime")
+                        .clone(),
+                    grpc_configuration.oidc_client_info.clone(),
+                )?))
+            }
+            Some(ConfigType::WasmConfig(config)) => Ok(Box::new(wasm::WasmNode::new(
                 node_name,
+                &self.application_configuration,
                 config.clone(),
-                grpc_configuration
-                    .grpc_server_tls_identity
-                    .as_ref()
-                    .expect("no gRPC server TLS identity provided to Oak Runtime")
-                    .clone(),
-                grpc_configuration.oidc_client_info.clone(),
-            )?))
+                &self.signature_table,
+            )?)),
+            Some(ConfigType::GrpcClientConfig(config)) => {
+                let grpc_configuration = self
+                    .secure_server_configuration
+                    .clone()
+                    .grpc_config
+                    .expect("no gRPC identity provided to Oak Runtime");
+                Ok(Box::new(grpc::client::GrpcClientNode::new(
+                    node_name,
+                    config.clone(),
+                    grpc_configuration
+                        .grpc_client_root_tls_certificate
+                        .as_ref()
+                        .expect("no gRPC client root TLS certificate provided to Oak Runtime")
+                        .clone(),
+                )?))
+            }
+            Some(ConfigType::RoughtimeClientConfig(config)) => Ok(Box::new(
+                roughtime::RoughtimeClientNode::new(node_name, config),
+            )),
+            Some(ConfigType::StorageConfig(_config)) => {
+                Ok(Box::new(storage::StorageNode::new(node_name)))
+            }
+            Some(ConfigType::HttpServerConfig(config)) => {
+                let tls_config = self
+                    .secure_server_configuration
+                    .http_config
+                    .clone()
+                    .expect("no TLS configuration for HTTP servers provided to Oak Runtime")
+                    .tls_config;
+                Ok(Box::new(http::HttpServerNode::new(
+                    node_name,
+                    config.clone(),
+                    tls_config,
+                )?))
+            }
+            None => Err(ConfigurationError::InvalidNodeConfiguration),
         }
-        Some(ConfigType::WasmConfig(config)) => Ok(Box::new(wasm::WasmNode::new(
-            node_name,
-            application_configuration,
-            config.clone(),
-            signature_table,
-        )?)),
-        Some(ConfigType::GrpcClientConfig(config)) => {
-            let grpc_configuration = secure_server_configuration
-                .clone()
-                .grpc_config
-                .expect("no gRPC identity provided to Oak Runtime");
-            Ok(Box::new(grpc::client::GrpcClientNode::new(
-                node_name,
-                config.clone(),
-                grpc_configuration
-                    .grpc_client_root_tls_certificate
-                    .as_ref()
-                    .expect("no gRPC client root TLS certificate provided to Oak Runtime")
-                    .clone(),
-            )?))
-        }
-        Some(ConfigType::RoughtimeClientConfig(config)) => Ok(Box::new(
-            roughtime::RoughtimeClientNode::new(node_name, config),
-        )),
-        Some(ConfigType::StorageConfig(_config)) => {
-            Ok(Box::new(storage::StorageNode::new(node_name)))
-        }
-        Some(ConfigType::HttpServerConfig(config)) => {
-            let tls_config = secure_server_configuration
-                .clone()
-                .http_config
-                .expect("no TLS configuration for HTTP servers provided to Oak Runtime")
-                .tls_config;
-            Ok(Box::new(http::HttpServerNode::new(
-                node_name,
-                config.clone(),
-                tls_config,
-            )?))
-        }
-        None => Err(ConfigurationError::InvalidNodeConfiguration),
     }
+}
+
+/// A trait implemented by a concrete factory of nodes that creates nodes based on a Node
+/// configuration of type `T`.
+pub trait NodeFactory<T> {
+    /// Creates a new [`Node`] instance based on the provided Node configuration information.
+    fn create_node(&self, node_configuration: &T) -> Result<Box<dyn Node>, ConfigurationError>;
 }

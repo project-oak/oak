@@ -209,7 +209,7 @@ fn handle_request(
 async fn make_server(
     port: u16,
     runtime: Arc<Runtime>,
-    termination_notificiation_receiver: tokio::sync::oneshot::Receiver<()>,
+    termination_notification_receiver: tokio::sync::oneshot::Receiver<()>,
 ) {
     // Initialize SocketAddr to listen on.
     let addr = SocketAddr::from((std::net::Ipv6Addr::UNSPECIFIED, port));
@@ -233,7 +233,7 @@ async fn make_server(
     let server = Server::bind(&addr).serve(make_service);
     let graceful = server.with_graceful_shutdown(async {
         // Treat notification failure the same as a notification.
-        let _ = termination_notificiation_receiver.await;
+        let _ = termination_notification_receiver.await;
     });
 
     // Run until asked to terminate.
