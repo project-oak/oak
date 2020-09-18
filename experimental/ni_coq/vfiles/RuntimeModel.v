@@ -12,6 +12,7 @@ From OakIFC Require Import
 * changes goals back to normal Coq built-in record updates *)
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
+Local Open Scope map_scope.
 
 (* This file is the top-level model of the Oak runtime *)
 

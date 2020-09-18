@@ -15,6 +15,7 @@ Arguments Ensembles.Singleton {U}.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 
+Local Open Scope map_scope.
 (*
 The top-level security condition compares traces involving both states (as
 in "state" in RuntimeModel.v) and events. This file augments the semantics 
@@ -45,9 +46,11 @@ so the call is a piece of state that probably does not matter at the moment)
  and a downgrade event.
 *)
 
-Notation "n '--->' msg":= (EvL (OutEv msg) n.(nlbl)) (at level 10).
-Notation "n '<---' msg":= (EvL (InEv msg) n.(nlbl)) (at level 10).
-Notation "n '---'":= (EvL NilEv n.(nlbl)) (at level 10).
+Declare Scope aug_scope.
+Local Open Scope aug_scope.
+Notation "n '--->' msg":= (EvL (OutEv msg) n.(nlbl)) (at level 10) : aug_scope.
+Notation "n '<---' msg":= (EvL (InEv msg) n.(nlbl)) (at level 10) : aug_scope.
+Notation "n '---'":= (EvL NilEv n.(nlbl)) (at level 10) : aug_scope.
 
 
 Definition head_st (t: trace) :=
@@ -118,3 +121,4 @@ Inductive step_system_ev_multi: trace -> trace -> Prop :=
         step_system_ev t2 t3 ->
         step_system_ev_multi t1 t2 ->
         step_system_ev_multi t1 t3.
+

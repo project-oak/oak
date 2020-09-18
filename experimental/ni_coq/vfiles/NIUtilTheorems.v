@@ -11,6 +11,7 @@ Import ListNotations.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 
+Local Open Scope map_scope.
 
 Theorem trace_leq_imples_head_st_leq: forall ell t1 t2 s1 s2,
     (head_st t1 = Some s1) ->
@@ -137,7 +138,7 @@ Proof.
                  unfold node_state_low_eq in H5.
                  inversion Ht2head. rewrite H8 in H5. specialize (H5 id).
                  rewrite Hsid in H5. simpl in H0. inversion H0.
-                 rewrite H9 in H5. rewrite H1 in H5. assumption.
+                 rewrite H9, H1 in H5. assumption.
     - (* none *)
         inversion H; subst. 
             + discriminate H0.
