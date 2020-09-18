@@ -37,10 +37,12 @@ Definition tg_fmap {KT: KeyT}{VT: Type}
     (f: VT -> VT)(m: tg_map KT VT): tg_map KT VT :=
     fun k => (f (m k)).
 
+Declare Scope map_scope.
 Notation "'_' '!->' v" := (tg_empty v)
-  (at level 100, right associativity).
+  (at level 100, right associativity) : map_scope.
 Notation "x '!->' v ';' m" := (tg_update m x v)
-  (at level 100, v at next level, right associativity).
+  (at level 100, v at next level, right associativity) : map_scope.
+Open Scope map_scope.
 
 Theorem upd_eq {KT: KeyT}{VT: Type}: forall (m: tg_map KT VT) k v,
     (k !-> v; m) k = v.
@@ -73,15 +75,16 @@ Definition pg_fmap {KT: KeyT}{VT: Type}
     end.
 
 Notation "x '|->' v ';' m" := (pg_update m x v)
-  (at level 100, v at next level, right associativity).
+  (at level 100, v at next level, right associativity) : map_scope.
 Notation "x '|->' v" := (pg_update pg_empty x v)
-  (at level 100).
+  (at level 100) : map_scope.
 
 (* Make the notation compatible with ssreflect finmap to 
 * deal with laziness of me *)
 Notation "m '.[' k '<-' v ']'" := (pg_update m k v)
-  (at level 100).
+  (at level 100) : map_scope.
 Definition fnd {KT: KeyT}{VT: Type} (m: (pg_map KT VT)) k :=  (m k).
 Notation "m '.[?' k ']'" := (fnd m k) 
-(at level 2, k at level 200, format "m .[?  k ]").
+(at level 2, k at level 200, format "m .[?  k ]") : map_scope.
 
+Close Scope map_scope.

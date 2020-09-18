@@ -13,7 +13,8 @@ From OakIFC Require Import
     Unwind.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
-
+Local Open Scope map_scope.
+Local Open Scope aug_scope.
 
 (*
 This is the top-level candidate security condition. This is a
@@ -132,7 +133,7 @@ Proof.
                 eapply state_upd_node_preserves_chan_state_leq. apply Hsleq_s1s2.
                 assert (ch1' = chan_append ch1 msg) by
                     (destruct (chan_append ch1 msg ); reflexivity).
-                rewrite H9. rewrite Heqch2'.
+                rewrite H9, Heqch2'.
                 eapply chan_append_unwind.
                     (* chan_low_eq ell ch1 ch2 *) (* TODO make theorem*)
                 inversion Hsleq_s1s2. specialize (H16 han).

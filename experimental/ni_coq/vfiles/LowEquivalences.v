@@ -5,6 +5,7 @@ From OakIFC Require Import
     Parameters
     GenericMap.
 
+Local Open Scope map_scope.
 (*=============================================================================
 * Low Equivalences
 =============================================================================*)

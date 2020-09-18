@@ -11,7 +11,7 @@ From OakIFC Require Import
     NIUtilTheorems.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
-
+Local Open Scope map_scope.
 (*============================================================================
  Unwinding Theorems
 ============================================================================*)
@@ -80,11 +80,11 @@ Proof.
         eapply state_upd_unwind_from_leqn; assumption.
     - (* some, none *)
         exfalso. specialize (H0 id).
-        rewrite E1 in H0. rewrite E2 in H0.
+        rewrite E1, E2 in H0.
         assumption.
     - (* none, some *)
         exfalso. specialize (H0 id).
-        rewrite E1 in H0. rewrite E2 in H0.
+        rewrite E1, E2 in H0.
         assumption.
     - split; assumption.
 Qed.
