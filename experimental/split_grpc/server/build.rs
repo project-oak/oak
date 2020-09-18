@@ -14,19 +14,19 @@
 // limitations under the License.
 //
 
-use std::path::Path;
+use oak_utils::CodegenOptions;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let proto_path = Path::new("../../../examples/hello_world/proto");
-    let file_path = proto_path.join("hello_world.proto");
+    let proto_path = "../../../examples/hello_world/proto";
+    let file_path = "hello_world.proto";
 
-    // Tell cargo to rerun this build script if the proto file has changed.
-    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    println!("cargo:rerun-if-changed={}", file_path.display());
-
-    tonic_build::configure()
-        .build_client(false)
-        .build_server(true)
-        .compile(&[file_path.as_path()], &[proto_path])?;
+    oak_utils::generate_grpc_code(
+        proto_path,
+        &[file_path],
+        CodegenOptions {
+            build_server: true,
+            ..Default::default()
+        },
+    )?;
     Ok(())
 }

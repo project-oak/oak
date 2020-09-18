@@ -569,6 +569,7 @@ dependencies = [
  "prost",
  "prost-build",
  "prost-types",
+ "serde",
 ]
 
 [[package]]
@@ -902,6 +903,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde"
+version = "1.0.112"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "736aac72d1eafe8e5962d1d1c3d99b0df526015ba40915cb3c49d042e92ec243"
+dependencies = [
+ "serde_derive",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.112"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf0343ce212ac0d3d6afd9391ac8e9c9efe06b533c8d33f660f6390cc4093f57"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -941,10 +962,10 @@ version = "0.1.0"
 dependencies = [
  "env_logger",
  "log",
+ "oak_utils",
  "prost",
  "tokio",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -963,10 +984,10 @@ version = "0.1.0"
 dependencies = [
  "futures-core",
  "futures-util",
+ "oak_utils",
  "prost",
  "tokio",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]

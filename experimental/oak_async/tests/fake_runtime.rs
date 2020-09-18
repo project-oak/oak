@@ -51,8 +51,9 @@ pub extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
     }) as i32 as u32
 }
 
+type WaitOnChannelsHandler = Box<dyn FnMut(&mut [HandleWithStatus]) -> OakStatus>;
 std::thread_local! {
-    static WAIT_ON_CHANNELS_HANDLER: RefCell<Option<Box<dyn FnMut(&mut [HandleWithStatus]) -> OakStatus>>> = RefCell::new(None);
+    static WAIT_ON_CHANNELS_HANDLER: RefCell<Option<WaitOnChannelsHandler>> = RefCell::new(None);
 }
 
 pub fn set_wait_on_channels_handler<F: 'static + FnMut(&mut [HandleWithStatus]) -> OakStatus>(
@@ -96,8 +97,10 @@ pub extern "C" fn channel_read(
     })
 }
 
+type ReadyChannelData = VecDeque<Result<Vec<u8>, OakStatus>>;
+
 std::thread_local! {
-    static READY_DATA: RefCell<HashMap<Handle, VecDeque<Result<Vec<u8>, OakStatus>>>> = RefCell::new(HashMap::new());
+    static READY_DATA: RefCell<HashMap<Handle, ReadyChannelData>> = RefCell::new(HashMap::new());
 }
 
 pub fn add_ready_data<T: Encodable>(handle: Handle, data: &T) {

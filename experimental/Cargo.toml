@@ -9,7 +9,7 @@ members = [
 [patch.crates-io]
 oak = { path = "../sdk/rust/oak" }
 oak_abi = { path = "../oak_abi" }
-oak_derive = { path = "../sdk/rust/oak_derive" }
+oak_derive = { path = "../oak_derive" }
 oak_io = { path = "../oak_io" }
 oak_services = { path = "../oak_services" }
 oak_utils = { path = "../oak_utils" }

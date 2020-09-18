@@ -260,7 +260,7 @@ fn many_reads_parallel() {
     });
 
     let results: Result<Vec<DummyData>, OakError> = block_on(futures::future::try_join_all(
-        (0..1000).into_iter().map(do_channel_read),
+        (0..1000).map(do_channel_read),
     ))
     .expect("block_on failed");
 
