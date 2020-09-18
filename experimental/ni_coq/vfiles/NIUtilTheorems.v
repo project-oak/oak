@@ -41,8 +41,7 @@ Theorem state_leq_and_flowsto_to_node_eq: forall ell s1 s2 id n1 n2,
     n1 = n2.
 Proof.
     inversion 3. specialize (H2 id).
-    (* hmmm, I used to be able to do rewrite H H0 in H2 as one tactic here *)
-    rewrite H in H2. rewrite H0 in H2.
+    rewrite H, H0 in H2.
     inversion H2. subst. reflexivity. contradiction.
 Qed.
 
