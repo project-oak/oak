@@ -61,9 +61,6 @@ impl RuntimeProxy {
         signature_table: &SignatureTable,
     ) -> RuntimeProxy {
         let runtime = Arc::new(Runtime {
-            application_configuration: application_configuration.clone(),
-            secure_server_configuration: secure_server_configuration.clone(),
-            signature_table: signature_table.clone(),
             terminating: AtomicBool::new(false),
             next_channel_id: AtomicU64::new(0),
             node_infos: RwLock::new(HashMap::new()),
@@ -71,6 +68,11 @@ impl RuntimeProxy {
             aux_servers: Mutex::new(Vec::new()),
             introspection_event_queue: Mutex::new(VecDeque::new()),
             metrics_data: Metrics::new(),
+            node_factory: crate::node::ServerNodeFactory {
+                application_configuration: application_configuration.clone(),
+                secure_server_configuration: secure_server_configuration.clone(),
+                signature_table: signature_table.clone(),
+            },
         });
         let proxy = runtime.proxy_for_new_node();
         proxy.runtime.node_configure_instance(
@@ -96,6 +98,7 @@ impl RuntimeProxy {
     ) -> Result<oak_abi::Handle, OakStatus> {
         let node_configuration = self
             .runtime
+            .node_factory
             .application_configuration
             .initial_node_configuration
             .as_ref()

@@ -36,6 +36,7 @@ use auth::oidc_utils::ClientInfo;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
+use node::NodeFactory;
 use oak_abi::{
     label::{Label, Tag},
     proto::oak::application::{ApplicationConfiguration, ConfigMap, NodeConfiguration},
@@ -326,12 +327,6 @@ impl Drop for AuxServer {
 
 /// Runtime structure for configuring and running a set of Oak Nodes.
 pub struct Runtime {
-    application_configuration: ApplicationConfiguration,
-
-    secure_server_configuration: SecureServerConfiguration,
-
-    signature_table: SignatureTable,
-
     terminating: AtomicBool,
 
     next_channel_id: AtomicU64,
@@ -345,6 +340,8 @@ pub struct Runtime {
 
     /// Queue of introspection events in chronological order.
     introspection_event_queue: Mutex<VecDeque<Event>>,
+
+    node_factory: node::ServerNodeFactory,
 
     pub metrics_data: Metrics,
 }
@@ -479,11 +476,11 @@ impl Runtime {
     /// Since such signatures are optional - tries to find corresponding signatures by module names
     /// and verifies them if found.
     pub(crate) fn verify_module_signatures(&self) -> Result<(), OakStatus> {
-        for (name, module_bytes) in &self.application_configuration.wasm_modules {
+        for (name, module_bytes) in &self.node_factory.application_configuration.wasm_modules {
             let module_hash = sha_256_hex(&module_bytes);
 
             // Get signature by module name.
-            if let Some(signatures) = self.signature_table.values.get(&module_hash) {
+            if let Some(signatures) = self.node_factory.signature_table.values.get(&module_hash) {
                 for signature_item in signatures.iter() {
                     let public_key_bytes = &signature_item.public_key;
                     let signature_bytes = &signature_item.signature;
@@ -1152,13 +1149,7 @@ impl Runtime {
         let new_node_name = format!("{}({})", config.name, new_node_id.0);
 
         // This only creates a Node instance, but does not start it.
-        let instance = node::create_node(
-            &self.application_configuration,
-            config,
-            &self.secure_server_configuration,
-            &self.signature_table,
-        )
-        .map_err(|err| {
+        let instance = self.node_factory.create_node(config).map_err(|err| {
             warn!("could not create node: {:?}", err);
             OakStatus::ErrInvalidArgs
         })?;
