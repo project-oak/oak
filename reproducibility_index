@@ -11,4 +11,4 @@ c75313317eb2c1512525fa49cb15888d5d12284be4a70b11f74e750fb01ad28e  ./examples/tar
 45b1e664a05341906f4b62149dbfcb2d6d34089730278359c112ef27f7b0a318  ./examples/target/wasm32-unknown-unknown/release/running_average.wasm
 7e0526a77e7708a1f3a680896e6f1357678de73d585f1ecb2f1872794417869a  ./examples/target/wasm32-unknown-unknown/release/translator.wasm
 0e764b505737cdfb076ebe23191e322b3f9d0a352fc28b75e4cf27ba1e426f96  ./examples/target/wasm32-unknown-unknown/release/trusted_information_retrieval.wasm
-919f018a2d4b01de29744aa294b1f6ac3b1efff681845a5a6f41d0519bdd5a17  ./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader
+516bb8407ddb42b70abd0e65b26f90731322d099de2fdf333e23937fb8171422  ./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader
