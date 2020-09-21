@@ -451,7 +451,7 @@ applications through static analysis tools that can help detect common problems:
 - Check that all nodes can read from handles they receive
 - Check that the node graph manifest does not violate defense-in-depth
   restritcions
-- Hihglight points where data is declassified to `Public`
+- Highlight points where data is declassified to `Public`
 - Find nodes that can never receive data (unneeded nodes)
 - Find nodes where data will get stuck (dead ends)
 - Find risky patterns (e.g. diamond shaped graph with declassification in each
