@@ -33,20 +33,13 @@
 //!
 //! cargo run --manifest-path=oak_sign/Cargo.toml -- \
 //!     verify \
-//!     --input-file=<INPUT_FILE> \
 //!     --signature=<SIGNATURE_FILE>.sign
 //! ```
 
 use anyhow::{anyhow, Context};
 use log::info;
-use pem::{encode, encode_many, parse, parse_many, Pem};
-use ring::{
-    rand,
-    signature::{self, KeyPair},
-};
-use std::{
-    collections::HashMap,
-    fs::{read, write},
+use oak_sign::{
+    read_pem_file, write_pem_file, KeyBundle, SignatureBundle, PRIVATE_KEY_TAG, PUBLIC_KEY_TAG,
 };
 use structopt::StructOpt;
 
@@ -80,41 +73,23 @@ struct Generate {
 struct Sign {
     #[structopt(long, help = "Input PEM encoded Ed25519 private key file path")]
     pub private_key: String,
-    #[structopt(long, help = "Input file path")]
-    pub input_file: String,
+    #[structopt(
+        long,
+        conflicts_with = "input_string",
+        help = "Input file path (Exactly one between `input_file` and `input_string` must be specified)"
+    )]
+    pub input_file: Option<String>,
+    #[structopt(long, conflicts_with = "input_file", help = "Input string")]
+    pub input_string: Option<String>,
     #[structopt(long, help = "Output PEM encoded Ed25519 signature file path")]
-    pub signature: String,
+    pub signature_file: String,
 }
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Verify input file signature")]
 struct Verify {
     #[structopt(long, help = "Input PEM encoded Ed25519 signature file path")]
-    pub signature: String,
-    #[structopt(long, help = "Input file path")]
-    pub input_file: String,
-}
-
-// PEM file tags.
-const PRIVATE_KEY_TAG: &str = "PRIVATE KEY";
-const PUBLIC_KEY_TAG: &str = "PUBLIC KEY";
-const SIGNATURE_TAG: &str = "SIGNATURE";
-const HASH_TAG: &str = "HASH";
-
-/// Creates a PEM structure for encoding.
-fn create_pem(tag: &str, contents: &[u8]) -> Pem {
-    Pem {
-        tag: tag.to_string(),
-        contents: contents.to_vec(),
-    }
-}
-
-/// Computes a SHA-256 digest of `bytes` and returns it in a for of raw bytes.
-pub fn get_sha256(bytes: &[u8]) -> Vec<u8> {
-    use sha2::digest::Digest;
-    let mut hasher = sha2::Sha256::new();
-    hasher.update(&bytes);
-    hasher.finalize().to_vec()
+    pub signature_file: String,
 }
 
 /// Main execution point for `oak_sign`.
@@ -124,96 +99,37 @@ fn main() -> anyhow::Result<()> {
 
     match opt.cmd {
         Command::Generate(ref opt) => {
-            // Generate key pair.
-            let rng = rand::SystemRandom::new();
-            let private_key_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)
-                .expect("Couldn't generate key pair");
-            let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_key_bytes.as_ref())
-                .expect("Couldn't parse generated key pair");
-            let public_key_bytes = key_pair.public_key();
-
-            // Encode key pair in PEM format.
-            let private_key_pem = create_pem(PRIVATE_KEY_TAG, private_key_bytes.as_ref());
-            let encoded_private_key = encode(&private_key_pem);
-
-            let public_key_pem = create_pem(PUBLIC_KEY_TAG, public_key_bytes.as_ref());
-            let encoded_public_key = encode(&public_key_pem);
-
-            // Write key files.
-            write(&opt.private_key, encoded_private_key)
-                .with_context(|| format!("Couldn't write private key file {}", &opt.private_key))?;
-            write(&opt.public_key, encoded_public_key)
-                .with_context(|| format!("Couldn't write public key file {}", &opt.public_key))?;
+            let key_pair = KeyBundle::generate()?;
+            write_pem_file(&opt.private_key, PRIVATE_KEY_TAG, &key_pair.private_key)?;
+            write_pem_file(&opt.public_key, PUBLIC_KEY_TAG, &key_pair.public_key)?;
             info!("Key pair generated successfully");
         }
         Command::Sign(ref opt) => {
-            // Read input files.
-            let private_key_file = read(&opt.private_key)
-                .with_context(|| format!("Couldn't read private key file {}", &opt.private_key))?;
-            let input_file_bytes = read(&opt.input_file)
-                .with_context(|| format!("Couldn't read input file {}", &opt.input_file))?;
-
-            // Sign input file.
-            let private_key_pem =
-                parse(private_key_file).context("Couldn't parse PEM encoded private key file")?;
-            let key_pair =
-                signature::Ed25519KeyPair::from_pkcs8(&private_key_pem.contents.as_ref())
-                    .expect("Couldn't parse PKCS8 encoded private key");
-            let public_key_bytes = key_pair.public_key();
-            let signature_bytes = key_pair.sign(&input_file_bytes);
-            let hash_bytes = get_sha256(&input_file_bytes);
-
-            // Encode signature in PEM format.
-            let public_key_pem = create_pem(PUBLIC_KEY_TAG, public_key_bytes.as_ref());
-            let signature_pem = create_pem(SIGNATURE_TAG, signature_bytes.as_ref());
-            let hash_pem = create_pem(HASH_TAG, hash_bytes.as_ref());
-            let encoded_signature = encode_many(&[public_key_pem, signature_pem, hash_pem]);
-
-            // Write signature file.
-            write(&opt.signature, &encoded_signature)
-                .with_context(|| format!("Couldn't write signature file {}", &opt.signature))?;
+            let private_key = read_pem_file(&opt.private_key)?;
+            let input = match (&opt.input_file, &opt.input_string) {
+                (Some(_), Some(_)) => Err(anyhow!(
+                    "Exactly one between `input_file` and `input_string` must be specified"
+                )),
+                (Some(input_file), None) => std::fs::read(&input_file)
+                    .with_context(|| format!("Couldn't read input file {}", &input_file)),
+                (None, Some(input_string)) => {
+                    if input_string.is_empty() {
+                        Err(anyhow!("`input_string` must have non-zero length"))
+                    } else {
+                        Ok(input_string.as_bytes().to_vec())
+                    }
+                }
+                (None, None) => Err(anyhow!(
+                    "Exactly one between `input_file` and `input_string` must be specified"
+                )),
+            }?;
+            let signature = SignatureBundle::create(&input, &private_key)?;
+            signature.to_pem_file(&opt.signature_file)?;
             info!("Input file signed successfully");
         }
         Command::Verify(ref opt) => {
-            // Read input files.
-            let signature_file = read(&opt.signature)
-                .with_context(|| format!("Couldn't read signature file {}", &opt.signature))?;
-            let input_file_bytes = read(&opt.input_file)
-                .with_context(|| format!("Couldn't read input file {}", &opt.input_file))?;
-
-            // Parse signature file.
-            let signature_content =
-                parse_many(signature_file)
-                    .iter()
-                    .fold(HashMap::new(), |mut content, entry| {
-                        content.insert(entry.tag.to_string(), entry.contents.to_vec());
-                        content
-                    });
-            let public_key_bytes = signature_content
-                .get(PUBLIC_KEY_TAG)
-                .context("Signature file doesn't contain public key")?;
-            let signature_bytes = signature_content
-                .get(SIGNATURE_TAG)
-                .context("Signature file doesn't contain signature")?;
-            let hash_bytes = signature_content
-                .get(HASH_TAG)
-                .context("Signature file doesn't contain hash")?;
-
-            // Verify input file signature.
-            let hash = hex::encode(hash_bytes);
-            let expected_hash = hex::encode(get_sha256(&input_file_bytes));
-            if hash != expected_hash {
-                return Err(anyhow!(
-                    "Wrong SHA-256 sum: expected {}, presented {}",
-                    hash,
-                    expected_hash
-                ));
-            }
-            let public_key =
-                signature::UnparsedPublicKey::new(&signature::ED25519, public_key_bytes);
-            public_key
-                .verify(&input_file_bytes, &signature_bytes)
-                .expect("Input file signature verification failed");
+            let signature = SignatureBundle::from_pem_file(&opt.signature_file)?;
+            signature.verify()?;
             info!("Input file signature verified successfully");
         }
     }
