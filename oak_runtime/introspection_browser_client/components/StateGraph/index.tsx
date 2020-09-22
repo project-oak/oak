@@ -38,19 +38,26 @@ function getGraphFromState(applicationState: OakApplicationState) {
     `msg${channelId.toString()}_${messageIndex}`;
 
   const oakNodes = [...applicationState.nodeInfos.entries()].map(
-    ([nodeId, nodeInfo]) => `${getNodeDotId(nodeId)} [label="${nodeInfo.name}"]`
+    ([nodeId, nodeInfo]) =>
+      `${getNodeDotId(nodeId)} [label="${
+        nodeInfo.name
+      }"  URL="/node/${nodeId}"]`
   );
   const oakHandles = [...applicationState.nodeInfos.entries()]
     .map(([nodeId, nodeInfo]) =>
       [...nodeInfo.abiHandles.entries()].map(
         ([handle]) =>
-          `${getHandleDotId(nodeId, handle)} [label="${nodeId}:${handle}"]`
+          `${getHandleDotId(
+            nodeId,
+            handle
+          )} [label="${nodeId}:${handle}" URL="/node/${nodeId}/${handle}"]`
       )
     )
     .flat();
-  const oakChannels = [
-    ...applicationState.channels.entries(),
-  ].map(([channelId]) => getChannelDotId(channelId));
+  const oakChannels = [...applicationState.channels.entries()].map(
+    ([channelId]) =>
+      `${getChannelDotId(channelId)} [URL="/channel/${channelId}"]`
+  );
   const oakMessages = [
     ...applicationState.channels.entries(),
   ].map(([channelId, channel]) =>

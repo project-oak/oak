@@ -22,6 +22,9 @@ import ApplicationStateOverview from '~/components/ApplicationStateOverview';
 import StateGraph from '~/components/StateGraph';
 import EventList from '~/components/EventList';
 import MainTabs from '~/components/MainTabs';
+import NodeDetails from '~/components/NodeDetails';
+import HandleDetails from '~/components/HandleDetails';
+import ChannelDetails from '~/components/ChannelDetails';
 import TimeTravelControls from '~/components/TimeTravelControls';
 import introspectionEventsProto, {
   DirectionMap,
@@ -304,6 +307,15 @@ export default function Root() {
                 },
               ]}
             />
+          </Route>
+          <Route exact path="/node/:nodeId">
+            <NodeDetails applicationState={applicationState} />
+          </Route>
+          <Route exact path="/node/:nodeId/:handle">
+            <HandleDetails applicationState={applicationState} />
+          </Route>
+          <Route exact path="/channel/:channelId">
+            <ChannelDetails applicationState={applicationState} />
           </Route>
         </Switch>
       </BrowserRouter>
