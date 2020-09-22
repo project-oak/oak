@@ -19,16 +19,35 @@ import introspectionEventsProto from '~/protoc_out/proto/introspection_events_pb
 
 type EventListProps = { events: introspectionEventsProto.Event[] };
 
+// Array of events in reverse chronological order
+type ReversedEvents = {
+  // The event index, in the order of event creation
+  eventIndex: number;
+  // The actual event
+  event: introspectionEventsProto.Event;
+}[];
+
 export default function EventList({ events }: EventListProps) {
+  // Reverse the array of events (while storing the orginal index) to render
+  // events in a reverse chronological order.
+  const reversedEvents = React.useMemo(
+    () =>
+      events.reduce((acc, event, eventIndex) => {
+        acc.unshift({ eventIndex, event });
+        return acc;
+      }, [] as ReversedEvents),
+    events
+  );
+
   return (
     <section>
       <strong>Events List</strong>
       <ol reversed>
-        {events.map((event, index) => (
+        {reversedEvents.map(({ eventIndex, event }) => (
           // Usually it's not advisable to use the index as a key. However since
           // the list of events is append-only it's fine in this case.
           // Ref: https://reactjs.org/docs/lists-and-keys.html#keys
-          <li key={index}>{JSON.stringify(event.toObject())}</li>
+          <li key={eventIndex}>{JSON.stringify(event.toObject())}</li>
         ))}
       </ol>
     </section>
