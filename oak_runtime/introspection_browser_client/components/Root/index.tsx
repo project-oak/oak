@@ -73,7 +73,6 @@ interface ChannelHalf {
   direction: ChannelHalfDirection;
 }
 interface Message {
-  data: Uint8Array;
   channels: ChannelHalf[];
 }
 interface Channel {
@@ -196,11 +195,30 @@ function eventReducer(
 
       break;
     case EventDetailsCase.MESSAGE_ENQUEUED:
-      // TODO(#913): Add support for displaying messages
+      {
+        const details = event.getMessageEnqueued()!;
+        const nodeId = BigInt(details!.getNodeId());
+        const enqueingNode = applicationState.nodeInfos.get(nodeId)!;
+        const message = details.getIncludedHandlesList().reduce(
+          (message, handle) => {
+            const channelHalf = enqueingNode.abiHandles.get(BigInt(handle))!;
+            message.channels.push(channelHalf);
+
+            return message;
+          },
+          { channels: [] } as Message
+        );
+
+        applicationState.channels
+          .get(BigInt(details.getChannelId()))!
+          .messages.push(message);
+      }
 
       break;
     case EventDetailsCase.MESSAGE_DEQUEUED:
-      // TODO(#913): Add support for displaying messages
+      applicationState.channels
+        .get(BigInt(event.getMessageDequeued()!.getChannelId()))!
+        .messages.shift();
 
       break;
     default:
