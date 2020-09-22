@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "npm ci && npx webpack-dev-server --env.NODE_ENV=development",
+    "dev": "./build \"development\"",
     "build": "./build",
     "postinstall": "./postinstall"
   },
