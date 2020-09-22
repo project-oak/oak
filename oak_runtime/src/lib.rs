@@ -45,6 +45,7 @@ use oak_abi::{
 use oak_io::Message as NodeMessage;
 use pem::parse_many;
 use prometheus::proto::MetricFamily;
+use prost::Message as _;
 use rand::RngCore;
 use ring::signature::{UnparsedPublicKey, ED25519};
 use std::{
@@ -241,6 +242,18 @@ impl NodePrivilege {
     }
 }
 
+impl std::convert::From<NodePrivilege> for Label {
+    fn from(privilege: NodePrivilege) -> Self {
+        Label {
+            confidentiality_tags: privilege
+                .can_declassify_confidentiality_tags
+                .into_iter()
+                .collect(),
+            integrity_tags: privilege.can_endorse_integrity_tags.into_iter().collect(),
+        }
+    }
+}
+
 impl std::fmt::Debug for NodeInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -274,6 +287,13 @@ pub enum NodeReadStatus {
 pub enum ReadStatus {
     Success(Message),
     NeedsCapacity(usize, usize),
+}
+/// Helper type to indicate whether retrieving a serialized label has succeed or has failed with
+/// not enough capacity.
+#[derive(Debug)]
+pub enum LabelSerializationStatus {
+    Success(Vec<u8>),
+    NeedsCapacity(usize),
 }
 
 /// Information for managing an associated server.
@@ -634,6 +654,88 @@ impl Runtime {
     /// Returns an error if `channel_half` is not a valid write half.
     fn get_writer_channel_label(&self, channel_half: &ChannelHalf) -> Result<Label, OakStatus> {
         with_writer_channel(channel_half, |channel| Ok(channel.label.clone()))
+    }
+
+    /// Returns the [`Label`] associated with the channel handle serialized as a byte array.
+    ///
+    /// If the serialized size is larger than the specified capacity, it will return a status
+    /// indicating the required capacity.
+    fn get_serialized_channel_label(
+        &self,
+        node_id: NodeId,
+        handle: oak_abi::Handle,
+        capacity: usize,
+    ) -> Result<LabelSerializationStatus, OakStatus> {
+        let half = self.abi_to_half(node_id, handle)?;
+        let label = match half.direction {
+            ChannelHalfDirection::Read => self.get_reader_channel_label(&half)?,
+            ChannelHalfDirection::Write => self.get_writer_channel_label(&half)?,
+        };
+
+        let size = label.encoded_len();
+        if size > capacity {
+            Ok(LabelSerializationStatus::NeedsCapacity(size))
+        } else {
+            let mut encoded = Vec::new();
+            match label.encode(&mut encoded) {
+                Err(error) => {
+                    warn!("Could not encode label: {}", error);
+                    Err(OakStatus::ErrInternal)
+                }
+                Ok(()) => Ok(LabelSerializationStatus::Success(encoded)),
+            }
+        }
+    }
+
+    /// Returns the [`Label`] associated with the node serialized as a byte array.
+    ///
+    /// If the serialized size is larger than the specified capacity, it will return a status
+    /// indicating the required capacity.
+    fn get_serialized_node_label(
+        &self,
+        node_id: NodeId,
+        capacity: usize,
+    ) -> Result<LabelSerializationStatus, OakStatus> {
+        let label = self.get_node_label(node_id);
+        let size = label.encoded_len();
+        if size > capacity {
+            Ok(LabelSerializationStatus::NeedsCapacity(size))
+        } else {
+            let mut encoded = Vec::new();
+            match label.encode(&mut encoded) {
+                Err(error) => {
+                    warn!("Could not encode label: {}", error);
+                    Err(OakStatus::ErrInternal)
+                }
+                Ok(()) => Ok(LabelSerializationStatus::Success(encoded)),
+            }
+        }
+    }
+
+    /// Returns the [`NodePrivilege`] associated with the node converted to a [`Label`] and
+    /// serialized as a byte array.
+    ///
+    /// If the serialized size is larger than the specified capacity, it will return a status
+    /// indicating the required capacity.
+    fn get_serialized_node_privilege(
+        &self,
+        node_id: NodeId,
+        capacity: usize,
+    ) -> Result<LabelSerializationStatus, OakStatus> {
+        let label: Label = self.get_node_privilege(node_id).into();
+        let size = label.encoded_len();
+        if size > capacity {
+            Ok(LabelSerializationStatus::NeedsCapacity(size))
+        } else {
+            let mut encoded = Vec::new();
+            match label.encode(&mut encoded) {
+                Err(error) => {
+                    warn!("Could not encode label: {}", error);
+                    Err(OakStatus::ErrInternal)
+                }
+                Ok(()) => Ok(LabelSerializationStatus::Success(encoded)),
+            }
+        }
     }
 
     /// Returns whether the given Node is allowed to read from the provided channel read half,

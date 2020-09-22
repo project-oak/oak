@@ -238,6 +238,55 @@ If creating the specified Node would violate
 - `param[4]: usize`: Handle to channel
 - `result[0]: u32`: Status of operation
 
+### `node_label`
+
+Returns the label for the calling Node, as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message.
+
+If the provided space for label data (`param[0]` and `param[1]`) is not large
+enough, the function returns `BUFFER_TOO_SMALL` and the required size is written
+in the space provided by `param[2]`.
+
+- `param[0]: usize`: Destination buffer
+- `param[1]: usize`: Destination buffer size in bytes
+- `param[2]: usize`: Address of a 4-byte location that will receive the number
+  of bytes in the label (as a little-endian u32) if the provided buffer is not
+  large enough.
+- `result[0]: u32`: Status of operation
+
+### `channel_label`
+
+Returns the label for the specified channel, as a serialized
+[`Label`](/oak/proto/label.proto) protobuf message.
+
+If the provided space for label data (`param[1]` and `param[2]`) is not large
+enough, the function returns `BUFFER_TOO_SMALL` and the required size is written
+in the space provided by `param[3]`.
+
+- `param[0]: u64`: Handle to channel
+- `param[1]: usize`: Destination buffer
+- `param[2]: usize`: Destination buffer size in bytes
+- `param[3]: usize`: Address of a 4-byte location that will receive the number
+  of bytes in the label (as a little-endian u32) if the provided buffer is not
+  large enough.
+- `result[0]: u32`: Status of operation
+
+### `node_privilege`
+
+Returns a label indicating the downgrade privilege of the calling Node, as a
+serialized [`Label`](/oak/proto/label.proto) protobuf message.
+
+If the provided space for label data (`param[0]` and `param[1]`) is not large
+enough, the function returns `BUFFER_TOO_SMALL` and the required size is written
+in the space provided by `param[2]`.
+
+- `param[0]: usize`: Destination buffer
+- `param[1]: usize`: Destination buffer size in bytes
+- `param[2]: usize`: Address of a 4-byte location that will receive the number
+  of bytes in the label (as a little-endian u32) if the provided buffer is not
+  large enough.
+- `result[0]: u32`: Status of operation
+
 ### `random_get`
 
 Fills a buffer with random bytes.
