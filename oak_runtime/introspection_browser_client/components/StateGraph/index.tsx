@@ -34,6 +34,8 @@ function getGraphFromState(applicationState: OakApplicationState) {
     `channel${channelId.toString()}`;
   const getHandleDotId = (nodeId: NodeId, handle: AbiHandle) =>
     `node${nodeId.toString()}_${handle.toString()}`;
+  const getMessageDotId = (channelId: ChannelID, messageIndex: number) =>
+    `msg${channelId.toString()}_${messageIndex}`;
 
   const oakNodes = [...applicationState.nodeInfos.entries()].map(
     ([nodeId, nodeInfo]) => `${getNodeDotId(nodeId)} [label="${nodeInfo.name}"]`
@@ -49,30 +51,56 @@ function getGraphFromState(applicationState: OakApplicationState) {
   const oakChannels = [
     ...applicationState.channels.entries(),
   ].map(([channelId]) => getChannelDotId(channelId));
-  const connections = [...applicationState.nodeInfos.entries()]
-    .map(([nodeId, nodeInfo]) =>
-      [...nodeInfo.abiHandles.entries()].map(([handle, channelHalf]) => {
-        switch (channelHalf.direction) {
-          case ChannelHalfDirection.Write:
-            return `${getNodeDotId(nodeId)} -> ${getHandleDotId(
-              nodeId,
-              handle
-            )} -> ${getChannelDotId(channelHalf.channelId)}`;
+  const oakMessages = [
+    ...applicationState.channels.entries(),
+  ].map(([channelId, channel]) =>
+    channel.messages.map((message, index) => getMessageDotId(channelId, index))
+  );
+  const connections = [
+    // Connections between nodes, handles, & channels
+    ...[...applicationState.nodeInfos.entries()]
+      .map(([nodeId, nodeInfo]) =>
+        [...nodeInfo.abiHandles.entries()].map(([handle, channelHalf]) => {
+          switch (channelHalf.direction) {
+            case ChannelHalfDirection.Write:
+              return `${getNodeDotId(nodeId)} -> ${getHandleDotId(
+                nodeId,
+                handle
+              )} -> ${getChannelDotId(channelHalf.channelId)}`;
 
-          case ChannelHalfDirection.Read:
-            return `${getChannelDotId(
-              channelHalf.channelId
-            )} -> ${getHandleDotId(nodeId, handle)} -> ${getNodeDotId(nodeId)}`;
+            case ChannelHalfDirection.Read:
+              return `${getChannelDotId(
+                channelHalf.channelId
+              )} -> ${getHandleDotId(nodeId, handle)} -> ${getNodeDotId(
+                nodeId
+              )}`;
 
-          default:
-            // This should never happen
-            throw new Error(
-              `Encountered unhandled direction value ${channelHalf.direction}`
-            );
-        }
-      })
-    )
-    .flat();
+            default:
+              // This should never happen
+              throw new Error(
+                `Encountered unhandled direction value ${channelHalf.direction}`
+              );
+          }
+        })
+      )
+      .flat(),
+    // Connections between channels & messages
+    'edge [arrowhead=none]',
+    ...[...applicationState.channels.entries()].map(([channelId, channel]) =>
+      channel.messages.map((message, index) =>
+        index === 0
+          ? // Connect the first message to the channel
+            `${getMessageDotId(channelId, index)} -> ${getChannelDotId(
+              channelId
+            )}`
+          : // Connect subsequent messages to the previous message
+            `${getMessageDotId(channelId, index)} -> ${getMessageDotId(
+              channelId,
+              index - 1
+            )}`
+      )
+    ),
+  ];
 
   return `digraph Runtime {
     graph [bgcolor=transparent]
@@ -87,6 +115,10 @@ function getGraphFromState(applicationState: OakApplicationState) {
     {
       node [shape=ellipse style=filled fillcolor=green]
       ${oakChannels.join('\n      ')}
+    }
+    {
+      node [shape=rect fontsize=10 label="msg"]
+      ${oakMessages.join('\n      ')}
     }
     ${connections.join('\n    ')}
   }
