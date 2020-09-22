@@ -5,7 +5,6 @@ From OakIFC Require Import
     LowEquivalences.
 Require Import Coq.Lists.List.
 Import ListNotations.
-From mathcomp Require Import fintype.
 
 (* This file contains  *)
 

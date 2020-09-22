@@ -53,10 +53,10 @@ Proof.
             rewrite e;
             rewrite !state_upd_node_eq; assumption.
         + (* neq *) 
-            rewrite !state_upd_node_neq.
+            rewrite !state_upd_node_neq; try assumption.
             apply (H1 id');  assumption.
     - (* chans *)
-        assumption. assumption. apply H2.
+        assumption.
 Qed.
 
 Theorem set_call_unwind: forall ell id c s1 s2,
