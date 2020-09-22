@@ -12,8 +12,6 @@ source "$SCRIPTS_DIR/common"
     cd oak_loader || exit 1
     grcov ./target/debug/ \
           --source-dir=. \
-          --llvm \
-          --branch \
           --ignore-not-existing \
           --excl-line="(panic!|unreachable!|#\\[derive\\()" \
           --excl-start=LCOV_EXCL_START \
