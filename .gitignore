@@ -49,6 +49,7 @@
 ### Coq ###
 # Coq build artifacts
 .Makefile.d
+Makefile.conf
 *.aux
 *.glob
 *.vo
