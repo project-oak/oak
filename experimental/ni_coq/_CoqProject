@@ -10,3 +10,4 @@ vfiles/EvAugSemantics.v
 vfiles/NIUtilTheorems.v
 vfiles/Unwind.v
 vfiles/PossibilisticNI.v
+vfiles/Tactics.v

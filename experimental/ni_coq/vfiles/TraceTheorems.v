@@ -3,27 +3,9 @@ Import ListNotations.
 From OakIFC Require Import
     RuntimeModel
     Parameters
+    Tactics
     Events
     EvAugSemantics.
-
-(* inner loop of destruct_match *)
-Local Ltac destruct_match' e :=
-  lazymatch e with
-  | context [match ?x with _ => _ end] => destruct_match' x
-  | _ => destruct e
-  end.
-(* Finds the first match it encounters in the goal and destructs the
-   most deeply-nested match within it. *)
-Local Ltac destruct_match :=
-  match goal with
-  | |- context [match ?x with _ => _ end] => destruct_match' x
-  | H : context [match ?x with _ => _ end] |- _ => destruct_match' x
-  end.
-
-(* Runs [inversion] and then clears the original hypothesis, and runs
-   [subst], in order to prevent cluttering the context.*)
-Ltac invert_clean H :=
-  progress (inversion H; clear H); subst.
 
 (* Single step of [crush] *)
 Local Ltac crush_step :=
