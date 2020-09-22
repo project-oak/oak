@@ -17,6 +17,7 @@
 import React from 'react';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Box from '@material-ui/core/Box';
+import { BrowserRouter, Switch, Route } from 'react-router-dom';
 import ApplicationStateOverview from '~/components/ApplicationStateOverview';
 import StateGraph from '~/components/StateGraph';
 import EventList from '~/components/EventList';
@@ -272,30 +273,40 @@ export default function Root() {
   return (
     <>
       <CssBaseline />
-      <MainTabs
-        tabs={[
-          {
-            label: 'Application Graph',
-            render: () => <StateGraph applicationState={applicationState} />,
-          },
-          {
-            label: 'Application State',
-            render: () => (
-              <Box p={3}>
-                <ApplicationStateOverview applicationState={applicationState} />
-              </Box>
-            ),
-          },
-          {
-            label: 'Event List',
-            render: () => (
-              <Box p={3}>
-                <EventList events={events} />
-              </Box>
-            ),
-          },
-        ]}
-      />
+      <BrowserRouter>
+        <Switch>
+          <Route exact path="/">
+            <MainTabs
+              tabs={[
+                {
+                  label: 'Application Graph',
+                  render: () => (
+                    <StateGraph applicationState={applicationState} />
+                  ),
+                },
+                {
+                  label: 'Application State',
+                  render: () => (
+                    <Box p={3}>
+                      <ApplicationStateOverview
+                        applicationState={applicationState}
+                      />
+                    </Box>
+                  ),
+                },
+                {
+                  label: 'Event List',
+                  render: () => (
+                    <Box p={3}>
+                      <EventList events={events} />
+                    </Box>
+                  ),
+                },
+              ]}
+            />
+          </Route>
+        </Switch>
+      </BrowserRouter>
       <TimeTravelControls
         back={() => (
           <button
