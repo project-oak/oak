@@ -70,12 +70,16 @@ export default function MainTabs({ tabs }: MainTabsProps) {
       <AppBar position="static">
         <Tabs value={activeTab} onChange={handleChange}>
           {tabs.map((tab, index) => (
-            <Tab label={tab.label} {...a11yProps(index)} />
+            <Tab
+              key={`${index}-${tab.label}`}
+              label={tab.label}
+              {...a11yProps(index)}
+            />
           ))}
         </Tabs>
       </AppBar>
       {tabs.map((tab, index) => (
-        <TabPanel value={activeTab} index={index}>
+        <TabPanel key={`${index}-${tab.label}`} value={activeTab} index={index}>
           {tab.render()}
         </TabPanel>
       ))}
