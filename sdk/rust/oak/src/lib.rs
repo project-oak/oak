@@ -299,6 +299,141 @@ pub fn node_create_with_label(
     result_from_status(status as i32, ())
 }
 
+/// Get the [`Label`] for the channel associated with the `handle`.
+pub fn channel_label(handle: Handle) -> Result<Label, OakStatus> {
+    let mut bytes = Vec::with_capacity(1024);
+    for resized in &[false, true] {
+        let mut actual_size: u32 = 0;
+        let status = OakStatus::from_i32(unsafe {
+            oak_abi::channel_label(handle, bytes.as_ptr(), bytes.len(), &mut actual_size)
+        });
+        match status {
+            Some(s) => match s {
+                OakStatus::Ok => {
+                    unsafe {
+                        // The serialized label was successfully fetched, so set the length to the
+                        // actual length.
+                        bytes.set_len(actual_size as usize);
+                    }
+                    return Ok(Label::deserialize(&bytes).expect("Could not deserialize label."));
+                }
+
+                OakStatus::ErrBufferTooSmall if !(*resized) => {
+                    // Extend the vector to be large enough for the serialized label.
+                    debug!(
+                        "Got space for {} bytes, need {}",
+                        bytes.capacity(),
+                        actual_size
+                    );
+                    bytes.reserve((actual_size as usize) - bytes.len());
+
+                    // Try again with a buffer resized to cope with expected size of data.
+                    continue;
+                }
+
+                s => {
+                    return Err(s);
+                }
+            },
+            None => {
+                return Err(OakStatus::ErrInternal);
+            }
+        }
+    }
+    error!("unreachable code reached");
+    Err(OakStatus::ErrInternal)
+}
+
+/// Get the [`Label`] for the current node.
+pub fn node_label() -> Result<Label, OakStatus> {
+    let mut bytes = Vec::with_capacity(1024);
+    for resized in &[false, true] {
+        let mut actual_size: u32 = 0;
+        let status = OakStatus::from_i32(unsafe {
+            oak_abi::node_label(bytes.as_ptr(), bytes.len(), &mut actual_size)
+        });
+        match status {
+            Some(s) => match s {
+                OakStatus::Ok => {
+                    unsafe {
+                        // The serialized label was successfully fetched, so set the length to the
+                        // actual length.
+                        bytes.set_len(actual_size as usize);
+                    }
+                    return Ok(Label::deserialize(&bytes).expect("Could not deserialize label."));
+                }
+
+                OakStatus::ErrBufferTooSmall if !(*resized) => {
+                    // Extend the vector to be large enough for the serialized label.
+                    debug!(
+                        "Got space for {} bytes, need {}",
+                        bytes.capacity(),
+                        actual_size
+                    );
+                    bytes.reserve((actual_size as usize) - bytes.len());
+
+                    // Try again with a buffer resized to cope with expected size of data.
+                    continue;
+                }
+
+                s => {
+                    return Err(s);
+                }
+            },
+            None => {
+                return Err(OakStatus::ErrInternal);
+            }
+        }
+    }
+    error!("unreachable code reached");
+    Err(OakStatus::ErrInternal)
+}
+
+/// Get the downgrade privilege for the current node represented as a [`Label`].
+pub fn node_privilege() -> Result<Label, OakStatus> {
+    let mut bytes = Vec::with_capacity(1024);
+    for resized in &[false, true] {
+        let mut actual_size: u32 = 0;
+        let status = OakStatus::from_i32(unsafe {
+            oak_abi::node_privilege(bytes.as_ptr(), bytes.len(), &mut actual_size)
+        });
+        match status {
+            Some(s) => match s {
+                OakStatus::Ok => {
+                    unsafe {
+                        // The serialized label was successfully fetched, so set the length to the
+                        // actual length.
+                        bytes.set_len(actual_size as usize);
+                    }
+                    return Ok(Label::deserialize(&bytes).expect("Could not deserialize label."));
+                }
+
+                OakStatus::ErrBufferTooSmall if !(*resized) => {
+                    // Extend the vector to be large enough for the serialized label.
+                    debug!(
+                        "Got space for {} bytes, need {}",
+                        bytes.capacity(),
+                        actual_size
+                    );
+                    bytes.reserve((actual_size as usize) - bytes.len());
+
+                    // Try again with a buffer resized to cope with expected size of data.
+                    continue;
+                }
+
+                s => {
+                    return Err(s);
+                }
+            },
+            None => {
+                return Err(OakStatus::ErrInternal);
+            }
+        }
+    }
+    error!("unreachable code reached");
+    Err(OakStatus::ErrInternal)
+}
+
 /// Fill a buffer with random data.
 pub fn random_get(buf: &mut [u8]) -> Result<(), OakStatus> {
     let status = unsafe { oak_abi::random_get(buf.as_mut_ptr(), buf.len()) };

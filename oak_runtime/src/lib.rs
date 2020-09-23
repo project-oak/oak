@@ -676,7 +676,7 @@ impl Runtime {
         if size > capacity {
             Ok(LabelSerializationStatus::NeedsCapacity(size))
         } else {
-            let mut encoded = Vec::new();
+            let mut encoded = Vec::with_capacity(size);
             match label.encode(&mut encoded) {
                 Err(error) => {
                     warn!("Could not encode label: {}", error);
@@ -701,7 +701,7 @@ impl Runtime {
         if size > capacity {
             Ok(LabelSerializationStatus::NeedsCapacity(size))
         } else {
-            let mut encoded = Vec::new();
+            let mut encoded = Vec::with_capacity(size);
             match label.encode(&mut encoded) {
                 Err(error) => {
                     warn!("Could not encode label: {}", error);
@@ -727,7 +727,7 @@ impl Runtime {
         if size > capacity {
             Ok(LabelSerializationStatus::NeedsCapacity(size))
         } else {
-            let mut encoded = Vec::new();
+            let mut encoded = Vec::with_capacity(size);
             match label.encode(&mut encoded) {
                 Err(error) => {
                     warn!("Could not encode label: {}", error);
