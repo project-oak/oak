@@ -277,7 +277,7 @@ impl std::fmt::Debug for NodeInfo {
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, PartialOrd, Ord)]
 pub struct NodeId(pub u64);
 
-/// Helper types to indicate whether a channel read operation has succeed or has failed with not
+/// Helper types to indicate whether a channel read operation has succeeded or has failed with not
 /// enough `bytes_capacity` and/or `handles_capacity`.
 #[derive(Debug)]
 pub enum NodeReadStatus {
@@ -288,7 +288,7 @@ pub enum ReadStatus {
     Success(Message),
     NeedsCapacity(usize, usize),
 }
-/// Helper type to indicate whether retrieving a serialized label has succeed or has failed with
+/// Helper type to indicate whether retrieving a serialized label has succeeded or has failed with
 /// not enough capacity.
 #[derive(Debug)]
 pub enum LabelSerializationStatus {
