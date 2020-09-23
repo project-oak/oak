@@ -252,6 +252,12 @@ impl OakAbiTestService for FrontendNode {
             "NodeCreateRaw",
             (Self::test_node_create_raw, Count::Unchanged),
         );
+        tests.insert("ChannelLabel", (Self::test_channel_label, Count::Unchanged));
+        tests.insert("NodeLabel", (Self::test_node_label, Count::Unchanged));
+        tests.insert(
+            "NodePrivilege",
+            (Self::test_node_privilege, Count::Unchanged),
+        );
         tests.insert("NodePanic", (Self::test_node_panic, Count::Unsure));
         tests.insert(
             "RandomGetRaw",
@@ -1436,6 +1442,42 @@ impl FrontendNode {
 
         expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
         expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
+        Ok(())
+    }
+
+    fn test_channel_label(&mut self) -> TestResult {
+        let hash = vec![1, 2, 3, 4];
+        let label = Label {
+            confidentiality_tags: vec![oak_abi::label::web_assembly_module_tag(&hash)],
+            integrity_tags: vec![],
+        };
+        let (out_handle, in_handle) = oak::channel_create_with_label(&label).unwrap();
+        let expected = Ok(label);
+        expect_eq!(expected, oak::channel_label(in_handle.handle));
+        expect_eq!(expected, oak::channel_label(out_handle.handle));
+        expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
+        expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
+        Ok(())
+    }
+
+    fn test_node_label(&mut self) -> TestResult {
+        let expected = Ok(Label::public_untrusted());
+        expect_eq!(expected, oak::node_label());
+        Ok(())
+    }
+
+    fn test_node_privilege(&mut self) -> TestResult {
+        let privilege = oak::node_label();
+        expect_matches!(privilege, Ok(_));
+        let confidentiality_tags = privilege.unwrap().confidentiality_tags.to_vec();
+        expect_eq!(1, confidentiality_tags.len());
+        let tag = confidentiality_tags[0];
+        expect_matches!(
+            tag,
+            oak_abi::proto::oak::label::tag::Tag::WebAssemblyModuleTag(_)
+        );
+        let oak_abi::proto::oak::label::tag::Tag::WebAssemblyModuleTag(module_tag) = tag;
+        expect_eq!(32, module_tag.web_assembly_module_hash_sha_256.len());
         Ok(())
     }
 
