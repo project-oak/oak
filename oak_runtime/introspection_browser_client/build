@@ -53,7 +53,7 @@ copy_directory_nondestructively "${PROTO_TMP_OUT_DIR}" "${PROTO_OUT_DIR}"
 # Finally delete the temporary protobuf directory.
 rm -rf "${PROTO_TMP_OUT_DIR}"
 
-if [[ $1 == "development" ]]; then
+if [[ "$1" == 'development' ]]; then
   # Run a webpack dev server
   readonly WEBPACK_TMP_OUT_DIR="./dist_tmp"
 
