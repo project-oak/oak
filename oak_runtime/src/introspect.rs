@@ -103,7 +103,7 @@ fn find_client_file(_path: &str) -> Option<(Vec<u8>, String)> {
 // Looks for a matching file used by the browser client and returns it
 #[cfg(feature = "oak_introspection_client")]
 fn find_client_file(path: &str) -> Option<(Vec<u8>, String)> {
-    let subpath = Regex::new(r"^/dynamic/(?P<filepath>[^\s]+)$")
+    let subpath = Regex::new(r"^/dynamic(?P<filepath>[^\s]*)$")
         .unwrap()
         .captures(path)?
         .name("filepath")
@@ -111,24 +111,20 @@ fn find_client_file(path: &str) -> Option<(Vec<u8>, String)> {
         .as_str();
 
     match subpath {
-        "index.html" => Some((
-            include_bytes!("../introspection_browser_client/dist/index.html.gz").to_vec(),
-            "text/html".to_string(),
-        )),
-        "index.js" => Some((
+        "/index.js" => Some((
             include_bytes!("../introspection_browser_client/dist/index.js.gz").to_vec(),
             "application/javascript".to_string(),
         )),
-        "graphvizlib.wasm" => Some((
+        "/graphvizlib.wasm" => Some((
             include_bytes!("../introspection_browser_client/dist/graphvizlib.wasm.gz").to_vec(),
             "application/wasm".to_string(),
         )),
-        // Serve index.html for all non-file paths to enable client-side routing
-        subpath if Regex::new(r"^.*\/[A-Za-z0-9]*$").unwrap().is_match(subpath) => Some((
+        // Serve index.html for all other paths under /dynamic, enabling
+        // client-side routing
+        _ => Some((
             include_bytes!("../introspection_browser_client/dist/index.html.gz").to_vec(),
             "text/html".to_string(),
         )),
-        _ => None,
     }
 }
 
