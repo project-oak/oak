@@ -1467,17 +1467,24 @@ impl FrontendNode {
     }
 
     fn test_node_privilege(&mut self) -> TestResult {
-        let privilege = oak::node_label();
+        let privilege = oak::node_privilege();
         expect_matches!(privilege, Ok(_));
         let confidentiality_tags = privilege.unwrap().confidentiality_tags.to_vec();
         expect_eq!(1, confidentiality_tags.len());
-        let tag = confidentiality_tags[0];
+        let tag = confidentiality_tags[0].tag.clone().unwrap();
         expect_matches!(
             tag,
             oak_abi::proto::oak::label::tag::Tag::WebAssemblyModuleTag(_)
         );
-        let oak_abi::proto::oak::label::tag::Tag::WebAssemblyModuleTag(module_tag) = tag;
-        expect_eq!(32, module_tag.web_assembly_module_hash_sha_256.len());
+        match tag {
+            oak_abi::proto::oak::label::tag::Tag::WebAssemblyModuleTag(module_tag) => {
+                expect_eq!(32, module_tag.web_assembly_module_hash_sha_256.len())
+            }
+            _ => {
+                error!("Unreachable code reached.");
+                unreachable!();
+            }
+        };
         Ok(())
     }
 

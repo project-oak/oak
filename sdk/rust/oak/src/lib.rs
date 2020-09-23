@@ -305,7 +305,12 @@ pub fn channel_label(handle: Handle) -> Result<Label, OakStatus> {
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
-            oak_abi::channel_label(handle, bytes.as_mut_ptr(), bytes.len(), &mut actual_size) as i32
+            oak_abi::channel_label(
+                handle,
+                bytes.as_mut_ptr(),
+                bytes.capacity(),
+                &mut actual_size,
+            ) as i32
         });
         match status {
             Some(s) => match s {
@@ -325,7 +330,7 @@ pub fn channel_label(handle: Handle) -> Result<Label, OakStatus> {
                         bytes.capacity(),
                         actual_size
                     );
-                    bytes.reserve((actual_size as usize) - bytes.len());
+                    bytes.reserve((actual_size as usize) - bytes.capacity());
 
                     // Try again with a buffer resized to cope with expected size of data.
                     continue;
@@ -350,7 +355,7 @@ pub fn node_label() -> Result<Label, OakStatus> {
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
-            oak_abi::node_label(bytes.as_mut_ptr(), bytes.len(), &mut actual_size) as i32
+            oak_abi::node_label(bytes.as_mut_ptr(), bytes.capacity(), &mut actual_size) as i32
         });
         match status {
             Some(s) => match s {
@@ -370,7 +375,7 @@ pub fn node_label() -> Result<Label, OakStatus> {
                         bytes.capacity(),
                         actual_size
                     );
-                    bytes.reserve((actual_size as usize) - bytes.len());
+                    bytes.reserve((actual_size as usize) - bytes.capacity());
 
                     // Try again with a buffer resized to cope with expected size of data.
                     continue;
@@ -395,7 +400,7 @@ pub fn node_privilege() -> Result<Label, OakStatus> {
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
-            oak_abi::node_privilege(bytes.as_mut_ptr(), bytes.len(), &mut actual_size) as i32
+            oak_abi::node_privilege(bytes.as_mut_ptr(), bytes.capacity(), &mut actual_size) as i32
         });
         match status {
             Some(s) => match s {
@@ -415,7 +420,7 @@ pub fn node_privilege() -> Result<Label, OakStatus> {
                         bytes.capacity(),
                         actual_size
                     );
-                    bytes.reserve((actual_size as usize) - bytes.len());
+                    bytes.reserve((actual_size as usize) - bytes.capacity());
 
                     // Try again with a buffer resized to cope with expected size of data.
                     continue;
