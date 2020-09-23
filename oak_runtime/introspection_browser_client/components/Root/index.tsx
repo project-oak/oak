@@ -22,6 +22,7 @@ import ApplicationStateOverview from '~/components/ApplicationStateOverview';
 import StateGraph from '~/components/StateGraph';
 import EventList from '~/components/EventList';
 import MainTabs from '~/components/MainTabs';
+import NotFound from '~/components/NotFound';
 import NodeDetails from '~/components/NodeDetails';
 import HandleDetails from '~/components/HandleDetails';
 import ChannelDetails from '~/components/ChannelDetails';
@@ -316,6 +317,9 @@ export default function Root() {
           </Route>
           <Route exact path="/channel/:channelId">
             <ChannelDetails applicationState={applicationState} />
+          </Route>
+          <Route>
+            <NotFound />
           </Route>
         </Switch>
       </BrowserRouter>
