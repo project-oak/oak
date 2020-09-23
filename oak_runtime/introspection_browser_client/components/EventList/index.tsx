@@ -15,6 +15,7 @@
 //
 
 import React from 'react';
+import Event from '~/components/Event';
 import introspectionEventsProto from '~/protoc_out/proto/introspection_events_pb';
 
 type EventListProps = { events: introspectionEventsProto.Event[] };
@@ -47,7 +48,9 @@ export default function EventList({ events }: EventListProps) {
           // Usually it's not advisable to use the index as a key. However since
           // the list of events is append-only it's fine in this case.
           // Ref: https://reactjs.org/docs/lists-and-keys.html#keys
-          <li key={eventIndex}>{JSON.stringify(event.toObject())}</li>
+          <li key={eventIndex}>
+            <Event event={event} />
+          </li>
         ))}
       </ol>
     </section>
