@@ -27,15 +27,22 @@ message HttpRequest {
   // The body of the request.
   bytes body = 3;
   // The HTTP request headers.
-  map<string, bytes> headers = 4;
+  map<string, HeaderValue> headers = 4;
 }
 
-// Protocol buffer encoding representing an HTTP/2 response.
+// Protocol buffer encoding representing an HTTP response.
 message HttpResponse {
   // The body of the response.
   bytes body = 1;
   // The HTTP status code.
   int32 status = 2;
   // The HTTP response headers.
-  map<string, bytes> headers = 3;
+  map<string, HeaderValue> headers = 3;
+}
+
+
+// Each header name in an HTTP request or HTTP response may correspond to more
+// than one header values. This protocol buffer represents such header values.
+message HeaderValue {
+  repeated bytes values = 1;
 }

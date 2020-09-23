@@ -19,7 +19,7 @@
 use log::{info, warn};
 use maplit::hashmap;
 use oak::{http::Invocation, Node, OakError};
-use oak_services::proto::oak::encap::HttpResponse;
+use oak_services::proto::oak::encap::{HeaderValue, HttpResponse};
 
 oak::entrypoint!(oak_main => |_in_channel| {
     oak::logger::init_default();
@@ -48,7 +48,7 @@ impl Node<Invocation> for StaticHttpServer {
                     body: include_bytes!("../static/index.html").to_vec(),
                     status: http::StatusCode::OK.as_u16() as i32,
                     headers: hashmap! {
-                        CONTENT_TYPE.as_str().to_string() => "text/html; charset=UTF-8".to_string().into_bytes(),
+                        CONTENT_TYPE.as_str().to_string() => HeaderValue { values: vec!["text/html; charset=UTF-8".to_string().into_bytes()] },
                     },
                 },
                 _ => HttpResponse {
