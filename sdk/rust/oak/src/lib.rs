@@ -305,7 +305,7 @@ pub fn channel_label(handle: Handle) -> Result<Label, OakStatus> {
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
-            oak_abi::channel_label(handle, bytes.as_ptr(), bytes.len(), &mut actual_size)
+            oak_abi::channel_label(handle, bytes.as_mut_ptr(), bytes.len(), &mut actual_size) as i32
         });
         match status {
             Some(s) => match s {
@@ -350,7 +350,7 @@ pub fn node_label() -> Result<Label, OakStatus> {
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
-            oak_abi::node_label(bytes.as_ptr(), bytes.len(), &mut actual_size)
+            oak_abi::node_label(bytes.as_mut_ptr(), bytes.len(), &mut actual_size) as i32
         });
         match status {
             Some(s) => match s {
@@ -395,7 +395,7 @@ pub fn node_privilege() -> Result<Label, OakStatus> {
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
         let status = OakStatus::from_i32(unsafe {
-            oak_abi::node_privilege(bytes.as_ptr(), bytes.len(), &mut actual_size)
+            oak_abi::node_privilege(bytes.as_mut_ptr(), bytes.len(), &mut actual_size) as i32
         });
         match status {
             Some(s) => match s {

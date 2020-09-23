@@ -524,7 +524,7 @@ impl WasmInterface {
                         self.pretty_name, err
                     );
                     OakStatus::ErrInvalidArgs
-                })?;
+                })
             }
             LabelSerializationStatus::NeedsCapacity(_) => Err(OakStatus::ErrBufferTooSmall),
         }
@@ -576,7 +576,7 @@ impl WasmInterface {
                         self.pretty_name, err
                     );
                     OakStatus::ErrInvalidArgs
-                })?;
+                })
             }
             LabelSerializationStatus::NeedsCapacity(_) => Err(OakStatus::ErrBufferTooSmall),
         }
@@ -628,7 +628,7 @@ impl WasmInterface {
                         self.pretty_name, err
                     );
                     OakStatus::ErrInvalidArgs
-                })?;
+                })
             }
             LabelSerializationStatus::NeedsCapacity(_) => Err(OakStatus::ErrBufferTooSmall),
         }
