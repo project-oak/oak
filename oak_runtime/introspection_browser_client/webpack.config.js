@@ -23,7 +23,7 @@ module.exports = (env) => ({
   output: {
     path: path.resolve(__dirname, env.OUTPUT_PATH || './dist'),
     filename: 'index.js',
-    publicPath: '/',
+    publicPath: '/dynamic/',
   },
   plugins: [
     new CopyPlugin({
@@ -58,6 +58,8 @@ module.exports = (env) => ({
   devServer: {
     inline: true,
     liveReload: false,
-    historyApiFallback: true,
+    historyApiFallback: {
+      rewrites: [{ from: /^\/dynamic.*/, to: '/dynamic/index.html' }],
+    },
   },
 });

@@ -276,7 +276,7 @@ export default function Root() {
   return (
     <>
       <CssBaseline />
-      <BrowserRouter>
+      <BrowserRouter basename="/dynamic">
         <Switch>
           <Route exact path="/">
             <MainTabs

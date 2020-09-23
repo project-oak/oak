@@ -41,7 +41,7 @@ function getGraphFromState(applicationState: OakApplicationState) {
     ([nodeId, nodeInfo]) =>
       `${getNodeDotId(nodeId)} [label="${
         nodeInfo.name
-      }"  URL="/node/${nodeId}"]`
+      }"  URL="/dynamic/node/${nodeId}"]`
   );
   const oakHandles = [...applicationState.nodeInfos.entries()]
     .map(([nodeId, nodeInfo]) =>
@@ -50,13 +50,13 @@ function getGraphFromState(applicationState: OakApplicationState) {
           `${getHandleDotId(
             nodeId,
             handle
-          )} [label="${nodeId}:${handle}" URL="/node/${nodeId}/${handle}"]`
+          )} [label="${nodeId}:${handle}" URL="/dynamic/node/${nodeId}/${handle}"]`
       )
     )
     .flat();
   const oakChannels = [...applicationState.channels.entries()].map(
     ([channelId]) =>
-      `${getChannelDotId(channelId)} [URL="/channel/${channelId}"]`
+      `${getChannelDotId(channelId)} [URL="/dynamic/channel/${channelId}"]`
   );
   const oakMessages = [
     ...applicationState.channels.entries(),
