@@ -53,20 +53,29 @@ copy_directory_nondestructively "${PROTO_TMP_OUT_DIR}" "${PROTO_OUT_DIR}"
 # Finally delete the temporary protobuf directory.
 rm -rf "${PROTO_TMP_OUT_DIR}"
 
-# Build JavaScript bundle
-readonly WEBPACK_TMP_OUT_DIR="./dist_tmp"
-readonly WEBPACK_OUT_DIR="./dist"
+if [[ "$1" == 'development' ]]; then
+  # Run a webpack dev server
+  readonly WEBPACK_TMP_OUT_DIR="./dist_tmp"
 
-mkdir -p "${WEBPACK_TMP_OUT_DIR}"
-mkdir -p "${WEBPACK_OUT_DIR}"
+  npx webpack-dev-server --env.NODE_ENV=development --env.OUTPUT_PATH="${WEBPACK_TMP_OUT_DIR}"
 
-npx webpack --env.NODE_ENV="production" --env.OUTPUT_PATH="${WEBPACK_TMP_OUT_DIR}"
+  rm -rf "${WEBPACK_TMP_OUT_DIR}"
+else
+  # Build JavaScript bundle
+  readonly WEBPACK_TMP_OUT_DIR="./dist_tmp"
+  readonly WEBPACK_OUT_DIR="./dist"
 
-# Copy each generated file into the actual output directory, but do not
-# overwrite identical files. Preserves the last modified date of unchanged
-# outputs, thereby preventing cargo from rebuilding crates that include them.
-# Ref: https://github.com/project-oak/oak/issues/1456
-copy_directory_nondestructively "${WEBPACK_TMP_OUT_DIR}" "${WEBPACK_OUT_DIR}"
+  mkdir -p "${WEBPACK_TMP_OUT_DIR}"
+  mkdir -p "${WEBPACK_OUT_DIR}"
 
-# Finally delete the temporary output directory.
-rm -rf "${WEBPACK_TMP_OUT_DIR}"
+  npx webpack --env.NODE_ENV="production" --env.OUTPUT_PATH="${WEBPACK_TMP_OUT_DIR}"
+
+  # Copy each generated file into the actual output directory, but do not
+  # overwrite identical files. Preserves the last modified date of unchanged
+  # outputs, thereby preventing cargo from rebuilding crates that include them.
+  # Ref: https://github.com/project-oak/oak/issues/1456
+  copy_directory_nondestructively "${WEBPACK_TMP_OUT_DIR}" "${WEBPACK_OUT_DIR}"
+
+  # Finally delete the temporary output directory.
+  rm -rf "${WEBPACK_TMP_OUT_DIR}"
+fi
