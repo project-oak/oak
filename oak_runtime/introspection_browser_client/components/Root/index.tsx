@@ -59,8 +59,8 @@ export interface OakApplicationState {
   channels: Channels;
 }
 
-export type NodeId = bigint;
-export type AbiHandle = bigint;
+export type NodeId = string;
+export type AbiHandle = string;
 type NodeInfos = Map<NodeId, NodeInfo>;
 interface NodeInfo {
   name: string;
@@ -68,7 +68,7 @@ interface NodeInfo {
   label: Label;
 }
 
-export type ChannelID = bigint;
+export type ChannelID = string;
 export enum ChannelHalfDirection {
   Read = 'READ',
   Write = 'WRITE',
@@ -112,19 +112,16 @@ function eventReducer(
 
   switch (eventType) {
     case EventDetailsCase.NODE_CREATED:
-      applicationState.nodeInfos.set(
-        BigInt(event!.getNodeCreated()!.getNodeId()),
-        {
-          name: event!.getNodeCreated()!.getName(),
-          abiHandles: new Map(),
-          label: event!.getNodeCreated()!.getLabel()!,
-        }
-      );
+      applicationState.nodeInfos.set(event!.getNodeCreated()!.getNodeId(), {
+        name: event!.getNodeCreated()!.getName(),
+        abiHandles: new Map(),
+        label: event!.getNodeCreated()!.getLabel()!,
+      });
 
       break;
     case EventDetailsCase.NODE_DESTROYED:
       {
-        const nodeId = BigInt(event!.getNodeDestroyed()!.getNodeId());
+        const nodeId = event!.getNodeDestroyed()!.getNodeId();
         if (applicationState.nodeInfos.delete(nodeId) === false) {
           throw new Error(
             `Couldn't delete Node with id "${nodeId}", as it does not exist.`
@@ -136,7 +133,7 @@ function eventReducer(
     case EventDetailsCase.CHANNEL_CREATED:
       {
         const channel = event!.getChannelCreated()!;
-        const channelId = BigInt(channel.getChannelId());
+        const channelId = channel.getChannelId();
         applicationState.channels.set(channelId, {
           id: channelId,
           messages: [],
@@ -147,7 +144,7 @@ function eventReducer(
       break;
     case EventDetailsCase.CHANNEL_DESTROYED:
       {
-        const channelId = BigInt(event!.getChannelDestroyed()!.getChannelId());
+        const channelId = event!.getChannelDestroyed()!.getChannelId();
         if (applicationState.channels.delete(channelId) === false) {
           throw new Error(
             `Couldn't delete Channel with id "${channelId}", as it does not exist.`
@@ -159,7 +156,7 @@ function eventReducer(
     case EventDetailsCase.HANDLE_CREATED:
       {
         const details = event.getHandleCreated();
-        const nodeId = BigInt(details!.getNodeId());
+        const nodeId = details!.getNodeId();
         const node = applicationState.nodeInfos.get(nodeId);
 
         if (node === undefined) {
@@ -168,8 +165,8 @@ function eventReducer(
           );
         }
 
-        const direction = node.abiHandles.set(BigInt(details!.getHandle()), {
-          channelId: BigInt(details!.getChannelId()),
+        const direction = node.abiHandles.set(details!.getHandle(), {
+          channelId: details!.getChannelId(),
           direction: protoDirectionToChannelHalfDirection(
             details!.getDirection()
           ),
@@ -180,7 +177,7 @@ function eventReducer(
     case EventDetailsCase.HANDLE_DESTROYED:
       {
         const details = event.getHandleDestroyed();
-        const nodeId = BigInt(details!.getNodeId());
+        const nodeId = details!.getNodeId();
         const node = applicationState.nodeInfos.get(nodeId);
 
         if (node === undefined) {
@@ -189,7 +186,7 @@ function eventReducer(
           );
         }
 
-        const handle = BigInt(details!.getHandle());
+        const handle = details!.getHandle();
 
         if (node.abiHandles.delete(handle) === false) {
           throw new Error(
@@ -202,11 +199,11 @@ function eventReducer(
     case EventDetailsCase.MESSAGE_ENQUEUED:
       {
         const details = event.getMessageEnqueued()!;
-        const nodeId = BigInt(details!.getNodeId());
+        const nodeId = details!.getNodeId();
         const enqueingNode = applicationState.nodeInfos.get(nodeId)!;
         const message = details.getIncludedHandlesList().reduce(
           (message, handle) => {
-            const channelHalf = enqueingNode.abiHandles.get(BigInt(handle))!;
+            const channelHalf = enqueingNode.abiHandles.get(handle)!;
             message.channels.push(channelHalf);
 
             return message;
@@ -215,14 +212,14 @@ function eventReducer(
         );
 
         applicationState.channels
-          .get(BigInt(details.getChannelId()))!
+          .get(details.getChannelId())!
           .messages.push(message);
       }
 
       break;
     case EventDetailsCase.MESSAGE_DEQUEUED:
       applicationState.channels
-        .get(BigInt(event.getMessageDequeued()!.getChannelId()))!
+        .get(event.getMessageDequeued()!.getChannelId())!
         .messages.shift();
 
       break;

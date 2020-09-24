@@ -31,13 +31,13 @@ export default function HandleDetails({
   applicationState,
 }: HandleDetailsProps) {
   const { nodeId, handle } = useParams<ParamTypes>();
-  const node = applicationState.nodeInfos.get(BigInt(nodeId));
+  const node = applicationState.nodeInfos.get(nodeId);
 
   if (node === undefined) {
     return <p>A node with the ID: {node} does not exist.</p>;
   }
 
-  const channelHalf = node.abiHandles.get(BigInt(handle));
+  const channelHalf = node.abiHandles.get(handle);
 
   if (channelHalf === undefined) {
     return (
@@ -50,7 +50,7 @@ export default function HandleDetails({
   return (
     <p>
       The handle {handle} of the node {nodeId} maps to channel{' '}
-      {channelHalf.channelId.toString()} {channelHalf.direction}
+      {channelHalf.channelId} {channelHalf.direction}
     </p>
   );
 }

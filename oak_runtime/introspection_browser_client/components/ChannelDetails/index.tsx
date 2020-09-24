@@ -30,7 +30,7 @@ export default function ChannelDetails({
   applicationState,
 }: ChannelDetailsProps) {
   const { channelId } = useParams<ParamTypes>();
-  const channel = applicationState.channels.get(BigInt(channelId));
+  const channel = applicationState.channels.get(channelId);
 
   if (channel === undefined) {
     return <p>A channel with the ID: {channelId} does not exist.</p>;

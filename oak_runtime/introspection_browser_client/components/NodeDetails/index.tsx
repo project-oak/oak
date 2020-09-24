@@ -28,7 +28,7 @@ interface ParamTypes {
 
 export default function NodeDetails({ applicationState }: NodeDetailsProps) {
   const { nodeId } = useParams<ParamTypes>();
-  const node = applicationState.nodeInfos.get(BigInt(nodeId));
+  const node = applicationState.nodeInfos.get(nodeId);
 
   if (node === undefined) {
     return <p>A node with the ID: {nodeId} does not exist.</p>;
