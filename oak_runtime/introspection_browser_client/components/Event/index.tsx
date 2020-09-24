@@ -44,13 +44,19 @@ function ObjectAsDescriptionList({ object }: { object: Object }) {
         <>
           <dt className={classes.dt}>{key}</dt>
           <dd className={classes.dd}>
-            {Array.isArray(value) ? (
-              JSON.stringify(value)
-            ) : typeof value === 'object' ? (
-              <ObjectAsDescriptionList object={value} />
-            ) : (
-              value
-            )}
+            {
+              // The array check needs to come first, since
+              // typeof [1,2,3] === 'object'
+              Array.isArray(value) ? (
+                JSON.stringify(value)
+              ) : // Check for null along the side object check, since
+              // typeof null === 'object'
+              typeof value === 'object' && value !== null ? (
+                <ObjectAsDescriptionList object={value} />
+              ) : (
+                value
+              )
+            }
           </dd>
         </>
       ))}
@@ -70,11 +76,9 @@ function getEventDetails(event: introspectionEventsProto.Event) {
   // The event details will have entries for each possible type defined the
   // protobuf enum. The one whose value is not undefined represents the details
   // of this object.
-  const [eventType, eventDetails] = Object.entries(rest).find(
-    ([key, value]) => value !== undefined
+  return Object.entries(rest).find(
+    ([eventType, eventDetails]) => eventDetails !== undefined
   )!;
-
-  return [eventType, eventDetails];
 }
 
 const useStyles = makeStyles({
@@ -88,7 +92,7 @@ export default function Event({
 }) {
   const classes = useStyles();
 
-  const eventTime = event.getTimestamp().toDate();
+  const eventTime: Date = event.getTimestamp().toDate();
   const [eventType, eventDetails] = getEventDetails(event);
 
   return (
@@ -97,11 +101,7 @@ export default function Event({
         <strong>{camelCaseToTitleCase(eventType)}</strong>
         <span>
           {' '}
-          at{' '}
-          <time>
-            {eventTime.getUTCHours()}h:{eventTime.getUTCMinutes()}m:
-            {eventTime.getUTCSeconds()}.{eventTime.getUTCMilliseconds()}s (UTC)
-          </time>
+          at <time>{eventTime.toISOString()}</time>
         </span>
       </div>
       <ObjectAsDescriptionList object={eventDetails} />
