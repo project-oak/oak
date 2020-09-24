@@ -536,6 +536,89 @@
 <span id="536">536</span>
 <span id="537">537</span>
 <span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -566,9 +649,10 @@
 };
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>};
 <span class="kw">use</span> <span class="ident">futures_util</span>::<span class="ident">stream</span>::<span class="ident">Stream</span>;
+<span class="kw">use</span> <span class="ident">http</span>::{<span class="ident">request</span>::<span class="ident">Request</span>, <span class="ident">response</span>::<span class="ident">Response</span>};
 <span class="kw">use</span> <span class="ident">hyper</span>::{
     <span class="ident">service</span>::{<span class="ident">make_service_fn</span>, <span class="ident">service_fn</span>},
-    <span class="ident">Body</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Server</span>, <span class="ident">StatusCode</span>,
+    <span class="ident">Body</span>, <span class="ident">Server</span>, <span class="ident">StatusCode</span>,
 };
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">label</span>::<span class="ident">Label</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">HttpServerConfiguration</span>, <span class="ident">OakStatus</span>};
@@ -576,8 +660,8 @@
     <span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>},
     <span class="ident">OakError</span>, <span class="ident">Receiver</span>, <span class="ident">Sender</span>,
 };
-<span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">HttpRequest</span>, <span class="ident">HttpResponse</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>, <span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">pin</span>::<span class="ident">Pin</span>};
+<span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">HeaderValue</span>, <span class="ident">HttpRequest</span>, <span class="ident">HttpResponse</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">io</span>, <span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">pin</span>::<span class="ident">Pin</span>};
 <span class="kw">use</span> <span class="ident">tokio</span>::{
     <span class="ident">net</span>::{<span class="ident">TcpListener</span>, <span class="ident">TcpStream</span>},
     <span class="ident">sync</span>::<span class="ident">oneshot</span>,
@@ -588,13 +672,14 @@
     <span class="ident">future</span>::<span class="ident">TryFutureExt</span>,
     <span class="ident">stream</span>::{<span class="ident">StreamExt</span>, <span class="ident">TryStreamExt</span>},
 };
+<span class="kw">use</span> <span class="ident">maplit</span>::<span class="ident">hashmap</span>;
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">tokio_rustls</span>::<span class="ident">TlsAcceptor</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests</span>;
 
-<span class="doccomment">/// Checks that prot is not reserved (i.e., is greater than 1023).</span>
+<span class="doccomment">/// Checks that port is not reserved (i.e., is greater than 1023).</span>
 <span class="kw">fn</span> <span class="ident">check_port</span>(<span class="ident">address</span>: <span class="kw-2">&amp;</span><span class="ident">SocketAddr</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">address</span>.<span class="ident">port</span>() <span class="op">&gt;</span> <span class="number">1023</span> {
         <span class="prelude-val">Ok</span>(())
@@ -628,7 +713,7 @@
             <span class="comment">// be awoken when there is a new incoming connection, by calling `wake` on</span>
             <span class="comment">// the `waker` in the context `cx`.</span>
             <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(<span class="ident">e</span>))) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error when processing TLS stream: {:?}&quot;</span>, <span class="ident">e</span>);
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error when processing TLS stream: {:?}&quot;</span>, <span class="ident">e</span>);
                 <span class="ident">Poll</span>::<span class="ident">Pending</span>
             }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">connection</span>,
@@ -662,7 +747,7 @@
         })
     }
 
-    <span class="comment">// Make a server, with graceful shutdown, from the given [`HttpRequestHandler`].</span>
+    <span class="doccomment">/// Make a server, with graceful shutdown, from the given [`HttpRequestHandler`].</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">make_server</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">request_handler</span>: <span class="ident">HttpRequestHandler</span>,
@@ -713,9 +798,9 @@
                 <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Incoming failed: {:?}&quot;</span>, <span class="ident">err</span>))
             })
             .<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">stream</span><span class="op">|</span> {
-                <span class="ident">log</span>::<span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Received incoming TLS stream: {:?}&quot;</span>, <span class="ident">stream</span>);
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Received incoming TLS stream: {:?}&quot;</span>, <span class="ident">stream</span>);
                 <span class="ident">tls_acceptor</span>.<span class="ident">accept</span>(<span class="ident">stream</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                    <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Client-connection error: {:?}&quot;</span>, <span class="ident">err</span>);
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Client-connection error: {:?}&quot;</span>, <span class="ident">err</span>);
                     <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TLS Error: {:?}&quot;</span>, <span class="ident">err</span>))
                 })
             })
@@ -723,33 +808,6 @@
 
         <span class="ident">TlsServer</span> {
             <span class="ident">acceptor</span>: <span class="ident">incoming_tls_stream</span>,
-        }
-    }
-
-    <span class="comment">// Create an instance of HttpRequest, from the given Request.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">map_to_http_request</span>(<span class="ident">req</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HttpRequest</span> {
-        <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="ident">req</span>.<span class="ident">uri</span>().<span class="ident">to_string</span>();
-        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="ident">req</span>.<span class="ident">method</span>().<span class="ident">as_str</span>().<span class="ident">to_string</span>();
-        <span class="kw">let</span> <span class="ident">req_headers</span> <span class="op">=</span> <span class="ident">req</span>.<span class="ident">headers</span>();
-        <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="ident">req_headers</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">key</span>, <span class="ident">value</span>)<span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-                (<span class="ident">key</span>.<span class="ident">to_string</span>(), <span class="ident">val</span>)
-            })
-            .<span class="ident">collect</span>();
-        <span class="kw">let</span> <span class="ident">body_stream</span> <span class="op">=</span> <span class="ident">req</span>.<span class="ident">into_body</span>();
-
-        <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">hyper</span>::<span class="ident">body</span>::<span class="ident">to_bytes</span>(<span class="ident">body_stream</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">expect</span>(<span class="string">&quot;Error when reading request body from the connection&quot;</span>)
-            .<span class="ident">to_vec</span>();
-
-        <span class="ident">HttpRequest</span> {
-            <span class="ident">uri</span>,
-            <span class="ident">method</span>,
-            <span class="ident">body</span>,
-            <span class="ident">headers</span>,
         }
     }
 }
@@ -843,7 +901,7 @@
 
 <span class="kw">impl</span> <span class="ident">HttpRequestHandler</span> {
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">HttpServerNode</span>::<span class="ident">map_to_http_request</span>(<span class="ident">req</span>).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">to_oak_http_request</span>(<span class="ident">req</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">match</span> <span class="ident">get_oak_label</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">oak_label</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">info</span><span class="macro">!</span>(
@@ -863,10 +921,7 @@
                         <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
                     })<span class="question-mark">?</span>;
 
-                <span class="ident">response</span>.<span class="ident">to_response</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
-                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Could not create response: {}&quot;</span>, <span class="ident">e</span>);
-                    <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
-                })
+                <span class="ident">response</span>.<span class="ident">to_hyper_response</span>()
             }
             <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">http</span>::<span class="ident">response</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
                 .<span class="ident">status</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_REQUEST</span>)
@@ -910,7 +965,7 @@
     }
 }
 
-<span class="comment">// A pair of temporary channels to pass the HTTP request and to receive the response.</span>
+<span class="doccomment">/// A pair of temporary channels to pass the HTTP request and to receive the response.</span>
 <span class="kw">struct</span> <span class="ident">Pipe</span> {
     <span class="ident">request_writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     <span class="ident">request_reader</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
@@ -1000,18 +1055,22 @@
     }
 }
 
-<span class="comment">// HTTP requests can either provide JSON formatted labels or protobuf encoded labels. But exactly</span>
-<span class="comment">// one of these should be provided. This method checks that exactly one label is provided in a</span>
-<span class="comment">// header in the request and extracts it for use for further handling of the request.</span>
+<span class="doccomment">/// HTTP requests can either provide JSON formatted labels or protobuf encoded labels. But exactly</span>
+<span class="doccomment">/// one of these should be provided. This method checks that exactly one label is provided in a</span>
+<span class="doccomment">/// header in the request and extracts it for use for further handling of the request.</span>
 <span class="kw">fn</span> <span class="ident">get_oak_label</span>(<span class="ident">req</span>: <span class="kw-2">&amp;</span><span class="ident">HttpRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> (
-        <span class="ident">req</span>.<span class="ident">headers</span>.<span class="ident">get</span>(<span class="ident">oak_abi</span>::<span class="ident">OAK_LABEL_HTTP_JSON_KEY</span>),
-        <span class="ident">req</span>.<span class="ident">headers</span>.<span class="ident">get</span>(<span class="ident">oak_abi</span>::<span class="ident">OAK_LABEL_HTTP_PROTOBUF_KEY</span>),
+        <span class="ident">req</span>.<span class="ident">headers</span>
+            .<span class="ident">get</span>(<span class="ident">oak_abi</span>::<span class="ident">OAK_LABEL_HTTP_JSON_KEY</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="ident">m</span>.<span class="ident">values</span>.<span class="ident">as_slice</span>()),
+        <span class="ident">req</span>.<span class="ident">headers</span>
+            .<span class="ident">get</span>(<span class="ident">oak_abi</span>::<span class="ident">OAK_LABEL_HTTP_PROTOBUF_KEY</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="ident">m</span>.<span class="ident">values</span>.<span class="ident">as_slice</span>()),
     );
 
     <span class="kw">match</span> <span class="ident">headers</span> {
-        (<span class="prelude-val">Some</span>(<span class="ident">json_label</span>), <span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_json_label</span>(<span class="ident">json_label</span>.<span class="ident">to_vec</span>()),
-        (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="ident">protobuf_label</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_protobuf_label</span>(<span class="kw-2">&amp;</span><span class="ident">protobuf_label</span>[..]),
+        (<span class="prelude-val">Some</span>([<span class="ident">json_label</span>]), <span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_json_label</span>(<span class="ident">json_label</span>.<span class="ident">to_vec</span>()),
+        (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>([<span class="ident">protobuf_label</span>])) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_protobuf_label</span>(<span class="kw-2">&amp;</span><span class="ident">protobuf_label</span>[..]),
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="macro">warn</span><span class="macro">!</span>(
                 <span class="string">&quot;Exactly one header must be provided as an {} or {} header.&quot;</span>,
@@ -1057,23 +1116,130 @@
         <span class="ident">response_receiver</span>.<span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">runtime</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">to_response</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>, <span class="ident">http</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">to_hyper_response</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;Generating response for runtime {} and reader {:?}.&quot;</span>,
             <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">node_id</span>.<span class="number">0</span>, <span class="self">self</span>.<span class="ident">response_reader</span>
         );
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">read_response</span>() {
-            <span class="prelude-val">Ok</span>(<span class="ident">http_response</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">http</span>::<span class="ident">response</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
-                .<span class="ident">status</span>(<span class="ident">http_response</span>.<span class="ident">status</span> <span class="kw">as</span> <span class="ident">u16</span>)
-                .<span class="ident">body</span>(<span class="ident">Body</span>::<span class="ident">from</span>(<span class="ident">http_response</span>.<span class="ident">body</span>)),
+            <span class="prelude-val">Ok</span>(<span class="ident">http_response</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">to_hyper_http_response</span>(<span class="ident">http_response</span>),
             <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Could not read response: {}&quot;</span>, <span class="ident">status</span>);
+                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Could not read response: {}&quot;</span>, <span class="ident">status</span>);
                 <span class="ident">http</span>::<span class="ident">response</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
                     .<span class="ident">status</span>(<span class="ident">StatusCode</span>::<span class="ident">INTERNAL_SERVER_ERROR</span>)
                     .<span class="ident">body</span>(<span class="ident">Body</span>::<span class="ident">empty</span>())
+                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Could not build response: {}&quot;</span>, <span class="ident">err</span>);
+                        <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
+                    })
             }
         }
     }
+}
+
+<span class="doccomment">/// Wrapper around a HashMap representing the headers in protobuf encapsulated HttpRequest and</span>
+<span class="doccomment">/// HttpResponse. This struct is defined mainly to allow implementing `std::convert::From` for more</span>
+<span class="doccomment">/// convenient conversion from hyper HeaderMaps.</span>
+<span class="kw">struct</span> <span class="ident">OakHeaderMap</span> {
+    <span class="ident">headers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">HeaderValue</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">OakHeaderMap</span> {
+    <span class="comment">// Flatten the headers into a vector of tuples (String, http::header::HeaderValue) that can</span>
+    <span class="comment">// be easily iterated over when populating the headers in the hyper Response builder.</span>
+    <span class="kw">fn</span> <span class="ident">to_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderName</span>, <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>)<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">headers</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">flat_map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">value</span>)<span class="op">|</span> {
+                <span class="ident">value</span>.<span class="ident">values</span>.<span class="ident">iter</span>().<span class="ident">filter_map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">val</span><span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">name_value_pair</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderName</span>, <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span>  {
+                        <span class="kw">let</span> <span class="ident">header_name</span> <span class="op">=</span> <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderName</span>::<span class="ident">from_bytes</span>(<span class="ident">name</span>.<span class="ident">as_bytes</span>())
+                            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Error when parsing header name: {}&quot;</span>, <span class="ident">err</span>);
+                                <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
+                            })<span class="question-mark">?</span>;
+                        <span class="kw">let</span> <span class="ident">header_value</span> <span class="op">=</span>
+                            <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>::<span class="ident">from_bytes</span>(<span class="ident">val</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Error when parsing header value: {}&quot;</span>, <span class="ident">err</span>);
+                                <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
+                            })<span class="question-mark">?</span>;
+                        <span class="prelude-val">Ok</span>((<span class="ident">header_name</span>, <span class="ident">header_value</span>))
+                    };
+                    <span class="ident">name_value_pair</span>().<span class="ident">ok</span>()
+                })
+            })
+            .<span class="ident">collect</span>()
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderMap</span><span class="op">&lt;</span><span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">OakHeaderMap</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">hyper_headers</span>: <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderMap</span><span class="op">&lt;</span><span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">mutable_key_type</span>)]</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">headers</span> <span class="op">=</span> <span class="macro">hashmap</span><span class="macro">!</span> {};
+        <span class="kw">for</span> (<span class="ident">header_name</span>, <span class="ident">header_value</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">hyper_headers</span> {
+            <span class="ident">headers</span>
+                .<span class="ident">entry</span>(<span class="ident">header_name</span>)
+                .<span class="ident">or_insert_with</span>(<span class="ident">Vec</span>::<span class="ident">new</span>)
+                .<span class="ident">push</span>(<span class="ident">header_value</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>())
+        }
+        <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="ident">headers</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">value</span>)<span class="op">|</span> {
+                (
+                    <span class="ident">name</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">HeaderValue</span> {
+                        <span class="ident">values</span>: <span class="ident">value</span>.<span class="ident">to_owned</span>(),
+                    },
+                )
+            })
+            .<span class="ident">collect</span>();
+
+        <span class="ident">OakHeaderMap</span> { <span class="ident">headers</span> }
+    }
+}
+
+<span class="doccomment">/// Create an instance of Oak HttpRequest from the given hyper Request.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">to_oak_http_request</span>(<span class="ident">req</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HttpRequest</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="ident">req</span>.<span class="ident">uri</span>().<span class="ident">to_string</span>();
+    <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="ident">req</span>.<span class="ident">method</span>().<span class="ident">as_str</span>().<span class="ident">to_string</span>();
+    <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="ident">OakHeaderMap</span>::<span class="ident">from</span>(<span class="ident">req</span>.<span class="ident">headers</span>().<span class="ident">to_owned</span>()).<span class="ident">headers</span>;
+    <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">hyper</span>::<span class="ident">body</span>::<span class="ident">to_bytes</span>(<span class="ident">req</span>.<span class="ident">into_body</span>())
+        .<span class="kw">await</span>
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+            <span class="macro">warn</span><span class="macro">!</span>(
+                <span class="string">&quot;Error when reading request body from the connection: {}&quot;</span>,
+                <span class="ident">err</span>
+            );
+            <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
+        })<span class="question-mark">?</span>
+        .<span class="ident">to_vec</span>();
+
+    <span class="prelude-val">Ok</span>(<span class="ident">HttpRequest</span> {
+        <span class="ident">uri</span>,
+        <span class="ident">method</span>,
+        <span class="ident">body</span>,
+        <span class="ident">headers</span>,
+    })
+}
+
+<span class="doccomment">/// Convert an instance of Oak HttpResponse to hyper Response.</span>
+<span class="kw">fn</span> <span class="ident">to_hyper_http_response</span>(<span class="ident">http_response</span>: <span class="ident">HttpResponse</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">http</span>::<span class="ident">response</span>::<span class="ident">Builder</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="ident">OakHeaderMap</span> {
+        <span class="ident">headers</span>: <span class="ident">http_response</span>.<span class="ident">headers</span>,
+    }
+    .<span class="ident">to_vec</span>();
+    <span class="kw">for</span> (<span class="ident">header_name</span>, <span class="ident">header_value</span>) <span class="kw">in</span> <span class="ident">headers</span> {
+        <span class="ident">builder</span> <span class="op">=</span> <span class="ident">builder</span>.<span class="ident">header</span>(<span class="ident">header_name</span>, <span class="ident">header_value</span>);
+    }
+
+    <span class="ident">builder</span>
+        .<span class="ident">status</span>(<span class="ident">http_response</span>.<span class="ident">status</span> <span class="kw">as</span> <span class="ident">u16</span>)
+        .<span class="ident">body</span>(<span class="ident">Body</span>::<span class="ident">from</span>(<span class="ident">http_response</span>.<span class="ident">body</span>))
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Could not build response: {}&quot;</span>, <span class="ident">err</span>);
+            <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
+        })
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../";window.currentCrate = "oak_runtime";</script><script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script><script defer src="../../../../search-index.js"></script></body></html>
