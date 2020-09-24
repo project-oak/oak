@@ -27,9 +27,10 @@ use crate::{
 };
 use core::task::{Context, Poll};
 use futures_util::stream::Stream;
+use http::{request::Request, response::Response};
 use hyper::{
     service::{make_service_fn, service_fn},
-    Body, Request, Response, Server, StatusCode,
+    Body, Server, StatusCode,
 };
 use log::{debug, error, info, warn};
 use oak_abi::{label::Label, proto::oak::application::HttpServerConfiguration, OakStatus};
@@ -37,8 +38,8 @@ use oak_io::{
     handle::{ReadHandle, WriteHandle},
     OakError, Receiver, Sender,
 };
-use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
-use std::{io, net::SocketAddr, pin::Pin};
+use oak_services::proto::oak::encap::{HeaderValue, HttpRequest, HttpResponse};
+use std::{collections::HashMap, io, net::SocketAddr, pin::Pin};
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::oneshot,
@@ -49,13 +50,14 @@ use futures_util::{
     future::TryFutureExt,
     stream::{StreamExt, TryStreamExt},
 };
+use maplit::hashmap;
 use prost::Message;
 use tokio_rustls::TlsAcceptor;
 
 #[cfg(test)]
 pub mod tests;
 
-/// Checks that prot is not reserved (i.e., is greater than 1023).
+/// Checks that port is not reserved (i.e., is greater than 1023).
 fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
     if address.port() > 1023 {
         Ok(())
@@ -89,7 +91,7 @@ impl hyper::server::accept::Accept for TlsServer<'_> {
             // be awoken when there is a new incoming connection, by calling `wake` on
             // the `waker` in the context `cx`.
             Poll::Ready(Some(Err(e))) => {
-                log::error!("Error when processing TLS stream: {:?}", e);
+                error!("Error when processing TLS stream: {:?}", e);
                 Poll::Pending
             }
             _ => connection,
@@ -123,7 +125,7 @@ impl HttpServerNode {
         })
     }
 
-    // Make a server, with graceful shutdown, from the given [`HttpRequestHandler`].
+    /// Make a server, with graceful shutdown, from the given [`HttpRequestHandler`].
     async fn make_server(
         &self,
         request_handler: HttpRequestHandler,
@@ -174,9 +176,9 @@ impl HttpServerNode {
                 io::Error::new(io::ErrorKind::Other, format!("Incoming failed: {:?}", err))
             })
             .and_then(move |stream| {
-                log::debug!("Received incoming TLS stream: {:?}", stream);
+                debug!("Received incoming TLS stream: {:?}", stream);
                 tls_acceptor.accept(stream).map_err(|err| {
-                    log::error!("Client-connection error: {:?}", err);
+                    error!("Client-connection error: {:?}", err);
                     io::Error::new(io::ErrorKind::Other, format!("TLS Error: {:?}", err))
                 })
             })
@@ -184,33 +186,6 @@ impl HttpServerNode {
 
         TlsServer {
             acceptor: incoming_tls_stream,
-        }
-    }
-
-    // Create an instance of HttpRequest, from the given Request.
-    async fn map_to_http_request(req: Request<Body>) -> HttpRequest {
-        let uri = req.uri().to_string();
-        let method = req.method().as_str().to_string();
-        let req_headers = req.headers();
-        let headers = req_headers
-            .into_iter()
-            .map(|(key, value)| {
-                let val = value.as_bytes().to_vec();
-                (key.to_string(), val)
-            })
-            .collect();
-        let body_stream = req.into_body();
-
-        let body = hyper::body::to_bytes(body_stream)
-            .await
-            .expect("Error when reading request body from the connection")
-            .to_vec();
-
-        HttpRequest {
-            uri,
-            method,
-            body,
-            headers,
         }
     }
 }
@@ -304,7 +279,7 @@ struct HttpRequestHandler {
 
 impl HttpRequestHandler {
     async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, OakStatus> {
-        let request = HttpServerNode::map_to_http_request(req).await;
+        let request = to_oak_http_request(req).await?;
         match get_oak_label(&request) {
             Ok(oak_label) => {
                 info!(
@@ -324,10 +299,7 @@ impl HttpRequestHandler {
                         OakStatus::ErrInternal
                     })?;
 
-                response.to_response().map_err(|e| {
-                    warn!("Could not create response: {}", e);
-                    OakStatus::ErrInternal
-                })
+                response.to_hyper_response()
             }
             Err(OakStatus::ErrInvalidArgs) => http::response::Builder::new()
                 .status(StatusCode::BAD_REQUEST)
@@ -371,7 +343,7 @@ impl HttpRequestHandler {
     }
 }
 
-// A pair of temporary channels to pass the HTTP request and to receive the response.
+/// A pair of temporary channels to pass the HTTP request and to receive the response.
 struct Pipe {
     request_writer: oak_abi::Handle,
     request_reader: oak_abi::Handle,
@@ -461,18 +433,22 @@ impl Pipe {
     }
 }
 
-// HTTP requests can either provide JSON formatted labels or protobuf encoded labels. But exactly
-// one of these should be provided. This method checks that exactly one label is provided in a
-// header in the request and extracts it for use for further handling of the request.
+/// HTTP requests can either provide JSON formatted labels or protobuf encoded labels. But exactly
+/// one of these should be provided. This method checks that exactly one label is provided in a
+/// header in the request and extracts it for use for further handling of the request.
 fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
     let headers = (
-        req.headers.get(oak_abi::OAK_LABEL_HTTP_JSON_KEY),
-        req.headers.get(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY),
+        req.headers
+            .get(oak_abi::OAK_LABEL_HTTP_JSON_KEY)
+            .map(|m| m.values.as_slice()),
+        req.headers
+            .get(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY)
+            .map(|m| m.values.as_slice()),
     );
 
     match headers {
-        (Some(json_label), None) => parse_json_label(json_label.to_vec()),
-        (None, Some(protobuf_label)) => parse_protobuf_label(&protobuf_label[..]),
+        (Some([json_label]), None) => parse_json_label(json_label.to_vec()),
+        (None, Some([protobuf_label])) => parse_protobuf_label(&protobuf_label[..]),
         _ => {
             warn!(
                 "Exactly one header must be provided as an {} or {} header.",
@@ -518,21 +494,128 @@ impl HttpResponseIterator {
         response_receiver.receive(&self.runtime)
     }
 
-    fn to_response(&self) -> Result<Response<Body>, http::Error> {
+    fn to_hyper_response(&self) -> Result<Response<Body>, OakStatus> {
         info!(
             "Generating response for runtime {} and reader {:?}.",
             self.runtime.node_id.0, self.response_reader
         );
         match self.read_response() {
-            Ok(http_response) => http::response::Builder::new()
-                .status(http_response.status as u16)
-                .body(Body::from(http_response.body)),
+            Ok(http_response) => to_hyper_http_response(http_response),
             Err(status) => {
-                error!("Could not read response: {}", status);
+                warn!("Could not read response: {}", status);
                 http::response::Builder::new()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
                     .body(Body::empty())
+                    .map_err(|err| {
+                        warn!("Could not build response: {}", err);
+                        OakStatus::ErrInternal
+                    })
             }
         }
     }
+}
+
+/// Wrapper around a HashMap representing the headers in protobuf encapsulated HttpRequest and
+/// HttpResponse. This struct is defined mainly to allow implementing `std::convert::From` for more
+/// convenient conversion from hyper HeaderMaps.
+struct OakHeaderMap {
+    headers: HashMap<String, HeaderValue>,
+}
+
+impl OakHeaderMap {
+    // Flatten the headers into a vector of tuples (String, http::header::HeaderValue) that can
+    // be easily iterated over when populating the headers in the hyper Response builder.
+    fn to_vec(&self) -> Vec<(http::header::HeaderName, http::header::HeaderValue)> {
+        self.headers
+            .iter()
+            .flat_map(|(name, value)| {
+                value.values.iter().filter_map(move |val| {
+                    let name_value_pair = || -> Result<(http::header::HeaderName, http::header::HeaderValue), OakStatus>  {
+                        let header_name = http::header::HeaderName::from_bytes(name.as_bytes())
+                            .map_err(|err| {
+                                warn!("Error when parsing header name: {}", err);
+                                OakStatus::ErrInternal
+                            })?;
+                        let header_value =
+                            http::header::HeaderValue::from_bytes(val).map_err(|err| {
+                                warn!("Error when parsing header value: {}", err);
+                                OakStatus::ErrInternal
+                            })?;
+                        Ok((header_name, header_value))
+                    };
+                    name_value_pair().ok()
+                })
+            })
+            .collect()
+    }
+}
+
+impl From<http::header::HeaderMap<http::header::HeaderValue>> for OakHeaderMap {
+    fn from(hyper_headers: http::header::HeaderMap<http::header::HeaderValue>) -> Self {
+        #![allow(clippy::mutable_key_type)]
+        let mut headers = hashmap! {};
+        for (header_name, header_value) in &hyper_headers {
+            headers
+                .entry(header_name)
+                .or_insert_with(Vec::new)
+                .push(header_value.as_bytes().to_vec())
+        }
+        let headers = headers
+            .iter()
+            .map(|(name, value)| {
+                (
+                    name.to_string(),
+                    HeaderValue {
+                        values: value.to_owned(),
+                    },
+                )
+            })
+            .collect();
+
+        OakHeaderMap { headers }
+    }
+}
+
+/// Create an instance of Oak HttpRequest from the given hyper Request.
+async fn to_oak_http_request(req: Request<Body>) -> Result<HttpRequest, OakStatus> {
+    let uri = req.uri().to_string();
+    let method = req.method().as_str().to_string();
+    let headers = OakHeaderMap::from(req.headers().to_owned()).headers;
+    let body = hyper::body::to_bytes(req.into_body())
+        .await
+        .map_err(|err| {
+            warn!(
+                "Error when reading request body from the connection: {}",
+                err
+            );
+            OakStatus::ErrInternal
+        })?
+        .to_vec();
+
+    Ok(HttpRequest {
+        uri,
+        method,
+        body,
+        headers,
+    })
+}
+
+/// Convert an instance of Oak HttpResponse to hyper Response.
+fn to_hyper_http_response(http_response: HttpResponse) -> Result<Response<Body>, OakStatus> {
+    let mut builder = http::response::Builder::new();
+    let headers = OakHeaderMap {
+        headers: http_response.headers,
+    }
+    .to_vec();
+    for (header_name, header_value) in headers {
+        builder = builder.header(header_name, header_value);
+    }
+
+    builder
+        .status(http_response.status as u16)
+        .body(Body::from(http_response.body))
+        .map_err(|err| {
+            warn!("Could not build response: {}", err);
+            OakStatus::ErrInternal
+        })
 }
