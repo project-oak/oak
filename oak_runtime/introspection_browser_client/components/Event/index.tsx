@@ -49,7 +49,7 @@ function ObjectAsDescriptionList({ object }: { object: Object }) {
               // typeof [1,2,3] === 'object'
               Array.isArray(value) ? (
                 JSON.stringify(value)
-              ) : // Check for null along the side object check, since
+              ) : // Check for null alongside the object check, since
               // typeof null === 'object'
               typeof value === 'object' && value !== null ? (
                 <ObjectAsDescriptionList object={value} />
