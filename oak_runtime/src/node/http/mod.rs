@@ -529,25 +529,22 @@ impl OakHeaderMap {
         self.headers
             .iter()
             .flat_map(|(name, value)| {
-                value
-                    .values
-                    .iter()
-                    .map(move |val| {
+                value.values.iter().filter_map(move |val| {
+                    let name_value_pair = || -> Result<(http::header::HeaderName, http::header::HeaderValue), OakStatus>  {
                         let header_name = http::header::HeaderName::from_bytes(name.as_bytes())
                             .map_err(|err| {
                                 warn!("Error when parsing header name: {}", err);
-                                err
-                            });
+                                OakStatus::ErrInternal
+                            })?;
                         let header_value =
                             http::header::HeaderValue::from_bytes(val).map_err(|err| {
                                 warn!("Error when parsing header value: {}", err);
-                                err
-                            });
-                        (header_name, header_value)
-                    })
-                    .filter(|(name, value)| name.is_ok() && value.is_ok())
-                    // can safely call unwrap since the `Error`s are filtered out
-                    .map(|(name, value)| (name.unwrap(), value.unwrap()))
+                                OakStatus::ErrInternal
+                            })?;
+                        Ok((header_name, header_value))
+                    };
+                    name_value_pair().ok()
+                })
             })
             .collect()
     }
