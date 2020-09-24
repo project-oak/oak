@@ -92,7 +92,7 @@ export default function Event({
 }) {
   const classes = useStyles();
 
-  const eventTime: Date = event.getTimestamp().toDate();
+  const eventTime: string = event.getTimestamp().toDate().toISOString();
   const [eventType, eventDetails] = getEventDetails(event);
 
   return (
@@ -101,7 +101,7 @@ export default function Event({
         <strong>{camelCaseToTitleCase(eventType)}</strong>
         <span>
           {' '}
-          at <time>{eventTime.toISOString()}</time>
+          at <time dateTime={eventTime}>{eventTime}</time>
         </span>
       </div>
       <ObjectAsDescriptionList object={eventDetails} />
