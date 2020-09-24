@@ -41,6 +41,10 @@ impl Encodable for DummyData {
 
 impl Decodable for DummyData {
     fn decode(message: &Message) -> Result<Self, OakError> {
+        assert!(
+            message.handles.is_empty(),
+            "DummyData does not have handles"
+        );
         Ok(String::from_utf8(message.bytes.clone())
             .map(DummyData)
             .expect("Failed to decode DummyData"))

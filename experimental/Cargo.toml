@@ -1,8 +1,8 @@
 [workspace]
 members = [
-  "oak_async", 
-  "split_grpc/client", 
-  "split_grpc/proxy", 
+  "oak_async",
+  "split_grpc/client",
+  "split_grpc/proxy",
   "split_grpc/server",
 ]
 

@@ -15,7 +15,7 @@
 //
 //! Asynchronous I/O
 
-use crate::executor::with_executor;
+use crate::executor::{with_executor, ReaderId};
 use core::{
     future::Future,
     marker::PhantomData,
@@ -30,7 +30,7 @@ use oak::{
 
 /// `Future` representing an asynchronous read from a channel.
 pub struct ChannelRead<T: Decodable> {
-    reader_id: usize,
+    reader_id: ReaderId,
     handle: ReadHandle,
     _message_type: PhantomData<T>,
 }
@@ -49,8 +49,8 @@ impl<T: Decodable> Future for ChannelRead<T> {
     type Output = Result<T, OakError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        // Check for ready data on the channel before scheduling a wakeup from the executor, in case
-        // we don't need to wait.
+        // Check for ready status on the channel before scheduling a wakeup from the executor, in
+        // case we don't need to wait.
         if let Some(data) = channel_read_message(self.handle) {
             Poll::Ready(data)
         } else {
