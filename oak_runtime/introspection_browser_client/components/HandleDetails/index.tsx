@@ -42,8 +42,7 @@ export default function HandleDetails({
   if (channelHalf === undefined) {
     return (
       <p>
-        The handle {handle} with the does not exist on the node with the ID:{' '}
-        {node}.
+        The handle {handle} does not exist on the node with the ID: {node}.
       </p>
     );
   }

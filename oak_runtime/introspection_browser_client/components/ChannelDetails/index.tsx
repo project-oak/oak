@@ -33,7 +33,7 @@ export default function ChannelDetails({
   const channel = applicationState.channels.get(BigInt(channelId));
 
   if (channel === undefined) {
-    return <p>A channel with the ID: {channel} does not exist.</p>;
+    return <p>A channel with the ID: {channelId} does not exist.</p>;
   }
 
   return (
