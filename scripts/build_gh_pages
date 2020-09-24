@@ -46,7 +46,6 @@ declare -ar SOURCE_PATHS=(
   'sdk'
 )
 declare -ar TARGET_SUBDIRS=(
-  'oak'
   'oak_abi'
   'oak_derive'
   'oak_io'
@@ -56,11 +55,22 @@ declare -ar TARGET_SUBDIRS=(
   'oak_sign'
   'oak_utils'
   'runner'
-  'sdk'
+  'oak'
 )
 
 # Titles used in the top-level index.html files.
-declare -ar PAGE_TITLES=('Oak Loader' 'Oak Runtime' 'ABI' 'Utils' 'SDK' 'Runner')
+declare -ar PAGE_TITLES=(
+  'ABI'
+  'Derive'
+  'IO'
+  'Loader'
+  'Runtime'
+  'Services'
+  'Sign'
+  'Utils'
+  'Runner'
+  'SDK'
+)
 
 readonly LEN=${#SOURCE_PATHS[@]}
 
