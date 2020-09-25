@@ -3,10 +3,10 @@ vfiles/Lattice.v
 vfiles/Parameters.v 
 vfiles/GenericMap.v
 vfiles/RuntimeModel.v
-vfiles/LowEquivalences.v
 vfiles/Events.v
-vfiles/TraceTheorems.v
 vfiles/EvAugSemantics.v
+vfiles/LowEquivalences.v
+vfiles/TraceTheorems.v
 vfiles/NIUtilTheorems.v
 vfiles/Unwind.v
 vfiles/PossibilisticNI.v

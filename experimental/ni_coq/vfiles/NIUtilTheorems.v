@@ -34,6 +34,22 @@ Proof.
     congruence.
 Qed.
 
+Theorem flows_uncons_proj: forall ell n,
+    (nlbl n <<L ell) ->
+    (node_low_proj ell n) = n.
+Proof.
+    intros. unfold node_low_proj. destruct (nlbl n <<? ell). reflexivity.
+    contradiction.
+Qed.
+
+Theorem nflows_uncons_proj: forall ell n,
+    ~(nlbl n <<L ell) ->
+    (node_low_proj ell n) = (empty_node n.(nlbl)).
+Proof.
+    intros. unfold node_low_proj. destruct (nlbl n <<? ell). contradiction.
+    reflexivity.
+Qed.
+
 Theorem state_leq_and_flowsto_to_node_eq: forall ell s1 s2 id n1 n2,
     (nodes s1).[? id] = Some n1 ->
     (nodes s2).[? id] = Some n2 ->
@@ -41,10 +57,13 @@ Theorem state_leq_and_flowsto_to_node_eq: forall ell s1 s2 id n1 n2,
     (nlbl n1 <<L ell) ->
     n1 = n2.
 Proof.
-    inversion 3. specialize (H2 id).
-    rewrite H, H0 in H2.
-    inversion H2. subst. reflexivity. contradiction.
-Qed.
+    (*
+    intros.
+    inversion H1. specialize (H3 id). rewrite H, H0 in H3. inversion H3.
+    assert (nlbl n2 <<L ell). destruct (nlbl n2 <<? ell).
+    assumption. rewrite flows_uncons_proj in H6. rewrite nflows_uncons_proj in H6.
+    *)
+Admitted.  (* WIP *)
 
 Theorem state_upd_chan_preserves_node_state_leq:
     forall ell s1 s2 han1 ch1 han2 ch2,
@@ -135,12 +154,16 @@ Proof.
                 inversion H; subst.
                 * (* t1 = [] and t2 = [] *) discriminate H0.
                 * exfalso. inversion H4; subst. simpl in Ht2head.
+                admit. 
+                (* 
                  unfold node_state_low_eq in H5.
                  inversion Ht2head. rewrite H8 in H5. specialize (H5 id).
                  rewrite Hsid in H5. simpl in H0. inversion H0.
                  rewrite H9, H1 in H5. assumption.
+                *)
     - (* none *)
         inversion H; subst. 
             + discriminate H0.
             + inversion Ht2head.
-Qed.
+Admitted. (* WIP *)
+

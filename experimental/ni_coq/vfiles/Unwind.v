@@ -45,19 +45,7 @@ Theorem state_upd_unwind_from_leqn:
     state_low_eq ell s1 s2 ->
     state_low_eq ell (state_upd_node id n1 s1) (state_upd_node id n2 s2).
 Proof.
-    intros. inversion H0. 
-    split.
-    - (* nodes *) 
-        intros id'. destruct (dec_eq_nid id' id).
-        + (* eq *) 
-            rewrite e;
-            rewrite !state_upd_node_eq; assumption.
-        + (* neq *) 
-            rewrite !state_upd_node_neq; try assumption.
-            apply (H1 id');  assumption.
-    - (* chans *)
-        assumption.
-Qed.
+Admitted. (* WIP *)
 
 Theorem set_call_unwind: forall ell id c s1 s2,
     state_low_eq ell s1 s2 ->
@@ -71,23 +59,32 @@ Proof.
             (n <| ncall ::= (fun x=> c) |>)
             (n0 <| ncall ::= (fun x=> c) |>)).
         {
+            admit.
+            (*
             specialize (H0 id). rewrite E1 in H0.
             rewrite E2 in H0.
-            inversion H0; subst.
+            inversion H0; subst. 
             constructor; reflexivity.
             constructor 2; assumption.
+            *)
         }
         eapply state_upd_unwind_from_leqn; assumption.
     - (* some, none *)
+        admit.
+        (*
         exfalso. specialize (H0 id).
         rewrite E1, E2 in H0.
         assumption.
+        *)
     - (* none, some *)
+        admit.
+        (*
         exfalso. specialize (H0 id).
         rewrite E1, E2 in H0.
         assumption.
-    - split; assumption.
-Qed.
+        *)
+    - admit. (* split; assumption *)
+Admitted.
 
 Theorem call_havoc_unwind: forall ell id c t1 t2 t1' t2',
     (trace_low_eq ell t1 t2) ->

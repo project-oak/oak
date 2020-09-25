@@ -236,7 +236,8 @@ continuation likely needs to be moved into the local transition relation *)
 
 Inductive step_system: state -> state -> Prop :=
     (* possibly also a termination case *)
-    | ValidStep id n c c' s s':
+    | SystemSkip s: step_system s s
+    | SystemStepNode id n c c' s s':
         s.(nodes) .[?id] = Some n ->
         n.(ncall) = c ->
         step_node id c s s' ->
