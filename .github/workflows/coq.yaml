@@ -2,7 +2,7 @@ name: Compile Coq proofs
 
 on:
   push:
-    branches: [main, coq-ci] # TODO: remove coq-ci; this is just for debugging 
+    branches: [main]
     paths:
       - "**.v"
       - "**coq.yaml"
