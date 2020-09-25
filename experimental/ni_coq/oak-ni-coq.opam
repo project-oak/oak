@@ -14,6 +14,6 @@ install: [make "install"]
 depends: [
   "ocaml"
   "coq" {>= "8.11.0"}
-  "coq-record-update {>= "0.2.0"}
+  "coq-record-update" {>= "0.2.0"}
 ]
 
