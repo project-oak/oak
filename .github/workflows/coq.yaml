@@ -10,14 +10,13 @@ on:
       - "_CoqProject"
       - "experimental/ni_coq/Makefile"
 
-strategy:
-  matrix:
-    coq_version:
-      - '8.11'
-      - '8.12'
-
 jobs:
   coq:
+    strategy:
+    matrix:
+      coq_version:
+        - '8.11'
+        - '8.12'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
