@@ -46,6 +46,8 @@ so the call is a piece of state that probably does not matter at the moment)
  and a downgrade event.
 *)
 
+Definition trace := list (state * event_l).
+
 Declare Scope aug_scope.
 Local Open Scope aug_scope.
 Notation "n '--->' msg":= (EvL (OutEv msg) n.(nlbl)) (at level 10) : aug_scope.
@@ -59,37 +61,32 @@ Definition head_st (t: trace) :=
         | (s', _)::_ => Some s'
     end.
 
-Inductive step_node_ev (id: node_id): call -> trace -> trace -> Prop :=
-    | SWriteChan (t: trace) s n han msg s' t:
-        head_st t = Some s ->
+Inductive step_node_ev (id: node_id): call -> state -> state -> event_l -> Prop :=
+    | SWriteChan s n han msg s':
         s.(nodes) .[?id] = Some n ->
         step_node id (WriteChannel han msg) s s' ->
-        step_node_ev id (WriteChannel han msg) t
-            ((s',  n ---> msg) :: t)
-    | SReadChan (t: trace) s n han chan msg s' t:
-        head_st t = Some s ->
+        step_node_ev id (WriteChannel han msg) s s' (n ---> msg)
+    | SReadChan s n han chan msg s':
         s.(nodes) .[?id] = Some n ->
         step_node id (ReadChannel han) s s' ->
         msg_is_head chan msg ->
-        step_node_ev id (ReadChannel han) t ((s', n <--- msg) :: t)
-    | SCreateChan (t: trace) s n lbl s' t:
+        step_node_ev id (ReadChannel han) s s' (n <--- msg)
+    | SCreateChan s n lbl s':
             (* It seems clear that no event is needed since nodes only observe
             * contents of channels indirectly via reads *)
-        head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateChannel lbl) s s' ->
-        step_node_ev id (CreateChannel lbl) t ((s', n --- ) :: t)
-    | SCreateNode (t: trace) s n lbl h s' t:
+        step_node_ev id (CreateChannel lbl) s s' (n --- )
+    | SCreateNode s n lbl h s':
             (* model observation that a node is created ?? *)
-        head_st t = Some s ->
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateNode lbl h) s s' ->
-        step_node_ev id (CreateNode lbl h) t ((s', n ---) :: t)
-    | SInternal (t: trace) s n s' t:
-        head_st t = Some s ->
+        step_node_ev id (CreateNode lbl h) s s' (n ---)
+    | SInternal s n s':
         s.(nodes) .[?id] = Some n ->
         step_node id Internal s s' ->
-        step_node_ev id Internal t ((s', n ---) :: t).
+        step_node_ev id Internal s s' (n ---).
+
 
 Definition trace_upd_head_state (t: trace) (s: state) :=
     match t with
@@ -104,21 +101,30 @@ Definition head_set_call t id c: trace :=
         | (s, e) :: t' => (s_set_call s id c, e) :: t'
     end.
 
-Inductive step_system_ev: trace -> trace -> Prop :=
-    | ValidStep id n c c' s t s' t':
-        head_st t  = Some s ->
-        head_st t' = Some s' ->
+Inductive step_system_ev: state -> state -> event_l -> Prop :=
+    | SytsemEvSkip s ell: step_system_ev s s (EvL NilEv ell)
+    | SystemEvStepNode id n c c' s s' e:
         s.(nodes) .[?id] = Some n ->
         n.(ncall) = c ->
-        step_node_ev id c t t' ->
-        step_system_ev t (head_set_call t' id c').
+        step_node_ev id c s s' e ->
+        let s'' := (s_set_call s' id c') in
+            (* Here c' is an arbitrary command. The next ABI call
+            that the node makes after the one executed here is an arbitrary one
+            of that node's choosing *)
+        step_system_ev s s'' e.
+
+Inductive step_system_ev_t: trace -> trace -> Prop :=
+    | StepTrace t s s' e:
+        head_st t = Some s -> 
+        step_system_ev s s' e ->
+        step_system_ev_t t ((s', e) :: t).
 
 Inductive step_system_ev_multi: trace -> trace -> Prop :=
     | multi_system_ev_refl t t':
-        step_system_ev t t' ->
+        step_system_ev_t t t' ->
         step_system_ev_multi t t'
     | multi_system_ev_tran t1 t2 t3:
-        step_system_ev t2 t3 ->
+        step_system_ev_t t2 t3 ->
         step_system_ev_multi t1 t2 ->
         step_system_ev_multi t1 t3.
 

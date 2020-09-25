@@ -39,19 +39,21 @@ Lemma head_set_call_preserves_tail: forall t id c,
 Proof. cbv [head_set_call]. crush. Qed.
 
 Theorem no_steps_from_empty: forall t,
-    ~(step_system_ev [] t).
+    ~(step_system_ev_t [] t).
 Proof.
 Admitted. (* WIP *)
 
+(* This vestige is kept for now
+* because it was referenced in the old P..NI.v *)
+(*
 Theorem node_no_steps_to_empty: forall t id c,
     ~(step_node_ev id c t []).
 Proof. inversion 1. Qed.
+*)
 
 Lemma system_no_steps_to_empty: forall t,
-    ~(step_system_ev t []).
-Proof.
-  inversion 1; cbv [head_set_call] in *. crush.
-Qed.
+    ~(step_system_ev_t t []).
+Proof. inversion 1. Qed.
 
 Theorem no_steps_to_empty: forall t, 
     ~(step_system_ev_multi t []).
@@ -67,36 +69,24 @@ Proof.
     induction 2; eauto using multi_system_ev_tran.
 Qed.
 
-Lemma no_node_steps_end_in_one: forall t t' id c,
-    length t' = 1 ->
-    ~(step_node_ev id c t t').
-Proof.
-  destruct t' as [| ? [| ? ? ] ]; crush; [ ].
-  inversion 1; crush.
-Qed.
-
 Lemma no_steps_end_in_one: forall t t',
     length t' = 1 ->
-    ~ step_system_ev t t'.
+    ~ step_system_ev_t t t'.
 Proof.
   intros; inversion 1; subst.
-  cbv [head_set_call] in *. crush.
-  eapply no_node_steps_end_in_one; eauto; [ ].
-  cbn [length]. congruence.
+  destruct t. inversion H1. inversion H.
 Qed.
 
 Theorem step_system_ev_uncons: forall t1 t2,
-    step_system_ev t1 t2 ->
+    step_system_ev_t t1 t2 ->
     t1 = tl t2.
 Proof.
-  induction 1; intros; subst.
-  let H := lazymatch goal with H : step_node_ev _ _ _ _ |- _ => H end in
-  inversion H; subst; reflexivity.
+    induction 1; intros; subst. auto.
 Qed.
 
 Lemma step_system_extends: forall t t' a,
-    step_system_ev t (a::t') ->
-    step_system_ev t' (a::t').
+    step_system_ev_t t (a::t') ->
+    step_system_ev_t t' (a::t').
 Proof.
   intros *. intro Hstep. pose proof Hstep.
   eapply step_system_ev_uncons in Hstep; crush.
@@ -104,7 +94,7 @@ Qed.
 
 Theorem step_system_multi_extends: forall t t',
     step_system_ev_multi t t' ->
-    step_system_ev (tl t') t'.
+    step_system_ev_t (tl t') t'.
 Proof.
   inversion 1; intros; subst;
     erewrite <-step_system_ev_uncons; eauto.
