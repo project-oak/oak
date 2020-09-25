@@ -40,13 +40,11 @@
 <span id="40">40</span>
 <span id="41">41</span>
 <span id="42">42</span>
+<span id="43">43</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the</span>
-<span class="doccomment">/// client (wrapped in a [`Receiver`]), and one to write outgoing responses to the client (wrapped</span>
-<span class="doccomment">/// in a [`Sender`]).</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// [`Receiver`]: oak_io::Receiver</span>
-<span class="doccomment">/// [`Sender`]: oak_io::Sender</span>
+<span class="doccomment">/// client (wrapped in a `Receiver`), and one to write outgoing responses to the client (wrapped in a</span>
+<span class="doccomment">/// `Sender`).</span>
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcInvocation</span> {
@@ -62,12 +60,16 @@
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">sender</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span>::<span class="ident">oak_io</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">GrpcInvocation</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
+<span class="doccomment">/// A wrapper for receiving a [`GrpcInvocation`] from a channel.</span>
+<span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GrpcInvocationReceiver</span> {
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">receiver</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span>::<span class="ident">oak_io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">GrpcInvocation</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+}
 <span class="doccomment">/// An HTTP invocation, consisting of exactly two channels: one to read incoming requests from the</span>
-<span class="doccomment">/// client (wrapped in a [`Receiver`]), and one to write outgoing responses to the client (wrapped</span>
-<span class="doccomment">/// in a [`Sender`]).</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// [`Receiver`]: oak_io::Receiver</span>
-<span class="doccomment">/// [`Sender`]: oak_io::Sender</span>
+<span class="doccomment">/// client (wrapped in a `Receiver`), and one to write outgoing responses to the client (wrapped in a</span>
+<span class="doccomment">/// `Sender`).</span>
 <span class="attribute">#[<span class="ident">derive</span>(::<span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">HandleVisit</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HttpInvocation</span> {
