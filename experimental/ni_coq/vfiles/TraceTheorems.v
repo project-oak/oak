@@ -41,7 +41,7 @@ Proof. cbv [head_set_call]. crush. Qed.
 Theorem no_steps_from_empty: forall t,
     ~(step_system_ev [] t).
 Proof.
-Admitted. (* WIP *)
+Qed.
 
 Theorem node_no_steps_to_empty: forall t id c,
     ~(step_node_ev id c t []).
