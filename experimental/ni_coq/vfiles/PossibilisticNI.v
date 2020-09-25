@@ -63,6 +63,32 @@ https://www.cs.cornell.edu/andru/papers/csfw03.pdf
     ***
 *)
 
+(* TODO: maybe move to Tactics.v *)
+Local Ltac logical_simplify :=
+  repeat match goal with
+         | H : _ /\ _ |- _ => destruct H
+         | H : exists _, _ |- _ => destruct H
+         | H1 : ?P, H2 : ?P -> _ |- _ => specialize (H2 H1)
+         | H : ?x = ?x |- _ => clear H
+         end.
+
+(* Single step of [crush] *)
+Local Ltac crush_step :=
+  repeat match goal with
+         | _ => progress intros
+         | _ => progress subst
+         | _ => progress logical_simplify
+         | H : Some _ = Some _ |- _ => invert_clean H
+         | H1 : ?x = Some _, H2 : ?x = Some _ |- _ =>
+           rewrite H2 in H1; invert_clean H1
+         | _ => reflexivity
+         end.
+(* General-purpose tactic that simplifies and solves simple goals for
+   possibilistic NI. *)
+Local Ltac crush := repeat crush_step.
+
+Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
+
 Definition is_init(t: trace) := length t = 1.
 
 Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
@@ -287,28 +313,12 @@ Admitted. (* WIP *)
 
 Theorem possibilistic_ni: conjecture_possibilistic_ni.
 Proof.
-unfold conjecture_possibilistic_ni.
-intros ell t1_init t2_init t1n [Hinit_tleq [Ht1_init [Ht2_init Ht1_mstep_t1n]]].
-remember ([]: trace) as emp eqn:R.
-induction t1n.
-    - (* t1 is empty trace, which is not possible *)
-        exfalso. apply (no_steps_to_empty t1_init Ht1_mstep_t1n).
-    - (* inductive case *)
-    inversion Ht1_mstep_t1n ; subst.
-        + specialize (possibilistic_ni_unwind_t ell t1_init t2_init
-            (a::t1n) Hinit_tleq H) as [t2n [E1 E2]].
-            exists t2n. split. constructor. assumption. assumption.
-        + rename Ht1_mstep_t1n into Ht1_mstep_at1n.
-          match goal with
-            H : _ |- _ =>
-            apply step_system_ev_uncons in H end.
-          cbn [tl] in *; subst.
-          specialize (IHt1n ltac:(assumption))
-            as [t2n [Hm_t2_init_t2n Hleq_t1n_t2n]].
-        specialize (step_system_multi_extends _ (a::t1n) ltac:(eauto)) as E2.
-        specialize (possibilistic_ni_unwind_t ell t1n t2n (a::t1n) Hleq_t1n_t2n E2)
-            as [t2n' [Hs_t2n_t2n' Hleq_at1n_t2n']].
-        exists t2n'. split.
-        apply (step_system_transitive t2_init t2n t2n'). assumption.
-        constructor. assumption. assumption.
+  unfold conjecture_possibilistic_ni. crush.
+  let H := match goal with H : step_system_ev_multi _ _ |- _ => H end in
+  induction H; crush.
+  all:pose proof (possibilistic_ni_unwind_t
+                    _ _ _ _
+                    ltac:(eassumption) ltac:(eassumption)).
+  all:crush.
+  all:eexists; split; crush; [ | eassumption ]; eauto with multi.
 Qed.
