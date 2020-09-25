@@ -18,6 +18,9 @@ members = [
   "http_server/client",
   "injection/module/rust",
   "machine_learning/module/rust",
+  "trusted_database/client/rust",
+  "trusted_database/module_0/rust",
+  "trusted_database/module_1/rust",
   "trusted_information_retrieval/backend",
   "trusted_information_retrieval/client/rust",
   "trusted_information_retrieval/module_0/rust",
@@ -57,6 +60,8 @@ private_set_intersection_grpc = { path = "private_set_intersection/grpc" }
 running_average_grpc = { path = "running_average/grpc" }
 translator_common = { path = "translator/common" }
 translator_grpc = { path = "translator/grpc" }
+trusted_database_client = { path = "trusted_database/client/rust" }
+trusted_database_handler = { path = "trusted_database/module_1/rust" }
 trusted_information_retrieval_client = { path = "trusted_information_retrieval/client/rust" }
 # Third party.
 expect = { path = "../third_party/expect" }

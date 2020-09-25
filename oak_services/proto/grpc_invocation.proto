@@ -22,11 +22,8 @@ import "oak_services/proto/grpc_encap.proto";
 import "proto/handle.proto";
 
 // A gRPC invocation, consisting of exactly two channels: one to read incoming requests from the
-// client (wrapped in a [`Receiver`]), and one to write outgoing responses to the client (wrapped
-// in a [`Sender`]).
-//
-// [`Receiver`]: oak_io::Receiver
-// [`Sender`]: oak_io::Sender
+// client (wrapped in a `Receiver`), and one to write outgoing responses to the client (wrapped in a
+// `Sender`).
 message GrpcInvocation {
   oak.handle.Receiver receiver = 1 [(oak.handle.message_type) = ".oak.encap.GrpcRequest"];
   oak.handle.Sender sender = 2 [(oak.handle.message_type) = ".oak.encap.GrpcResponse"];
@@ -35,4 +32,9 @@ message GrpcInvocation {
 // A wrapper for sending a [`GrpcInvocation`] over a channel.
 message GrpcInvocationSender {
   oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.invocation.GrpcInvocation"];
+}
+
+// A wrapper for receiving a [`GrpcInvocation`] from a channel.
+message GrpcInvocationReceiver {
+  oak.handle.Receiver receiver = 1 [(oak.handle.message_type) = ".oak.invocation.GrpcInvocation"];
 }
