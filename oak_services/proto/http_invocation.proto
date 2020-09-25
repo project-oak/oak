@@ -22,11 +22,8 @@ import "oak_services/proto/http_encap.proto";
 import "proto/handle.proto";
 
 // An HTTP invocation, consisting of exactly two channels: one to read incoming requests from the
-// client (wrapped in a [`Receiver`]), and one to write outgoing responses to the client (wrapped
-// in a [`Sender`]).
-//
-// [`Receiver`]: oak_io::Receiver
-// [`Sender`]: oak_io::Sender
+// client (wrapped in a `Receiver`), and one to write outgoing responses to the client (wrapped in a
+// `Sender`).
 message HttpInvocation {
   oak.handle.Receiver receiver = 1 [(oak.handle.message_type) = ".oak.encap.HttpRequest"];
   oak.handle.Sender sender = 2 [(oak.handle.message_type) = ".oak.encap.HttpResponse"];
