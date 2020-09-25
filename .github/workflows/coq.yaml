@@ -13,10 +13,10 @@ on:
 jobs:
   coq:
     strategy:
-    matrix:
-      coq_version:
-        - '8.11'
-        - '8.12'
+      matrix:
+        coq_version:
+          - '8.11'
+          - '8.12'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
