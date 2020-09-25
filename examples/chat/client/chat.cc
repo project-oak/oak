@@ -22,7 +22,6 @@
 #include "absl/synchronization/mutex.h"
 #include "examples/chat/proto/chat.grpc.pb.h"
 #include "examples/chat/proto/chat.pb.h"
-#include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
 #include "oak/common/nonce_generator.h"
