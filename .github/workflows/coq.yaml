@@ -1,0 +1,29 @@
+name: Compile Coq proofs
+
+on:
+  push:
+    branches: [main, coq-ci] # TODO: remove coq-ci; this is just for debugging 
+  pull_request:
+    branches: [main]
+    paths:
+      - "**.v"
+      - "_CoqProject"
+      - "experimental/ni_coq/Makefile"
+
+strategy:
+  matrix:
+    coq_version:
+      - '8.11'
+      - '8.12'
+
+jobs:
+  coq:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v2
+      - name: Run make + opam install
+        uses: coq-community/docker-coq-action@v1
+        with:
+          opam_file: 'experimental/ni_coq/oak-ni-coq.opam'
+          coq_version: ${{ matrix.coq_version }}
