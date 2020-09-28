@@ -71,6 +71,19 @@ Proof.
     reflexivity. auto.
 Qed.
 
+Theorem chan_projection_preserves_lbl: forall ell ch,
+    (clbl (chan_low_proj ell ch)) = clbl ch.
+Proof.
+Admitted. (* WIP *)
+
+Theorem uncons_proj_chan_s: forall ell s han ch,
+    (chans (state_low_proj ell s)).[? han] = Some ch ->
+    exists ch',
+         (chans s).[? han] = Some ch' /\
+        chan_low_proj ell ch' = ch.
+Proof.
+Admitted. (* WIP *)
+
 Theorem proj_node_state_to_proj_n: forall ell s id n,
     ((nodes (state_low_proj ell s)).[? id] = Some n) ->
     exists n',

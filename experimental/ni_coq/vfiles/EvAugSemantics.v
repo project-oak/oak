@@ -62,27 +62,27 @@ Definition head_st (t: trace) :=
     end.
 
 Inductive step_node_ev (id: node_id): call -> state -> state -> event_l -> Prop :=
-    | SWriteChan s n han msg s':
+    | SWriteChanEv s n han msg s':
         s.(nodes) .[?id] = Some n ->
         step_node id (WriteChannel han msg) s s' ->
         step_node_ev id (WriteChannel han msg) s s' (n ---> msg)
-    | SReadChan s n han chan msg s':
+    | SReadChanEv s n han chan msg s':
         s.(nodes) .[?id] = Some n ->
         step_node id (ReadChannel han) s s' ->
         msg_is_head chan msg ->
         step_node_ev id (ReadChannel han) s s' (n <--- msg)
-    | SCreateChan s n lbl s':
+    | SCreateChanEv s n lbl s':
             (* It seems clear that no event is needed since nodes only observe
             * contents of channels indirectly via reads *)
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateChannel lbl) s s' ->
         step_node_ev id (CreateChannel lbl) s s' (n --- )
-    | SCreateNode s n lbl h s':
+    | SCreateNodeEv s n lbl h s':
             (* model observation that a node is created ?? *)
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateNode lbl h) s s' ->
         step_node_ev id (CreateNode lbl h) s s' (n ---)
-    | SInternal s n s':
+    | SInternalEv s n s':
         s.(nodes) .[?id] = Some n ->
         step_node id Internal s s' ->
         step_node_ev id Internal s s' (n ---).

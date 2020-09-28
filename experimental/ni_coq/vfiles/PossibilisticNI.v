@@ -109,9 +109,32 @@ Proof.
         specialize (proj_node_state_to_proj_n ell s id n H0)
             as [n' [Hidx_n' Hproj_n']].
         destruct (n'.(nlbl) <<? ell).
-        * (* flowsto case*) (* likely by inversion on H_step_projs_s1' *)
-        (* inversion H_step_projs_s1'; assert (n0 = n) by congruence; subst. *)
-        admit. 
+        *
+            (* flowsto case*) (* likely by inversion on H_step_projs_s1' *)
+            inversion H_step_projs_s1'; assert (n0 = n) by congruence; subst.
+            + (* WriteChannel *)
+                inversion H3; subst.
+                specialize (uncons_proj_chan_s ell s han ch H8)
+                    as [ch2 [H_ch'_idx H_ch2_proj]].
+                remember (s_set_call (state_upd_chan han (chan_append ch2 msg)
+                (state_upd_node id n'0 s)) id c') as s2''.
+                exists s2'', ((node_low_proj ell n') ---> msg); repeat try split.
+                (* step *)
+                rewrite Heqs2''. eapply SystemEvStepNode; eauto; subst. 
+                replace (ncall n') with (ncall (node_low_proj ell n')) by
+                    (erewrite flows_node_proj; try eassumption; try congruence).
+                rewrite <- H1. econstructor. erewrite flows_node_proj; assumption.
+                assert (n' = n). { 
+                    rewrite H6 in H0. inversion H0. symmetry. eapply flows_node_proj. auto.
+                }
+                eapply SWriteChan; try congruence; try assumption;
+                    try (erewrite <- chan_projection_preserves_lbl; eassumption).
+                (* s1'' =L s2'' *)
+                admit.
+            + admit.
+            + admit.
+            + admit.
+            + admit.
         (* by cases on the command by n in s *)
         * (* not flowsTo case *)
             rename n0 into Hflows.
