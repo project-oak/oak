@@ -19,13 +19,14 @@ mod fake_runtime;
 
 use dummy_data::DummyData;
 use fake_runtime::{add_ready_data, set_error, set_wait_on_channels_handler};
+use futures::prelude::*;
 use log::LevelFilter;
 use oak::{
     io::{Decodable, Receiver},
     ChannelReadStatus, OakError, OakStatus, ReadHandle,
 };
 use oak_abi::Handle;
-use oak_async::{block_on, ChannelRead, ReceiverAsync};
+use oak_async::{block_on, ChannelRead, ChannelReadStream, ReceiverAsync};
 
 // Dummy handle values.
 const HANDLE_0: Handle = 123;
@@ -252,6 +253,8 @@ fn block_on_wait_many_times() {
 
 #[test]
 fn many_reads_parallel() {
+    init();
+
     set_wait_on_channels_handler(move |handles| {
         for (i, handle) in handles.iter_mut().enumerate() {
             // Every wait_on_channels call we send data to half the waiting channels
@@ -285,6 +288,63 @@ fn many_reads_parallel() {
     assert_eq!(data.len(), 1000);
 }
 
+// Stream functionality relies heavily on the implementation of `Future`, so we only need minimal
+// tests for the `Stream` impl.
+#[test]
+fn stream_immediate() {
+    init();
+
+    let mut data_sent_count = 0;
+    set_wait_on_channels_handler(move |handles| {
+        assert_eq!(handles.len(), 1);
+        assert_eq!(handles[0].handle(), HANDLE_0);
+        if data_sent_count < 10 {
+            handles[0].set_status(ChannelReadStatus::ReadReady);
+            add_ready_data(
+                handles[0].handle(),
+                &DummyData::new(&data_sent_count.to_string()),
+            );
+            data_sent_count += 1;
+        } else {
+            handles[0].set_status(ChannelReadStatus::Orphaned);
+            set_error(handles[0].handle(), OakStatus::ErrChannelClosed);
+        }
+        OakStatus::Ok
+    });
+    let reference_data: Vec<DummyData> = (0..10).map(|n| DummyData::new(&n.to_string())).collect();
+
+    let data_received: Vec<DummyData> = block_on(do_channel_read_stream(HANDLE_0).try_collect())
+        .expect("block_on failed")
+        .expect("Failed to read from stream");
+
+    assert_eq!(data_received, reference_data);
+}
+
+#[test]
+fn stream_nothing() {
+    init();
+
+    set_wait_on_channels_handler(move |handles| {
+        assert_eq!(handles.len(), 1);
+        assert_eq!(handles[0].handle(), HANDLE_0);
+
+        handles[0].set_status(ChannelReadStatus::Orphaned);
+        set_error(handles[0].handle(), OakStatus::ErrChannelClosed);
+
+        OakStatus::Ok
+    });
+
+    let data_received: Vec<DummyData> = block_on(do_channel_read_stream(HANDLE_0).try_collect())
+        .expect("block_on failed")
+        .expect("Failed to read from stream");
+
+    assert_eq!(data_received, vec![]);
+}
+
 fn do_channel_read<T: Decodable + Send>(handle: Handle) -> ChannelRead<T> {
     Receiver::new(ReadHandle { handle }).receive_async()
+}
+
+fn do_channel_read_stream<T: Decodable + Send>(handle: Handle) -> ChannelReadStream<T> {
+    Receiver::new(ReadHandle { handle }).receive_stream()
 }

@@ -23,6 +23,7 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
+use futures::stream::Stream;
 use log::debug;
 use oak::{
     io::{Decodable, Message},
@@ -37,7 +38,7 @@ pub struct ChannelRead<T: Decodable> {
 }
 
 impl<T: Decodable> ChannelRead<T> {
-    pub(crate) fn new(handle: ReadHandle) -> ChannelRead<T> {
+    fn new(handle: ReadHandle) -> ChannelRead<T> {
         ChannelRead {
             reader_id: with_executor(|e| e.new_id()),
             handle,
@@ -72,6 +73,32 @@ impl<T: Decodable> Drop for ChannelRead<T> {
     }
 }
 
+/// `Stream` representing a sequence of asynchronous reads from a channel.
+pub struct ChannelReadStream<T: Decodable>(
+    // Note: `Stream` could be implemented directly on the `ChannelRead` type. Unfortunately the
+    // `Future` and `Stream` extension traits have some methods that overlap, such as `map`. This
+    // would make it impossible for the compiler to figure out what a call like
+    // `my_channel_read.map(..)`  should do, so instead the stream is wrapped in its own type to
+    // avoid any confusion.
+    ChannelRead<T>,
+);
+
+impl<T: Decodable> Stream for ChannelReadStream<T> {
+    type Item = Result<T, OakError>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        // This is trivially safe, as the inner contents of the struct are never moved or even
+        // mutated.
+        let inner = unsafe { self.map_unchecked_mut(|s| &mut s.0) };
+        match inner.poll(cx) {
+            // ErrChannelClosed indicates the end of the stream
+            Poll::Ready(Err(OakError::OakStatus(OakStatus::ErrChannelClosed))) => Poll::Ready(None),
+            Poll::Ready(data) => Poll::Ready(Some(data)),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
 fn channel_read_message<T: Decodable>(handle: ReadHandle) -> Option<Result<T, OakError>> {
     let mut message = Message {
         bytes: Vec::new(),
@@ -92,6 +119,11 @@ pub trait ReceiverAsync {
     ///
     /// The returned `Future` resolves to either a message or an `OakError`.
     fn receive_async(&self) -> ChannelRead<Self::Message>;
+
+    /// Asynchronously receive multiple messages.
+    ///
+    /// Each item received from this `Stream` resolves to either a message or an `OakError`
+    fn receive_stream(&self) -> ChannelReadStream<Self::Message>;
 }
 
 impl<T: Decodable + Send> ReceiverAsync for oak::io::Receiver<T> {
@@ -99,5 +131,9 @@ impl<T: Decodable + Send> ReceiverAsync for oak::io::Receiver<T> {
 
     fn receive_async(&self) -> ChannelRead<Self::Message> {
         ChannelRead::new(self.handle)
+    }
+
+    fn receive_stream(&self) -> ChannelReadStream<Self::Message> {
+        ChannelReadStream(self.receive_async())
     }
 }
