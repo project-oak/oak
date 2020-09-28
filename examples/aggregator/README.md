@@ -58,7 +58,7 @@ localhost. Use the following command to connect the client to an Aggregator
 hosted at a specific domain name; in this case `aggregator.oakexamples.dev`:
 
 ```bash
-./bazel-client-bin/examples/aggregator/client/client \
+./bazel-client-bin/examples/aggregator/client/cpp/client \
   --address=aggregator.oakexamples.dev \
   --ca_cert=./examples/certs/gcp/ca.pem \
   --bucket=test \
