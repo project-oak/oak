@@ -18,8 +18,8 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    metrics::Metrics, AuxServer, ChannelHalfDirection, LabelSerializationStatus, NodeId,
-    NodeMessage, NodePrivilege, NodeReadStatus, Runtime, SecureServerConfiguration, SignatureTable,
+    metrics::Metrics, AuxServer, ChannelHalfDirection, LabelReadStatus, NodeId, NodeMessage,
+    NodePrivilege, NodeReadStatus, Runtime, SecureServerConfiguration, SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -289,7 +289,7 @@ impl RuntimeProxy {
         &self,
         handle: oak_abi::Handle,
         capacity: usize,
-    ) -> Result<LabelSerializationStatus, OakStatus> {
+    ) -> Result<LabelReadStatus, OakStatus> {
         debug!(
             "{:?}: get_serialized_channel_label({}, capacity={})",
             self.node_id, handle, capacity
@@ -305,10 +305,7 @@ impl RuntimeProxy {
     }
 
     /// See [`Runtime::get_serialized_node_label`].
-    pub fn get_serialized_node_label(
-        &self,
-        capacity: usize,
-    ) -> Result<LabelSerializationStatus, OakStatus> {
+    pub fn get_serialized_node_label(&self, capacity: usize) -> Result<LabelReadStatus, OakStatus> {
         debug!(
             "{:?}: get_serialized_node_label(capacity={})",
             self.node_id, capacity
@@ -327,7 +324,7 @@ impl RuntimeProxy {
     pub fn get_serialized_node_privilege(
         &self,
         capacity: usize,
-    ) -> Result<LabelSerializationStatus, OakStatus> {
+    ) -> Result<LabelReadStatus, OakStatus> {
         debug!(
             "{:?}: get_serialized_node_privilege(capacity={})",
             self.node_id, capacity

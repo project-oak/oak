@@ -76,7 +76,7 @@ pub extern "C" fn node_create(_config_buf: *const u8, _config_len: usize, _handl
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn channel_label(
+pub extern "C" fn channel_label_read(
     _handle: u64,
     _label_buf: *mut u8,
     _label_size: usize,
@@ -85,7 +85,7 @@ pub extern "C" fn channel_label(
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn node_label(
+pub extern "C" fn node_label_read(
     _label_buf: *mut u8,
     _label_size: usize,
     _actual_size: *mut u32,
@@ -93,7 +93,7 @@ pub extern "C" fn node_label(
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn node_privilege(
+pub extern "C" fn node_privilege_read(
     _label_buf: *mut u8,
     _label_size: usize,
     _actual_size: *mut u32,

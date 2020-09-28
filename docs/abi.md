@@ -238,7 +238,7 @@ If creating the specified Node would violate
 - `param[4]: usize`: Handle to channel
 - `result[0]: u32`: Status of operation
 
-### `node_label`
+### `node_label_read`
 
 Returns the label for the calling Node, as a serialized
 [`Label`](/oak/proto/label.proto) protobuf message.
@@ -254,7 +254,7 @@ in the space provided by `param[2]`.
   large enough.
 - `result[0]: u32`: Status of operation
 
-### `channel_label`
+### `channel_label_read`
 
 Returns the label for the specified channel, as a serialized
 [`Label`](/oak/proto/label.proto) protobuf message.
@@ -271,7 +271,7 @@ in the space provided by `param[3]`.
   large enough.
 - `result[0]: u32`: Status of operation
 
-### `node_privilege`
+### `node_privilege_read`
 
 Returns a label indicating the downgrade privilege of the calling Node, as a
 serialized [`Label`](/oak/proto/label.proto) protobuf message.

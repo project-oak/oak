@@ -168,7 +168,7 @@ extern "C" {
     ///
     /// [`ErrBufferTooSmall`]: crate::OakStatus::ErrBufferTooSmall
     /// [`Label`]: crate::label::Label
-    pub fn channel_label(
+    pub fn channel_label_read(
         handle: u64,
         label_buf: *mut u8,
         label_size: usize,
@@ -188,7 +188,7 @@ extern "C" {
     ///
     /// [`ErrBufferTooSmall`]: crate::OakStatus::ErrBufferTooSmall
     /// [`Label`]: crate::label::Label
-    pub fn node_label(label_buf: *mut u8, label_size: usize, actual_size: *mut u32) -> u32;
+    pub fn node_label_read(label_buf: *mut u8, label_size: usize, actual_size: *mut u32) -> u32;
 
     /// Returns a label indicating the downgrade privilege of the current calling node.
     ///
@@ -203,7 +203,8 @@ extern "C" {
     ///
     /// [`ErrBufferTooSmall`]: crate::OakStatus::ErrBufferTooSmall
     /// [`Label`]: crate::label::Label
-    pub fn node_privilege(label_buf: *mut u8, label_size: usize, actual_size: *mut u32) -> u32;
+    pub fn node_privilege_read(label_buf: *mut u8, label_size: usize, actual_size: *mut u32)
+        -> u32;
 
     /// Creates a new Node instance running code identified by a serialized [`NodeConfiguration`].
     ///
