@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 mod dummy_data;
 mod fake_runtime;
 
@@ -25,6 +26,10 @@ use oak::{
 };
 use oak_abi::Handle;
 use oak_async::{block_on, ChannelRead, ReceiverAsync};
+
+// Dummy handle values.
+const HANDLE_0: Handle = 123;
+const HANDLE_1: Handle = 456;
 
 fn init() {
     let _ = env_logger::builder()
@@ -59,14 +64,14 @@ fn block_on_channel_read_ready_after_wait() {
     init();
     set_wait_on_channels_handler(|handles| {
         assert_eq!(handles.len(), 1);
-        assert_eq!(handles[0].handle(), 123);
-        add_ready_data(123, &DummyData::new("data"));
+        assert_eq!(handles[0].handle(), HANDLE_0);
+        add_ready_data(HANDLE_0, &DummyData::new("data"));
         handles[0].set_status(ChannelReadStatus::ReadReady);
         OakStatus::Ok
     });
 
     let read_result: Result<DummyData, OakError> =
-        block_on(do_channel_read(123)).expect("block_on failed");
+        block_on(do_channel_read(HANDLE_0)).expect("block_on failed");
 
     assert_eq!(
         read_result.expect("Read returned error"),
@@ -80,8 +85,8 @@ fn block_on_multiple_readers_sequentially() {
     set_wait_on_channels_handler(|handles| {
         assert_eq!(handles.len(), 1);
         let data = match handles[0].handle() {
-            123 => "Hello",
-            456 => "world!",
+            HANDLE_0 => "Hello",
+            HANDLE_1 => "world!",
             c => panic!("Unexpected waiting channel {}", c),
         };
         add_ready_data(handles[0].handle(), &DummyData::new(data));
@@ -90,12 +95,12 @@ fn block_on_multiple_readers_sequentially() {
     });
 
     let result = block_on(async {
-        let a: DummyData = do_channel_read(123)
+        let a: DummyData = do_channel_read(HANDLE_0)
             .await
-            .expect("Failed to read channel 123");
-        let b: DummyData = do_channel_read(456)
+            .expect("Failed to read channel HANDLE_0");
+        let b: DummyData = do_channel_read(HANDLE_1)
             .await
-            .expect("Failed to read channel 456");
+            .expect("Failed to read channel HANDLE_1");
 
         [a.0, b.0].join(", ")
     })
@@ -110,8 +115,8 @@ fn block_on_multiple_readers_parallel() {
     set_wait_on_channels_handler(|handles| {
         for handle in handles.iter_mut() {
             let data = match handle.handle() {
-                123 => "Hello",
-                456 => "world!",
+                HANDLE_0 => "Hello",
+                HANDLE_1 => "world!",
                 c => panic!("Unexpected waiting channel {}", c),
             };
             add_ready_data(handle.handle(), &DummyData::new(data));
@@ -121,17 +126,17 @@ fn block_on_multiple_readers_parallel() {
     });
 
     let (a, b): (Result<DummyData, OakError>, Result<DummyData, OakError>) = block_on(
-        futures::future::join(do_channel_read(123), do_channel_read(456)),
+        futures::future::join(do_channel_read(HANDLE_0), do_channel_read(HANDLE_1)),
     )
     .expect("block_on failed");
 
     assert_eq!(
-        a.expect("Read from channel 123 failed"),
+        a.expect("Read from channel HANDLE_0 failed"),
         DummyData::new("Hello")
     );
 
     assert_eq!(
-        b.expect("Read from channel 456 failed"),
+        b.expect("Read from channel HANDLE_1 failed"),
         DummyData::new("world!")
     );
 }
@@ -153,11 +158,11 @@ fn block_on_drop_channel_read_after_wait() {
         std::thread::sleep(std::time::Duration::from_secs(1));
         for handle in handles.iter_mut() {
             match handle.handle() {
-                123 => {
+                HANDLE_0 => {
                     handle.set_status(ChannelReadStatus::NotReady);
                 }
-                456 => {
-                    add_ready_data(456, &DummyData::new("hello"));
+                HANDLE_1 => {
+                    add_ready_data(HANDLE_1, &DummyData::new("hello"));
                     handle.set_status(ChannelReadStatus::ReadReady);
                 }
                 c => panic!("Unexpected waiting channel {}", c),
@@ -167,12 +172,12 @@ fn block_on_drop_channel_read_after_wait() {
     });
 
     let result: Result<DummyData, OakError> = block_on(async {
-        futures::future::select(do_channel_read(123), do_channel_read(456))
+        futures::future::select(do_channel_read(HANDLE_0), do_channel_read(HANDLE_1))
             .await
             .factor_first()
             // Note: It is important that we extract the result inside the async block. Doing this
             // outside the async scope will block indefinitely, because it will try and move the
-            // unresolved ChannelRead on 123 outside of the async block, but for block_on to
+            // unresolved ChannelRead on HANDLE_0 outside of the async block, but for block_on to
             // terminate that ChannelRead must be `Drop`ed first (to remove it from the waiting
             // set).
             .0
@@ -225,10 +230,10 @@ fn block_on_wait_many_times() {
     set_wait_on_channels_handler(move |handles| {
         log::debug!("wait_on_channels counter: {}", counter);
         assert_eq!(handles.len(), 1);
-        assert_eq!(handles[0].handle(), 123);
+        assert_eq!(handles[0].handle(), HANDLE_0);
         if counter >= 100 {
             handles[0].set_status(ChannelReadStatus::ReadReady);
-            add_ready_data(123, &DummyData::new("data"));
+            add_ready_data(HANDLE_0, &DummyData::new("data"));
         } else {
             handles[0].set_status(ChannelReadStatus::NotReady);
         }
@@ -236,7 +241,8 @@ fn block_on_wait_many_times() {
         OakStatus::Ok
     });
 
-    let result: Result<DummyData, _> = block_on(do_channel_read(123)).expect("block_on failed");
+    let result: Result<DummyData, _> =
+        block_on(do_channel_read(HANDLE_0)).expect("block_on failed");
 
     assert_eq!(result.expect("channel read failed"), DummyData::new("data"));
 }
