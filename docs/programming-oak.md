@@ -344,7 +344,7 @@ the request, which is used to enforce Information Flow Control within the
 running Oak Application:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/client/hello_world.cc C++ /.*Connect to the/ /GetTlsChannelCredentials.*/)
+[embedmd]:# (../examples/hello_world/client/cpp/hello_world.cc C++ /.*Connect to the/ /GetTlsChannelCredentials.*/)
 ```C++
   // Connect to the Oak Application.
   auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(
@@ -356,7 +356,7 @@ Because the Oak Application is available as a gRPC service, clients written in
 any language that supports gRPC can use the service. For example in Go:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/translator/client/translator.go Go /.*Connect to the Oak/ /NewTranslatorClient.*/)
+[embedmd]:# (../examples/translator/client/go/translator.go Go /.*Connect to the Oak/ /NewTranslatorClient.*/)
 ```Go
 	// Connect to the Oak Application.
 	creds, err := credentials.NewClientTLSFromFile(*caCert, "")
