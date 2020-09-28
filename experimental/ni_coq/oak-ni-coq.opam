@@ -1,0 +1,19 @@
+opam-version: "2.0"
+maintainer: "aferr@google.com"
+authors:"Google LLC and contributors"
+synopsis: "Noninterference proofs for Project Oak"
+license: "Apache-2.0"
+version: "dev"
+
+homepage: "https://github.com/project-oak/oak"
+dev-repo: "git+https://github.com/project-oak/oak.git"
+bug-reports: "https://github.com/project-oak/oak/issues"
+
+build: [make "-j2"]
+install: [make "install"]
+depends: [
+  "ocaml"
+  "coq" {>= "8.11.0"}
+  "coq-record-update" {>= "0.2.0"}
+]
+
