@@ -18,7 +18,7 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
 package(
     default_visibility = [
-        "//examples/abitest/client:__pkg__",
+        "//examples/abitest/client/cpp:__pkg__",
         "//oak/server:__pkg__",
     ],
     licenses = ["notice"],

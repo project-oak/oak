@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "examples/abitest/client/grpctest.h"
+#include "examples/abitest/client/cpp/grpctest.h"
 
 #include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
