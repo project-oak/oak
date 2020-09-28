@@ -4,17 +4,17 @@ on:
   push:
     branches: [main]
     paths:
-      - "**.v"
-      - "**coq.yaml"
-      - "**_CoqProject"
-      - "experimental/ni_coq/Makefile"
+      - '**.v'
+      - '**coq.yaml'
+      - '**_CoqProject'
+      - 'experimental/ni_coq/Makefile'
   pull_request:
     branches: [main]
     paths:
-      - "**.v"
-      - "**coq.yaml"
-      - "**_CoqProject"
-      - "experimental/ni_coq/Makefile"
+      - '**.v'
+      - '**coq.yaml'
+      - '**_CoqProject'
+      - 'experimental/ni_coq/Makefile'
 
 jobs:
   coq:
