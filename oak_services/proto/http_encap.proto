@@ -27,7 +27,7 @@ message HttpRequest {
   // The body of the request.
   bytes body = 3;
   // The HTTP request headers.
-  map<string, HeaderValue> headers = 4;
+  HeaderMap headers = 4;
 }
 
 // Protocol buffer encoding representing an HTTP response.
@@ -37,7 +37,12 @@ message HttpResponse {
   // The HTTP status code.
   int32 status = 2;
   // The HTTP response headers.
-  map<string, HeaderValue> headers = 3;
+  HeaderMap headers = 3;
+}
+
+// Wrapper around a HashMap representing the headers in HttpRequest and HttpResponse.
+message HeaderMap {
+  map<string, HeaderValue> headers = 1;
 }
 
 // Each header name in an HTTP request or HTTP response may correspond to more

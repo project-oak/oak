@@ -21,24 +21,33 @@ use crate::{
     proto::oak::invocation::HttpInvocationSender,
     OakError, OakStatus,
 };
+use http::{Request, Response};
 use log::warn;
-pub use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
+pub use oak_services::proto::oak::encap::{HeaderMap, HttpRequest, HttpResponse};
+use std::convert::TryInto;
 
 pub type Invocation = crate::proto::oak::invocation::HttpInvocation;
 
+/// This implementation provides an interface for sending requests and receiving responses, using
+/// the idiomatic http types. Internally, these types are converted into protobuf encoded requests
+/// and responses that can be used for communication with the Oak nodes.
 impl Invocation {
-    pub fn receive(&self) -> std::result::Result<HttpRequest, crate::OakError> {
-        self.receiver
+    pub fn receive(&self) -> std::result::Result<Request<Vec<u8>>, crate::OakError> {
+        let request = self
+            .receiver
             .as_ref()
             .ok_or(OakError::OakStatus(OakStatus::ErrBadHandle))?
-            .receive()
+            .receive();
+
+        request.and_then(|req| req.try_into().map_err(crate::OakError::OakStatus))
     }
 
-    pub fn send(&self, response: &HttpResponse) -> std::result::Result<(), crate::OakError> {
+    pub fn send(&self, response: &Response<Vec<u8>>) -> std::result::Result<(), crate::OakError> {
+        let response = HttpResponse::from(response);
         self.sender
             .as_ref()
             .ok_or(OakError::OakStatus(OakStatus::ErrBadHandle))?
-            .send(response)
+            .send(&response)
     }
 
     pub fn close_channels(&self) {

@@ -11,7 +11,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 http = "*"
 log = "*"
-maplit = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
 oak_services = "=0.1.0"

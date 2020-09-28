@@ -219,7 +219,9 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
         let resp = HttpResponse {
             body: vec![],
             status: http::status::StatusCode::OK.as_u16() as i32,
-            headers: hashmap! {},
+            headers: Some(HeaderMap {
+                headers: hashmap! {},
+            }),
         };
         invocation
             .sender
