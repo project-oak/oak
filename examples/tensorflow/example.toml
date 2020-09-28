@@ -10,4 +10,4 @@ out = "examples/tensorflow/bin/tensorflow.oak"
 module = { Bazel = { bazel_target = "//examples/tensorflow/module/cpp:tensorflow_micro.wasm", config = "emscripten" } }
 
 [clients]
-cpp = { Bazel = { bazel_target = "//examples/tensorflow/client:client" } }
+cpp = { Bazel = { bazel_target = "//examples/tensorflow/client/cpp:client" } }
