@@ -74,32 +74,13 @@ Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
         (trace_low_eq ell t1n t2n)).
 
 
-Theorem n_low_proj_label_preserving: forall ell n,
-    (node_low_proj ell n).(nlbl) = n.(nlbl).
-Proof.
-Admitted.
-
-Theorem state_low_eq_from_substates: forall ell s1 s2,
-    (node_state_low_eq ell s1.(nodes) s2.(nodes)) ->
-    (chan_state_low_eq ell s1.(chans) s2.(chans)) ->
-    (state_low_eq ell s1 s2).
+Theorem unobservable_node_step: forall ell s s' e id n,
+    s.(nodes).[? id] = Some n ->
+    step_node_ev id n.(ncall) s s' e ->
+    ~(nlbl n <<L ell) ->
+    (state_low_eq ell s s') /\ (event_low_eq ell e (empty_event e.(elbl))).
 Proof.
 Admitted. (* WIP *)
-
-Theorem eq_nodes_have_eq_lbls: forall n1 n2,
-    n1 = n2 -> (nlbl n1) = (nlbl n2).
-Proof. congruence. Qed.
- 
-Theorem node_leq_imples_eq_lbls: forall ell n1 n2,
-    (node_low_eq ell n1 n2) -> (n1.(nlbl) = n2.(nlbl)).
-Proof.
-    inversion 1. unfold node_low_proj in H1.
-     destruct (n1.(nlbl) <<? ell); destruct (n2.(nlbl) <<? ell).
-    - congruence.
-    - inversion H1. reflexivity.
-    - apply eq_nodes_have_eq_lbls in H1. simpl in H1. congruence.
-    - inversion H1. congruence.
-Qed.
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
@@ -108,7 +89,7 @@ Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
         (state_low_eq ell s1' s2') /\
         (event_low_eq ell e1 e2)).
 Proof.
-Admitted.
+Admitted. (* WIP *)
 
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
     (step_system_ev (state_low_proj ell s) s1' e1) ->
@@ -117,7 +98,52 @@ Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
         (state_low_eq ell s1' s2') /\
         (event_low_eq ell e1 e2)).
 Proof.
-Admitted.
+    intros. inversion H; subst.
+    - (* SystemSkip *)
+        exists s, (EvL NilEv ell0). split. constructor.
+        split. unfold state_low_eq. unfold low_eq.
+        rewrite state_low_proj_idempotent'. reflexivity.
+        reflexivity.
+    - (* NodeStep *)
+        rename s'' into s1''. rename s' into s1'. rename H2 into H_step_projs_s1'.
+        specialize (proj_node_state_to_proj_n ell s id n H0)
+            as [n' [Hidx_n' Hproj_n']].
+        destruct (n'.(nlbl) <<? ell).
+        * (* flowsto case*) (* likely by inversion on H_step_projs_s1' *)
+        (* inversion H_step_projs_s1'; assert (n0 = n) by congruence; subst. *)
+        admit. 
+        (* by cases on the command by n in s *)
+        * (* not flowsTo case *)
+            rename n0 into Hflows.
+            assert ((state_low_eq ell (state_low_proj ell s) s1') /\
+                (event_low_eq ell e1 (empty_event e1.(elbl))))
+                as [Hustep Huev] by
+                repeat (eauto || eapply unobservable_node_step
+                    || eapply node_projection_preserves_flowsto).
+            exists s, (empty_event (elbl e1));
+                repeat try (split || constructor).
+            + (* s1'' ={ell} s *)
+                apply state_low_eq_sym.
+                eapply (state_low_eq_trans _ s s1' s1'').
+                eapply (state_low_eq_trans _ s (state_low_proj ell s) s1').
+                apply state_low_eq_sym.
+                eapply state_low_proj_idempotent. assumption.
+                unfold s1''. 
+                assert (H_leq_s_s1': state_low_eq ell s s1'). {
+                    eapply (state_low_eq_trans _ s
+                        (state_low_proj ell s) s1').
+                    apply state_low_eq_sym.
+                    eapply state_low_proj_idempotent.
+                    assumption.
+                }
+                specialize (state_loweq_to_deref_node ell s s1' id n'
+                    Hidx_n' H_leq_s_s1') as [ns1' [Hidx_s1' H_leq_n'_n2]].
+                eapply set_call_unobs. eassumption.
+                replace (nlbl ns1') with (nlbl n')
+                    by (eapply node_low_eq_to_lbl_eq; eassumption).
+                auto.
+            + (* e1 ={ell} *) assumption.
+Admitted. (* WIP *)
 
 Theorem possibilistic_ni_1step: forall ell s1 s2 s1' e1,
     (state_low_eq ell s1 s2) ->
@@ -136,8 +162,8 @@ Proof.
     specialize (low_proj_steps_implies_leq_step ell s2 s3' e3 H_s2_proj_s3')
         as [s2' [ e2 [Hstep_s2_s2' [H_leq_s3'_s2' H_leq_e3_e2]]]].
     exists s2', e2. split. assumption. split.
-    - admit. (* transitivity of state_low_eq *)
-    - admit. (* transitivity of event_low_eq *)
+    - eapply (state_low_eq_trans _ s1' s3' s2'); congruence.
+    - eapply (event_low_eq_trans _ e1 e3 e2); congruence.
 Admitted.
 
 Theorem possibilistic_ni_unwind_t: forall ell t1 t2 t1',
