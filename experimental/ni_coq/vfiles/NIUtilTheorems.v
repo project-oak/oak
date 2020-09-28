@@ -13,6 +13,136 @@ Import RecordSetNotations.
 
 Local Open Scope map_scope.
 
+Theorem eq_nodes_have_eq_lbls: forall n1 n2,
+    n1 = n2 -> (nlbl n1) = (nlbl n2).
+Proof. congruence. Qed.
+
+Theorem state_upd_node_eq: forall id n s,
+    (state_upd_node id n s).(nodes).[? id] = Some n.
+Proof.
+    intros. eapply upd_eq.
+Qed.
+
+Theorem state_upd_node_neq: forall (id id': node_id) n s,
+    id' <> id ->
+    (state_upd_node id n s).(nodes).[?id'] = s.(nodes).[?id'].
+Proof.
+    intros. eapply upd_neq. congruence.
+Qed.
+
+(*---------------------------------------------------------------------------*)
+(* Low Projections *)
+(*---------------------------------------------------------------------------*)
+Theorem flows_node_proj: forall ell n,
+    (nlbl n <<L ell) ->
+    (node_low_proj ell n) = n.
+Proof.
+    intros. unfold node_low_proj. destruct (nlbl n <<? ell). reflexivity.
+    contradiction.
+Qed.
+
+Theorem nflows_node_proj: forall ell n,
+    ~(nlbl n <<L ell) ->
+    (node_low_proj ell n) = (empty_node n.(nlbl)).
+Proof.
+    intros. unfold node_low_proj. destruct (nlbl n <<? ell). contradiction.
+    reflexivity.
+Qed.
+
+Theorem state_low_proj_idempotent: forall ell s,
+    (state_low_eq ell (state_low_proj ell s) s).
+Proof.
+Admitted.    
+
+Theorem state_low_proj_idempotent': forall ell s,
+    (state_low_proj ell (state_low_proj ell s)) = (state_low_proj ell s).
+Proof.
+Admitted.
+
+Theorem node_projection_preserves_lbl: forall ell n,
+    ((node_low_proj ell n).(nlbl) = n.(nlbl)).
+Proof.
+    intros. unfold node_low_proj. destruct (nlbl n <<? ell).
+    reflexivity. auto.
+Qed.
+
+Theorem proj_node_state_to_proj_n: forall ell s id n,
+    ((nodes (state_low_proj ell s)).[? id] = Some n) ->
+    exists n',
+        ((nodes s).[? id] = Some n') /\
+        (node_low_proj ell n') = n.
+Proof.
+    intros. 
+    unfold state_low_proj in H. cbn in H. unfold node_state_low_proj in H. cbn in H.
+    replace (nodes s id) with ((nodes s).[? id]) in H by reflexivity.
+    destruct ((nodes s).[? id]) eqn:Eidx.
+    - (* some *)
+    exists n0. split. reflexivity. congruence.
+    - (* none) *)
+    inversion H.
+Qed.
+
+Theorem node_projection_preserves_flowsto: forall ell s id n n',
+    s.(nodes).[? id] = Some n ->
+    (state_low_proj ell s).(nodes).[? id] = Some n' ->
+    ~(n.(nlbl) <<L ell) ->
+    ~(n'.(nlbl) <<L ell).
+Proof.
+    intros. unfold state_low_proj in *. cbn in H0.  unfold node_state_low_proj in H0.
+    destruct (nodes s id) eqn: E in H0. 
+        - (* some *) 
+        replace n0 with n in *.
+        erewrite nflows_node_proj in H0. inversion H0. auto. auto.
+        replace (nodes s id) with ((nodes s).[? id]) in E by auto.
+            (* why on earth do I need this, it's just notation ? *)
+            (* Do I need hint rewrites or something ? *)
+        congruence.
+        - (* none *)
+        inversion H0.
+Qed.
+
+(*---------------------------------------------------------------------------*)
+(* Low Equivalences *)
+(*---------------------------------------------------------------------------*)
+Definition transitive {A: Type} (r: A -> A -> Prop) :=
+        forall a1 a2 a3, (r a1 a2) -> (r a2 a3) -> (r a1 a3).
+
+Definition symmetric {A: Type} (r: A -> A -> Prop) := 
+    forall a1 a2, (r a1 a2) -> (r a2 a1).
+
+Theorem state_low_eq_trans: forall ell, transitive (state_low_eq ell).
+Proof.
+Admitted. (* WIP *)
+
+Theorem state_low_eq_sym: forall ell, symmetric (state_low_eq ell).
+Proof.
+Admitted. (* WIP *)
+
+Theorem event_low_eq_trans: forall ell, transitive (event_low_eq ell).
+Proof.
+Admitted. (* WIP *)
+
+Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
+    (nodes s1).[? id] = Some n1 ->
+    (state_low_eq ell s1 s2) ->
+    exists n2,
+        (nodes s2).[? id] = Some n2 /\
+        (node_low_eq ell n1 n2).
+Proof.
+Admitted. (* WIP. For this one I think we need functional extensionality *)
+
+Theorem node_low_eq_to_lbl_eq: forall ell n1 n2,
+    (node_low_eq ell n1 n2) ->
+    (n1.(nlbl) = n2.(nlbl)).
+Proof.
+    intros. inversion H.
+    assert ( nlbl (node_low_proj ell n1) = nlbl (node_low_proj ell n2)).
+    rewrite H1. reflexivity.
+    rewrite node_projection_preserves_lbl in H0.
+    rewrite node_projection_preserves_lbl in H0.
+    assumption.
+Qed.
+
 Theorem trace_leq_imples_head_st_leq: forall ell t1 t2 s1 s2,
     (head_st t1 = Some s1) ->
     (head_st t2 = Some s2) ->
@@ -32,99 +162,6 @@ Proof.
             reflexivity. congruence.
         }
     congruence.
-Qed.
-
-Theorem flows_uncons_proj: forall ell n,
-    (nlbl n <<L ell) ->
-    (node_low_proj ell n) = n.
-Proof.
-    intros. unfold node_low_proj. destruct (nlbl n <<? ell). reflexivity.
-    contradiction.
-Qed.
-
-Theorem nflows_uncons_proj: forall ell n,
-    ~(nlbl n <<L ell) ->
-    (node_low_proj ell n) = (empty_node n.(nlbl)).
-Proof.
-    intros. unfold node_low_proj. destruct (nlbl n <<? ell). contradiction.
-    reflexivity.
-Qed.
-
-Theorem state_leq_and_flowsto_to_node_eq: forall ell s1 s2 id n1 n2,
-    (nodes s1).[? id] = Some n1 ->
-    (nodes s2).[? id] = Some n2 ->
-    (state_low_eq ell s1 s2) -> 
-    (nlbl n1 <<L ell) ->
-    n1 = n2.
-Proof.
-    (*
-    intros.
-    inversion H1. specialize (H3 id). rewrite H, H0 in H3. inversion H3.
-    assert (nlbl n2 <<L ell). destruct (nlbl n2 <<? ell).
-    assumption. rewrite flows_uncons_proj in H6. rewrite nflows_uncons_proj in H6.
-    *)
-Admitted.  (* WIP *)
-
-Theorem state_upd_chan_preserves_node_state_leq:
-    forall ell s1 s2 han1 ch1 han2 ch2,
-    node_state_low_eq ell (nodes s1) (nodes s2) ->
-    node_state_low_eq ell
-        (nodes (state_upd_chan han1 ch1 s1))
-        (nodes (state_upd_chan han2 ch2 s2)).
-Proof.
-Admitted. (* WIP // TODO *)
-
-Theorem state_upd_node_preserves_chan_state_leq:
-    forall ell s1 s2 id1 id2 n1 n2,
-    chan_state_low_eq ell (chans s1) (chans s2) ->
-    chan_state_low_eq ell
-        (chans (state_upd_node id1 n1 s1))
-        (chans (state_upd_node id2 n2 s2)).
-Proof.
-Admitted. (* WIP // TODO *)
-
-Theorem leq_node_updates_preserve_node_state_leq:
-    forall ell s1 s2 n1 n2 id,
-    node_state_low_eq ell (nodes s1) (nodes s2) ->
-    node_low_eq ell n1 n2 ->
-    node_state_low_eq ell
-        (nodes (state_upd_node id n1 s1)) (nodes (state_upd_node id n2 s2)).
-Proof.
-Admitted. (* WIP // TODO *)
-
-Theorem leq_chan_updates_preserve_chan_state_leq:
-    forall ell s1 s2 ch1 ch2 han,
-    chan_state_low_eq ell (chans s1) (chans s2) ->
-    chan_low_eq ell ch1 ch2 ->
-    chan_state_low_eq ell
-        (chans (state_upd_chan han ch1 s1)) (chans (state_upd_chan han ch2 s2)).
-Proof.
-Admitted. (* WIP // TODO *)
-
-Theorem node_low_eq_reflexive:
-    forall ell n, node_low_eq ell n n.
-Proof.
-Admitted. (* WIP // TODO *)
-
-Theorem other_chan_exists_from_chans_leq: forall ell s1 s2 han ch1,
-    chan_state_low_eq ell (chans s1) (chans s2) ->
-    (chans s1).[? han] = Some ch1 ->
-    exists ch2, ((chans s2).[? han ] = Some ch2) /\
-        (chan_low_eq ell ch1 ch2).
-Proof.
-Admitted. (* WIP // TODO *)
-
-Theorem state_upd_node_eq: forall id n s,
-    (state_upd_node id n s).(nodes).[? id] = Some n.
-Proof.
-    intros. eapply upd_eq.
-Qed.
-
-Theorem state_upd_node_neq: forall (id id': node_id) n s,
-    id' <> id ->
-    (state_upd_node id n s).(nodes).[?id'] = s.(nodes).[?id'].
-Proof.
-    intros. eapply upd_neq. congruence.
 Qed.
 
 Theorem trace_loweq_to_deref_node: forall ell t1 t2 id s1 n1,
@@ -167,3 +204,12 @@ Proof.
             + inversion Ht2head.
 Admitted. (* WIP *)
 
+(*---------------------------------------------------------------------------*)
+(* Unobservable *)
+(*---------------------------------------------------------------------------*)
+Theorem set_call_unobs: forall ell s id n c,
+    (nodes s).[? id] = Some n ->
+    ~(nlbl n <<L ell) ->
+    (state_low_eq ell s (s_set_call s id c)).
+Proof.
+Admitted. (* WIP *)
