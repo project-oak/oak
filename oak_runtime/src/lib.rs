@@ -987,11 +987,6 @@ impl Runtime {
     ) -> Result<Option<NodeReadStatus>, OakStatus> {
         let half = self.abi_to_read_half(node_id, handle)?;
         self.validate_can_read_from_channel(node_id, &half)?;
-        self.introspection_event(EventDetails::MessageDequeued(MessageDequeued {
-            node_id: node_id.0,
-            channel_id: half.get_channel_id(),
-            acquired_handles: vec![],
-        }));
         let result = with_reader_channel(&half, |channel| {
             let mut messages = channel.messages.write().unwrap();
             match messages.front() {
