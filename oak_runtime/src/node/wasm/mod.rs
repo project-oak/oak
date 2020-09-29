@@ -17,8 +17,8 @@
 //! WebAssembly Node functionality.
 
 use crate::{
-    node::ConfigurationError, sha_256_hex, NodeMessage, NodePrivilege, NodeReadStatus,
-    RuntimeProxy, SignatureTable,
+    node::ConfigurationError, sha_256_hex, LabelReadStatus, NodeMessage, NodePrivilege,
+    NodeReadStatus, RuntimeProxy, SignatureTable,
 };
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, trace, warn};
@@ -48,8 +48,11 @@ const CHANNEL_CREATE: usize = 3;
 const CHANNEL_WRITE: usize = 4;
 const CHANNEL_READ: usize = 5;
 const WAIT_ON_CHANNELS: usize = 6;
+const CHANNEL_LABEL_READ: usize = 7;
+const NODE_LABEL_READ: usize = 8;
+const NODE_PRIVILEGE_READ: usize = 9;
 // TODO(#817): remove this; we shouldn't need to have WASI stubs.
-const WASI_STUB: usize = 7;
+const WASI_STUB: usize = 10;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -471,6 +474,117 @@ impl WasmInterface {
 
         Ok(())
     }
+
+    /// Corresponds to the host ABI function [`channel_label_read`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_label_read).
+    fn channel_label_read(
+        &mut self,
+        handle: oak_abi::Handle,
+        dest: AbiPointer,
+        dest_capacity: AbiPointerOffset,
+        actual_length_addr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        trace!(
+            "{}: channel_label_read({}, {}, {}, {})",
+            self.pretty_name,
+            handle,
+            dest,
+            dest_capacity,
+            actual_length_addr
+        );
+
+        self.validate_ptr(dest, dest_capacity)?;
+
+        let label = self
+            .runtime
+            .get_serialized_channel_label(handle, dest_capacity as usize)?;
+
+        self.write_label_to_memory(label, dest, actual_length_addr)
+    }
+
+    /// Corresponds to the host ABI function [`node_label_read`](https://github.com/project-oak/oak/blob/main/docs/abi.md#node_label_read).
+    fn node_label_read(
+        &mut self,
+        dest: AbiPointer,
+        dest_capacity: AbiPointerOffset,
+        actual_length_addr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        trace!(
+            "{}: node_label_read({}, {}, {})",
+            self.pretty_name,
+            dest,
+            dest_capacity,
+            actual_length_addr
+        );
+
+        self.validate_ptr(dest, dest_capacity)?;
+
+        let label = self
+            .runtime
+            .get_serialized_node_label(dest_capacity as usize)?;
+
+        self.write_label_to_memory(label, dest, actual_length_addr)
+    }
+
+    /// Corresponds to the host ABI function [`node_privilege_read`](https://github.com/project-oak/oak/blob/main/docs/abi.md#node_privilege_read).
+    fn node_privilege_read(
+        &mut self,
+        dest: AbiPointer,
+        dest_capacity: AbiPointerOffset,
+        actual_length_addr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        trace!(
+            "{}: node_privilege_read({}, {}, {})",
+            self.pretty_name,
+            dest,
+            dest_capacity,
+            actual_length_addr
+        );
+
+        self.validate_ptr(dest, dest_capacity)?;
+
+        let label = self
+            .runtime
+            .get_serialized_node_privilege(dest_capacity as usize)?;
+
+        self.write_label_to_memory(label, dest, actual_length_addr)
+    }
+
+    /// Helper function to write a serialized label and the actual/required length to Wasm linear
+    /// memory at `dest` and `actual_length_addr`.
+    fn write_label_to_memory(
+        &self,
+        label: LabelReadStatus,
+        dest: AbiPointer,
+        actual_length_addr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        let actual_length = match &label {
+            LabelReadStatus::Success(label) => label.len(),
+            LabelReadStatus::NeedsCapacity(a) => *a,
+        };
+
+        let raw_writer = &mut [0; 4];
+        LittleEndian::write_u32(raw_writer, actual_length as u32);
+        self.get_memory()
+            .set(actual_length_addr, raw_writer)
+            .map_err(|err| {
+                error!(
+                    "{}: write_label_to_memory(): Unable to write actual length into guest memory: {:?}",
+                    self.pretty_name, err
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+
+        match label {
+            LabelReadStatus::Success(label) => self.get_memory().set(dest, &label).map_err(|err| {
+                error!(
+                    "{}: write_label_to_memory(): Unable to write destination buffer into guest memory: {:?}",
+                    self.pretty_name, err
+                );
+                OakStatus::ErrInvalidArgs
+            }),
+            LabelReadStatus::NeedsCapacity(_) => Err(OakStatus::ErrBufferTooSmall),
+        }
+    }
 }
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
@@ -530,6 +644,22 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(4)?,
                 args.nth_checked(5)?,
                 args.nth_checked(6)?,
+            )),
+            CHANNEL_LABEL_READ => map_host_errors(self.channel_label_read(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+            )),
+            NODE_LABEL_READ => map_host_errors(self.node_label_read(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+            )),
+            NODE_PRIVILEGE_READ => map_host_errors(self.node_privilege_read(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
             )),
             WAIT_ON_CHANNELS => {
                 map_host_errors(self.wait_on_channels(args.nth_checked(0)?, args.nth_checked(1)?))
@@ -636,6 +766,40 @@ fn oak_resolve_func(
                 &[
                     ABI_USIZE,      // buf
                     ValueType::I32, // count
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_label_read" => (
+            CHANNEL_LABEL_READ,
+            wasmi::Signature::new(
+                &[
+                    ValueType::I64, // handle
+                    ABI_USIZE,      // label_buf
+                    ABI_USIZE,      // label_size
+                    ABI_USIZE,      // actual_size (out)
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "node_label_read" => (
+            NODE_LABEL_READ,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // label_buf
+                    ABI_USIZE, // label_size
+                    ABI_USIZE, // actual_size (out)
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "node_privilege_read" => (
+            NODE_PRIVILEGE_READ,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // label_buf
+                    ABI_USIZE, // label_size
+                    ABI_USIZE, // actual_size (out)
                 ][..],
                 Some(ValueType::I32),
             ),

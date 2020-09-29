@@ -18,8 +18,8 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    metrics::Metrics, AuxServer, ChannelHalfDirection, NodeId, NodeMessage, NodePrivilege,
-    NodeReadStatus, Runtime, SecureServerConfiguration, SignatureTable,
+    metrics::Metrics, AuxServer, ChannelHalfDirection, LabelReadStatus, NodeId, NodeMessage,
+    NodePrivilege, NodeReadStatus, Runtime, SecureServerConfiguration, SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -280,6 +280,61 @@ impl RuntimeProxy {
         debug!(
             "{:?}: channel_try_read({}, bytes_capacity={}, handles_capacity={}) -> {:?}",
             self.node_id, read_handle, bytes_capacity, handles_capacity, result
+        );
+        result
+    }
+
+    /// See [`Runtime::get_serialized_channel_label`].
+    pub fn get_serialized_channel_label(
+        &self,
+        handle: oak_abi::Handle,
+        capacity: usize,
+    ) -> Result<LabelReadStatus, OakStatus> {
+        debug!(
+            "{:?}: get_serialized_channel_label({}, capacity={})",
+            self.node_id, handle, capacity
+        );
+        let result = self
+            .runtime
+            .get_serialized_channel_label(self.node_id, handle, capacity);
+        debug!(
+            "{:?}: get_serialized_channel_label({}, capacity={}) -> {:?}",
+            self.node_id, handle, capacity, result
+        );
+        result
+    }
+
+    /// See [`Runtime::get_serialized_node_label`].
+    pub fn get_serialized_node_label(&self, capacity: usize) -> Result<LabelReadStatus, OakStatus> {
+        debug!(
+            "{:?}: get_serialized_node_label(capacity={})",
+            self.node_id, capacity
+        );
+        let result = self
+            .runtime
+            .get_serialized_node_label(self.node_id, capacity);
+        debug!(
+            "{:?}: get_serialized_node_label(capacity={}) -> {:?}",
+            self.node_id, capacity, result
+        );
+        result
+    }
+
+    /// See [`Runtime::get_serialized_node_privilege`].
+    pub fn get_serialized_node_privilege(
+        &self,
+        capacity: usize,
+    ) -> Result<LabelReadStatus, OakStatus> {
+        debug!(
+            "{:?}: get_serialized_node_privilege(capacity={})",
+            self.node_id, capacity
+        );
+        let result = self
+            .runtime
+            .get_serialized_node_privilege(self.node_id, capacity);
+        debug!(
+            "{:?}: get_serialized_node_privilege(capacity={}) -> {:?}",
+            self.node_id, capacity, result
         );
         result
     }

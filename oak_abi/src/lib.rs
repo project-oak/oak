@@ -155,6 +155,57 @@ extern "C" {
     /// [`OakStatus`]: crate::OakStatus
     pub fn channel_close(handle: u64) -> u32;
 
+    /// Returns the label for the channel identified by `handle`.
+    ///
+    /// The label is stored into `label_buf` as a serialized [`Label`] protobuf message. The actual
+    /// size of the serialized message is indicated by `actual_size`.
+    ///
+    /// If the provided space for the label is too small (`label_buf` and `label_size`), then no
+    /// data will be stored in `label_buf` and [`ErrBufferTooSmall`] returned. The required size
+    /// will be returned in the space provided by `actual_size`.
+    ///
+    /// Returns the status of the operation, as an [`OakStatus`] value.
+    ///
+    /// [`ErrBufferTooSmall`]: crate::OakStatus::ErrBufferTooSmall
+    /// [`Label`]: crate::label::Label
+    pub fn channel_label_read(
+        handle: u64,
+        label_buf: *mut u8,
+        label_size: usize,
+        actual_size: *mut u32,
+    ) -> u32;
+
+    /// Returns the label of the current calling node.
+    ///
+    /// The label is stored into `label_buf` as a serialized [`Label`] protobuf message. The actual
+    /// size of the serialized message is indicated by `actual_size`.
+    ///
+    /// If the provided space for the label is too small (`label_buf` and `label_size`), then no
+    /// data will be stored in `label_buf` and [`ErrBufferTooSmall`] returned. The required size
+    /// will be returned in the space provided by `actual_size`.
+    ///
+    /// Returns the status of the operation, as an [`OakStatus`] value.
+    ///
+    /// [`ErrBufferTooSmall`]: crate::OakStatus::ErrBufferTooSmall
+    /// [`Label`]: crate::label::Label
+    pub fn node_label_read(label_buf: *mut u8, label_size: usize, actual_size: *mut u32) -> u32;
+
+    /// Returns a label indicating the downgrade privilege of the current calling node.
+    ///
+    /// The label is stored into `label_buf` as a serialized [`Label`] protobuf message. The actual
+    /// size of the serialized message is indicated by `actual_size`.
+    ///
+    /// If the provided space for the label is too small (`label_buf` and `label_size`), then no
+    /// data will be stored in `label_buf` and [`ErrBufferTooSmall`] returned. The required size
+    /// will be returned in the space provided by `actual_size`.
+    ///
+    /// Returns the status of the operation, as an [`OakStatus`] value.
+    ///
+    /// [`ErrBufferTooSmall`]: crate::OakStatus::ErrBufferTooSmall
+    /// [`Label`]: crate::label::Label
+    pub fn node_privilege_read(label_buf: *mut u8, label_size: usize, actual_size: *mut u32)
+        -> u32;
+
     /// Creates a new Node instance running code identified by a serialized [`NodeConfiguration`].
     ///
     /// The serialized configuration object is provided in the memory area given by `config_buf` and

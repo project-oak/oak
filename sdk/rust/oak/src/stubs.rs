@@ -76,6 +76,31 @@ pub extern "C" fn node_create(_config_buf: *const u8, _config_len: usize, _handl
     panic!("stub function invoked!");
 }
 #[no_mangle]
+pub extern "C" fn channel_label_read(
+    _handle: u64,
+    _label_buf: *mut u8,
+    _label_size: usize,
+    _actual_size: *mut u32,
+) -> u32 {
+    panic!("stub function invoked!");
+}
+#[no_mangle]
+pub extern "C" fn node_label_read(
+    _label_buf: *mut u8,
+    _label_size: usize,
+    _actual_size: *mut u32,
+) -> u32 {
+    panic!("stub function invoked!");
+}
+#[no_mangle]
+pub extern "C" fn node_privilege_read(
+    _label_buf: *mut u8,
+    _label_size: usize,
+    _actual_size: *mut u32,
+) -> u32 {
+    panic!("stub function invoked!");
+}
+#[no_mangle]
 pub extern "C" fn random_get(_buf: *mut u8, _len: usize) -> u32 {
     panic!("stub function invoked!");
 }

@@ -45,6 +45,7 @@ use oak_abi::{
 use oak_io::Message as NodeMessage;
 use pem::parse_many;
 use prometheus::proto::MetricFamily;
+use prost::Message as _;
 use rand::RngCore;
 use ring::signature::{UnparsedPublicKey, ED25519};
 use std::{
@@ -241,6 +242,28 @@ impl NodePrivilege {
     }
 }
 
+impl std::convert::From<NodePrivilege> for Label {
+    /// Converts a [`NodePrivilege`] to a [`Label`].
+    ///
+    /// This is a temporary representation that maps the privilege to a label directly. In future
+    /// the plan is to move to robust declassification and transparent endorsement, which would
+    /// remove the need for explicitly specifying the node privilege.
+    ///
+    /// Robust declassification means that the privilege to declassify confidentiality tags will be
+    /// implied by integrity tags on the node label itself. Transparent endorsement means that the
+    /// privilege to endorse integrity tags will be implied by confidentiality tags on the node
+    /// label.
+    fn from(privilege: NodePrivilege) -> Self {
+        Label {
+            confidentiality_tags: privilege
+                .can_declassify_confidentiality_tags
+                .into_iter()
+                .collect(),
+            integrity_tags: privilege.can_endorse_integrity_tags.into_iter().collect(),
+        }
+    }
+}
+
 impl std::fmt::Debug for NodeInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -264,7 +287,7 @@ impl std::fmt::Debug for NodeInfo {
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug, PartialOrd, Ord)]
 pub struct NodeId(pub u64);
 
-/// Helper types to indicate whether a channel read operation has succeed or has failed with not
+/// Helper types to indicate whether a channel read operation has succeeded or has failed with not
 /// enough `bytes_capacity` and/or `handles_capacity`.
 #[derive(Debug)]
 pub enum NodeReadStatus {
@@ -274,6 +297,13 @@ pub enum NodeReadStatus {
 pub enum ReadStatus {
     Success(Message),
     NeedsCapacity(usize, usize),
+}
+/// Helper type to indicate whether retrieving a serialized label has succeeded or has failed with
+/// not enough capacity.
+#[derive(Debug)]
+pub enum LabelReadStatus {
+    Success(Vec<u8>),
+    NeedsCapacity(usize),
 }
 
 /// Information for managing an associated server.
@@ -634,6 +664,49 @@ impl Runtime {
     /// Returns an error if `channel_half` is not a valid write half.
     fn get_writer_channel_label(&self, channel_half: &ChannelHalf) -> Result<Label, OakStatus> {
         with_writer_channel(channel_half, |channel| Ok(channel.label.clone()))
+    }
+
+    /// Returns the [`Label`] associated with the channel handle serialized as a byte array.
+    ///
+    /// If the serialized size is larger than the specified capacity, it will return a status
+    /// indicating the required capacity.
+    fn get_serialized_channel_label(
+        &self,
+        node_id: NodeId,
+        handle: oak_abi::Handle,
+        capacity: usize,
+    ) -> Result<LabelReadStatus, OakStatus> {
+        let half = self.abi_to_half(node_id, handle)?;
+        let label = match half.direction {
+            ChannelHalfDirection::Read => self.get_reader_channel_label(&half)?,
+            ChannelHalfDirection::Write => self.get_writer_channel_label(&half)?,
+        };
+        serialize_label(label, capacity)
+    }
+
+    /// Returns the [`Label`] associated with the node serialized as a byte array.
+    ///
+    /// If the serialized size is larger than the specified capacity, it will return a status
+    /// indicating the required capacity.
+    fn get_serialized_node_label(
+        &self,
+        node_id: NodeId,
+        capacity: usize,
+    ) -> Result<LabelReadStatus, OakStatus> {
+        serialize_label(self.get_node_label(node_id), capacity)
+    }
+
+    /// Returns the [`NodePrivilege`] associated with the node converted to a [`Label`] and
+    /// serialized as a byte array.
+    ///
+    /// If the serialized size is larger than the specified capacity, it will return a status
+    /// indicating the required capacity.
+    fn get_serialized_node_privilege(
+        &self,
+        node_id: NodeId,
+        capacity: usize,
+    ) -> Result<LabelReadStatus, OakStatus> {
+        serialize_label(self.get_node_privilege(node_id).into(), capacity)
     }
 
     /// Returns whether the given Node is allowed to read from the provided channel read half,
@@ -1272,6 +1345,26 @@ impl Runtime {
             .runtime_nodes_by_type
             .with_label_values(&[node_type])
             .add(delta);
+    }
+}
+
+/// Searializes a [`Label`] as a byte array.
+///
+/// If the serialized size is larger than the specified capacity, it will return a status
+/// indicating the required capacity.
+fn serialize_label(label: Label, capacity: usize) -> Result<LabelReadStatus, OakStatus> {
+    let size = label.encoded_len();
+    if size > capacity {
+        Ok(LabelReadStatus::NeedsCapacity(size))
+    } else {
+        let mut encoded = Vec::with_capacity(size);
+        match label.encode(&mut encoded) {
+            Err(error) => {
+                error!("Could not encode label: {}", error);
+                Err(OakStatus::ErrInternal)
+            }
+            Ok(()) => Ok(LabelReadStatus::Success(encoded)),
+        }
     }
 }
 

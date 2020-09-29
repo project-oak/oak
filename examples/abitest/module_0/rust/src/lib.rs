@@ -252,6 +252,30 @@ impl OakAbiTestService for FrontendNode {
             "NodeCreateRaw",
             (Self::test_node_create_raw, Count::Unchanged),
         );
+        tests.insert(
+            "ChannelLabelRead",
+            (Self::test_channel_label_read, Count::Unchanged),
+        );
+        tests.insert(
+            "NodeLabelRead",
+            (Self::test_node_label_read, Count::Unchanged),
+        );
+        tests.insert(
+            "NodePrivilegeRead",
+            (Self::test_node_privilege_read, Count::Unchanged),
+        );
+        tests.insert(
+            "ChannelLabelReadRaw",
+            (Self::test_channel_label_read_raw, Count::Unchanged),
+        );
+        tests.insert(
+            "NodeLabelReadRaw",
+            (Self::test_node_label_read_raw, Count::Unchanged),
+        );
+        tests.insert(
+            "NodePrivilegeReadRaw",
+            (Self::test_node_privilege_read_raw, Count::Unchanged),
+        );
         tests.insert("NodePanic", (Self::test_node_panic, Count::Unsure));
         tests.insert(
             "RandomGetRaw",
@@ -1436,6 +1460,175 @@ impl FrontendNode {
 
         expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
         expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
+        Ok(())
+    }
+
+    fn test_channel_label_read(&mut self) -> TestResult {
+        let hash = vec![1, 2, 3, 4];
+        let label = Label {
+            confidentiality_tags: vec![oak_abi::label::web_assembly_module_tag(&hash)],
+            integrity_tags: vec![],
+        };
+
+        // Expect valid handles to return correct label.
+        let (out_handle, in_handle) = oak::channel_create_with_label(&label).unwrap();
+        let expected = Ok(label);
+        expect_eq!(expected, oak::channel_label_read(in_handle.handle));
+        expect_eq!(expected, oak::channel_label_read(out_handle.handle));
+
+        // Reading the label from an invalid handle gives an error.
+        expect_eq!(Err(OakStatus::ErrBadHandle), oak::channel_label_read(99999));
+
+        expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
+        expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
+        Ok(())
+    }
+
+    fn test_node_label_read(&mut self) -> TestResult {
+        let expected = Ok(Label::public_untrusted());
+        expect_eq!(expected, oak::node_label_read());
+        Ok(())
+    }
+
+    fn test_node_privilege_read(&mut self) -> TestResult {
+        let privilege = oak::node_privilege_read();
+        expect_matches!(privilege, Ok(_));
+        let confidentiality_tags = privilege.unwrap().confidentiality_tags.to_vec();
+        expect_eq!(1, confidentiality_tags.len());
+        let tag = confidentiality_tags[0].tag.clone().unwrap();
+        expect_matches!(
+            tag,
+            oak_abi::proto::oak::label::tag::Tag::WebAssemblyModuleTag(_)
+        );
+        match tag {
+            oak_abi::proto::oak::label::tag::Tag::WebAssemblyModuleTag(module_tag) => {
+                expect_eq!(32, module_tag.web_assembly_module_hash_sha_256.len())
+            }
+            _ => {
+                error!("Unreachable code reached.");
+                unreachable!();
+            }
+        };
+        Ok(())
+    }
+
+    fn test_channel_label_read_raw(&mut self) -> TestResult {
+        let (out_channel, in_channel, _) = channel_create_raw();
+
+        let mut buf = Vec::<u8>::with_capacity(5);
+        let mut actual_size: u32 = 99;
+        unsafe {
+            // Try invalid values for the 2 linear memory offset arguments.
+            expect_eq!(
+                OakStatus::ErrInvalidArgs as u32,
+                oak_abi::channel_label_read(
+                    in_channel,
+                    invalid_raw_offset() as *mut u8,
+                    1,
+                    &mut actual_size
+                )
+            );
+            expect_eq!(
+                OakStatus::ErrInvalidArgs as u32,
+                oak_abi::channel_label_read(
+                    in_channel,
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    invalid_raw_offset() as *mut u32
+                )
+            );
+
+            // Valid case.
+            expect_eq!(
+                OakStatus::Ok as u32,
+                oak_abi::channel_label_read(
+                    in_channel,
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    &mut actual_size
+                )
+            );
+            // Public untrusted label has 0 size.
+            expect_eq!(0, actual_size);
+        }
+
+        expect_eq!(OakStatus::Ok as u32, unsafe {
+            oak_abi::channel_close(out_channel)
+        });
+        expect_eq!(OakStatus::Ok as u32, unsafe {
+            oak_abi::channel_close(in_channel)
+        });
+        Ok(())
+    }
+
+    fn test_node_label_read_raw(&mut self) -> TestResult {
+        let mut buf = Vec::<u8>::with_capacity(5);
+        let mut actual_size: u32 = 99;
+        unsafe {
+            // Try invalid values for the 2 linear memory offset arguments.
+            expect_eq!(
+                OakStatus::ErrInvalidArgs as u32,
+                oak_abi::node_label_read(invalid_raw_offset() as *mut u8, 1, &mut actual_size)
+            );
+            expect_eq!(
+                OakStatus::ErrInvalidArgs as u32,
+                oak_abi::node_label_read(
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    invalid_raw_offset() as *mut u32
+                )
+            );
+
+            // Valid case.
+            expect_eq!(
+                OakStatus::Ok as u32,
+                oak_abi::node_label_read(buf.as_mut_ptr(), buf.capacity(), &mut actual_size)
+            );
+            // Public untrusted label has 0 size.
+            expect_eq!(0, actual_size);
+        }
+        Ok(())
+    }
+
+    fn test_node_privilege_read_raw(&mut self) -> TestResult {
+        let mut buf = Vec::<u8>::with_capacity(5);
+        let mut actual_size: u32 = 99;
+        unsafe {
+            // Try invalid values for the 2 linear memory offset arguments.
+            expect_eq!(
+                OakStatus::ErrInvalidArgs as u32,
+                oak_abi::node_privilege_read(invalid_raw_offset() as *mut u8, 1, &mut actual_size)
+            );
+            expect_eq!(
+                OakStatus::ErrInvalidArgs as u32,
+                oak_abi::node_privilege_read(
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    invalid_raw_offset() as *mut u32
+                )
+            );
+
+            // Buffer too small.
+            expect_eq!(
+                OakStatus::ErrBufferTooSmall as u32,
+                oak_abi::node_privilege_read(buf.as_mut_ptr(), buf.capacity(), &mut actual_size)
+            );
+
+            // Valid case.
+            buf.reserve(100);
+            expect_eq!(
+                OakStatus::Ok as u32,
+                oak_abi::node_privilege_read(buf.as_mut_ptr(), buf.capacity(), &mut actual_size)
+            );
+            // Should be a valid encoding of a privilege label containing two
+            // `WebAssemblyModuleTag`s, each containing a SHA256 (32 byte) hash.
+            let hash = [0; 32];
+            let label = Label {
+                confidentiality_tags: vec![oak_abi::label::web_assembly_module_tag(&hash)],
+                integrity_tags: vec![oak_abi::label::web_assembly_module_tag(&hash)],
+            };
+            expect_eq!(label.encoded_len() as u32, actual_size);
+        }
         Ok(())
     }
 
