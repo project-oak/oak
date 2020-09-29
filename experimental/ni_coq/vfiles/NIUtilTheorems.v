@@ -16,6 +16,8 @@ Require Import Coq.Classes.RelationClasses.
 
 Local Open Scope map_scope.
 
+Section misc_theorems.
+
 Theorem eq_nodes_have_eq_lbls: forall n1 n2,
     n1 = n2 -> (nlbl n1) = (nlbl n2).
 Proof. congruence. Qed.
@@ -33,9 +35,9 @@ Proof.
     intros. eapply upd_neq. congruence.
 Qed.
 
-(*---------------------------------------------------------------------------*)
-(* Low Projections *)
-(*---------------------------------------------------------------------------*)
+End misc_theorems.
+
+Section low_projection.
 Theorem flows_node_proj: forall ell n,
     (nlbl n <<L ell) ->
     (node_low_proj ell n) = n.
@@ -101,9 +103,9 @@ Proof.
         inversion H0.
 Qed.
 
-(*---------------------------------------------------------------------------*)
-(* Low Equivalences *)
-(*---------------------------------------------------------------------------*)
+End low_projection.
+
+Section low_equivalence.
 Global Instance state_low_eq_refl: forall ell, Reflexive (state_low_eq ell) | 10.
 Proof.
 Admitted. (* WIP *)
@@ -142,8 +144,7 @@ Proof.
     intros. inversion H.
     assert ( nlbl (node_low_proj ell n1) = nlbl (node_low_proj ell n2)).
     rewrite H1. reflexivity.
-    rewrite node_projection_preserves_lbl in H0.
-    rewrite node_projection_preserves_lbl in H0.
+    rewrite !node_projection_preserves_lbl in H0.
     assumption.
 Qed.
 
@@ -158,12 +159,14 @@ Proof.
         exfalso. rewrite <- H3 in H. inversion H.
     - 
         assert (xs = s1). {
-            assert (head_st ((xs, xe) :: t0 ) = Some xs).
-            reflexivity. congruence.
+            assert (head_st ((xs, xe) :: t0 ) = Some xs) by reflexivity.
+            congruence.
         }
+
         assert (ys = s2). {
             assert (head_st ((ys, ye) :: t3 ) = Some ys).
-            reflexivity. congruence.
+            assert (head_st ((ys, ye) :: t3 ) = Some ys) by reflexivity.
+            congruence.
         }
     congruence.
 Qed.
@@ -208,12 +211,15 @@ Proof.
             + inversion Ht2head.
 Admitted. (* WIP *)
 
-(*---------------------------------------------------------------------------*)
-(* Unobservable *)
-(*---------------------------------------------------------------------------*)
+End low_equivalence.
+
+Section unobservable.
+
 Theorem set_call_unobs: forall ell s id n c,
     (nodes s).[? id] = Some n ->
     ~(nlbl n <<L ell) ->
     (state_low_eq ell s (s_set_call s id c)).
 Proof.
 Admitted. (* WIP *)
+
+End unobservable.
