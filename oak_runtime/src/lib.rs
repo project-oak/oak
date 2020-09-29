@@ -1093,9 +1093,17 @@ impl Runtime {
         Ok(match result {
             None => None,
             Some(ReadStatus::NeedsCapacity(z, c)) => Some(NodeReadStatus::NeedsCapacity(z, c)),
-            Some(ReadStatus::Success(msg)) => Some(NodeReadStatus::Success(
-                self.node_message_from(msg, node_id),
-            )),
+            Some(ReadStatus::Success(msg)) => {
+                let message = self.node_message_from(msg, node_id);
+
+                self.introspection_event(EventDetails::MessageDequeued(MessageDequeued {
+                    node_id: node_id.0,
+                    channel_id: half.get_channel_id(),
+                    acquired_handles: message.handles.clone(),
+                }));
+
+                Some(NodeReadStatus::Success(message))
+            }
         })
     }
 
