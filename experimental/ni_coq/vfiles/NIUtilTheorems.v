@@ -164,7 +164,6 @@ Proof.
         }
 
         assert (ys = s2). {
-            assert (head_st ((ys, ye) :: t3 ) = Some ys).
             assert (head_st ((ys, ye) :: t3 ) = Some ys) by reflexivity.
             congruence.
         }
