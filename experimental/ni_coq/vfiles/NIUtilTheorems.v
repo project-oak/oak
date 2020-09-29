@@ -38,6 +38,11 @@ Qed.
 End misc_theorems.
 
 Section low_projection.
+Theorem state_upd_chan_node_leq: forall ell s h ch,
+    (node_state_low_eq ell (nodes (state_upd_chan h ch s)) (nodes s)).
+Proof.
+Admitted.
+
 Theorem flows_node_proj: forall ell n,
     (nlbl n <<L ell) ->
     (node_low_proj ell n) = n.
@@ -119,6 +124,7 @@ Qed.
 End low_projection.
 
 Section low_equivalence.
+
 Global Instance state_low_eq_refl: forall ell, Reflexive (state_low_eq ell) | 10.
 Proof.
 Admitted. (* WIP *)
@@ -131,14 +137,35 @@ Global Instance state_low_eq_sym: forall ell, Symmetric (state_low_eq ell) | 10.
 Proof.
 Admitted. (* WIP *)
 
+Global Instance node_state_low_eq_refl: forall ell, Reflexive (node_state_low_eq ell) | 10.
+Proof.
+Admitted. (* WIP *)
+
+Global Instance node_state_low_eq_trans: forall ell, Transitive (node_state_low_eq ell) | 10.
+Proof.
+Admitted.  (* WIP *)
+
+Global Instance node_state_low_eq_sym: forall ell, Symmetric (node_state_low_eq ell) | 10.
+Proof.
+Admitted. (* WIP *)
+
 Global Instance event_low_eq_refl: forall ell, Reflexive (event_low_eq ell) | 10.
 Proof.
 Admitted. (* WIP *)
 
 Global Instance event_low_eq_trans: forall ell, Transitive (event_low_eq ell) | 10.
+Proof.
 Admitted. (* WIP *)
 
 Global Instance event_low_eq_sym: forall ell, Symmetric (event_low_eq ell) | 10.
+Proof.
+Admitted. (* WIP *)
+
+Theorem state_loweq_from_substates: forall ell s1 s2,
+    node_state_low_eq ell (nodes s1) (nodes s2) ->
+    chan_state_low_eq ell (chans s1) (chans s2) ->
+    state_low_eq ell s1 s2.
+Proof.
 Admitted. (* WIP *)
 
 Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
@@ -232,6 +259,6 @@ Theorem set_call_unobs: forall ell s id n c,
     ~(nlbl n <<L ell) ->
     (state_low_eq ell s (s_set_call s id c)).
 Proof.
-Admitted. (* WIP *)
+Admitted.
 
 End unobservable.

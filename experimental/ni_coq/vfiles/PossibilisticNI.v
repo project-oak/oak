@@ -91,6 +91,18 @@ Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
 Proof.
 Admitted. (* WIP *)
 
+Theorem state_upd_chan_node_leq: forall ell s h ch,
+    (node_state_low_eq ell (nodes (state_upd_chan h ch s)) (nodes s)).
+Proof.
+Admitted.
+
+Theorem state_upd_node_unwind: forall ell id n1 n2 s1 s2,
+    node_low_eq ell n1 n2 ->
+    node_state_low_eq ell (nodes s1) (nodes s2) ->
+    node_state_low_eq ell (nodes (state_upd_node id n1 s1)) (nodes (state_upd_node id n2 s2)).
+Proof.
+Admitted. (* WIP // TODO *)
+
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
     (step_system_ev (state_low_proj ell s) s1' e1) ->
     (exists s2' e2,
@@ -130,6 +142,26 @@ Proof.
                 eapply SWriteChan; try congruence; try assumption;
                     try (erewrite <- chan_projection_preserves_lbl; eassumption).
                 (* s1'' =L s2'' *)
+                subst. unfold s1''. eapply set_call_unwind. unfold ch'.
+                eapply state_loweq_from_substates.
+                (* node_state_loweq *)
+                eapply (node_state_low_eq_trans _ 
+                    (nodes (state_upd_chan han (chan_append (chan_low_proj ell ch2) msg)
+                    (state_upd_node id n'0 (state_low_proj ell s))))
+
+                    (nodes (state_upd_node id n'0 (state_low_proj ell s)))
+                ). eapply state_upd_chan_node_leq.
+                eapply node_state_low_eq_sym.
+                eapply (node_state_low_eq_trans _
+                    (nodes (state_upd_chan han (chan_append ch2 msg) (state_upd_node id n'0 s)))
+                    (nodes (state_upd_node id n'0 s))
+                    (nodes (state_upd_node id n'0 (state_low_proj ell s)))
+                ).
+                eapply state_upd_chan_node_leq.
+                unfold node_state_low_eq. eapply state_upd_node_unwind.
+                unfold node_low_eq. unfold node_low_proj. reflexivity.
+                admit. (* node_state_low_eq ell (nodes s) (nodes (state_low_proj ell s)) *)
+                (* chan state loweq *)
                 admit.
             + admit.
             + admit.

@@ -32,6 +32,13 @@ Definition state_unwind (f: state -> state):
 but we have to fix the way the definitions are curried.
 *)
 
+Theorem state_upd_node_unwind: forall ell id n1 n2 s1 s2,
+    node_low_eq ell n1 n2 ->
+    state_low_eq ell s1 s2 ->
+    state_low_eq ell (state_upd_node id n1 s1) (state_upd_node id n2 s2).
+Proof.
+Admitted. (* WIP // TODO *)
+
 Theorem chan_append_unwind:
     forall ell ch1 ch2 msg,
     chan_low_eq ell ch1 ch2 ->
