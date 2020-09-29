@@ -1,4 +1,5 @@
 name = "private_set_intersection"
+rerun_server_for_each_client = true
 
 [applications]
 

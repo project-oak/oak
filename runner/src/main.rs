@@ -553,6 +553,12 @@ fn run_example_server(
     )
 }
 
+/// Assigns `false` as a default for values deserialized with `serde`.
+/// https://serde.rs/attr-default.html
+fn default_bool() -> bool {
+    false
+}
+
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Example {
@@ -563,6 +569,8 @@ struct Example {
     backend: Option<Executable>,
     applications: HashMap<String, Application>,
     clients: HashMap<String, Executable>,
+    #[serde(default = "default_bool")]
+    rerun_server_for_each_client: bool,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -650,10 +658,39 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
         let run_server_clients = if opt.build_client.client_variant != NO_CLIENTS {
-            Step::WithBackground {
-                name: "background server".to_string(),
-                background: run_server,
-                foreground: Box::new(run_clients),
+            if example.rerun_server_for_each_client {
+                Step::Multiple {
+                    name: "run separate clients".to_string(),
+                    steps: example
+                        .clients
+                        .iter()
+                        .filter(|(name, _)| match opt.build_client.client_variant.as_str() {
+                            ALL_CLIENTS => true,
+                            client => *name == client,
+                        })
+                        .map(|(name, client)| Step::WithBackground {
+                            name: "background server".to_string(),
+                            background: run_example_server(
+                                &opt.build_server,
+                                &example.server,
+                                opt.server_additional_args.clone(),
+                                &application.out,
+                            ),
+                            foreground: Box::new(run_client(
+                                name,
+                                &client,
+                                &opt.build_client,
+                                opt.client_additional_args.clone(),
+                            )),
+                        })
+                        .collect(),
+                }
+            } else {
+                Step::WithBackground {
+                    name: "background server".to_string(),
+                    background: run_server,
+                    foreground: Box::new(run_clients),
+                }
             }
         } else {
             Step::Single {
