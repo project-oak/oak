@@ -30,7 +30,7 @@ import TimeTravelControls from '~/components/TimeTravelControls';
 import introspectionEventsProto, {
   DirectionMap,
 } from '~/protoc_out/proto/introspection_events_pb';
-import { Label } from '~/protoc_out/oak_abi/proto/label_pb.d';
+import oakAbiProto from '~/protoc_out/oak_abi/proto/label_pb.d';
 
 // Requests the list of introspection events provided by the Oak runtime's
 // auxiliary introspection server.
@@ -61,6 +61,7 @@ export interface OakApplicationState {
 
 export type NodeId = string;
 export type AbiHandle = string;
+type Label = oakAbiProto.Label.AsObject;
 type NodeInfos = Map<NodeId, NodeInfo>;
 interface NodeInfo {
   name: string;
@@ -115,7 +116,7 @@ function eventReducer(
       applicationState.nodeInfos.set(event!.getNodeCreated()!.getNodeId(), {
         name: event!.getNodeCreated()!.getName(),
         abiHandles: new Map(),
-        label: event!.getNodeCreated()!.getLabel()!,
+        label: event!.getNodeCreated()!.getLabel()!.toObject(),
       });
 
       break;
@@ -137,7 +138,7 @@ function eventReducer(
         applicationState.channels.set(channelId, {
           id: channelId,
           messages: [],
-          label: channel.getLabel()!,
+          label: channel.getLabel()!.toObject(),
         });
       }
 
