@@ -296,6 +296,61 @@
 <span id="296">296</span>
 <span id="297">297</span>
 <span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -317,8 +372,8 @@
 <span class="doccomment">//! context of a specific Node or pseudo-Node.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">metrics</span>::<span class="ident">Metrics</span>, <span class="ident">AuxServer</span>, <span class="ident">ChannelHalfDirection</span>, <span class="ident">NodeId</span>, <span class="ident">NodeMessage</span>, <span class="ident">NodePrivilege</span>,
-    <span class="ident">NodeReadStatus</span>, <span class="ident">Runtime</span>, <span class="ident">SecureServerConfiguration</span>, <span class="ident">SignatureTable</span>,
+    <span class="ident">metrics</span>::<span class="ident">Metrics</span>, <span class="ident">AuxServer</span>, <span class="ident">ChannelHalfDirection</span>, <span class="ident">LabelReadStatus</span>, <span class="ident">NodeId</span>, <span class="ident">NodeMessage</span>,
+    <span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>, <span class="ident">Runtime</span>, <span class="ident">SecureServerConfiguration</span>, <span class="ident">SignatureTable</span>,
 };
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>};
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
@@ -579,6 +634,61 @@
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;{:?}: channel_try_read({}, bytes_capacity={}, handles_capacity={}) -&gt; {:?}&quot;</span>,
             <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">read_handle</span>, <span class="ident">bytes_capacity</span>, <span class="ident">handles_capacity</span>, <span class="ident">result</span>
+        );
+        <span class="ident">result</span>
+    }
+
+    <span class="doccomment">/// See [`Runtime::get_serialized_channel_label`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_serialized_channel_label</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">capacity</span>: <span class="ident">usize</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: get_serialized_channel_label({}, capacity={})&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">capacity</span>
+        );
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">runtime</span>
+            .<span class="ident">get_serialized_channel_label</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">capacity</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: get_serialized_channel_label({}, capacity={}) -&gt; {:?}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">capacity</span>, <span class="ident">result</span>
+        );
+        <span class="ident">result</span>
+    }
+
+    <span class="doccomment">/// See [`Runtime::get_serialized_node_label`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_serialized_node_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">capacity</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: get_serialized_node_label(capacity={})&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">capacity</span>
+        );
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">runtime</span>
+            .<span class="ident">get_serialized_node_label</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">capacity</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: get_serialized_node_label(capacity={}) -&gt; {:?}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">capacity</span>, <span class="ident">result</span>
+        );
+        <span class="ident">result</span>
+    }
+
+    <span class="doccomment">/// See [`Runtime::get_serialized_node_privilege`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_serialized_node_privilege</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">capacity</span>: <span class="ident">usize</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: get_serialized_node_privilege(capacity={})&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">capacity</span>
+        );
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">runtime</span>
+            .<span class="ident">get_serialized_node_privilege</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">capacity</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: get_serialized_node_privilege(capacity={}) -&gt; {:?}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">capacity</span>, <span class="ident">result</span>
         );
         <span class="ident">result</span>
     }
