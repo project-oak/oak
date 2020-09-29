@@ -10,4 +10,4 @@ out = "examples/translator/bin/translator.oak"
 module = { Cargo = { cargo_manifest = "examples/translator/module/rust/Cargo.toml" } }
 
 [clients]
-go = { Bazel = { bazel_target = "//examples/translator/client:client" } }
+go = { Bazel = { bazel_target = "//examples/translator/client/go:client" } }

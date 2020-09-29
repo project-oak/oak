@@ -16,7 +16,7 @@ additional_args = [
 ]
 
 [clients]
-rust = { Cargo = { cargo_manifest = "examples/http_server/client/Cargo.toml" }, additional_args = [
+rust = { Cargo = { cargo_manifest = "examples/http_server/client/rust/Cargo.toml" }, additional_args = [
   "--ca-cert=./examples/certs/local/ca.pem"
 ] }
 shell = { Shell = { script = "examples/http_server/client/client" } }

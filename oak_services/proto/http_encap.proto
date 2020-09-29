@@ -40,7 +40,6 @@ message HttpResponse {
   map<string, HeaderValue> headers = 3;
 }
 
-
 // Each header name in an HTTP request or HTTP response may correspond to more
 // than one header values. This protocol buffer represents such header values.
 message HeaderValue {
