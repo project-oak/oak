@@ -102,7 +102,7 @@ Proof.
     - (* SystemSkip *)
         exists s, (EvL NilEv ell0). split. constructor.
         split. unfold state_low_eq. unfold low_eq.
-        rewrite state_low_proj_idempotent'. reflexivity.
+        rewrite state_low_proj_idempotent. reflexivity.
         reflexivity.
     - (* NodeStep *)
         rename s'' into s1''. rename s' into s1'. rename H2 into H_step_projs_s1'.

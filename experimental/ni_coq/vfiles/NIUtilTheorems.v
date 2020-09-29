@@ -11,6 +11,9 @@ Import ListNotations.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 
+(* For Transitive, Symmetric *)
+Require Import Coq.Classes.RelationClasses.
+
 Local Open Scope map_scope.
 
 Theorem eq_nodes_have_eq_lbls: forall n1 n2,
@@ -50,14 +53,14 @@ Proof.
 Qed.
 
 Theorem state_low_proj_idempotent: forall ell s,
-    (state_low_eq ell (state_low_proj ell s) s).
-Proof.
-Admitted.    
-
-Theorem state_low_proj_idempotent': forall ell s,
     (state_low_proj ell (state_low_proj ell s)) = (state_low_proj ell s).
 Proof.
 Admitted.
+
+Theorem state_low_proj_loweq: forall ell s,
+    (state_low_eq ell (state_low_proj ell s) s).
+Proof.
+Admitted.    
 
 Theorem node_projection_preserves_lbl: forall ell n,
     ((node_low_proj ell n).(nlbl) = n.(nlbl)).
@@ -93,9 +96,6 @@ Proof.
         - (* some *) 
         replace n0 with n in *.
         erewrite nflows_node_proj in H0. inversion H0. auto. auto.
-        replace (nodes s id) with ((nodes s).[? id]) in E by auto.
-            (* why on earth do I need this, it's just notation ? *)
-            (* Do I need hint rewrites or something ? *)
         congruence.
         - (* none *)
         inversion H0.
@@ -104,22 +104,26 @@ Qed.
 (*---------------------------------------------------------------------------*)
 (* Low Equivalences *)
 (*---------------------------------------------------------------------------*)
-Definition transitive {A: Type} (r: A -> A -> Prop) :=
-        forall a1 a2 a3, (r a1 a2) -> (r a2 a3) -> (r a1 a3).
-
-Definition symmetric {A: Type} (r: A -> A -> Prop) := 
-    forall a1 a2, (r a1 a2) -> (r a2 a1).
-
-Theorem state_low_eq_trans: forall ell, transitive (state_low_eq ell).
+Global Instance state_low_eq_refl: forall ell, Reflexive (state_low_eq ell) | 10.
 Proof.
 Admitted. (* WIP *)
 
-Theorem state_low_eq_sym: forall ell, symmetric (state_low_eq ell).
+Global Instance state_low_eq_trans: forall ell, Transitive (state_low_eq ell) | 10.
 Proof.
 Admitted. (* WIP *)
 
-Theorem event_low_eq_trans: forall ell, transitive (event_low_eq ell).
+Global Instance state_low_eq_sym: forall ell, Symmetric (state_low_eq ell) | 10.
 Proof.
+Admitted. (* WIP *)
+
+Global Instance event_low_eq_refl: forall ell, Reflexive (event_low_eq ell) | 10.
+Proof.
+Admitted. (* WIP *)
+
+Global Instance event_low_eq_trans: forall ell, Transitive (event_low_eq ell) | 10.
+Admitted. (* WIP *)
+
+Global Instance event_low_eq_sym: forall ell, Symmetric (event_low_eq ell) | 10.
 Admitted. (* WIP *)
 
 Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
