@@ -39,18 +39,16 @@ Theorem state_upd_node_unwind: forall ell id n1 n2 s1 s2,
 Proof.
 Admitted. (* WIP // TODO *)
 
-Theorem chan_append_unwind:
-    forall ell ch1 ch2 msg,
+Theorem chan_append_unwind: forall ell ch1 ch2 msg,
     chan_low_eq ell ch1 ch2 ->
     chan_low_eq ell (chan_append ch1 msg) (chan_append ch2 msg).
 Proof.
 Admitted. (* WIP // TODO *)
 
-Theorem state_upd_unwind_from_leqn:
-    forall ell id n1 n2 s1 s2,
-    node_low_eq ell n1 n2 ->
+Theorem state_upd_chan_unwind: forall ell han ch1 ch2 s1 s2,
+    chan_low_eq ell ch1 ch2 ->
     state_low_eq ell s1 s2 ->
-    state_low_eq ell (state_upd_node id n1 s1) (state_upd_node id n2 s2).
+    state_low_eq ell (state_upd_chan han ch1 s1) (state_upd_chan han ch2 s2).
 Proof.
 Admitted. (* WIP *)
 
@@ -75,7 +73,7 @@ Proof.
             constructor 2; assumption.
             *)
         }
-        eapply state_upd_unwind_from_leqn; assumption.
+        eapply state_upd_node_unwind; assumption.
     - (* some, none *)
         admit.
         (*
