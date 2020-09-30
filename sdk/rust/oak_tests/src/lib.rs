@@ -149,7 +149,7 @@ pub fn runtime_config_wasm(
                 ),
                 oidc_client_info: None,
             }),
-            http_config: None,
+            http_config: create_http_config(),
         },
         app_config: ApplicationConfiguration {
             wasm_modules,
@@ -164,6 +164,16 @@ pub fn runtime_config_wasm(
         config_map,
         sign_table: oak_runtime::SignatureTable::default(),
     }
+}
+
+/// Tries to create a `HttpConfiguration`. Returns None, if any of the paths does not represent a
+/// valid file.
+fn create_http_config() -> Option<oak_runtime::HttpConfiguration> {
+    let tls_config = oak_runtime::tls::TlsConfig::new(
+        "../../../certs/local/local.pem",
+        "../../../certs/local/local.key",
+    )?;
+    Some(oak_runtime::HttpConfiguration { tls_config })
 }
 
 /// Build a channel and interceptor suitable for building a client that connects
