@@ -8,7 +8,9 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+http = "*"
 log = "*"
+maplit = "*"
 prost = { path = "../third_party/prost" }
 prost-types = { path = "../third_party/prost/prost-types" }
 oak_abi = { path = "../oak_abi" }

@@ -825,7 +825,9 @@ dependencies = [
 name = "oak_services"
 version = "0.1.0"
 dependencies = [
+ "http",
  "log",
+ "maplit",
  "oak_abi",
  "oak_io",
  "oak_utils",

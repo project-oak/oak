@@ -743,7 +743,6 @@ version = "0.1.0"
 dependencies = [
  "http",
  "log",
- "maplit",
  "oak",
  "oak_abi",
  "oak_services",
@@ -1187,6 +1186,7 @@ version = "0.1.0"
 dependencies = [
  "byteorder",
  "fmt",
+ "http",
  "log",
  "oak_abi",
  "oak_derive",
@@ -1277,7 +1277,9 @@ dependencies = [
 name = "oak_services"
 version = "0.1.0"
 dependencies = [
+ "http",
  "log",
+ "maplit",
  "oak_abi",
  "oak_io",
  "oak_utils",
