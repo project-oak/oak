@@ -41,7 +41,7 @@ export default function ChannelDetails({
       <dt>ID:</dt>
       <dd>{channelId}</dd>
       <dt>Label:</dt>
-      <dd>{JSON.stringify(channel.label.toObject())}</dd>
+      <dd>{JSON.stringify(channel.label)}</dd>
       <dt>Messages:</dt>
       <dd>{channel.messages.length}</dd>
     </dl>
