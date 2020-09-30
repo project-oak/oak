@@ -44,13 +44,14 @@ function getGraphFromState(applicationState: OakApplicationState) {
   );
   const oakHandles = [...applicationState.nodeInfos.entries()]
     .map(([nodeId, nodeInfo]) =>
-      [...nodeInfo.abiHandles.entries()].map(
-        ([handle]) =>
-          `${getHandleDotId(
-            nodeId,
-            handle
-          )} [label="${nodeId}:${handle}" URL="/dynamic/node/${nodeId}/${handle}"]`
-      )
+      [...nodeInfo.abiHandles.entries()].map(([handle, { direction }]) => {
+        const shape =
+          direction === ChannelHalfDirection.Write ? 'invhouse' : 'house';
+        return `${getHandleDotId(
+          nodeId,
+          handle
+        )} [shape="${shape}" label="${nodeId}:${handle}" URL="/dynamic/node/${nodeId}/${handle}"]`;
+      })
     )
     .flat();
   const oakChannels = [...applicationState.channels.entries()].map(
@@ -63,6 +64,7 @@ function getGraphFromState(applicationState: OakApplicationState) {
     channel.messages.map((message, index) => getMessageDotId(channelId, index))
   );
   const connections = [
+    'edge [arrowsize=1.2 penwidth=2.5 color="#595959"]',
     // Connections between nodes, handles, & channels
     ...[...applicationState.nodeInfos.entries()]
       .map(([nodeId, nodeInfo]) =>
@@ -109,21 +111,21 @@ function getGraphFromState(applicationState: OakApplicationState) {
   ];
 
   return `digraph Runtime {
-    graph [bgcolor=transparent]
+    graph [bgcolor=transparent splines=ortho pad=0.5]
     {
-      node [shape=box style=filled fillcolor=red fontsize=24]
+      node [shape="box" style="filled" penwidth=0 margin=0.2 fillcolor="#3a3a3a" fontcolor="#faf8f8" fontsize=24 fontname="helvetica"]
       ${oakNodes.join('\n      ')}
     }
     {
-      node [shape=hexagon style=filled fillcolor=orange]
+      node [shape="hexagon" style="filled" penwidth=0 margin=0.02 fillcolor="#efa087" fontname="helvetica"]
       ${oakHandles.join('\n      ')}
     }
     {
-      node [shape=ellipse style=filled fillcolor=green]
+      node [shape="box" style="filled" penwidth=0 margin=0.1 fillcolor="#3e7ea0" fontcolor="#faf8f8" fontsize=24 fontname="helvetica"]
       ${oakChannels.join('\n      ')}
     }
     {
-      node [shape=rect fontsize=10 label="msg"]
+      node [shape="rect" fontsize=10 label="msg" fontname="helvetica"]
       ${oakMessages.join('\n      ')}
     }
     ${connections.join('\n    ')}
@@ -141,6 +143,7 @@ const useStyles = makeStyles(() => ({
     height: '100%',
 
     '& > svg': { width: '100%', height: '100%' },
+    '& > svg text': { fontFamily: 'inherit' },
   },
 }));
 
