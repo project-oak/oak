@@ -53,6 +53,7 @@ Local Open Scope aug_scope.
 Notation "n '--->' msg":= (EvL (OutEv msg) n.(nlbl)) (at level 10) : aug_scope.
 Notation "n '<---' msg":= (EvL (InEv msg) n.(nlbl)) (at level 10) : aug_scope.
 Notation "n '---'":= (EvL NilEv n.(nlbl)) (at level 10) : aug_scope.
+Notation "'--' n '--'" := (EvL (NCreateEv n) n.(nlbl)) (at level 10) : aug_scope.
 
 
 Definition head_st (t: trace) :=
@@ -78,28 +79,13 @@ Inductive step_node_ev (id: node_id): call -> state -> state -> event_l -> Prop 
         step_node id (CreateChannel lbl) s s' ->
         step_node_ev id (CreateChannel lbl) s s' (n --- )
     | SCreateNode s n lbl h s':
-            (* model observation that a node is created ?? *)
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateNode lbl h) s s' ->
-        step_node_ev id (CreateNode lbl h) s s' (n ---)
+        step_node_ev id (CreateNode lbl h) s s' ( -- n -- )
     | SInternal s n s':
         s.(nodes) .[?id] = Some n ->
         step_node id Internal s s' ->
         step_node_ev id Internal s s' (n ---).
-
-
-Definition trace_upd_head_state (t: trace) (s: state) :=
-    match t with
-        | nil => nil
-        | (s', e) :: t' => (s, e) :: t'
-    end.
-
-Definition head_set_call t id c: trace :=
-    match t with 
-        | nil => nil (* this case never happens in the 
-                context where this is used *)
-        | (s, e) :: t' => (s_set_call s id c, e) :: t'
-    end.
 
 Inductive step_system_ev: state -> state -> event_l -> Prop :=
     | SytsemEvSkip s ell: step_system_ev s s (EvL NilEv ell)
@@ -112,6 +98,20 @@ Inductive step_system_ev: state -> state -> event_l -> Prop :=
             that the node makes after the one executed here is an arbitrary one
             of that node's choosing *)
         step_system_ev s s'' e.
+
+(* TODO
+    Theorem that proves that step_system_ev is sound/complete for step_system.
+    (* should be trivial ? *)
+
+    The reason why there is more than one state transition relation is that the
+    'events' are just an abstract concept meant to state the security theorems,
+    so it seemed useful to keep them separate from the main specification of 
+    behavior.
+
+    Alternatively, we could just decide that actually including events in the
+    main specification of behavior is just fine, and then we just replace
+    step_sytem with step_system_ev.
+*)
 
 Inductive step_system_ev_t: trace -> trace -> Prop :=
     | StepTrace t s s' e:
