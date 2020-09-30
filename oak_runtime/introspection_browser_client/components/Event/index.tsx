@@ -16,7 +16,11 @@
 
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import ObjectAsDescriptionList from '~/components/ObjectAsDescriptionList';
+import ObjectAsDescriptionList, {
+  InlineDl,
+  InlineDt,
+  InlineDd,
+} from '~/components/ObjectAsDescriptionList';
 import introspectionEventsProto from '~/protoc_out/proto/introspection_events_pb';
 
 function camelCaseToTitleCase(camelCase: string) {
@@ -59,7 +63,12 @@ export default function Event({
           at <time dateTime={eventTime}>{eventTime}</time>
         </span>
       </div>
-      <ObjectAsDescriptionList object={eventDetails} />
+      <ObjectAsDescriptionList
+        object={eventDetails}
+        dlComponent={InlineDl}
+        dtComponent={InlineDt}
+        ddComponent={InlineDd}
+      />
     </div>
   );
 }

@@ -15,38 +15,43 @@
 //
 
 import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import { styled } from '@material-ui/core/styles';
 
-const useObjectAsDescriptionListStyles = makeStyles({
-  dl: {
-    display: 'inline',
-    '& dl': { '&:before': { content: '"{ "' }, '&:after': { content: '" }"' } },
-  },
-  dt: {
-    display: 'inline',
-    margin: 0,
-    '&:after': { content: '": "' },
-  },
-  dd: {
-    display: 'inline',
-    margin: 0,
-    '&:after': { content: '", "' },
-    '&:last-of-type': { '&:after': { content: '""' } },
-  },
+export const InlineDl = styled('dl')({
+  display: 'inline',
+  '& dl': { '&:before': { content: '"{ "' }, '&:after': { content: '" }"' } },
+});
+
+export const InlineDt = styled('dt')({
+  display: 'inline',
+  margin: 0,
+  '&:after': { content: '": "' },
+});
+
+export const InlineDd = styled('dd')({
+  display: 'inline',
+  margin: 0,
+  '&:after': { content: '", "' },
+  '&:last-of-type': { '&:after': { content: '""' } },
 });
 
 export default function ObjectAsDescriptionList({
   object,
+  dlComponent: DlComponent = ({ children }) => <dl>{children}</dl>,
+  dtComponent: DtComponent = ({ children }) => <dt>{children}</dt>,
+  ddComponent: DdComponent = ({ children }) => <dd>{children}</dd>,
 }: {
   object: Object;
+  dlComponent?: React.ComponentType;
+  dtComponent?: React.ComponentType;
+  ddComponent?: React.ComponentType;
 }) {
-  const classes = useObjectAsDescriptionListStyles();
   return (
-    <dl className={classes.dl}>
+    <DlComponent>
       {Object.entries(object).map(([key, value]) => (
         <>
-          <dt className={classes.dt}>{key}</dt>
-          <dd className={classes.dd}>
+          <DtComponent>{key}</DtComponent>
+          <DdComponent>
             {
               // The array check needs to come first, since
               // typeof [1,2,3] === 'object'
@@ -55,14 +60,19 @@ export default function ObjectAsDescriptionList({
               ) : // Check for null alongside the object check, since
               // typeof null === 'object'
               typeof value === 'object' && value !== null ? (
-                <ObjectAsDescriptionList object={value} />
+                <ObjectAsDescriptionList
+                  object={value}
+                  dlComponent={DlComponent}
+                  dtComponent={DtComponent}
+                  ddComponent={DdComponent}
+                />
               ) : (
                 value
               )
             }
-          </dd>
+          </DdComponent>
         </>
       ))}
-    </dl>
+    </DlComponent>
   );
 }
