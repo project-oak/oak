@@ -356,26 +356,31 @@ Because the Oak Application is available as a gRPC service, clients written in
 any language that supports gRPC can use the service. For example in Rust:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/private_set_intersection/client/rust/src/main.rs Rust /.*web_assembly_module_signature_tag/ /Ok(request)*/)
-```rust
-  let public_key_tag = web_assembly_module_signature_tag(&public_key);
-  let mut label = Vec::new();
-  Label {
-      confidentiality_tags: vec![public_key_tag],
-      integrity_tags: vec![],
-  }
-  .encode(&mut label)
-  .context("Error encoding label")?;
-  Ok(PrivateSetIntersectionClient::with_interceptor(
-      channel,
-      move |mut request: Request<()>| {
-          request.metadata_mut().insert_bin(
-              oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
-              MetadataValue::from_bytes(label.as_ref()),
-          );
-          Ok(request)
-      },
-  ))
+[embedmd]:# (../examples/private_set_intersection/client/rust/src/main.rs Rust /^.*create_client.*/ /^}/)
+```Rust
+fn create_client(
+    channel: Channel,
+    public_key: &[u8],
+) -> anyhow::Result<PrivateSetIntersectionClient<Channel>> {
+    let public_key_tag = web_assembly_module_signature_tag(&public_key);
+    let mut label = Vec::new();
+    Label {
+        confidentiality_tags: vec![public_key_tag],
+        integrity_tags: vec![],
+    }
+    .encode(&mut label)
+    .context("Error encoding label")?;
+    Ok(PrivateSetIntersectionClient::with_interceptor(
+        channel,
+        move |mut request: Request<()>| {
+            request.metadata_mut().insert_bin(
+                oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
+                MetadataValue::from_bytes(label.as_ref()),
+            );
+            Ok(request)
+        },
+    ))
+}
 ```
 <!-- prettier-ignore-end -->
 
