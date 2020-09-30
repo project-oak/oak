@@ -63,7 +63,7 @@ export type NodeId = string;
 export type AbiHandle = string;
 type Label = oakAbiProto.Label.AsObject;
 type NodeInfos = Map<NodeId, NodeInfo>;
-interface NodeInfo {
+export interface NodeInfo {
   name: string;
   abiHandles: Map<AbiHandle, ChannelHalf>;
   label: Label;
