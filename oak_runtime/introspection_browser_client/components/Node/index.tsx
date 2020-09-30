@@ -29,9 +29,12 @@ export default function Node({ nodeId, nodeInfo }: NodeProps) {
       object={{
         id: nodeId,
         ...nodeInfo,
-        handles: [...nodeInfo.abiHandles.entries()].map(
-          ([handle, channelHalf]) =>
-            `${handle} pointing to channel ${channelHalf.channelId} ${channelHalf.direction}`
+        handles: [...nodeInfo.abiHandles.entries()].reduce(
+          (acc, [handle, channelHalf]) => ({
+            ...acc,
+            [handle]: `points to channel ${channelHalf.channelId} ${channelHalf.direction}`,
+          }),
+          {}
         ),
       }}
     />
