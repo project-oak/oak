@@ -15,6 +15,11 @@ additional_args = [
 ]
 
 [clients]
-cpp = { Bazel = { bazel_target = "//examples/private_set_intersection/client/cpp:client" }, additional_args = [
-  "--public_key=../../../../../../../../../examples/keys/ed25519/test.pub",
+rust = { Cargo = { cargo_manifest = "examples/private_set_intersection/client/rust/Cargo.toml" }, additional_args = [
+  "--root-tls-certificate=examples/certs/local/ca.pem",
+  "--public-key=examples/keys/ed25519/test.pub",
 ] }
+# TODO(#1537): Uncomment C++ client when it's possible to run multiple PSI clients.
+# cpp = { Bazel = { bazel_target = "//examples/private_set_intersection/client/cpp:client" }, additional_args = [
+#   "--public_key=../../../../../../../../../examples/keys/ed25519/test.pub",
+# ] }

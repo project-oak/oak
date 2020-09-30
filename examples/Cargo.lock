@@ -1492,6 +1492,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "private_set_intersection_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "env_logger",
+ "http",
+ "log",
+ "maplit",
+ "oak_abi",
+ "oak_utils",
+ "pem",
+ "prost",
+ "structopt",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
 name = "private_set_intersection_grpc"
 version = "0.1.0"
 dependencies = [

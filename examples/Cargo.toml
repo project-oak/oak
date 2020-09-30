@@ -26,6 +26,7 @@ members = [
   "trusted_information_retrieval/module_0/rust",
   "trusted_information_retrieval/module_1/rust",
   "private_set_intersection/grpc",
+  "private_set_intersection/client/rust",
   "private_set_intersection/module/rust",
   "running_average/grpc",
   "running_average/module/rust",
