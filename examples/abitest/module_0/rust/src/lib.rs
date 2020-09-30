@@ -338,6 +338,14 @@ impl OakAbiTestService for FrontendNode {
             ),
         );
         tests.insert(
+            "CreateHttpServer",
+            (Self::test_create_http_server, Count::Unsure),
+        );
+        tests.insert(
+            "HttpServerInvalidAddress",
+            (Self::test_http_server_invalid_address, Count::Unsure),
+        );
+        tests.insert(
             "RoughtimeClient",
             (Self::test_roughtime_client, Count::Unsure),
         );
@@ -2150,6 +2158,27 @@ impl FrontendNode {
         }
         receiver.close().expect("failed to close receiver");
 
+        Ok(())
+    }
+
+    fn test_create_http_server(&mut self) -> TestResult {
+        // Create an HTTP server pseudo-Node.
+        let result = oak::http::init("[::]:8282");
+        expect_matches!(result, Ok(_));
+        let invocation_receiver = result.unwrap();
+        // Close the only read-handle for the invocation handle, which should
+        // trigger the HTTP server pseudo-Node to terminate (but we can't
+        // check that here).
+        expect_eq!(Ok(()), invocation_receiver.close());
+        Ok(())
+    }
+
+    fn test_http_server_invalid_address(&mut self) -> TestResult {
+        // Attempt to create an additional gRPC server with an invalid local address.
+        expect_eq!(
+            Some(OakStatus::ErrInvalidArgs),
+            oak::http::init("Platform 9 3/4").err()
+        );
         Ok(())
     }
 

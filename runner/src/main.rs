@@ -530,6 +530,8 @@ fn run_example_server(
         spread![
             "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
             "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
+            "--http-tls-certificate=./examples/certs/local/local.pem".to_string(),
+            "--http-tls-private-key=./examples/certs/local/local.key".to_string(),
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
             ...match opt.server_variant {

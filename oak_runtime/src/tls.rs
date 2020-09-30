@@ -17,7 +17,6 @@
 use std::{
     fs::File,
     io::{self, BufReader},
-    path::Path,
     sync::Arc,
 };
 use tokio_rustls::rustls::{
@@ -34,12 +33,12 @@ pub struct TlsConfig {
 
 impl TlsConfig {
     pub fn new(cert_path: &str, key_path: &str) -> Option<Self> {
-        let certs = match load_certs(&Path::new(cert_path)) {
+        let certs = match load_certs(cert_path) {
             Ok(certs) => certs,
             Err(_) => return None,
         };
 
-        let keys = match load_keys(&Path::new(key_path)) {
+        let keys = match load_keys(key_path) {
             Ok(keys) => keys,
             Err(_) => return None,
         };
@@ -59,12 +58,12 @@ pub(crate) fn to_server_config(tls_config: TlsConfig) -> Arc<ServerConfig> {
     Arc::new(cfg)
 }
 
-fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
+fn load_certs(path: &str) -> io::Result<Vec<Certificate>> {
     certs(&mut BufReader::new(File::open(path)?))
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
 }
 
-fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
+fn load_keys(path: &str) -> io::Result<Vec<PrivateKey>> {
     rsa_private_keys(&mut BufReader::new(File::open(path)?))
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
 }
