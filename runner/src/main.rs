@@ -528,8 +528,10 @@ fn run_example_server(
     Cmd::new_with_env(
         "oak_loader/bin/oak_loader",
         spread![
-            "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
             "--grpc-tls-certificate=./examples/certs/local/local.pem".to_string(),
+            "--grpc-tls-private-key=./examples/certs/local/local.key".to_string(),
+            "--http-tls-certificate=./examples/certs/local/local.pem".to_string(),
+            "--http-tls-private-key=./examples/certs/local/local.key".to_string(),
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
             ...match opt.server_variant {

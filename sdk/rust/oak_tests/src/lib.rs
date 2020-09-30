@@ -76,8 +76,8 @@ const RUNTIME_URI: &str = "https://localhost:8080";
 const DEFAULT_MODULE_MANIFEST: &str = "Cargo.toml";
 
 // Retry parameters when connecting to a gRPC server.
-const RETRY_COUNT: u32 = 360;
-const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500);
+const RETRY_COUNT: u32 = 600;
+const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(800);
 
 /// Convenience helper to build and run a single-Node Application with the given module name, using
 /// the default name "oak_main" for its entrypoint.
@@ -149,7 +149,7 @@ pub fn runtime_config_wasm(
                 ),
                 oidc_client_info: None,
             }),
-            http_config: None,
+            http_config: create_http_config(),
         },
         app_config: ApplicationConfiguration {
             wasm_modules,
@@ -166,6 +166,16 @@ pub fn runtime_config_wasm(
     }
 }
 
+/// Tries to create a [`oak_runtime::HttpConfiguration`]. Returns `None`, if any of the paths does
+/// not represent a valid file.
+fn create_http_config() -> Option<oak_runtime::HttpConfiguration> {
+    let tls_config = oak_runtime::tls::TlsConfig::new(
+        "../../../certs/local/local.pem",
+        "../../../certs/local/local.key",
+    )?;
+    Some(oak_runtime::HttpConfiguration { tls_config })
+}
+
 /// Build a channel and interceptor suitable for building a client that connects
 /// to a Runtime under test.
 pub async fn channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor>) {
@@ -177,7 +187,7 @@ pub async fn channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor
         .tls_config(tls_config)
         .expect("Couldn't create TLS configuration");
 
-    // The Runtime may have just been started for a test, and make take some time
+    // The Runtime may have just been started for a test, and may take some time
     // to come fully up, start a gRPC server and accept connections. Allow for
     // this by retrying at intervals until the server responds or we hit a retry
     // limit.

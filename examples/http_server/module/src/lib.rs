@@ -29,7 +29,10 @@ oak::entrypoint!(oak_main => |_in_channel| {
     oak::run_event_loop(node, http_channel);
 });
 
-struct StaticHttpServer;
+/// A simple HTTP server that responds with `OK` (200) to every request sent to `/`, and with
+/// `NOT_FOUND` (400) to any other request. It is used in the `abitest`. So its functionality
+/// should be modified with care!
+pub struct StaticHttpServer;
 
 impl Node<Invocation> for StaticHttpServer {
     fn handle_command(&mut self, invocation: Invocation) -> Result<(), OakError> {

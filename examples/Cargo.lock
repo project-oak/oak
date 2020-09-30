@@ -13,6 +13,7 @@ dependencies = [
  "env_logger",
  "expect",
  "hex",
+ "http_server",
  "log",
  "maplit",
  "oak",

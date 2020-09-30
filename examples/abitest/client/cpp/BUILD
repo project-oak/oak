@@ -26,6 +26,8 @@ cc_binary(
     deps = [
         ":grpc_test_server",
         ":grpctest",
+        ":httplib_config",
+        ":httptest",
         "//examples/abitest/proto:abitest_cc_grpc",
         "//oak/client:application_client",
         "//oak/server/storage:memory_provider",
@@ -35,6 +37,13 @@ cc_binary(
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "httplib_config",
+    hdrs = ["httplib_config.h"],
+    deps = [
         "@cpp_httplib//:httplib",
     ],
 )
@@ -47,6 +56,17 @@ cc_library(
         "//examples/abitest/proto:abitest_cc_grpc",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
+    ],
+)
+
+cc_library(
+    name = "httptest",
+    srcs = ["httptest.cc"],
+    hdrs = ["httptest.h"],
+    deps = [
+        ":httplib_config",
+        "//oak/common:label",
+        "@com_github_google_glog//:glog",
     ],
 )
 
