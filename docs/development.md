@@ -287,16 +287,14 @@ signed using [Ed25519](https://ed25519.cr.yp.to/) scheme.
 
 If you are reviewing an Oak module (for example `private_set_intersection.wasm`)
 and want to create a signature for it, first you need a private/public key pair.
-It can be generated using `oak_sign` utility:
+It can be generated with `oak_sign` utility using the following script (that
+will generate two key files: `test.key` and `test.pub`)
 
 ```bash
 ./scripts/oak_sign generate \
   --private-key=examples/keys/ed25519/test.key \
   --public-key=examples/keys/ed25519/test.pub
 ```
-
-It generates two key files (`test.key` and `test.pub`) that are encoded using
-[PEM](https://tools.ietf.org/html/rfc1421) format.
 
 Then a Wasm module can be signed using the following command:
 
