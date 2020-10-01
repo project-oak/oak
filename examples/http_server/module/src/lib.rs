@@ -29,7 +29,7 @@ oak::entrypoint!(oak_main => |_in_channel| {
     oak::run_event_loop(node, http_channel);
 });
 
-struct StaticHttpServer;
+pub struct StaticHttpServer;
 
 impl Node<Invocation> for StaticHttpServer {
     fn handle_command(&mut self, invocation: Invocation) -> Result<(), OakError> {

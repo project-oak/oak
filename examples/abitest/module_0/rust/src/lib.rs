@@ -80,6 +80,19 @@ impl FrontendNode {
             oak::channel_close(wh.handle).unwrap();
             oak::channel_close(rh.handle).unwrap();
         }
+
+        {
+            // Create a new node to handle HTTP requests
+            let (wh, rh) = oak::channel_create().unwrap();
+            oak::node_create(
+                &oak::node_config::wasm(FRONTEND_MODULE_NAME, "http_oak_main"),
+                rh,
+            )
+            .expect("failed to create http_oak_main Node");
+            oak::channel_close(wh.handle).unwrap();
+            oak::channel_close(rh.handle).unwrap();
+        }
+
         oak::logger::init(log::Level::Debug).expect("could not initialize logging node");
 
         // Create backend node instances.
@@ -2350,6 +2363,17 @@ pub extern "C" fn channel_loser(_handle: u64) {
     // At this point there are two channels that this Node can no longer access.
     // On Node exit (when this function returns), the Runtime should free those
     // channels.
+}
+
+// Entrypoint for a Node instance that handles HTTP requests.
+#[no_mangle]
+pub extern "C" fn http_oak_main(_handle: u64) {
+    oak::logger::init_default();
+    let node = http_server::StaticHttpServer {};
+    info!("Starting HTTP server pseudo-node on port 8383.");
+    let http_channel =
+        oak::http::init("[::]:8383").expect("Could not create HTTP server pseudo-Node!");
+    oak::run_event_loop(node, http_channel);
 }
 
 // Build a nested chain of channels where:
