@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-use crate::database::parse_database;
+use crate::{
+    database::parse_database, handler::distance, proto::oak::examples::trusted_database::Location,
+};
 use assert_matches::assert_matches;
 
 const XML_DATABASE: &str = r#"<?xml version="1.0" encoding="utf-8"?><stations lastUpdate="1590775020879" version="2.0">
@@ -85,4 +87,32 @@ fn test_parse_database() {
     let database = parse_database(&XML_DATABASE.as_bytes().to_vec());
     assert_matches!(database, Ok(_));
     assert_eq!(database.unwrap().len(), 4);
+}
+
+fn get_distance(first: (f32, f32), second: (f32, f32)) -> f32 {
+    distance(
+        Location {
+            latitude_degrees: first.0,
+            longitude_degrees: first.1,
+        },
+        Location {
+            latitude_degrees: second.0,
+            longitude_degrees: second.1,
+        },
+    )
+}
+
+fn assert_approx_eq(left: f32, right: f32) {
+    if (left - right).abs() > 0.000001 {
+        panic!("{} is not equal to {}", left, right);
+    }
+}
+
+#[test]
+fn test_distance() {
+    assert_approx_eq(get_distance((0.0, 0.0), (0.0, 0.0)), 0.0);
+    assert_approx_eq(get_distance((0.0, 0.0), (10.0, 10.0)), 1568.5204);
+    assert_approx_eq(get_distance((10.0, 10.0), (-10.0, -10.0)), 3137.0413);
+    assert_approx_eq(get_distance((0.0, 0.0), (0.0, 180.0)), 20015.088);
+    assert_approx_eq(get_distance((90.0, 0.0), (-90.0, 180.0)), 20015.088);
 }

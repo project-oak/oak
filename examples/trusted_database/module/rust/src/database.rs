@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
+use crate::proto::oak::examples::trusted_database::{Location, PointOfInterest};
 use log::{debug, error};
 use oak::OakError;
 use oak_abi::proto::oak::application::ConfigMap;
 use serde::Deserialize;
-use trusted_database_handler::proto::oak::examples::trusted_database::{Location, PointOfInterest};
 
 /// Database structure represents internal XML fields from the following database:
 /// https://tfl.gov.uk/tfl/syndication/feeds/cycle-hire/livecyclehireupdates.xml

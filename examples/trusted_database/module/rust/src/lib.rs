@@ -32,16 +32,33 @@
 //! trust in the Oak implementation. Thus clients don't need to use module hash or module signature
 //! labels and can only assign their token labels to the data.
 
+pub mod proto {
+    pub mod oak {
+        pub use oak::proto::oak::invocation;
+        pub mod examples {
+            pub mod trusted_database {
+                include!(concat!(
+                    env!("OUT_DIR"),
+                    "/oak.examples.trusted_database.rs"
+                ));
+                include!(concat!(
+                    env!("OUT_DIR"),
+                    "/oak.examples.trusted_database_command.rs"
+                ));
+            }
+        }
+    }
+}
+
 mod database;
+mod handler;
 #[cfg(test)]
 mod tests;
 
 use database::load_database;
 use log::{debug, error};
 use oak::{grpc, io::SenderExt, proto::oak::invocation::GrpcInvocationReceiver, Node, OakError};
-use trusted_database_handler::proto::oak::examples::trusted_database::{
-    PointOfInterest, TrustedDatabaseCommand,
-};
+use proto::oak::examples::trusted_database::{PointOfInterest, TrustedDatabaseCommand};
 
 /// Oak Node that contains an in-memory database.
 pub struct TrustedDatabaseNode {
@@ -59,7 +76,7 @@ impl Node<grpc::Invocation> for TrustedDatabaseNode {
             })?;
         // TODO(#1406): Use client assigned label for creating a new handler Node.
         oak::node_create(
-            &oak::node_config::wasm("trusted_database_handler", "handler_oak_main"),
+            &oak::node_config::wasm("app", "handler_oak_main"),
             receiver.handle,
         )
         .map_err(|error| {

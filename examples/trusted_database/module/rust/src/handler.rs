@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Trusted Database Handler module.
+//! Trusted Database Handler Node.
 //!
 //! In the current implementation clients send their location coordinates (latitude and longitude)
 //! and the Handler Node returns the location of the closest Point Of Interest.
@@ -22,33 +22,12 @@
 //! The Handler Node searches for the closest Point Of Interest in the database received from the
 //! Main Node.
 
-pub mod proto {
-    pub mod oak {
-        pub use oak::proto::oak::invocation;
-        pub mod examples {
-            pub mod trusted_database {
-                include!(concat!(
-                    env!("OUT_DIR"),
-                    "/oak.examples.trusted_database.rs"
-                ));
-                include!(concat!(
-                    env!("OUT_DIR"),
-                    "/oak.examples.trusted_database_command.rs"
-                ));
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests;
-
-use log::{debug, error, warn};
-use oak::{grpc, io::ReceiverExt};
-use proto::oak::examples::trusted_database::{
+use crate::proto::oak::examples::trusted_database::{
     ListPointsOfInterestRequest, ListPointsOfInterestResponse, Location, PointOfInterest,
     TrustedDatabase, TrustedDatabaseCommand, TrustedDatabaseDispatcher,
 };
+use log::{debug, error, warn};
+use oak::{grpc, io::ReceiverExt};
 
 // Error messages.
 const NO_LOCATION_ERROR: &str = "Location is not specified";
