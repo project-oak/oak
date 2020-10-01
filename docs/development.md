@@ -10,6 +10,7 @@
   - [Build Runtime Server](#build-runtime-server)
   - [Run Runtime Server](#run-runtime-server)
   - [Run Example Client](#run-example-client)
+  - [Signing Oak Wasm modules](#signing-oak-wasm-modules)
 
 ## Quick Start
 
@@ -281,15 +282,53 @@ I0511 10:15:29.593106 244858 hello_world.cc:57] Response: HELLO AGAIN WORLDS!
 
 ### Signing Oak Wasm modules
 
-Oak Wasm modules can be signed using [Ed25519](https://ed25519.cr.yp.to/)
-scheme.
+As described in [Oak Concepts](/docs/concepts.md#labels) Oak Wasm modules can be
+signed using [Ed25519](https://ed25519.cr.yp.to/) scheme.
 
-In order create a signature `hello_world.sign` for a Wasm module
-`hello_world.wasm` use the following script:
+If you are reviewing an Oak module (for example `private_set_intersection.wasm`)
+and want to create a signature for it, first you need a private/public key pair.
+It can be generated with `oak_sign` utility using the following script (that
+will generate two key files: `test.key` and `test.pub`)
+
+```bash
+./scripts/oak_sign generate \
+  --private-key=examples/keys/ed25519/test.key \
+  --public-key=examples/keys/ed25519/test.pub
+```
+
+Then a Wasm module can be signed using the following command:
 
 ```bash
 ./scripts/oak_sign sign \
-  --private-key=examples/certs/ed25519/test.key \
-  --input-file=examples/hello_world/bin/hello_world.wasm \
-  --signature=examples/hello_world/bin/hello_world.sign
+  --private-key=examples/keys/ed25519/test.key \
+  --input-file=examples/private_set_intersection/bin/private_set_intersection.wasm \
+  --signature=examples/private_set_intersection/bin/signature.pem
 ```
+
+This command generates a signature file `signature.pem` containing a public key,
+a Wasm module signature (also encoded with PEM) and corresponding Wasm module
+SHA-256 hash.
+
+Wasm module signatures should be passed to `oak_loader` by an Oak operator using
+the `--signatures-manifest=signatures.toml`, where `signatures.toml` file
+contains paths to signature files for each signed Oak Wasm module. Also, since
+each module can be signed by multiple entities, each module may have multiple
+signatures.
+
+The `signatures.toml` file can look like this:
+
+```toml
+signatures = [
+  { path = "examples/private_set_intersection/signature.pem" },
+  { path = "examples/private_set_intersection/additional_signature.pem" },
+]
+
+```
+
+Where `signature.pem` and `additional_signature.pem` are signatures that could
+be provided by different reviewers.
+
+Oak clients can download the `test.pub` public key (from the reviewer's public
+repository) and use it as a
+[label](/docs/programming-oak.md#using-an-oak-application-from-a-client) for
+requests sent to the corresponding Oak application.
