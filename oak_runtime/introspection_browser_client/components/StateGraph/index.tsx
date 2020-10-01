@@ -18,6 +18,9 @@ import React from 'react';
 import { graphviz } from 'd3-graphviz';
 import { transition } from 'd3-transition';
 import { easeLinear } from 'd3-ease';
+import FormGroup from '@material-ui/core/FormGroup';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from '@material-ui/core/Switch';
 import { makeStyles } from '@material-ui/core/styles';
 import {
   OakApplicationState,
@@ -28,7 +31,12 @@ import {
 } from '~/components/Root';
 
 // Generate a Graphviz dot graph that shows the shape of the Nodes and Channels
-function getGraphFromState(applicationState: OakApplicationState) {
+function getGraphFromState(
+  applicationState: OakApplicationState,
+  options = {
+    shouldIncludeHandles: false,
+  }
+) {
   const getNodeDotId = (nodeId: NodeId) => `node${nodeId}`;
   const getChannelDotId = (channelId: ChannelID) => `channel${channelId}`;
   const getHandleDotId = (nodeId: NodeId, handle: AbiHandle) =>
@@ -42,18 +50,26 @@ function getGraphFromState(applicationState: OakApplicationState) {
         nodeInfo.name
       }"  URL="/dynamic/node/${nodeId}"]`
   );
-  const oakHandles = [...applicationState.nodeInfos.entries()]
-    .map(([nodeId, nodeInfo]) =>
-      [...nodeInfo.abiHandles.entries()].map(([handle, { direction }]) => {
-        const shape =
-          direction === ChannelHalfDirection.Write ? 'invhouse' : 'house';
-        return `${getHandleDotId(
-          nodeId,
-          handle
-        )} [shape="${shape}" label="${nodeId}:${handle}" URL="/dynamic/node/${nodeId}/${handle}"]`;
-      })
-    )
-    .flat();
+  const oakHandles = options.shouldIncludeHandles
+    ? [...applicationState.nodeInfos.entries()]
+        .map(([nodeId, nodeInfo]) =>
+          [...nodeInfo.abiHandles.entries()].map(
+            ([handle, { direction, channelId }]) => {
+              const shape =
+                direction === ChannelHalfDirection.Write ? 'invhouse' : 'house';
+              return `${getHandleDotId(
+                nodeId,
+                handle
+              )} [shape="${shape}" label="${
+                direction === ChannelHalfDirection.Write
+                  ? 'writes to'
+                  : 'reads from'
+              } channel ${channelId}\n${handle}" URL="/dynamic/node/${nodeId}/${handle}"]`;
+            }
+          )
+        )
+        .flat()
+    : [];
   const oakChannels = [...applicationState.channels.entries()].map(
     ([channelId]) =>
       `${getChannelDotId(channelId)} [URL="/dynamic/channel/${channelId}"]`
@@ -64,24 +80,32 @@ function getGraphFromState(applicationState: OakApplicationState) {
     channel.messages.map((message, index) => getMessageDotId(channelId, index))
   );
   const connections = [
-    'edge [arrowsize=1.2 penwidth=2.5 color="#595959"]',
+    'edge [arrowsize=1.2 penwidth=5 color="#595959"]',
     // Connections between nodes, handles, & channels
     ...[...applicationState.nodeInfos.entries()]
       .map(([nodeId, nodeInfo]) =>
         [...nodeInfo.abiHandles.entries()].map(([handle, channelHalf]) => {
           switch (channelHalf.direction) {
             case ChannelHalfDirection.Write:
-              return `${getNodeDotId(nodeId)} -> ${getHandleDotId(
-                nodeId,
-                handle
-              )} -> ${getChannelDotId(channelHalf.channelId)}`;
+              return options.shouldIncludeHandles
+                ? `${getNodeDotId(nodeId)} -> ${getHandleDotId(
+                    nodeId,
+                    handle
+                  )} -> ${getChannelDotId(channelHalf.channelId)}`
+                : `${getNodeDotId(nodeId)} -> ${getChannelDotId(
+                    channelHalf.channelId
+                  )} [edgeURL="/dynamic/node/${nodeId}/${handle}" edgetooltip="Write handle ${nodeId}:${handle}"]`;
 
             case ChannelHalfDirection.Read:
-              return `${getChannelDotId(
-                channelHalf.channelId
-              )} -> ${getHandleDotId(nodeId, handle)} -> ${getNodeDotId(
-                nodeId
-              )}`;
+              return options.shouldIncludeHandles
+                ? `${getChannelDotId(
+                    channelHalf.channelId
+                  )} -> ${getHandleDotId(nodeId, handle)} -> ${getNodeDotId(
+                    nodeId
+                  )}`
+                : `${getChannelDotId(channelHalf.channelId)} -> ${getNodeDotId(
+                    nodeId
+                  )} [edgeURL="/dynamic/node/${nodeId}/${handle}" edgetooltip="Read handle ${nodeId}:${handle}"]`;
 
             default:
               // This should never happen
@@ -93,7 +117,7 @@ function getGraphFromState(applicationState: OakApplicationState) {
       )
       .flat(),
     // Connections between channels & messages
-    'edge [arrowhead=none]',
+    'edge [arrowhead=none penwidth=2]',
     ...[...applicationState.channels.entries()].map(([channelId, channel]) =>
       channel.messages.map((message, index) =>
         index === 0
@@ -141,21 +165,61 @@ const useStyles = makeStyles(() => ({
   root: {
     width: '100%',
     height: '100%',
+    position: 'relative',
+  },
+
+  graph: {
+    width: '100%',
+    height: '100%',
 
     '& > svg': { width: '100%', height: '100%' },
     '& > svg text': { fontFamily: 'inherit' },
   },
+
+  formRow: {
+    position: 'absolute',
+    top: '10px',
+    left: '10px',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderRadius: '5px',
+    backdropFilter: 'blur(5px)',
+    padding: '4px 10px',
+  },
 }));
 
 export default function StateGraph({ applicationState }: StateGraphProps) {
+  const [shouldIncludeHandles, setShouldIncludeHandles] = React.useState(false);
   const classes = useStyles();
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    const dotGraph = getGraphFromState(applicationState);
+    const dotGraph = getGraphFromState(applicationState, {
+      shouldIncludeHandles,
+    });
     // Type as any to fix type mismatch caused by incorrect typings.
     const transiton: any = transition().duration(300).ease(easeLinear);
     graphviz(ref.current).transition(transiton).scale(0.9).renderDot(dotGraph);
-  }, [applicationState]);
+  }, [applicationState, shouldIncludeHandles]);
 
-  return <div className={classes.root} ref={ref} />;
+  return (
+    <div className={classes.root}>
+      <FormGroup row className={classes.formRow}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={shouldIncludeHandles}
+              onChange={() =>
+                setShouldIncludeHandles(
+                  (shouldIncludeHandles) => !shouldIncludeHandles
+                )
+              }
+              name="shouldIncludeHandles"
+              color="primary"
+            />
+          }
+          label="Show Handles"
+        />
+      </FormGroup>
+      <div className={classes.graph} ref={ref} />
+    </div>
+  );
 }
