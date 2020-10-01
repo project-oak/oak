@@ -342,8 +342,24 @@ impl OakAbiTestService for FrontendNode {
             (Self::test_create_http_server, Count::Unsure),
         );
         tests.insert(
+            "InvalidHttpPort",
+            (Self::test_invalid_http_port, Count::Unsure),
+        );
+        tests.insert(
             "HttpServerInvalidAddress",
             (Self::test_http_server_invalid_address, Count::Unsure),
+        );
+        tests.insert(
+            "HttpServerFailNoHandle",
+            (Self::test_http_server_fail_no_handle, Count::Unsure),
+        );
+        tests.insert(
+            "HttpServerFailReadHandle",
+            (Self::test_http_server_fail_read_handle, Count::Unsure),
+        );
+        tests.insert(
+            "HttpServerFailTwoHandles",
+            (Self::test_http_server_fail_two_handles, Count::Unsure),
         );
         tests.insert(
             "RoughtimeClient",
@@ -2173,12 +2189,63 @@ impl FrontendNode {
         Ok(())
     }
 
+    fn test_invalid_http_port(&mut self) -> TestResult {
+        // Attempt to create an HTTP server with an invalid local port.
+        expect_eq!(
+            Some(OakStatus::ErrInvalidArgs),
+            oak::http::init("[::]:1001").err()
+        );
+        Ok(())
+    }
+
     fn test_http_server_invalid_address(&mut self) -> TestResult {
-        // Attempt to create an additional gRPC server with an invalid local address.
+        // Attempt to create an HTTP server with an invalid local address.
         expect_eq!(
             Some(OakStatus::ErrInvalidArgs),
             oak::http::init("Platform 9 3/4").err()
         );
+        Ok(())
+    }
+
+    // Under the covers, the oak::http::init() helper performs several steps. Test various failure
+    // conditions for each of those steps. We can't really check any failures, but hopefully nothing
+    // crashes...
+    fn test_http_server_fail_no_handle(&mut self) -> TestResult {
+        let config = oak::node_config::http_server("[::]:8081");
+
+        // Rather than passing the newly-created Node a message with a write handle
+        // for an invocation channel in it, instead pass it a message with data.
+        let (wh, rh) = oak::channel_create().expect("could not create channel");
+        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        oak::channel_write(wh, &[0x01, 0x02], &[]).expect("could not write to channel");
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
+    fn test_http_server_fail_read_handle(&mut self) -> TestResult {
+        let config = oak::node_config::http_server("[::]:8081");
+
+        // Rather than passing the newly-created Node a message with a write handle
+        // for an invocation channel in it, instead pass it a message with a single
+        // read handle.
+        let (wh, rh) = oak::channel_create().expect("could not create channel");
+        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        oak::channel_write(wh, &[], &[rh.handle]).expect("could not write to channel");
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
+    fn test_http_server_fail_two_handles(&mut self) -> TestResult {
+        let config = oak::node_config::http_server("[::]:8081");
+
+        // Rather than passing the newly-created Node a message with a write handle
+        // for an invocation channel in it, instead pass it a message with a write
+        // handle and a read handle.
+        let (wh, rh) = oak::channel_create().expect("could not create channel");
+        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        oak::channel_write(wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())
     }
 
