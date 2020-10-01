@@ -26,6 +26,7 @@
 #include "absl/strings/string_view.h"
 #include "examples/abitest/client/cpp/grpc_test_server.h"
 #include "examples/abitest/client/cpp/grpctest.h"
+#include "examples/abitest/client/cpp/httptest.h"
 #include "examples/abitest/proto/abitest.grpc.pb.h"
 #include "examples/abitest/proto/abitest.pb.h"
 #include "glog/logging.h"
@@ -45,6 +46,7 @@ ABSL_FLAG(int, grpc_test_port, 7878,
           "Port on which the test gRPC Server listens; set to zero to disable.");
 ABSL_FLAG(bool, test_abi, true, "Whether to perform ABI tests");
 ABSL_FLAG(bool, test_grpc, true, "Whether to perform gRPC tests");
+ABSL_FLAG(bool, test_http, true, "Whether to perform HTTP tests");
 ABSL_FLAG(bool, test_aux, true, "Whether to perform tests on Runtime auxiliary servers");
 ABSL_FLAG(std::string, test_include, "", "Filter indicating which tests to include");
 ABSL_FLAG(std::string, test_exclude, "", "Filter indicating tests to exclude (if nonempty)");
@@ -118,6 +120,43 @@ bool run_grpc_tests(OakABITestService::Stub* stub, const std::string& include,
     }
 
     if (test_fn(stub)) {
+      LOG(INFO) << "[  OK  ] " << test_name;
+    } else {
+      success = false;
+      LOG(INFO) << "[ FAIL ] " << test_name;
+    }
+  }
+  if (disabled > 0) {
+    LOG(INFO) << " YOU HAVE " << disabled << " DISABLED GRPC TEST" << ((disabled > 1) ? "S" : "");
+  }
+
+  return success;
+}
+
+// Run tests of the HTTP connection to an Oak Application, including error
+// propagation.
+bool run_http_tests(const std::string& include, const std::string& exclude) {
+  LOG(INFO) << "Run HTTP tests matching: '" << include << "', exclude those matching '" << exclude
+            << "'";
+  bool success = true;
+  std::regex include_re(include);
+  std::regex exclude_re(exclude);
+  int disabled = 0;
+  for (const auto& test : http_tests) {
+    const std::string& test_name = test.first;
+    HttpTestFn test_fn = test.second;
+    if (!std::regex_search(test_name, include_re)) {
+      continue;
+    }
+    if (!exclude.empty() && std::regex_search(test_name, exclude_re)) {
+      continue;
+    }
+    if (absl::StartsWith(test_name, "DISABLED_")) {
+      disabled++;
+      continue;
+    }
+
+    if (test_fn()) {
       LOG(INFO) << "[  OK  ] " << test_name;
     } else {
       success = false;
@@ -298,6 +337,13 @@ int main(int argc, char** argv) {
   if (absl::GetFlag(FLAGS_test_grpc)) {
     // Test gRPC modes.
     if (!run_grpc_tests(stub.get(), include, exclude)) {
+      success = false;
+    }
+  }
+
+  if (absl::GetFlag(FLAGS_test_http)) {
+    // Test HTTP modes.
+    if (!run_http_tests(include, exclude)) {
       success = false;
     }
   }
