@@ -14,9 +14,16 @@
 // limitations under the License.
 //
 
-//! Type, constant and Wasm host function definitions for the Oak application
-//! binary interface (ABI).
+use oak_utils::{generate_grpc_code, CodegenOptions};
 
-pub mod grpc;
-pub mod http;
-pub mod proto;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    generate_grpc_code(
+        "../../proto",
+        &["private_set_intersection.proto"],
+        CodegenOptions {
+            build_client: true,
+            ..Default::default()
+        },
+    )?;
+    Ok(())
+}

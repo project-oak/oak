@@ -38,8 +38,8 @@ use oak_io::{
     handle::{ReadHandle, WriteHandle},
     OakError, Receiver, Sender,
 };
-use oak_services::proto::oak::encap::{HeaderValue, HttpRequest, HttpResponse};
-use std::{collections::HashMap, io, net::SocketAddr, pin::Pin};
+use oak_services::proto::oak::encap::{HeaderMap, HttpRequest, HttpResponse};
+use std::{io, net::SocketAddr, pin::Pin};
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::oneshot,
@@ -50,7 +50,6 @@ use futures_util::{
     future::TryFutureExt,
     stream::{StreamExt, TryStreamExt},
 };
-use maplit::hashmap;
 use prost::Message;
 use tokio_rustls::TlsAcceptor;
 
@@ -299,7 +298,7 @@ impl HttpRequestHandler {
                         OakStatus::ErrInternal
                     })?;
 
-                response.to_hyper_response()
+                response.try_into_hyper_response()
             }
             Err(OakStatus::ErrInvalidArgs) => http::response::Builder::new()
                 .status(StatusCode::BAD_REQUEST)
@@ -438,12 +437,16 @@ impl Pipe {
 /// header in the request and extracts it for use for further handling of the request.
 fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
     let headers = (
-        req.headers
-            .get(oak_abi::OAK_LABEL_HTTP_JSON_KEY)
-            .map(|m| m.values.as_slice()),
-        req.headers
-            .get(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY)
-            .map(|m| m.values.as_slice()),
+        req.headers.as_ref().and_then(|map| {
+            map.headers
+                .get(oak_abi::OAK_LABEL_HTTP_JSON_KEY)
+                .map(|m| m.values.as_slice())
+        }),
+        req.headers.as_ref().and_then(|map| {
+            map.headers
+                .get(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY)
+                .map(|m| m.values.as_slice())
+        }),
     );
 
     match headers {
@@ -494,13 +497,13 @@ impl HttpResponseIterator {
         response_receiver.receive(&self.runtime)
     }
 
-    fn to_hyper_response(&self) -> Result<Response<Body>, OakStatus> {
+    fn try_into_hyper_response(&self) -> Result<Response<Body>, OakStatus> {
         info!(
             "Generating response for runtime {} and reader {:?}.",
             self.runtime.node_id.0, self.response_reader
         );
         match self.read_response() {
-            Ok(http_response) => to_hyper_http_response(http_response),
+            Ok(http_response) => to_hyper_response(http_response),
             Err(status) => {
                 warn!("Could not read response: {}", status);
                 http::response::Builder::new()
@@ -515,72 +518,11 @@ impl HttpResponseIterator {
     }
 }
 
-/// Wrapper around a HashMap representing the headers in protobuf encapsulated HttpRequest and
-/// HttpResponse. This struct is defined mainly to allow implementing `std::convert::From` for more
-/// convenient conversion from hyper HeaderMaps.
-struct OakHeaderMap {
-    headers: HashMap<String, HeaderValue>,
-}
-
-impl OakHeaderMap {
-    // Flatten the headers into a vector of tuples (String, http::header::HeaderValue) that can
-    // be easily iterated over when populating the headers in the hyper Response builder.
-    fn to_vec(&self) -> Vec<(http::header::HeaderName, http::header::HeaderValue)> {
-        self.headers
-            .iter()
-            .flat_map(|(name, value)| {
-                value.values.iter().filter_map(move |val| {
-                    let name_value_pair = || -> Result<(http::header::HeaderName, http::header::HeaderValue), OakStatus>  {
-                        let header_name = http::header::HeaderName::from_bytes(name.as_bytes())
-                            .map_err(|err| {
-                                warn!("Error when parsing header name: {}", err);
-                                OakStatus::ErrInternal
-                            })?;
-                        let header_value =
-                            http::header::HeaderValue::from_bytes(val).map_err(|err| {
-                                warn!("Error when parsing header value: {}", err);
-                                OakStatus::ErrInternal
-                            })?;
-                        Ok((header_name, header_value))
-                    };
-                    name_value_pair().ok()
-                })
-            })
-            .collect()
-    }
-}
-
-impl From<http::header::HeaderMap<http::header::HeaderValue>> for OakHeaderMap {
-    fn from(hyper_headers: http::header::HeaderMap<http::header::HeaderValue>) -> Self {
-        #![allow(clippy::mutable_key_type)]
-        let mut headers = hashmap! {};
-        for (header_name, header_value) in &hyper_headers {
-            headers
-                .entry(header_name)
-                .or_insert_with(Vec::new)
-                .push(header_value.as_bytes().to_vec())
-        }
-        let headers = headers
-            .iter()
-            .map(|(name, value)| {
-                (
-                    name.to_string(),
-                    HeaderValue {
-                        values: value.to_owned(),
-                    },
-                )
-            })
-            .collect();
-
-        OakHeaderMap { headers }
-    }
-}
-
 /// Create an instance of Oak HttpRequest from the given hyper Request.
 async fn to_oak_http_request(req: Request<Body>) -> Result<HttpRequest, OakStatus> {
     let uri = req.uri().to_string();
     let method = req.method().as_str().to_string();
-    let headers = OakHeaderMap::from(req.headers().to_owned()).headers;
+    let headers = Some(HeaderMap::from(req.headers().to_owned()));
     let body = hyper::body::to_bytes(req.into_body())
         .await
         .map_err(|err| {
@@ -601,14 +543,13 @@ async fn to_oak_http_request(req: Request<Body>) -> Result<HttpRequest, OakStatu
 }
 
 /// Convert an instance of Oak HttpResponse to hyper Response.
-fn to_hyper_http_response(http_response: HttpResponse) -> Result<Response<Body>, OakStatus> {
+fn to_hyper_response(http_response: HttpResponse) -> Result<Response<Body>, OakStatus> {
     let mut builder = http::response::Builder::new();
-    let headers = OakHeaderMap {
-        headers: http_response.headers,
-    }
-    .to_vec();
-    for (header_name, header_value) in headers {
-        builder = builder.header(header_name, header_value);
+    if let Some(headers) = http_response.headers {
+        let headers = headers.iter();
+        for (header_name, header_value) in headers {
+            builder = builder.header(header_name, header_value);
+        }
     }
 
     builder

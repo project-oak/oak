@@ -14,9 +14,6 @@
 // limitations under the License.
 //
 
-//! Type, constant and Wasm host function definitions for the Oak application
-//! binary interface (ABI).
-
-pub mod grpc;
-pub mod http;
-pub mod proto;
+pub mod proto {
+    tonic::include_proto!("oak.examples.private_set_intersection");
+}

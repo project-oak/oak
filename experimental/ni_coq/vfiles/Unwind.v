@@ -90,19 +90,3 @@ Proof.
         *)
     - admit. (* split; assumption *)
 Admitted.
-
-Theorem call_havoc_unwind: forall ell id c t1 t2 t1' t2',
-    (trace_low_eq ell t1 t2) ->
-    (t1' = head_set_call t1 id c) ->
-    (t2' = head_set_call t2 id c) ->
-    (trace_low_eq ell t1' t2').
-Proof.
-    intros.
-    destruct t1, t2; simpl in *; subst.
-    - (* nil, nil *) constructor.
-    - (* nil, not nil *) inversion H.
-    - (* not nil, nil *) inversion H.
-    - destruct p. destruct p0. inversion H; subst.
-    constructor 2; try assumption.
-    eapply set_call_unwind; assumption.
-Qed.
