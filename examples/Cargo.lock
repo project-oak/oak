@@ -23,6 +23,7 @@ dependencies = [
  "oak_services",
  "oak_tests",
  "oak_utils",
+ "port_scanner",
  "prost",
  "rand 0.7.3",
  "rand_core 0.5.1",
@@ -1468,6 +1469,12 @@ name = "pkg-config"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d36492546b6af1463394d46f0c834346f31548646f6ba10849802c9c9a27ac33"
+
+[[package]]
+name = "port_scanner"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "325a6d2ac5dee293c3b2612d4993b98aec1dff096b0a2dae70ed7d95784a05da"
 
 [[package]]
 name = "ppv-lite86"

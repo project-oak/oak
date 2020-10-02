@@ -104,6 +104,7 @@ async fn test_abi() {
     } // ensure futures are all dropped
     drop(client);
     runtime.stop();
+    assert!(port_scanner::local_port_available(8383));
 }
 
 #[tokio::test(core_threads = 2)]

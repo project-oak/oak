@@ -458,8 +458,8 @@ fn run_ci() -> Step {
                 server_rust_toolchain: None,
                 server_rust_target: None,
             }),
-            run_tests_tsan(),
             run_tests(),
+            run_tests_tsan(),
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
                 example_name: None,
