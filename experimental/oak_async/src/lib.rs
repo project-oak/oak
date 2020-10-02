@@ -14,19 +14,8 @@
 // limitations under the License.
 //
 
-use oak_utils::CodegenOptions;
+mod executor;
+mod io;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let proto_path = "../../../examples/hello_world/proto";
-    let file_path = "hello_world.proto";
-
-    oak_utils::generate_grpc_code(
-        proto_path,
-        &[file_path],
-        CodegenOptions {
-            build_client: true,
-            ..Default::default()
-        },
-    )?;
-    Ok(())
-}
+pub use executor::block_on;
+pub use io::{ChannelRead, ReceiverAsync};

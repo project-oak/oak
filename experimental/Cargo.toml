@@ -1,2 +1,19 @@
 [workspace]
-members = ["split_grpc/client", "split_grpc/proxy", "split_grpc/server"]
+members = [
+  "oak_async",
+  "split_grpc/client",
+  "split_grpc/proxy",
+  "split_grpc/server",
+]
+
+[patch.crates-io]
+oak = { path = "../sdk/rust/oak" }
+oak_abi = { path = "../oak_abi" }
+oak_derive = { path = "../oak_derive" }
+oak_io = { path = "../oak_io" }
+oak_services = { path = "../oak_services" }
+oak_utils = { path = "../oak_utils" }
+prost = { path = "../third_party/prost" }
+prost-build = { path = "../third_party/prost/prost-build" }
+prost-derive = { path = "../third_party/prost/prost-derive" }
+prost-types = { path = "../third_party/prost/prost-types" }

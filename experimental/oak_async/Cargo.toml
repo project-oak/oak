@@ -1,0 +1,13 @@
+[package]
+name = "oak_async"
+version = "0.1.0"
+authors = ["Daan de Graaf <daagra@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+futures = "0.3"
+log = "0.4"
+oak = "*"
+oak_abi = "*"
+env_logger = "0.7"
