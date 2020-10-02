@@ -167,7 +167,7 @@ fn wasm_starting_module_with_wrong_signature_3_fails() {
 #[test]
 fn wasm_verify_module_signature_succeeds() {
     let binary = read("testdata/minimal.wasm").expect("Couldn't read Wasm file");
-    let signature = load_signature("testdata/minimal.pem");
+    let signature = load_signature("testdata/minimal.sign");
     let result = start_node(binary, "oak_main", vec![signature].as_ref());
     assert_eq!(true, result.is_ok());
 }
@@ -175,7 +175,7 @@ fn wasm_verify_module_signature_succeeds() {
 #[test]
 fn wasm_verify_module_signature_fails() {
     let binary = read("testdata/minimal.wasm").expect("Couldn't read Wasm file");
-    let signature = load_signature("testdata/wrong.pem");
+    let signature = load_signature("testdata/wrong.sign");
     let result = start_node(binary, "oak_main", vec![signature].as_ref());
     assert_eq!(Some(OakStatus::ErrInvalidArgs), result.err());
 }
