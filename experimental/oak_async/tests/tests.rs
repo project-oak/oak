@@ -32,6 +32,7 @@ const HANDLE_0: Handle = 123;
 const HANDLE_1: Handle = 456;
 
 fn init() {
+    fake_runtime::init();
     let _ = env_logger::builder()
         .is_test(true)
         .filter_level(LevelFilter::Trace)
@@ -193,9 +194,10 @@ fn block_on_drop_channel_read_after_wait() {
 #[test]
 fn block_on_channel_read_propagate_immediate_error() {
     init();
-    set_error(666, OakStatus::ErrBadHandle);
+    set_error(HANDLE_0, OakStatus::ErrBadHandle);
 
-    let result: Result<DummyData, _> = block_on(do_channel_read(666)).expect("block_on failed");
+    let result: Result<DummyData, _> =
+        block_on(do_channel_read(HANDLE_0)).expect("block_on failed");
 
     match result {
         Err(OakError::OakStatus(OakStatus::ErrBadHandle)) => { /* The expected error */ }
@@ -208,13 +210,14 @@ fn block_on_channel_read_propagate_error_after_wait() {
     init();
     set_wait_on_channels_handler(|handles| {
         assert_eq!(handles.len(), 1);
-        assert_eq!(handles[0].handle(), 666);
+        assert_eq!(handles[0].handle(), HANDLE_0);
         handles[0].set_status(ChannelReadStatus::PermissionDenied);
-        set_error(666, OakStatus::ErrPermissionDenied);
+        set_error(HANDLE_0, OakStatus::ErrPermissionDenied);
         OakStatus::Ok
     });
 
-    let result: Result<DummyData, _> = block_on(do_channel_read(666)).expect("block_on failed");
+    let result: Result<DummyData, _> =
+        block_on(do_channel_read(HANDLE_0)).expect("block_on failed");
 
     match result {
         Err(OakError::OakStatus(OakStatus::ErrPermissionDenied)) => { /* The expected error */ }

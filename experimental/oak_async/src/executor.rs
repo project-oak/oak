@@ -22,7 +22,17 @@ use oak::{ChannelReadStatus, Handle, OakStatus, ReadHandle};
 use std::collections::HashMap;
 
 // thread local so `cargo test` can run tests in parallel.
-// Oak nodes are single-threaded.
+//
+// Oak nodes are single-threaded. When wasm gains support for multithreading,
+// it is likely we will still have this thread local variable, but the inner
+// value will be backed by an Arc so the actual object is global.
+// When a new thread is created it will inherit the executor from its parent.
+// That way tests will still work, it would even be possible to run multiple
+// executors in different threads, each with their own threadpool.
+//
+// It is worth noting Tokio, a multi-threaded executor, also uses a thread local
+// variable to store the handle to an executor:
+// https://github.com/tokio-rs/tokio/blob/7ec6d88b21ea3e5531176f526a51dae0a4513025/tokio/src/runtime/context.rs#L7
 std::thread_local! {
     static EXECUTOR: RefCell<Executor> = RefCell::new(Executor::default());
 }
@@ -91,7 +101,9 @@ impl Executor {
     /// channel.
     ///
     /// The `Vec`s returned are guaranteed to have the same length, and a handle at index `i`
-    /// corresponds to the reader id at index `i`.
+    /// corresponds to the reader id at index `i`. Having separate `Vec`s for both values makes it
+    /// easy to pass the `ReadHandle`s to `wait_on_channels`, and then zip the results to the
+    /// `ReaderId`s.
     pub fn pending_handles(&self) -> (Vec<ReadHandle>, Vec<ReaderId>) {
         self.waiting_readers
             .iter()
@@ -106,7 +118,15 @@ impl Executor {
     pub fn wake_reader(&mut self, reader_id: ReaderId) {
         self.waiting_readers
             .remove(&reader_id)
-            .unwrap()
+            // wake_reader is only called by the executor as a result of it being added to the
+            // waiting set and then receiving data. No futures can run while the executor is waiting
+            // for data and then waking readers, so the reader cannot have removed itself in the
+            // meantime. It follows that a failure to remove the given reader from the waiting set
+            // constitutes an executor bug.
+            .expect(&format!(
+                "wake_reader called on reader_id {}, which is not in the waiting reader set",
+                reader_id
+            ))
             .waker
             .wake();
     }

@@ -15,6 +15,16 @@
 //
 
 //! Provides implementations of Oak ABI functions to test the async executor against.
+//!
+//! `init()` must be called at the start of each test case, or state from a previous test run on the
+//! same thread may interfere with later tests.
+//!
+//! The following functions are available to modify the result of Runtime ABI calls:
+//! * `set_wait_on_channels_handler`: Configures a handler function that can set statuses for
+//!   channels when `wait_on_channels` is called.
+//! * `add_ready_data`: Adds a `Message` to the queue for a handle. Calls to `channel_read` will
+//!   return the values in this queue in insertion order.
+//! * `set_error`: Adds an error status into the queue for a handle.
 
 use core::cell::RefCell;
 use oak::io::Encodable;
@@ -23,6 +33,11 @@ use oak_abi::{
     Handle,
 };
 use std::collections::{HashMap, VecDeque};
+
+pub fn init() {
+    WAIT_ON_CHANNELS_HANDLER.with(|handler| handler.replace(None));
+    READY_DATA.with(|ready_data| ready_data.borrow_mut().clear());
+}
 
 #[repr(packed)]
 pub struct HandleWithStatus {

@@ -43,7 +43,7 @@ impl Decodable for DummyData {
     fn decode(message: &Message) -> Result<Self, OakError> {
         assert!(
             message.handles.is_empty(),
-            "DummyData does not have handles"
+            "DummyData must not have handles"
         );
         Ok(String::from_utf8(message.bytes.clone())
             .map(DummyData)
