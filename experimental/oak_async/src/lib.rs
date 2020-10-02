@@ -15,6 +15,7 @@
 //
 
 mod executor;
+pub mod grpc;
 mod io;
 
 pub use executor::block_on;

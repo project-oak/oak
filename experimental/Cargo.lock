@@ -582,6 +582,7 @@ dependencies = [
  "log",
  "oak",
  "oak_abi",
+ "prost",
 ]
 
 [[package]]
