@@ -6,13 +6,21 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "*"
 env_logger = "*"
+futures = "*"
 futures-core = "*"
 futures-util = "*"
 log = "*"
 prost = "*"
 structopt = "*"
-tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "signal",
+  "sync",
+  "stream"
+] }
 tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]

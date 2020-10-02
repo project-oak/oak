@@ -23,6 +23,8 @@ pub mod proto {
     tonic::include_proto!("oak.examples.aggregator");
 }
 
+use anyhow::Context;
+use futures::future::FutureExt;
 use log::info;
 use proto::{
     aggregator_server::{Aggregator, AggregatorServer},
@@ -62,26 +64,30 @@ impl Aggregator for AggregatorBackend {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::from_args();
 
-    let private_key = tokio::fs::read(&opt.grpc_tls_private_key).await?;
-    let certificate = tokio::fs::read(&opt.grpc_tls_certificate).await?;
+    let private_key = tokio::fs::read(&opt.grpc_tls_private_key)
+        .await
+        .context("Couldn't load private key")?;
+    let certificate = tokio::fs::read(&opt.grpc_tls_certificate)
+        .await
+        .context("Couldn't load certificate")?;
 
     let identity = Identity::from_pem(certificate, private_key);
 
-    let address = "[::]:8888".parse()?;
+    let address = "[::]:8888".parse().context("Couldn't parse address")?;
     let handler = AggregatorBackend::default();
 
     info!("Starting the backend server at {:?}", address);
-
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))
-        .expect("Couldn't create TLS configuration")
+        .context("Couldn't create TLS configuration")?
         .add_service(AggregatorServer::new(handler))
-        .serve(address)
-        .await?;
+        .serve_with_shutdown(address, tokio::signal::ctrl_c().map(|r| r.unwrap()))
+        .await
+        .context("Couldn't start server")?;
 
     Ok(())
 }
