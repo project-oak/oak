@@ -123,10 +123,12 @@ impl Executor {
             // for data and then waking readers, so the reader cannot have removed itself in the
             // meantime. It follows that a failure to remove the given reader from the waiting set
             // constitutes an executor bug.
-            .expect(&format!(
-                "wake_reader called on reader_id {}, which is not in the waiting reader set",
-                reader_id
-            ))
+            .unwrap_or_else(|| {
+                panic!(
+                    "wake_reader called on reader_id {}, which is not in the waiting reader set",
+                    reader_id
+                )
+            })
             .waker
             .wake();
     }
