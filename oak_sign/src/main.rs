@@ -108,9 +108,6 @@ fn main() -> anyhow::Result<()> {
             let private_key = read_pem_file(&opt.private_key)?;
             let key_pair = KeyBundle::parse(&private_key)?;
             let input = match (&opt.input_file, &opt.input_string) {
-                (Some(_), Some(_)) => Err(anyhow!(
-                    "Exactly one between `input_file` and `input_string` must be specified"
-                )),
                 (Some(input_file), None) => std::fs::read(&input_file)
                     .with_context(|| format!("Couldn't read input file {}", &input_file)),
                 (None, Some(input_string)) => {
@@ -120,7 +117,7 @@ fn main() -> anyhow::Result<()> {
                         Ok(input_string.as_bytes().to_vec())
                     }
                 }
-                (None, None) => Err(anyhow!(
+                _ => Err(anyhow!(
                     "Exactly one between `input_file` and `input_string` must be specified"
                 )),
             }?;
