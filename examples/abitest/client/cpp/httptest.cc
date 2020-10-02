@@ -22,17 +22,31 @@
 // Simple manual test case registry.
 const std::map<std::string, HttpTestFn> http_tests = {
     {"ValidHttpsOk", test_valid_https_ok},
+    {"HttpsWithoutLabelErrBadRequest", test_https_without_label_err_bad_request},
+
 };
 
 bool test_valid_https_ok() {
   httplib::SSLClient cli("localhost", 8383);
   cli.set_ca_cert_path("../../../../../../../../../examples/certs/local/ca.pem");
   cli.enable_server_certificate_verification(true);
-
   httplib::Headers headers = {{"oak-label", "{\"confidentialityTags\":[],\"integrityTags\":[]}"}};
+
   auto res = cli.Get("/", headers);
   if (res && res->status == 200) {
     return true;
   }
-  return true;
+  return false;
+}
+
+bool test_https_without_label_err_bad_request() {
+  httplib::SSLClient cli("localhost", 8383);
+  cli.set_ca_cert_path("../../../../../../../../../examples/certs/local/ca.pem");
+  cli.enable_server_certificate_verification(true);
+
+  auto res = cli.Get("/");
+  if (res && res->status == 400) {
+    return true;
+  }
+  return false;
 }
