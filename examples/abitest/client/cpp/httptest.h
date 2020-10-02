@@ -26,5 +26,6 @@ typedef bool (*HttpTestFn)();
 extern const std::map<std::string, HttpTestFn> http_tests;
 
 bool test_valid_https_ok();
+bool test_https_without_label_err_bad_request();
 
 #endif  // EXAMPLES_ABITEST_CLIENT_HTTPTEST_H
