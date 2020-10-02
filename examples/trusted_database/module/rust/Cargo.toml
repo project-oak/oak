@@ -1,5 +1,5 @@
 [package]
-name = "trusted_database_handler"
+name = "trusted_database"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
@@ -17,6 +17,7 @@ oak_io = "=0.1.0"
 prost = "*"
 serde = "*"
 toml = "*"
+quick-xml = { version = "*", features = ["serialize"] }
 
 [dev-dependencies]
 assert_matches = "*"
@@ -28,7 +29,7 @@ oak_services = "=0.1.0"
 oak_tests = "=0.1.0"
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
 tonic = { version = "*", features = ["tls"] }
-trusted_database_client = "=0.1.0"
+trusted_database_client = "*"
 
 [build-dependencies]
 oak_utils = "*"

@@ -7,8 +7,7 @@ manifest = "examples/trusted_database/oak_app_manifest.toml"
 out = "examples/trusted_database/bin/trusted_database.oak"
 
 [applications.rust.modules]
-module_0 = { Cargo = { cargo_manifest = "examples/trusted_database/module_0/rust/Cargo.toml" } }
-module_1 = { Cargo = { cargo_manifest = "examples/trusted_database/module_1/rust/Cargo.toml" } }
+module = { Cargo = { cargo_manifest = "examples/trusted_database/module/rust/Cargo.toml" } }
 
 [server]
 additional_args = [
