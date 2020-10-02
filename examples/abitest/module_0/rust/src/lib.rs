@@ -83,14 +83,14 @@ impl FrontendNode {
 
         {
             // Create a new node to handle HTTP requests
-            info!("Starting HTTP server pseudo-node on port 8383.");
-            let http_channel =
-                oak::http::init("[::]:8383").expect("Could not create HTTP server pseudo-Node!");
+            info!("Starting gRPC server pseudo-node on port 8383.");
+            let channel = oak::grpc::server::init("[::]:8383")
+                .expect("Could not create gRPC server pseudo-Node!");
             oak::node_create(
-                &oak::node_config::wasm(FRONTEND_MODULE_NAME, "http_oak_main"),
-                http_channel.handle,
+                &oak::node_config::wasm(FRONTEND_MODULE_NAME, "grpc_oak_main"),
+                channel.handle,
             )
-            .expect("failed to create http_oak_main Node");
+            .expect("failed to create grpc_oak_main Node");
         }
 
         oak::logger::init(log::Level::Debug).expect("could not initialize logging node");
@@ -546,6 +546,43 @@ impl OakAbiTestService for FrontendNode {
                 None => panic!("invalid request"),
             };
         }
+    }
+}
+
+struct DummyNode;
+impl OakAbiTestService for DummyNode {
+    fn run_tests(&mut self, _req: AbiTestRequest) -> grpc::Result<AbiTestResponse> {
+        let mut res = AbiTestResponse::default();
+        res.results = vec![];
+
+        Ok(res)
+    }
+
+    // gRPC test methods.
+    fn unary_method(&mut self, _req: GrpcTestRequest) -> grpc::Result<GrpcTestResponse> {
+        let mut rsp = GrpcTestResponse::default();
+        rsp.text = "rsp".to_string();
+        Ok(rsp)
+    }
+    fn server_streaming_method(
+        &mut self,
+        _req: GrpcTestRequest,
+        _writer: grpc::ChannelResponseWriter,
+    ) {
+    }
+    fn client_streaming_method(
+        &mut self,
+        _reqs: Vec<GrpcTestRequest>,
+    ) -> grpc::Result<GrpcTestResponse> {
+        let mut rsp = GrpcTestResponse::default();
+        rsp.text = "rsp".to_string();
+        Ok(rsp)
+    }
+    fn bidi_streaming_method(
+        &mut self,
+        _reqs: Vec<GrpcTestRequest>,
+        _writer: grpc::ChannelResponseWriter,
+    ) {
     }
 }
 
@@ -2367,14 +2404,13 @@ pub extern "C" fn channel_loser(_handle: u64) {
 
 // Entrypoint for a Node instance that handles HTTP requests.
 #[no_mangle]
-pub extern "C" fn http_oak_main(http_channel: u64) {
+pub extern "C" fn grpc_oak_main(channel: u64) {
     oak::logger::init_default();
-    let node = http_server::StaticHttpServer {};
+    let node = DummyNode {};
+    let dispatcher = OakAbiTestServiceDispatcher::new(node);
     oak::run_event_loop(
-        node,
-        oak::io::Receiver::new(oak_io::handle::ReadHandle {
-            handle: http_channel,
-        }),
+        dispatcher,
+        oak::io::Receiver::new(oak_io::handle::ReadHandle { handle: channel }),
     );
 }
 

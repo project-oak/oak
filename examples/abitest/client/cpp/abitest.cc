@@ -46,7 +46,7 @@ ABSL_FLAG(int, grpc_test_port, 7878,
           "Port on which the test gRPC Server listens; set to zero to disable.");
 ABSL_FLAG(bool, test_abi, true, "Whether to perform ABI tests");
 ABSL_FLAG(bool, test_grpc, true, "Whether to perform gRPC tests");
-ABSL_FLAG(bool, test_http, true, "Whether to perform HTTP tests");
+ABSL_FLAG(bool, test_http, false, "Whether to perform HTTP tests");
 ABSL_FLAG(bool, test_aux, true, "Whether to perform tests on Runtime auxiliary servers");
 ABSL_FLAG(std::string, test_include, "", "Filter indicating which tests to include");
 ABSL_FLAG(std::string, test_exclude, "", "Filter indicating tests to exclude (if nonempty)");
