@@ -23,14 +23,14 @@ use oak_abi::{
         node_configuration::ConfigType, ApplicationConfiguration, WebAssemblyConfiguration,
     },
 };
-use oak_sign::{get_sha256_hex, Signature};
+use oak_sign::{get_sha256_hex, SignatureBundle};
 use std::fs::read;
 use wat::parse_str;
 
 fn start_node(
     wasm_module: Vec<u8>,
     entrypoint_name: &str,
-    signatures: &[Signature],
+    signatures: &[SignatureBundle],
 ) -> Result<(), OakStatus> {
     crate::tests::init_logging();
     let module_name = "oak_module";
@@ -81,8 +81,8 @@ fn start_node(
     result
 }
 
-fn load_signature(signature_path: &str) -> Signature {
-    Signature::from_pem_file(signature_path).expect("Couldn't parse signature")
+fn load_signature(signature_path: &str) -> SignatureBundle {
+    SignatureBundle::from_pem_file(signature_path).expect("Couldn't parse signature")
 }
 
 #[test]

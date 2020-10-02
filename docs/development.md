@@ -302,12 +302,12 @@ Then a Wasm module can be signed using the following command:
 ./scripts/oak_sign sign \
   --private-key=examples/keys/ed25519/test.key \
   --input-file=examples/private_set_intersection/bin/private_set_intersection.wasm \
-  --signature=examples/private_set_intersection/bin/signature.sign
+  --signature-file=examples/private_set_intersection/bin/signature.sign
 ```
 
-This command generates a signature file `signature.sign` containing a public key,
-a signature of the Wasm module SHA-256 hash (also encoded with PEM) and a Wasm
-module SHA-256 hash itself.
+This command generates a signature file `signature.sign` containing a public
+key, a signature of the Wasm module SHA-256 hash (also encoded with PEM) and a
+Wasm module SHA-256 hash itself.
 
 Wasm module signatures should be passed to `oak_loader` by an Oak operator using
 the `--signatures-manifest=signatures.toml`, where `signatures.toml` file

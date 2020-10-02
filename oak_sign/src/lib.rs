@@ -31,11 +31,11 @@ pub const PUBLIC_KEY_TAG: &str = "PUBLIC KEY";
 pub const SIGNATURE_TAG: &str = "SIGNATURE";
 pub const HASH_TAG: &str = "HASH";
 
-/// Convenience struct for private and public key.
-/// Named `KeyBundle` since it uses a `ring::signature::KeyPair` trait.
+/// Convenience struct that encapsulates `Ed25519KeyPair`.
+/// Named `KeyBundle` since it uses the `ring::signature::KeyPair` trait.
 pub struct KeyBundle {
-    pub private_key: Vec<u8>,
-    pub public_key: Vec<u8>,
+    private_key: Vec<u8>,
+    key_pair: Ed25519KeyPair,
 }
 
 impl KeyBundle {
@@ -45,14 +45,30 @@ impl KeyBundle {
         let private_key = Ed25519KeyPair::generate_pkcs8(&rng)
             .ok()
             .context("Couldn't generate key pair")?;
-        let key_pair = Ed25519KeyPair::from_pkcs8(private_key.as_ref())
+        KeyBundle::parse(private_key.as_ref())
+    }
+
+    /// Parses a Ed25519 key pair from bytes.
+    pub fn parse(private_key: &[u8]) -> anyhow::Result<KeyBundle> {
+        let key_pair = Ed25519KeyPair::from_pkcs8(private_key)
             .ok()
             .context("Couldn't parse generated key pair")?;
-        let public_key = key_pair.public_key();
-        Ok(KeyBundle {
-            private_key: private_key.as_ref().to_vec(),
-            public_key: public_key.as_ref().to_vec(),
+        Ok(Self {
+            private_key: private_key.to_vec(),
+            key_pair,
         })
+    }
+
+    pub fn private_key(&self) -> Vec<u8> {
+        self.private_key.to_vec()
+    }
+
+    pub fn public_key(&self) -> Vec<u8> {
+        self.key_pair.public_key().as_ref().to_vec()
+    }
+
+    pub fn sign(&self, input: &[u8]) -> Vec<u8> {
+        self.key_pair.sign(input).as_ref().to_vec()
     }
 }
 
@@ -65,14 +81,11 @@ pub struct SignatureBundle {
 
 impl SignatureBundle {
     /// Signs a SHA-256 hash of the `input` using `private_key`.
-    pub fn create(input: &[u8], private_key: &[u8]) -> anyhow::Result<SignatureBundle> {
-        let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_key)
-            .ok()
-            .context("Couldn't parse PKCS8 encoded private key")?;
+    pub fn create(input: &[u8], key_pair: &KeyBundle) -> anyhow::Result<SignatureBundle> {
         let hash = get_sha256(input);
         Ok(SignatureBundle {
-            public_key: key_pair.public_key().as_ref().to_vec(),
-            signed_hash: key_pair.sign(&hash).as_ref().to_vec(),
+            public_key: key_pair.public_key(),
+            signed_hash: key_pair.sign(&hash),
             hash,
         })
     }

@@ -29,11 +29,11 @@
 //!     sign \
 //!     --private-key=<PRIVATE_KEY_FILE>.key \
 //!     --input-file=<INPUT_FILE> \
-//!     --signature=<SIGNATURE_FILE>.sign
+//!     --signature-file=<SIGNATURE_FILE>.sign
 //!
 //! cargo run --manifest-path=oak_sign/Cargo.toml -- \
 //!     verify \
-//!     --signature=<SIGNATURE_FILE>.sign
+//!     --signature-file=<SIGNATURE_FILE>.sign
 //! ```
 
 use anyhow::{anyhow, Context};
@@ -100,12 +100,13 @@ fn main() -> anyhow::Result<()> {
     match opt.cmd {
         Command::Generate(ref opt) => {
             let key_pair = KeyBundle::generate()?;
-            write_pem_file(&opt.private_key, PRIVATE_KEY_TAG, &key_pair.private_key)?;
-            write_pem_file(&opt.public_key, PUBLIC_KEY_TAG, &key_pair.public_key)?;
+            write_pem_file(&opt.private_key, PRIVATE_KEY_TAG, &key_pair.private_key())?;
+            write_pem_file(&opt.public_key, PUBLIC_KEY_TAG, &key_pair.public_key())?;
             info!("Key pair generated successfully");
         }
         Command::Sign(ref opt) => {
             let private_key = read_pem_file(&opt.private_key)?;
+            let key_pair = KeyBundle::parse(&private_key)?;
             let input = match (&opt.input_file, &opt.input_string) {
                 (Some(_), Some(_)) => Err(anyhow!(
                     "Exactly one between `input_file` and `input_string` must be specified"
@@ -123,7 +124,7 @@ fn main() -> anyhow::Result<()> {
                     "Exactly one between `input_file` and `input_string` must be specified"
                 )),
             }?;
-            let signature = SignatureBundle::create(&input, &private_key)?;
+            let signature = SignatureBundle::create(&input, &key_pair)?;
             signature.to_pem_file(&opt.signature_file)?;
             info!("Input file signed successfully");
         }

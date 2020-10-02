@@ -26,7 +26,7 @@ use oak_runtime::{
     config::load_certificate,
     SignatureTable,
 };
-use oak_sign::Signature;
+use oak_sign::SignatureBundle;
 use prost::Message;
 use std::{
     collections::HashMap,
@@ -238,7 +238,7 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
 
 /// Create a signature table for Oak runtime.
 /// Returns an [`oak_runtime::SignatureTable`] that maps each module hash to a vector of
-/// [`oak_runtime::Signature`].
+/// [`oak_runtime::SignatureBundle`].
 /// Returned signatures are not verified yet, they are supposed to be verified by the `oak_runtime`.
 fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
     let mut sign_table = SignatureTable::default();
@@ -255,7 +255,7 @@ fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
             let loaded_signature = match &signature_location {
                 SignatureLocation::Path(path) => {
                     debug!("Loading signature file {}", &path);
-                    let signature = Signature::from_pem_file(path)
+                    let signature = SignatureBundle::from_pem_file(path)
                         .with_context(|| format!("Couldn't load signature file {}", &path))?;
                     signature
                         .verify()
