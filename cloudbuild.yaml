@@ -37,7 +37,7 @@ steps:
     waitFor: ['git_init']
     timeout: 90m
     entrypoint: 'bash'
-    args: ['./scripts/runner', '--commands', 'run-ci']
+    args: ['./scripts/runner', '--commands', '--logs', 'run-tests-tsan']
 
   - name: 'gcr.io/oak-ci/oak:latest'
     id: generate_root_ca_certs
