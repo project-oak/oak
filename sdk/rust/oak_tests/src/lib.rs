@@ -194,19 +194,26 @@ pub async fn channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor
     let mut retries = 0;
     let channel;
     loop {
+        info!(
+            "Attempt {} to connect to gRPC server at {}",
+            retries, RUNTIME_URI
+        );
         match builder.connect().await {
             Ok(c) => {
-                debug!("Connected to gRPC server");
+                info!("Connected to gRPC server at {}", RUNTIME_URI);
                 channel = c;
                 break;
             }
             Err(err) => {
                 if retries < RETRY_COUNT {
-                    debug!("Failed to connect, try again momentarily: {:?}", err);
+                    info!(
+                        "Failed to connect to {}, try again momentarily: {:?}",
+                        RUNTIME_URI, err
+                    );
                     retries += 1;
                     std::thread::sleep(RETRY_INTERVAL);
                 } else {
-                    panic!("Failed to connect, last err: {:?}", err);
+                    panic!("Failed to connect to {}, last err: {:?}", RUNTIME_URI, err);
                 }
             }
         }
