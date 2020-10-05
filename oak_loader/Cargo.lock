@@ -764,10 +764,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "env_logger",
+ "hex",
  "log",
  "maplit",
  "oak_abi",
  "oak_runtime",
+ "oak_sign",
  "oak_utils",
  "prost",
  "rustls",
@@ -800,8 +802,8 @@ dependencies = [
  "oak_abi",
  "oak_io",
  "oak_services",
+ "oak_sign",
  "oak_utils",
- "pem",
  "prometheus",
  "prost",
  "prost-build",
@@ -809,7 +811,6 @@ dependencies = [
  "rand",
  "regex",
  "reqwest",
- "ring",
  "roughenough",
  "rustls",
  "serde",
@@ -834,6 +835,21 @@ dependencies = [
  "prost",
  "prost-build",
  "prost-types",
+]
+
+[[package]]
+name = "oak_sign"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "hex",
+ "log",
+ "pem",
+ "rand",
+ "ring",
+ "sha2",
+ "structopt",
 ]
 
 [[package]]

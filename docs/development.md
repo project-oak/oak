@@ -302,12 +302,12 @@ Then a Wasm module can be signed using the following command:
 ./scripts/oak_sign sign \
   --private-key=examples/keys/ed25519/test.key \
   --input-file=examples/private_set_intersection/bin/private_set_intersection.wasm \
-  --signature=examples/private_set_intersection/bin/signature.pem
+  --signature-file=examples/private_set_intersection/bin/signature.sign
 ```
 
-This command generates a signature file `signature.pem` containing a public key,
-a Wasm module signature (also encoded with PEM) and corresponding Wasm module
-SHA-256 hash.
+This command generates a signature file `signature.sign` containing a public
+key, a signature of the Wasm module SHA-256 hash (also encoded with PEM) and a
+Wasm module SHA-256 hash itself.
 
 Wasm module signatures should be passed to `oak_loader` by an Oak operator using
 the `--signatures-manifest=signatures.toml`, where `signatures.toml` file
@@ -319,13 +319,13 @@ The `signatures.toml` file can look like this:
 
 ```toml
 signatures = [
-  { path = "examples/private_set_intersection/signature.pem" },
-  { path = "examples/private_set_intersection/additional_signature.pem" },
+  { path = "examples/private_set_intersection/signature.sign" },
+  { path = "examples/private_set_intersection/additional_signature.sign" },
 ]
 
 ```
 
-Where `signature.pem` and `additional_signature.pem` are signatures that could
+Where `signature.sign` and `additional_signature.sign` are signatures that could
 be provided by different reviewers.
 
 Oak clients can download the `test.pub` public key (from the reviewer's public

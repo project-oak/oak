@@ -136,9 +136,6 @@ impl RuntimeProxy {
                 ));
         }
 
-        // Check Wasm module signatures.
-        self.runtime.verify_module_signatures()?;
-
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point Node.
         let (write_handle, read_handle) = self.channel_create(&Label::public_untrusted())?;

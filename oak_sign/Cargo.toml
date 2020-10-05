@@ -7,6 +7,14 @@ authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[lib]
+name = "oak_sign"
+path = "src/lib.rs"
+
+[[bin]]
+name = "oak_sign_bin"
+path = "src/main.rs"
+
 [dependencies]
 anyhow = "*"
 env_logger = "*"

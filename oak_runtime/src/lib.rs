@@ -43,11 +43,10 @@ use oak_abi::{
     ChannelReadStatus, OakStatus,
 };
 use oak_io::Message as NodeMessage;
-use pem::parse_many;
+use oak_sign::SignatureBundle;
 use prometheus::proto::MetricFamily;
 use prost::Message as _;
 use rand::RngCore;
-use ring::signature::{UnparsedPublicKey, ED25519};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     string::String,
@@ -116,22 +115,11 @@ pub struct GrpcConfiguration {
     pub grpc_client_root_tls_certificate: Option<Certificate>,
 }
 
-/// Configuration options related to Wasm module signatures.
-/// Consists of parsed Ed25519 public key and signature bytes.
-/// This structure contains a public key and a signature that have not yet been
-/// verified since it's an argument passed to `oak_runtime`.
-/// The verification takes place in the `verify_module_signatures` function.
-#[derive(Clone)]
-pub struct Signature {
-    pub public_key: Vec<u8>,
-    pub signature: Vec<u8>,
-}
-
+/// Configuration options table related to Wasm module signatures.
 #[derive(Default, Clone)]
-/// Table that contains signatures and public keys corresponding to Oak modules.
 pub struct SignatureTable {
-    /// Keys in the table are Oak module hashes.
-    pub values: HashMap<String, Vec<Signature>>,
+    /// Map from Oak module hashes to corresponding signatures.
+    pub values: HashMap<String, Vec<SignatureBundle>>,
 }
 
 /// Configuration options related to HTTP pseudo-Nodes.
@@ -500,35 +488,6 @@ impl Runtime {
     /// Return the accumulated metrics for the `Runtime`.
     pub fn gather_metrics(&self) -> Vec<MetricFamily> {
         self.metrics_data.gather()
-    }
-
-    /// Checks Wasm module signatures.
-    /// Since such signatures are optional - tries to find corresponding signatures by module names
-    /// and verifies them if found.
-    pub(crate) fn verify_module_signatures(&self) -> Result<(), OakStatus> {
-        for (name, module_bytes) in &self.node_factory.application_configuration.wasm_modules {
-            let module_hash = sha_256_hex(&module_bytes);
-
-            // Get signature by module name.
-            if let Some(signatures) = self.node_factory.signature_table.values.get(&module_hash) {
-                for signature_item in signatures.iter() {
-                    let public_key_bytes = &signature_item.public_key;
-                    let signature_bytes = &signature_item.signature;
-
-                    let public_key = UnparsedPublicKey::new(&ED25519, public_key_bytes);
-                    public_key
-                        .verify(&module_bytes, &signature_bytes)
-                        .map_err(|error| {
-                            error!(
-                                "Wasm module signature verification failed for {}: {}",
-                                name, error
-                            );
-                            OakStatus::ErrInvalidArgs
-                        })?;
-                }
-            }
-        }
-        Ok(())
     }
 }
 
@@ -1374,51 +1333,4 @@ fn serialize_label(label: Label, capacity: usize) -> Result<LabelReadStatus, Oak
             Ok(()) => Ok(LabelReadStatus::Success(encoded)),
         }
     }
-}
-
-/// Computes a SHA-256 digest of `bytes` and returns it in a hex encoded string.
-pub fn sha_256_hex(bytes: &[u8]) -> String {
-    use sha2::digest::Digest;
-    let mut hasher = sha2::Sha256::new();
-    hasher.update(&bytes);
-    let hash_value = hasher.finalize();
-    hex::encode(hash_value)
-}
-
-// PEM file tags.
-pub(crate) const PUBLIC_KEY_TAG: &str = "PUBLIC KEY";
-pub(crate) const SIGNATURE_TAG: &str = "SIGNATURE";
-pub(crate) const HASH_TAG: &str = "HASH";
-
-/// Parses public key and signature encoded using PEM format.
-/// https://tools.ietf.org/html/rfc1421
-///
-/// Returns a pair of hex encoded SHA-256 digest and [`Signature`].
-pub fn parse_pem_signature(signature_pem: &[u8]) -> Result<(String, Signature), OakStatus> {
-    let signature_content =
-        parse_many(signature_pem)
-            .iter()
-            .fold(HashMap::new(), |mut content, entry| {
-                content.insert(entry.tag.to_string(), entry.contents.to_vec());
-                content
-            });
-    let public_key = signature_content.get(PUBLIC_KEY_TAG).ok_or_else(|| {
-        error!("Signature file doesn't contain public key");
-        OakStatus::ErrInvalidArgs
-    })?;
-    let signature = signature_content.get(SIGNATURE_TAG).ok_or_else(|| {
-        error!("Signature file doesn't contain signature");
-        OakStatus::ErrInvalidArgs
-    })?;
-    let hash = signature_content.get(HASH_TAG).ok_or_else(|| {
-        error!("Signature file doesn't contain hash");
-        OakStatus::ErrInvalidArgs
-    })?;
-    Ok((
-        hex::encode(hash),
-        Signature {
-            public_key: public_key.to_vec(),
-            signature: signature.to_vec(),
-        },
-    ))
 }

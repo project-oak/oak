@@ -15,7 +15,7 @@
 //
 
 use super::*;
-use crate::{RuntimeProxy, SecureServerConfiguration, Signature};
+use crate::{RuntimeProxy, SecureServerConfiguration};
 use maplit::hashmap;
 use oak_abi::{
     label::Label,
@@ -23,21 +23,32 @@ use oak_abi::{
         node_configuration::ConfigType, ApplicationConfiguration, WebAssemblyConfiguration,
     },
 };
+use oak_sign::{get_sha256_hex, SignatureBundle};
 use std::fs::read;
 use wat::parse_str;
 
 fn start_node(
     wasm_module: Vec<u8>,
     entrypoint_name: &str,
-    signatures: &[Signature],
+    signatures: &[SignatureBundle],
 ) -> Result<(), OakStatus> {
     crate::tests::init_logging();
     let module_name = "oak_module";
-    let module_hash = sha_256_hex(wasm_module.as_ref());
+    let module_hash = get_sha256_hex(wasm_module.as_ref());
     let application_configuration = ApplicationConfiguration {
         wasm_modules: hashmap! { module_name.to_string() => wasm_module },
         initial_node_configuration: None,
     };
+    for signature in signatures.iter() {
+        signature.verify().map_err(|error| {
+            error!("Wasm module signature verification failed: {:?}", error);
+            OakStatus::ErrInvalidArgs
+        })?;
+        if module_hash != hex::encode(&signature.hash) {
+            error!("Incorrect Wasm module signature hash");
+            return Err(OakStatus::ErrInvalidArgs);
+        }
+    }
     let signature_table = SignatureTable {
         values: hashmap! { module_hash => signatures.to_vec() },
     };
@@ -47,9 +58,6 @@ fn start_node(
         &signature_table,
     );
     let (_write_handle, read_handle) = proxy.channel_create(&Label::public_untrusted())?;
-
-    // Check Wasm module signatures.
-    proxy.runtime.verify_module_signatures()?;
 
     let result = proxy.node_create(
         &NodeConfiguration {
@@ -73,11 +81,8 @@ fn start_node(
     result
 }
 
-fn load_signature(signature_path: &str) -> Signature {
-    let signature_file = read(&signature_path).expect("Couldn't read signature file");
-    let (_, signature) =
-        crate::parse_pem_signature(&signature_file).expect("Couldn't parse signature");
-    signature
+fn load_signature(signature_path: &str) -> SignatureBundle {
+    SignatureBundle::from_pem_file(signature_path).expect("Couldn't parse signature")
 }
 
 #[test]
