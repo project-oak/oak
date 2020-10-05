@@ -51,6 +51,7 @@ const useStyles = makeStyles({
     right: 0,
     bottom: 0,
     backgroundColor: 'inherit',
+    zIndex: 2,
   },
   innerChildrenWrapper: {
     padding: '3px 7px',
