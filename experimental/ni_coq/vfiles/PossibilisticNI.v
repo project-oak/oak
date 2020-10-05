@@ -10,7 +10,8 @@ From OakIFC Require Import
     LowEquivalences
     TraceTheorems
     NIUtilTheorems
-    Unwind.
+    Unwind
+    Tactics.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 Local Open Scope map_scope.
@@ -109,9 +110,40 @@ Proof.
         specialize (proj_node_state_to_proj_n ell s id n H0)
             as [n' [Hidx_n' Hproj_n']].
         destruct (n'.(nlbl) <<? ell).
-        * (* flowsto case*) (* likely by inversion on H_step_projs_s1' *)
-        (* inversion H_step_projs_s1'; assert (n0 = n) by congruence; subst. *)
-        admit. 
+        *
+            (* flowsto case*) (* likely by inversion on H_step_projs_s1' *)
+            inversion H_step_projs_s1'; assert (n0 = n) by congruence; subst.
+            + (* WriteChannel *)
+                invert_clean H3.
+                specialize (uncons_proj_chan_s ell s han ch H8)
+                    as [ch2 [H_ch'_idx H_ch2_proj]].
+                remember (s_set_call (state_upd_chan han (chan_append ch2 msg)
+                (state_upd_node id n'0 s)) id c') as s2''.
+                exists s2'', ((node_low_proj ell n') ---> msg); repeat split.
+                (* step *)
+                rewrite Heqs2''. eapply SystemEvStepNode; eauto; subst. 
+                replace (ncall n') with (ncall (node_low_proj ell n')) by
+                    (erewrite flows_node_proj; try eassumption; try congruence).
+                rewrite <- H1. econstructor. erewrite flows_node_proj; assumption.
+                assert (n' = n). { 
+                    rewrite H6 in H0. inversion H0. symmetry. eapply flows_node_proj. auto.
+                }
+                eapply SWriteChan; try congruence; try assumption;
+                    try (erewrite <- chan_projection_preserves_lbl; eassumption).
+                (* s1'' =L s2'' *)
+                (* This part looks tactic-able to me *)
+                subst. unfold s1''. eapply set_call_unwind. unfold ch'.
+                eapply state_upd_chan_unwind. eapply chan_append_unwind. 
+                eapply chan_low_proj_loweq. eapply state_upd_node_unwind.
+                reflexivity. eapply state_low_proj_loweq.
+            + (* ReadChannel *)
+                admit.
+            + (* CreateChannel *)
+                admit.
+            + (* CreateNode *)
+                admit.
+            + (* Internal *)
+                admit.
         (* by cases on the command by n in s *)
         * (* not flowsTo case *)
             rename n0 into Hflows.
