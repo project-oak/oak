@@ -133,6 +133,12 @@ Theorem state_nidx_to_proj_state_idx: forall ell s id n,
 Proof.
 Admitted.
 
+Theorem state_cidx_to_proj_state_cidx: forall ell s han ch,
+    ((chans s).[? han] = Some ch) ->
+    ((chans (state_low_proj ell s)).[? han] = Some (chan_low_proj ell ch)).
+Proof.
+Admitted.
+
 Theorem state_hidx_to_proj_state_hidx: forall ell s h ch,
     ((chans s).[? h] = Some ch) ->
     ((chans (state_low_proj ell s)).[? h] = Some (chan_low_proj ell ch)).

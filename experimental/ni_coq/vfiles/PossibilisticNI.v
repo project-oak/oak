@@ -107,46 +107,42 @@ Proof.
                 remember (state_upd_chan han ch2' (state_upd_node id n' s2)) as s2'.
                 remember (s_set_call s2' id c') as s2''.
                 exists s2'', (n ---> msg); repeat try split.
-                exists (s_set_call (state_low_proj ell s1') id c'), (n ---> msg);
-                    repeat try split.
                 assert (Hnproj: n = (node_low_proj ell n)) by
                     repeat (eapply flows_node_proj || symmetry|| congruence ).
                 assert (Hn_idx_s1proj: (nodes (state_low_proj ell s1)).[? id]
                     = Some (node_low_proj ell n)) by
                     (eapply state_nidx_to_proj_state_idx; auto).
                 (* system step *)
-                eapply (SystemEvStepNode id n (ncall n) c' 
-                    (state_low_proj ell s1) (state_low_proj ell s1')); auto.
-                replace n with (node_low_proj ell n) by auto; auto. 
+                replace (s2'') with (s_set_call s2' id c').
+                econstructor. rewrite Heqs2. eauto. eauto.
                 (* node step ev *)
-                rewrite <- H1. constructor.
-                replace n with (node_low_proj ell n) by auto; auto. 
+                replace (node_low_proj ell n) with n by auto; auto.
+                rewrite <- H1.
+                econstructor. congruence.
                 (* node step *)
-                (*
-                assert (Hch_idx_s1proj: ((chans (state_low_proj ell s1)).[? han]
-                    = Some (chan_low_proj ell ch)) ) by
-                    (eapply state_hidx_to_proj_state_hidx; auto).
-                *)
-                replace  (state_low_proj ell (state_upd_chan han ch'
-                    (state_upd_node id n' s1))) with 
-                    (state_upd_chan han ch' (state_upd_node id n'
-                        (state_low_proj ell s1))).
-                constructor; eauto.
-                replace n with (node_low_proj ell n) by auto; auto.
-                replace ch with (chan_low_proj ell ch). 
-                Focus 2. eapply flows_chan_proj. auto.
-                
-                replace ch with (chan_low_proj ell ch) by auto; auto.
-                admit. (* need similar theorem about indexing channels *)
-                admit. (* updates commute with loweq when flowsto *)
-                (* states loweq *)
-                admit. (* might be better to *)
-                
+                subst. eapply SWriteChan.
+                congruence. congruence. 
+                eapply state_hidx_to_proj_state_hidx; eauto.
+                replace (clbl (chan_low_proj ell ch)) with (clbl ch)
+                    by (symmetry; eapply chan_projection_preserves_lbl).
+                eauto. eauto. eauto.
+                (* s1'' ={ell} s2'' *)
+                unfold s1''.  unfold ch'. subst. 
+                eapply set_call_unwind.
+                eapply state_upd_chan_unwind.
+                eapply chan_append_unwind.
+                symmetry. eapply chan_low_proj_loweq.
+                eapply state_upd_node_unwind.
+                reflexivity.
+                symmetry. eapply state_low_proj_loweq.
             + (* ReadChannel *)
-            + (* WriteChannel *)
-            + (* WriteChannel *)
-            + (* WriteChannel *)
-            admit.
+                admit.
+            + (* CreateChannel *)
+                admit.
+            + (* CreateNode *)
+                admit.
+            +  (* Internal *)
+                admit.
         * (* not flowsTo case *)
             rename n0 into Hflows.
             assert ((state_low_eq ell s1 s1') /\
@@ -275,7 +271,7 @@ Proof.
     exists s2', e2. split. assumption. split.
     - eapply (state_low_eq_trans _ s1' s3' s2'); congruence.
     - eapply (event_low_eq_trans _ e1 e3 e2); congruence.
-Admitted.
+Qed.
 
 Theorem possibilistic_ni_unwind_t: forall ell t1 t2 t1',
 (trace_low_eq ell t1 t2) ->
