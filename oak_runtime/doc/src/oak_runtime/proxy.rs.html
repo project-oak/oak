@@ -348,9 +348,6 @@
 <span id="348">348</span>
 <span id="349">349</span>
 <span id="350">350</span>
-<span id="351">351</span>
-<span id="352">352</span>
-<span id="353">353</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -489,9 +486,6 @@
                     <span class="kw">crate</span>::<span class="ident">metrics</span>::<span class="ident">server</span>::<span class="ident">start_metrics_server</span>,
                 ));
         }
-
-        <span class="comment">// Check Wasm module signatures.</span>
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">verify_module_signatures</span>()<span class="question-mark">?</span>;
 
         <span class="comment">// When first starting, we assign the least privileged label to the channel connecting the</span>
         <span class="comment">// outside world to the entry point Node.</span>
