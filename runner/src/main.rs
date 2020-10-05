@@ -1369,6 +1369,7 @@ fn run_cargo_test_tsan() -> Step {
                 "--verbose",
                 "--",
                 "--nocapture",
+                "test_abi",
             ],
             &hashmap! {
                 "RUST_BACKTRACE".to_string() => "1".to_string(),
