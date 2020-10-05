@@ -163,8 +163,7 @@ type StateGraphProps = {
 
 const useStyles = makeStyles(() => ({
   root: {
-    width: '100%',
-    height: '100%',
+    flexGrow: 1,
     position: 'relative',
   },
 
@@ -197,7 +196,7 @@ export default function StateGraph({ applicationState }: StateGraphProps) {
     });
     // Type as any to fix type mismatch caused by incorrect typings.
     const transiton: any = transition().duration(300).ease(easeLinear);
-    graphviz(ref.current).transition(transiton).scale(0.9).renderDot(dotGraph);
+    graphviz(ref.current).transition(transiton).renderDot(dotGraph);
   }, [applicationState, shouldIncludeHandles]);
 
   return (
