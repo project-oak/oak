@@ -37,7 +37,7 @@ impl std::convert::TryFrom<HttpRequest> for Request<Vec<u8>> {
             .method(request.method.as_bytes())
             .uri(request.uri);
         if let Some(headers) = request.headers {
-            for (header_name, header_value) in headers.iter() {
+            for (header_name, header_value) in headers.into_iter() {
                 builder = builder.header(header_name, header_value);
             }
         }
@@ -73,30 +73,32 @@ impl From<http::header::HeaderMap<http::header::HeaderValue>> for HeaderMap {
     }
 }
 
-impl HeaderMap {
-    /// Flatten the headers into an iterator of tuples (String, http::header::HeaderValue).
-    pub fn iter(
-        &self,
-    ) -> impl Iterator<Item = (http::header::HeaderName, http::header::HeaderValue)> + '_ {
-        self.headers
-            .iter()
+impl std::iter::IntoIterator for HeaderMap {
+    type Item = (http::header::HeaderName, http::header::HeaderValue);
+    type IntoIter = Box<dyn Iterator<Item = (http::header::HeaderName, http::header::HeaderValue)>>;
+
+    /// Convert into an iterator over (http::header::HeaderName, http::header::HeaderValue) tuples.
+    fn into_iter(self) -> Self::IntoIter {
+        let iter = self.headers
+            .into_iter()
             .flat_map(|(name, value)| {
-                value.values.iter().filter_map(move |val| {
-                    let name_value_pair = || -> Result<(http::header::HeaderName, http::header::HeaderValue), OakStatus>  {
+                value.values.into_iter().filter_map(move |val| {
+                    let name_value_pair_closure = || -> Result<(http::header::HeaderName, http::header::HeaderValue), OakStatus>  {
                         let header_name = http::header::HeaderName::from_bytes(name.as_bytes())
                             .map_err(|err| {
                                 warn!("Error when parsing header name: {}", err);
                                 OakStatus::ErrInternal
                             })?;
                         let header_value =
-                            http::header::HeaderValue::from_bytes(val).map_err(|err| {
+                            http::header::HeaderValue::from_bytes(val.as_ref()).map_err(|err| {
                                 warn!("Error when parsing header value: {}", err);
                                 OakStatus::ErrInternal
                             })?;
                         Ok((header_name, header_value))
                     };
-                    name_value_pair().ok()
+                    name_value_pair_closure().ok()
                 })
-            })
+            });
+        Box::new(iter)
     }
 }

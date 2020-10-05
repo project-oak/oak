@@ -546,7 +546,7 @@ async fn to_oak_http_request(req: Request<Body>) -> Result<HttpRequest, OakStatu
 fn to_hyper_response(http_response: HttpResponse) -> Result<Response<Body>, OakStatus> {
     let mut builder = http::response::Builder::new();
     if let Some(headers) = http_response.headers {
-        let headers = headers.iter();
+        let headers = headers.into_iter();
         for (header_name, header_value) in headers {
             builder = builder.header(header_name, header_value);
         }
