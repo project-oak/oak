@@ -1362,7 +1362,7 @@ fn run_cargo_test_tsan() -> Step {
         command: Cmd::new_with_env(
             "cargo",
             &[
-                //"-Zbuild-std",
+                "-Zbuild-std",
                 "test",
                 "--manifest-path=./examples/abitest/module_0/rust/Cargo.toml",
                 "--target=x86_64-unknown-linux-gnu",
@@ -1372,8 +1372,8 @@ fn run_cargo_test_tsan() -> Step {
             ],
             &hashmap! {
                 "RUST_BACKTRACE".to_string() => "1".to_string(),
-                //"RUSTFLAGS".to_string() => "-Z sanitizer=thread".to_string(),
-                //"TSAN_OPTIONS".to_string() => format!("halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress", std::env::current_dir().unwrap().display()),
+                "RUSTFLAGS".to_string() => "-Z sanitizer=thread".to_string(),
+                "TSAN_OPTIONS".to_string() => format!("halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress", std::env::current_dir().unwrap().display()),
             },
         ),
     }
