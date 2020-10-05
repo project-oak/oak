@@ -6,8 +6,8 @@ vfiles/RuntimeModel.v
 vfiles/Events.v
 vfiles/EvAugSemantics.v
 vfiles/LowEquivalences.v
+vfiles/Tactics.v
 vfiles/TraceTheorems.v
 vfiles/NIUtilTheorems.v
 vfiles/Unwind.v
 vfiles/PossibilisticNI.v
-vfiles/Tactics.v

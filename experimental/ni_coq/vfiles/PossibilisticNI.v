@@ -81,7 +81,7 @@ Theorem unobservable_node_step: forall ell s s' e id n,
     ~(nlbl n <<L ell) ->
     (state_low_eq ell s s') /\ (event_low_eq ell e (empty_event e.(elbl))).
 Proof.
-Admitted. (* WIP *)
+Admitted.
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
@@ -90,6 +90,85 @@ Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
         (state_low_eq ell s1' s2') /\
         (event_low_eq ell e1 e2)).
 Proof.
+    intros. inversion H; subst. 
+    - (* SystemSkip *)
+        exists (state_low_proj ell s1'), (EvL NilEv ell0); repeat try split.
+        constructor. symmetry. eapply state_low_proj_loweq.
+    - (* NodeSetp *)
+        rename s' into s1'. rename s'' into s1''. rename H2 into H_step_s1_s1'.
+        destruct (n.(nlbl) <<? ell).
+        * (* flowsto case *)
+            inversion H_step_s1_s1'; assert (n0 = n ) by congruence; subst.
+            + (* WriteChannel *)
+                inversion H3; assert (n0 = n) by congruence; subst.
+                remember (chan_low_proj ell ch) as ch2.
+                remember (chan_append ch2 msg) as ch2'.
+                remember (state_low_proj ell s1) as s2.
+                remember (state_upd_chan han ch2' (state_upd_node id n' s2)) as s2'.
+                remember (s_set_call s2' id c') as s2''.
+                exists s2'', (n ---> msg); repeat try split.
+                exists (s_set_call (state_low_proj ell s1') id c'), (n ---> msg);
+                    repeat try split.
+                assert (Hnproj: n = (node_low_proj ell n)) by
+                    repeat (eapply flows_node_proj || symmetry|| congruence ).
+                assert (Hn_idx_s1proj: (nodes (state_low_proj ell s1)).[? id]
+                    = Some (node_low_proj ell n)) by
+                    (eapply state_nidx_to_proj_state_idx; auto).
+                (* system step *)
+                eapply (SystemEvStepNode id n (ncall n) c' 
+                    (state_low_proj ell s1) (state_low_proj ell s1')); auto.
+                replace n with (node_low_proj ell n) by auto; auto. 
+                (* node step ev *)
+                rewrite <- H1. constructor.
+                replace n with (node_low_proj ell n) by auto; auto. 
+                (* node step *)
+                (*
+                assert (Hch_idx_s1proj: ((chans (state_low_proj ell s1)).[? han]
+                    = Some (chan_low_proj ell ch)) ) by
+                    (eapply state_hidx_to_proj_state_hidx; auto).
+                *)
+                replace  (state_low_proj ell (state_upd_chan han ch'
+                    (state_upd_node id n' s1))) with 
+                    (state_upd_chan han ch' (state_upd_node id n'
+                        (state_low_proj ell s1))).
+                constructor; eauto.
+                replace n with (node_low_proj ell n) by auto; auto.
+                replace ch with (chan_low_proj ell ch). 
+                Focus 2. eapply flows_chan_proj. auto.
+                
+                replace ch with (chan_low_proj ell ch) by auto; auto.
+                admit. (* need similar theorem about indexing channels *)
+                admit. (* updates commute with loweq when flowsto *)
+                (* states loweq *)
+                admit. (* might be better to *)
+                
+            + (* ReadChannel *)
+            + (* WriteChannel *)
+            + (* WriteChannel *)
+            + (* WriteChannel *)
+            admit.
+        * (* not flowsTo case *)
+            rename n0 into Hflows.
+            assert ((state_low_eq ell s1 s1') /\
+                (event_low_eq ell e1 (empty_event e1.(elbl))))
+                as [Hustep Huev] by
+                repeat (eauto || eapply unobservable_node_step).
+            exists (state_low_proj ell s1), (empty_event (elbl e1));
+                repeat try split.
+            (* step *)
+            constructor.
+            (* states leq *)
+            specialize (state_loweq_to_deref_node ell s1 s1' id n 
+                H0 Hustep) as [ns1' [Hns1'idx Hns1'leq]].
+            transitivity s1'. unfold s1''. symmetry. eapply set_call_unobs.
+            eauto. replace (nlbl ns1') with (nlbl n) by
+                (eapply node_low_eq_to_lbl_eq; eauto).
+            eauto. 
+            assert (E: state_low_eq ell (state_low_proj ell s1) s1) by
+                eapply state_low_proj_loweq.
+            congruence.
+            (* events leq *)
+            congruence.
 Admitted. (* WIP *)
 
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
