@@ -76,8 +76,9 @@ const RUNTIME_URI: &str = "https://localhost:8080";
 const DEFAULT_MODULE_MANIFEST: &str = "Cargo.toml";
 
 // Retry parameters when connecting to a gRPC server.
-const RETRY_COUNT: u32 = 360;
-const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500);
+// Have a long retry period to allow for runs under ThreadSanitizer.
+const RETRY_COUNT: u32 = 600;
+const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(800);
 
 /// Convenience helper to build and run a single-Node Application with the given module name, using
 /// the default name "oak_main" for its entrypoint.
