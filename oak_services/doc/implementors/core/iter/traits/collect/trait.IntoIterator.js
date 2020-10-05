@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_services"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/iter/traits/collect/trait.IntoIterator.html\" title=\"trait core::iter::traits::collect::IntoIterator\">IntoIterator</a> for <a class=\"struct\" href=\"oak_services/proto/oak/encap/struct.HeaderMap.html\" title=\"struct oak_services::proto::oak::encap::HeaderMap\">HeaderMap</a>","synthetic":false,"types":["oak_services::proto::oak::encap::HeaderMap"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

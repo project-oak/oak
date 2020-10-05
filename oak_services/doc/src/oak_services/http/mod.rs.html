@@ -100,6 +100,8 @@
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -140,7 +142,7 @@
             .<span class="ident">method</span>(<span class="ident">request</span>.<span class="ident">method</span>.<span class="ident">as_bytes</span>())
             .<span class="ident">uri</span>(<span class="ident">request</span>.<span class="ident">uri</span>);
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">headers</span>) <span class="op">=</span> <span class="ident">request</span>.<span class="ident">headers</span> {
-            <span class="kw">for</span> (<span class="ident">header_name</span>, <span class="ident">header_value</span>) <span class="kw">in</span> <span class="ident">headers</span>.<span class="ident">iter</span>() {
+            <span class="kw">for</span> (<span class="ident">header_name</span>, <span class="ident">header_value</span>) <span class="kw">in</span> <span class="ident">headers</span>.<span class="ident">into_iter</span>() {
                 <span class="ident">builder</span> <span class="op">=</span> <span class="ident">builder</span>.<span class="ident">header</span>(<span class="ident">header_name</span>, <span class="ident">header_value</span>);
             }
         }
@@ -176,31 +178,33 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">HeaderMap</span> {
-    <span class="doccomment">/// Flatten the headers into an iterator of tuples (String, http::header::HeaderValue).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderName</span>, <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
-        <span class="self">self</span>.<span class="ident">headers</span>
-            .<span class="ident">iter</span>()
+<span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="ident">HeaderMap</span> {
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> (<span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderName</span>, <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>);
+    <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderName</span>, <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>)<span class="op">&gt;</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Convert into an iterator over (http::header::HeaderName, http::header::HeaderValue) tuples.</span>
+    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">IntoIter</span> {
+        <span class="kw">let</span> <span class="ident">iter</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">headers</span>
+            .<span class="ident">into_iter</span>()
             .<span class="ident">flat_map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">value</span>)<span class="op">|</span> {
-                <span class="ident">value</span>.<span class="ident">values</span>.<span class="ident">iter</span>().<span class="ident">filter_map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">val</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">name_value_pair</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderName</span>, <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span>  {
+                <span class="ident">value</span>.<span class="ident">values</span>.<span class="ident">into_iter</span>().<span class="ident">filter_map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">val</span><span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">name_value_pair_closure</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderName</span>, <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span>  {
                         <span class="kw">let</span> <span class="ident">header_name</span> <span class="op">=</span> <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderName</span>::<span class="ident">from_bytes</span>(<span class="ident">name</span>.<span class="ident">as_bytes</span>())
                             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                                 <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Error when parsing header name: {}&quot;</span>, <span class="ident">err</span>);
                                 <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
                             })<span class="question-mark">?</span>;
                         <span class="kw">let</span> <span class="ident">header_value</span> <span class="op">=</span>
-                            <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>::<span class="ident">from_bytes</span>(<span class="ident">val</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                            <span class="ident">http</span>::<span class="ident">header</span>::<span class="ident">HeaderValue</span>::<span class="ident">from_bytes</span>(<span class="ident">val</span>.<span class="ident">as_ref</span>()).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                                 <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Error when parsing header value: {}&quot;</span>, <span class="ident">err</span>);
                                 <span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>
                             })<span class="question-mark">?</span>;
                         <span class="prelude-val">Ok</span>((<span class="ident">header_name</span>, <span class="ident">header_value</span>))
                     };
-                    <span class="ident">name_value_pair</span>().<span class="ident">ok</span>()
+                    <span class="ident">name_value_pair_closure</span>().<span class="ident">ok</span>()
                 })
-            })
+            });
+        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">iter</span>)
     }
 }
 </pre></div>
