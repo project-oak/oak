@@ -136,7 +136,7 @@ pub fn runtime_config_wasm(
 ) -> oak_runtime::RuntimeConfiguration {
     oak_runtime::RuntimeConfiguration {
         metrics_port: Some(9090),
-        introspect_port: Some(1909),
+        introspect_port: Some(9091),
         secure_server_configuration: oak_runtime::SecureServerConfiguration {
             grpc_config: Some(oak_runtime::GrpcConfiguration {
                 grpc_server_tls_identity: Some(Identity::from_pem(
