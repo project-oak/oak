@@ -92,7 +92,9 @@ dependencies = [
 name = "aggregator_backend"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "env_logger",
+ "futures",
  "futures-core",
  "futures-util",
  "log",
