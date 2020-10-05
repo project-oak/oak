@@ -166,6 +166,11 @@ Proof.
             congruence.
 Admitted. (* WIP *)
 
+(* Hints for [eauto with unwind] *)
+Hint Resolve state_upd_chan_unwind chan_append_unwind chan_low_proj_loweq
+     state_upd_node_unwind : unwind.
+Hint Extern 4 (node_low_eq _ _ _) => reflexivity : unwind.
+
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
     (step_system_ev (state_low_proj ell s) s1' e1) ->
     (exists s2' e2,
@@ -207,9 +212,7 @@ Proof.
                 (* s1'' =L s2'' *)
                 (* This part looks tactic-able to me *)
                 subst. unfold s1''. eapply set_call_unwind. unfold ch'.
-                eapply state_upd_chan_unwind. eapply chan_append_unwind. 
-                eapply chan_low_proj_loweq. eapply state_upd_node_unwind.
-                reflexivity. eapply state_low_proj_loweq.
+                eauto with unwind.
             + (* ReadChannel *)
                 admit.
             + (* CreateChannel *)
