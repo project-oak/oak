@@ -10,7 +10,8 @@ Import ListNotations.
 Inductive event: Type :=
     | NilEv: event
     | InEv (m: message): event
-    | OutEv (m: message): event.
+    | OutEv (m: message): event
+    | NCreateEv (n: node): event.
 (* note that messages include the bytes and handles sent via channels *)
 (* eventually, downgrades will also be represented by events *)
 

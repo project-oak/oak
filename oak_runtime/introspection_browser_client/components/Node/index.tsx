@@ -15,25 +15,28 @@
 //
 
 import React from 'react';
-import { useParams } from 'react-router-dom';
-import { OakApplicationState } from '~/components/Root';
-import Node from '~/components/Node';
+import ObjectAsDescriptionList from '~/components/ObjectAsDescriptionList';
+import { NodeId, NodeInfo } from '~/components/Root';
 
-type NodeDetailsProps = {
-  applicationState: OakApplicationState;
-};
-
-interface ParamTypes {
-  nodeId: string;
+interface NodeProps {
+  nodeId: NodeId;
+  nodeInfo: NodeInfo;
 }
 
-export default function NodeDetails({ applicationState }: NodeDetailsProps) {
-  const { nodeId } = useParams<ParamTypes>();
-  const node = applicationState.nodeInfos.get(nodeId);
-
-  if (node === undefined) {
-    return <p>A node with the ID: {nodeId} does not exist.</p>;
-  }
-
-  return <Node nodeId={nodeId} nodeInfo={node} />;
+export default function Node({ nodeId, nodeInfo }: NodeProps) {
+  return (
+    <ObjectAsDescriptionList
+      object={{
+        id: nodeId,
+        ...nodeInfo,
+        handles: [...nodeInfo.abiHandles.entries()].reduce(
+          (acc, [handle, channelHalf]) => ({
+            ...acc,
+            [handle]: `points to channel ${channelHalf.channelId} ${channelHalf.direction}`,
+          }),
+          {}
+        ),
+      }}
+    />
+  );
 }

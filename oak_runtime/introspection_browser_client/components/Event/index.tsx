@@ -16,53 +16,12 @@
 
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import ObjectAsDescriptionList, {
+  InlineDl,
+  InlineDt,
+  InlineDd,
+} from '~/components/ObjectAsDescriptionList';
 import introspectionEventsProto from '~/protoc_out/proto/introspection_events_pb';
-
-const useObjectAsDescriptionListStyles = makeStyles({
-  dl: {
-    display: 'inline',
-    '& dl': { '&:before': { content: '"{ "' }, '&:after': { content: '" }"' } },
-  },
-  dt: {
-    display: 'inline',
-    margin: 0,
-    '&:after': { content: '": "' },
-  },
-  dd: {
-    display: 'inline',
-    margin: 0,
-    '&:after': { content: '", "' },
-    '&:last-of-type': { '&:after': { content: '""' } },
-  },
-});
-
-function ObjectAsDescriptionList({ object }: { object: Object }) {
-  const classes = useObjectAsDescriptionListStyles();
-  return (
-    <dl className={classes.dl}>
-      {Object.entries(object).map(([key, value]) => (
-        <>
-          <dt className={classes.dt}>{key}</dt>
-          <dd className={classes.dd}>
-            {
-              // The array check needs to come first, since
-              // typeof [1,2,3] === 'object'
-              Array.isArray(value) ? (
-                JSON.stringify(value)
-              ) : // Check for null alongside the object check, since
-              // typeof null === 'object'
-              typeof value === 'object' && value !== null ? (
-                <ObjectAsDescriptionList object={value} />
-              ) : (
-                value
-              )
-            }
-          </dd>
-        </>
-      ))}
-    </dl>
-  );
-}
 
 function camelCaseToTitleCase(camelCase: string) {
   return camelCase
@@ -104,7 +63,12 @@ export default function Event({
           at <time dateTime={eventTime}>{eventTime}</time>
         </span>
       </div>
-      <ObjectAsDescriptionList object={eventDetails} />
+      <ObjectAsDescriptionList
+        object={eventDetails}
+        dlComponent={InlineDl}
+        dtComponent={InlineDt}
+        ddComponent={InlineDd}
+      />
     </div>
   );
 }

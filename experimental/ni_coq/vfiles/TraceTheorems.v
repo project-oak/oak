@@ -25,19 +25,6 @@ Local Ltac crush_step :=
 (* General-purpose tactic that simplifies and solves simple goals. *)
 Local Ltac crush := repeat crush_step.
 
-Lemma head_set_call_preserves_len: forall t t' id c,
-    head_set_call t id c = t' ->
-    length t = length t'.
-Proof. cbv [head_set_call]. crush. Qed.
-
-Theorem head_set_call_not_nil: forall t id c,
-    t <> nil -> (head_set_call t id c) <> nil.
-Proof. cbv [head_set_call]. crush. Qed.
-
-Lemma head_set_call_preserves_tail: forall t id c,
-    tl (head_set_call t id c) = tl t.
-Proof. cbv [head_set_call]. crush. Qed.
-
 Theorem no_steps_from_empty: forall t,
     ~(step_system_ev_t [] t).
 Proof.
