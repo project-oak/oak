@@ -109,9 +109,8 @@ Proof.
                 exists s2'', (n ---> msg); repeat try split.
                 assert (Hnproj: n = (node_low_proj ell n)) by
                     repeat (eapply flows_node_proj || symmetry|| congruence ).
-                assert (Hn_idx_s1proj: (nodes (state_low_proj ell s1)).[? id]
-                    = Some (node_low_proj ell n)) by
-                    (eapply state_nidx_to_proj_state_idx; auto).
+                pose proof (state_nidx_to_proj_state_idx ell _ _ _
+                    ltac:(eauto)) as Hn_idx_s1proj.
                 (* system step *)
                 replace (s2'') with (s_set_call s2' id c').
                 econstructor. rewrite Heqs2. eauto. eauto.
