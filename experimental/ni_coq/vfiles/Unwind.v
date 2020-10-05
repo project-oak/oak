@@ -106,3 +106,7 @@ Proof.
     constructor 2; try assumption.
     eapply set_call_unwind; assumption.
 Qed.
+
+Hint Resolve state_upd_chan_unwind chan_append_unwind
+                set_call_unwind state_upd_node_unwind
+                chan_low_proj_loweq state_low_proj_loweq : unwind.

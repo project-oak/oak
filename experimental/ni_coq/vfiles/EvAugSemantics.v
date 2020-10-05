@@ -78,7 +78,6 @@ Inductive step_node_ev (id: node_id): call -> state -> state -> event_l -> Prop 
         step_node id (CreateChannel lbl) s s' ->
         step_node_ev id (CreateChannel lbl) s s' (n --- )
     | SCreateNodeEv s n lbl h s':
-            (* model observation that a node is created ?? *)
         s.(nodes) .[?id] = Some n ->
         step_node id (CreateNode lbl h) s s' ->
         step_node_ev id (CreateNode lbl h) s s' (n ---)

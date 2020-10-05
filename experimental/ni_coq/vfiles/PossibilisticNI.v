@@ -10,7 +10,8 @@ From OakIFC Require Import
     LowEquivalences
     TraceTheorems
     NIUtilTheorems
-    Unwind.
+    Unwind
+    Tactics.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 Local Open Scope map_scope.
@@ -113,12 +114,12 @@ Proof.
             (* flowsto case*) (* likely by inversion on H_step_projs_s1' *)
             inversion H_step_projs_s1'; assert (n0 = n) by congruence; subst.
             + (* WriteChannel *)
-                inversion H3; subst.
+                invert_clean H3.
                 specialize (uncons_proj_chan_s ell s han ch H8)
                     as [ch2 [H_ch'_idx H_ch2_proj]].
                 remember (s_set_call (state_upd_chan han (chan_append ch2 msg)
                 (state_upd_node id n'0 s)) id c') as s2''.
-                exists s2'', ((node_low_proj ell n') ---> msg); repeat try split.
+                exists s2'', ((node_low_proj ell n') ---> msg); repeat split.
                 (* step *)
                 rewrite Heqs2''. eapply SystemEvStepNode; eauto; subst. 
                 replace (ncall n') with (ncall (node_low_proj ell n')) by
