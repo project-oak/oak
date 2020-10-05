@@ -76,8 +76,8 @@ const RUNTIME_URI: &str = "https://localhost:8080";
 const DEFAULT_MODULE_MANIFEST: &str = "Cargo.toml";
 
 // Retry parameters when connecting to a gRPC server.
-const RETRY_COUNT: u32 = 360;
-const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500);
+const RETRY_COUNT: u32 = 600;
+const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(800);
 
 /// Convenience helper to build and run a single-Node Application with the given module name, using
 /// the default name "oak_main" for its entrypoint.
@@ -187,7 +187,7 @@ pub async fn channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor
         .tls_config(tls_config)
         .expect("Couldn't create TLS configuration");
 
-    // The Runtime may have just been started for a test, and make take some time
+    // The Runtime may have just been started for a test, and may take some time
     // to come fully up, start a gRPC server and accept connections. Allow for
     // this by retrying at intervals until the server responds or we hit a retry
     // limit.
