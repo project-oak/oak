@@ -17,8 +17,8 @@
 //! WebAssembly Node functionality.
 
 use crate::{
-    node::ConfigurationError, sha_256_hex, LabelReadStatus, NodeMessage, NodePrivilege,
-    NodeReadStatus, RuntimeProxy, SignatureTable,
+    node::ConfigurationError, LabelReadStatus, NodeMessage, NodePrivilege, NodeReadStatus,
+    RuntimeProxy, SignatureTable,
 };
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, trace, warn};
@@ -30,6 +30,7 @@ use oak_abi::{
     },
     OakStatus,
 };
+use oak_sign::get_sha256_hex;
 use prost::Message as _;
 use rand::RngCore;
 use std::{string::String, sync::Arc};
@@ -999,7 +1000,7 @@ fn wasm_node_privilege(
     wasm_module_bytes: &[u8],
     signature_table: &SignatureTable,
 ) -> NodePrivilege {
-    let module_hash = sha_256_hex(&wasm_module_bytes);
+    let module_hash = get_sha256_hex(&wasm_module_bytes);
     debug!("Wasm module SHA-256 hash: {:?}", module_hash);
 
     // Create hash tags.

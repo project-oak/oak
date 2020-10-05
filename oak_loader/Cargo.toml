@@ -20,9 +20,11 @@ default = ["oak_debug"]
 [dependencies]
 anyhow = "*"
 env_logger = "*"
+hex = "*"
 log = "*"
 oak_abi = { path = "../oak_abi" }
 oak_runtime = { path = "../oak_runtime" }
+oak_sign = { path = "../oak_sign" }
 oak_utils = { path = "../oak_utils" }
 prost = { path = "../third_party/prost" }
 rustls = "*"

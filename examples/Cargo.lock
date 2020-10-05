@@ -92,7 +92,9 @@ dependencies = [
 name = "aggregator_backend"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "env_logger",
+ "futures",
  "futures-core",
  "futures-util",
  "log",
@@ -1252,8 +1254,8 @@ dependencies = [
  "oak_abi",
  "oak_io",
  "oak_services",
+ "oak_sign",
  "oak_utils",
- "pem",
  "prometheus",
  "prost",
  "prost-build",
@@ -1261,7 +1263,6 @@ dependencies = [
  "rand 0.7.3",
  "regex",
  "reqwest",
- "ring",
  "roughenough",
  "rustls",
  "serde",
@@ -1286,6 +1287,21 @@ dependencies = [
  "prost",
  "prost-build",
  "prost-types",
+]
+
+[[package]]
+name = "oak_sign"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "hex",
+ "log",
+ "pem",
+ "rand 0.3.23",
+ "ring",
+ "sha2",
+ "structopt",
 ]
 
 [[package]]

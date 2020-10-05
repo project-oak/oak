@@ -30,6 +30,7 @@ mod proto {
 #[cfg(test)]
 mod tests;
 
+use anyhow::Context;
 use database::load_database;
 use futures::future::FutureExt;
 use log::{error, info};
@@ -127,8 +128,12 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
     info!("Running backend database");
 
-    let private_key = tokio::fs::read(&opt.grpc_tls_private_key).await?;
-    let certificate = tokio::fs::read(&opt.grpc_tls_certificate).await?;
+    let private_key = tokio::fs::read(&opt.grpc_tls_private_key)
+        .await
+        .context("Couldn't load private key")?;
+    let certificate = tokio::fs::read(&opt.grpc_tls_certificate)
+        .await
+        .context("Couldn't load certificate")?;
     let database_url = Url::parse(&opt.database_url).expect("Couldn't parse database URL");
 
     // Create a mutex-protected database.
@@ -137,18 +142,18 @@ async fn main() -> anyhow::Result<()> {
     // Run a separate asynchronous task for updating the database.
     tokio::spawn(update_database_loop(database_url, database.clone()));
 
-    let handler = DatabaseService { entries: database };
-
     let identity = Identity::from_pem(certificate, private_key);
-    let address = "[::]:8888".parse()?;
+    let address = "[::]:8888".parse().context("Couldn't parse address")?;
+    let handler = DatabaseService { entries: database };
 
     info!("Starting gRPC server at {:?}", address);
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))
-        .expect("Couldn't create TLS configuration")
+        .context("Couldn't create TLS configuration")?
         .add_service(DatabaseServer::new(handler))
         .serve_with_shutdown(address, tokio::signal::ctrl_c().map(|r| r.unwrap()))
-        .await?;
+        .await
+        .context("Couldn't start server")?;
 
     Ok(())
 }

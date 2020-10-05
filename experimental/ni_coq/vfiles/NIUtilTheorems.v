@@ -38,6 +38,7 @@ Qed.
 End misc_theorems.
 
 Section low_projection.
+
 Theorem flows_node_proj: forall ell n,
     (nlbl n <<L ell) ->
     (node_low_proj ell n) = n.
@@ -54,15 +55,55 @@ Proof.
     reflexivity.
 Qed.
 
-Theorem state_low_proj_idempotent: forall ell s,
-    (state_low_proj ell (state_low_proj ell s)) = (state_low_proj ell s).
+Definition idempotent {A: Type} (f: A -> A) := forall a, f (f a) = f a.
+
+Theorem node_low_proj_idempotent: forall ell, idempotent (node_low_proj ell).
+Proof. 
+    intros. unfold idempotent. intros n.
+    unfold node_low_proj. destruct (nlbl n <<? ell) eqn:Hflows.
+    - (* flows *)
+        rewrite Hflows. reflexivity.
+    - (* not flows *) 
+        replace (nlbl (empty_node (nlbl n))) with (nlbl n) by auto.
+        rewrite Hflows. reflexivity.
+Qed.
+
+Theorem chan_low_proj_idempotent: forall ell, idempotent (chan_low_proj ell).
+    intros. unfold idempotent. intros ch.
+    unfold chan_low_proj. destruct (clbl ch <<? ell) eqn:Hflows.
+    - (* flows *)
+        rewrite Hflows. reflexivity.
+    - (* not flows *) 
+        replace (clbl (empty_chan (clbl ch))) with (clbl ch) by auto.
+        rewrite Hflows. reflexivity.
+Qed.
+
+Theorem state_low_proj_idempotent: forall ell, idempotent (state_low_proj ell).
 Proof.
 Admitted.
 
 Theorem state_low_proj_loweq: forall ell s,
     (state_low_eq ell (state_low_proj ell s) s).
 Proof.
-Admitted.    
+Admitted.
+
+Theorem node_low_proj_loweq: forall ell n,
+    (node_low_eq ell (node_low_proj ell n) n).
+Proof.
+    intros. unfold node_low_eq. unfold low_eq. unfold node_low_proj.
+    destruct (nlbl n <<? ell) eqn:Hflows. rewrite Hflows. reflexivity.
+    replace (nlbl (empty_node (nlbl n))) with (nlbl n) by auto.
+    rewrite Hflows. reflexivity.
+Qed.
+
+Theorem chan_low_proj_loweq: forall ell ch,
+    (chan_low_eq ell (chan_low_proj ell ch) ch).
+Proof.
+    intros. unfold chan_low_eq. unfold low_eq. unfold chan_low_proj.
+    destruct (clbl ch <<? ell) eqn:Hflows. rewrite Hflows. reflexivity.
+    replace (clbl (empty_chan (clbl ch))) with (clbl ch) by auto.
+    rewrite Hflows. reflexivity.
+Qed.
 
 Theorem node_projection_preserves_lbl: forall ell n,
     ((node_low_proj ell n).(nlbl) = n.(nlbl)).
@@ -70,6 +111,21 @@ Proof.
     intros. unfold node_low_proj. destruct (nlbl n <<? ell).
     reflexivity. auto.
 Qed.
+
+Theorem chan_projection_preserves_lbl: forall ell ch,
+    (clbl (chan_low_proj ell ch)) = clbl ch.
+Proof.
+    intros. unfold chan_low_proj. destruct (clbl ch <<? ell).
+    reflexivity. auto.
+Qed.
+
+Theorem uncons_proj_chan_s: forall ell s han ch,
+    (chans (state_low_proj ell s)).[? han] = Some ch ->
+    exists ch',
+         (chans s).[? han] = Some ch' /\
+        chan_low_proj ell ch' = ch.
+Proof.
+Admitted. (* WIP *)
 
 Theorem proj_node_state_to_proj_n: forall ell s id n,
     ((nodes (state_low_proj ell s)).[? id] = Some n) ->
@@ -98,6 +154,7 @@ Proof.
         - (* some *) 
         replace n0 with n in *.
         erewrite nflows_node_proj in H0. inversion H0. auto. auto.
+        replace (nodes s id) with ((nodes s).[? id]) in E by auto.
         congruence.
         - (* none *)
         inversion H0.
@@ -106,27 +163,41 @@ Qed.
 End low_projection.
 
 Section low_equivalence.
+
 Global Instance state_low_eq_refl: forall ell, Reflexive (state_low_eq ell) | 10.
-Proof.
-Admitted. (* WIP *)
+Proof. congruence. Qed.
 
 Global Instance state_low_eq_trans: forall ell, Transitive (state_low_eq ell) | 10.
-Proof.
-Admitted. (* WIP *)
+Proof. congruence. Qed.
 
 Global Instance state_low_eq_sym: forall ell, Symmetric (state_low_eq ell) | 10.
-Proof.
-Admitted. (* WIP *)
+Proof. congruence. Qed.
+
+Global Instance node_state_low_eq_refl: forall ell, Reflexive (node_state_low_eq ell) | 10.
+Proof. congruence. Qed.
+
+Global Instance node_state_low_eq_trans: forall ell, Transitive (node_state_low_eq ell) | 10.
+Proof. congruence. Qed.
+
+Global Instance node_state_low_eq_sym: forall ell, Symmetric (node_state_low_eq ell) | 10.
+Proof. congruence. Qed.
 
 Global Instance event_low_eq_refl: forall ell, Reflexive (event_low_eq ell) | 10.
-Proof.
-Admitted. (* WIP *)
+Proof. congruence. Qed.
 
 Global Instance event_low_eq_trans: forall ell, Transitive (event_low_eq ell) | 10.
-Admitted. (* WIP *)
+Proof. congruence. Qed.
 
 Global Instance event_low_eq_sym: forall ell, Symmetric (event_low_eq ell) | 10.
-Admitted. (* WIP *)
+Proof. congruence. Qed.
+
+Theorem state_loweq_from_substates: forall ell s1 s2,
+    node_state_low_eq ell (nodes s1) (nodes s2) ->
+    chan_state_low_eq ell (chans s1) (chans s2) ->
+    state_low_eq ell s1 s2.
+Proof.
+    intros. unfold state_low_eq. unfold low_eq. unfold state_low_proj. congruence.
+Qed.
 
 Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
     (nodes s1).[? id] = Some n1 ->
@@ -135,7 +206,11 @@ Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
         (nodes s2).[? id] = Some n2 /\
         (node_low_eq ell n1 n2).
 Proof.
-Admitted. (* WIP. For this one I think we need functional extensionality *)
+    intros. inversion H0. unfold node_state_low_proj in *. 
+    match type of H2 with
+        ?f = ?g => assert (f id = g id)
+    end.
+Admitted. 
 
 Theorem node_low_eq_to_lbl_eq: forall ell n1 n2,
     (node_low_eq ell n1 n2) ->
@@ -219,6 +294,6 @@ Theorem set_call_unobs: forall ell s id n c,
     ~(nlbl n <<L ell) ->
     (state_low_eq ell s (s_set_call s id c)).
 Proof.
-Admitted. (* WIP *)
+Admitted.
 
 End unobservable.

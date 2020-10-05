@@ -83,7 +83,8 @@ Notation "x '|->' v" := (pg_update pg_empty x v)
 * deal with laziness of me *)
 Notation "m '.[' k '<-' v ']'" := (pg_update m k v)
   (at level 100) : map_scope.
-Notation "m '.[?' k ']'" := (m k) 
+Definition fnd {KT: KeyT}{VT: Type} (m: (pg_map KT VT)) k :=  (m k).
+Notation "m '.[?' k ']'" := (fnd m k) 
 (at level 2, k at level 200, format "m .[?  k ]") : map_scope.
 
 Close Scope map_scope.

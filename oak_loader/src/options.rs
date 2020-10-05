@@ -24,8 +24,9 @@ use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 use oak_runtime::{
     auth::oidc_utils::{parse_client_info_json, ClientInfo},
     config::load_certificate,
-    parse_pem_signature, SignatureTable,
+    SignatureTable,
 };
+use oak_sign::SignatureBundle;
 use prost::Message;
 use std::{
     collections::HashMap,
@@ -237,7 +238,7 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
 
 /// Create a signature table for Oak runtime.
 /// Returns an [`oak_runtime::SignatureTable`] that maps each module hash to a vector of
-/// [`oak_runtime::Signature`].
+/// [`oak_runtime::SignatureBundle`].
 /// Returned signatures are not verified yet, they are supposed to be verified by the `oak_runtime`.
 fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
     let mut sign_table = SignatureTable::default();
@@ -251,25 +252,28 @@ fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
         debug!("Parsed signature manifest file: {:?}", signatures_manifest);
 
         for signature_location in loaded_signatures_manifest.signatures.iter() {
-            let (module_hash, loaded_signature) = match &signature_location {
+            let loaded_signature = match &signature_location {
                 SignatureLocation::Path(path) => {
                     debug!("Loading signature file {}", &path);
-                    let signature_file = read(&path)
-                        .with_context(|| format!("Couldn't read signature file {}", &path))?;
-                    parse_pem_signature(&signature_file)
-                        .with_context(|| format!("Couldn't parse signature file {}", &path))?
+                    let signature = SignatureBundle::from_pem_file(path)
+                        .with_context(|| format!("Couldn't load signature file {}", &path))?;
+                    signature
+                        .verify()
+                        .context("Signature verification failed")?;
+                    signature
                 }
                 SignatureLocation::Url(_url) => {
                     // TODO(#1379): Download certificates from Web.
                     todo!()
                 }
             };
+            let module_hash = hex::encode(&loaded_signature.hash);
             match sign_table.values.get_mut(&module_hash) {
                 Some(signatures) => signatures.push(loaded_signature),
                 None => {
                     sign_table
                         .values
-                        .insert(module_hash.to_string(), vec![loaded_signature]);
+                        .insert(module_hash, vec![loaded_signature]);
                 }
             }
         }
