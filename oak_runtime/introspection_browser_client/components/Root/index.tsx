@@ -16,12 +16,14 @@
 
 import React from 'react';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import Box from '@material-ui/core/Box';
 import { BrowserRouter, Switch, Route } from 'react-router-dom';
-import ApplicationStateOverview from '~/components/ApplicationStateOverview';
+import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
+import AppBar from '@material-ui/core/AppBar';
+import Toolbar from '@material-ui/core/Toolbar';
+import Typography from '@material-ui/core/Typography';
+import Button from '@material-ui/core/Button';
 import StateGraph from '~/components/StateGraph';
 import EventList from '~/components/EventList';
-import MainTabs from '~/components/MainTabs';
 import NotFound from '~/components/NotFound';
 import NodeDetails from '~/components/NodeDetails';
 import HandleDetails from '~/components/HandleDetails';
@@ -259,9 +261,54 @@ function useEvents() {
   return { totalEvents: events, presentEventIndex, setPresentEventIndex };
 }
 
+const useStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    '@global': {
+      '#app': {
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+      },
+    },
+    root: {
+      flexGrow: 1,
+    },
+    menuButton: {
+      marginRight: theme.spacing(2),
+    },
+    title: {
+      flexGrow: 1,
+    },
+    contentWrapper: {
+      display: 'flex',
+      flexGrow: 1,
+    },
+    eventListWrapper: {
+      position: 'relative',
+      width: '40%',
+      maxWidth: '500px',
+      backgroundColor: theme.palette.grey[100],
+      borderLeft: `1px solid ${theme.palette.grey[300]}`,
+    },
+    eventList: {
+      display: 'flex',
+      flexDirection: 'column',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      bottom: 0,
+      right: 0,
+      overflow: 'scroll',
+      backgroundColor: 'inherit',
+    },
+  })
+);
+
 export default function Root() {
   // The entirety of introspection events
   const { totalEvents, presentEventIndex, setPresentEventIndex } = useEvents();
+
+  const classes = useStyles();
 
   // Subset of events representing the inspected point in time
   const events = totalEvents.slice(0, presentEventIndex + 1);
@@ -275,37 +322,52 @@ export default function Root() {
   return (
     <>
       <CssBaseline />
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" className={classes.title}>
+            Oak Introspection
+          </Typography>
+        </Toolbar>
+      </AppBar>
       <BrowserRouter basename="/dynamic">
         <Switch>
           <Route exact path="/">
-            <MainTabs
-              tabs={[
-                {
-                  label: 'Application Graph',
-                  render: () => (
-                    <StateGraph applicationState={applicationState} />
-                  ),
-                },
-                {
-                  label: 'Application State',
-                  render: () => (
-                    <Box p={3}>
-                      <ApplicationStateOverview
-                        applicationState={applicationState}
-                      />
-                    </Box>
-                  ),
-                },
-                {
-                  label: 'Event List',
-                  render: () => (
-                    <Box p={3}>
-                      <EventList events={events} />
-                    </Box>
-                  ),
-                },
-              ]}
-            />
+            <div className={classes.contentWrapper}>
+              <StateGraph applicationState={applicationState}></StateGraph>
+              <div className={classes.eventListWrapper}>
+                <EventList
+                  className={classes.eventList}
+                  totalEvents={totalEvents}
+                  presentEventIndex={events.length - 1}
+                  setPresentEventIndex={setPresentEventIndex}
+                >
+                  <TimeTravelControls
+                    back={() => (
+                      <Button
+                        size="small"
+                        disabled={presentEventIndex === 0}
+                        onClick={() =>
+                          setPresentEventIndex((index) => index - 1)
+                        }
+                      >
+                        Go back in time
+                      </Button>
+                    )}
+                    forth={() => (
+                      <Button
+                        size="small"
+                        disabled={presentEventIndex + 1 >= totalEvents.length}
+                        onClick={() =>
+                          setPresentEventIndex((index) => index + 1)
+                        }
+                      >
+                        Go forward in time
+                      </Button>
+                    )}
+                  />
+                </EventList>
+              </div>
+            </div>
           </Route>
           <Route exact path="/node/:nodeId">
             <NodeDetails applicationState={applicationState} />
@@ -321,24 +383,6 @@ export default function Root() {
           </Route>
         </Switch>
       </BrowserRouter>
-      <TimeTravelControls
-        back={() => (
-          <button
-            disabled={presentEventIndex === 0}
-            onClick={() => setPresentEventIndex((index) => index - 1)}
-          >
-            Go to back in time
-          </button>
-        )}
-        forth={() => (
-          <button
-            disabled={presentEventIndex + 1 >= totalEvents.length}
-            onClick={() => setPresentEventIndex((index) => index + 1)}
-          >
-            Go forward in time
-          </button>
-        )}
-      />
     </>
   );
 }

@@ -15,7 +15,6 @@
 //
 
 import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
 import ObjectAsDescriptionList, {
   InlineDl,
   InlineDt,
@@ -40,22 +39,16 @@ function getEventDetails(event: introspectionEventsProto.Event) {
   )!;
 }
 
-const useStyles = makeStyles({
-  wrapper: { marginBottom: '0.5rem' },
-});
-
 export default function Event({
   event,
 }: {
   event: introspectionEventsProto.Event;
 }) {
-  const classes = useStyles();
-
   const eventTime: string = event.getTimestamp().toDate().toISOString();
   const [eventType, eventDetails] = getEventDetails(event);
 
   return (
-    <div className={classes.wrapper}>
+    <div>
       <div>
         <strong>{camelCaseToTitleCase(eventType)}</strong>
         <span>

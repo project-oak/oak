@@ -15,44 +15,148 @@
 //
 
 import React from 'react';
+import { makeStyles } from '@material-ui/core/styles';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListSubheader from '@material-ui/core/ListSubheader';
+import Divider from '@material-ui/core/Divider';
 import Event from '~/components/Event';
 import introspectionEventsProto from '~/protoc_out/proto/introspection_events_pb';
 
-type EventListProps = { events: introspectionEventsProto.Event[] };
+const useStyles = makeStyles({
+  list: {
+    position: 'relative',
+    backgroundColor: 'inherit',
+    flexGrow: 1,
+  },
+  futureEvents: {
+    backgroundColor: 'rgb(255 246 233)',
+  },
+  events: {
+    backgroundColor: 'inherit',
+  },
+  ol: {
+    backgroundColor: 'inherit',
+    padding: 0,
+  },
+  listIcon: {
+    minWidth: 'unset',
+    marginRight: '10px',
+  },
+  outerChildrenWrapper: {
+    position: 'sticky',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'inherit',
+    zIndex: 2,
+  },
+  innerChildrenWrapper: {
+    padding: '3px 7px',
+  },
+});
+
+type EventListProps = {
+  totalEvents: introspectionEventsProto.Event[];
+  presentEventIndex: number;
+  className: string;
+  setPresentEventIndex: React.Dispatch<React.SetStateAction<number>>;
+  children: React.ReactNode;
+};
 
 // Array of events in reverse chronological order
-type ReversedEvents = {
+type ReversedEvent = {
   // The event index, in the order of event creation
   eventIndex: number;
   // The actual event
   event: introspectionEventsProto.Event;
-}[];
+};
 
-export default function EventList({ events }: EventListProps) {
+type ReversedEvents = ReversedEvent[];
+
+enum EventType {
+  Future,
+  Past,
+}
+
+export default function EventList({
+  presentEventIndex,
+  totalEvents,
+  className,
+  setPresentEventIndex,
+  children,
+}: EventListProps) {
+  const classes = useStyles();
   // Reverse the array of events (while storing the orginal index) to render
   // events in a reverse chronological order.
-  const reversedEvents = React.useMemo(
-    () =>
-      events.reduce((acc, event, eventIndex) => {
-        acc.unshift({ eventIndex, event });
-        return acc;
-      }, [] as ReversedEvents),
-    events
+  const reversedEvents = totalEvents.reduce((acc, event, eventIndex) => {
+    acc.unshift({ eventIndex, event });
+    return acc;
+  }, [] as ReversedEvents);
+
+  const futureEvents = reversedEvents.slice(
+    0,
+    totalEvents.length - presentEventIndex - 1
+  );
+  const pastEvents = reversedEvents.slice(
+    totalEvents.length - presentEventIndex - 1
   );
 
+  function renderEvent({ eventIndex, event }: ReversedEvent) {
+    return (
+      // Usually it's not advisable to use the index as a key. However since
+      // the list of events is append-only it's fine in this case.
+      // Ref: https://reactjs.org/docs/lists-and-keys.html#keys
+      <ListItem
+        component="li"
+        key={eventIndex}
+        button
+        onClick={() => setPresentEventIndex(eventIndex)}
+        dense
+      >
+        <ListItemIcon
+          aria-hidden
+          classes={{
+            root: classes.listIcon,
+          }}
+        >
+          {eventIndex}.
+        </ListItemIcon>
+        <ListItemText>
+          <Event event={event} />
+        </ListItemText>
+      </ListItem>
+    );
+  }
+
   return (
-    <section>
-      <strong>Events List</strong>
-      <ol reversed>
-        {reversedEvents.map(({ eventIndex, event }) => (
-          // Usually it's not advisable to use the index as a key. However since
-          // the list of events is append-only it's fine in this case.
-          // Ref: https://reactjs.org/docs/lists-and-keys.html#keys
-          <li key={eventIndex}>
-            <Event event={event} />
-          </li>
-        ))}
-      </ol>
-    </section>
+    <div className={className}>
+      <List
+        className={classes.list}
+        component="ol"
+        aria-label="State change events"
+        subheader={<li />}
+      >
+        <li className={classes.futureEvents}>
+          <ol className={classes.ol}>
+            <ListSubheader>Future Changes: {futureEvents.length}</ListSubheader>
+            {futureEvents.map(renderEvent)}
+          </ol>
+        </li>
+        <Divider />
+        <li className={classes.events}>
+          <ol className={classes.ol}>
+            <ListSubheader>Previous Changes: {pastEvents.length}</ListSubheader>
+            {pastEvents.map(renderEvent)}
+          </ol>
+        </li>
+      </List>
+      <div className={classes.outerChildrenWrapper}>
+        <Divider />
+        <div className={classes.innerChildrenWrapper}>{children}</div>
+      </div>
+    </div>
   );
 }

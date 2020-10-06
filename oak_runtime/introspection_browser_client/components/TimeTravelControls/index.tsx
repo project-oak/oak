@@ -19,9 +19,6 @@ import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles(() => ({
   wrapper: {
-    position: 'fixed',
-    right: '10px',
-    bottom: '10px',
     display: 'flex',
     padding: '5px',
   },
