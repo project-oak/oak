@@ -39,6 +39,21 @@ mod introspection_client {
     use super::*;
     use hyper::header::CONTENT_ENCODING;
 
+    fn static_file(
+        file: &str,
+        content_type: &str,
+        content_encoding: Option<&str>,
+    ) -> Response<Body> {
+        let mut response = Response::new(Body::from(file.to_string()));
+        let headers = response.headers_mut();
+        headers.insert(CONTENT_TYPE, content_type.parse().unwrap());
+        if let Some(content_encoding_value) = content_encoding {
+            headers.insert(CONTENT_ENCODING, content_encoding_value.parse().unwrap());
+        }
+
+        response
+    }
+
     // Looks for a matching file used by the browser client and returns it
     pub fn find_client_file(path: &str) -> Option<Response<Body>> {
         let subpath = Regex::new(r"^/dynamic(?P<filepath>[^\s]*)$")
@@ -49,48 +64,28 @@ mod introspection_client {
             .as_str();
 
         match subpath {
-            "/index.js" => {
-                let mut response = Response::new(Body::from(
-                    include_bytes!("../introspection_browser_client/dist/index.js.gz").to_vec(),
-                ));
-                let headers = response.headers_mut();
-                headers.insert(CONTENT_TYPE, "application/javascript".parse().unwrap());
-                headers.insert(CONTENT_ENCODING, "gzip".parse().unwrap());
-
-                Some(response)
-            }
-            "/graphvizlib.wasm" => {
-                let mut response = Response::new(Body::from(
-                    include_bytes!("../introspection_browser_client/dist/graphvizlib.wasm.gz")
-                        .to_vec(),
-                ));
-                let headers = response.headers_mut();
-                headers.insert(CONTENT_TYPE, "application/wasm".parse().unwrap());
-                headers.insert(CONTENT_ENCODING, "gzip".parse().unwrap());
-
-                Some(response)
-            }
-            "/favicon.png" => {
-                let mut response = Response::new(Body::from(
-                    include_bytes!("../introspection_browser_client/dist/favicon.png").to_vec(),
-                ));
-                let headers = response.headers_mut();
-                headers.insert(CONTENT_TYPE, "application/png".parse().unwrap());
-
-                Some(response)
-            }
+            "/index.js" => Some(static_file(
+                "../introspection_browser_client/dist/index.js.gz",
+                "application/javascript",
+                Some("gzip"),
+            )),
+            "/graphvizlib.wasm" => Some(static_file(
+                "../introspection_browser_client/dist/graphvizlib.wasm.gz",
+                "application/wasm",
+                Some("gzip"),
+            )),
+            "/favicon.png" => Some(static_file(
+                "../introspection_browser_client/dist/favicon.png",
+                "image/png",
+                None,
+            )),
             // Serve index.html for all other paths under /dynamic, enabling
             // client-side routing
-            _ => {
-                let mut response = Response::new(Body::from(
-                    include_bytes!("../introspection_browser_client/dist/index.html.gz").to_vec(),
-                ));
-                let headers = response.headers_mut();
-                headers.insert(CONTENT_TYPE, "text/html".parse().unwrap());
-                headers.insert(CONTENT_ENCODING, "gzip".parse().unwrap());
-
-                Some(response)
-            }
+            _ => Some(static_file(
+                "../introspection_browser_client/dist/index.html.gz",
+                "text/html",
+                Some("gzip"),
+            )),
         }
     }
 }
