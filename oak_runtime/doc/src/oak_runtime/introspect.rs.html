@@ -256,6 +256,40 @@
 <span id="256">256</span>
 <span id="257">257</span>
 <span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -275,7 +309,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::<span class="ident">Events</span>, <span class="ident">Runtime</span>};
 <span class="kw">use</span> <span class="ident">hyper</span>::{
-    <span class="ident">header</span>::{<span class="ident">ACCESS_CONTROL_ALLOW_ORIGIN</span>, <span class="ident">CONTENT_ENCODING</span>, <span class="ident">CONTENT_TYPE</span>},
+    <span class="ident">header</span>::{<span class="ident">ACCESS_CONTROL_ALLOW_ORIGIN</span>, <span class="ident">CONTENT_TYPE</span>},
     <span class="ident">service</span>::{<span class="ident">make_service_fn</span>, <span class="ident">service_fn</span>},
     <span class="ident">Body</span>, <span class="ident">Error</span>, <span class="ident">Method</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Server</span>, <span class="ident">StatusCode</span>,
 };
@@ -283,6 +317,78 @@
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_introspection_client&quot;</span>))]</span>
+<span class="kw">mod</span> <span class="ident">introspection_client</span> {
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_client_file</span>(<span class="ident">_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="prelude-val">None</span>
+    }
+}
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_introspection_client&quot;</span>)]</span>
+<span class="kw">mod</span> <span class="ident">introspection_client</span> {
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="ident">hyper</span>::<span class="ident">header</span>::<span class="ident">CONTENT_ENCODING</span>;
+
+    <span class="kw">fn</span> <span class="ident">static_file</span>(
+        <span class="ident">file</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">content_type</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">content_encoding</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">Body</span>::<span class="ident">from</span>(<span class="ident">file</span>.<span class="ident">to_string</span>()));
+        <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">headers_mut</span>();
+        <span class="ident">headers</span>.<span class="ident">insert</span>(<span class="ident">CONTENT_TYPE</span>, <span class="ident">content_type</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
+        <span class="comment">// If the served file is compressed, add a header instructing the</span>
+        <span class="comment">// browser how to decode it by indicating the compression algorithm in</span>
+        <span class="comment">// the `Content-Encoding` header.</span>
+        <span class="comment">// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding</span>
+        <span class="comment">// For example, our webpack configuration will gzip text-based assets</span>
+        <span class="comment">// when they are generated.</span>
+        <span class="comment">// See: (../introspection_browser_client/webpack.config.js).</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">content_encoding_value</span>) <span class="op">=</span> <span class="ident">content_encoding</span> {
+            <span class="ident">headers</span>.<span class="ident">insert</span>(<span class="ident">CONTENT_ENCODING</span>, <span class="ident">content_encoding_value</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
+        }
+
+        <span class="ident">response</span>
+    }
+
+    <span class="comment">// Looks for a matching file used by the browser client and returns it</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_client_file</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">subpath</span> <span class="op">=</span> <span class="ident">Regex</span>::<span class="ident">new</span>(<span class="string">r&quot;^/dynamic(?P&lt;filepath&gt;[^\s]*)$&quot;</span>)
+            .<span class="ident">unwrap</span>()
+            .<span class="ident">captures</span>(<span class="ident">path</span>)<span class="question-mark">?</span>
+            .<span class="ident">name</span>(<span class="string">&quot;filepath&quot;</span>)
+            .<span class="ident">unwrap</span>()
+            .<span class="ident">as_str</span>();
+
+        <span class="kw">match</span> <span class="ident">subpath</span> {
+            <span class="string">&quot;/index.js&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">static_file</span>(
+                <span class="string">&quot;../introspection_browser_client/dist/index.js.gz&quot;</span>,
+                <span class="string">&quot;application/javascript&quot;</span>,
+                <span class="prelude-val">Some</span>(<span class="string">&quot;gzip&quot;</span>),
+            )),
+            <span class="string">&quot;/graphvizlib.wasm&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">static_file</span>(
+                <span class="string">&quot;../introspection_browser_client/dist/graphvizlib.wasm.gz&quot;</span>,
+                <span class="string">&quot;application/wasm&quot;</span>,
+                <span class="prelude-val">Some</span>(<span class="string">&quot;gzip&quot;</span>),
+            )),
+            <span class="string">&quot;/favicon.png&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">static_file</span>(
+                <span class="string">&quot;../introspection_browser_client/dist/favicon.png&quot;</span>,
+                <span class="string">&quot;image/png&quot;</span>,
+                <span class="prelude-val">None</span>,
+            )),
+            <span class="comment">// Serve index.html for all other paths under /dynamic, enabling</span>
+            <span class="comment">// client-side routing</span>
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">static_file</span>(
+                <span class="string">&quot;../introspection_browser_client/dist/index.html.gz&quot;</span>,
+                <span class="string">&quot;text/html&quot;</span>,
+                <span class="prelude-val">Some</span>(<span class="string">&quot;gzip&quot;</span>),
+            )),
+        }
+    }
+}
 
 <span class="doccomment">/// Wrap a string holding a Graphviz Dot graph description in an HTML template</span>
 <span class="doccomment">/// suitable for live display.</span>
@@ -354,39 +460,6 @@
     <span class="prelude-val">Some</span>((<span class="ident">id</span>, <span class="ident">subid</span>))
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_introspection_client&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">find_client_file</span>(<span class="ident">_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">String</span>)<span class="op">&gt;</span> {
-    <span class="prelude-val">None</span>
-}
-
-<span class="comment">// Looks for a matching file used by the browser client and returns it</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_introspection_client&quot;</span>)]</span>
-<span class="kw">fn</span> <span class="ident">find_client_file</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">String</span>)<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">subpath</span> <span class="op">=</span> <span class="ident">Regex</span>::<span class="ident">new</span>(<span class="string">r&quot;^/dynamic(?P&lt;filepath&gt;[^\s]*)$&quot;</span>)
-        .<span class="ident">unwrap</span>()
-        .<span class="ident">captures</span>(<span class="ident">path</span>)<span class="question-mark">?</span>
-        .<span class="ident">name</span>(<span class="string">&quot;filepath&quot;</span>)
-        .<span class="ident">unwrap</span>()
-        .<span class="ident">as_str</span>();
-
-    <span class="kw">match</span> <span class="ident">subpath</span> {
-        <span class="string">&quot;/index.js&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
-            <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../introspection_browser_client/dist/index.js.gz&quot;</span>).<span class="ident">to_vec</span>(),
-            <span class="string">&quot;application/javascript&quot;</span>.<span class="ident">to_string</span>(),
-        )),
-        <span class="string">&quot;/graphvizlib.wasm&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
-            <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../introspection_browser_client/dist/graphvizlib.wasm.gz&quot;</span>).<span class="ident">to_vec</span>(),
-            <span class="string">&quot;application/wasm&quot;</span>.<span class="ident">to_string</span>(),
-        )),
-        <span class="comment">// Serve index.html for all other paths under /dynamic, enabling</span>
-        <span class="comment">// client-side routing</span>
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
-            <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../introspection_browser_client/dist/index.html.gz&quot;</span>).<span class="ident">to_vec</span>(),
-            <span class="string">&quot;text/html&quot;</span>.<span class="ident">to_string</span>(),
-        )),
-    }
-}
-
 <span class="comment">// Handler for a single HTTP request to the introspection server.</span>
 <span class="kw">fn</span> <span class="ident">handle_request</span>(
     <span class="ident">req</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>,
@@ -439,12 +512,7 @@
         );
 
         <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>);
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">file</span>, <span class="ident">content_type</span>)) <span class="op">=</span> <span class="ident">find_client_file</span>(<span class="ident">path</span>) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">Body</span>::<span class="ident">from</span>(<span class="ident">file</span>));
-        <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">headers_mut</span>();
-        <span class="ident">headers</span>.<span class="ident">insert</span>(<span class="ident">CONTENT_TYPE</span>, <span class="ident">content_type</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
-        <span class="ident">headers</span>.<span class="ident">insert</span>(<span class="ident">CONTENT_ENCODING</span>, <span class="string">&quot;gzip&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
-
+    } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">response</span>) <span class="op">=</span> <span class="ident">introspection_client</span>::<span class="ident">find_client_file</span>(<span class="ident">path</span>) {
         <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">response</span>);
     } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">node_id</span>) <span class="op">=</span> <span class="ident">find_id</span>(<span class="ident">path</span>, <span class="string">&quot;node&quot;</span>) {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">body</span>) <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">html_for_node</span>(<span class="ident">node_id</span>) {
