@@ -47,6 +47,13 @@ mod introspection_client {
         let mut response = Response::new(Body::from(file.to_string()));
         let headers = response.headers_mut();
         headers.insert(CONTENT_TYPE, content_type.parse().unwrap());
+        // If the served file is compressed, add a header instructing the
+        // browser how to decode it by indicating the compression algorithm in
+        // the `Content-Encoding` header.
+        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+        // For example, our webpack configuration will gzip text-based assets
+        // when they are generated.
+        // See: (../introspection_browser_client/webpack.config.js).
         if let Some(content_encoding_value) = content_encoding {
             headers.insert(CONTENT_ENCODING, content_encoding_value.parse().unwrap());
         }
