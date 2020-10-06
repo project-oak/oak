@@ -40,7 +40,7 @@ mod introspection_client {
     use hyper::header::CONTENT_ENCODING;
 
     fn static_file(
-        file: Vec<u8>,
+        file: &'static [u8],
         content_type: &str,
         content_encoding: Option<&str>,
     ) -> Response<Body> {
@@ -72,24 +72,24 @@ mod introspection_client {
 
         match subpath {
             "/index.js" => Some(static_file(
-                include_bytes!("../introspection_browser_client/dist/index.js.gz").to_vec(),
+                include_bytes!("../introspection_browser_client/dist/index.js.gz"),
                 "application/javascript",
                 Some("gzip"),
             )),
             "/graphvizlib.wasm" => Some(static_file(
-                include_bytes!("../introspection_browser_client/dist/graphvizlib.wasm.gz").to_vec(),
+                include_bytes!("../introspection_browser_client/dist/graphvizlib.wasm.gz"),
                 "application/wasm",
                 Some("gzip"),
             )),
             "/favicon.png" => Some(static_file(
-                include_bytes!("../introspection_browser_client/dist/favicon.png").to_vec(),
+                include_bytes!("../introspection_browser_client/dist/favicon.png"),
                 "image/png",
                 None,
             )),
             // Serve index.html for all other paths under /dynamic, enabling
             // client-side routing
             _ => Some(static_file(
-                include_bytes!("../introspection_browser_client/dist/index.html.gz").to_vec(),
+                include_bytes!("../introspection_browser_client/dist/index.html.gz"),
                 "text/html",
                 Some("gzip"),
             )),
