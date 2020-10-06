@@ -40,11 +40,11 @@ mod introspection_client {
     use hyper::header::CONTENT_ENCODING;
 
     fn static_file(
-        file: &str,
+        file: &'static [u8],
         content_type: &str,
         content_encoding: Option<&str>,
     ) -> Response<Body> {
-        let mut response = Response::new(Body::from(file.to_string()));
+        let mut response = Response::new(Body::from(file));
         let headers = response.headers_mut();
         headers.insert(CONTENT_TYPE, content_type.parse().unwrap());
         // If the served file is compressed, add a header instructing the
@@ -72,24 +72,24 @@ mod introspection_client {
 
         match subpath {
             "/index.js" => Some(static_file(
-                "../introspection_browser_client/dist/index.js.gz",
+                include_bytes!("../introspection_browser_client/dist/index.js.gz"),
                 "application/javascript",
                 Some("gzip"),
             )),
             "/graphvizlib.wasm" => Some(static_file(
-                "../introspection_browser_client/dist/graphvizlib.wasm.gz",
+                include_bytes!("../introspection_browser_client/dist/graphvizlib.wasm.gz"),
                 "application/wasm",
                 Some("gzip"),
             )),
             "/favicon.png" => Some(static_file(
-                "../introspection_browser_client/dist/favicon.png",
+                include_bytes!("../introspection_browser_client/dist/favicon.png"),
                 "image/png",
                 None,
             )),
             // Serve index.html for all other paths under /dynamic, enabling
             // client-side routing
             _ => Some(static_file(
-                "../introspection_browser_client/dist/index.html.gz",
+                include_bytes!("../introspection_browser_client/dist/index.html.gz"),
                 "text/html",
                 Some("gzip"),
             )),
