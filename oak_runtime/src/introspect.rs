@@ -16,7 +16,7 @@
 
 use crate::{proto::oak::introspection_events::Events, Runtime};
 use hyper::{
-    header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_ENCODING, CONTENT_TYPE},
+    header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE},
     service::{make_service_fn, service_fn},
     Body, Error, Method, Request, Response, Server, StatusCode,
 };
@@ -96,13 +96,13 @@ fn find_ids(path: &str, kind: &str) -> Option<(u64, u64)> {
 }
 
 #[cfg(not(feature = "oak_introspection_client"))]
-fn find_client_file(_path: &str) -> Option<(Vec<u8>, String)> {
+fn find_client_file(_path: &str) -> Option<Response<Body>> {
     None
 }
 
 // Looks for a matching file used by the browser client and returns it
 #[cfg(feature = "oak_introspection_client")]
-fn find_client_file(path: &str) -> Option<(Vec<u8>, String)> {
+fn find_client_file(path: &str) -> Option<Response<Body>> {
     let subpath = Regex::new(r"^/dynamic(?P<filepath>[^\s]*)$")
         .unwrap()
         .captures(path)?
@@ -111,20 +111,47 @@ fn find_client_file(path: &str) -> Option<(Vec<u8>, String)> {
         .as_str();
 
     match subpath {
-        "/index.js" => Some((
-            include_bytes!("../introspection_browser_client/dist/index.js.gz").to_vec(),
-            "application/javascript".to_string(),
-        )),
-        "/graphvizlib.wasm" => Some((
-            include_bytes!("../introspection_browser_client/dist/graphvizlib.wasm.gz").to_vec(),
-            "application/wasm".to_string(),
-        )),
+        "/index.js" => {
+            let mut response = Response::new(Body::from(
+                include_bytes!("../introspection_browser_client/dist/index.js.gz").to_vec(),
+            ));
+            let headers = response.headers_mut();
+            headers.insert(CONTENT_TYPE, "application/javascript".parse().unwrap());
+            headers.insert(hyper::header::CONTENT_ENCODING, "gzip".parse().unwrap());
+
+            Some(response)
+        }
+        "/graphvizlib.wasm" => {
+            let mut response = Response::new(Body::from(
+                include_bytes!("../introspection_browser_client/dist/graphvizlib.wasm.gz").to_vec(),
+            ));
+            let headers = response.headers_mut();
+            headers.insert(CONTENT_TYPE, "application/wasm".parse().unwrap());
+            headers.insert(hyper::header::CONTENT_ENCODING, "gzip".parse().unwrap());
+
+            Some(response)
+        }
+        "/favicon.png" => {
+            let mut response = Response::new(Body::from(
+                include_bytes!("../introspection_browser_client/dist/favicon.png").to_vec(),
+            ));
+            let headers = response.headers_mut();
+            headers.insert(CONTENT_TYPE, "application/png".parse().unwrap());
+
+            Some(response)
+        }
         // Serve index.html for all other paths under /dynamic, enabling
         // client-side routing
-        _ => Some((
-            include_bytes!("../introspection_browser_client/dist/index.html.gz").to_vec(),
-            "text/html".to_string(),
-        )),
+        _ => {
+            let mut response = Response::new(Body::from(
+                include_bytes!("../introspection_browser_client/dist/index.html.gz").to_vec(),
+            ));
+            let headers = response.headers_mut();
+            headers.insert(CONTENT_TYPE, "text/html".parse().unwrap());
+            headers.insert(hyper::header::CONTENT_ENCODING, "gzip".parse().unwrap());
+
+            Some(response)
+        }
     }
 }
 
@@ -180,12 +207,7 @@ fn handle_request(
         );
 
         return Ok(response);
-    } else if let Some((file, content_type)) = find_client_file(path) {
-        let mut response = Response::new(Body::from(file));
-        let headers = response.headers_mut();
-        headers.insert(CONTENT_TYPE, content_type.parse().unwrap());
-        headers.insert(CONTENT_ENCODING, "gzip".parse().unwrap());
-
+    } else if let Some(response) = find_client_file(path) {
         return Ok(response);
     } else if let Some(node_id) = find_id(path, "node") {
         if let Some(body) = runtime.html_for_node(node_id) {
