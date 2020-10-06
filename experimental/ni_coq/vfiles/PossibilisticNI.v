@@ -68,7 +68,11 @@ Local Ltac logical_simplify :=
   repeat match goal with
          | H : _ /\ _ |- _ => destruct H
          | H : exists _, _ |- _ => destruct H
-         | H1 : ?P, H2 : ?P -> _ |- _ => specialize (H2 H1)
+         | H1 : ?P, H2 : ?P -> _ |- _ =>
+           (* only proceed if P is a Prop; if H1 is a nat, for instance, P
+              would be a type, and we don't want to specialize foralls. *)
+           match type of P with Prop => idtac end;
+           specialize (H2 H1)
          | H : ?x = ?x |- _ => clear H
          end.
 
