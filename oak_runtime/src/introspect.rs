@@ -16,7 +16,7 @@
 
 use crate::{proto::oak::introspection_events::Events, Runtime};
 use hyper::{
-    header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_ENCODING, CONTENT_TYPE},
+    header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE},
     service::{make_service_fn, service_fn},
     Body, Error, Method, Request, Response, Server, StatusCode,
 };
@@ -24,6 +24,78 @@ use log::info;
 use prost::Message;
 use regex::Regex;
 use std::{net::SocketAddr, sync::Arc};
+
+#[cfg(not(feature = "oak_introspection_client"))]
+mod introspection_client {
+    use super::*;
+
+    pub fn find_client_file(_path: &str) -> Option<Response<Body>> {
+        None
+    }
+}
+
+#[cfg(feature = "oak_introspection_client")]
+mod introspection_client {
+    use super::*;
+    use hyper::header::CONTENT_ENCODING;
+
+    fn static_file(
+        file: &str,
+        content_type: &str,
+        content_encoding: Option<&str>,
+    ) -> Response<Body> {
+        let mut response = Response::new(Body::from(file.to_string()));
+        let headers = response.headers_mut();
+        headers.insert(CONTENT_TYPE, content_type.parse().unwrap());
+        // If the served file is compressed, add a header instructing the
+        // browser how to decode it by indicating the compression algorithm in
+        // the `Content-Encoding` header.
+        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+        // For example, our webpack configuration will gzip text-based assets
+        // when they are generated.
+        // See: (../introspection_browser_client/webpack.config.js).
+        if let Some(content_encoding_value) = content_encoding {
+            headers.insert(CONTENT_ENCODING, content_encoding_value.parse().unwrap());
+        }
+
+        response
+    }
+
+    // Looks for a matching file used by the browser client and returns it
+    pub fn find_client_file(path: &str) -> Option<Response<Body>> {
+        let subpath = Regex::new(r"^/dynamic(?P<filepath>[^\s]*)$")
+            .unwrap()
+            .captures(path)?
+            .name("filepath")
+            .unwrap()
+            .as_str();
+
+        match subpath {
+            "/index.js" => Some(static_file(
+                "../introspection_browser_client/dist/index.js.gz",
+                "application/javascript",
+                Some("gzip"),
+            )),
+            "/graphvizlib.wasm" => Some(static_file(
+                "../introspection_browser_client/dist/graphvizlib.wasm.gz",
+                "application/wasm",
+                Some("gzip"),
+            )),
+            "/favicon.png" => Some(static_file(
+                "../introspection_browser_client/dist/favicon.png",
+                "image/png",
+                None,
+            )),
+            // Serve index.html for all other paths under /dynamic, enabling
+            // client-side routing
+            _ => Some(static_file(
+                "../introspection_browser_client/dist/index.html.gz",
+                "text/html",
+                Some("gzip"),
+            )),
+        }
+    }
+}
 
 /// Wrap a string holding a Graphviz Dot graph description in an HTML template
 /// suitable for live display.
@@ -95,39 +167,6 @@ fn find_ids(path: &str, kind: &str) -> Option<(u64, u64)> {
     Some((id, subid))
 }
 
-#[cfg(not(feature = "oak_introspection_client"))]
-fn find_client_file(_path: &str) -> Option<(Vec<u8>, String)> {
-    None
-}
-
-// Looks for a matching file used by the browser client and returns it
-#[cfg(feature = "oak_introspection_client")]
-fn find_client_file(path: &str) -> Option<(Vec<u8>, String)> {
-    let subpath = Regex::new(r"^/dynamic(?P<filepath>[^\s]*)$")
-        .unwrap()
-        .captures(path)?
-        .name("filepath")
-        .unwrap()
-        .as_str();
-
-    match subpath {
-        "/index.js" => Some((
-            include_bytes!("../introspection_browser_client/dist/index.js.gz").to_vec(),
-            "application/javascript".to_string(),
-        )),
-        "/graphvizlib.wasm" => Some((
-            include_bytes!("../introspection_browser_client/dist/graphvizlib.wasm.gz").to_vec(),
-            "application/wasm".to_string(),
-        )),
-        // Serve index.html for all other paths under /dynamic, enabling
-        // client-side routing
-        _ => Some((
-            include_bytes!("../introspection_browser_client/dist/index.html.gz").to_vec(),
-            "text/html".to_string(),
-        )),
-    }
-}
-
 // Handler for a single HTTP request to the introspection server.
 fn handle_request(
     req: Request<Body>,
@@ -180,12 +219,7 @@ fn handle_request(
         );
 
         return Ok(response);
-    } else if let Some((file, content_type)) = find_client_file(path) {
-        let mut response = Response::new(Body::from(file));
-        let headers = response.headers_mut();
-        headers.insert(CONTENT_TYPE, content_type.parse().unwrap());
-        headers.insert(CONTENT_ENCODING, "gzip".parse().unwrap());
-
+    } else if let Some(response) = introspection_client::find_client_file(path) {
         return Ok(response);
     } else if let Some(node_id) = find_id(path, "node") {
         if let Some(body) = runtime.html_for_node(node_id) {
