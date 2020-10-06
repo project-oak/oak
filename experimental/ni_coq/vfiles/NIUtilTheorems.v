@@ -127,6 +127,18 @@ Theorem uncons_proj_chan_s: forall ell s han ch,
 Proof.
 Admitted. (* WIP *)
 
+Theorem state_nidx_to_proj_state_idx: forall ell s id n,
+    ((nodes s).[? id] = Some n) ->
+    ((nodes (state_low_proj ell s)).[? id] = Some (node_low_proj ell n)).
+Proof.
+Admitted.
+
+Theorem state_hidx_to_proj_state_hidx: forall ell s h ch,
+    ((chans s).[? h] = Some ch) ->
+    ((chans (state_low_proj ell s)).[? h] = Some (chan_low_proj ell ch)).
+Proof.
+Admitted.
+
 Theorem proj_node_state_to_proj_n: forall ell s id n,
     ((nodes (state_low_proj ell s)).[? id] = Some n) ->
     exists n',

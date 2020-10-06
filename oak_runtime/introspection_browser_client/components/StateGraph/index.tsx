@@ -15,7 +15,7 @@
 //
 
 import React from 'react';
-import { graphviz } from 'd3-graphviz';
+import { graphviz, Graphviz } from 'd3-graphviz';
 import { transition } from 'd3-transition';
 import { easeLinear } from 'd3-ease';
 import FormGroup from '@material-ui/core/FormGroup';
@@ -191,14 +191,24 @@ export default function StateGraph({ applicationState }: StateGraphProps) {
   const classes = useStyles();
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    const dotGraph = getGraphFromState(applicationState, {
-      shouldIncludeHandles,
-    });
-    // Type as any to fix type mismatch caused by incorrect typings.
-    const transiton: any = transition().duration(300).ease(easeLinear);
-    graphviz(ref.current).transition(transiton).renderDot(dotGraph);
-  }, [applicationState, shouldIncludeHandles]);
+    async function drawGraph() {
+      const dotGraph = getGraphFromState(applicationState, {
+        shouldIncludeHandles,
+      });
+      let dot: Graphviz<any, any, any, any> | undefined;
+      // Wrap graphviz in a promise to ensure that the graph is generated
+      // prior to applying any transitions.
+      await new Promise((resolve) => {
+        dot = graphviz(ref.current).dot(dotGraph, resolve);
+      });
+      const transiton = transition('ease').duration(300).ease(easeLinear);
+      dot!.transition(() => transiton).render();
+    }
 
+    if (ref.current) {
+      drawGraph();
+    }
+  }, [ref.current, applicationState, shouldIncludeHandles]);
   return (
     <div className={classes.root}>
       <FormGroup row className={classes.formRow}>
