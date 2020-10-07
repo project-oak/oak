@@ -4,15 +4,22 @@ members = [
   "split_grpc/client",
   "split_grpc/proxy",
   "split_grpc/server",
+  "benchmark",
 ]
 
 [patch.crates-io]
+# Oak.
 oak = { path = "../sdk/rust/oak" }
 oak_abi = { path = "../oak_abi" }
 oak_derive = { path = "../oak_derive" }
 oak_io = { path = "../oak_io" }
+oak_runtime = { path = "../oak_runtime" }
 oak_services = { path = "../oak_services" }
+oak_tests = { path = "../sdk/rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }
+# Examples.
+trusted_database_client = { path = "../examples/trusted_database/client/rust" }
+# Third party.
 prost = { path = "../third_party/prost" }
 prost-build = { path = "../third_party/prost/prost-build" }
 prost-derive = { path = "../third_party/prost/prost-derive" }

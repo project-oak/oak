@@ -14,14 +14,14 @@
 // limitations under the License.
 //
 
-syntax = "proto3";
+pub mod oak;
+pub mod raw;
 
-package oak.examples.trusted_database_command;
+use async_trait::async_trait;
 
-import "trusted_database.proto";
-import "oak_services/proto/grpc_invocation.proto";
-
-message TrustedDatabaseCommand {
-  oak.invocation.GrpcInvocationReceiver invocation_receiver = 1;
-  oak.examples.trusted_database.PointOfInterestMap points_of_interest = 2;
+/// Trait for sending test requests. Returns `()` since the value of the request is not needed for
+/// current benchmark implementation.
+#[async_trait]
+pub trait Application: std::marker::Send {
+    async fn send_request(&mut self, id: &str) -> Result<(), tonic::Status>;
 }

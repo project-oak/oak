@@ -86,7 +86,7 @@ const XML_DATABASE: &str = r#"<?xml version="1.0" encoding="utf-8"?><stations la
 fn test_parse_database() {
     let database = parse_database(&XML_DATABASE.as_bytes().to_vec());
     assert_matches!(database, Ok(_));
-    assert_eq!(database.unwrap().len(), 4);
+    assert_eq!(database.unwrap().entries.len(), 4);
 }
 
 fn get_distance(first: (f32, f32), second: (f32, f32)) -> f32 {

@@ -30,15 +30,32 @@ message PointOfInterest {
   Location location = 2;
 }
 
+// Maps a string ID to `PointOfInterest`.
+message PointOfInterestMap {
+  map<string, oak.examples.trusted_database.PointOfInterest> entries = 1;
+}
+
+message GetPointOfInterestRequest {
+  string id = 1;
+}
+
+message GetPointOfInterestResponse {
+  PointOfInterest point_of_interest = 1;
+}
+
 message ListPointsOfInterestRequest {
   Location location = 1;
 }
 
 message ListPointsOfInterestResponse {
-  PointOfInterest point_of_interest = 2;
+  PointOfInterest point_of_interest = 1;
 }
 
 service TrustedDatabase {
+  // Find Point Of Interest based on ID.
+  // In the current implementation this function is used for benchmarking the Trusted Database, i.e.
+  // determine request processing time in Oak.
+  rpc GetPointOfInterest(GetPointOfInterestRequest) returns (GetPointOfInterestResponse);
   // Find the nearest Point Of Interest based on linear search in the database.
   rpc ListPointsOfInterest(ListPointsOfInterestRequest) returns (ListPointsOfInterestResponse);
 }
