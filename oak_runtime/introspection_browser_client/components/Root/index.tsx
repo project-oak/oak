@@ -309,14 +309,13 @@ export default function Root() {
 
   const classes = useStyles();
 
-  // Subset of events representing the inspected point in time
-  const events = totalEvents.slice(0, presentEventIndex + 1);
-
   // Application state based of the current point in time
-  const applicationState: OakApplicationState = events.reduce(eventReducer, {
-    nodeInfos: new Map(),
-    channels: new Map(),
-  });
+  const applicationState: OakApplicationState = totalEvents
+    .slice(0, presentEventIndex + 1)
+    .reduce(eventReducer, {
+      nodeInfos: new Map(),
+      channels: new Map(),
+    });
 
   return (
     <>
