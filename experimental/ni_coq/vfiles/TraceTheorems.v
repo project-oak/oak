@@ -27,8 +27,7 @@ Local Ltac crush := repeat crush_step.
 
 Theorem no_steps_from_empty: forall t,
     ~(step_system_ev_t [] t).
-Proof.
-Admitted. (* WIP *)
+Proof. inversion 1; crush. Qed.
 
 (* This vestige is kept for now
 * because it was referenced in the old P..NI.v *)
