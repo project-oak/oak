@@ -240,9 +240,9 @@ function useEvents() {
   );
   // Index of the event representing the last state change. Setting it lower
   // than the number of events enables inspecting past application states.
-  const [presentEventIndex, setPresentEventIndex] = React.useState<number>(
-    events.length - 1
-  );
+  const [presentEventIndex, setPresentEventIndex] = React.useState<number>(0);
+
+  const sessionStorageKeyRef = React.useRef<undefined | string>();
 
   React.useEffect(() => {
     async function loadEvents() {
@@ -250,12 +250,41 @@ function useEvents() {
       const events = introspectionEventsProto.Events.deserializeBinary(
         serializedEvents
       ).getEventsList();
+
+      if (events.length > 0) {
+        // Key the session storage to the first event, preventing state from
+        // being persisted across different inspected Oak applications.
+        sessionStorageKeyRef.current = `presentEventIndexSessionStorageKey-${events[0]
+          .getTimestamp()!
+          .getSeconds()}-${events[0].getTimestamp()!.getNanos()}`;
+
+        const sessionStorageValue = sessionStorage.getItem(
+          sessionStorageKeyRef.current
+        );
+
+        setPresentEventIndex(
+          sessionStorageValue
+            ? parseInt(sessionStorageValue)
+            : events.length - 1
+        );
+      }
+
       setEvents(events);
-      setPresentEventIndex(events.length - 1);
     }
 
     loadEvents();
   }, []);
+
+  // Persist the presentEventIndex across page refreshes & links.
+  // Ref: https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage
+  React.useEffect(() => {
+    if (typeof sessionStorageKeyRef.current === 'string') {
+      sessionStorage.setItem(
+        sessionStorageKeyRef.current,
+        presentEventIndex.toString()
+      );
+    }
+  }, [presentEventIndex, sessionStorageKeyRef.current]);
 
   return { totalEvents: events, presentEventIndex, setPresentEventIndex };
 }
