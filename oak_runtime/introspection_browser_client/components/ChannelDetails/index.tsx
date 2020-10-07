@@ -16,11 +16,14 @@
 
 import React from 'react';
 import { useParams } from 'react-router-dom';
+import DetailsDialog, { DetailsDialogProps } from '~/components/DetailsDialog';
 import { OakApplicationState } from '~/components/Root';
 
-type ChannelDetailsProps = {
+interface ChannelDetailsProps {
   applicationState: OakApplicationState;
-};
+  open: DetailsDialogProps['open'];
+  onClose: DetailsDialogProps['onClose'];
+}
 
 interface ParamTypes {
   channelId: string;
@@ -28,22 +31,31 @@ interface ParamTypes {
 
 export default function ChannelDetails({
   applicationState,
+  open,
+  onClose,
 }: ChannelDetailsProps) {
   const { channelId } = useParams<ParamTypes>();
   const channel = applicationState.channels.get(channelId);
 
-  if (channel === undefined) {
-    return <p>A channel with the ID: {channelId} does not exist.</p>;
-  }
-
   return (
-    <dl>
-      <dt>ID:</dt>
-      <dd>{channelId}</dd>
-      <dt>Label:</dt>
-      <dd>{JSON.stringify(channel.label)}</dd>
-      <dt>Messages:</dt>
-      <dd>{channel.messages.length}</dd>
-    </dl>
+    <DetailsDialog
+      onClose={onClose}
+      open={open}
+      title="Channel Details"
+      titleId="channel-details-dialog-title"
+    >
+      {channel === undefined ? (
+        <p>A channel with the ID: {channelId} does not exist.</p>
+      ) : (
+        <dl>
+          <dt>ID:</dt>
+          <dd>{channelId}</dd>
+          <dt>Label:</dt>
+          <dd>{JSON.stringify(channel.label)}</dd>
+          <dt>Messages:</dt>
+          <dd>{channel.messages.length}</dd>
+        </dl>
+      )}
+    </DetailsDialog>
   );
 }
