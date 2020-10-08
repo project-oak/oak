@@ -123,7 +123,6 @@ impl DatabaseProxy for DatabaseProxyNode {
             .map_err(|error| {
                 grpc::build_status(
                     grpc::Code::NotFound,
-                    // &format!("Database error: {:?}", error)[..],
                     format!("Database error: {:?}", error).as_ref(),
                 )
             })?;
