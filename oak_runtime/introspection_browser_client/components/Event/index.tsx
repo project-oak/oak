@@ -44,7 +44,7 @@ export default function Event({
 }: {
   event: introspectionEventsProto.Event;
 }) {
-  const eventTime: string = event.getTimestamp().toDate().toISOString();
+  const eventTime: string = event.getTimestamp()!.toDate().toISOString();
   const [eventType, eventDetails] = getEventDetails(event);
 
   return (

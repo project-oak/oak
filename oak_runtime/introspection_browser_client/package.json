@@ -11,6 +11,7 @@
   "devDependencies": {
     "@types/d3-ease": "^1.0.9",
     "@types/d3-graphviz": "^2.6.3",
+    "@types/google-protobuf": "^3.7.3",
     "@types/react-router-dom": "^5.1.5",
     "cache-loader": "^4.1.0",
     "compression-webpack-plugin": "^5.0.2",
