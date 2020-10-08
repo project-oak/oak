@@ -411,27 +411,18 @@ impl Runtime {
         let mut node_infos = self.node_infos.write().unwrap();
         let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
 
-        let event_details = HandleDestroyed {
-            node_id: node_id.0,
-            handle,
-            channel_id: node_info
-                .abi_handles
-                .get(&handle)
-                .ok_or(OakStatus::ErrBadHandle)?
-                .get_channel_id(),
-        };
+        match node_info.abi_handles.remove(&handle) {
+            Some(half) => {
+                self.introspection_event(EventDetails::HandleDestroyed(HandleDestroyed {
+                    node_id: node_id.0,
+                    handle,
+                    channel_id: half.get_channel_id(),
+                }));
 
-        let result = node_info
-            .abi_handles
-            .remove(&handle)
-            .ok_or(OakStatus::ErrBadHandle)
-            .map(|_half| ());
-
-        if result.is_ok() {
-            self.introspection_event(EventDetails::HandleDestroyed(event_details))
-        };
-
-        result
+                Ok(())
+            }
+            None => Err(OakStatus::ErrBadHandle),
+        }
     }
     /// Convert an ABI handle to an internal [`ChannelHalf`].
     fn abi_to_half(
