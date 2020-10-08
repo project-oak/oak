@@ -560,6 +560,9 @@
 <span id="560">560</span>
 <span id="561">561</span>
 <span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -724,7 +727,10 @@
 
         <span class="comment">// Run until asked to terminate...</span>
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">graceful_server</span>.<span class="kw">await</span>;
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;HTTP server pseudo-node terminated with {:?}&quot;</span>, <span class="ident">result</span>);
+        <span class="macro">info</span><span class="macro">!</span>(
+            <span class="string">&quot;HTTP server pseudo-node on addr {:?} terminated with {:?}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">address</span>, <span class="ident">result</span>
+        );
     }
 
     <span class="doccomment">/// Build a server that checks incoming TCP connections for TLS handshake.</span>

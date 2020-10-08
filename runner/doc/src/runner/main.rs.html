@@ -1432,6 +1432,8 @@
 <span id="1432">1432</span>
 <span id="1433">1433</span>
 <span id="1434">1434</span>
+<span id="1435">1435</span>
+<span id="1436">1436</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1963,8 +1965,10 @@
     <span class="ident">Cmd</span>::<span class="ident">new_with_env</span>(
         <span class="string">&quot;oak_loader/bin/oak_loader&quot;</span>,
         <span class="macro">spread</span><span class="macro">!</span>[
-            <span class="string">&quot;--grpc-tls-private-key=./examples/certs/local/local.key&quot;</span>.<span class="ident">to_string</span>(),
             <span class="string">&quot;--grpc-tls-certificate=./examples/certs/local/local.pem&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="string">&quot;--grpc-tls-private-key=./examples/certs/local/local.key&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="string">&quot;--http-tls-certificate=./examples/certs/local/local.pem&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="string">&quot;--http-tls-private-key=./examples/certs/local/local.key&quot;</span>.<span class="ident">to_string</span>(),
             <span class="comment">// TODO(#396): Add `--oidc-client` support.</span>
             <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--application={}&quot;</span>, <span class="ident">application_file</span>),
             ...<span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
