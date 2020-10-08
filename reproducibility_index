@@ -1,10 +1,10 @@
-0f6bb21eac5a47ef10e7ce4cdfd867041f5e1670ed3a2ffe45011962b692fcdb  ./examples/target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm
+fceff4958729bd7de30b6ad636e47a81834d723c7c27b21491019d80165dbe56  ./examples/target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm
 5b5add8fec34a78e253fc5d5fe36165c4465fec09e79a1b18fec493d5349c8c2  ./examples/target/wasm32-unknown-unknown/release/abitest_1_backend.wasm
 ace14aa9b46acc290d429201683664689fd59edfd8e47cd3900e20cffc9c0e2c  ./examples/target/wasm32-unknown-unknown/release/aggregator.wasm
 9f349213eba3cac1ba104349361a0007787ff45087c27dd9189fb0d209d65bfd  ./examples/target/wasm32-unknown-unknown/release/chat.wasm
 d1e3f7ad39a45b399b8aa48de16228309a62241a2a043d5f25018d1500e119e6  ./examples/target/wasm32-unknown-unknown/release/database_proxy.wasm
 e3380daf74faa38c951f4d7efd54388fab1d9dd4b08b7bdcd04d9ed5c45d5100  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
-2f5a49d77b62918bd3ed62717e7b340e5768ab72d2261b16f2d39770635e5aee  ./examples/target/wasm32-unknown-unknown/release/http_server.wasm
+96ca2027aeab9edfd7184520cc190251b53707f456dbe2eb076d72717eba5d99  ./examples/target/wasm32-unknown-unknown/release/http_server.wasm
 b27905be664ff1a28f5ce46aace0dad7e47e6837e8789d21ab0319e67bdcbdb0  ./examples/target/wasm32-unknown-unknown/release/injection.wasm
 27c41b0aa184952fdd4160a1186ea7f8f4bbcc241fc3b90a20136aedf4ddfb62  ./examples/target/wasm32-unknown-unknown/release/machine_learning.wasm
 a56efc6b5b12561c87d52d399e032be5ade0e4f779a16e1738a4a001d515985c  ./examples/target/wasm32-unknown-unknown/release/private_set_intersection.wasm
@@ -12,4 +12,4 @@ b3c4bfe93ea122a8cb58bf50252d4b16e8b22c6a2fc45169e09523ff126b40d4  ./examples/tar
 69730c5a20f69fdff5739d1b97a2d7df3345221dc8ce7a590cde02f4860d18e1  ./examples/target/wasm32-unknown-unknown/release/translator.wasm
 ca4d1a25908099db37e1bd380e8785db71c24079e91274582205d36a59322d25  ./examples/target/wasm32-unknown-unknown/release/trusted_database.wasm
 5573e344a52cc9733d576e3d24878b4a6a19b22d4d058f87b5d6a2ba31076f0d  ./examples/target/wasm32-unknown-unknown/release/trusted_information_retrieval.wasm
-6cf0f36fba737f05f0b812fe67ced5f7664e89eb6a59db84b792685daa5d6047  ./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader
+982ebfeba66456500ae5e61d85dd534fe0c66bfbcfb992929dfc77e9fd250fd6  ./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader
