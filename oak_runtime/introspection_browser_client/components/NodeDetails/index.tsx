@@ -17,23 +17,39 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { OakApplicationState } from '~/components/Root';
+import DetailsDialog, { DetailsDialogProps } from '~/components/DetailsDialog';
 import Node from '~/components/Node';
 
 type NodeDetailsProps = {
   applicationState: OakApplicationState;
+  open: DetailsDialogProps['open'];
+  onClose: DetailsDialogProps['onClose'];
 };
 
 interface ParamTypes {
   nodeId: string;
 }
 
-export default function NodeDetails({ applicationState }: NodeDetailsProps) {
+export default function NodeDetails({
+  applicationState,
+  open,
+  onClose,
+}: NodeDetailsProps) {
   const { nodeId } = useParams<ParamTypes>();
   const node = applicationState.nodeInfos.get(nodeId);
 
-  if (node === undefined) {
-    return <p>A node with the ID: {nodeId} does not exist.</p>;
-  }
-
-  return <Node nodeId={nodeId} nodeInfo={node} />;
+  return (
+    <DetailsDialog
+      onClose={onClose}
+      open={open}
+      title="Node Details"
+      titleId="node-details-dialog-title"
+    >
+      {node === undefined ? (
+        <p>A node with the ID: {nodeId} does not exist.</p>
+      ) : (
+        <Node nodeId={nodeId} nodeInfo={node} />
+      )}
+    </DetailsDialog>
+  );
 }

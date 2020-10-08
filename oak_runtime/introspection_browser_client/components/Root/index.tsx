@@ -16,7 +16,7 @@
 
 import React from 'react';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import { BrowserRouter, Switch, Route } from 'react-router-dom';
+import { BrowserRouter, Route } from 'react-router-dom';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
@@ -24,7 +24,6 @@ import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 import StateGraph from '~/components/StateGraph';
 import EventList from '~/components/EventList';
-import NotFound from '~/components/NotFound';
 import NodeDetails from '~/components/NodeDetails';
 import HandleDetails from '~/components/HandleDetails';
 import ChannelDetails from '~/components/ChannelDetails';
@@ -330,58 +329,67 @@ export default function Root() {
         </Toolbar>
       </AppBar>
       <BrowserRouter basename="/dynamic">
-        <Switch>
-          <Route exact path="/">
-            <div className={classes.contentWrapper}>
-              <StateGraph applicationState={applicationState}></StateGraph>
-              <div className={classes.eventListWrapper}>
-                <EventList
-                  className={classes.eventList}
-                  totalEvents={totalEvents}
-                  presentEventIndex={events.length - 1}
-                  setPresentEventIndex={setPresentEventIndex}
-                >
-                  <TimeTravelControls
-                    back={() => (
-                      <Button
-                        size="small"
-                        disabled={presentEventIndex === 0}
-                        onClick={() =>
-                          setPresentEventIndex((index) => index - 1)
-                        }
-                      >
-                        Go back in time
-                      </Button>
-                    )}
-                    forth={() => (
-                      <Button
-                        size="small"
-                        disabled={presentEventIndex + 1 >= totalEvents.length}
-                        onClick={() =>
-                          setPresentEventIndex((index) => index + 1)
-                        }
-                      >
-                        Go forward in time
-                      </Button>
-                    )}
-                  />
-                </EventList>
-              </div>
+        <Route path="/">
+          <div className={classes.contentWrapper}>
+            <StateGraph applicationState={applicationState}></StateGraph>
+            <div className={classes.eventListWrapper}>
+              <EventList
+                className={classes.eventList}
+                totalEvents={totalEvents}
+                presentEventIndex={presentEventIndex}
+                setPresentEventIndex={setPresentEventIndex}
+              >
+                <TimeTravelControls
+                  back={() => (
+                    <Button
+                      size="small"
+                      disabled={presentEventIndex === 0}
+                      onClick={() => setPresentEventIndex((index) => index - 1)}
+                    >
+                      Go back in time
+                    </Button>
+                  )}
+                  forth={() => (
+                    <Button
+                      size="small"
+                      disabled={presentEventIndex + 1 >= totalEvents.length}
+                      onClick={() => setPresentEventIndex((index) => index + 1)}
+                    >
+                      Go forward in time
+                    </Button>
+                  )}
+                />
+              </EventList>
             </div>
-          </Route>
-          <Route exact path="/node/:nodeId">
-            <NodeDetails applicationState={applicationState} />
-          </Route>
-          <Route exact path="/node/:nodeId/:handle">
-            <HandleDetails applicationState={applicationState} />
-          </Route>
-          <Route exact path="/channel/:channelId">
-            <ChannelDetails applicationState={applicationState} />
-          </Route>
-          <Route>
-            <NotFound />
-          </Route>
-        </Switch>
+          </div>
+        </Route>
+        <Route exact path="/node/:nodeId">
+          {({ match, history }) => (
+            <NodeDetails
+              open={Boolean(match)}
+              onClose={() => history.push('/')}
+              applicationState={applicationState}
+            />
+          )}
+        </Route>
+        <Route exact path="/node/:nodeId/:handle">
+          {({ match, history }) => (
+            <HandleDetails
+              open={Boolean(match)}
+              onClose={() => history.push('/')}
+              applicationState={applicationState}
+            />
+          )}
+        </Route>
+        <Route exact path="/channel/:channelId">
+          {({ match, history }) => (
+            <ChannelDetails
+              open={Boolean(match)}
+              onClose={() => history.push('/')}
+              applicationState={applicationState}
+            />
+          )}
+        </Route>
       </BrowserRouter>
     </>
   );

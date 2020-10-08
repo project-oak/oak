@@ -15,6 +15,7 @@
 //
 
 import React from 'react';
+import { useHistory } from 'react-router-dom';
 import { graphviz, Graphviz } from 'd3-graphviz';
 import { transition } from 'd3-transition';
 import { easeLinear } from 'd3-ease';
@@ -190,6 +191,7 @@ export default function StateGraph({ applicationState }: StateGraphProps) {
   const [shouldIncludeHandles, setShouldIncludeHandles] = React.useState(false);
   const classes = useStyles();
   const ref = React.useRef<HTMLDivElement>(null);
+  const history = useHistory();
   React.useEffect(() => {
     async function drawGraph() {
       const dotGraph = getGraphFromState(applicationState, {
@@ -202,7 +204,22 @@ export default function StateGraph({ applicationState }: StateGraphProps) {
         dot = graphviz(ref.current).dot(dotGraph, resolve);
       });
       const transiton = transition('ease').duration(300).ease(easeLinear);
-      dot!.transition(() => transiton).render();
+      await new Promise((resolve) => {
+        dot!.transition(() => transiton).render(resolve);
+      });
+      // Get html links and convert them to client side redirects. This
+      // prevents page reloads, preserving graph zoom-level etc.
+      ref.current!.querySelectorAll('a').forEach((link) => {
+        const href = link.getAttribute('href');
+        const routePrefix = '/dynamic';
+
+        if (href !== undefined && href!.startsWith(routePrefix)) {
+          link.onclick = (event) => {
+            event.preventDefault();
+            history.push(href!.slice(routePrefix.length));
+          };
+        }
+      });
     }
 
     if (ref.current) {

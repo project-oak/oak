@@ -17,9 +17,12 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { OakApplicationState } from '~/components/Root';
+import DetailsDialog, { DetailsDialogProps } from '~/components/DetailsDialog';
 
 type HandleDetailsProps = {
   applicationState: OakApplicationState;
+  open: DetailsDialogProps['open'];
+  onClose: DetailsDialogProps['onClose'];
 };
 
 interface ParamTypes {
@@ -27,9 +30,11 @@ interface ParamTypes {
   handle: string;
 }
 
-export default function HandleDetails({
+function HandleDetailsContent({
   applicationState,
-}: HandleDetailsProps) {
+}: {
+  applicationState: OakApplicationState;
+}) {
   const { nodeId, handle } = useParams<ParamTypes>();
   const node = applicationState.nodeInfos.get(nodeId);
 
@@ -52,5 +57,22 @@ export default function HandleDetails({
       The handle {handle} of the node {nodeId} maps to channel{' '}
       {channelHalf.channelId} {channelHalf.direction}
     </p>
+  );
+}
+
+export default function HandleDetails({
+  applicationState,
+  open,
+  onClose,
+}: HandleDetailsProps) {
+  return (
+    <DetailsDialog
+      onClose={onClose}
+      open={open}
+      title="Handle Details"
+      titleId="handle-details-dialog-title"
+    >
+      <HandleDetailsContent applicationState={applicationState} />
+    </DetailsDialog>
   );
 }
