@@ -14,6 +14,7 @@ byteorder = "*"
 chrono = "*"
 expect = { path = "../../../../third_party/expect" }
 hex = "*"
+http_server = { path = "../../../http_server/module" }
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"

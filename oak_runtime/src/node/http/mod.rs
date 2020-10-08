@@ -161,7 +161,10 @@ impl HttpServerNode {
 
         // Run until asked to terminate...
         let result = graceful_server.await;
-        info!("HTTP server pseudo-node terminated with {:?}", result);
+        info!(
+            "HTTP server pseudo-node on addr {:?} terminated with {:?}",
+            self.address, result
+        );
     }
 
     /// Build a server that checks incoming TCP connections for TLS handshake.
