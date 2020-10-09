@@ -59,8 +59,9 @@ pub fn compile_rust_wasm(
         "--target=wasm32-unknown-unknown".to_string(),
         format!("--manifest-path={}", cargo_path),
     ];
-    if let Profile::Release = profile {
-        args.push("--release".to_string());
+    match profile {
+        Profile::Release => args.push("--release".to_string()),
+        Profile::Debug => (),
     }
 
     Command::new("cargo")
