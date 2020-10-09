@@ -64,16 +64,6 @@ pub fn compile_rust_wasm(
     }
 
     Command::new("cargo")
-        // .args(&[
-        //     "build",
-        //     &format!(
-        //         "--target-dir={}",
-        //         target_dir.to_str().expect("invalid target dir")
-        //     ),
-        //     &format!("{}", if let Profile::Release = profile { "--release" } else { "" }),
-        //     "--target=wasm32-unknown-unknown",
-        //     &format!("--manifest-path={}", cargo_path),
-        // ])
         .args(args)
         .env_remove("RUSTFLAGS")
         .spawn()
