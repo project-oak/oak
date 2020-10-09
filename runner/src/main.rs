@@ -1000,6 +1000,11 @@ fn is_yaml_file(path: &PathBuf) -> bool {
     filename.ends_with(".yaml")
 }
 
+fn is_html_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".htm") || filename.ends_with(".html")
+}
+
 fn is_javascript_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".js") || filename.ends_with(".mjs")
@@ -1108,6 +1113,7 @@ fn run_prettier(mode: FormatMode) -> Step {
                 is_markdown_file(path)
                     || is_yaml_file(path)
                     || is_toml_file(path)
+                    || is_html_file(path)
                     || is_javascript_file(path)
                     || is_typescript_file(path)
             })
