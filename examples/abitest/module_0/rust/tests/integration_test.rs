@@ -37,8 +37,8 @@ const BACKEND_MODULE_WASM_FILE_NAME: &str = "abitest_1_backend.wasm";
 
 fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
     Ok(hashmap! {
-        FRONTEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(FRONTEND_MANIFEST, FRONTEND_MODULE_WASM_FILE_NAME).context("could not compile frontend module")?,
-        BACKEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(BACKEND_MANIFEST, BACKEND_MODULE_WASM_FILE_NAME).context("could not compile backend module")?,
+        FRONTEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(FRONTEND_MANIFEST, FRONTEND_MODULE_WASM_FILE_NAME, false).context("could not compile frontend module")?,
+        BACKEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(BACKEND_MANIFEST, BACKEND_MODULE_WASM_FILE_NAME, false).context("could not compile backend module")?,
     })
 }
 
