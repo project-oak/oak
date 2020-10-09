@@ -131,13 +131,13 @@ impl ChannelResponseWriter {
 
 /// Trait for Oak Nodes that act as a gRPC services.
 ///
-/// A `ServerNode` instance is normally passed to [`oak::run_event_loop`], to
+/// A `ServerNode` instance is normally passed to [`oak::run_command_loop`], to
 /// allow repeated invocation of its `invoke()` method.
 ///
 /// You can choose to implement this trait yourself, or use the convenient
 /// `Dispatcher` created by the gRPC code generator.
 ///
-/// [`oak::run_event_loop`]: ../../oak/fn.run_event_loop.html
+/// [`oak::run_command_loop`]: ../../oak/fn.run_command_loop.html
 pub trait ServerNode {
     /// Process a single gRPC method invocation.
     ///
@@ -147,7 +147,7 @@ pub trait ServerNode {
     fn invoke(&mut self, method: &str, req: &[u8], writer: ChannelResponseWriter);
 }
 
-impl<T: ServerNode> crate::Node<Invocation> for T {
+impl<T: ServerNode> crate::CommandHandler<Invocation> for T {
     /// Handle incoming gRPC events for a [`ServerNode`].
     ///
     /// Invoking the given `node`'s [`invoke`] method for each incoming request that

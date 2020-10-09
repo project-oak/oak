@@ -96,7 +96,7 @@ oak::entrypoint!(grpc_fe => |_in_channel| {
     let grpc_channel = oak::grpc::server::init("[::]:8080")
         .expect("could not create gRPC server pseudo-Node");
 
-    oak::run_event_loop(dispatcher, grpc_channel);
+    oak::run_command_loop(dispatcher, grpc_channel);
 });
 
 oak::entrypoint!(provider => |frontend_read| {
@@ -106,8 +106,7 @@ oak::entrypoint!(provider => |frontend_read| {
             .expect("Did not receive a decodable message")
             .sender
             .expect("No sender in received message");
-    oak::run_event_loop(BlobStoreProvider::new(frontend_sender),
-        Receiver::<BlobStoreRequest>::new(frontend_read));
+    oak::run_command_loop(BlobStoreProvider::new(frontend_sender), frontend_read);
 });
 
 oak::entrypoint!(store => |reader| {
@@ -117,8 +116,7 @@ oak::entrypoint!(store => |reader| {
             .expect("Did not receive a write handle")
             .sender
             .expect("No write handle in received message");
-    oak::run_event_loop(BlobStoreImpl::new(sender),
-        Receiver::<BlobRequest>::new(reader));
+    oak::run_command_loop(BlobStoreImpl::new(sender), reader);
 });
 
 enum BlobStoreAccess {
@@ -206,7 +204,7 @@ impl BlobStoreProvider {
     }
 }
 
-impl oak::Node<BlobStoreRequest> for BlobStoreProvider {
+impl oak::CommandHandler<BlobStoreRequest> for BlobStoreProvider {
     fn handle_command(&mut self, _command: BlobStoreRequest) -> Result<(), oak::OakError> {
         // Create new BlobStore
         let (to_store_write_handle, to_store_read_handle) = oak::channel_create().unwrap();
@@ -277,7 +275,7 @@ fn blob_index(id: u64) -> usize {
     (id - 1) as usize
 }
 
-impl oak::Node<BlobRequest> for BlobStoreImpl {
+impl oak::CommandHandler<BlobRequest> for BlobStoreImpl {
     fn handle_command(&mut self, request: BlobRequest) -> Result<(), oak::OakError> {
         let response = match request.request {
             Some(Request::Get(req)) => self.get_blob(req),

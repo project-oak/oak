@@ -19,11 +19,11 @@ use crate::proto::{
     Command, Message,
 };
 use log::{info, warn};
-use oak::Node;
+use oak::CommandHandler;
 
 oak::entrypoint!(backend_oak_main => |in_channel| {
     oak::logger::init_default();
-    oak::run_event_loop(Room::default(), oak::io::Receiver::<Command>::new(in_channel));
+    oak::run_command_loop(Room::default(), in_channel);
 });
 
 #[derive(Default)]
@@ -32,7 +32,7 @@ struct Room {
     clients: Vec<oak::grpc::ChannelResponseWriter>,
 }
 
-impl Node<Command> for Room {
+impl CommandHandler<Command> for Room {
     fn handle_command(&mut self, command: Command) -> Result<(), oak::OakError> {
         match command.command {
             Some(JoinRoom(sender)) => {

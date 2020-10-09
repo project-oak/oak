@@ -82,5 +82,5 @@ oak::entrypoint!(oak_main => |in_channel| {
     });
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("Couldn't create gRPC server pseudo-Node");
-    oak::run_event_loop(dispatcher, grpc_channel);
+    oak::run_command_loop(dispatcher, grpc_channel);
 });

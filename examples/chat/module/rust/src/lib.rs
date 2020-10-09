@@ -44,7 +44,7 @@ oak::entrypoint!(grpc_oak_main => |_in_channel| {
     let dispatcher = ChatDispatcher::new(Node::default());
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_event_loop(dispatcher, grpc_channel);
+    oak::run_command_loop(dispatcher, grpc_channel);
 });
 
 struct Room {
