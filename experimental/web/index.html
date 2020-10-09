@@ -6,8 +6,10 @@
   </head>
 
   <body>
+    <script src="https://raw.githack.com/protobufjs/protobuf.js/v6.10.1/dist/protobuf.js"></script>
     <script type="module">
       import Vue from 'https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.esm.browser.js';
+
       function init() {
         var app = new Vue({
           el: '#app',
@@ -46,14 +48,30 @@
               await this.instantiate();
             },
             instantiate: async function () {
-              const statusOk = 1;
+              // Load proto files from GitHub. We cannot refer to local files unless they are served
+              // via a web server first.
+              // This means that if protobuf definitions are modified locally, this script will not
+              // be able to use the updated definitions.
+              const root = await protobuf.load([
+                'https://raw.githubusercontent.com/project-oak/oak/main/oak_abi/proto/application.proto',
+                'https://raw.githubusercontent.com/project-oak/oak/main/oak_abi/proto/label.proto',
+                'https://raw.githubusercontent.com/project-oak/oak/main/oak_abi/proto/oak_abi.proto',
+              ]);
+
+              // Lookup the types that we will use later on.
+              const NodeConfiguration = root.lookupType(
+                'oak.application.NodeConfiguration'
+              );
+              const Label = root.lookupType('oak.label.Label');
+              const OakStatus = root.lookupEnum('oak_abi.OakStatus');
+
               // Provide a mock implementation of some of the Oak ABI functions.
               // Mostly these just log their argument to the trace, and return a
               // successful status without actually doing anything.
               const importObject = {
                 oak: {
                   wait_on_channels: (buf, count) => {
-                    const status = statusOk;
+                    const status = OakStatus.values.OK;
                     const entry =
                       new Date().toISOString() +
                       ': wait_on_channels(' +
@@ -64,7 +82,7 @@
                     return status;
                   },
                   channel_close: (handle) => {
-                    const status = statusOk;
+                    const status = OakStatus.values.OK;
                     const entry =
                       new Date().toISOString() +
                       ': channel_close(' +
@@ -83,7 +101,7 @@
                     handleCount,
                     actualHandleCount
                   ) => {
-                    const status = statusOk;
+                    const status = OakStatus.values.OK;
                     const entry =
                       new Date().toISOString() +
                       ': channel_read(' +
@@ -108,7 +126,7 @@
                     handleBuf,
                     handleCount
                   ) => {
-                    const status = statusOk;
+                    const status = OakStatus.values.OK;
                     const bytes = this.readMemory(buf, size);
                     const bytesString = new TextDecoder().decode(bytes);
                     const handles = new Uint8Array(
@@ -140,8 +158,10 @@
                     labelBuf,
                     labelSize
                   ) => {
-                    const status = statusOk;
-                    const label = this.readMemory(labelBuf, labelSize);
+                    const status = OakStatus.values.OK;
+                    const label = Label.decode(
+                      this.readMemory(labelBuf, labelSize)
+                    );
                     const entry =
                       new Date().toISOString() +
                       ': channel_create(' +
@@ -150,9 +170,8 @@
                       ) +
                       ') -> ' +
                       status +
-                      '\n  label: [' +
-                      label +
-                      ']';
+                      '\n  label: ' +
+                      JSON.stringify(label);
                     this.trace.push(entry);
                     return status;
                   },
@@ -163,10 +182,13 @@
                     labelSize,
                     handle
                   ) => {
-                    const status = statusOk;
-                    const config = this.readMemory(configBuf, configLen);
-                    const configString = new TextDecoder().decode(config);
-                    const label = this.readMemory(labelBuf, labelSize);
+                    const status = OakStatus.values.OK;
+                    const config = NodeConfiguration.decode(
+                      this.readMemory(configBuf, configLen)
+                    );
+                    const label = Label.decode(
+                      this.readMemory(labelBuf, labelSize)
+                    );
                     const entry =
                       new Date().toISOString() +
                       ': node_create(' +
@@ -175,20 +197,16 @@
                       ) +
                       ') -> ' +
                       status +
-                      '\n  config: [' +
-                      config +
-                      ']' +
-                      '\n  config(string): "' +
-                      configString +
-                      '"' +
-                      '\n  label: [' +
-                      label +
-                      ']';
+                      '\n  config: ' +
+                      JSON.stringify(config) +
+                      '\n  label: ' +
+                      JSON.stringify(label);
                     this.trace.push(entry);
+                    this.createNode(config);
                     return status;
                   },
                   random_get: (buf, len) => {
-                    const status = statusOk;
+                    const status = OakStatus.values.OK;
                     const entry =
                       new Date().toISOString() +
                       ': random_get(' +
@@ -219,6 +237,11 @@
               // messages as a parameter, so we just pass a zero value here.
               const result = this.instance.exports[exportName](BigInt(0));
               console.log('invocation result: ' + result);
+            },
+            createNode: function (config) {
+              // TODO(#1067): Create mock nodes that replicate the functionality from the Oak
+              // Runtime.
+              console.log('creating node', config);
             },
             // Reset the current Wasm instance and trace, but keep the module loaded, so
             // that we can perform another invocation from scratch.
