@@ -42,7 +42,7 @@ pub enum Profile {
 
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
 pub fn compile_rust_wasm(
-    cargo_path: &str,
+    manifest_path: &str,
     module_wasm_file_name: &str,
     profile: Profile,
 ) -> anyhow::Result<Vec<u8>> {
@@ -57,7 +57,7 @@ pub fn compile_rust_wasm(
             target_dir.to_str().expect("invalid target dir")
         ),
         "--target=wasm32-unknown-unknown".to_string(),
-        format!("--manifest-path={}", cargo_path),
+        format!("--manifest-path={}", manifest_path),
     ];
     match profile {
         Profile::Release => args.push("--release".to_string()),
