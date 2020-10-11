@@ -165,7 +165,34 @@ Proof.
                 reflexivity.
                 symmetry. eapply state_low_proj_loweq.
             + (* ReadChannel *)
-                admit.
+                inversion H3. crush.
+                assert (Hnproj: n = (node_low_proj ell n)) by
+                    repeat (eapply flows_node_proj || symmetry|| congruence ).
+                assert (Hcproj: (chan_low_proj ell ch) = ch) by
+                    eauto using flows_chan_proj, ord_trans.
+                pose proof (state_nidx_to_proj_state_idx ell _ _ _
+                    ltac:(eauto)) as Hn_idx_s1proj.
+                eexists. exists (n <--- msg).
+                split. econstructor.
+                eauto. eauto.
+                replace (node_low_proj ell n) with n by auto; auto.
+                rewrite <- H1. econstructor.
+                replace n with (node_low_proj ell n) by auto; auto.
+                econstructor. eassumption.
+                replace (node_low_proj ell n) with n by auto; auto.
+                eapply state_hidx_to_proj_state_hidx; eauto. 
+                replace (chan_low_proj ell ch) with ch by eauto.
+                eauto. 
+                replace (node_low_proj ell n) with n by auto; auto.
+                replace (chan_low_proj ell ch) with ch. eauto.
+                eauto. eauto. unfold s1''. subst. split.
+                eapply set_call_unwind. eapply state_upd_chan_unwind.
+                unfold ch'. 
+                replace (chan_low_proj ell ch) with ch by eauto. 
+                reflexivity. eapply state_upd_node_unwind.
+                unfold n'. replace (node_low_proj ell n) with n by auto; auto.
+                reflexivity. symmetry. eapply state_low_proj_loweq.
+                reflexivity.
             + (* CreateChannel *)
                 admit.
             + (* CreateNode *)

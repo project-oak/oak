@@ -55,6 +55,12 @@ Proof.
     reflexivity.
 Qed.
 
+Theorem flows_chan_proj: forall ell ch,
+    (clbl ch <<L ell) ->
+    (chan_low_proj ell ch) = ch.
+Proof.
+Admitted.
+
 Definition idempotent {A: Type} (f: A -> A) := forall a, f (f a) = f a.
 
 Theorem node_low_proj_idempotent: forall ell, idempotent (node_low_proj ell).
