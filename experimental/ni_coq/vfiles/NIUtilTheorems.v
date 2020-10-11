@@ -61,6 +61,16 @@ Theorem flows_chan_proj: forall ell ch,
 Proof.
 Admitted.
 
+Theorem proj_pres_handle_fresh: forall ell s,
+    handle_fresh (state_low_proj ell s) = handle_fresh s.
+Proof.
+Admitted.
+
+Theorem proj_pres_nid_fresh: forall ell s,
+    nid_fresh (state_low_proj ell s) = nid_fresh s.
+Proof.
+Admitted.
+
 Definition idempotent {A: Type} (f: A -> A) := forall a, f (f a) = f a.
 
 Theorem node_low_proj_idempotent: forall ell, idempotent (node_low_proj ell).
