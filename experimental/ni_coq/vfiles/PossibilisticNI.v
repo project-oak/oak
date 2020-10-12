@@ -422,8 +422,18 @@ Theorem possibilistic_ni_unwind_t: forall ell t1 t2 t1',
     (step_system_ev_t t2 t2') /\
     (trace_low_eq ell t1' t2')).
 Proof.
-    (* Should make use of possibilistic_ni_1step *)
-Admitted. (* WIP *)
+    intros. 
+    inversion H; crush.
+    -  (* starts from empty trace *)
+        exfalso. eapply no_steps_from_empty; eauto.
+    - (* non-empty trace *)
+        inversion H0; inversion H4; crush.
+        pose proof (possibilistic_ni_1step _ s ys s' _
+            ltac:(eauto) ltac:(eauto)) as [s2' [e2 [H2step [Hsleq Heleq]]]].
+        eexists ((s2', e2) :: (ys, ye) :: t3); repeat split; crush.
+        econstructor; crush; eauto. 
+        econstructor; crush; eauto.
+Qed.
 
 Theorem possibilistic_ni: conjecture_possibilistic_ni.
 Proof.
