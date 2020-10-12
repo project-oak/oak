@@ -496,13 +496,13 @@
 
 <span class="doccomment">/// Trait for Oak Nodes that act as a gRPC services.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// A `ServerNode` instance is normally passed to [`oak::run_event_loop`], to</span>
+<span class="doccomment">/// A `ServerNode` instance is normally passed to [`oak::run_command_loop`], to</span>
 <span class="doccomment">/// allow repeated invocation of its `invoke()` method.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// You can choose to implement this trait yourself, or use the convenient</span>
 <span class="doccomment">/// `Dispatcher` created by the gRPC code generator.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// [`oak::run_event_loop`]: ../../oak/fn.run_event_loop.html</span>
+<span class="doccomment">/// [`oak::run_command_loop`]: ../../oak/fn.run_command_loop.html</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ServerNode</span> {
     <span class="doccomment">/// Process a single gRPC method invocation.</span>
     <span class="doccomment">///</span>
@@ -512,7 +512,7 @@
     <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">method</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>);
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ServerNode</span><span class="op">&gt;</span> <span class="kw">crate</span>::<span class="ident">Node</span><span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">T</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ServerNode</span><span class="op">&gt;</span> <span class="kw">crate</span>::<span class="ident">CommandHandler</span><span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">T</span> {
     <span class="doccomment">/// Handle incoming gRPC events for a [`ServerNode`].</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Invoking the given `node`&#39;s [`invoke`] method for each incoming request that</span>

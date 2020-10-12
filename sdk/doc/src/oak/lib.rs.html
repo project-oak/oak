@@ -597,6 +597,10 @@
 <span id="597">597</span>
 <span id="598">598</span>
 <span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -1021,12 +1025,12 @@
     }));
 }
 
-<span class="doccomment">/// Trait implemented by Oak Nodes that operate on commands.</span>
+<span class="doccomment">/// Trait implemented by Oak Nodes (or parts thereof) that operate on commands.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// It has a single method for handling commands, which are [`Decodable`](crate::io::Decodable)</span>
 <span class="doccomment">/// objects that are received via the single incoming channel handle which is passed in at Node</span>
 <span class="doccomment">/// creation time. The return value is only used for logging in case of failure.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Node</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Decodable</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CommandHandler</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Decodable</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">handle_command</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">command</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw">crate</span>::<span class="ident">OakError</span><span class="op">&gt;</span>;
 }
 
@@ -1041,27 +1045,31 @@
     <span class="ident">result</span>
 }
 
-<span class="doccomment">/// Run an event loop on the provided `node`:</span>
+<span class="doccomment">/// Run a command loop on the provided [`CommandHandler`]:</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// - wait for new messages on the provided channel `in_channel`</span>
 <span class="doccomment">/// - if the runtime signals that the Node was terminated while waiting, then exit the event loop</span>
 <span class="doccomment">/// - otherwise, read the available message via the provided channel handle</span>
-<span class="doccomment">/// - decode the message from (bytes + handles) to the specified type `T`</span>
-<span class="doccomment">/// - pass the typed object to the `Node::handle_command` method of the `node`, which executes a</span>
-<span class="doccomment">///   single iteration of the event loop</span>
+<span class="doccomment">/// - decode the message from (bytes + handles) to the specified command type `T`</span>
+<span class="doccomment">/// - pass the typed command object to the `Node::handle_command` method of the `node`, which</span>
+<span class="doccomment">///   executes a single iteration of the loop</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just</span>
-<span class="doccomment">/// logged, and the event loop continues with the next iteration.</span>
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_event_loop</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Decodable</span>, <span class="ident">N</span>: <span class="ident">Node</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(
-    <span class="kw-2">mut</span> <span class="ident">node</span>: <span class="ident">N</span>,
-    <span class="ident">receiver</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="doccomment">/// logged, and the loop continues with the next iteration.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_command_loop</span><span class="op">&lt;</span>
+    <span class="ident">T</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Decodable</span>,
+    <span class="ident">N</span>: <span class="ident">CommandHandler</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    <span class="ident">R</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="op">&gt;</span>(
+    <span class="kw-2">mut</span> <span class="ident">command_handler</span>: <span class="ident">N</span>,
+    <span class="ident">receiver</span>: <span class="ident">R</span>,
 ) {
+    <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">receiver</span>.<span class="ident">into</span>();
     <span class="kw">if</span> <span class="op">!</span><span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">is_valid</span>(<span class="ident">receiver</span>.<span class="ident">handle</span>.<span class="ident">handle</span>) {
         <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}: invalid input handle&quot;</span>, <span class="ident">receiver</span>);
         <span class="kw">return</span>;
     }
-    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{:?}: starting event loop&quot;</span>, <span class="ident">receiver</span>);
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{:?}: starting command loop&quot;</span>, <span class="ident">receiver</span>);
     <span class="kw">loop</span> {
         <span class="comment">// First wait until a message is available. If the Node was terminated while waiting, this</span>
         <span class="comment">// will return `ErrTerminated`, which indicates that the event loop should be terminated.</span>
@@ -1109,7 +1117,7 @@
         <span class="kw">match</span> <span class="ident">receiver</span>.<span class="ident">try_receive</span>() {
             <span class="prelude-val">Ok</span>(<span class="ident">command</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{:?}: received command&quot;</span>, <span class="ident">receiver</span>);
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">node</span>.<span class="ident">handle_command</span>(<span class="ident">command</span>) {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">command_handler</span>.<span class="ident">handle_command</span>(<span class="ident">command</span>) {
                     <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}: error handling command: {}&quot;</span>, <span class="ident">receiver</span>, <span class="ident">err</span>);
                 }
             }
@@ -1128,7 +1136,7 @@
 <span class="doccomment">/// #[derive(Default)]</span>
 <span class="doccomment">/// struct DummyNode;</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// impl oak::Node&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
+<span class="doccomment">/// impl oak::CommandHandler&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
 <span class="doccomment">///     // ...</span>
 <span class="doccomment">///     # fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; Result&lt;(), oak::OakError&gt; {</span>
 <span class="doccomment">///     #     unimplemented!()</span>
@@ -1139,7 +1147,7 @@
 <span class="doccomment">///     let dispatcher = DummyNode::default();</span>
 <span class="doccomment">///     let grpc_channel = oak::grpc::server::init(&quot;[::]:8080&quot;)</span>
 <span class="doccomment">///         .expect(&quot;could not create gRPC server pseudo-node&quot;);</span>
-<span class="doccomment">///     oak::run_event_loop(dispatcher, grpc_channel);</span>
+<span class="doccomment">///     oak::run_command_loop(dispatcher, grpc_channel);</span>
 <span class="doccomment">/// });</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// # fn main() {}</span>
@@ -1158,7 +1166,7 @@
 <span class="doccomment">/// # #[derive(Default)]</span>
 <span class="doccomment">/// # struct DummyNode;</span>
 <span class="doccomment">/// #</span>
-<span class="doccomment">/// # impl oak::Node&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
+<span class="doccomment">/// # impl oak::CommandHandler&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
 <span class="doccomment">/// #     fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; Result&lt;(), oak::OakError&gt; {</span>
 <span class="doccomment">/// #         unimplemented!()</span>
 <span class="doccomment">/// #     }</span>
@@ -1169,7 +1177,7 @@
 <span class="doccomment">///     let dispatcher = DummyNode::default();</span>
 <span class="doccomment">///     let grpc_channel = oak::grpc::server::init(&quot;[::]:8080&quot;)</span>
 <span class="doccomment">///         .expect(&quot;could not create gRPC server pseudo-node&quot;);</span>
-<span class="doccomment">///     oak::run_event_loop(dispatcher, grpc_channel);</span>
+<span class="doccomment">///     oak::run_command_loop(dispatcher, grpc_channel);</span>
 <span class="doccomment">/// });</span>
 <span class="doccomment">/// #</span>
 <span class="doccomment">/// # fn main() {}</span>
