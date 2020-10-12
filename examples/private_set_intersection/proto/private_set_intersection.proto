@@ -21,7 +21,12 @@ package oak.examples.private_set_intersection;
 import "google/protobuf/empty.proto";
 
 message SubmitSetRequest {
-  repeated string values = 1;
+  string set_id = 1;
+  repeated string values = 2;
+}
+
+message GetIntersectionRequest {
+  string set_id = 1;
 }
 
 message GetIntersectionResponse {
@@ -29,10 +34,10 @@ message GetIntersectionResponse {
 }
 
 service PrivateSetIntersection {
-  // Submit a private set that will be contributed to the set intersection.
-  // The number of submissions is limited.
+  // Submit a private set that will be contributed to the set intersection specified by the set ID.
+  // The number of submissions is limited for individual intersection.
   rpc SubmitSet(SubmitSetRequest) returns (google.protobuf.Empty);
-  // Request the final private set intersection.
+  // Request the final private set intersection specified by the set ID.
   // Once the intersection is requested it becomes locked, and new contributions are discarded.
-  rpc GetIntersection(google.protobuf.Empty) returns (GetIntersectionResponse);
+  rpc GetIntersection(GetIntersectionRequest) returns (GetIntersectionResponse);
 }

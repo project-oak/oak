@@ -33,10 +33,10 @@ pub mod proto {
 
 use oak::grpc;
 use proto::{
-    GetIntersectionResponse, PrivateSetIntersection, PrivateSetIntersectionDispatcher,
-    SubmitSetRequest,
+    GetIntersectionRequest, GetIntersectionResponse, PrivateSetIntersection,
+    PrivateSetIntersectionDispatcher, SubmitSetRequest,
 };
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 oak::entrypoint!(oak_main => |_in_channel| {
     let dispatcher = PrivateSetIntersectionDispatcher::new(Node::default());
@@ -49,32 +49,39 @@ oak::entrypoint!(oak_main => |_in_channel| {
 pub const SET_THRESHOLD: u64 = 2;
 
 #[derive(Default)]
-struct Node {
+struct SetIntersection {
     /// Current intersection of contributed private sets.
-    values: Option<HashSet<String>>,
+    values: HashSet<String>,
     /// Number of contributed private sets.
     set_count: u64,
     /// The intersection is locked and new contributions are discarded.
     locked: bool,
 }
 
+#[derive(Default)]
+struct Node {
+    /// Map from set ID to `SetIntersection`.
+    sets: HashMap<String, SetIntersection>,
+}
+
 impl PrivateSetIntersection for Node {
     fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<()> {
-        if self.locked {
+        let mut current_set = self
+            .sets
+            .entry(req.set_id)
+            .or_insert(SetIntersection::default());
+
+        if current_set.locked {
             return Err(grpc::build_status(
                 grpc::Code::FailedPrecondition,
                 "Set contributions are no longer available",
             ));
         }
 
-        if self.set_count < SET_THRESHOLD {
-            let set = req.values.iter().cloned().collect::<HashSet<_>>();
-            let next = match self.values {
-                Some(ref previous) => previous.intersection(&set).cloned().collect(),
-                None => set,
-            };
-            self.values = Some(next);
-            self.set_count += 1;
+        if current_set.set_count < SET_THRESHOLD {
+            let new_set = req.values.iter().cloned().collect::<HashSet<_>>();
+            current_set.values = current_set.values.intersection(&new_set).cloned().collect();
+            current_set.set_count += 1;
             Ok(())
         } else {
             Err(grpc::build_status(
@@ -84,12 +91,22 @@ impl PrivateSetIntersection for Node {
         }
     }
 
-    fn get_intersection(&mut self, _req: ()) -> grpc::Result<GetIntersectionResponse> {
-        let mut res = GetIntersectionResponse::default();
-        if let Some(ref set) = self.values {
-            res.values = set.iter().cloned().collect();
-        };
-        self.locked = true;
-        Ok(res)
+    fn get_intersection(
+        &mut self,
+        req: GetIntersectionRequest,
+    ) -> grpc::Result<GetIntersectionResponse> {
+        match self.sets.get_mut(&req.set_id) {
+            Some(ref mut set) => {
+                set.locked = true;
+                Ok(GetIntersectionResponse {
+                    values: set.values.iter().cloned().collect(),
+                    ..Default::default()
+                })
+            }
+            None => Err(grpc::build_status(
+                grpc::Code::FailedPrecondition,
+                "Incorrect set ID",
+            )),
+        }
     }
 }
