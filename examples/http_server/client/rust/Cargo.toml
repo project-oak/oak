@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
+base64 = "*"
 env_logger = "*"
 hyper = "*"
 hyper-rustls = { version = "*", default-features = false, features = [
@@ -14,6 +15,7 @@ hyper-rustls = { version = "*", default-features = false, features = [
 ] }
 log = "*"
 oak_abi = "=0.1.0"
+oak_sign = "*"
 prost = "*"
 rustls = "*"
 serde_json = "*"

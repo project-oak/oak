@@ -18,19 +18,21 @@ use super::*;
 use crate::{
     io::{ReceiverExt, SenderExt},
     node::Node,
+    proto::oak::invocation::HttpInvocation,
 };
 use maplit::hashmap;
 use oak_abi::{
-    label::{confidentiality_label, tls_endpoint_tag, Label},
+    label::{confidentiality_label, public_key_identity_tag, tls_endpoint_tag, Label},
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, HttpServerConfiguration,
         NodeConfiguration,
     },
 };
+use oak_io::Sender;
 use std::fs;
 
-static LOCAL_CA: &str = "../examples/certs/local/ca.pem";
-static GCP_CA: &str = "../examples/certs/gcp/ca.pem";
+const LOCAL_CA: &str = "../examples/certs/local/ca.pem";
+const GCP_CA: &str = "../examples/certs/gcp/ca.pem";
 
 /// A router node that creates a per-request [`EchoNode`] for each incoming request.
 struct RouterNode;
@@ -155,6 +157,7 @@ impl HttpServerTester {
     fn new(port: u32) -> HttpServerTester {
         let runtime = create_runtime();
         let invocation_receiver = create_server_node(&runtime, port);
+        let _ = env_logger::builder().is_test(true).try_init();
 
         // Create an Oak node that responds with 200 (OK) to every request it receives.
         runtime
@@ -191,10 +194,11 @@ async fn test_https_server_can_serve_https_requests() {
     let mut http_server_tester = HttpServerTester::new(2525);
     let client_with_valid_tls = create_client(LOCAL_CA);
 
-    // Send an HTTPS request, and check that response has StatusCode::OK
+    // Send an HTTPS request with an empty label, and check that response has StatusCode::OK
     let resp = send_request(
         client_with_valid_tls,
         "https://localhost:2525",
+        create_signature(),
         Label::public_untrusted(),
     )
     .await;
@@ -218,10 +222,11 @@ async fn test_https_server_cannot_serve_http_requests() {
     let mut http_server_tester = HttpServerTester::new(2526);
     let client_with_valid_tls = create_client(LOCAL_CA);
 
-    // Send an HTTP request, and check that the server responds with an error
+    // Send an HTTP request with empty label, and check that the server responds with an error
     let resp = send_request(
         client_with_valid_tls,
         "http://localhost:2526",
+        create_signature(),
         Label::public_untrusted(),
     )
     .await;
@@ -244,6 +249,7 @@ async fn test_https_server_does_not_terminate_after_a_bad_request() {
     let resp = send_request(
         client_with_valid_tls.clone(),
         "https://localhost:2527",
+        create_signature(),
         Label::public_untrusted(),
     )
     .await;
@@ -253,6 +259,7 @@ async fn test_https_server_does_not_terminate_after_a_bad_request() {
     let resp = send_request(
         client_with_invalid_tls,
         "https://localhost:2527",
+        create_signature(),
         Label::public_untrusted(),
     )
     .await;
@@ -263,6 +270,7 @@ async fn test_https_server_does_not_terminate_after_a_bad_request() {
     let resp = send_request(
         client_with_valid_tls,
         "https://localhost:2527",
+        create_signature(),
         Label::public_untrusted(),
     )
     .await;
@@ -281,18 +289,51 @@ async fn test_https_server_can_serve_https_requests_with_non_empty_request_label
     let mut http_server_tester = HttpServerTester::new(2528);
     let client_with_valid_tls = create_client(LOCAL_CA);
 
-    // TODO(#1357): Use the user's identity as the label
     let label = confidentiality_label(tls_endpoint_tag("localhost"));
 
     // Send an HTTPS request, and check that response has StatusCode::OK
-    let resp = send_request(client_with_valid_tls, "https://localhost:2528", label).await;
+    let resp = send_request(
+        client_with_valid_tls,
+        "https://localhost:2528",
+        create_signature(),
+        label,
+    )
+    .await;
     assert!(resp.is_ok());
     let resp = resp.unwrap();
     assert_eq!(resp.status(), http::status::StatusCode::OK.as_u16());
-    // TODO(#1357): Uncomment when the user's identity is set as the label
-    // assert!(resp
-    //     .headers()
-    //     .contains_key(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY));
+
+    // Stop the runtime and the servers
+    http_server_tester.cleanup();
+}
+
+#[tokio::test]
+async fn test_https_server_can_serve_https_requests_with_user_identity_as_request_label() {
+    init_logger();
+
+    // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
+    // HTTP requests.
+    let mut http_server_tester = HttpServerTester::new(2529);
+    let client_with_valid_tls = create_client(LOCAL_CA);
+
+    let signature = create_signature();
+
+    let label = confidentiality_label(public_key_identity_tag(signature.clone().public_key));
+
+    // Send an HTTPS request, and check that response has StatusCode::OK
+    let resp = send_request(
+        client_with_valid_tls,
+        "https://localhost:2529",
+        signature,
+        label,
+    )
+    .await;
+    assert!(resp.is_ok());
+    let resp = resp.unwrap();
+    assert_eq!(resp.status(), http::status::StatusCode::OK.as_u16());
+    assert!(resp
+        .headers()
+        .contains_key(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY));
 
     // Stop the runtime and the servers
     http_server_tester.cleanup();
@@ -392,17 +433,35 @@ fn create_client(
     hyper::client::Client::builder().build(https)
 }
 
+fn create_signature() -> oak_abi::proto::oak::identity::SignedChallenge {
+    let key_pair = oak_sign::KeyPair::generate().unwrap();
+    let signature =
+        oak_sign::SignatureBundle::create(oak_abi::OAK_CHALLENGE.as_bytes(), &key_pair).unwrap();
+
+    oak_abi::proto::oak::identity::SignedChallenge {
+        signed_hash: signature.signed_hash,
+        public_key: key_pair.pkcs8_public_key(),
+    }
+}
+
 async fn send_request(
     client: hyper::client::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
     uri: &str,
-    label: Label,
+    signature: oak_abi::proto::oak::identity::SignedChallenge,
+    request_label: Label,
 ) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
     // Send a request, and wait for the response
     let mut label_bytes = vec![];
-    if let Err(err) = label.encode(&mut label_bytes) {
+    if let Err(err) = request_label.encode(&mut label_bytes) {
         panic!("Failed to encode label: {}", err);
     }
     let label_bytes = base64::encode(label_bytes);
+
+    let mut sig_bytes = vec![];
+    if let Err(err) = signature.encode(&mut sig_bytes) {
+        panic!("Failed to encode signature: {}", err);
+    }
+    let sig_bytes = base64::encode(sig_bytes);
 
     // The client thread may start sending the requests before the server is up. In this case, the
     // request will be rejected with a "ConnectError". To make the tests are stable, we need to
@@ -414,6 +473,10 @@ async fn send_request(
             .method(http::Method::GET)
             .uri(uri)
             .header(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY, label_bytes.clone())
+            .header(
+                oak_abi::OAK_SIGNED_CHALLENGE_PROTOBUF_KEY,
+                sig_bytes.clone(),
+            )
             .body(hyper::Body::empty())
             .unwrap();
 

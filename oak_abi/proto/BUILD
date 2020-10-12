@@ -70,3 +70,17 @@ cc_grpc_library(
     well_known_protos = True,
     deps = [":application_cc_proto"],
 )
+
+proto_library(
+    name = "identity_proto",
+    srcs = ["identity.proto"],
+    deps = [
+        "@com_google_protobuf//:descriptor_proto",
+        "@com_google_protobuf//:empty_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "identity_cc_proto",
+    deps = [":identity_proto"],
+)

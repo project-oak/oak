@@ -134,8 +134,19 @@ pub fn tls_endpoint_tag(authority: &str) -> Tag {
     }
 }
 
+/// Creates a [`Tag`] having as principal the provided identification Ed25519 public key.
+///
+/// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto
+pub fn public_key_identity_tag(public_key: Vec<u8>) -> Tag {
+    Tag {
+        tag: Some(tag::Tag::PublicKeyIdentityTag(PublicKeyIdentityTag {
+            public_key,
+        })),
+    }
+}
+
 /// Convenience function for creating the top tag.
 pub fn top() -> Tag {
-    let tag = Some(crate::proto::oak::label::tag::Tag::TopTag(Top {}));
+    let tag = Some(tag::Tag::TopTag(Top {}));
     Tag { tag }
 }
