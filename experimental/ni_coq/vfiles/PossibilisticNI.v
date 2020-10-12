@@ -93,6 +93,18 @@ Local Ltac crush := repeat crush_step.
 
 Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
+
+(* Hints for [eauto with unwind] *)
+Hint Resolve state_upd_chan_unwind chan_append_unwind chan_low_proj_loweq
+    chan_low_proj_idempotent state_upd_node_unwind set_call_unwind 
+    state_low_proj_loweq : unwind.
+Hint Extern 4 (node_low_eq _ _ _) => reflexivity : unwind.
+Hint Extern 4 (chan_low_eq _ _ _) => reflexivity : unwind.
+(* meant to be case where we have (cleq ch (proj ch) ) and want to swap order *)
+Hint Extern 4 (chan_low_eq _ _ (chan_low_proj _ _)) => symmetry : unwind.
+Hint Extern 4 (state_low_eq _ _ (state_low_proj _ _)) => symmetry : unwind.
+
+
 Definition is_init(t: trace) := length t = 1.
 
 Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
@@ -130,104 +142,82 @@ Proof.
         * (* flowsto case *)
             inversion H_step_s1_s1'; assert (n0 = n ) by congruence; subst.
             + (* WriteChannel *)
-                inversion H3; assert (n0 = n) by congruence; subst.
+                inversion H3; crush.
+                (* is there a more concise way to write this calculation?
+                I just want s1'' but with s1 replaced by its low projection *)
                 remember (chan_low_proj ell ch) as ch2.
                 remember (chan_append ch2 msg) as ch2'.
                 remember (state_low_proj ell s1) as s2.
                 remember (state_upd_chan han ch2' (state_upd_node id n' s2)) as s2'.
                 remember (s_set_call s2' id c') as s2''.
-                exists s2'', (n ---> msg); repeat try split.
-                assert (Hnproj: n = (node_low_proj ell n)) by
-                    repeat (eapply flows_node_proj || symmetry|| congruence ).
+                exists s2'', (n ---> msg); repeat split; crush.
                 pose proof (state_nidx_to_proj_state_idx ell _ _ _
                     ltac:(eauto)) as Hn_idx_s1proj.
-                (* system step *)
-                replace (s2'') with (s_set_call s2' id c').
-                econstructor. rewrite Heqs2. eauto. eauto.
-                (* node step ev *)
-                replace (node_low_proj ell n) with n by auto; auto.
+                rewrite flows_node_proj in *; eauto.
+                econstructor; try eauto.
                 rewrite <- H1.
-                econstructor. congruence.
-                (* node step *)
-                subst. eapply SWriteChan.
-                congruence. congruence. 
+                econstructor; try eauto.
+                econstructor; try eauto.
                 eapply state_hidx_to_proj_state_hidx; eauto.
-                replace (clbl (chan_low_proj ell ch)) with (clbl ch)
-                    by (symmetry; eapply chan_projection_preserves_lbl).
-                eauto. eauto. eauto.
+                    (* note that we can't use flows_chan_proj in this case *)
+                rewrite chan_projection_preserves_lbl; eauto.
                 (* s1'' ={ell} s2'' *)
-                unfold s1''.  unfold ch'. subst. 
+                unfold s1''.  unfold ch'.
                 eapply set_call_unwind.
                 eapply state_upd_chan_unwind.
                 eapply chan_append_unwind.
-                symmetry. eapply chan_low_proj_loweq.
-                eapply state_upd_node_unwind.
-                reflexivity.
-                symmetry. eapply state_low_proj_loweq.
+                symmetry.
+                (* eauto with unwind can't seem to figure this part out: *)
+                eapply chan_low_proj_loweq.
+                (* in this spot, could also do:
+                eapply chan_low_proj_idempotent.
+                 *)
+                eauto with unwind.
             + (* ReadChannel *)
-                inversion H3. crush.
-                assert (Hnproj: n = (node_low_proj ell n)) by
-                    repeat (eapply flows_node_proj || symmetry|| congruence ).
-                assert (Hcproj: (chan_low_proj ell ch) = ch) by
-                    eauto using flows_chan_proj, ord_trans.
+                inversion H3; crush.
                 pose proof (state_nidx_to_proj_state_idx ell _ _ _
                     ltac:(eauto)) as Hn_idx_s1proj.
+                pose proof (state_hidx_to_proj_state_hidx ell _ _ _
+                    ltac:(eauto)) as Hch_hidx_s1proj.
+                rewrite flows_node_proj in *.
+                rewrite flows_chan_proj in *; eauto using ord_trans.
                 eexists. exists (n <--- msg).
-                split. econstructor.
-                eauto. eauto.
-                replace (node_low_proj ell n) with n by auto; auto.
-                rewrite <- H1. econstructor.
-                replace n with (node_low_proj ell n) by auto; auto.
-                econstructor. eassumption.
-                replace (node_low_proj ell n) with n by auto; auto.
-                eapply state_hidx_to_proj_state_hidx; eauto. 
-                replace (chan_low_proj ell ch) with ch by eauto.
-                eauto. 
-                replace (node_low_proj ell n) with n by auto; auto.
-                replace (chan_low_proj ell ch) with ch. eauto.
-                eauto. eauto. unfold s1''. subst. split.
-                eapply set_call_unwind. eapply state_upd_chan_unwind.
-                unfold ch'. 
-                replace (chan_low_proj ell ch) with ch by eauto. 
-                reflexivity. eapply state_upd_node_unwind.
-                unfold n'. replace (node_low_proj ell n) with n by auto; auto.
-                reflexivity. symmetry. eapply state_low_proj_loweq.
-                reflexivity.
+                split. econstructor; try eauto.
+                rewrite <- H1. 
+                econstructor; try eauto.
+                econstructor; try eauto. 
+                unfold s1''. unfold ch'. split.
+                eauto with unwind.
+                reflexivity. 
+                eauto.
             + (* CreateChannel *)
-                inversion H3. crush. 
-                assert (Hnproj: n = (node_low_proj ell n)) by
-                    repeat (eapply flows_node_proj || symmetry|| congruence ).
+                inversion H3; crush. 
                 pose proof (state_nidx_to_proj_state_idx ell _ _ _
                     ltac:(eauto)) as Hn_idx_s1proj.
+                rewrite flows_node_proj in *; auto.
                 unfold s', s2, s0 in *.
+                    (* similar tedious calculation needed here *)
                 remember (s_set_call (state_upd_node id (node_add_whan h n)
                     (state_upd_node id (node_add_rhan h n)
                      (state_upd_chan h (new_chan lbl) 
                      (state_low_proj ell s1)))) id c') as s_ex2'.
                      (* s_ex2' is the same as s1'' but replacing s1' with
                      its ell-projection *)
-                exists s_ex2', (n ---); repeat split.
-                subst. econstructor. eauto.
-                replace (node_low_proj ell n) with n by auto; auto.
-                rewrite <- H1. econstructor. 
-                replace n with (node_low_proj ell n) by auto; auto.
-                econstructor. 
-                replace n with (node_low_proj ell n) by auto; auto.
-                auto.
+                exists s_ex2', (n ---); repeat split; crush.
+                econstructor; eauto.
+                rewrite <- H1. 
+                econstructor; eauto.
+                econstructor; eauto.
                 replace (handle_fresh (state_low_proj ell s1))
                     with (handle_fresh s1)
-                    by (symmetry; eapply proj_pres_handle_fresh); auto.
-                unfold s1''. subst.
-                eapply set_call_unwind. eapply state_upd_node_unwind.
-                reflexivity. eapply state_upd_node_unwind. reflexivity.
-                eapply state_upd_chan_unwind. reflexivity.
-                symmetry. eapply state_low_proj_loweq.
+                    by eauto using proj_pres_handle_fresh; auto.
+                unfold s1''.
+                eauto 6 with unwind.
             + (* CreateNode *)
                 inversion H3; crush. 
-                assert (Hnproj: n = (node_low_proj ell n)) by
-                    repeat (eapply flows_node_proj || symmetry|| congruence ).
                 pose proof (state_nidx_to_proj_state_idx ell _ _ _
                     ltac:(eauto)) as Hn_idx_s1proj.
+                rewrite flows_node_proj in *; auto.
                 remember (state_upd_node new_id
                     {|
                         nlbl := lbl;
@@ -239,66 +229,51 @@ Proof.
                 remember (state_upd_node id (node_add_rhan h n) s3_ex2)
                     as s'_ex2.
                 remember (s_set_call s'_ex2 id c') as s2''.
-                exists s2'', (-- n --); repeat split.
-                subst. econstructor. 
-                eauto. eauto. 
-                replace (node_low_proj ell n) with n by auto; auto.
-                rewrite <- H1. econstructor.
-                replace n with (node_low_proj ell n) by auto; auto.
-                econstructor. 
-                replace n with (node_low_proj ell n) by auto; auto.
-                auto.
+                exists s2'', (-- n --); repeat split; crush.
+                econstructor; eauto.
+                rewrite <- H1.
+                econstructor; eauto.
+                econstructor; eauto.
                 replace (nid_fresh (state_low_proj ell s1))
                     with (nid_fresh s1)
-                    by (symmetry; eapply proj_pres_nid_fresh); auto.
+                    by eauto using proj_pres_nid_fresh; eauto.
                 unfold s1'', s', s3; subst.
-                eapply set_call_unwind.
-                eapply state_upd_node_unwind. reflexivity.
-                eapply state_upd_node_unwind. reflexivity.
-                symmetry. eapply state_low_proj_loweq.
+                eauto with unwind.
             +  (* Internal *)
                 inversion H3; crush.
                 exists (s_set_call (state_low_proj ell s1') id c'), (n ---);
-                    repeat split.
-                assert (Hnproj: n = (node_low_proj ell n)) by
-                    repeat (eapply flows_node_proj || symmetry|| congruence ).
+                    repeat split; crush.
                 pose proof (state_nidx_to_proj_state_idx ell _ _ _
                     ltac:(eauto)) as Hn_idx_s1proj.
-                econstructor. eauto. eauto.
-                replace (node_low_proj ell n) with n by auto; auto.
-                rewrite <- H1. econstructor.
-                replace n with (node_low_proj ell n) by auto; auto.
-                econstructor. unfold s1''.
-                eapply set_call_unwind. 
-                symmetry. eapply state_low_proj_loweq.
+                rewrite flows_node_proj in *; eauto.
+                econstructor; eauto.
+                rewrite <- H1.
+                econstructor; eauto.
+                econstructor; eauto.
+                unfold s1''.
+                eauto with unwind.
         * (* not flowsTo case *)
             rename n0 into Hflows.
-            assert ((state_low_eq ell s1 s1') /\
-                (event_low_eq ell e1 (empty_event e1.(elbl))))
-                as [Hustep Huev] by
-                repeat (eauto || eapply unobservable_node_step).
+            pose proof (unobservable_node_step _ _ _ _ _ _
+                ltac:(eauto) H_step_s1_s1' ltac:(eauto))
+                as [Hustep Huev].
             exists (state_low_proj ell s1), (empty_event (elbl e1));
-                repeat try split.
+                repeat split.
             (* step *)
             constructor.
             (* states leq *)
-            specialize (state_loweq_to_deref_node ell s1 s1' id n 
-                H0 Hustep) as [ns1' [Hns1'idx Hns1'leq]].
-            transitivity s1'. unfold s1''. symmetry. eapply set_call_unobs.
-            eauto. replace (nlbl ns1') with (nlbl n) by
-                (eapply node_low_eq_to_lbl_eq; eauto).
-            eauto. 
-            assert (E: state_low_eq ell (state_low_proj ell s1) s1) by
-                eapply state_low_proj_loweq.
-            congruence.
+            pose proof (state_loweq_to_deref_node _ _ _ _ _
+                ltac:(eauto) ltac:(eauto)) 
+                as [ns1' [Hns1'idx Hns1'leq]].
+            unfold s1''. transitivity s1'.
+            symmetry. 
+            eapply set_call_unobs; eauto.
+            erewrite node_low_eq_to_lbl_eq; eauto.
+            symmetry; eauto.
+            pose proof (state_low_proj_loweq ell s1); congruence.
             (* events leq *)
             congruence.
 Qed.
-
-(* Hints for [eauto with unwind] *)
-Hint Resolve state_upd_chan_unwind chan_append_unwind chan_low_proj_loweq
-     state_upd_node_unwind : unwind.
-Hint Extern 4 (node_low_eq _ _ _) => reflexivity : unwind.
 
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
     (step_system_ev (state_low_proj ell s) s1' e1) ->
