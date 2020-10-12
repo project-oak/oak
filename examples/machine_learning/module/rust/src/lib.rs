@@ -154,7 +154,7 @@ oak::entrypoint!(oak_main => |in_channel| {
         config: None,
         model: NaiveBayes::new(),
     };
-    oak::run_event_loop(node, oak::io::Receiver::<grpc::Invocation>::new(in_channel));
+    oak::run_command_loop(node, in_channel);
 });
 
 oak::entrypoint!(grpc_oak_main => |_in_channel| {
@@ -167,7 +167,7 @@ oak::entrypoint!(grpc_oak_main => |_in_channel| {
     };
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_event_loop(node, grpc_channel);
+    oak::run_command_loop(node, grpc_channel);
 });
 
 struct Node {

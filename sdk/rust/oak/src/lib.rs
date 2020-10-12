@@ -421,12 +421,12 @@ pub fn set_panic_hook() {
     }));
 }
 
-/// Trait implemented by Oak Nodes that operate on commands.
+/// Trait implemented by Oak Nodes (or parts thereof) that operate on commands.
 ///
 /// It has a single method for handling commands, which are [`Decodable`](crate::io::Decodable)
 /// objects that are received via the single incoming channel handle which is passed in at Node
 /// creation time. The return value is only used for logging in case of failure.
-pub trait Node<T: crate::io::Decodable> {
+pub trait CommandHandler<T: crate::io::Decodable> {
     fn handle_command(&mut self, command: T) -> Result<(), crate::OakError>;
 }
 
@@ -441,27 +441,31 @@ pub fn app_config_map(initial_handle: ReadHandle) -> Result<ConfigMap, OakError>
     result
 }
 
-/// Run an event loop on the provided `node`:
+/// Run a command loop on the provided [`CommandHandler`]:
 ///
 /// - wait for new messages on the provided channel `in_channel`
 /// - if the runtime signals that the Node was terminated while waiting, then exit the event loop
 /// - otherwise, read the available message via the provided channel handle
-/// - decode the message from (bytes + handles) to the specified type `T`
-/// - pass the typed object to the `Node::handle_command` method of the `node`, which executes a
-///   single iteration of the event loop
+/// - decode the message from (bytes + handles) to the specified command type `T`
+/// - pass the typed command object to the `Node::handle_command` method of the `node`, which
+///   executes a single iteration of the loop
 ///
 /// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just
-/// logged, and the event loop continues with the next iteration.
-
-pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
-    mut node: N,
-    receiver: crate::io::Receiver<T>,
+/// logged, and the loop continues with the next iteration.
+pub fn run_command_loop<
+    T: crate::io::Decodable,
+    N: CommandHandler<T>,
+    R: Into<crate::io::Receiver<T>>,
+>(
+    mut command_handler: N,
+    receiver: R,
 ) {
+    let receiver = receiver.into();
     if !crate::handle::is_valid(receiver.handle.handle) {
         error!("{:?}: invalid input handle", receiver);
         return;
     }
-    info!("{:?}: starting event loop", receiver);
+    info!("{:?}: starting command loop", receiver);
     loop {
         // First wait until a message is available. If the Node was terminated while waiting, this
         // will return `ErrTerminated`, which indicates that the event loop should be terminated.
@@ -509,7 +513,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
         match receiver.try_receive() {
             Ok(command) => {
                 info!("{:?}: received command", receiver);
-                if let Err(err) = node.handle_command(command) {
+                if let Err(err) = command_handler.handle_command(command) {
                     error!("{:?}: error handling command: {}", receiver, err);
                 }
             }
@@ -528,7 +532,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
 /// #[derive(Default)]
 /// struct DummyNode;
 ///
-/// impl oak::Node<oak::grpc::Invocation> for DummyNode {
+/// impl oak::CommandHandler<oak::grpc::Invocation> for DummyNode {
 ///     // ...
 ///     # fn handle_command(&mut self, command: oak::grpc::Invocation) -> Result<(), oak::OakError> {
 ///     #     unimplemented!()
@@ -539,7 +543,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
 ///     let dispatcher = DummyNode::default();
 ///     let grpc_channel = oak::grpc::server::init("[::]:8080")
 ///         .expect("could not create gRPC server pseudo-node");
-///     oak::run_event_loop(dispatcher, grpc_channel);
+///     oak::run_command_loop(dispatcher, grpc_channel);
 /// });
 ///
 /// # fn main() {}
@@ -558,7 +562,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
 /// # #[derive(Default)]
 /// # struct DummyNode;
 /// #
-/// # impl oak::Node<oak::grpc::Invocation> for DummyNode {
+/// # impl oak::CommandHandler<oak::grpc::Invocation> for DummyNode {
 /// #     fn handle_command(&mut self, command: oak::grpc::Invocation) -> Result<(), oak::OakError> {
 /// #         unimplemented!()
 /// #     }
@@ -569,7 +573,7 @@ pub fn run_event_loop<T: crate::io::Decodable, N: Node<T>>(
 ///     let dispatcher = DummyNode::default();
 ///     let grpc_channel = oak::grpc::server::init("[::]:8080")
 ///         .expect("could not create gRPC server pseudo-node");
-///     oak::run_event_loop(dispatcher, grpc_channel);
+///     oak::run_command_loop(dispatcher, grpc_channel);
 /// });
 /// #
 /// # fn main() {}

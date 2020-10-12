@@ -32,6 +32,12 @@ impl std::fmt::Debug for ReadHandle {
     }
 }
 
+impl From<Handle> for ReadHandle {
+    fn from(handle: Handle) -> Self {
+        ReadHandle { handle }
+    }
+}
+
 /// Wrapper for a handle to the send half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
@@ -43,6 +49,12 @@ pub struct WriteHandle {
 impl std::fmt::Debug for WriteHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "WriteHandle({})", self.handle)
+    }
+}
+
+impl From<Handle> for WriteHandle {
+    fn from(handle: Handle) -> Self {
+        WriteHandle { handle }
     }
 }
 

@@ -163,7 +163,7 @@ impl Aggregator for AggregatorNode {
 oak::entrypoint!(grpc_worker => |in_channel| {
     oak::logger::init_default();
     let dispatcher = AggregatorDispatcher::new(AggregatorNode::new());
-    oak::run_event_loop(dispatcher, oak::io::Receiver::<grpc::Invocation>::new(in_channel));
+    oak::run_command_loop(dispatcher, in_channel);
 });
 
 #[derive(Debug, serde::Deserialize)]

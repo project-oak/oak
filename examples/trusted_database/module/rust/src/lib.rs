@@ -57,7 +57,9 @@ mod tests;
 
 use database::load_database;
 use log::{debug, error};
-use oak::{grpc, io::SenderExt, proto::oak::invocation::GrpcInvocationReceiver, Node, OakError};
+use oak::{
+    grpc, io::SenderExt, proto::oak::invocation::GrpcInvocationReceiver, CommandHandler, OakError,
+};
 use proto::oak::examples::trusted_database::{PointOfInterest, TrustedDatabaseCommand};
 
 /// Oak Node that contains an in-memory database.
@@ -65,7 +67,7 @@ pub struct TrustedDatabaseNode {
     points_of_interest: Vec<PointOfInterest>,
 }
 
-impl Node<grpc::Invocation> for TrustedDatabaseNode {
+impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
     fn handle_command(&mut self, invocation: grpc::Invocation) -> Result<(), OakError> {
         // Create a client request handler Node.
         debug!("Creating handler Node");
@@ -133,5 +135,5 @@ oak::entrypoint!(oak_main => |in_channel| {
     let points_of_interest = load_database(config_map).expect("Couldn't load database");
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("Couldn't create gRPC server pseudo-Node");
-    oak::run_event_loop(TrustedDatabaseNode { points_of_interest }, grpc_channel);
+    oak::run_command_loop(TrustedDatabaseNode { points_of_interest }, grpc_channel);
 });

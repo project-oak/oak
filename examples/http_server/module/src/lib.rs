@@ -17,16 +17,16 @@
 //! Simple example starting an Oak Application serving a static page over HTTP.
 
 use log::{info, warn};
-use oak::{http::Invocation, Node, OakError, OakStatus};
+use oak::{http::Invocation, CommandHandler, OakError, OakStatus};
 
 oak::entrypoint!(oak_main => |_in_channel| {
     oak::logger::init_default();
-    let node = StaticHttpServer{};
+    let node = StaticHttpServer;
     info!("Starting HTTP server pseudo-node on port 8080.");
     let http_channel =
         oak::http::init("[::]:8080").expect("Could not create HTTP server pseudo-Node!");
 
-    oak::run_event_loop(node, http_channel);
+    oak::run_command_loop(node, http_channel);
 });
 
 /// A simple HTTP server that responds with `OK` (200) to every request sent to `/`, and with
@@ -34,7 +34,7 @@ oak::entrypoint!(oak_main => |_in_channel| {
 /// should be modified with care!
 pub struct StaticHttpServer;
 
-impl Node<Invocation> for StaticHttpServer {
+impl CommandHandler<Invocation> for StaticHttpServer {
     fn handle_command(&mut self, invocation: Invocation) -> Result<(), OakError> {
         let request = invocation.receive()?;
 

@@ -150,7 +150,7 @@ impl DatabaseProxy for DatabaseProxyNode {
 oak::entrypoint!(database_proxy_main => |in_channel| {
     oak::logger::init_default();
     let dispatcher = DatabaseProxyDispatcher::new(DatabaseProxyNode::default());
-    oak::run_event_loop(dispatcher, oak::io::Receiver::<grpc::Invocation>::new(in_channel));
+    oak::run_command_loop(dispatcher, in_channel);
 });
 
 oak::entrypoint!(grpc_database_proxy_main => |_in_channel| {
@@ -158,5 +158,5 @@ oak::entrypoint!(grpc_database_proxy_main => |_in_channel| {
     let dispatcher = DatabaseProxyDispatcher::new(DatabaseProxyNode::default());
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("Couldn't create gRPC server pseudo-Node");
-    oak::run_event_loop(dispatcher, grpc_channel);
+    oak::run_command_loop(dispatcher, grpc_channel);
 });

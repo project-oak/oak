@@ -52,6 +52,12 @@ impl<T: Decodable> Receiver<T> {
     }
 }
 
+impl<T: Decodable> From<ReadHandle> for Receiver<T> {
+    fn from(handle: ReadHandle) -> Self {
+        Receiver::new(handle)
+    }
+}
+
 impl<T: Decodable> crate::handle::HandleVisit for Receiver<T> {
     fn visit<F: FnMut(&mut crate::Handle)>(&mut self, mut visitor: F) -> F {
         visitor(&mut self.handle.handle);
