@@ -235,6 +235,13 @@ where
         prost_config.out_dir(out_dir);
     }
     prost_config
+        // We require identity-related types to be serializable and deserializable to and from JSON.
+        .type_attribute(
+            ".oak.identity",
+            "#[derive(serde::Deserialize, serde::Serialize)]",
+        )
+        .type_attribute(".oak.identity", "#[serde(rename_all = \"camelCase\")]");
+    prost_config
         // We require label-related types to be comparable and hashable so that they can be used in
         // hash-based collections.
         .type_attribute(".oak.label", "#[derive(Eq, Hash)]")

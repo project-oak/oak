@@ -31,6 +31,7 @@ fn main() {
         &[
             "../oak_services/proto/grpc_invocation.proto",
             "../oak_services/proto/http_invocation.proto",
+            "../proto/identity.proto",
             "../proto/introspection_events.proto",
         ],
         &[".."],
