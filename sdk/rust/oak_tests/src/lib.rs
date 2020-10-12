@@ -33,24 +33,39 @@ use tonic::{
     Request,
 };
 
+pub enum Profile {
+    Release,
+    Debug,
+}
+
 // TODO(#544): re-enable unit tests of SDK functionality
 
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
-pub fn compile_rust_wasm(cargo_path: &str, module_wasm_file_name: &str) -> anyhow::Result<Vec<u8>> {
+pub fn compile_rust_wasm(
+    cargo_path: &str,
+    module_wasm_file_name: &str,
+    profile: Profile,
+) -> anyhow::Result<Vec<u8>> {
     // Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it
     // should end with `target` so that it gets automatically ignored by our `.gitignore`.
     let target_dir = PathBuf::from("oak_tests/target");
 
+    let mut args = vec![
+        "build".to_string(),
+        format!(
+            "--target-dir={}",
+            target_dir.to_str().expect("invalid target dir")
+        ),
+        "--target=wasm32-unknown-unknown".to_string(),
+        format!("--manifest-path={}", cargo_path),
+    ];
+    match profile {
+        Profile::Release => args.push("--release".to_string()),
+        Profile::Debug => (),
+    }
+
     Command::new("cargo")
-        .args(&[
-            "build",
-            &format!(
-                "--target-dir={}",
-                target_dir.to_str().expect("invalid target dir")
-            ),
-            "--target=wasm32-unknown-unknown",
-            &format!("--manifest-path={}", cargo_path),
-        ])
+        .args(args)
         .env_remove("RUSTFLAGS")
         .spawn()
         .context("could not spawn cargo build")?
@@ -116,8 +131,12 @@ pub fn runtime_config(
 ) -> oak_runtime::RuntimeConfiguration {
     let wasm: HashMap<String, Vec<u8>> = [(
         DEFAULT_MODULE_NAME.to_string(),
-        compile_rust_wasm(DEFAULT_MODULE_MANIFEST, module_wasm_file_name)
-            .expect("failed to build wasm module"),
+        compile_rust_wasm(
+            DEFAULT_MODULE_MANIFEST,
+            module_wasm_file_name,
+            Profile::Debug,
+        )
+        .expect("failed to build wasm module"),
     )]
     .iter()
     .cloned()
