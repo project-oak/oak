@@ -72,23 +72,18 @@
                 oak: {
                   wait_on_channels: (buf, count) => {
                     const status = OakStatus.values.OK;
-                    const entry =
-                      new Date().toISOString() +
-                      ': wait_on_channels(' +
-                      [buf, count].join(', ') +
-                      ') -> ' +
-                      status;
+                    const entry = `${new Date().toISOString()}: wait_on_channels(${[
+                      buf,
+                      count,
+                    ].join(', ')}) -> ${status}`;
                     this.trace.push(entry);
                     return status;
                   },
                   channel_close: (handle) => {
                     const status = OakStatus.values.OK;
-                    const entry =
-                      new Date().toISOString() +
-                      ': channel_close(' +
-                      [handle].join(', ') +
-                      ') -> ' +
-                      status;
+                    const entry = `${new Date().toISOString()}: channel_close(${[
+                      handle,
+                    ].join(', ')}) -> ${status}`;
                     this.trace.push(entry);
                     return status;
                   },
@@ -102,20 +97,15 @@
                     actualHandleCount
                   ) => {
                     const status = OakStatus.values.OK;
-                    const entry =
-                      new Date().toISOString() +
-                      ': channel_read(' +
-                      [
-                        handle,
-                        buf,
-                        size,
-                        actualSize,
-                        handleBuf,
-                        handleCount,
-                        actualHandleCount,
-                      ].join(', ') +
-                      ') -> ' +
-                      status;
+                    const entry = `${new Date().toISOString()}: channel_read(${[
+                      handle,
+                      buf,
+                      size,
+                      actualSize,
+                      handleBuf,
+                      handleCount,
+                      actualHandleCount,
+                    ].join(', ')} -> ${status}`;
                     this.trace.push(entry);
                     return status;
                   },
@@ -134,21 +124,16 @@
                       handleBuf,
                       handleCount
                     );
-                    const entry =
-                      new Date().toISOString() +
-                      ': channel_write(' +
-                      [handle, buf, size, handleBuf, handleCount].join(', ') +
-                      ') -> ' +
-                      status +
-                      '\n  bytes: [' +
-                      bytes +
-                      ']' +
-                      '\n  bytes(string): "' +
-                      bytesString +
-                      '"' +
-                      '\n  handles: [' +
-                      handles +
-                      ']';
+                    const entry = `${new Date().toISOString()}: channel_write(${[
+                      handle,
+                      buf,
+                      size,
+                      handleBuf,
+                      handleCount,
+                    ].join(', ')}) -> ${status}
+    bytes: [${bytes}]
+    bytes(string): "${bytesString}"
+    handles: [${handles}]`;
                     this.trace.push(entry);
                     return status;
                   },
@@ -162,16 +147,13 @@
                     const label = Label.decode(
                       this.readMemory(labelBuf, labelSize)
                     );
-                    const entry =
-                      new Date().toISOString() +
-                      ': channel_create(' +
-                      [writeHandle, readHandle, labelBuf, labelSize].join(
-                        ', '
-                      ) +
-                      ') -> ' +
-                      status +
-                      '\n  label: ' +
-                      JSON.stringify(label);
+                    const entry = `${new Date().toISOString()}: channel_create(${[
+                      writeHandle,
+                      readHandle,
+                      labelBuf,
+                      labelSize,
+                    ].join(', ')}) -> ${status}
+    label: ${JSON.stringify(label)}`;
                     this.trace.push(entry);
                     return status;
                   },
@@ -189,30 +171,25 @@
                     const label = Label.decode(
                       this.readMemory(labelBuf, labelSize)
                     );
-                    const entry =
-                      new Date().toISOString() +
-                      ': node_create(' +
-                      [configBuf, configLen, labelBuf, labelSize, handle].join(
-                        ', '
-                      ) +
-                      ') -> ' +
-                      status +
-                      '\n  config: ' +
-                      JSON.stringify(config) +
-                      '\n  label: ' +
-                      JSON.stringify(label);
+                    const entry = `${new Date().toISOString()}: node_create(${[
+                      configBuf,
+                      configLen,
+                      labelBuf,
+                      labelSize,
+                      handle,
+                    ].join(', ')}) -> ${status}
+    config: ${JSON.stringify(config)}
+    label: ${JSON.stringify(label)}`;
                     this.trace.push(entry);
                     this.createNode(config);
                     return status;
                   },
                   random_get: (buf, len) => {
                     const status = OakStatus.values.OK;
-                    const entry =
-                      new Date().toISOString() +
-                      ': random_get(' +
-                      [buf, len].join(', ') +
-                      ') -> ' +
-                      status;
+                    const entry = `${new Date().toISOString()}: random_get(${[
+                      buf,
+                      len,
+                    ].join(', ')}) -> ${status}`;
                     this.trace.push(entry);
                     return status;
                   },
