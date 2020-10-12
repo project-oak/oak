@@ -298,33 +298,69 @@ Proof.
             inversion H_step_projs_s1'; assert (n0 = n) by congruence; subst.
             + (* WriteChannel *)
                 invert_clean H3.
-                specialize (uncons_proj_chan_s ell s han ch H8)
+                pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
                     as [ch2 [H_ch'_idx H_ch2_proj]].
                 remember (s_set_call (state_upd_chan han (chan_append ch2 msg)
-                (state_upd_node id n'0 s)) id c') as s2''.
+                    (state_upd_node id n'0 s)) id c') as s2''.
                 exists s2'', ((node_low_proj ell n') ---> msg); repeat split.
+                rewrite flows_node_proj in *; eauto; crush.
+                rewrite chan_projection_preserves_lbl in *; eauto.
                 (* step *)
-                rewrite Heqs2''. eapply SystemEvStepNode; eauto; subst. 
-                replace (ncall n') with (ncall (node_low_proj ell n')) by
-                    (erewrite flows_node_proj; try eassumption; try congruence).
-                rewrite <- H1. econstructor. erewrite flows_node_proj; assumption.
-                assert (n' = n). { 
-                    rewrite H6 in H0. inversion H0. symmetry. eapply flows_node_proj. auto.
-                }
-                eapply SWriteChan; try congruence; try assumption;
-                    try (erewrite <- chan_projection_preserves_lbl; eassumption).
+                repeat try ((econstructor; eauto) || rewrite <- H1).
                 (* s1'' =L s2'' *)
-                (* This part looks tactic-able to me *)
-                subst. unfold s1''. eapply set_call_unwind. unfold ch'.
-                eauto with unwind.
+                crush. unfold s1'', ch'. eauto with unwind.
             + (* ReadChannel *)
-                admit.
+                inversion H3; crush.
+                pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
+                    as [ch2 [H_ch'_idx H_ch2_proj]].
+                unfold n'0 in *; crush.
+                unfold s1'' in *.
+                rewrite flows_node_proj in *; eauto; crush.
+                rewrite chan_projection_preserves_lbl in *.
+                rewrite flows_chan_proj in *; eauto using ord_trans.
+                remember (s_set_call (state_upd_chan han ch'
+                   (state_upd_node id (node_get_hans n' msg0)
+                    s)) id c') as s2'.
+                exists s2'; eexists; repeat split; crush.
+                repeat try ((econstructor; eauto) || rewrite <- H1 ||
+                    (rewrite flows_chan_proj; eauto using ord_trans)).
+                eauto with unwind.
             + (* CreateChannel *)
-                admit.
+                inversion H3; crush.
+                remember (s_set_call (state_upd_node id (node_add_whan h n')
+                    (state_upd_node id (node_add_rhan h n')
+                     (state_upd_chan h (new_chan lbl) 
+                     s ))) id c') as s2'. 
+                unfold s1'', s', s2, s1.
+                rewrite flows_node_proj in *; eauto.
+                exists s2'; eexists; repeat split; crush.
+                repeat try ((econstructor; eauto) || rewrite <- H1).
+                erewrite <- proj_pres_handle_fresh; eauto.
+                eauto with unwind.
             + (* CreateNode *)
-                admit.
+                inversion H3; crush.
+                remember (s_set_call
+                   (state_upd_node id (node_add_rhan h (node_low_proj ell n'))
+                   (state_upd_node new_id
+                      {|
+                        nlbl := lbl;
+                        read_handles := Ensembles.Singleton h;
+                        write_handles := Ensembles.Empty_set;
+                        ncall := Internal
+                      |} s)) id c' ) as s2'.
+                unfold s1'', s', s3 in *.
+                rewrite flows_node_proj in *; eauto.
+                exists s2'; eexists; repeat split; crush.
+                repeat try ((econstructor; eauto) || rewrite <- H1).
+                erewrite <- proj_pres_nid_fresh; eauto.
+                eauto with unwind.
             + (* Internal *)
-                admit.
+                inversion H3; crush.
+                unfold s1''.
+                rewrite flows_node_proj in *; eauto.
+                exists (s_set_call s id c'); eexists; repeat split; crush.
+                repeat try ((econstructor; eauto) || rewrite <- H1).
+                eauto with unwind.
         (* by cases on the command by n in s *)
         * (* not flowsTo case *)
             rename n0 into Hflows.
@@ -356,7 +392,7 @@ Proof.
                     by (eapply node_low_eq_to_lbl_eq; eassumption).
                 auto.
             + (* e1 ={ell} *) assumption.
-Admitted. (* WIP *)
+Qed.
 
 Theorem possibilistic_ni_1step: forall ell s1 s2 s1' e1,
     (state_low_eq ell s1 s2) ->
