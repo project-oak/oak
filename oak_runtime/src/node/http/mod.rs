@@ -33,7 +33,11 @@ use hyper::{
     Body, Server, StatusCode,
 };
 use log::{debug, error, info, warn};
-use oak_abi::{label::Label, proto::oak::application::HttpServerConfiguration, OakStatus};
+use oak_abi::{
+    label::{Label, Tag, UserIdentityTag},
+    proto::oak::application::HttpServerConfiguration,
+    OakStatus,
+};
 use oak_io::{
     handle::{ReadHandle, WriteHandle},
     OakError, Receiver, Sender,
@@ -325,6 +329,10 @@ impl HttpRequestHandler {
         request: HttpRequest,
         label: &Label,
     ) -> Result<HttpResponseIterator, ()> {
+        let user_label = get_identity_label(&request);
+        info!("Got usr label: {:?}", user_label);
+        // TODO: do something useful with user_label
+
         // Create a pair of temporary channels to pass the HTTP request and to receive the
         // response.
         let pipe = Pipe::new(&self.runtime.clone(), label)?;
@@ -455,8 +463,8 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
     );
 
     match headers {
-        (Some([json_label]), None) => parse_json_label(json_label.to_vec()),
-        (None, Some([protobuf_label])) => parse_protobuf_label(&protobuf_label[..]),
+        (Some([json_label]), None) => parse_json_label(json_label),
+        (None, Some([protobuf_label])) => parse_protobuf_label(protobuf_label),
         _ => {
             warn!(
                 "Exactly one header must be provided as an {} or {} header.",
@@ -468,8 +476,43 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
     }
 }
 
-fn parse_json_label(label_str: Vec<u8>) -> Result<Label, OakStatus> {
-    let label_str = String::from_utf8(label_str).map_err(|err| {
+/// Similar to the request labels, signed challenge headers can either be JSON formatted or protobuf
+/// encoded. Exactly one of these formats should be provided. This method:
+/// (1) checks that exactly one signed challenge is provided,
+/// (2) parses the signed challenge
+/// (3) verifies that the signature
+/// (4) if the signature is valid, returns a label with its confidentiality component set to the
+/// public key in the signed challenge.
+fn get_identity_label(req: &HttpRequest) -> Result<Label, OakStatus> {
+    let headers = (
+        req.headers.as_ref().and_then(|map| {
+            map.headers
+                .get(oak_abi::OAK_SIGNED_CHALLENGE_JSON_KEY)
+                .map(|m| m.values.as_slice())
+        }),
+        req.headers.as_ref().and_then(|map| {
+            map.headers
+                .get(oak_abi::OAK_SIGNED_CHALLENGE_PROTOBUF_KEY)
+                .map(|m| m.values.as_slice())
+        }),
+    );
+
+    match headers {
+        (Some([json_signature]), None) => verify_json_challenge(json_signature),
+        (None, Some([protobuf_signature])) => verify_protobuf_challenge(protobuf_signature),
+        _ => {
+            warn!(
+                "Exactly one header must be provided as an {} or {} header.",
+                oak_abi::OAK_LABEL_HTTP_JSON_KEY,
+                oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY
+            );
+            Err(OakStatus::ErrInvalidArgs)
+        }
+    }
+}
+
+fn parse_json_label(label_str: &[u8]) -> Result<Label, OakStatus> {
+    let label_str = String::from_utf8(label_str.to_vec()).map_err(|err| {
         warn!(
             "The label must be a valid UTF-8 JSON-formatted string: {}",
             err
@@ -483,10 +526,47 @@ fn parse_json_label(label_str: Vec<u8>) -> Result<Label, OakStatus> {
 }
 
 fn parse_protobuf_label(protobuf_label: &[u8]) -> Result<Label, OakStatus> {
-    Label::decode(protobuf_label).map_err(|err| {
+    Label::decode(&protobuf_label[..]).map_err(|err| {
         warn!("Could not parse HTTP label: {}", err);
         OakStatus::ErrInvalidArgs
     })
+}
+
+fn verify_json_challenge(signature: &[u8]) -> Result<Label, OakStatus> {
+    let signature = parse_json_signed_challenge(signature.to_vec()).map_err(|err| {
+        warn!("Could not parse json formatted signed challenge: {}", err);
+        OakStatus::ErrInvalidArgs
+    })?;
+    verify_signed_challenge(signature)
+}
+
+fn verify_protobuf_challenge(signature: &[u8]) -> Result<Label, OakStatus> {
+    let signature =
+        crate::proto::oak::identity::SignedChallenge::decode(&signature[..]).map_err(|err| {
+            warn!("Could not parse protobuf encoded signed challenge: {}", err);
+            OakStatus::ErrInvalidArgs
+        })?;
+    verify_signed_challenge(signature)
+}
+
+fn verify_signed_challenge(
+    signature: crate::proto::oak::identity::SignedChallenge,
+) -> Result<Label, OakStatus> {
+    // TODO: verify
+    let tag = Some(oak_abi::label::tag::Tag::UserIdentityTag(UserIdentityTag {
+        public_key: signature.public_key,
+    }));
+    Ok(Label {
+        confidentiality_tags: vec![Tag { tag }],
+        integrity_tags: vec![],
+    })
+}
+
+fn parse_json_signed_challenge(
+    bytes: Vec<u8>,
+) -> Result<crate::proto::oak::identity::SignedChallenge, OakStatus> {
+    let signature_str = String::from_utf8(bytes).map_err(|_err| OakStatus::ErrInvalidArgs)?;
+    serde_json::from_str(&signature_str).map_err(|_err| OakStatus::ErrInvalidArgs)
 }
 
 struct HttpResponseIterator {
