@@ -121,7 +121,7 @@ fn test_combine() {
 fn test_serialize() {
     // Use the module-internal version of the protobuf-derived struct.
     // TODO(#1093): unify the two versions
-    use aggregator::proto::SerializedSparseVector;
+    use aggregator::proto::oak::examples::aggregator::SerializedSparseVector;
     assert_eq!(
         SerializedSparseVector::from(SparseVector::new(hashmap! {1 => 10.0})),
         SerializedSparseVector {
