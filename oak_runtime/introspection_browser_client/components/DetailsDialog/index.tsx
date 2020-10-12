@@ -47,6 +47,8 @@ export default function DetailsDialog({
   return (
     <Dialog
       transitionDuration={0}
+      maxWidth={'sm'}
+      fullWidth={true}
       onClose={onClose}
       aria-labelledby={titleId}
       open={open}

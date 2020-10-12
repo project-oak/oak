@@ -16,6 +16,7 @@
 
 import React from 'react';
 import { useParams } from 'react-router-dom';
+import ObjectAsTree from '~/components/ObjectAsTree';
 import DetailsDialog, { DetailsDialogProps } from '~/components/DetailsDialog';
 import { OakApplicationState } from '~/components/Root';
 
@@ -41,20 +42,13 @@ export default function ChannelDetails({
     <DetailsDialog
       onClose={onClose}
       open={open}
-      title="Channel Details"
+      title={`Channel Details: channel${channelId}`}
       titleId="channel-details-dialog-title"
     >
       {channel === undefined ? (
         <p>A channel with the ID: {channelId} does not exist.</p>
       ) : (
-        <dl>
-          <dt>ID:</dt>
-          <dd>{channelId}</dd>
-          <dt>Label:</dt>
-          <dd>{JSON.stringify(channel.label)}</dd>
-          <dt>Messages:</dt>
-          <dd>{channel.messages.length}</dd>
-        </dl>
+        <ObjectAsTree data={channel} />
       )}
     </DetailsDialog>
   );
