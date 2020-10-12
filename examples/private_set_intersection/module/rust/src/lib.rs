@@ -79,9 +79,16 @@ impl PrivateSetIntersection for Node {
         }
 
         if current_set.set_count < SET_THRESHOLD {
-            let new_set = req.values.iter().cloned().collect::<HashSet<_>>();
-            current_set.values = current_set.values.intersection(&new_set).cloned().collect();
-            current_set.set_count += 1;
+            let submitted_set = req.values.iter().cloned().collect::<HashSet<_>>();
+            current_set.values = if current_set.values.is_empty() {
+                submitted_set
+            } else {
+                current_set
+                    .values
+                    .intersection(&submitted_set)
+                    .cloned()
+                    .collect()
+            };
             Ok(())
         } else {
             Err(grpc::build_status(

@@ -24,16 +24,20 @@
 #include "oak/common/nonce_generator.h"
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
+ABSL_FLAG(std::string, set_id, "", "ID of the set intersection");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 ABSL_FLAG(std::string, public_key, "", "Path to the PEM-encoded public key used as a data label");
 
+using ::oak::examples::private_set_intersection::GetIntersectionRequest;
 using ::oak::examples::private_set_intersection::GetIntersectionResponse;
 using ::oak::examples::private_set_intersection::PrivateSetIntersection;
 using ::oak::examples::private_set_intersection::SubmitSetRequest;
 
-grpc::Status SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::string> set) {
+grpc::Status SubmitSet(PrivateSetIntersection::Stub* stub, std::string set_id,
+                       std::vector<std::string> set) {
   grpc::ClientContext context;
   SubmitSetRequest request;
+  request.set_set_id(set_id);
   for (auto item : set) {
     request.add_values(item);
   }
@@ -41,10 +45,12 @@ grpc::Status SubmitSet(PrivateSetIntersection::Stub* stub, std::vector<std::stri
   return stub->SubmitSet(&context, request, &response);
 }
 
-std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub) {
+std::vector<std::string> RetrieveIntersection(PrivateSetIntersection::Stub* stub,
+                                              std::string set_id) {
   std::vector<std::string> values;
   grpc::ClientContext context;
-  google::protobuf::Empty request;
+  GetIntersectionRequest request;
+  request.set_set_id(set_id);
   GetIntersectionResponse response;
   grpc::Status status = stub->GetIntersection(&context, request, &response);
   if (!status.ok()) {
@@ -61,6 +67,7 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
+  std::string set_id = absl::GetFlag(FLAGS_set_id);
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
@@ -77,14 +84,14 @@ int main(int argc, char** argv) {
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};
-  auto submit_status_0 = SubmitSet(stub_0.get(), set_0);
+  auto submit_status_0 = SubmitSet(stub_0.get(), set_id, set_0);
   if (!submit_status_0.ok()) {
     LOG(FATAL) << "Could not submit set: " << submit_status_0.error_code() << ": "
                << submit_status_0.error_message();
   }
 
   std::vector<std::string> set_1{"b", "c", "d"};
-  auto submit_status_1 = SubmitSet(stub_1.get(), set_1);
+  auto submit_status_1 = SubmitSet(stub_1.get(), set_id, set_1);
   if (!submit_status_1.ok()) {
     LOG(FATAL) << "Could not submit set: " << submit_status_1.error_code() << ": "
                << submit_status_1.error_message();
@@ -100,7 +107,7 @@ int main(int argc, char** argv) {
   auto invalid_stub = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), invalid_label));
   std::vector<std::string> set_2{"c", "d", "e"};
-  auto submit_status_2 = SubmitSet(invalid_stub.get(), set_2);
+  auto submit_status_2 = SubmitSet(invalid_stub.get(), set_id, set_2);
   // Error code `3` means `could not process gRPC request`.
   if (submit_status_2.error_code() != 3) {
     LOG(FATAL) << "Invalid public key was accepted";
@@ -108,7 +115,7 @@ int main(int argc, char** argv) {
 
   // Retrieve intersection.
   std::set<std::string> expected_set{"b", "c"};
-  std::vector<std::string> intersection_0 = RetrieveIntersection(stub_0.get());
+  std::vector<std::string> intersection_0 = RetrieveIntersection(stub_0.get(), set_id);
   LOG(INFO) << "client 0 intersection:";
   for (auto item : intersection_0) {
     LOG(INFO) << "- " << item;
@@ -117,7 +124,7 @@ int main(int argc, char** argv) {
     LOG(FATAL) << "Unexpected set";
   }
 
-  std::vector<std::string> intersection_1 = RetrieveIntersection(stub_1.get());
+  std::vector<std::string> intersection_1 = RetrieveIntersection(stub_1.get(), set_id);
   LOG(INFO) << "client 1 intersection:";
   for (auto item : intersection_1) {
     LOG(INFO) << "- " << item;

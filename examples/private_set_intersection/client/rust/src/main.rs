@@ -22,7 +22,8 @@ use log::info;
 use maplit::hashset;
 use oak_abi::label::{web_assembly_module_signature_tag, Label};
 use private_set_intersection_client::proto::{
-    private_set_intersection_client::PrivateSetIntersectionClient, SubmitSetRequest,
+    private_set_intersection_client::PrivateSetIntersectionClient, GetIntersectionRequest,
+    SubmitSetRequest,
 };
 use prost::Message;
 use std::collections::HashSet;
@@ -42,6 +43,8 @@ pub struct Opt {
         default_value = "https://localhost:8080"
     )]
     uri: String,
+    #[structopt(long, help = "ID of the set intersection")]
+    set_id: String,
     #[structopt(
         long,
         help = "PEM encoded X.509 TLS root certificate file used by gRPC client"
@@ -112,6 +115,7 @@ async fn main() -> anyhow::Result<()> {
     let mut client_1 =
         create_client(channel_1, &public_key_bytes).context("Couldn't create gRPC client")?;
     let request = Request::new(SubmitSetRequest {
+        set_id: opt.set_id.to_string(),
         values: vec!["a".to_string(), "b".to_string(), "c".to_string()],
     });
     client_1
@@ -125,6 +129,7 @@ async fn main() -> anyhow::Result<()> {
     let mut client_2 =
         create_client(channel_2, &public_key_bytes).context("Couldn't create gRPC client")?;
     let request = Request::new(SubmitSetRequest {
+        set_id: opt.set_id.to_string(),
         values: vec!["b".to_string(), "c".to_string(), "d".to_string()],
     });
     client_2
@@ -142,6 +147,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Couldn't create gRPC client")?;
 
     let request = Request::new(SubmitSetRequest {
+        set_id: opt.set_id.to_string(),
         values: vec!["c".to_string(), "d".to_string(), "e".to_string()],
     });
     invalid_client
@@ -154,7 +160,9 @@ async fn main() -> anyhow::Result<()> {
     // Retrieve intersection.
     let expected_intersection = hashset!["b".to_string(), "c".to_string()];
     let response_1 = client_1
-        .get_intersection(Request::new(()))
+        .get_intersection(Request::new(GetIntersectionRequest {
+            set_id: opt.set_id.to_string(),
+        }))
         .await
         .context("Couldn't receive intersection")?;
     let intersection_1: HashSet<_> = response_1.get_ref().values.iter().cloned().collect();
@@ -168,7 +176,9 @@ async fn main() -> anyhow::Result<()> {
     info!("Client 1 intersection: {:?}", &intersection_1);
 
     let response_2 = client_2
-        .get_intersection(Request::new(()))
+        .get_intersection(Request::new(GetIntersectionRequest {
+            set_id: opt.set_id.to_string(),
+        }))
         .await
         .context("Couldn't receive intersection")?;
     let intersection_2: HashSet<_> = response_2.get_ref().values.iter().cloned().collect();
