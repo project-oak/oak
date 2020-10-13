@@ -23,6 +23,13 @@
 //! The (common) intersection can then be retrieved by each client by a separate invocation.
 //! After the first client retrieves the intersection it becomes locked, and new contributions are
 //! discarded.
+//!
+//! Each client request should be provided with a set ID. This is necessary for allowing multiple
+//! sets of clients to compute their own intersections.
+//!
+//! It's important to note that in the current implementation of the application labels, specifying
+//! a different set ID does not provide guarantees that data from different clients is kept
+//! separate.
 
 pub mod proto {
     include!(concat!(
@@ -61,15 +68,15 @@ struct SetIntersection {
 #[derive(Default)]
 struct Node {
     /// Map from set ID to `SetIntersection`.
+    ///
+    /// this allows multiple sets of clients to compute their own intersections, also explain what
+    /// the security characteristics are
     sets: HashMap<String, SetIntersection>,
 }
 
 impl PrivateSetIntersection for Node {
     fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<()> {
-        let mut current_set = self
-            .sets
-            .entry(req.set_id)
-            .or_insert(SetIntersection::default());
+        let mut current_set = self.sets.entry(req.set_id).or_default();
 
         if current_set.locked {
             return Err(grpc::build_status(
@@ -89,6 +96,7 @@ impl PrivateSetIntersection for Node {
                     .cloned()
                     .collect()
             };
+            current_set.set_count += 1;
             Ok(())
         } else {
             Err(grpc::build_status(
@@ -107,7 +115,6 @@ impl PrivateSetIntersection for Node {
                 set.locked = true;
                 Ok(GetIntersectionResponse {
                     values: set.values.iter().cloned().collect(),
-                    ..Default::default()
                 })
             }
             None => Err(grpc::build_status(

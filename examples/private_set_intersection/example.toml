@@ -15,6 +15,7 @@ additional_args = [
 ]
 
 [clients]
+# Separate set IDs are necessary for computing separate set intersections for each client variant.
 rust = { Cargo = { cargo_manifest = "examples/private_set_intersection/client/rust/Cargo.toml" }, additional_args = [
   "--set-id=rust",
   "--root-tls-certificate=examples/certs/local/ca.pem",
