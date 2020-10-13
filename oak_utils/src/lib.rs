@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 
 /// Returns a [`TokenStream`] representing the specified Rust type.
@@ -163,6 +163,97 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
     }
 }
 
+struct AsyncServiceGenerator;
+
+impl prost_build::ServiceGenerator for AsyncServiceGenerator {
+    fn generate(&mut self, service: prost_build::Service, out: &mut String) {
+        let oak_package = oak_package();
+        let name = format_ident!("{}", service.name);
+        let service_enum = generate_service_enum(&name, &service);
+
+        let method_matchers = service.methods.iter().map(|method| {
+            let method_name = format_ident!("{}", method.proto_name);
+            let variant = quote!(#name::#method_name);
+            let input_type = type_ident(&method.input_type);
+            let input = if method.client_streaming {
+                quote!(requests.into_type::<#input_type>())
+            } else {
+                quote!(requests.into_type::<#input_type>().first().await?)
+            };
+            let writer = if method.server_streaming {
+                quote!(MultiWriter)
+            } else {
+                quote!(OneshotWriter)
+            };
+            let output = quote!(oak_async::grpc::#writer::new(response_writer));
+            let return_expr = quote!(#variant(#input, #output));
+            let method_name_string = format!(
+                "/{}.{}/{}",
+                service.package, service.proto_name, method.proto_name
+            );
+            quote! {
+                #method_name_string => Ok(#return_expr),
+            }
+        });
+        let service_enum_impl = quote! {
+            impl #name {
+                #[allow(dead_code)]
+                pub async fn from_invocation(invocation: #oak_package::grpc::Invocation) -> Result<#name, #oak_package::OakError> {
+                    let (method_name, requests, response_writer) = ::oak_async::grpc::invocation_to_requests_and_writer(invocation).await?;
+                    match method_name.as_str() {
+                        #(#method_matchers)*
+                        _ => {
+                            ::log::error!("unknown method name: {}", method_name);
+                            Err(#oak_package::OakStatus::ErrInvalidArgs.into())
+                        }
+                    }
+                }
+            }
+        };
+
+        let gen = quote! {
+            pub mod asynchronous {
+                use super::*;
+                #service_enum
+
+                #service_enum_impl
+            }
+        };
+        out.push_str(&format!("{}", gen));
+        out.push_str("\n");
+
+        // Eventually the sync code generation will be removed, but until then we also generate that
+        // code.
+        OakServiceGenerator.generate(service, out);
+    }
+}
+
+fn generate_service_enum(enum_name: &Ident, service: &prost_build::Service) -> TokenStream {
+    let variants = service.methods.iter().map(|method| {
+        let variant = format_ident!("{}", method.proto_name);
+        let input_type = type_ident(&method.input_type);
+        let output_type = type_ident(&method.output_type);
+        let input_type = if method.client_streaming {
+            quote!(::oak_async::ChannelReadStream<#input_type>)
+        } else {
+            quote!(#input_type)
+        };
+        let output_type = if method.server_streaming {
+            quote!(::oak_async::grpc::MultiWriter<#output_type>)
+        } else {
+            quote!(::oak_async::grpc::OneshotWriter<#output_type>)
+        };
+        quote!(#variant(#input_type, #output_type))
+    });
+
+    quote! {
+        #[allow(dead_code)]
+        pub enum #enum_name {
+            #(#variants,)*
+        }
+    }
+}
+
 /// Options for generating Protocol buffer Rust types.
 pub struct ProtoOptions {
     /// Generate Oak-specific service code for inter-node communication.
@@ -181,6 +272,15 @@ pub struct ProtoOptions {
     /// Generated code depends on the `oak` SDK crate.
     pub derive_handle_visit: bool,
 
+    /// Enable service code generated for the async SDK.
+    ///
+    /// Default: **false**.
+    ///
+    /// The regular sync code will still be generated if this is enabled.
+    ///
+    /// This feature is currently experimental.
+    pub experimental_async: bool,
+
     pub out_dir_override: Option<std::path::PathBuf>,
 }
 
@@ -190,6 +290,7 @@ impl Default for ProtoOptions {
         ProtoOptions {
             generate_services: true,
             derive_handle_visit: true,
+            experimental_async: false,
             out_dir_override: None,
         }
     }
@@ -221,7 +322,12 @@ where
 
     let mut prost_config = prost_build::Config::new();
     if options.generate_services {
-        prost_config.service_generator(Box::new(OakServiceGenerator));
+        if options.experimental_async {
+            // AsyncServiceGenerator calls OakServiceGenerator, so the sync code is either way.
+            prost_config.service_generator(Box::new(AsyncServiceGenerator));
+        } else {
+            prost_config.service_generator(Box::new(OakServiceGenerator));
+        }
     }
     if options.derive_handle_visit {
         prost_config

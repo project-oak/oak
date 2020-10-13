@@ -16,10 +16,17 @@
 
 //! gRPC related types for asynchronous processing.
 
+use crate::{io::ReceiverAsync, ChannelReadStream};
+use core::{
+    pin::Pin,
+    task::{Context, Poll},
+};
+use futures::stream::{Peek, Peekable, Stream, StreamExt};
 use log::error;
 use oak::{
-    grpc::{ChannelResponseWriter, Code, WriteMode},
-    OakError,
+    grpc::{ChannelResponseWriter, Code, GrpcRequest, Invocation, WriteMode},
+    io::{Decodable, Message},
+    OakError, OakStatus,
 };
 
 /// Writes exactly one message on a gRPC response channel, setting an `UNKNOWN` error if unused.
@@ -50,6 +57,15 @@ impl<T: ::prost::Message> OneshotWriter<T> {
     /// Send the response, automatically closing the channel.
     pub fn send(mut self, msg: &T) -> Result<(), OakError> {
         self.writer.take().unwrap().write(msg, WriteMode::Close)?;
+        Ok(())
+    }
+
+    /// Closes the channel with the given error code and message.
+    pub fn close_error<S: AsRef<str>>(mut self, code: Code, msg: S) -> Result<(), OakError> {
+        self.writer
+            .take()
+            .unwrap()
+            .close(Err(oak::grpc::build_status(code, msg.as_ref())))?;
         Ok(())
     }
 
@@ -127,5 +143,118 @@ impl<T> Drop for MultiWriter<T> {
                 error!("Failed to close MultiWriter in Drop: {}", e);
             };
         }
+    }
+}
+
+/// A streaming gRPC client request.
+///
+/// `T` represents the message type sent in the requests.
+pub struct GrpcRequestStream<T: Decodable> {
+    inner: Peekable<ChannelReadStream<GrpcRequest>>,
+    is_drained: bool,
+    _msg: core::marker::PhantomData<T>,
+}
+
+// Unpin is needed to be able to peek at the first request before passing it
+// on to the handler.
+impl<T: Decodable> Unpin for GrpcRequestStream<T> {}
+
+// This should only be used by the Oak service generator. Not a stable API.
+#[doc(hidden)]
+impl GrpcRequestStream<()> {
+    pub fn new(inner: ChannelReadStream<GrpcRequest>) -> GrpcRequestStream<()> {
+        GrpcRequestStream {
+            inner: inner.peekable(),
+            is_drained: false,
+            _msg: core::marker::PhantomData,
+        }
+    }
+
+    // Casts this stream into the given message type.
+    pub fn into_type<T: Decodable>(self) -> GrpcRequestStream<T> {
+        GrpcRequestStream {
+            inner: self.inner,
+            is_drained: self.is_drained,
+            _msg: core::marker::PhantomData,
+        }
+    }
+}
+
+// This should only be used by the Oak service generator. Not a stable API.
+#[doc(hidden)]
+impl<T: Decodable> GrpcRequestStream<T> {
+    pub fn peek(self: Pin<&mut Self>) -> Peek<'_, ChannelReadStream<GrpcRequest>> {
+        Peekable::peek(Pin::new(&mut Pin::into_inner(self).inner))
+    }
+
+    pub async fn first(mut self) -> Result<T, OakError> {
+        // Unwrapping is safe here, as the gRPC stream must have at least one incoming request
+        self.next().await.unwrap()
+    }
+}
+
+impl<T: Decodable> Stream for GrpcRequestStream<T> {
+    type Item = Result<T, OakError>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        if self.is_drained {
+            return Poll::Ready(None);
+        }
+        let self_ = Pin::into_inner(self);
+        let inner = Pin::new(&mut self_.inner);
+        Peekable::poll_next(inner, cx).map(|ready| {
+            ready.map(|some| {
+                some.and_then(|request| {
+                    self_.is_drained = request.last;
+                    let message = Message {
+                        bytes: request.req_msg,
+                        handles: Vec::new(),
+                    };
+                    T::decode(&message)
+                })
+            })
+        })
+    }
+}
+
+// This should only be used by the Oak service generator. Not a stable API.
+#[doc(hidden)]
+pub async fn invocation_to_requests_and_writer(
+    invocation: Invocation,
+) -> Result<(String, GrpcRequestStream<()>, ChannelResponseWriter), OakError> {
+    let receiver = invocation.receiver.ok_or_else(|| {
+        error!("Invocation did not have a receiver");
+        OakError::OakStatus(OakStatus::ErrInvalidArgs)
+    })?;
+    let mut requests = GrpcRequestStream::new(receiver.receive_stream());
+    let requests_pinned = core::pin::Pin::new(&mut requests);
+    let sender = invocation.sender.ok_or_else(|| {
+        error!("Invocation did not have a sender");
+        OakError::OakStatus(OakStatus::ErrInvalidArgs)
+    })?;
+    let response_writer = ChannelResponseWriter::new(sender);
+
+    let req1 = requests_pinned
+        .peek()
+        .await
+        .ok_or_else(|| {
+            error!("No request arrived for invocation");
+            OakError::OakStatus(OakStatus::ErrBadHandle)
+        })?
+        .as_ref()
+        // `peek` only gives us a reference to the error, and `OakError` cannot implement `Clone`,
+        // so we need to do a poor man's clone here.
+        .map_err(|e| clone_error(e))?;
+    let method_name = req1.method_name.clone();
+    Ok((method_name, requests, response_writer))
+}
+
+// Poor man's clone for `OakError`
+fn clone_error(e: &OakError) -> OakError {
+    match e {
+        OakError::ProtobufDecodeError(e) => OakError::ProtobufDecodeError(e.clone()),
+        OakError::ProtobufEncodeError(e) => OakError::ProtobufEncodeError(e.clone()),
+        OakError::OakStatus(s) => OakError::OakStatus(*s),
+        OakError::IoError(e) => OakError::IoError(std::io::Error::new(e.kind(), e.to_string())),
     }
 }

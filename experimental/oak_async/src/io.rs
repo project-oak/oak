@@ -24,9 +24,9 @@ use core::{
     task::{Context, Poll},
 };
 use futures::stream::Stream;
-use log::debug;
+use log::{debug, info};
 use oak::{
-    io::{Decodable, Message},
+    io::{Decodable, Message, Receiver},
     OakError, OakStatus, ReadHandle,
 };
 
@@ -128,10 +128,31 @@ pub trait ReceiverAsync {
     }
 }
 
-impl<T: Decodable + Send> ReceiverAsync for oak::io::Receiver<T> {
+impl<T: Decodable + Send> ReceiverAsync for Receiver<T> {
     type Message = T;
 
     fn receive_async(&self) -> ChannelRead<Self::Message> {
         ChannelRead::new(self.handle)
+    }
+}
+
+/// Process the stream of messages coming in on `receiver` using the provided handler.
+///
+/// If the runtime signals that the node is being terminated while waiting for new commands, the
+/// loop will terminate and this function will return without completing the `handler` future.
+///
+/// `panic!`s if any other error occurs while reading commands.
+pub fn run_command_loop<T, F, R>(receiver: Receiver<T>, handler: F)
+where
+    T: Decodable + Send,
+    F: FnOnce(ChannelReadStream<T>) -> R,
+    R: Future<Output = ()> + 'static,
+{
+    match crate::block_on(handler(receiver.receive_stream())) {
+        Ok(()) => {}
+        Err(OakStatus::ErrTerminated) => {
+            info!("Received termination status, terminating command loop");
+        }
+        Err(e) => panic!("Command loop received non-termination error: {:?}", e),
     }
 }
