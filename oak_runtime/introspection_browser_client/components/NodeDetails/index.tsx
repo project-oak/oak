@@ -17,8 +17,8 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { OakApplicationState } from '~/components/Root';
+import ObjectAsTree from '~/components/ObjectAsTree';
 import DetailsDialog, { DetailsDialogProps } from '~/components/DetailsDialog';
-import Node from '~/components/Node';
 
 type NodeDetailsProps = {
   applicationState: OakApplicationState;
@@ -42,13 +42,13 @@ export default function NodeDetails({
     <DetailsDialog
       onClose={onClose}
       open={open}
-      title="Node Details"
+      title={`Node Details: ${node?.name ?? `Node ${nodeId}`}`}
       titleId="node-details-dialog-title"
     >
       {node === undefined ? (
         <p>A node with the ID: {nodeId} does not exist.</p>
       ) : (
-        <Node nodeId={nodeId} nodeInfo={node} />
+        <ObjectAsTree data={{ id: nodeId, ...node }} />
       )}
     </DetailsDialog>
   );

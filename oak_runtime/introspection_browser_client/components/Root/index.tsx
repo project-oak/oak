@@ -75,7 +75,7 @@ export enum ChannelHalfDirection {
   Read = 'READ',
   Write = 'WRITE',
 }
-interface ChannelHalf {
+export interface ChannelHalf {
   channelId: ChannelID;
   direction: ChannelHalfDirection;
 }
