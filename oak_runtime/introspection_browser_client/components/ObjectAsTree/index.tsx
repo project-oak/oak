@@ -1,6 +1,7 @@
 import React from 'react';
 import JSONTree from 'react-json-tree';
 
+// Taken from https://github.com/Alchiadus/base16-syntax/blob/master/styles/schemes/github.less
 const THEME = {
   base00: '#ffffff',
   base01: '#f5f5f5',
