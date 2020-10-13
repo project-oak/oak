@@ -77,8 +77,10 @@ Local Ltac logical_simplify :=
          end.
 
 Local Ltac step_econstruct :=
-    match goal with
+    repeat match goal with
         | H: _ = ncall _ |- _ => progress rewrite <- H
+    end;
+    lazymatch goal with
         | |- step_system_ev _ _ _ => econstructor; eauto
         | |- step_node_ev _ _ _ _ _  => econstructor; eauto
         | |- step_system _ _ => econstructor; eauto
