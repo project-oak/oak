@@ -75,9 +75,9 @@ impl<T: Decodable> Drop for ChannelRead<T> {
 
 /// `Stream` representing a sequence of asynchronous reads from a channel.
 pub struct ChannelReadStream<T: Decodable>(
-    // Note: `Stream` could be implemented directly on the `ChannelRead` type. Unfortunately the
-    // `Future` and `Stream` extension traits have some methods that overlap, such as `map`. This
-    // would make it impossible for the compiler to figure out what a call like
+    // Note: `Stream` could be implemented directly on the `ChannelRead` type, but unfortunately
+    // the `Future` and `Stream` extension traits have some methods that overlap, such as
+    // `map`. This would make it impossible for the compiler to figure out what a call like
     // `my_channel_read.map(..)`  should do, so instead the stream is wrapped in its own type to
     // avoid any confusion.
     ChannelRead<T>,
@@ -123,7 +123,9 @@ pub trait ReceiverAsync {
     /// Asynchronously receive multiple messages.
     ///
     /// Each item received from this `Stream` resolves to either a message or an `OakError`
-    fn receive_stream(&self) -> ChannelReadStream<Self::Message>;
+    fn receive_stream(&self) -> ChannelReadStream<Self::Message> {
+        ChannelReadStream(self.receive_async())
+    }
 }
 
 impl<T: Decodable + Send> ReceiverAsync for oak::io::Receiver<T> {
@@ -131,9 +133,5 @@ impl<T: Decodable + Send> ReceiverAsync for oak::io::Receiver<T> {
 
     fn receive_async(&self) -> ChannelRead<Self::Message> {
         ChannelRead::new(self.handle)
-    }
-
-    fn receive_stream(&self) -> ChannelReadStream<Self::Message> {
-        ChannelReadStream(self.receive_async())
     }
 }

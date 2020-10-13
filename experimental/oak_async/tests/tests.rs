@@ -291,7 +291,7 @@ fn many_reads_parallel() {
 // Stream functionality relies heavily on the implementation of `Future`, so we only need minimal
 // tests for the `Stream` impl.
 #[test]
-fn stream_immediate() {
+fn stream_read_multiple() {
     init();
 
     let mut data_sent_count = 0;
