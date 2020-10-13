@@ -16,7 +16,7 @@
 
 use crate::{
     io::{Encodable, Sender},
-    OakError, OakStatus,
+    Label, OakError, OakStatus,
 };
 
 /// Trait for context-dependent functionality on a `Sender`.
@@ -26,18 +26,24 @@ pub trait SenderExt<T> {
 
     /// Attempt to send a value on the sender.
     fn send(&self, t: &T) -> Result<(), OakError>;
+
+    /// Retrieve the label associated with the underlying channel.
+    fn label(&self) -> Result<Label, OakError>;
 }
 
 impl<T: Encodable> SenderExt<T> for Sender<T> {
-    /// Close the underlying channel used by the sender.
     fn close(&self) -> Result<(), OakStatus> {
         crate::channel_close(self.handle.handle)
     }
 
-    /// Attempt to send a value on the sender.
     fn send(&self, t: &T) -> Result<(), OakError> {
         let message = t.encode()?;
         crate::channel_write(self.handle, &message.bytes, &message.handles)?;
         Ok(())
+    }
+
+    fn label(&self) -> Result<Label, OakError> {
+        let label = crate::channel_label_read(self.handle.handle)?;
+        Ok(label)
     }
 }

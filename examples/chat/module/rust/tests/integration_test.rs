@@ -39,7 +39,6 @@ async fn test_room_create() {
     let mut client = ChatClient::with_interceptor(channel, interceptor);
 
     let req = CreateRoomRequest {
-        room_id: b"dummy room id".to_vec(),
         admin_token: b"dummy admin token".to_vec(),
     };
     info!("Sending request: {:?}", req);
@@ -48,7 +47,6 @@ async fn test_room_create() {
 
     // Fail to destroy a non-existent room.
     let req = DestroyRoomRequest {
-        room_id: b"unknown room id".to_vec(),
         admin_token: b"dummy admin token".to_vec(),
     };
     info!("Sending request: {:?}", req);
@@ -57,7 +55,6 @@ async fn test_room_create() {
 
     // Succeed in destroying the room created above.
     let req = DestroyRoomRequest {
-        room_id: b"dummy room id".to_vec(),
         admin_token: b"dummy admin token".to_vec(),
     };
     info!("Sending request: {:?}", req);
@@ -85,7 +82,6 @@ async fn test_chat() {
 
     let room_id = b"test room";
     let req = CreateRoomRequest {
-        room_id: room_id.to_vec(),
         admin_token: b"dummy admin token".to_vec(),
     };
     info!("Sending request: {:?}", req);
@@ -190,7 +186,6 @@ impl Chatter {
 
     pub fn send(&mut self, text: &str) {
         let req = SendMessageRequest {
-            room_id: self.room_id.clone(),
             message: Some(Message {
                 user_handle: self.user_handle.clone(),
                 text: text.to_string(),
@@ -208,7 +203,6 @@ async fn subscribe(room_id: Vec<u8>, msgs: Arc<ChatLog>, s: Arc<Semaphore>) {
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
     let mut client = ChatClient::with_interceptor(channel, interceptor);
     let req = SubscribeRequest {
-        room_id: room_id.clone(),
     };
     info!("Sending request: {:?}", req);
     let mut stream = client.subscribe(req).await.unwrap().into_inner();

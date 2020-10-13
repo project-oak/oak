@@ -16,7 +16,7 @@
 
 use crate::{
     io::{Decodable, Receiver},
-    ChannelReadStatus, OakError, OakStatus,
+    ChannelReadStatus, Label, OakError, OakStatus,
 };
 use log::error;
 
@@ -31,6 +31,9 @@ pub trait ReceiverExt<T> {
     /// Attempt to read a value from the receiver, without blocking.
     fn try_receive(&self) -> Result<T, OakError>;
 
+    /// Retrieve the label associated with the underlying channel.
+    fn label(&self) -> Result<Label, OakError>;
+
     /// Wait for a value to be available from the receiver.
     ///
     /// Returns [`ChannelReadStatus`] of the wrapped handle, or `Err(OakStatus::ErrTerminated)` if
@@ -39,18 +42,15 @@ pub trait ReceiverExt<T> {
 }
 
 impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
-    /// Close the underlying channel used by the receiver.
     fn close(&self) -> Result<(), OakStatus> {
         crate::channel_close(self.handle.handle)
     }
 
-    /// Attempt to wait for a value on the receiver, blocking if necessary.
     fn receive(&self) -> Result<T, OakError> {
         self.wait()?;
         self.try_receive()
     }
 
-    /// Attempt to read a value from the receiver, without blocking.
     fn try_receive(&self) -> Result<T, OakError> {
         let mut bytes = Vec::with_capacity(1024);
         let mut handles = Vec::with_capacity(16);
@@ -60,10 +60,11 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
         T::decode(&message)
     }
 
-    /// Wait for a value to be available from the receiver.
-    ///
-    /// Returns [`ChannelReadStatus`] of the wrapped handle, or `Err(OakStatus::ErrTerminated)` if
-    /// the Oak Runtime is terminating.
+    fn label(&self) -> Result<Label, OakError> {
+        let label = crate::channel_label_read(self.handle.handle)?;
+        Ok(label)
+    }
+
     fn wait(&self) -> Result<ChannelReadStatus, OakStatus> {
         // TODO(#500): Consider creating the handle notification space once and for all in `new`.
         let read_handles = vec![self.handle];
