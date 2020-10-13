@@ -725,18 +725,17 @@ impl Runtime {
         // downgraded is the data inside the Node (protected by the Node Label).
         let source_label = self.get_node_label(node_id);
         let downgraded_source_label = self.get_node_downgraded_label(node_id, &source_label);
-        trace!("{:?}: original source label: {:?}?", node_id, source_label);
-        trace!(
+        error!("{:?}: original source label: {:?}?", node_id, source_label);
+        error!(
             "{:?}: downgraded source label: {:?}?",
-            node_id,
-            downgraded_source_label
+            node_id, downgraded_source_label
         );
-        trace!("{:?}: target label: {:?}?", node_id, target_label);
+        error!("{:?}: target label: {:?}?", node_id, target_label);
         if downgraded_source_label.flows_to(&target_label) {
-            trace!("{:?}: can write to {:?}", node_id, target_label);
+            error!("{:?}: can write to {:?}", node_id, target_label);
             Ok(())
         } else {
-            warn!("{:?}: cannot write to {:?}", node_id, target_label);
+            error!("{:?}: cannot write to {:?}", node_id, target_label);
             Err(OakStatus::ErrPermissionDenied)
         }
     }

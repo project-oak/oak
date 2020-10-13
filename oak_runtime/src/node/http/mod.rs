@@ -327,15 +327,14 @@ impl HttpRequestHandler {
     fn inject_http_request(
         &self,
         request: HttpRequest,
-        label: &Label,
+        request_label: &Label,
     ) -> Result<HttpResponseIterator, ()> {
-        let user_label = get_identity_label(&request);
-        info!("Got usr label: {:?}", user_label);
-        // TODO: do something useful with user_label
+        let user_identity_label =
+            get_identity_label(&request).map_err(|_err| warn!("No valid identity"))?;
 
         // Create a pair of temporary channels to pass the HTTP request and to receive the
         // response.
-        let pipe = Pipe::new(&self.runtime.clone(), label)?;
+        let pipe = Pipe::new(&self.runtime.clone(), request_label, &user_identity_label)?;
 
         // Put the HTTP request message inside the per-invocation request channel.
         pipe.insert_message(&self.runtime, request)?;
@@ -362,14 +361,25 @@ struct Pipe {
 }
 
 impl Pipe {
-    fn new(runtime: &RuntimeProxy, label: &Label) -> Result<Self, ()> {
+    fn new(
+        runtime: &RuntimeProxy,
+        request_label: &Label,
+        _user_identity_label: &Label,
+    ) -> Result<Self, ()> {
+        let request_reader_label = Label {
+            confidentiality_tags: request_label.confidentiality_tags.clone(),
+            // integrity_tags: user_identity_label.confidentiality_tags.clone(),
+            integrity_tags: vec![],
+        };
+
         // Create a channel for passing HTTP requests to the Oak node. This channel is created with
-        // the label specified by the caller. This will fail if the label has a non-empty
-        // integrity component.
-        // TODO: set integrity component to the user identity
-        let (request_writer, request_reader) = runtime.channel_create(&label).map_err(|err| {
-            warn!("could not create HTTP request channel: {:?}", err);
-        })?;
+        // the label specified by the caller, and the identity of the caller. This will fail if the
+        // label has a non-empty integrity component.
+        let (request_writer, request_reader) = runtime
+            .channel_create(&request_reader_label)
+            .map_err(|err| {
+                warn!("could not create HTTP request channel: {:?}", err);
+            })?;
         // TODO: set confidentiality component to the user identity
         let (response_writer, response_reader) = runtime
             .channel_create(&Label::public_untrusted())
@@ -483,7 +493,7 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
 /// (3) verifies that the signature
 /// (4) if the signature is valid, returns a label with its confidentiality component set to the
 /// public key in the signed challenge.
-fn get_identity_label(req: &HttpRequest) -> Result<Label, OakStatus> {
+fn get_identity_label(req: &HttpRequest) -> Result<Label, ()> {
     let headers = (
         req.headers.as_ref().and_then(|map| {
             map.headers
@@ -506,7 +516,7 @@ fn get_identity_label(req: &HttpRequest) -> Result<Label, OakStatus> {
                 oak_abi::OAK_LABEL_HTTP_JSON_KEY,
                 oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY
             );
-            Err(OakStatus::ErrInvalidArgs)
+            Err(())
         }
     }
 }
@@ -532,21 +542,21 @@ fn parse_protobuf_label(protobuf_label: &[u8]) -> Result<Label, OakStatus> {
     })
 }
 
-fn verify_json_challenge(signature: &[u8]) -> Result<Label, OakStatus> {
+fn verify_json_challenge(signature: &[u8]) -> Result<Label, ()> {
     let signature = parse_json_signed_challenge(signature.to_vec()).map_err(|err| {
         warn!("Could not parse json formatted signed challenge: {}", err);
-        OakStatus::ErrInvalidArgs
     })?;
     verify_signed_challenge(signature)
+        .map_err(|err| warn!("Could not verify the signature: {:?}", err))
 }
 
-fn verify_protobuf_challenge(signature: &[u8]) -> Result<Label, OakStatus> {
+fn verify_protobuf_challenge(signature: &[u8]) -> Result<Label, ()> {
     let signature =
         crate::proto::oak::identity::SignedChallenge::decode(&signature[..]).map_err(|err| {
             warn!("Could not parse protobuf encoded signed challenge: {}", err);
-            OakStatus::ErrInvalidArgs
         })?;
     verify_signed_challenge(signature)
+        .map_err(|err| warn!("Could not verify the signature: {}", err))
 }
 
 fn verify_signed_challenge(
