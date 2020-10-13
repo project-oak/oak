@@ -131,6 +131,8 @@ Hint Extern 4 (chan_low_eq _ _ _) => reflexivity : unwind.
 (* meant to be case where we have (cleq ch (proj ch) ) and want to swap order *)
 Hint Extern 4 (chan_low_eq _ _ (chan_low_proj _ _)) => symmetry : unwind.
 Hint Extern 4 (state_low_eq _ _ (state_low_proj _ _)) => symmetry : unwind.
+Hint Extern 2 (chan_low_proj _ _ = chan_low_proj _ _)
+=> simple eapply chan_low_proj_loweq : unwind.
 
 Hint Extern 4 (_ <<L clbl (chan_low_proj _ _))
 => (rewrite chan_projection_preserves_lbl) : flowsto.
@@ -179,17 +181,7 @@ Proof.
                 do 2 eexists; split_ands; [ | | reflexivity ].
                 1:apply_all_constructors;
                   solve [eauto using state_hidx_to_proj_state_hidx with flowsto].
-                subst_lets.
-                eapply set_call_unwind.
-                eapply state_upd_chan_unwind.
-                eapply chan_append_unwind.
-                symmetry.
-                (* eauto with unwind can't seem to figure this part out: *)
-                eapply chan_low_proj_loweq.
-                (* in this spot, could also do:
-                eapply chan_low_proj_idempotent.
-                 *)
-                eauto with unwind.
+                subst_lets. eauto 7 with unwind.
             + (* ReadChannel *)
                 pose proof (state_hidx_to_proj_state_hidx ell _ _ _
                     ltac:(eauto)) as Hch_hidx_s1proj.
