@@ -179,7 +179,17 @@ Proof.
                 do 2 eexists; split_ands; [ | | reflexivity ].
                 1:apply_all_constructors;
                   solve [eauto using state_hidx_to_proj_state_hidx with flowsto].
-                subst_lets. eauto 7 with unwind.
+                subst_lets.
+                eapply set_call_unwind.
+                eapply state_upd_chan_unwind.
+                eapply chan_append_unwind.
+                symmetry.
+                (* eauto with unwind can't seem to figure this part out: *)
+                eapply chan_low_proj_loweq.
+                (* in this spot, could also do:
+                eapply chan_low_proj_idempotent.
+                 *)
+                eauto with unwind.
             + (* ReadChannel *)
                 pose proof (state_hidx_to_proj_state_hidx ell _ _ _
                     ltac:(eauto)) as Hch_hidx_s1proj.
