@@ -23,6 +23,13 @@
 //! The (common) intersection can then be retrieved by each client by a separate invocation.
 //! After the first client retrieves the intersection it becomes locked, and new contributions are
 //! discarded.
+//!
+//! Each client request should be provided with a set ID. This is necessary for allowing multiple
+//! sets of clients to compute their own intersections.
+//!
+//! It's important to note that in the current implementation of the application labels, specifying
+//! a different set ID does not provide guarantees that data from different clients is kept
+//! separate.
 
 pub mod proto {
     include!(concat!(
@@ -33,10 +40,10 @@ pub mod proto {
 
 use oak::grpc;
 use proto::{
-    GetIntersectionResponse, PrivateSetIntersection, PrivateSetIntersectionDispatcher,
-    SubmitSetRequest,
+    GetIntersectionRequest, GetIntersectionResponse, PrivateSetIntersection,
+    PrivateSetIntersectionDispatcher, SubmitSetRequest,
 };
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 oak::entrypoint!(oak_main => |_in_channel| {
     let dispatcher = PrivateSetIntersectionDispatcher::new(Node::default());
@@ -49,32 +56,47 @@ oak::entrypoint!(oak_main => |_in_channel| {
 pub const SET_THRESHOLD: u64 = 2;
 
 #[derive(Default)]
-struct Node {
+struct SetIntersection {
     /// Current intersection of contributed private sets.
-    values: Option<HashSet<String>>,
+    values: HashSet<String>,
     /// Number of contributed private sets.
     set_count: u64,
     /// The intersection is locked and new contributions are discarded.
     locked: bool,
 }
 
+#[derive(Default)]
+struct Node {
+    /// Map from set ID to `SetIntersection`.
+    ///
+    /// this allows multiple sets of clients to compute their own intersections, also explain what
+    /// the security characteristics are
+    sets: HashMap<String, SetIntersection>,
+}
+
 impl PrivateSetIntersection for Node {
     fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<()> {
-        if self.locked {
+        let mut current_set = self.sets.entry(req.set_id).or_default();
+
+        if current_set.locked {
             return Err(grpc::build_status(
                 grpc::Code::FailedPrecondition,
                 "Set contributions are no longer available",
             ));
         }
 
-        if self.set_count < SET_THRESHOLD {
-            let set = req.values.iter().cloned().collect::<HashSet<_>>();
-            let next = match self.values {
-                Some(ref previous) => previous.intersection(&set).cloned().collect(),
-                None => set,
+        if current_set.set_count < SET_THRESHOLD {
+            let submitted_set = req.values.iter().cloned().collect::<HashSet<_>>();
+            current_set.values = if current_set.values.is_empty() {
+                submitted_set
+            } else {
+                current_set
+                    .values
+                    .intersection(&submitted_set)
+                    .cloned()
+                    .collect()
             };
-            self.values = Some(next);
-            self.set_count += 1;
+            current_set.set_count += 1;
             Ok(())
         } else {
             Err(grpc::build_status(
@@ -84,12 +106,21 @@ impl PrivateSetIntersection for Node {
         }
     }
 
-    fn get_intersection(&mut self, _req: ()) -> grpc::Result<GetIntersectionResponse> {
-        let mut res = GetIntersectionResponse::default();
-        if let Some(ref set) = self.values {
-            res.values = set.iter().cloned().collect();
-        };
-        self.locked = true;
-        Ok(res)
+    fn get_intersection(
+        &mut self,
+        req: GetIntersectionRequest,
+    ) -> grpc::Result<GetIntersectionResponse> {
+        match self.sets.get_mut(&req.set_id) {
+            Some(ref mut set) => {
+                set.locked = true;
+                Ok(GetIntersectionResponse {
+                    values: set.values.iter().cloned().collect(),
+                })
+            }
+            None => Err(grpc::build_status(
+                grpc::Code::FailedPrecondition,
+                "Incorrect set ID",
+            )),
+        }
     }
 }

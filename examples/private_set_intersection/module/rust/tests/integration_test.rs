@@ -16,11 +16,13 @@
 
 use assert_matches::assert_matches;
 use private_set_intersection_grpc::proto::{
-    private_set_intersection_client::PrivateSetIntersectionClient, SubmitSetRequest,
+    private_set_intersection_client::PrivateSetIntersectionClient, GetIntersectionRequest,
+    SubmitSetRequest,
 };
 use std::{collections::HashSet, iter::FromIterator};
 
 const MODULE_WASM_FILE_NAME: &str = "private_set_intersection.wasm";
+const TEST_SET_ID: &str = "test";
 
 #[tokio::test(core_threads = 2)]
 async fn test_set_intersection() {
@@ -33,12 +35,14 @@ async fn test_set_intersection() {
     let mut client = PrivateSetIntersectionClient::with_interceptor(channel, interceptor);
 
     let req = SubmitSetRequest {
+        set_id: TEST_SET_ID.to_string(),
         values: vec!["a".to_string(), "b".to_string(), "c".to_string()],
     };
     let result = client.submit_set(req).await;
     assert_matches!(result, Ok(_));
 
     let req = SubmitSetRequest {
+        set_id: TEST_SET_ID.to_string(),
         values: vec!["b".to_string(), "c".to_string(), "d".to_string()],
     };
     let result = client.submit_set(req).await;
@@ -46,12 +50,17 @@ async fn test_set_intersection() {
 
     // Send more sets than threshold.
     let req = SubmitSetRequest {
+        set_id: TEST_SET_ID.to_string(),
         values: vec!["c".to_string()],
     };
     let result = client.submit_set(req).await;
     assert_matches!(result, Err(_));
 
-    let result = client.get_intersection(()).await;
+    let result = client
+        .get_intersection(GetIntersectionRequest {
+            set_id: TEST_SET_ID.to_string(),
+        })
+        .await;
     assert_matches!(result, Ok(_));
     let got = HashSet::<String>::from_iter(result.unwrap().into_inner().values.to_vec());
     let want: HashSet<String> = ["b".to_string(), "c".to_string()].iter().cloned().collect();
@@ -59,6 +68,7 @@ async fn test_set_intersection() {
 
     // Send a new set after the intersection was requested.
     let req = SubmitSetRequest {
+        set_id: TEST_SET_ID.to_string(),
         values: vec!["c".to_string()],
     };
     let result = client.submit_set(req).await;
