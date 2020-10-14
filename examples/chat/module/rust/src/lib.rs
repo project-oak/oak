@@ -39,7 +39,7 @@ struct Node {
     rooms: HashMap<RoomId, Room>,
 }
 
-oak::entrypoint!(grpc_oak_main => |_in_channel| {
+oak::entrypoint!(grpc_oak_main<()> => |_receiver| {
     oak::logger::init_default();
     let dispatcher = ChatDispatcher::new(Node::default());
     let grpc_channel =

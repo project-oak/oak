@@ -58,9 +58,15 @@ mod tests;
 use database::load_database;
 use log::{debug, error};
 use oak::{
-    grpc, io::SenderExt, proto::oak::invocation::GrpcInvocationReceiver, CommandHandler, OakError,
+    grpc,
+    io::{Receiver, ReceiverExt, SenderExt},
+    proto::oak::invocation::GrpcInvocationReceiver,
+    CommandHandler, OakError,
 };
-use proto::oak::examples::trusted_database::{PointOfInterestMap, TrustedDatabaseCommand};
+use oak_abi::proto::oak::application::ConfigMap;
+use proto::oak::examples::trusted_database::{
+    PointOfInterest, PointOfInterestMap, TrustedDatabaseCommand,
+};
 
 /// Oak Node that contains an in-memory database.
 pub struct TrustedDatabaseNode {
@@ -129,9 +135,9 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
     }
 }
 
-oak::entrypoint!(oak_main => |in_channel| {
+oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     oak::logger::init_default();
-    let config_map = oak::app_config_map(in_channel).expect("Couldn't read config map");
+    let config_map = receiver.receive().expect("Couldn't read config map");
     let points_of_interest = load_database(config_map).expect("Couldn't load database");
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("Couldn't create gRPC server pseudo-Node");

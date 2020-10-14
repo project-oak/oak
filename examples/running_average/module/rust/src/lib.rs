@@ -29,7 +29,7 @@ pub mod proto {
 use oak::grpc;
 use proto::{GetAverageResponse, RunningAverage, RunningAverageDispatcher, SubmitSampleRequest};
 
-oak::entrypoint!(oak_main => |_in_channel| {
+oak::entrypoint!(oak_main<()> => |_receiver| {
     let dispatcher = RunningAverageDispatcher::new(Node::default());
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");

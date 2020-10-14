@@ -28,7 +28,10 @@ use crate::proto::oak::examples::trusted_database::{
     TrustedDatabaseCommand, TrustedDatabaseDispatcher,
 };
 use log::{debug, error, warn};
-use oak::{grpc, io::ReceiverExt};
+use oak::{
+    grpc,
+    io::{Receiver, ReceiverExt},
+};
 
 // Error messages.
 const NO_LOCATION_ERROR: &str = "Location is not specified";
@@ -133,11 +136,10 @@ pub fn distance(first: Location, second: Location) -> f32 {
     EARTH_RADIUS * central_angle
 }
 
-oak::entrypoint!(handler_oak_main => |in_channel| {
+oak::entrypoint!(handler_oak_main<TrustedDatabaseCommand> => |command_receiver: Receiver<TrustedDatabaseCommand>| {
     oak::logger::init_default();
 
     // Receive command.
-    let command_receiver = oak::io::Receiver::<TrustedDatabaseCommand>::new(in_channel);
     let command: TrustedDatabaseCommand =
         command_receiver.receive().expect("Couldn't receive command");
     let receiver = command.invocation_receiver.expect("Couldn't receive gRPC invocation receiver");

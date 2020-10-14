@@ -19,7 +19,7 @@
 use log::{info, warn};
 use oak::{http::Invocation, CommandHandler, OakError, OakStatus};
 
-oak::entrypoint!(oak_main => |_in_channel| {
+oak::entrypoint!(oak_main<()> => |_receiver| {
     oak::logger::init_default();
     let node = StaticHttpServer;
     info!("Starting HTTP server pseudo-node on port 8080.");

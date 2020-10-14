@@ -146,7 +146,7 @@ struct Config {
     test_animals: Vec<Animal>,
 }
 
-oak::entrypoint!(oak_main => |in_channel| {
+oak::entrypoint!(oak_main<grpc::Invocation> => |receiver| {
     oak::logger::init_default();
     let node = Node {
         training_set_size: 1000,
@@ -154,10 +154,10 @@ oak::entrypoint!(oak_main => |in_channel| {
         config: None,
         model: NaiveBayes::new(),
     };
-    oak::run_command_loop(node, in_channel);
+    oak::run_command_loop(node, receiver);
 });
 
-oak::entrypoint!(grpc_oak_main => |_in_channel| {
+oak::entrypoint!(grpc_oak_main<()> => |_receiver| {
     oak::logger::init_default();
     let node = Node {
         training_set_size: 1000,

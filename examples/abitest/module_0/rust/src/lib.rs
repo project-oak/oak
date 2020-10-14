@@ -2415,6 +2415,6 @@ fn new_channel_chain(nest_count: u32) -> Result<oak::ReadHandle, Box<dyn std::er
     Ok(inner_rh)
 }
 
-oak::entrypoint!(panic_main => |_in_channel| {
+oak::entrypoint!(panic_main<()> => |_receiver| {
     panic!("deliberate panic");
 });

@@ -147,13 +147,13 @@ impl DatabaseProxy for DatabaseProxyNode {
     }
 }
 
-oak::entrypoint!(database_proxy_main => |in_channel| {
+oak::entrypoint!(database_proxy_main<grpc::Invocation> => |receiver| {
     oak::logger::init_default();
     let dispatcher = DatabaseProxyDispatcher::new(DatabaseProxyNode::default());
-    oak::run_command_loop(dispatcher, in_channel);
+    oak::run_command_loop(dispatcher, receiver);
 });
 
-oak::entrypoint!(grpc_database_proxy_main => |_in_channel| {
+oak::entrypoint!(grpc_database_proxy_main<()> => |_receiver| {
     oak::logger::init_default();
     let dispatcher = DatabaseProxyDispatcher::new(DatabaseProxyNode::default());
     let grpc_channel =

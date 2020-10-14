@@ -38,7 +38,11 @@ mod tests;
 use config::get_database_url;
 use database_proxy::get_database_entry;
 use log::{debug, error};
-use oak::grpc;
+use oak::{
+    grpc,
+    io::{Receiver, ReceiverExt},
+};
+use oak_abi::proto::oak::application::ConfigMap;
 use prost::Message;
 use proto::{
     GetPointOfInterestRequest, GetPointOfInterestResponse, TrustedInformationRetrieval,
@@ -73,9 +77,9 @@ impl TrustedInformationRetrieval for TrustedInformationRetrievalNode {
     }
 }
 
-oak::entrypoint!(oak_main => |in_channel| {
+oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     oak::logger::init_default();
-    let config_map = oak::app_config_map(in_channel).expect("Couldn't read config map");
+    let config_map = receiver.receive().expect("Couldn't read config map");
     let database_url = get_database_url(config_map).expect("Couldn't load database URL");
     let dispatcher = TrustedInformationRetrievalDispatcher::new(TrustedInformationRetrievalNode {
         database_url

@@ -21,9 +21,9 @@ use crate::proto::{
 use log::{info, warn};
 use oak::CommandHandler;
 
-oak::entrypoint!(backend_oak_main => |in_channel| {
+oak::entrypoint!(backend_oak_main<Command> => |receiver| {
     oak::logger::init_default();
-    oak::run_command_loop(Room::default(), in_channel);
+    oak::run_command_loop(Room::default(), receiver);
 });
 
 #[derive(Default)]

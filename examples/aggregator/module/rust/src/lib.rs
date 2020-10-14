@@ -41,10 +41,10 @@ use data::SparseVector;
 use log::{debug, error, info};
 use oak::{
     grpc,
-    io::{ReceiverExt, SenderExt},
+    io::{Receiver, ReceiverExt, SenderExt},
     proto::oak::invocation::{GrpcInvocation, GrpcInvocationReceiver, GrpcInvocationSender},
 };
-use oak_abi::label::Label;
+use oak_abi::{label::Label, proto::oak::application::ConfigMap};
 use proto::oak::examples::aggregator::{
     Aggregator, AggregatorClient, AggregatorDispatcher, AggregatorInit, Sample,
 };
@@ -151,11 +151,10 @@ impl Aggregator for AggregatorNode {
     }
 }
 
-oak::entrypoint!(aggregator => |in_channel| {
+oak::entrypoint!(aggregator<AggregatorInit> => |init_receiver: Receiver<AggregatorInit>| {
     oak::logger::init_default();
 
     // Receive the initialization message.
-    let init_receiver = oak::io::Receiver::<AggregatorInit>::new(in_channel);
     let init_message: AggregatorInit = init_receiver.receive().expect("Couldn't receive init message");
     let grpc_server_invocation_receiver = init_message
         .grpc_server_invocation_receiver
@@ -199,11 +198,11 @@ fn create_init_message(
     }
 }
 
-oak::entrypoint!(oak_main => |in_channel| {
+oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     oak::logger::init_default();
 
     // Parse config.
-    let config_map = oak::app_config_map(in_channel).expect("Couldn't read config map");
+    let config_map = receiver.receive().expect("Couldn't read config map");
     let config: Config = toml::from_slice(&config_map.items.get("config").expect("Couldn't find config")).expect("Couldn't parse TOML config file");
     info!("Parsed config: {:?}", config);
     let grpc_server_channel =
