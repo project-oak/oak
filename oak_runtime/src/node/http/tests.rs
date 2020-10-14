@@ -41,6 +41,7 @@ impl HttpServerTester {
     fn new(port: u32) -> HttpServerTester {
         let runtime = create_runtime();
         let invocation_receiver = create_server_node(&runtime, port);
+        let _ = env_logger::builder().is_test(true).try_init();
 
         // Simulate an Oak node that responds with 200 (OK) to every request it receives. Instead of
         // using `Runtime::node_create` which would require WebAssembly code, create and start the
@@ -48,6 +49,7 @@ impl HttpServerTester {
         //
         // TODO(#1186): Use tokio instead of spawning a thread.
         let runtime_proxy = runtime.clone();
+        info!("@@@@@ Starting the node simulator thread");
         let oak_node_simulator_thread = Some(std::thread::spawn(move || {
             oak_node_simulator(&runtime_proxy, invocation_receiver);
         }));
@@ -182,6 +184,7 @@ fn create_server_node(runtime: &RuntimeProxy, port: u32) -> oak_abi::Handle {
 
 fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak_abi::Handle) {
     // create channel: one end to server_node::run; the other to the Oak node.
+    info!("@@@@@@ Creating init-channel (in test).");
     let (init_sender, init_receiver) = runtime
         .channel_create(&Label::public_untrusted())
         .expect("Could not create channel");
@@ -190,6 +193,7 @@ fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak
     // exactly one handle in it.
     //
     // Create a channel for receiving invocations to pass to the HTTP server pseudo-Node.
+    info!("@@@@@@ Creating invocation-channel (in test).");
     let (invocation_sender, invocation_receiver) = runtime
         .channel_create(&Label::public_untrusted())
         .expect("Could not create channel");
@@ -215,11 +219,13 @@ fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak
 // Simulate an Oak node that responds to incoming requests.
 fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Handle) {
     // Get invocation message that contains the response_writer handle.
+    info!("@@@@@ invocation_receiver (in test)");
     let invocation_receiver = Receiver::<HttpInvocation>::new(ReadHandle {
         handle: invocation_receiver,
     });
 
     while let Ok(invocation) = invocation_receiver.receive(runtime) {
+        info!("@@@@@ received a invocation channel (in test)");
         let resp = HttpResponse {
             body: vec![],
             status: http::status::StatusCode::OK.as_u16() as i32,
@@ -227,6 +233,7 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
                 headers: hashmap! {},
             }),
         };
+        info!("@@@@@ Sending the response over the invocation channel (in test)");
         invocation
             .sender
             .expect("Empty sender on invocation.")

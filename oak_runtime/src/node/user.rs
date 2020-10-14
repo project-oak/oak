@@ -120,12 +120,14 @@ impl Node for UserNode {
             }
         };
 
+        // Response-reader that contains the response. this should be handed to the HTTP node
         let response_reader =
             match self.inject_http_request(runtime.clone(), inner_http_invocation.clone()) {
                 Ok(handle) => handle,
                 Err(_) => return,
             };
 
+        info!("@@@@@@ injected the request");
         let response_receiver = crate::io::Receiver::new(ReadHandle {
             handle: response_reader,
         });
@@ -134,6 +136,7 @@ impl Node for UserNode {
             receiver: Some(response_receiver),
         };
 
+        info!("@@@@@@ Sending the response_receiver back to HTTP spn.");
         if let Err(err) = inner_http_invocation
             .response_sender
             .unwrap()
@@ -176,7 +179,10 @@ impl Pipe {
                 .collect(),
         };
 
-        info!("Creating request_reader with {:?}", &request_reader_label);
+        info!(
+            "@@@@@@@@ Creating request_reader with {:?}",
+            &request_reader_label
+        );
         let (request_writer, request_reader) = runtime
             .channel_create(&request_reader_label)
             .map_err(|err| {
@@ -194,7 +200,10 @@ impl Pipe {
                 .collect(),
             integrity_tags: vec![],
         };
-        info!("Creating response_writer with {:?}", &response_writer_label);
+        info!(
+            "@@@@@@@@ Creating response_writer with {:?}",
+            &response_writer_label
+        );
         let (response_writer, response_reader) = runtime
             .channel_create(&response_writer_label)
             .map_err(|err| {
@@ -214,6 +223,7 @@ impl Pipe {
         let sender = crate::io::Sender::new(WriteHandle {
             handle: self.request_writer,
         });
+        info!("@@@@@@@@ Sending request to Oak node");
         sender.send(request, runtime).map_err(|err| {
             error!(
                 "Couldn't write the request to the HTTP request channel: {:?}",
@@ -239,6 +249,7 @@ impl Pipe {
         let invocation_sender = crate::io::Sender::new(WriteHandle {
             handle: invocation_channel,
         });
+        info!("@@@@@@@@ Sending invocation");
         invocation_sender
             .send(invocation, runtime)
             .map_err(|error| {

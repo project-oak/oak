@@ -20,9 +20,9 @@
 //! asynchronously.
 
 use crate::{
-    io::{ReceiverExt, SenderExt},
+    io::{ReceiverExt, Sender, SenderExt},
     node::{ConfigurationError, Node},
-    proto::oak::invocation::{HttpInvocationSender, InnerHttpInvocation},
+    proto::oak::invocation::{HttpInvocationSender, InnerHttpInvocation, ResponseReceiver},
     RuntimeProxy,
 };
 use core::task::{Context, Poll};
@@ -331,8 +331,8 @@ impl HttpRequestHandler {
     ) -> Result<HttpResponseIterator, ()> {
         let user_identity = get_user_identity(&request)?;
 
-        info!("Creating channel for communication with the UserNode.");
-        // Create a pair of for interacting with the UserNode.
+        // Create a pair of channels for interacting with the UserNode.
+        info!("@@@@@@@@ Creating channel for communication with the UserNode.");
         let pipe = Pipe::new(&self.runtime.clone(), &request_label)?;
 
         let config = NodeConfiguration {
@@ -342,9 +342,10 @@ impl HttpRequestHandler {
             })),
         };
 
+        info!("@@@@@@@@ Creating UserNode.");
         if let Err(err) = self
             .runtime
-            .node_create(&config, &request_label, pipe.request_reader)
+            .node_create(&config, &request_label, pipe.invocation_reader)
         {
             error!("Could not create UserNode: {}", err);
             return Err(());
@@ -357,6 +358,7 @@ impl HttpRequestHandler {
             request_label,
             self.invocation_channel,
         )?;
+        info!("@@@@@ invocation inserted in UserNode channel");
 
         // Await the handing of the request. When it is done, the response_reader will be available
         // on the pipe's response reader.
@@ -374,8 +376,8 @@ impl HttpRequestHandler {
 
 /// A pair of temporary channels to pass the HTTP request and to receive the response.
 struct Pipe {
-    request_writer: oak_abi::Handle,
-    request_reader: oak_abi::Handle,
+    invocation_writer: oak_abi::Handle,
+    invocation_reader: oak_abi::Handle,
     response_writer: oak_abi::Handle,
     response_reader: oak_abi::Handle,
 }
@@ -385,13 +387,13 @@ impl Pipe {
         // Create a channel for passing HTTP requests to the temporary UserNode. This channel is
         // created with the label specified by the caller. This will fail if the label has a
         // non-empty integrity component.
-        info!("Creating request_reader with {:?}", &request_label);
-        let (request_writer, request_reader) =
+        info!("@@@@@@@@ Creating request_reader with {:?}", &request_label);
+        let (invocation_writer, invocation_reader) =
             runtime.channel_create(&request_label).map_err(|err| {
                 warn!("could not create HTTP request channel: {:?}", err);
             })?;
 
-        info!("Creating response_writer with public-untrusted.");
+        info!("@@@@@@@@ Creating response_writer with public-untrusted.");
         let (response_writer, response_reader) = runtime
             .channel_create(&Label::public_untrusted())
             .map_err(|err| {
@@ -399,8 +401,8 @@ impl Pipe {
             })?;
 
         Ok(Pipe {
-            request_writer,
-            request_reader,
+            invocation_writer,
+            invocation_reader,
             response_writer,
             response_reader,
         })
@@ -411,65 +413,71 @@ impl Pipe {
         runtime: &RuntimeProxy,
         request: HttpRequest,
         request_label: Label,
-        invocation_channel: oak_abi::Handle,
+        invocation_sender: oak_abi::Handle,
     ) -> Result<(), ()> {
         // Put the HTTP request message inside the per-invocation request channel.
-        let sender = crate::io::Sender::new(WriteHandle {
-            handle: self.request_writer,
+        let invocation_writer = Sender::new(WriteHandle {
+            handle: self.invocation_writer,
         });
-        let invocation_sender = crate::io::Sender::new(WriteHandle {
-            handle: invocation_channel,
+        let inner_invocation_sender = Sender::new(WriteHandle {
+            handle: invocation_sender, // the other end connected to oak node
         });
 
-        let response_sender = crate::io::Sender::new(WriteHandle {
-            handle: self.response_reader,
+        let response_sender = Sender::new(WriteHandle {
+            handle: self.response_writer,
         });
         let inner_message = InnerHttpInvocation {
             request: Some(request),
             request_label: Some(request_label),
-            invocation_sender: Some(invocation_sender),
+            invocation_sender: Some(inner_invocation_sender),
             response_sender: Some(response_sender),
         };
-        sender.send(inner_message, runtime).map_err(|err| {
-            error!(
-                "Couldn't write the request to the UserNode channel: {:?}",
-                err
-            )
-        })
+        info!("@@@@@@@@ Sending inner_message.");
+        invocation_writer
+            .send(inner_message, runtime)
+            .map_err(|err| {
+                error!(
+                    "Couldn't write the request to the UserNode channel: {:?}",
+                    err
+                )
+            })
     }
 
     fn get_response_reader(&self, runtime: &RuntimeProxy) -> Result<oak_abi::Handle, ()> {
+        // Should get a ResponseReceiver from the UerNode.
         let receiver = Receiver::new(ReadHandle {
             handle: self.response_reader,
         });
 
-        let response_reader = receiver
+        info!("@@@@@@@@ Waiting for response_reader.");
+        let response_reader: ResponseReceiver = receiver
             .receive(runtime)
             .map_err(|_err| error!("Could not get get response-receiver."))?;
 
-        Ok(response_reader)
+        info!("@@@@@ Got response_reader: {:?}", response_reader);
+        Ok(response_reader.receiver.unwrap().handle.handle)
     }
 
     // Close all local handles except for the one that allows reading responses.
     fn close(&self, runtime: &RuntimeProxy) {
-        if let Err(err) = runtime.channel_close(self.request_writer) {
+        if let Err(err) = runtime.channel_close(self.invocation_writer) {
             error!(
                 "Failed to close request writer channel for invocation: {:?}",
                 err
             );
         }
-        if let Err(err) = runtime.channel_close(self.request_reader) {
+        if let Err(err) = runtime.channel_close(self.invocation_reader) {
             error!(
                 "Failed to close request reader channel for invocation: {:?}",
                 err
             );
         }
-        if let Err(err) = runtime.channel_close(self.response_writer) {
-            error!(
-                "Failed to close response writer channel for invocation: {:?}",
-                err
-            );
-        }
+        // if let Err(err) = runtime.channel_close(self.response_writer) {
+        //     error!(
+        //         "Failed to close response writer channel for invocation: {:?}",
+        //         err
+        //     );
+        // }
     }
 }
 
@@ -592,6 +600,7 @@ struct HttpResponseIterator {
 
 impl HttpResponseIterator {
     fn read_response(&self) -> Result<HttpResponse, OakError> {
+        error!("response_reader handle: {}", self.response_reader);
         let response_receiver = crate::io::Receiver::<HttpResponse>::new(ReadHandle {
             handle: self.response_reader,
         });
