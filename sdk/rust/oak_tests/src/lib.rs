@@ -59,10 +59,13 @@ pub fn compile_rust_wasm(
         "--target=wasm32-unknown-unknown".to_string(),
         format!("--manifest-path={}", manifest_path),
     ];
-    match profile {
-        Profile::Release => args.push("--release".to_string()),
-        Profile::Debug => (),
-    }
+    let profile_str = match profile {
+        Profile::Release => {
+            args.push("--release".to_string());
+            "release".to_string()
+        }
+        Profile::Debug => "debug".to_string(),
+    };
 
     Command::new("cargo")
         .args(args)
@@ -73,7 +76,7 @@ pub fn compile_rust_wasm(
         .context("could not wait for cargo build to finish")?;
 
     let mut module_path = target_dir;
-    module_path.push("wasm32-unknown-unknown/debug");
+    module_path.push(format!("wasm32-unknown-unknown/{}", profile_str));
     module_path.push(module_wasm_file_name);
 
     info!("compiled Wasm module path: {:?}", module_path);
