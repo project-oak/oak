@@ -247,6 +247,9 @@
 <span id="247">247</span>
 <span id="248">248</span>
 <span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -309,10 +312,13 @@
         <span class="string">&quot;--target=wasm32-unknown-unknown&quot;</span>.<span class="ident">to_string</span>(),
         <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">manifest_path</span>),
     ];
-    <span class="kw">match</span> <span class="ident">profile</span> {
-        <span class="ident">Profile</span>::<span class="ident">Release</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">args</span>.<span class="ident">push</span>(<span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>()),
-        <span class="ident">Profile</span>::<span class="ident">Debug</span> <span class="op">=</span><span class="op">&gt;</span> (),
-    }
+    <span class="kw">let</span> <span class="ident">profile_str</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">profile</span> {
+        <span class="ident">Profile</span>::<span class="ident">Release</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">args</span>.<span class="ident">push</span>(<span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>());
+            <span class="string">&quot;release&quot;</span>.<span class="ident">to_string</span>()
+        }
+        <span class="ident">Profile</span>::<span class="ident">Debug</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;debug&quot;</span>.<span class="ident">to_string</span>(),
+    };
 
     <span class="ident">Command</span>::<span class="ident">new</span>(<span class="string">&quot;cargo&quot;</span>)
         .<span class="ident">args</span>(<span class="ident">args</span>)
@@ -323,7 +329,7 @@
         .<span class="ident">context</span>(<span class="string">&quot;could not wait for cargo build to finish&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">module_path</span> <span class="op">=</span> <span class="ident">target_dir</span>;
-    <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="string">&quot;wasm32-unknown-unknown/debug&quot;</span>);
+    <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;wasm32-unknown-unknown/{}&quot;</span>, <span class="ident">profile_str</span>));
     <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="ident">module_wasm_file_name</span>);
 
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;compiled Wasm module path: {:?}&quot;</span>, <span class="ident">module_path</span>);
