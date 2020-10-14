@@ -65,6 +65,7 @@ message NodeConfiguration {
     GrpcClientConfiguration grpc_client_config = 6;
     RoughtimeClientConfiguration roughtime_client_config = 7;
     HttpServerConfiguration http_server_config = 8;
+    UserNodeConfiguration user_node_config = 9;
   }
 }
 
@@ -132,6 +133,15 @@ message HttpServerConfiguration {
   // The endpoint address for the HTTP server to listen on.
   // `address` is represented as an "ip_address:tcp_port" string.
   string address = 1;
+}
+
+// Describes the configuration of a user node that has the required privilege
+// to create invocations with the user's identity set as the integrity tag
+// when creating the `request receiver`, and as the confidentiality tag when
+// creating the `response sender`.
+message UserNodeConfiguration {
+  // Privilege of this node, set to the public_key identifying the user.  
+  bytes privilege = 1;
 }
 
 // Information to identify a particular Roughtime server.

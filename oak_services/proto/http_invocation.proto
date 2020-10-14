@@ -20,6 +20,7 @@ package oak.invocation;
 
 import "oak_services/proto/http_encap.proto";
 import "proto/handle.proto";
+import "oak_abi/proto/label.proto";
 
 // An HTTP invocation, consisting of exactly two channels: one to read incoming requests from the
 // client (wrapped in a `Receiver`), and one to write outgoing responses to the client (wrapped in a
@@ -32,4 +33,15 @@ message HttpInvocation {
 // A wrapper for sending an [`HttpInvocation`] over a channel.
 message HttpInvocationSender {
   oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
+}
+
+message ResponseReceiver {
+    oak.handle.Receiver receiver = 1 [(oak.handle.message_type) = ".oak.encap.HttpResponse"];
+}
+
+message InnerHttpInvocation {
+  oak.encap.HttpRequest request = 1;
+  oak.label.Label user_label = 2;
+  oak.handle.Sender invocation_sender = 3 [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
+  oak.handle.Sender response_sender = 4 [(oak.handle.message_type) = ".oak.invocation.ResponseReceiver"];
 }

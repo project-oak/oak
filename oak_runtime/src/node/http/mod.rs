@@ -329,8 +329,7 @@ impl HttpRequestHandler {
         request: HttpRequest,
         request_label: &Label,
     ) -> Result<HttpResponseIterator, ()> {
-        let user_identity_label =
-            get_identity_label(&request).map_err(|_err| warn!("No valid identity"))?;
+        let user_identity_label = get_identity_label(&request)?;
 
         // Create a pair of temporary channels to pass the HTTP request and to receive the
         // response.
@@ -364,25 +363,30 @@ impl Pipe {
     fn new(
         runtime: &RuntimeProxy,
         request_label: &Label,
-        _user_identity_label: &Label,
+        user_identity_label: &Label,
     ) -> Result<Self, ()> {
         let request_reader_label = Label {
             confidentiality_tags: request_label.confidentiality_tags.clone(),
-            // integrity_tags: user_identity_label.confidentiality_tags.clone(),
             integrity_tags: vec![],
         };
 
         // Create a channel for passing HTTP requests to the Oak node. This channel is created with
         // the label specified by the caller, and the identity of the caller. This will fail if the
         // label has a non-empty integrity component.
+        info!("Creating request_reader with {:?}", &request_reader_label);
         let (request_writer, request_reader) = runtime
             .channel_create(&request_reader_label)
             .map_err(|err| {
                 warn!("could not create HTTP request channel: {:?}", err);
             })?;
-        // TODO: set confidentiality component to the user identity
+
+        let response_writer_label = Label {
+            confidentiality_tags: user_identity_label.confidentiality_tags.clone(),
+            integrity_tags: vec![],
+        };
+        info!("Creating response_writer with {:?}", &response_writer_label);
         let (response_writer, response_reader) = runtime
-            .channel_create(&Label::public_untrusted())
+            .channel_create(&response_writer_label)
             .map_err(|err| {
                 warn!("could not create HTTP response channel: {:?}", err);
             })?;
@@ -493,6 +497,8 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
 /// (3) verifies that the signature
 /// (4) if the signature is valid, returns a label with its confidentiality component set to the
 /// public key in the signed challenge.
+/// User identification is currently an optional feature, so if not response is provided to the
+/// challenge, a public-untrusted label is returned.
 fn get_identity_label(req: &HttpRequest) -> Result<Label, ()> {
     let headers = (
         req.headers.as_ref().and_then(|map| {
@@ -510,14 +516,7 @@ fn get_identity_label(req: &HttpRequest) -> Result<Label, ()> {
     match headers {
         (Some([json_signature]), None) => verify_json_challenge(json_signature),
         (None, Some([protobuf_signature])) => verify_protobuf_challenge(protobuf_signature),
-        _ => {
-            warn!(
-                "Exactly one header must be provided as an {} or {} header.",
-                oak_abi::OAK_LABEL_HTTP_JSON_KEY,
-                oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY
-            );
-            Err(())
-        }
+        _ => Ok(Label::public_untrusted()),
     }
 }
 
