@@ -32,6 +32,7 @@ use oak::{grpc, io::ReceiverExt};
 
 // Error messages.
 const NO_LOCATION_ERROR: &str = "Location is not specified";
+const ID_NOT_FOUND_ERROR: &str = "ID not found";
 const EMPTY_DATABASE_ERROR: &str = "Empty database";
 
 /// Oak Node that contains a copy of the database.
@@ -55,7 +56,7 @@ impl TrustedDatabase for TrustedDatabaseHandlerNode {
                 })
             }
             None => {
-                let err = grpc::build_status(grpc::Code::Internal, &EMPTY_DATABASE_ERROR);
+                let err = grpc::build_status(grpc::Code::NotFound, &ID_NOT_FOUND_ERROR);
                 error!("{:?}", err);
                 Err(err)
             }

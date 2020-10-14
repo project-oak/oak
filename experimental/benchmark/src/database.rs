@@ -121,9 +121,9 @@ impl Database {
         let start = Instant::now();
         let parsed_database: StationDatabase =
             quick_xml::de::from_str(&database).expect("Couldn't deserialize database");
-        let duration = (start.elapsed().as_millis() as f64) / 1000.0;
+        let duration = start.elapsed();
         info!(
-            "Database parsing time: {:.3}s for {} entries ({} bytes)",
+            "Database parsing time: {:?} for {} entries ({} bytes)",
             duration,
             parsed_database.stations.len(),
             database.as_bytes().len()

@@ -17,13 +17,16 @@
 //! Trusted Database Benchmark.
 //!
 //! This benchmark measures average gRPC request time to a database that is either:
-//! - Implemented as part of the Trusted Database Oak application (using `oak::OakApplication`)
-//! - Implemented as a `tonic` gRPC server without using Oak (using `raw::RawApplication`)
-//!
-//! Benchmark randomly generates (with 0 seed) a database and sends it both to Oak and Raw
-//! application. Then it sends `REQUEST_NUMBER` of requests to each application and computes the
-//! average response time. It also computes time needed to start Oak application (which includes XML
-//! database deserialization).
+//! - A part of the Trusted Database Oak application
+//!     - This version uses compiled Wasm modules and Oak IFC which both account for a nontrivial
+//!       performance difference
+//!     - Implemented in `oak::OakApplication`
+//! - A `tonic` gRPC server without using Oak
+//!     - Implemented in `native::NativeApplication`
+//! Benchmark pseudo-randomly (but deterministically) generates a database and sends it both to Oak
+//! and native application. Then it sends `REQUEST_NUMBER` of requests to each application and
+//! computes the average response time. It also computes time needed to start Oak application (which
+//! includes XML database deserialization).
 //!
 //! It's important to note that Wasm module for Trusted Database application is being compiled with
 //! `--release`.
@@ -44,11 +47,11 @@ mod application;
 mod database;
 
 use crate::{
-    application::{oak::OakApplication, raw::RawApplication, Application},
+    application::{native::NativeApplication, oak::OakApplication, Application},
     database::Database,
 };
 use log::{error, info};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -58,14 +61,14 @@ pub struct Opt {
     database_size: usize,
 }
 
-// Port for running a gRPC server for the raw application.
-const VANILLA_APP_PORT: u16 = 8888;
+// Port for running a gRPC server for the native application.
+const NATIVE_APPLICATION_GRPC_PORT: u16 = 8888;
 
 // Number of requests to average request time on.
 const REQUEST_NUMBER: usize = 10;
 
 /// Measures average request time in milliseconds.
-async fn measure_request_time(app: &mut dyn Application, database_size: usize) -> f32 {
+async fn measure_request_time(app: &mut dyn Application, database_size: usize) -> Duration {
     use rand::{rngs::SmallRng, Rng, SeedableRng};
     let mut rng = SmallRng::seed_from_u64(0);
 
@@ -76,8 +79,7 @@ async fn measure_request_time(app: &mut dyn Application, database_size: usize) -
             error!("Couldn't send request: {}", error);
         });
     }
-    let total_request_time = request_start.elapsed().as_millis();
-    (total_request_time as f32) / (REQUEST_NUMBER as f32)
+    request_start.elapsed().div_f32(REQUEST_NUMBER as f32)
 }
 
 #[tokio::main(core_threads = 4)]
@@ -90,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
 
     let database = Database::new(opt.database_size);
     let serialized_database = database.serialize();
-    let mut raw_app = RawApplication::start(&database, VANILLA_APP_PORT).await;
+    let mut native_app = NativeApplication::start(&database, NATIVE_APPLICATION_GRPC_PORT).await;
 
     // Start Oak runtime.
     info!(
@@ -100,11 +102,12 @@ async fn main() -> anyhow::Result<()> {
     );
     let oak_loading_start = Instant::now();
     let mut oak_app = OakApplication::start(&serialized_database).await;
-    let oak_loading_time = (oak_loading_start.elapsed().as_millis() as f64) / 1000.0;
-    info!("Runtime loaded: {:.3}s", oak_loading_time);
+    let oak_loading_time = oak_loading_start.elapsed();
+    info!("Runtime loaded: {:?}", oak_loading_time);
 
-    // Measure raw request durations.
-    let average_raw_request_time = measure_request_time(&mut raw_app, opt.database_size).await;
+    // Measure native request durations.
+    let average_native_request_time =
+        measure_request_time(&mut native_app, opt.database_size).await;
 
     // Measure Oak request durations.
     let average_oak_request_time = measure_request_time(&mut oak_app, opt.database_size).await;
@@ -115,15 +118,12 @@ async fn main() -> anyhow::Result<()> {
         "Database size: {} entries",
         database.points_of_interest.entries.len()
     );
-    info!("Runtime loading time: {:.3}s", oak_loading_time / 1000.0);
+    info!("Runtime loading time: {:?}", oak_loading_time);
     info!(
-        "Average raw request time: {:.3}s",
-        average_raw_request_time / 1000.0
+        "Average native request time: {:?}",
+        average_native_request_time
     );
-    info!(
-        "Average Oak request time: {:.3}s",
-        average_oak_request_time / 1000.0
-    );
+    info!("Average Oak request time: {:?}", average_oak_request_time);
 
     Ok(())
 }

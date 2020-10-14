@@ -70,20 +70,20 @@ impl TrustedDatabase for TrustedDatabaseService {
     }
 }
 
-pub struct RawApplication {
+pub struct NativeApplication {
     _handle: JoinHandle<()>,
     client: TrustedDatabaseClient<tonic::transport::channel::Channel>,
 }
 
-impl RawApplication {
+impl NativeApplication {
     pub async fn start(database: &Database, port: u16) -> Self {
         info!("Running backend database");
-        let handle = tokio::spawn(RawApplication::create_server(
+        let handle = tokio::spawn(NativeApplication::create_server(
             database.points_of_interest.clone(),
             port,
         ));
-        let client = RawApplication::create_client(port).await;
-        RawApplication {
+        let client = NativeApplication::create_client(port).await;
+        NativeApplication {
             _handle: handle,
             client,
         }
@@ -127,7 +127,7 @@ impl RawApplication {
 }
 
 #[async_trait]
-impl Application for RawApplication {
+impl Application for NativeApplication {
     async fn send_request(&mut self, id: &str) -> Result<(), tonic::Status> {
         let request = Request::new(GetPointOfInterestRequest { id: id.to_string() });
         self.client.get_point_of_interest(request).await?;

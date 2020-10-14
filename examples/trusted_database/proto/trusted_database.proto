@@ -53,8 +53,6 @@ message ListPointsOfInterestResponse {
 
 service TrustedDatabase {
   // Find Point Of Interest based on ID.
-  // In the current implementation this function is used for benchmarking the Trusted Database, i.e.
-  // determine request processing time in Oak.
   rpc GetPointOfInterest(GetPointOfInterestRequest) returns (GetPointOfInterestResponse);
   // Find the nearest Point Of Interest based on linear search in the database.
   rpc ListPointsOfInterest(ListPointsOfInterestRequest) returns (ListPointsOfInterestResponse);
