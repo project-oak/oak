@@ -25,4 +25,4 @@ import "google/protobuf/empty.proto";
 message SignedChallenge {
   bytes signed_hash = 1;
   bytes public_key = 2;
-} 
+}

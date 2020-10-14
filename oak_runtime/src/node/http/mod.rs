@@ -22,7 +22,7 @@
 use crate::{
     io::{ReceiverExt, SenderExt},
     node::{ConfigurationError, Node},
-    proto::oak::invocation::{HttpInvocation, HttpInvocationSender},
+    proto::oak::invocation::{HttpInvocationSender, InnerHttpInvocation},
     RuntimeProxy,
 };
 use core::task::{Context, Poll};
@@ -33,14 +33,10 @@ use hyper::{
     Body, Server, StatusCode,
 };
 use log::{debug, error, info, warn};
-use oak_abi::{
-    label::{Label, Tag, UserIdentityTag},
-    proto::oak::application::HttpServerConfiguration,
-    OakStatus,
-};
+use oak_abi::{label::Label, proto::oak::application::HttpServerConfiguration, OakStatus};
 use oak_io::{
     handle::{ReadHandle, WriteHandle},
-    OakError, Receiver, Sender,
+    OakError, Receiver,
 };
 use oak_services::proto::oak::encap::{HeaderMap, HttpRequest, HttpResponse};
 use std::{io, net::SocketAddr, pin::Pin};
@@ -56,6 +52,10 @@ use futures_util::{
 };
 use prost::Message;
 use tokio_rustls::TlsAcceptor;
+
+use oak_abi::proto::oak::application::{
+    node_configuration::ConfigType, NodeConfiguration, UserNodeConfiguration,
+};
 
 #[cfg(test)]
 pub mod tests;
@@ -296,7 +296,7 @@ impl HttpRequestHandler {
 
                 debug!("Injecting the request into the Oak Node");
                 let response = self
-                    .inject_http_request(request, &oak_label)
+                    .inject_http_request(request, oak_label)
                     .map_err(|err| {
                         warn!(
                             "Error when injecting the request into the Oak Node: {:?}",
@@ -327,26 +327,47 @@ impl HttpRequestHandler {
     fn inject_http_request(
         &self,
         request: HttpRequest,
-        request_label: &Label,
+        request_label: Label,
     ) -> Result<HttpResponseIterator, ()> {
-        let user_identity_label = get_identity_label(&request)?;
+        let user_identity = get_user_identity(&request)?;
 
-        // Create a pair of temporary channels to pass the HTTP request and to receive the
-        // response.
-        let pipe = Pipe::new(&self.runtime.clone(), request_label, &user_identity_label)?;
+        info!("Creating channel for communication with the UserNode.");
+        // Create a pair of for interacting with the UserNode.
+        let pipe = Pipe::new(&self.runtime.clone(), &request_label)?;
 
-        // Put the HTTP request message inside the per-invocation request channel.
-        pipe.insert_message(&self.runtime, request)?;
+        let config = NodeConfiguration {
+            name: "http_server".to_string(),
+            config_type: Some(ConfigType::UserNodeConfig(UserNodeConfiguration {
+                privilege: user_identity,
+            })),
+        };
 
-        // Send an invocation message (with attached handles) to the Oak Node.
-        pipe.send_invocation(&self.runtime, self.invocation_channel)?;
+        if let Err(err) = self
+            .runtime
+            .node_create(&config, &request_label, pipe.request_reader)
+        {
+            error!("Could not create UserNode: {}", err);
+            return Err(());
+        }
+
+        // Forward the request to the UserNode.
+        pipe.insert_message(
+            &self.runtime,
+            request,
+            request_label,
+            self.invocation_channel,
+        )?;
+
+        // Await the handing of the request. When it is done, the response_reader will be available
+        // on the pipe's response reader.
+        let response_reader = pipe.get_response_reader(&self.runtime)?;
 
         // Close all local handles except for the one that allows reading responses.
         pipe.close(&self.runtime);
 
         Ok(HttpResponseIterator {
             runtime: self.runtime.clone(),
-            response_reader: pipe.response_reader,
+            response_reader,
         })
     }
 }
@@ -360,33 +381,19 @@ struct Pipe {
 }
 
 impl Pipe {
-    fn new(
-        runtime: &RuntimeProxy,
-        request_label: &Label,
-        user_identity_label: &Label,
-    ) -> Result<Self, ()> {
-        let request_reader_label = Label {
-            confidentiality_tags: request_label.confidentiality_tags.clone(),
-            integrity_tags: vec![],
-        };
-
-        // Create a channel for passing HTTP requests to the Oak node. This channel is created with
-        // the label specified by the caller, and the identity of the caller. This will fail if the
-        // label has a non-empty integrity component.
-        info!("Creating request_reader with {:?}", &request_reader_label);
-        let (request_writer, request_reader) = runtime
-            .channel_create(&request_reader_label)
-            .map_err(|err| {
+    fn new(runtime: &RuntimeProxy, request_label: &Label) -> Result<Self, ()> {
+        // Create a channel for passing HTTP requests to the temporary UserNode. This channel is
+        // created with the label specified by the caller. This will fail if the label has a
+        // non-empty integrity component.
+        info!("Creating request_reader with {:?}", &request_label);
+        let (request_writer, request_reader) =
+            runtime.channel_create(&request_label).map_err(|err| {
                 warn!("could not create HTTP request channel: {:?}", err);
             })?;
 
-        let response_writer_label = Label {
-            confidentiality_tags: user_identity_label.confidentiality_tags.clone(),
-            integrity_tags: vec![],
-        };
-        info!("Creating response_writer with {:?}", &response_writer_label);
+        info!("Creating response_writer with public-untrusted.");
         let (response_writer, response_reader) = runtime
-            .channel_create(&response_writer_label)
+            .channel_create(&Label::public_untrusted())
             .map_err(|err| {
                 warn!("could not create HTTP response channel: {:?}", err);
             })?;
@@ -399,41 +406,48 @@ impl Pipe {
         })
     }
 
-    fn insert_message(&self, runtime: &RuntimeProxy, request: HttpRequest) -> Result<(), ()> {
+    fn insert_message(
+        &self,
+        runtime: &RuntimeProxy,
+        request: HttpRequest,
+        request_label: Label,
+        invocation_channel: oak_abi::Handle,
+    ) -> Result<(), ()> {
         // Put the HTTP request message inside the per-invocation request channel.
         let sender = crate::io::Sender::new(WriteHandle {
             handle: self.request_writer,
         });
-        sender.send(request, runtime).map_err(|err| {
+        let invocation_sender = crate::io::Sender::new(WriteHandle {
+            handle: invocation_channel,
+        });
+
+        let response_sender = crate::io::Sender::new(WriteHandle {
+            handle: self.response_reader,
+        });
+        let inner_message = InnerHttpInvocation {
+            request: Some(request),
+            request_label: Some(request_label),
+            invocation_sender: Some(invocation_sender),
+            response_sender: Some(response_sender),
+        };
+        sender.send(inner_message, runtime).map_err(|err| {
             error!(
-                "Couldn't write the request to the HTTP request channel: {:?}",
+                "Couldn't write the request to the UserNode channel: {:?}",
                 err
             )
         })
     }
 
-    fn send_invocation(
-        &self,
-        runtime: &RuntimeProxy,
-        invocation_channel: oak_abi::Handle,
-    ) -> Result<(), ()> {
-        // Create an invocation containing request-specific channels.
-        let invocation = HttpInvocation {
-            receiver: Some(Receiver::new(ReadHandle {
-                handle: self.request_reader,
-            })),
-            sender: Some(Sender::new(WriteHandle {
-                handle: self.response_writer,
-            })),
-        };
-        let invocation_sender = crate::io::Sender::new(WriteHandle {
-            handle: invocation_channel,
+    fn get_response_reader(&self, runtime: &RuntimeProxy) -> Result<oak_abi::Handle, ()> {
+        let receiver = Receiver::new(ReadHandle {
+            handle: self.response_reader,
         });
-        invocation_sender
-            .send(invocation, runtime)
-            .map_err(|error| {
-                error!("Couldn't write the invocation message: {:?}", error);
-            })
+
+        let response_reader = receiver
+            .receive(runtime)
+            .map_err(|_err| error!("Could not get get response-receiver."))?;
+
+        Ok(response_reader)
     }
 
     // Close all local handles except for the one that allows reading responses.
@@ -495,11 +509,10 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
 /// (1) checks that exactly one signed challenge is provided,
 /// (2) parses the signed challenge
 /// (3) verifies that the signature
-/// (4) if the signature is valid, returns a label with its confidentiality component set to the
-/// public key in the signed challenge.
+/// (4) if the signature is valid, returns the public key in the signed challenge.
 /// User identification is currently an optional feature, so if not response is provided to the
 /// challenge, a public-untrusted label is returned.
-fn get_identity_label(req: &HttpRequest) -> Result<Label, ()> {
+fn get_user_identity(req: &HttpRequest) -> Result<Vec<u8>, ()> {
     let headers = (
         req.headers.as_ref().and_then(|map| {
             map.headers
@@ -516,7 +529,7 @@ fn get_identity_label(req: &HttpRequest) -> Result<Label, ()> {
     match headers {
         (Some([json_signature]), None) => verify_json_challenge(json_signature),
         (None, Some([protobuf_signature])) => verify_protobuf_challenge(protobuf_signature),
-        _ => Ok(Label::public_untrusted()),
+        _ => Ok(vec![]),
     }
 }
 
@@ -541,7 +554,7 @@ fn parse_protobuf_label(protobuf_label: &[u8]) -> Result<Label, OakStatus> {
     })
 }
 
-fn verify_json_challenge(signature: &[u8]) -> Result<Label, ()> {
+fn verify_json_challenge(signature: &[u8]) -> Result<Vec<u8>, ()> {
     let signature = parse_json_signed_challenge(signature.to_vec()).map_err(|err| {
         warn!("Could not parse json formatted signed challenge: {}", err);
     })?;
@@ -549,7 +562,7 @@ fn verify_json_challenge(signature: &[u8]) -> Result<Label, ()> {
         .map_err(|err| warn!("Could not verify the signature: {:?}", err))
 }
 
-fn verify_protobuf_challenge(signature: &[u8]) -> Result<Label, ()> {
+fn verify_protobuf_challenge(signature: &[u8]) -> Result<Vec<u8>, ()> {
     let signature =
         crate::proto::oak::identity::SignedChallenge::decode(&signature[..]).map_err(|err| {
             warn!("Could not parse protobuf encoded signed challenge: {}", err);
@@ -560,15 +573,9 @@ fn verify_protobuf_challenge(signature: &[u8]) -> Result<Label, ()> {
 
 fn verify_signed_challenge(
     signature: crate::proto::oak::identity::SignedChallenge,
-) -> Result<Label, OakStatus> {
-    // TODO: verify
-    let tag = Some(oak_abi::label::tag::Tag::UserIdentityTag(UserIdentityTag {
-        public_key: signature.public_key,
-    }));
-    Ok(Label {
-        confidentiality_tags: vec![Tag { tag }],
-        integrity_tags: vec![],
-    })
+) -> Result<Vec<u8>, OakStatus> {
+    // TO-DO: verify
+    Ok(signature.public_key)
 }
 
 fn parse_json_signed_challenge(

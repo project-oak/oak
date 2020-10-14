@@ -15,6 +15,7 @@
 //
 
 use super::*;
+use crate::proto::oak::invocation::HttpInvocation;
 use maplit::hashmap;
 use oak_abi::{
     label::Label,
@@ -23,6 +24,7 @@ use oak_abi::{
         NodeConfiguration,
     },
 };
+use oak_io::Sender;
 use std::{fs, option::Option, thread::JoinHandle};
 
 static LOCAL_CA: &str = "../examples/certs/local/ca.pem";
@@ -95,6 +97,7 @@ async fn test_https_server_can_serve_https_requests() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_https_server_cannot_serve_http_requests() {
     init_logger();
 
@@ -114,6 +117,7 @@ async fn test_https_server_cannot_serve_http_requests() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_https_server_does_not_terminate_after_a_bad_request() {
     init_logger();
 
