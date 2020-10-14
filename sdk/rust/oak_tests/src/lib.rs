@@ -63,7 +63,7 @@ pub fn compile_rust_wasm(
         Profile::Release => {
             args.push("--release".to_string());
             "release".to_string()
-        },
+        }
         Profile::Debug => "debug".to_string(),
     };
 
