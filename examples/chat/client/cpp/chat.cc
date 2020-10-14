@@ -65,6 +65,7 @@ class Safe {
 
 void Prompt(const std::string& user_handle) { std::cout << user_handle << "> "; }
 
+// The current chat room is implicitly encoded as part of the gRPC stub.
 void ListenLoop(Chat::Stub* stub, const std::string& user_handle,
                 std::shared_ptr<Safe<bool>> done) {
   grpc::ClientContext context;
@@ -84,6 +85,7 @@ void ListenLoop(Chat::Stub* stub, const std::string& user_handle,
   std::cout << "\n\nRoom closed.\n\n";
 }
 
+// The current chat room is implicitly encoded as part of the gRPC stub.
 void SendLoop(Chat::Stub* stub, const std::string& user_handle, std::shared_ptr<Safe<bool>> done) {
   // Re-use the same SendMessageRequest object for each message.
   SendMessageRequest req;
@@ -113,6 +115,7 @@ void SendLoop(Chat::Stub* stub, const std::string& user_handle, std::shared_ptr<
   std::cout << "\n\nLeaving room.\n\n";
 }
 
+// The current chat room is implicitly encoded as part of the gRPC stub.
 void Chat(Chat::Stub* stub, const std::string& user_handle) {
   // TODO(#746): make both loops notice immediately when done is true.
   auto done = std::make_shared<Safe<bool>>(false);
@@ -129,6 +132,9 @@ void Chat(Chat::Stub* stub, const std::string& user_handle) {
   SendLoop(stub, user_handle, done);
 }
 
+// Create a gRPC stub for an application, with the provided room access token, which will be used as
+// confidentiality label for any messages sent, and also to authenticate to the application in order
+// to read messages sent by other clients.
 std::unique_ptr<Chat::Stub> create_stub(std::string address, std::string ca_cert,
                                         std::string room_access_token) {
   auto call_credentials =
@@ -197,6 +203,12 @@ int main(int argc, char** argv) {
 
   std::shared_ptr<Chat::Stub> stub;
   std::unique_ptr<Room> room;
+
+  // If no room access token was provided, create a new `Room` object, which internally generates a
+  // fresh room access token, creates a gRPC stub based on it, and makes this stub available to the
+  // rest of this method.
+  //
+  // If a room access token was provided, directly create a gRPC stub with it.
   if (room_access_token.empty()) {
     room = absl::make_unique<Room>(address, ca_cert);
     stub = room->Stub();
@@ -221,6 +233,7 @@ int main(int argc, char** argv) {
   }
 
   // Main chat loop.
+  // The current chat room is implicitly encoded as part of the gRPC stub created earlier.
   Chat(stub.get(), user_handle);
 
   return EXIT_SUCCESS;

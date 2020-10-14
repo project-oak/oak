@@ -48,6 +48,9 @@ struct Router {
 
 impl oak::CommandHandler<oak::grpc::Invocation> for Router {
     fn handle_command(&mut self, command: oak::grpc::Invocation) -> Result<(), oak::OakError> {
+        // The router node has a public confidentiality label, and therefore cannot read the
+        // contents of the request of the invocation (unless it happens to be public as well), but
+        // it can always inspect its label.
         match &command.receiver {
             Some(receiver) => {
                 let label = receiver.label()?;
@@ -56,13 +59,16 @@ impl oak::CommandHandler<oak::grpc::Invocation> for Router {
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
                     let (wh, rh) = oak::io::channel_create_with_label(&label)
                         .expect("could not create channel");
-                    oak::node_create(&oak::node_config::wasm("app", "room"), rh.handle)
-                        .expect("could not create node");
+                    oak::node_create_with_label(
+                        &oak::node_config::wasm("app", "room"),
+                        &label,
+                        rh.handle,
+                    )
+                    .expect("could not create node");
                     rh.close().expect("could not close channel");
                     wh
                 });
-                // Send the incoming invocation (which cannot be read by the current node, apart
-                // from its labels) to the dedicated worker node.
+                // Send the invocation to the dedicated worker node.
                 channel.send(&command)?;
                 Ok(())
             }
