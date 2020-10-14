@@ -91,6 +91,8 @@ message HandleDestroyed {
   uint64 channel_id = 2 [jstype = JS_STRING];
 
   uint64 handle = 3 [jstype = JS_STRING];
+
+  Direction direction = 4;
 }
 
 message MessageEnqueued {
