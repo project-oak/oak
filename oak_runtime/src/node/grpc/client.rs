@@ -402,7 +402,7 @@ impl Node for GrpcClientNode {
             "{}: Starting gRPC client pseudo-Node thread",
             self.node_name
         );
-        async_runtime.block_on(futures::future::select(
+        async_runtime.block_on(futures_util::future::select(
             Box::pin(self.handle_loop(runtime, handle)),
             notify_receiver,
         ));
