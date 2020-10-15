@@ -47,10 +47,9 @@ mod application;
 mod database;
 
 use crate::{
-    application::{native::NativeApplication, oak::OakApplication, Application},
+    application::{native::NativeApplication, oak::OakApplication, ApplicationClient},
     database::Database,
 };
-use anyhow::Context;
 use log::{error, info};
 use std::time::{Duration, Instant};
 use structopt::StructOpt;
@@ -66,17 +65,20 @@ pub struct Opt {
 const NATIVE_APPLICATION_GRPC_PORT: u16 = 8888;
 
 // Number of requests to average request time on.
-const REQUEST_NUMBER: usize = 10;
+const REQUEST_NUMBER: usize = 1;
 
 /// Measures average request time in milliseconds.
-async fn measure_request_time(app: &mut dyn Application, database_size: usize) -> Duration {
+async fn measure_request_time(
+    client: &mut dyn ApplicationClient,
+    database_size: usize,
+) -> Duration {
     use rand::{rngs::SmallRng, Rng, SeedableRng};
     let mut rng = SmallRng::seed_from_u64(0);
 
     let request_start = Instant::now();
     for _ in 0..REQUEST_NUMBER {
         let id = format!("{}", rng.gen_range(0, database_size));
-        let _ = app.send_request(&id).await.map_err(|error| {
+        let _ = client.send_request(&id).await.map_err(|error| {
             error!("Couldn't send request: {}", error);
         });
     }
@@ -114,10 +116,7 @@ async fn main() -> anyhow::Result<()> {
     let average_oak_request_time = measure_request_time(&mut oak_app, opt.database_size).await;
 
     oak_app.stop();
-    native_app
-        .handle
-        .await
-        .context("Couldn't stop native application")?;
+    native_app.stop()?;
 
     info!(
         "Database size: {} entries",

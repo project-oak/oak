@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::application::Application;
+use crate::application::ApplicationClient;
 use anyhow::Context;
 use async_trait::async_trait;
 use maplit::hashmap;
@@ -72,7 +72,7 @@ impl OakApplication {
 }
 
 #[async_trait]
-impl Application for OakApplication {
+impl ApplicationClient for OakApplication {
     /// Sends test requests to the oak application. Returns `()` since the value of the request is
     /// not needed for current benchmark implementation.
     async fn send_request(&mut self, id: &str) -> Result<(), tonic::Status> {

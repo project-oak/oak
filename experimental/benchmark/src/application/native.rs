@@ -15,7 +15,7 @@
 //
 
 use crate::{
-    application::Application,
+    application::ApplicationClient,
     database::Database,
     proto::{
         trusted_database_client::TrustedDatabaseClient,
@@ -24,11 +24,13 @@ use crate::{
         ListPointsOfInterestResponse, PointOfInterestMap,
     },
 };
+use anyhow::Context;
 use async_trait::async_trait;
+use futures_util::FutureExt;
 use log::{debug, info, warn};
 use oak_abi::label::Label;
 use prost::Message;
-use tokio::task::JoinHandle;
+use tokio::sync::oneshot;
 use tonic::{
     metadata::MetadataValue,
     transport::{Channel, Server},
@@ -71,22 +73,38 @@ impl TrustedDatabase for TrustedDatabaseService {
 }
 
 pub struct NativeApplication {
-    pub handle: JoinHandle<()>,
+    notification_sender: oneshot::Sender<()>,
     client: TrustedDatabaseClient<tonic::transport::channel::Channel>,
 }
 
 impl NativeApplication {
     pub async fn start(database: &Database, port: u16) -> Self {
         info!("Running native application");
-        let handle = tokio::spawn(NativeApplication::create_server(
+        let (notification_sender, notification_receiver) = oneshot::channel::<()>();
+        tokio::spawn(NativeApplication::create_server(
             database.points_of_interest.clone(),
             port,
+            notification_receiver,
         ));
         let client = NativeApplication::create_client(port).await;
-        NativeApplication { handle, client }
+        NativeApplication {
+            notification_sender,
+            client,
+        }
     }
 
-    async fn create_server(database: PointOfInterestMap, port: u16) {
+    pub fn stop(self) -> anyhow::Result<()> {
+        self.notification_sender
+            .send(())
+            .ok()
+            .context("Couldn't stop native application")
+    }
+
+    async fn create_server(
+        database: PointOfInterestMap,
+        port: u16,
+        termination_notification_receiver: oneshot::Receiver<()>,
+    ) {
         let address = format!("[::]:{}", port)
             .parse()
             .expect("Couldn't parse address");
@@ -95,7 +113,7 @@ impl NativeApplication {
         };
         Server::builder()
             .add_service(TrustedDatabaseServer::new(handler))
-            .serve(address)
+            .serve_with_shutdown(address, termination_notification_receiver.map(drop))
             .await
             .expect("Couldn't start server");
     }
@@ -124,7 +142,7 @@ impl NativeApplication {
 }
 
 #[async_trait]
-impl Application for NativeApplication {
+impl ApplicationClient for NativeApplication {
     /// Sends test requests to the native application. Returns `()` since the value of the request
     /// is not needed for current benchmark implementation.
     async fn send_request(&mut self, id: &str) -> Result<(), tonic::Status> {
