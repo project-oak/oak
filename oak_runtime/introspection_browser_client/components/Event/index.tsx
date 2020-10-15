@@ -16,6 +16,9 @@
 
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
+import { useParams } from 'react-router-dom';
+import ObjectAsTree from '~/components/ObjectAsTree';
+import DetailsDialog, { DetailsDialogProps } from '~/components/DetailsDialog';
 import { NodeId } from '~/components/Root';
 import ObjectAsDescriptionList, {
   InlineDl,
@@ -41,7 +44,63 @@ function getEventDetails(event: introspectionEventsProto.Event) {
   )!;
 }
 
-function renderEvent(
+interface EventDetailsDialogProps {
+  totalEvents: introspectionEventsProto.Event[];
+  open: DetailsDialogProps['open'];
+  onClose: DetailsDialogProps['onClose'];
+}
+
+interface ParamTypes {
+  eventIndex: string;
+}
+
+export function EventDetailsDialog({
+  totalEvents,
+  open,
+  onClose,
+}: EventDetailsDialogProps) {
+  const { eventIndex: eventIndexParam } = useParams<ParamTypes>();
+  const eventIndex = parseInt(eventIndexParam);
+  const event = totalEvents[eventIndex];
+
+  if (event === undefined) {
+    return (
+      <DetailsDialog
+        onClose={onClose}
+        open={open}
+        title={'Not found'}
+        titleId="change-details-dialog-title"
+      >
+        <p>A change with the index: {eventIndex} does not exist.</p>
+      </DetailsDialog>
+    );
+  }
+
+  const [eventType, eventDetails] = getEventDetails(event);
+
+  return (
+    <DetailsDialog
+      onClose={onClose}
+      open={open}
+      title={`Change Details: ${camelCaseToTitleCase(eventType)}`}
+      titleId="change-details-dialog-title"
+    >
+      <strong>Change Metadata:</strong>
+      <ObjectAsTree
+        data={{
+          changeIndex: eventIndex,
+          changeTime: event.getTimestamp()!.toDate().toISOString(),
+          changeType: camelCaseToTitleCase(eventType),
+        }}
+      />
+      <br />
+      <strong>Change Data:</strong>
+      <ObjectAsTree data={eventDetails} />
+    </DetailsDialog>
+  );
+}
+
+function renderEventDescription(
   event: introspectionEventsProto.Event,
   nodeIdsToNodeNames: Map<NodeId, string>
 ): { description: React.ReactNode; title: string } {
@@ -231,7 +290,10 @@ export default function Event({
   nodeIdsToNodeNames: Map<NodeId, string>;
 }) {
   const eventTime = event.getTimestamp()!.toDate();
-  const { title, description } = renderEvent(event, nodeIdsToNodeNames);
+  const { title, description } = renderEventDescription(
+    event,
+    nodeIdsToNodeNames
+  );
 
   const classes = useStyles();
 

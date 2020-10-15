@@ -15,6 +15,7 @@
 //
 
 import React from 'react';
+import { useHistory } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
@@ -22,6 +23,8 @@ import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import ListSubheader from '@material-ui/core/ListSubheader';
 import Divider from '@material-ui/core/Divider';
+import IconButton from '@material-ui/core/IconButton';
+import MoreVertIcon from '@material-ui/icons/MoreVert';
 import { NodeId } from '~/components/Root';
 import Event from '~/components/Event';
 import introspectionEventsProto from '~/protoc_out/proto/introspection_events_pb';
@@ -46,6 +49,7 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingRight: '10px',
   },
   listIcon: {
     minWidth: 'unset',
@@ -95,6 +99,7 @@ export default function EventList({
   children,
 }: EventListProps) {
   const classes = useStyles();
+  const history = useHistory();
   // Reverse the array of events (while storing the orginal index) to render
   // events in a reverse chronological order.
   const reversedEvents = totalEvents.reduce((acc, event, eventIndex) => {
@@ -153,6 +158,12 @@ export default function EventList({
             <Event event={event} nodeIdsToNodeNames={nodeIdsToNodeNames} />
           </ListItemText>
         </ListItem>
+        <IconButton
+          onClick={() => history.push(`/change/${eventIndex}`)}
+          aria-label="View change details"
+        >
+          <MoreVertIcon />
+        </IconButton>
       </div>
     );
   }
