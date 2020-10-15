@@ -38,8 +38,6 @@ ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate
 using RoomToken = std::string;
 
 using ::oak::examples::chat::Chat;
-using ::oak::examples::chat::CreateRoomRequest;
-using ::oak::examples::chat::DestroyRoomRequest;
 using ::oak::examples::chat::Message;
 using ::oak::examples::chat::SendMessageRequest;
 using ::oak::examples::chat::SubscribeRequest;
@@ -148,47 +146,6 @@ std::unique_ptr<Chat::Stub> create_stub(std::string address, std::string ca_cert
   return stub;
 }
 
-// RAII class to handle creation/destruction of a chat room.
-class Room {
- public:
-  Room(std::string address, std::string ca_cert) {
-    oak::NonceGenerator<64> generator;
-    grpc::ClientContext context;
-    CreateRoomRequest req;
-    auto room_access_token_bytes = generator.NextNonce();
-    room_access_token_ =
-        std::string(room_access_token_bytes.begin(), room_access_token_bytes.end());
-    auto room_admin_token_bytes = generator.NextNonce();
-    room_admin_token_ = std::string(room_admin_token_bytes.begin(), room_admin_token_bytes.end());
-    stub_ = create_stub(address, ca_cert, room_access_token_);
-    req.set_admin_token(room_admin_token_);
-    google::protobuf::Empty rsp;
-    grpc::Status status = stub_->CreateRoom(&context, req, &rsp);
-    if (!status.ok()) {
-      LOG(FATAL) << "Could not CreateRoom():" << oak::status_code_to_string(status.error_code())
-                 << ": " << status.error_message();
-    }
-  }
-  ~Room() {
-    LOG(INFO) << "Destroying room";
-    grpc::ClientContext context;
-    DestroyRoomRequest req;
-    req.set_admin_token(room_admin_token_);
-    google::protobuf::Empty rsp;
-    grpc::Status status = stub_->DestroyRoom(&context, req, &rsp);
-    if (!status.ok()) {
-      LOG(WARNING) << "Could not DestroyRoom(): " << oak::status_code_to_string(status.error_code())
-                   << ": " << status.error_message();
-    }
-  }
-  const std::shared_ptr<Chat::Stub> Stub() { return stub_; }
-
- private:
-  std::shared_ptr<Chat::Stub> stub_;
-  RoomToken room_access_token_;
-  RoomToken room_admin_token_;
-};
-
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
@@ -201,8 +158,7 @@ int main(int argc, char** argv) {
     LOG(FATAL) << "Failed to parse --room_access_token as base64";
   }
 
-  std::shared_ptr<Chat::Stub> stub;
-  std::unique_ptr<Room> room;
+  std::unique_ptr<Chat::Stub> stub;
 
   // If no room access token was provided, create a new `Room` object, which internally generates a
   // fresh room access token, creates a gRPC stub based on it, and makes this stub available to the
@@ -210,16 +166,32 @@ int main(int argc, char** argv) {
   //
   // If a room access token was provided, directly create a gRPC stub with it.
   if (room_access_token.empty()) {
-    room = absl::make_unique<Room>(address, ca_cert);
-    stub = room->Stub();
+    oak::NonceGenerator<64> generator;
+    auto room_access_token_bytes = generator.NextNonce();
+    room_access_token = std::string(room_access_token_bytes.begin(), room_access_token_bytes.end());
     LOG(INFO) << "Join this room with --address=" << address
               << " --room_access_token=" << absl::Base64Escape(room_access_token);
-  } else {
-    stub = create_stub(address, ca_cert, room_access_token);
   }
 
+  stub = create_stub(address, ca_cert, room_access_token);
+
   if (absl::GetFlag(FLAGS_test)) {
-    // Disable interactive behaviour.
+    // Disable interactive behaviour, and just attempt to send a pre-defined message.
+
+    SendMessageRequest req;
+    Message* msg = req.mutable_message();
+    msg->set_user_handle("test user");
+    msg->set_text("test message");
+
+    google::protobuf::Empty rsp;
+
+    grpc::ClientContext context;
+    grpc::Status status = stub->SendMessage(&context, req, &rsp);
+    if (!status.ok()) {
+      LOG(FATAL) << "Could not SendMessage(): " << oak::status_code_to_string(status.error_code())
+                 << ": " << status.error_message();
+    }
+
     return EXIT_SUCCESS;
   }
 

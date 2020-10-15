@@ -31,8 +31,6 @@ mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.chat.rs"));
 }
 
-type AdminToken = Vec<u8>;
-
 /// A node that routes each incoming gRPC invocation to a per-room worker node (either pre-existing,
 /// or newly created) that can handle requests with the label of the incoming request.
 ///
@@ -106,92 +104,23 @@ oak::entrypoint!(room => |in_channel| {
 /// which it receives messages from clients and sends out replies to subscribed clients.
 #[derive(Default)]
 struct Room {
-    inner: Option<RoomInner>,
-}
-
-struct RoomInner {
-    admin_token: AdminToken,
     messages: Vec<Message>,
     clients: Vec<oak::grpc::ChannelResponseWriter>,
 }
 
-impl RoomInner {
-    fn new(admin_token: AdminToken) -> Self {
-        RoomInner {
-            admin_token,
-            messages: Vec::new(),
-            clients: Vec::new(),
-        }
-    }
-}
-
-fn room_id_not_found_err<T>() -> grpc::Result<T> {
-    Err(grpc::build_status(grpc::Code::NotFound, "room not found"))
-}
-
-fn room_id_duplicate_err<T>() -> grpc::Result<T> {
-    Err(grpc::build_status(
-        grpc::Code::AlreadyExists,
-        "room already exists",
-    ))
-}
-
 impl Chat for Room {
-    fn create_room(&mut self, req: CreateRoomRequest) -> grpc::Result<()> {
-        info!("creating room");
-        match self.inner {
-            None => {
-                self.inner = Some(RoomInner::new(req.admin_token));
-                Ok(())
-            }
-            Some(_) => room_id_duplicate_err(),
-        }
-    }
-
-    fn destroy_room(&mut self, req: DestroyRoomRequest) -> grpc::Result<()> {
-        info!("destroying room");
-        match &self.inner {
-            Some(room) => {
-                if room.admin_token == req.admin_token {
-                    // TODO: Trigger this node termination, so that the router node may notice and
-                    // clean up any associated state.
-                    Ok(())
-                } else {
-                    Err(grpc::build_status(
-                        grpc::Code::PermissionDenied,
-                        "invalid admin token",
-                    ))
-                }
-            }
-            None => room_id_not_found_err(),
-        }
-    }
-
     fn subscribe(&mut self, _req: SubscribeRequest, writer: grpc::ChannelResponseWriter) {
         info!("subscribing to room");
-        match &mut self.inner {
-            Some(room) => {
-                info!("new subscription to room");
-                room.clients.push(writer);
-            }
-            None => {
-                if let Err(err) = writer.close(room_id_not_found_err()) {
-                    warn!("could not close channel: {}", err);
-                }
-            }
-        };
+        self.clients.push(writer);
     }
 
     fn send_message(&mut self, req: SendMessageRequest) -> grpc::Result<()> {
         info!("sending message to room");
-        match &mut self.inner {
-            Some(room) => {
-                info!("new message to room");
-                match req.message {
-                    Some(message) => {
-                        room.messages.push(message.clone());
-                        // Only retain clients we can write to successfully.
-                        room.clients.retain(|writer| {
+        match req.message {
+            Some(message) => {
+                self.messages.push(message.clone());
+                // Only retain clients we can write to successfully.
+                self.clients.retain(|writer| {
                             if let Err(err) = writer.write(&message, oak::grpc::WriteMode::KeepOpen) {
                                 warn!("could not write to client, dropping for future SendMessage invocations: {}", err);
                                 // Do not retain writer.
@@ -201,15 +130,12 @@ impl Chat for Room {
                                 true
                             }
                         });
-                        Ok(())
-                    }
-                    None => Err(grpc::build_status(
-                        grpc::Code::InvalidArgument,
-                        "missing message",
-                    )),
-                }
+                Ok(())
             }
-            None => room_id_not_found_err(),
+            None => Err(grpc::build_status(
+                grpc::Code::InvalidArgument,
+                "missing message",
+            )),
         }
     }
 }

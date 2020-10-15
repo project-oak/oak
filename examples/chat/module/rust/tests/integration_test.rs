@@ -15,10 +15,7 @@
 //
 
 use assert_matches::assert_matches;
-use chat_grpc::proto::{
-    chat_client::ChatClient, CreateRoomRequest, DestroyRoomRequest, Message, SendMessageRequest,
-    SubscribeRequest,
-};
+use chat_grpc::proto::{chat_client::ChatClient, Message, SendMessageRequest, SubscribeRequest};
 use futures::executor::block_on;
 use log::info;
 use serial_test::serial;
@@ -202,8 +199,7 @@ async fn subscribe(room_id: Vec<u8>, msgs: Arc<ChatLog>, s: Arc<Semaphore>) {
 
     let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
     let mut client = ChatClient::with_interceptor(channel, interceptor);
-    let req = SubscribeRequest {
-    };
+    let req = SubscribeRequest {};
     info!("Sending request: {:?}", req);
     let mut stream = client.subscribe(req).await.unwrap().into_inner();
     s.add_permits(1);
