@@ -19,9 +19,9 @@ pub mod oak;
 
 use async_trait::async_trait;
 
-/// Trait for sending test requests. Returns `()` since the value of the request is not needed for
-/// current benchmark implementation.
 #[async_trait]
 pub trait Application: std::marker::Send {
+    /// Sends test requests. Returns `()` since the value of the request is not needed for
+    /// current benchmark implementation.
     async fn send_request(&mut self, id: &str) -> Result<(), tonic::Status>;
 }

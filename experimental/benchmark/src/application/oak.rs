@@ -73,6 +73,8 @@ impl OakApplication {
 
 #[async_trait]
 impl Application for OakApplication {
+    /// Sends test requests to the oak application. Returns `()` since the value of the request is
+    /// not needed for current benchmark implementation.
     async fn send_request(&mut self, id: &str) -> Result<(), tonic::Status> {
         let request = GetPointOfInterestRequest { id: id.to_string() };
         self.client.get_point_of_interest(request).await?;

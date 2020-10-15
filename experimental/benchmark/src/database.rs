@@ -117,7 +117,8 @@ impl Database {
             .replace("<Station>", "<station>")
             .replace("</Station>", "</station>");
 
-        // Measure database parsing time.
+        // Measure database parsing time. It is necessary to compare XML parsing time difference
+        // between Oak and native applications.
         let start = Instant::now();
         let parsed_database: StationDatabase =
             quick_xml::de::from_str(&database).expect("Couldn't deserialize database");

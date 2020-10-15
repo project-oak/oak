@@ -25,7 +25,7 @@ use crate::{
     },
 };
 use async_trait::async_trait;
-use log::{debug, error, info};
+use log::{debug, info, warn};
 use oak_abi::label::Label;
 use prost::Message;
 use tokio::task::JoinHandle;
@@ -55,8 +55,8 @@ impl TrustedDatabase for TrustedDatabaseService {
                 }))
             }
             None => {
-                let err = tonic::Status::new(tonic::Code::Internal, "Empty database");
-                error!("{:?}", err);
+                let err = tonic::Status::new(tonic::Code::NotFound, "ID not found");
+                warn!("{:?}", err);
                 Err(err)
             }
         }
@@ -71,22 +71,19 @@ impl TrustedDatabase for TrustedDatabaseService {
 }
 
 pub struct NativeApplication {
-    _handle: JoinHandle<()>,
+    pub handle: JoinHandle<()>,
     client: TrustedDatabaseClient<tonic::transport::channel::Channel>,
 }
 
 impl NativeApplication {
     pub async fn start(database: &Database, port: u16) -> Self {
-        info!("Running backend database");
+        info!("Running native application");
         let handle = tokio::spawn(NativeApplication::create_server(
             database.points_of_interest.clone(),
             port,
         ));
         let client = NativeApplication::create_client(port).await;
-        NativeApplication {
-            _handle: handle,
-            client,
-        }
+        NativeApplication { handle, client }
     }
 
     async fn create_server(database: PointOfInterestMap, port: u16) {
@@ -128,6 +125,8 @@ impl NativeApplication {
 
 #[async_trait]
 impl Application for NativeApplication {
+    /// Sends test requests to the native application. Returns `()` since the value of the request
+    /// is not needed for current benchmark implementation.
     async fn send_request(&mut self, id: &str) -> Result<(), tonic::Status> {
         let request = Request::new(GetPointOfInterestRequest { id: id.to_string() });
         self.client.get_point_of_interest(request).await?;

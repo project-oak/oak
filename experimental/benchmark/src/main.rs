@@ -50,6 +50,7 @@ use crate::{
     application::{native::NativeApplication, oak::OakApplication, Application},
     database::Database,
 };
+use anyhow::Context;
 use log::{error, info};
 use std::time::{Duration, Instant};
 use structopt::StructOpt;
@@ -113,6 +114,10 @@ async fn main() -> anyhow::Result<()> {
     let average_oak_request_time = measure_request_time(&mut oak_app, opt.database_size).await;
 
     oak_app.stop();
+    native_app
+        .handle
+        .await
+        .context("Couldn't stop native application")?;
 
     info!(
         "Database size: {} entries",
