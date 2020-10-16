@@ -24,7 +24,7 @@ multiple-versions = "deny"
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
-allow = ["Apache-2.0", "ISC", "MIT", "OpenSSL"]
+allow = ["Apache-2.0", "ISC", "MIT", "MPL-2.0", "OpenSSL"]
 copyleft = "deny"
 
 [[licenses.clarify]]

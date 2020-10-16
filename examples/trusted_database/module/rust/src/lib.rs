@@ -60,11 +60,11 @@ use log::{debug, error};
 use oak::{
     grpc, io::SenderExt, proto::oak::invocation::GrpcInvocationReceiver, CommandHandler, OakError,
 };
-use proto::oak::examples::trusted_database::{PointOfInterest, TrustedDatabaseCommand};
+use proto::oak::examples::trusted_database::{PointOfInterestMap, TrustedDatabaseCommand};
 
 /// Oak Node that contains an in-memory database.
 pub struct TrustedDatabaseNode {
-    points_of_interest: Vec<PointOfInterest>,
+    points_of_interest: PointOfInterestMap,
 }
 
 impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
@@ -103,7 +103,7 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
             invocation_receiver: Some(GrpcInvocationReceiver {
                 receiver: Some(invocation_receiver),
             }),
-            points_of_interest: self.points_of_interest.to_vec(),
+            points_of_interest: Some(self.points_of_interest.clone()),
         };
 
         // Send the command massage to create a `TrustedDatabaseHandlerNode`

@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::examples::trusted_database::{Location, PointOfInterest};
+use crate::proto::oak::examples::trusted_database::{
+    Location, PointOfInterest, PointOfInterestMap,
+};
 use log::{debug, error};
 use oak::OakError;
 use oak_abi::proto::oak::application::ConfigMap;
@@ -27,7 +29,7 @@ struct Database {
     #[serde(rename = "lastUpdate", default)]
     last_update: String,
     version: String,
-    #[serde(rename = "station", default)]
+    #[serde(rename = "station")]
     stations: Vec<Station>,
 }
 
@@ -41,7 +43,9 @@ struct Station {
     latitude_degrees: f32,
     #[serde(rename = "long", default)]
     longitude_degrees: f32,
+    #[serde(default)]
     installed: bool,
+    #[serde(default)]
     locked: bool,
     #[serde(rename = "installDate", default)]
     install_date: String,
@@ -57,17 +61,19 @@ struct Station {
 }
 
 /// Load an XML database from [`ConfigMap`] and parse it.
-pub fn load_database(config_map: ConfigMap) -> Result<Vec<PointOfInterest>, OakError> {
+pub fn load_database(config_map: ConfigMap) -> Result<PointOfInterestMap, OakError> {
     debug!("Loading database");
     match config_map.items.get("database") {
         Some(xml_database) => {
+            debug!("Parsing database - size: {} bytes", xml_database.len());
             let points_of_interest = parse_database(xml_database).map_err(|error| {
                 error!("Couldn't parse database: {:?}", error);
                 OakError::OakStatus(oak_abi::OakStatus::ErrInvalidArgs)
             })?;
             debug!(
-                "Database loaded - size: {} entries",
-                points_of_interest.len()
+                "Database loaded - size: {} entries ({} bytes)",
+                points_of_interest.entries.len(),
+                std::mem::size_of_val(&points_of_interest),
             );
             Ok(points_of_interest)
         }
@@ -78,8 +84,8 @@ pub fn load_database(config_map: ConfigMap) -> Result<Vec<PointOfInterest>, OakE
     }
 }
 
-/// Parse an XML database into a vector of [`PointOfInterest`].
-pub fn parse_database(xml_database: &[u8]) -> Result<Vec<PointOfInterest>, OakError> {
+/// Parse an XML database into a [`PointOfInterestMap`].
+pub fn parse_database(xml_database: &[u8]) -> Result<PointOfInterestMap, OakError> {
     let database: Database = quick_xml::de::from_str(
         String::from_utf8(xml_database.to_vec())
             .map_err(|error| {
@@ -93,16 +99,21 @@ pub fn parse_database(xml_database: &[u8]) -> Result<Vec<PointOfInterest>, OakEr
         OakError::OakStatus(oak_abi::OakStatus::ErrInvalidArgs)
     })?;
 
-    let points_of_interest = database
-        .stations
-        .iter()
-        .map(|station| PointOfInterest {
-            name: station.name.to_string(),
-            location: Some(Location {
-                latitude_degrees: station.latitude_degrees,
-                longitude_degrees: station.longitude_degrees,
-            }),
-        })
-        .collect();
+    let points_of_interest = PointOfInterestMap {
+        entries: database
+            .stations
+            .iter()
+            .map(|station| {
+                let point_of_interest = PointOfInterest {
+                    name: station.name.to_string(),
+                    location: Some(Location {
+                        latitude_degrees: station.latitude_degrees,
+                        longitude_degrees: station.longitude_degrees,
+                    }),
+                };
+                (station.id.to_string(), point_of_interest)
+            })
+            .collect(),
+    };
     Ok(points_of_interest)
 }

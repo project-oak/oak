@@ -14,14 +14,16 @@
 // limitations under the License.
 //
 
-syntax = "proto3";
+use oak_utils::{generate_grpc_code, CodegenOptions};
 
-package oak.examples.trusted_database_command;
-
-import "trusted_database.proto";
-import "oak_services/proto/grpc_invocation.proto";
-
-message TrustedDatabaseCommand {
-  oak.invocation.GrpcInvocationReceiver invocation_receiver = 1;
-  oak.examples.trusted_database.PointOfInterestMap points_of_interest = 2;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    generate_grpc_code(
+        "../../examples/trusted_database/proto",
+        &["trusted_database.proto"],
+        CodegenOptions {
+            build_client: true,
+            build_server: true,
+        },
+    )?;
+    Ok(())
 }
