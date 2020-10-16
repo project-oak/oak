@@ -39,13 +39,14 @@ pub mod proto {
 }
 
 use oak::grpc;
+use oak_abi::proto::oak::application::ConfigMap;
 use proto::{
     GetIntersectionRequest, GetIntersectionResponse, PrivateSetIntersection,
     PrivateSetIntersectionDispatcher, SubmitSetRequest,
 };
 use std::collections::{HashMap, HashSet};
 
-oak::entrypoint!(oak_main<()> => |_receiver| {
+oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
     let dispatcher = PrivateSetIntersectionDispatcher::new(Node::default());
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");

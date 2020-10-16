@@ -35,7 +35,7 @@ pub mod proto {
 
 use anyhow::{anyhow, Context};
 use oak::grpc;
-use oak_abi::label::Label;
+use oak_abi::{label::Label, proto::oak::application::ConfigMap};
 pub use proto::DatabaseProxyClient;
 use proto::{
     DatabaseClient, DatabaseEntry, DatabaseProxy, DatabaseProxyDispatcher, GetDatabaseEntryRequest,
@@ -153,7 +153,7 @@ oak::entrypoint!(database_proxy_main<grpc::Invocation> => |receiver| {
     oak::run_command_loop(dispatcher, receiver);
 });
 
-oak::entrypoint!(grpc_database_proxy_main<()> => |_receiver| {
+oak::entrypoint!(grpc_database_proxy_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let dispatcher = DatabaseProxyDispatcher::new(DatabaseProxyNode::default());
     let grpc_channel =

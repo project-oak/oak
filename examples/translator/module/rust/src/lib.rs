@@ -16,6 +16,7 @@
 
 use log::info;
 use oak::grpc;
+use oak_abi::proto::oak::application::ConfigMap;
 use translator_common::proto::{
     TranslateRequest, TranslateResponse, Translator, TranslatorDispatcher,
 };
@@ -33,7 +34,7 @@ oak::entrypoint!(oak_main<grpc::Invocation> => |receiver| {
 // Application. In this case, it creates a gRPC server pseudo-Node on startup, and
 // invocations arrive from the outside world over the channel that connects with the
 // pseudo-Node.
-oak::entrypoint!(grpc_oak_main<()> => |_receiver| {
+oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let dispatcher = TranslatorDispatcher::new(Node);
     let grpc_channel =

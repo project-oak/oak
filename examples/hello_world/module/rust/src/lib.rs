@@ -20,9 +20,10 @@ pub mod proto {
 
 use log::info;
 use oak::grpc;
+use oak_abi::proto::oak::application::ConfigMap;
 use proto::{HelloRequest, HelloResponse, HelloWorld, HelloWorldDispatcher};
 
-oak::entrypoint!(oak_main<()> => |_receiver| {
+oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let node = Node {
         translator: grpc::client::Client::new(&oak::node_config::wasm("translator", "oak_main"))

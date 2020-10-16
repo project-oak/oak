@@ -54,7 +54,7 @@ gRPC server pseudo-Node:
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/machine_learning/module/rust/src/lib.rs Rust /^oak::entrypoint!\(grpc_oak_main.*/ /}\);$/)
 ```Rust
-oak::entrypoint!(grpc_oak_main<()> => |_receiver| {
+oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let node = Node {
         training_set_size: 1000,
@@ -107,7 +107,7 @@ Application), the easiest way to use a gRPC service implementation is to:
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /oak::entrypoint!\(grpc_oak_main/ /^}/)
 ```Rust
-oak::entrypoint!(grpc_oak_main<()> => |_receiver| {
+oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let dispatcher = TranslatorDispatcher::new(Node);
     let grpc_channel =
@@ -318,8 +318,9 @@ Application start-up, the Oak Runtime sends the serialized form of this message
 as a single message on the initial Node's initial channel (and then closes the
 channel).
 
-The initial Node of an Application can retrieve this configuration with the
-`oak::app_config_map` helper function.
+The initial Node of an Application can retrieve this configuration by reading
+from the implicit incoming channel, usually via a `Receiver<ConfigMap>`
+instance.
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/trusted_information_retrieval/module_0/rust/src/lib.rs Rust /oak::entrypoint/ /.*let config_map =.*/)

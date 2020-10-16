@@ -31,7 +31,7 @@ use oak::{
 use oak_abi::{
     label::Label,
     proto::oak::application::{
-        NodeConfiguration, RoughtimeClientConfiguration, StorageProxyConfiguration,
+        ConfigMap, NodeConfiguration, RoughtimeClientConfiguration, StorageProxyConfiguration,
     },
 };
 use prost::Message;
@@ -2415,6 +2415,6 @@ fn new_channel_chain(nest_count: u32) -> Result<oak::ReadHandle, Box<dyn std::er
     Ok(inner_rh)
 }
 
-oak::entrypoint!(panic_main<()> => |_receiver| {
+oak::entrypoint!(panic_main<ConfigMap> => |_receiver| {
     panic!("deliberate panic");
 });

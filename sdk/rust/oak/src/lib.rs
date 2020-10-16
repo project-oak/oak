@@ -518,7 +518,15 @@ pub fn run_command_loop<
 /// This registers the entrypoint name and the expression that runs an event loop, and it includes
 /// the static type of messages that are read from the inbound channel.
 ///
+/// The first node of an Oak application usually receives a
+/// [`ConfigMap`](oak_abi::proto::oak::application::ConfigMap) message from the Oak Runtime via the
+/// initial incoming channel, which is reflected in the type of message associated with the
+/// entrypoint.
+///
 /// ```
+/// use oak::io::{Receiver, ReceiverExt};
+/// use oak_abi::proto::oak::application::ConfigMap;
+///
 /// #[derive(Default)]
 /// struct DummyNode;
 ///
@@ -529,10 +537,17 @@ pub fn run_command_loop<
 ///     # }
 /// }
 ///
-/// oak::entrypoint!(dummy<()> => |_receiver| {
-///     let dispatcher = DummyNode::default();
-///     let grpc_channel = oak::grpc::server::init("[::]:8080")
+/// oak::entrypoint!(dummy<ConfigMap> => |receiver: Receiver<ConfigMap>| {
+///     let config_map = receiver.receive().unwrap();
+///     let grpc_server_listen_address = String::from_utf8(
+///         config_map
+///             .items
+///             .get("grpc_server_listen_address")
+///             .unwrap_or(&"[::]:8080".as_bytes().to_vec())
+///         .to_vec()).unwrap();
+///     let grpc_channel = oak::grpc::server::init(&grpc_server_listen_address)
 ///         .expect("could not create gRPC server pseudo-node");
+///     let dispatcher = DummyNode::default();
 ///     oak::run_command_loop(dispatcher, grpc_channel);
 /// });
 ///
@@ -547,6 +562,8 @@ pub fn run_command_loop<
 /// expression too:
 ///
 /// ```
+/// use oak_abi::proto::oak::application::ConfigMap;
+///
 /// # fn init_all_the_things() {}
 /// #
 /// # #[derive(Default)]
@@ -558,7 +575,7 @@ pub fn run_command_loop<
 /// #     }
 /// # }
 /// #
-/// oak::entrypoint!(its_complicated<()> => |_receiver| {
+/// oak::entrypoint!(its_complicated<ConfigMap> => |_receiver| {
 ///     init_all_the_things();
 ///     let dispatcher = DummyNode::default();
 ///     let grpc_channel = oak::grpc::server::init("[::]:8080")

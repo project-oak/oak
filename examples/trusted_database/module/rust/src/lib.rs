@@ -64,9 +64,7 @@ use oak::{
     CommandHandler, OakError,
 };
 use oak_abi::proto::oak::application::ConfigMap;
-use proto::oak::examples::trusted_database::{
-    PointOfInterest, PointOfInterestMap, TrustedDatabaseCommand,
-};
+use proto::oak::examples::trusted_database::{PointOfInterestMap, TrustedDatabaseCommand};
 
 /// Oak Node that contains an in-memory database.
 pub struct TrustedDatabaseNode {

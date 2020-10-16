@@ -19,6 +19,7 @@
 
 use log::{error, info, warn};
 use oak::grpc;
+use oak_abi::proto::oak::application::ConfigMap;
 use rand::prelude::*;
 use rand_distr::{Distribution, Normal, Standard};
 use rusty_machine::{
@@ -157,7 +158,7 @@ oak::entrypoint!(oak_main<grpc::Invocation> => |receiver| {
     oak::run_command_loop(node, receiver);
 });
 
-oak::entrypoint!(grpc_oak_main<()> => |_receiver| {
+oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let node = Node {
         training_set_size: 1000,

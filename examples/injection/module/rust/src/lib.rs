@@ -68,6 +68,7 @@ use oak::{
     grpc,
     io::{ReceiverExt, SenderExt},
 };
+use oak_abi::proto::oak::application::ConfigMap;
 use oak_io::{Receiver, Sender};
 use proto::{
     blob_request::Request, BlobRequest, BlobResponse, BlobStore, BlobStoreDispatcher,
@@ -75,7 +76,7 @@ use proto::{
     PutBlobRequest,
 };
 
-oak::entrypoint!(grpc_fe<()> => |_receiver| {
+oak::entrypoint!(grpc_fe<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let (to_provider_write_handle, to_provider_read_handle) = oak::channel_create().unwrap();
     let (from_provider_write_handle, from_provider_read_handle) = oak::channel_create().unwrap();
