@@ -19,6 +19,7 @@ use oak::{
     grpc,
     io::{Sender, SenderExt},
 };
+use oak_abi::proto::oak::application::ConfigMap;
 use proto::{
     command::Command::{JoinRoom, SendMessage},
     Chat, ChatDispatcher, Command, CreateRoomRequest, DestroyRoomRequest, SendMessageRequest,
@@ -39,7 +40,7 @@ struct Node {
     rooms: HashMap<RoomId, Room>,
 }
 
-oak::entrypoint!(grpc_oak_main => |_in_channel| {
+oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let dispatcher = ChatDispatcher::new(Node::default());
     let grpc_channel =

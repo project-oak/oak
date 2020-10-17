@@ -20,7 +20,7 @@
 use byteorder::WriteBytesExt;
 use io::ReceiverExt;
 use log::{debug, error, info, trace, warn};
-use oak_abi::proto::oak::application::{ConfigMap, NodeConfiguration};
+use oak_abi::proto::oak::application::NodeConfiguration;
 use prost::Message;
 
 // Re-export ABI and Services constants and structs that are also visible as part of the SDK API.
@@ -430,17 +430,6 @@ pub trait CommandHandler<T: crate::io::Decodable> {
     fn handle_command(&mut self, command: T) -> Result<(), crate::OakError>;
 }
 
-/// Retrieve the Application's `ConfigMap` from the read handle for the start-of-day
-/// initial channel.
-pub fn app_config_map(initial_handle: ReadHandle) -> Result<ConfigMap, OakError> {
-    let receiver = crate::io::Receiver::new(initial_handle);
-    let result = receiver.receive();
-    if let Err(err) = receiver.close() {
-        error!("Failed to close initial channel: {:?}", err);
-    }
-    result
-}
-
 /// Run a command loop on the provided [`CommandHandler`]:
 ///
 /// - wait for new messages on the provided channel `in_channel`
@@ -526,9 +515,18 @@ pub fn run_command_loop<
 
 /// Register a new Node entrypoint.
 ///
-/// This registers the entrypoint name and the expression that runs an event loop.
+/// This registers the entrypoint name and the expression that runs an event loop, and it includes
+/// the static type of messages that are read from the inbound channel.
+///
+/// The first node of an Oak application usually receives a
+/// [`ConfigMap`](oak_abi::proto::oak::application::ConfigMap) message from the Oak Runtime via the
+/// initial incoming channel, which is reflected in the type of message associated with the
+/// entrypoint.
 ///
 /// ```
+/// use oak::io::{Receiver, ReceiverExt};
+/// use oak_abi::proto::oak::application::ConfigMap;
+///
 /// #[derive(Default)]
 /// struct DummyNode;
 ///
@@ -539,10 +537,17 @@ pub fn run_command_loop<
 ///     # }
 /// }
 ///
-/// oak::entrypoint!(dummy => |_in_channel| {
-///     let dispatcher = DummyNode::default();
-///     let grpc_channel = oak::grpc::server::init("[::]:8080")
+/// oak::entrypoint!(dummy<ConfigMap> => |receiver: Receiver<ConfigMap>| {
+///     let config_map = receiver.receive().unwrap();
+///     let grpc_server_listen_address = String::from_utf8(
+///         config_map
+///             .items
+///             .get("grpc_server_listen_address")
+///             .unwrap_or(&"[::]:8080".as_bytes().to_vec())
+///         .to_vec()).unwrap();
+///     let grpc_channel = oak::grpc::server::init(&grpc_server_listen_address)
 ///         .expect("could not create gRPC server pseudo-node");
+///     let dispatcher = DummyNode::default();
 ///     oak::run_command_loop(dispatcher, grpc_channel);
 /// });
 ///
@@ -557,6 +562,8 @@ pub fn run_command_loop<
 /// expression too:
 ///
 /// ```
+/// use oak_abi::proto::oak::application::ConfigMap;
+///
 /// # fn init_all_the_things() {}
 /// #
 /// # #[derive(Default)]
@@ -568,7 +575,7 @@ pub fn run_command_loop<
 /// #     }
 /// # }
 /// #
-/// oak::entrypoint!(its_complicated => |_in_channel| {
+/// oak::entrypoint!(its_complicated<ConfigMap> => |_receiver| {
 ///     init_all_the_things();
 ///     let dispatcher = DummyNode::default();
 ///     let grpc_channel = oak::grpc::server::init("[::]:8080")
@@ -580,7 +587,7 @@ pub fn run_command_loop<
 /// ```
 #[macro_export]
 macro_rules! entrypoint {
-    ($name:ident => $main_function:expr) => {
+    ($name:ident < $msg:ty > => $handler:expr) => {
         // Do not mangle these functions when running unit tests, because the Rust unit test
         // framework will add a `pub extern "C" fn main()` containing the test runner. This can
         // cause clashes when $name = main. We don't fully omit it in tests so that compile errors
@@ -594,9 +601,10 @@ macro_rules! entrypoint {
             let _ = ::std::panic::catch_unwind(|| {
                 ::oak::set_panic_hook();
 
-                // Run the Node's `main` function.
-                let in_channel = ::oak::ReadHandle { handle: in_handle };
-                $main_function(in_channel);
+                // Run the Node's entrypoint handler.
+                let in_read_handle = ::oak::ReadHandle { handle: in_handle };
+                let receiver = ::oak::io::Receiver::<$msg>::new(in_read_handle);
+                $handler(receiver);
             });
         }
     };

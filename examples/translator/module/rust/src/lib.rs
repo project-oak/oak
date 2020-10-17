@@ -16,6 +16,7 @@
 
 use log::info;
 use oak::grpc;
+use oak_abi::proto::oak::application::ConfigMap;
 use translator_common::proto::{
     TranslateRequest, TranslateResponse, Translator, TranslatorDispatcher,
 };
@@ -23,17 +24,17 @@ use translator_common::proto::{
 // The `oak_main` entrypoint is used when the Translator acts as a library Node for a
 // wider Application. In this case, invocations arrive directly over the channel received
 // at start-of-day.
-oak::entrypoint!(oak_main => |in_channel| {
+oak::entrypoint!(oak_main<grpc::Invocation> => |receiver| {
     oak::logger::init_default();
     let dispatcher = TranslatorDispatcher::new(Node);
-    oak::run_command_loop(dispatcher, in_channel);
+    oak::run_command_loop(dispatcher, receiver);
 });
 
 // The `grpc_oak_main` entrypoint is used when the Translator acts as a standalone Oak
 // Application. In this case, it creates a gRPC server pseudo-Node on startup, and
 // invocations arrive from the outside world over the channel that connects with the
 // pseudo-Node.
-oak::entrypoint!(grpc_oak_main => |_in_channel| {
+oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let dispatcher = TranslatorDispatcher::new(Node);
     let grpc_channel =

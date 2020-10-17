@@ -68,6 +68,7 @@ use oak::{
     grpc,
     io::{ReceiverExt, SenderExt},
 };
+use oak_abi::proto::oak::application::ConfigMap;
 use oak_io::{Receiver, Sender};
 use proto::{
     blob_request::Request, BlobRequest, BlobResponse, BlobStore, BlobStoreDispatcher,
@@ -75,7 +76,7 @@ use proto::{
     PutBlobRequest,
 };
 
-oak::entrypoint!(grpc_fe => |_in_channel| {
+oak::entrypoint!(grpc_fe<ConfigMap> => |_receiver| {
     oak::logger::init_default();
     let (to_provider_write_handle, to_provider_read_handle) = oak::channel_create().unwrap();
     let (from_provider_write_handle, from_provider_read_handle) = oak::channel_create().unwrap();
@@ -99,24 +100,32 @@ oak::entrypoint!(grpc_fe => |_in_channel| {
     oak::run_command_loop(dispatcher, grpc_channel);
 });
 
-oak::entrypoint!(provider => |frontend_read| {
+oak::entrypoint!(provider<BlobStoreRequest> => |receiver: Receiver<BlobStoreRequest>| {
     oak::logger::init_default();
+    // This node expects the first received message to be of a different type than subsequent ones,
+    // therefore we create a temporary alternative Receiver reading from the same underlying channel
+    // but decoding to a different type.
+    // TODO(#1584): Replace this with a more type safe pattern.
     let frontend_sender =
-        Receiver::<BlobStoreProviderSender>::new(frontend_read).receive()
+        Receiver::<BlobStoreProviderSender>::new(receiver.handle).receive()
             .expect("Did not receive a decodable message")
             .sender
             .expect("No sender in received message");
-    oak::run_command_loop(BlobStoreProvider::new(frontend_sender), frontend_read);
+    oak::run_command_loop(BlobStoreProvider::new(frontend_sender), receiver);
 });
 
-oak::entrypoint!(store => |reader| {
+oak::entrypoint!(store<BlobRequest> => |receiver: Receiver<BlobRequest>| {
     oak::logger::init_default();
+    // This node expects the first received message to be of a different type than subsequent ones,
+    // therefore we create a temporary alternative Receiver reading from the same underlying channel
+    // but decoding to a different type.
+    // TODO(#1584): Replace this with a more type safe pattern.
     let sender =
-        Receiver::<BlobStoreSender>::new(reader).receive()
+        Receiver::<BlobStoreSender>::new(receiver.handle).receive()
             .expect("Did not receive a write handle")
             .sender
             .expect("No write handle in received message");
-    oak::run_command_loop(BlobStoreImpl::new(sender), reader);
+    oak::run_command_loop(BlobStoreImpl::new(sender), receiver);
 });
 
 enum BlobStoreAccess {
