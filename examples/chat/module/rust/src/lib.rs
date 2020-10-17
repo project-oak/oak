@@ -21,10 +21,7 @@ use oak::{
     Label,
 };
 use oak_abi::proto::oak::application::ConfigMap;
-use proto::{
-    Chat, ChatDispatcher, CreateRoomRequest, DestroyRoomRequest, Message, SendMessageRequest,
-    SubscribeRequest,
-};
+use proto::{Chat, ChatDispatcher, Message, SendMessageRequest, SubscribeRequest};
 use std::collections::HashMap;
 
 mod proto {
@@ -91,10 +88,10 @@ oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
 //
 // Multiple instances of nodes with this entrypoint may be created at runtime, according to the
 // variety of labels of incoming requests.
-oak::entrypoint!(room => |in_channel| {
+oak::entrypoint!(room<oak::grpc::Invocation> => |receiver| {
     oak::logger::init_default();
     let dispatcher = ChatDispatcher::new(Room::default());
-    oak::run_command_loop(dispatcher, in_channel);
+    oak::run_command_loop(dispatcher, receiver);
 });
 
 /// A worker node implementation for an individual label.

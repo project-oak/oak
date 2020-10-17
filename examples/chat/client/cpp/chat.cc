@@ -160,11 +160,8 @@ int main(int argc, char** argv) {
 
   std::unique_ptr<Chat::Stub> stub;
 
-  // If no room access token was provided, create a new `Room` object, which internally generates a
-  // fresh room access token, creates a gRPC stub based on it, and makes this stub available to the
-  // rest of this method.
-  //
-  // If a room access token was provided, directly create a gRPC stub with it.
+  // If no room access token was provided, create a fresh one, and print it out so that other
+  // clients may join the same room.
   if (room_access_token.empty()) {
     oak::NonceGenerator<64> generator;
     auto room_access_token_bytes = generator.NextNonce();
