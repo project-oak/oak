@@ -601,6 +601,14 @@
 <span id="601">601</span>
 <span id="602">602</span>
 <span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -624,7 +632,7 @@
 <span class="kw">use</span> <span class="ident">byteorder</span>::<span class="ident">WriteBytesExt</span>;
 <span class="kw">use</span> <span class="ident">io</span>::<span class="ident">ReceiverExt</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{<span class="ident">ConfigMap</span>, <span class="ident">NodeConfiguration</span>};
+<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">NodeConfiguration</span>;
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 
 <span class="comment">// Re-export ABI and Services constants and structs that are also visible as part of the SDK API.</span>
@@ -1034,17 +1042,6 @@
     <span class="kw">fn</span> <span class="ident">handle_command</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">command</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw">crate</span>::<span class="ident">OakError</span><span class="op">&gt;</span>;
 }
 
-<span class="doccomment">/// Retrieve the Application&#39;s `ConfigMap` from the read handle for the start-of-day</span>
-<span class="doccomment">/// initial channel.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">app_config_map</span>(<span class="ident">initial_handle</span>: <span class="ident">ReadHandle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ConfigMap</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Receiver</span>::<span class="ident">new</span>(<span class="ident">initial_handle</span>);
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">receiver</span>.<span class="ident">receive</span>();
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">receiver</span>.<span class="ident">close</span>() {
-        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to close initial channel: {:?}&quot;</span>, <span class="ident">err</span>);
-    }
-    <span class="ident">result</span>
-}
-
 <span class="doccomment">/// Run a command loop on the provided [`CommandHandler`]:</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// - wait for new messages on the provided channel `in_channel`</span>
@@ -1130,9 +1127,18 @@
 
 <span class="doccomment">/// Register a new Node entrypoint.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// This registers the entrypoint name and the expression that runs an event loop.</span>
+<span class="doccomment">/// This registers the entrypoint name and the expression that runs an event loop, and it includes</span>
+<span class="doccomment">/// the static type of messages that are read from the inbound channel.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// The first node of an Oak application usually receives a</span>
+<span class="doccomment">/// [`ConfigMap`](oak_abi::proto::oak::application::ConfigMap) message from the Oak Runtime via the</span>
+<span class="doccomment">/// initial incoming channel, which is reflected in the type of message associated with the</span>
+<span class="doccomment">/// entrypoint.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
+<span class="doccomment">/// use oak::io::{Receiver, ReceiverExt};</span>
+<span class="doccomment">/// use oak_abi::proto::oak::application::ConfigMap;</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// #[derive(Default)]</span>
 <span class="doccomment">/// struct DummyNode;</span>
 <span class="doccomment">///</span>
@@ -1143,10 +1149,17 @@
 <span class="doccomment">///     # }</span>
 <span class="doccomment">/// }</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// oak::entrypoint!(dummy =&gt; |_in_channel| {</span>
-<span class="doccomment">///     let dispatcher = DummyNode::default();</span>
-<span class="doccomment">///     let grpc_channel = oak::grpc::server::init(&quot;[::]:8080&quot;)</span>
+<span class="doccomment">/// oak::entrypoint!(dummy&lt;ConfigMap&gt; =&gt; |receiver: Receiver&lt;ConfigMap&gt;| {</span>
+<span class="doccomment">///     let config_map = receiver.receive().unwrap();</span>
+<span class="doccomment">///     let grpc_server_listen_address = String::from_utf8(</span>
+<span class="doccomment">///         config_map</span>
+<span class="doccomment">///             .items</span>
+<span class="doccomment">///             .get(&quot;grpc_server_listen_address&quot;)</span>
+<span class="doccomment">///             .unwrap_or(&amp;&quot;[::]:8080&quot;.as_bytes().to_vec())</span>
+<span class="doccomment">///         .to_vec()).unwrap();</span>
+<span class="doccomment">///     let grpc_channel = oak::grpc::server::init(&amp;grpc_server_listen_address)</span>
 <span class="doccomment">///         .expect(&quot;could not create gRPC server pseudo-node&quot;);</span>
+<span class="doccomment">///     let dispatcher = DummyNode::default();</span>
 <span class="doccomment">///     oak::run_command_loop(dispatcher, grpc_channel);</span>
 <span class="doccomment">/// });</span>
 <span class="doccomment">///</span>
@@ -1161,6 +1174,8 @@
 <span class="doccomment">/// expression too:</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
+<span class="doccomment">/// use oak_abi::proto::oak::application::ConfigMap;</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// # fn init_all_the_things() {}</span>
 <span class="doccomment">/// #</span>
 <span class="doccomment">/// # #[derive(Default)]</span>
@@ -1172,7 +1187,7 @@
 <span class="doccomment">/// #     }</span>
 <span class="doccomment">/// # }</span>
 <span class="doccomment">/// #</span>
-<span class="doccomment">/// oak::entrypoint!(its_complicated =&gt; |_in_channel| {</span>
+<span class="doccomment">/// oak::entrypoint!(its_complicated&lt;ConfigMap&gt; =&gt; |_receiver| {</span>
 <span class="doccomment">///     init_all_the_things();</span>
 <span class="doccomment">///     let dispatcher = DummyNode::default();</span>
 <span class="doccomment">///     let grpc_channel = oak::grpc::server::init(&quot;[::]:8080&quot;)</span>
@@ -1184,7 +1199,7 @@
 <span class="doccomment">/// ```</span>
 <span class="attribute">#[<span class="ident">macro_export</span>]</span>
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">entrypoint</span> {
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>:<span class="ident">ident</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">main_function</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>:<span class="ident">ident</span> <span class="op">&lt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">msg</span>:<span class="ident">ty</span> <span class="op">&gt;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">handler</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
         <span class="comment">// Do not mangle these functions when running unit tests, because the Rust unit test</span>
         <span class="comment">// framework will add a `pub extern &quot;C&quot; fn main()` containing the test runner. This can</span>
         <span class="comment">// cause clashes when $name = main. We don&#39;t fully omit it in tests so that compile errors</span>
@@ -1198,9 +1213,10 @@
             <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> ::<span class="ident">std</span>::<span class="ident">panic</span>::<span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> {
                 ::<span class="ident">oak</span>::<span class="ident">set_panic_hook</span>();
 
-                <span class="comment">// Run the Node&#39;s `main` function.</span>
-                <span class="kw">let</span> <span class="ident">in_channel</span> <span class="op">=</span> ::<span class="ident">oak</span>::<span class="ident">ReadHandle</span> { <span class="ident">handle</span>: <span class="ident">in_handle</span> };
-                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">main_function</span>(<span class="ident">in_channel</span>);
+                <span class="comment">// Run the Node&#39;s entrypoint handler.</span>
+                <span class="kw">let</span> <span class="ident">in_read_handle</span> <span class="op">=</span> ::<span class="ident">oak</span>::<span class="ident">ReadHandle</span> { <span class="ident">handle</span>: <span class="ident">in_handle</span> };
+                <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> ::<span class="ident">oak</span>::<span class="ident">io</span>::<span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">msg</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">in_read_handle</span>);
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">handler</span>(<span class="ident">receiver</span>);
             });
         }
     };
