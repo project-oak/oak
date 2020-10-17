@@ -64,6 +64,7 @@ mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.injection.rs"));
 }
 
+use anyhow::Context;
 use oak::{
     grpc,
     io::{ReceiverExt, SenderExt},
@@ -214,25 +215,32 @@ impl BlobStoreProvider {
 }
 
 impl oak::CommandHandler<BlobStoreRequest> for BlobStoreProvider {
-    fn handle_command(&mut self, _command: BlobStoreRequest) -> Result<(), oak::OakError> {
+    fn handle_command(&mut self, _command: BlobStoreRequest) -> anyhow::Result<()> {
         // Create new BlobStore
-        let (to_store_write_handle, to_store_read_handle) = oak::channel_create().unwrap();
-        let (from_store_write_handle, from_store_read_handle) = oak::channel_create().unwrap();
+        let (to_store_write_handle, to_store_read_handle) =
+            oak::channel_create().context("Could not create channel")?;
+        let (from_store_write_handle, from_store_read_handle) =
+            oak::channel_create().context("Could not create channel")?;
         oak::node_create(
             &oak::node_config::wasm("app", "store"),
             to_store_read_handle,
         )?;
-        oak::channel_close(to_store_read_handle.handle).expect("Failed to close channel");
+        oak::channel_close(to_store_read_handle.handle).context("Could not close channel")?;
 
-        Sender::new(to_store_write_handle).send(&BlobStoreSender {
-            sender: Some(Sender::new(from_store_write_handle)),
-        })?;
-        oak::channel_close(from_store_write_handle.handle).expect("Failed to close channel");
+        Sender::new(to_store_write_handle)
+            .send(&BlobStoreSender {
+                sender: Some(Sender::new(from_store_write_handle)),
+            })
+            .context("Could not send value")?;
+        oak::channel_close(from_store_write_handle.handle).context("Could not close channel")?;
 
-        self.sender.send(&BlobStoreInterface {
-            sender: Some(Sender::new(to_store_write_handle)),
-            receiver: Some(Receiver::new(from_store_read_handle)),
-        })
+        self.sender
+            .send(&BlobStoreInterface {
+                sender: Some(Sender::new(to_store_write_handle)),
+                receiver: Some(Receiver::new(from_store_read_handle)),
+            })
+            .context("Could not send value")?;
+        Ok(())
     }
 }
 
@@ -285,12 +293,15 @@ fn blob_index(id: u64) -> usize {
 }
 
 impl oak::CommandHandler<BlobRequest> for BlobStoreImpl {
-    fn handle_command(&mut self, request: BlobRequest) -> Result<(), oak::OakError> {
+    fn handle_command(&mut self, request: BlobRequest) -> anyhow::Result<()> {
         let response = match request.request {
             Some(Request::Get(req)) => self.get_blob(req),
             Some(Request::Put(req)) => self.put_blob(req),
             None => panic!("No inner request"),
         };
-        self.sender.send(&response)
+        self.sender
+            .send(&response)
+            .context("Could not send value")?;
+        Ok(())
     }
 }

@@ -33,7 +33,7 @@ struct Room {
 }
 
 impl CommandHandler<Command> for Room {
-    fn handle_command(&mut self, command: Command) -> Result<(), oak::OakError> {
+    fn handle_command(&mut self, command: Command) -> anyhow::Result<()> {
         match command.command {
             Some(JoinRoom(sender)) => {
                 self.clients
@@ -54,8 +54,7 @@ impl CommandHandler<Command> for Room {
                 Ok(())
             }
             None => {
-                warn!("Received empty command");
-                Err(oak::OakError::OakStatus(oak::OakStatus::ErrInvalidArgs))
+                anyhow::bail!("Received empty command");
             }
         }
     }
