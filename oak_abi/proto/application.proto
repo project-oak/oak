@@ -135,10 +135,10 @@ message HttpServerConfiguration {
   string address = 1;
 }
 
-// Describes the configuration of a user node that has the required privilege
-// to create invocations with the user's identity set as the integrity tag
-// when creating the `request receiver`, and as the confidentiality tag when
-// creating the `response sender`.
+// Describes the configuration of a UserNode that has the required privilege
+// to create invocations having the user's identity set as the integrity tag
+// of the `request receiver` channel, and as the confidentiality tag of the
+// `response sender` channel.
 message UserNodeConfiguration {
   // Privilege of this node, set to the public_key identifying the user.  
   bytes privilege = 1;

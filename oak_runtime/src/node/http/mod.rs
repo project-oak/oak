@@ -22,7 +22,7 @@
 use crate::{
     io::{ReceiverExt, Sender, SenderExt},
     node::{ConfigurationError, Node},
-    proto::oak::invocation::{HttpInvocationSender, InnerHttpInvocation, ResponseReceiver},
+    proto::oak::invocation::{HttpInvocationSender, InnerHttpInvocation},
     RuntimeProxy,
 };
 use core::task::{Context, Poll};
@@ -360,16 +360,12 @@ impl HttpRequestHandler {
         )?;
         info!("@@@@@ invocation inserted in UserNode channel");
 
-        // Await the handing of the request. When it is done, the response_reader will be available
-        // on the pipe's response reader.
-        let response_reader = pipe.get_response_reader(&self.runtime)?;
-
         // Close all local handles except for the one that allows reading responses.
         pipe.close(&self.runtime);
 
         Ok(HttpResponseIterator {
             runtime: self.runtime.clone(),
-            response_reader,
+            response_reader: pipe.response_reader,
         })
     }
 }
@@ -441,21 +437,6 @@ impl Pipe {
                     err
                 )
             })
-    }
-
-    fn get_response_reader(&self, runtime: &RuntimeProxy) -> Result<oak_abi::Handle, ()> {
-        // Should get a ResponseReceiver from the UerNode.
-        let receiver = Receiver::new(ReadHandle {
-            handle: self.response_reader,
-        });
-
-        info!("@@@@@@@@ Waiting for response_reader.");
-        let response_reader: ResponseReceiver = receiver
-            .receive(runtime)
-            .map_err(|_err| error!("Could not get get response-receiver."))?;
-
-        info!("@@@@@ Got response_reader: {:?}", response_reader);
-        Ok(response_reader.receiver.unwrap().handle.handle)
     }
 
     // Close all local handles except for the one that allows reading responses.

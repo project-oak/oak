@@ -86,7 +86,7 @@ message TlsEndpointTag {
 
 // Policies related to user identification.
 message UserIdentityTag {
-  // Public key counterpart of the private key used the user to sign a challenge.
+  // Public key counterpart of the private key that the user used to sign an authentication challenge.
   // In the current implementation it is represented as a serialized Ed25519 public key.
   // https://ed25519.cr.yp.to
   bytes public_key = 1;

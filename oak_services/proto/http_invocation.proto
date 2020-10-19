@@ -35,13 +35,9 @@ message HttpInvocationSender {
   oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
 }
 
-message ResponseReceiver {
-    oak.handle.Receiver receiver = 1 [(oak.handle.message_type) = ".oak.encap.HttpResponse"];
-}
-
 message InnerHttpInvocation {
   oak.encap.HttpRequest request = 1;
   oak.label.Label request_label = 2;
   oak.handle.Sender invocation_sender = 3 [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
-  oak.handle.Sender response_sender = 4 [(oak.handle.message_type) = ".oak.invocation.ResponseReceiver"];
+  oak.handle.Sender response_sender = 4 [(oak.handle.message_type) = ".oak.encap.HttpResponse"];
 }

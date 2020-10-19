@@ -736,7 +736,7 @@ impl Runtime {
             trace!("{:?}: can write to {:?}", node_id, target_label);
             Ok(())
         } else {
-            error!("{:?}: cannot write to {:?}", node_id, target_label);
+            warn!("{:?}: cannot write to {:?}", node_id, target_label);
             Err(OakStatus::ErrPermissionDenied)
         }
     }

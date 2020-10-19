@@ -22,7 +22,7 @@
 use crate::{
     io::{Receiver, ReceiverExt, Sender, SenderExt},
     node::{ConfigurationError, Node, NodePrivilege},
-    proto::oak::invocation::{HttpInvocation, InnerHttpInvocation, ResponseReceiver},
+    proto::oak::invocation::{HttpInvocation, InnerHttpInvocation},
     RuntimeProxy,
 };
 use log::{error, info, warn};
@@ -53,7 +53,7 @@ impl UserNode {
         });
 
         let privilege = NodePrivilege {
-            can_declassify_confidentiality_tags: HashSet::new(),
+            can_declassify_confidentiality_tags: endorsement.clone(),
             can_endorse_integrity_tags: endorsement,
         };
         Ok(UserNode {
@@ -127,23 +127,34 @@ impl Node for UserNode {
                 Err(_) => return,
             };
 
-        info!("@@@@@@ injected the request");
+        info!(
+            "@@@@@@ injected the request, and received response handle: {}",
+            response_reader
+        );
         let response_receiver = crate::io::Receiver::new(ReadHandle {
             handle: response_reader,
         });
 
-        let response_receiver = ResponseReceiver {
-            receiver: Some(response_receiver),
+        info!("@@@@@@ Waiting on for the response to arrive");
+        let response = match response_receiver.receive(&runtime) {
+            Ok(rsp) => rsp,
+            Err(err) => {
+                error!(
+                    "Could not receive the response from the Oak node on channel {}: {}.",
+                    response_reader, err
+                );
+                return;
+            }
         };
 
-        info!("@@@@@@ Sending the response_receiver back to HTTP spn.");
+        info!("@@@@@@ Sending the response back to HTTP spn.");
         if let Err(err) = inner_http_invocation
             .response_sender
             .unwrap()
-            .send(response_receiver, &runtime)
+            .send(response, &runtime)
         {
             error!(
-                "{}: Could not send response receiver to HTTP server pseudo-node: {}",
+                "{}: Could not send response to HTTP server pseudo-node: {}",
                 self.node_name, err,
             );
         };
