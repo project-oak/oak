@@ -61,6 +61,14 @@ Theorem flows_chan_proj: forall ell ch,
 Proof.
 Admitted.
 
+
+Theorem nflows_event_proj: forall ell e,
+    ~(elbl e <<L ell) ->
+    (event_low_proj ell e) = empty_event e.(elbl).
+Proof.
+    intros. unfold event_low_proj. destruct (elbl e <<? ell); eauto. contradiction.
+Qed.
+
 Theorem proj_pres_handle_fresh: forall ell s,
     handle_fresh (state_low_proj ell s) = handle_fresh s.
 Proof.
@@ -70,6 +78,7 @@ Theorem proj_pres_nid_fresh: forall ell s,
     nid_fresh (state_low_proj ell s) = nid_fresh s.
 Proof.
 Admitted.
+
 
 Definition idempotent {A: Type} (f: A -> A) := forall a, f (f a) = f a.
 
@@ -95,6 +104,10 @@ Theorem chan_low_proj_idempotent: forall ell, idempotent (chan_low_proj ell).
 Qed.
 
 Theorem state_low_proj_idempotent: forall ell, idempotent (state_low_proj ell).
+Proof.
+Admitted.
+
+Theorem event_low_proj_idempotent: forall ell, idempotent (event_low_proj ell).
 Proof.
 Admitted.
 
@@ -167,7 +180,7 @@ Proof.
     destruct ((nodes s).[? id]) eqn:Eidx.
     - (* some *)
     exists n0. split. reflexivity. congruence.
-    - (* none) *)
+    - 
     inversion H.
 Qed.
 
@@ -315,7 +328,30 @@ Admitted. (* WIP *)
 
 End low_equivalence.
 
+(*
+Section label_preservation.
+(* 
+    These are theorems that show that various functions applied to states
+    keep certain labels the same
+*)
+
+Theorem chan_append_label_pres: forall ch msg,
+    clbl (chan_append ch msg)  = clbl ch.
+Proof. eauto. Qed.
+
+Theorem node_del_rhans_label_pres: forall n hans,
+    nlbl (node_del_rhans hans n) = nlbl n.
+Proof. eauto. Qed.
+
+
+End label_preservation
+*)
+
 Section unobservable.
+
+(* These are theorems that say that when you change a part of a state that is
+    not visible to ell the old and new state are ell-equivalent
+*)
 
 Theorem set_call_unobs: forall ell s id n c,
     (nodes s).[? id] = Some n ->
@@ -323,5 +359,22 @@ Theorem set_call_unobs: forall ell s id n c,
     (state_low_eq ell s (s_set_call s id c)).
 Proof.
 Admitted.
+
+Theorem state_upd_chan_unobs: forall ell s han ch ch',
+    (chans s).[? han] = Some ch ->
+    ~(clbl ch <<L ell) ->
+    (clbl ch = clbl ch') ->
+    (state_low_eq ell s (state_upd_chan han ch' s)).
+Proof.
+Admitted.
+
+Theorem state_upd_node_unobs: forall ell s id n n',
+    (nodes s).[? id] = Some n ->
+    ~(nlbl n <<L ell) ->
+    (nlbl n = nlbl n') ->
+    (state_low_eq ell s (state_upd_node id n' s)).
+Proof.
+Admitted.
+
 
 End unobservable.

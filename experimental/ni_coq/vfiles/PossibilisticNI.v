@@ -148,13 +148,90 @@ Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
         (step_system_ev_multi t2_init t2n) /\
         (trace_low_eq ell t1n t2n)).
 
-
 Theorem unobservable_node_step: forall ell s s' e id n,
     s.(nodes).[? id] = Some n ->
     step_node_ev id n.(ncall) s s' e ->
     ~(nlbl n <<L ell) ->
     (state_low_eq ell s s') /\ (event_low_eq ell e (empty_event e.(elbl))).
 Proof.
+    intros. inversion H0; (split; [ inversion H4 | ] ); subst_lets; crush.
+    - (* WriteChannel; states loweq *) 
+        assert ( ~ (clbl ch <<L ell) ) by eauto using ord_trans.
+        eapply state_low_eq_trans.
+        eapply (state_upd_node_unobs _ _ _ _ (node_del_rhans (rhs msg) n)
+            ltac:(eauto) ltac:(eauto) ltac:(eauto)).
+        eapply (state_upd_chan_unobs _
+            (state_upd_node id (node_del_rhans (rhs msg) n) s)
+            _ _ (chan_append ch msg)
+            ltac:(eauto) ltac:(eauto) ltac:(eauto)).
+    - (* WriteChannel; events loweq*)
+        erewrite <- (nflows_event_proj _ (n ---> msg) ltac:(eauto)).
+        unfold event_low_eq. unfold low_eq. 
+        erewrite event_low_proj_idempotent. reflexivity.
+    - (* ReadChannel; states loweq *)
+        pose proof (state_upd_chan_unobs).
+        (* This is the part of the proof where
+        the label check for destructive updates to the
+        channel are needed. See also:
+        https://github.com/project-oak/oak/issues/1197#issuecomment-712175755
+        *)
+        assert ( ~ (clbl ch <<L ell) ) by eauto using ord_trans.
+        eapply state_low_eq_trans.
+        eapply (state_upd_node_unobs _ _ _ _ (node_get_hans n msg0) 
+            ltac:(eauto) ltac:(eauto) ltac:(eauto)).
+        eapply state_upd_chan_unobs; eauto.
+    - (* ReadChannel; events loweq *)
+        erewrite <- (nflows_event_proj _ (n <--- msg) ltac:(eauto)).
+        unfold event_low_eq. unfold low_eq.
+        erewrite event_low_proj_idempotent. reflexivity.
+    -  (* CreateChannel; states loweq *) 
+        assert ( ~ (lbl <<L ell) ) by eauto using ord_trans.
+        eapply state_low_eq_trans.
+        eapply (state_upd_chan_unobs _ s h _ (new_chan lbl)
+            ltac:(eauto) ltac:(eauto) ltac:(eauto)).
+        eapply (state_low_eq_trans _ _ (state_upd_node id (node_add_rhan h n)
+            (state_upd_chan h (new_chan lbl) s))).
+        eapply state_upd_node_unobs; eauto.
+        pose proof state_upd_node_unobs.
+        eapply (state_upd_node_unobs _ _ _ (node_add_rhan h n)); eauto.
+        eapply upd_eq.
+    - (* CreateNode; states loweq *)
+        assert ( ~ (lbl <<L ell) ) by eauto using ord_trans.
+        eapply state_low_eq_trans.
+        eapply (state_upd_node_unobs _ _ new_id _
+            ( {|
+                nlbl := lbl;
+                read_handles := Ensembles.Singleton h;
+                write_handles := Ensembles.Empty_set;
+                ncall := Internal
+              |}
+            ) ltac:(eauto) ltac:(eauto) ltac:(eauto)).
+        eapply state_upd_node_unobs; eauto.
+        replace ((nodes
+        (state_upd_node new_id
+           {|
+           nlbl := lbl;
+           read_handles := Ensembles.Singleton h;
+           write_handles := Ensembles.Empty_set;
+           ncall := Internal |} s)).[? id]) with ((nodes s).[? id]).
+        eauto. symmetry. eapply upd_neq. 
+        destruct (dec_eq_nid new_id id).
+            + unfold nid_fresh in *. exfalso. congruence.
+            + eauto.
+    - (* Internal; events loweq *)
+    erewrite <- (nflows_event_proj _ (-- n --) ltac:(eauto)).
+    unfold event_low_eq. unfold low_eq.
+    erewrite event_low_proj_idempotent. reflexivity.
+    (* It looks like the goals are all solved, but the existentials 
+    include things that are not provable. Apparently,
+    existential variables escape Coq's type system momentarily,
+    but then when the final proof is checked at the end, the proof of
+    false is detected*)
+    (* the reason these proofs don't go through is because
+    with the definition of chan_state_low_eq and node_state... 
+    creating/deleting nodes/channels, is observable, but these should not be
+    if the labels of the nodes/channels are secret
+    *)
 Admitted.
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
