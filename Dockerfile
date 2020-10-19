@@ -1,6 +1,6 @@
 # Use fixed snapshot of Debian to create a deterministic environment.
 # Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags
-ARG debian_snapshot=buster-20200327
+ARG debian_snapshot=buster-20201012
 FROM debian/snapshot:${debian_snapshot}
 
 # Set the SHELL option -o pipefail before RUN with a pipe in.
@@ -65,8 +65,8 @@ RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sou
   && ln --symbolic --force clang-format-8 /usr/bin/clang-format
 
 # Use a fixed version of Bazel.
-ARG bazel_version=3.0.0
-ARG bazel_sha256=dfa79c10bbfa39cd778e1813a273fd3236beb495497baa046f26d393c58bdc35
+ARG bazel_version=3.6.0
+ARG bazel_sha256=cc07d953cb94785b203017dcca728e52b7c08a80d1a863b9aed14e504726e81a
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
 RUN curl --location "${bazel_url}" > bazel.deb \
   && sha256sum --binary bazel.deb && echo "${bazel_sha256} *bazel.deb" | sha256sum --check \
@@ -104,8 +104,8 @@ RUN chmod --recursive go+wx "${emscripten_dir}"
 RUN mkdir -p "/.npm" && chmod a+rwx "/.npm" & mkdir -p "/.config" && chmod a+rwx "/.config"
 
 # Install Go.
-ARG golang_version=1.14.4
-ARG golang_sha256=aed845e4185a0b2a3c3d5e1d0a35491702c55889192bb9c30e67a3de6849c067
+ARG golang_version=1.15.3
+ARG golang_sha256=010a88df924a81ec21b293b5da8f9b11c176d27c0ee3962dc1738d2352d3c02d
 ARG golang_temp=/tmp/golang.tar.gz
 ENV GOROOT /usr/local/go
 ENV GOPATH ${HOME}/go
@@ -129,16 +129,16 @@ RUN go get github.com/campoy/embedmd@97c13d6 \
 
 # Install liche (Markdown link checker) (via Go).
 # https://github.com/raviqqe/liche
-RUN go get github.com/raviqqe/liche@f57a5d1 \
+RUN go get github.com/raviqqe/liche@3ac05a3 \
   && liche --version
 
 # Install prettier and markdownlint (via Node.js).
 # This will use the Node version installed by emscripten.
 # https://prettier.io/
 # https://github.com/igorshubovych/markdownlint-cli
-ARG prettier_version=2.1.1
+ARG prettier_version=2.1.2
 ARG prettier_plugin_toml_version=0.3.1
-ARG markdownlint_version=0.22.0
+ARG markdownlint_version=0.24.0
 RUN npm install --global \
   prettier@${prettier_version} \
   prettier-plugin-toml@${prettier_plugin_toml_version} \
@@ -148,8 +148,8 @@ RUN npm install --global \
 
 # Install hadolint.
 # https://github.com/hadolint/hadolint
-ARG hadolint_version=1.17.5
-ARG hadolint_sha256=20dd38bc0602040f19268adc14c3d1aae11af27b463af43f3122076baf827a35
+ARG hadolint_version=1.18.1
+ARG hadolint_sha256=cf713ca0a79b2a8e66b7aa5900f3af8b1f0be6ad5e359cf6954728a1548d1488
 ARG hadolint_dir=/usr/local/hadolint/bin
 ARG hadolint_bin=${hadolint_dir}/hadolint
 ENV PATH "${hadolint_dir}:${PATH}"
@@ -161,8 +161,8 @@ RUN mkdir --parents ${hadolint_dir} \
 
 # Install buildifier.
 # https://github.com/bazelbuild/buildtools/tree/master/buildifier
-ARG bazel_tools_version=2.2.1
-ARG buildifier_sha256=731a6a9bf8fca8a00a165cd5b3fbac9907a7cf422ec9c2f206b0a76c0a7e3d62
+ARG bazel_tools_version=3.5.0
+ARG buildifier_sha256=f9a9c082b8190b9260fce2986aeba02a25d41c00178855a1425e1ce6f1169843
 ARG buildifier_dir=/usr/local/buildifier/bin
 ARG buildifier_bin=${buildifier_dir}/buildifier
 ENV PATH "${buildifier_dir}:${PATH}"
@@ -173,8 +173,8 @@ RUN mkdir --parents ${buildifier_dir} \
   && buildifier --version
 
 # Install Protobuf compiler.
-ARG protobuf_version=3.11.4
-ARG protobuf_sha256=6d0f18cd84b918c7b3edd0203e75569e0c8caecb1367bbbe409b45e28514f5be
+ARG protobuf_version=3.13.0
+ARG protobuf_sha256=4a3b26d1ebb9c1d23e933694a6669295f6a39ddc64c3db2adf671f0a6026f82e
 ARG protobuf_dir=/usr/local/protobuf
 ARG protobuf_temp=/tmp/protobuf.zip
 ENV PATH "${protobuf_dir}/bin:${PATH}"
@@ -182,6 +182,7 @@ RUN curl --location https://github.com/protocolbuffers/protobuf/releases/downloa
   && sha256sum --binary ${protobuf_temp} && echo "${protobuf_sha256} *${protobuf_temp}" | sha256sum --check \
   && unzip ${protobuf_temp} -d ${protobuf_dir} \
   && rm ${protobuf_temp} \
+  && chmod --recursive a+rwx ${protobuf_dir} \
   && protoc --version
 
 # Install rustup.
@@ -198,7 +199,7 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # We currently need the nightly version in order to be able to compile some of the examples.
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
-ARG rust_version=nightly-2020-06-10
+ARG rust_version=nightly-2020-10-19
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 
@@ -229,14 +230,14 @@ RUN chmod +x ${install_dir}/grcov
 
 # Install cargo-crev.
 # https://github.com/crev-dev/cargo-crev
-ARG crev_version=v0.16.1
+ARG crev_version=v0.18.0
 ARG crev_location=https://github.com/crev-dev/cargo-crev/releases/download/${crev_version}/cargo-crev-${crev_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${crev_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-crev
 
 # Install cargo-deny
 # https://github.com/EmbarkStudios/cargo-deny
-ARG deny_version=0.7.0
+ARG deny_version=0.7.3
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny

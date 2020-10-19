@@ -91,14 +91,14 @@ impl std::fmt::Debug for Channel {
     }
 }
 
-/// A reference to one half of a [`Channel`].
+/// A reference to one half of a `Channel`
 pub struct ChannelHalf {
     channel: Arc<Channel>,
     pub direction: ChannelHalfDirection,
 }
 
 impl ChannelHalf {
-    /// Constructor for [`ChannelHalf`] keeps the underlying [`Channel`]'s reader/writer count
+    /// Constructor for [`ChannelHalf`] keeps the underlying `Channel`'s reader/writer count
     /// up-to-date.
     pub fn new(channel: Arc<Channel>, direction: ChannelHalfDirection) -> Self {
         match direction {
@@ -150,15 +150,15 @@ impl ChannelHalf {
     }
 }
 
-/// Manual implementation of the [`Clone`] trait to keep the counts for the underlying [`Channel`]
-/// in sync.
+/// Manual implementation of the [`Clone`] trait to keep the counts for the underlying `Channel` in
+/// sync.
 impl Clone for ChannelHalf {
     fn clone(&self) -> Self {
         ChannelHalf::new(self.channel.clone(), self.direction)
     }
 }
 
-/// Manual implementation of the [`Drop`] trait to keep the counts for the underlying [`Channel`] in
+/// Manual implementation of the [`Drop`] trait to keep the counts for the underlying `Channel` in
 /// sync.
 impl Drop for ChannelHalf {
     fn drop(&mut self) {

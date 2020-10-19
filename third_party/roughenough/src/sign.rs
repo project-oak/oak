@@ -41,10 +41,7 @@ impl Verifier {
 
     pub fn verify(&self, expected_sig: &[u8]) -> bool {
         let public_key = signature::UnparsedPublicKey::new(&signature::ED25519, &self.pubkey);
-        match public_key.verify(&self.buf, expected_sig) {
-            Ok(_) => true,
-            _ => false,
-        }
+        public_key.verify(&self.buf, expected_sig).is_ok()
     }
 }
 

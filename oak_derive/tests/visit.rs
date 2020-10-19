@@ -131,7 +131,8 @@ mod enums {
 fn assert_visit<T: HandleVisit>(mut t: T, count: usize) {
     let mut counter = 0;
 
-    t.visit(|_| {
+    // TODO(#1599): Remove the `let _` when the underlying issue is fixed.
+    let _ = t.visit(|_| {
         counter += 1;
     });
 

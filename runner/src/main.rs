@@ -1334,6 +1334,14 @@ fn run_cargo_clippy() -> Step {
                         &format!("--manifest-path={}", &entry),
                         "--",
                         "--deny=warnings",
+                        // TODO(#1598): Re-enable lint when prost is fixed upstream.
+                        "--allow=clippy::manual_strip",
+                        // TODO(#1598): Re-enable lint when prost is fixed upstream.
+                        "--allow=clippy::stable_sort_primitive",
+                        // TODO(#1598): Re-enable lint when prost is fixed upstream.
+                        "--allow=clippy::single-char-push-str",
+                        // TODO(#1598): Re-enable lint when prost is fixed upstream.
+                        "--allow=clippy::match-like-matches-macro",
                     ],
                 ),
             })
