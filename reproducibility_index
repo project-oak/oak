@@ -12,4 +12,4 @@ c0c8413d6624ceb3ca1c6d09792c956b3cc846801b572c076da051caf0686dc6  ./examples/tar
 32ebba3212c7c93d5f97e5c18954fa43f46bbaa7bffc5e3ca05ac407b611c6a2  ./examples/target/wasm32-unknown-unknown/release/translator.wasm
 7a1b3c784f0bafcf10e19350fda1b94176d01d6d8957c8863cfce0defd642e23  ./examples/target/wasm32-unknown-unknown/release/trusted_database.wasm
 15e7ec00ebf9fc48eead02d382b216c119e2f1b6fece4a56e531791f5433c272  ./examples/target/wasm32-unknown-unknown/release/trusted_information_retrieval.wasm
-aed89c0dba43a599b43d4366e88d130bf7861808a6850aaa3849d99780eedfbc  ./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader
+dd5137aa00af0deae5352a80c9cd3e28bc31cca59addd669d8fe80cf8c6ed717  ./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader
