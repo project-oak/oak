@@ -16,11 +16,9 @@ colored = "*"
 futures = "*"
 maplit = "*"
 nix = "*"
-notify = "5.0.0-pre.2"
 once_cell = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
-spinners = "*"
 structopt = "*"
 tokio = { version = "*", features = [
   "fs",

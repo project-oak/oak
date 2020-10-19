@@ -27,14 +27,8 @@
 
 use colored::*;
 use maplit::hashmap;
-use notify::Watcher;
 use once_cell::sync::Lazy;
-use std::{
-    collections::HashMap,
-    io::Read,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};
 use structopt::StructOpt;
 
 #[macro_use]
@@ -87,8 +81,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(0);
     };
 
-    let watch = opt.watch;
-
     let run = async move || {
         let steps = match opt.cmd {
             Command::RunExamples(ref opt) => run_examples(&opt),
@@ -105,87 +97,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         run_step(&Context::root(&opt), steps, Status::new(remaining_steps)).await
     };
 
-    if watch {
-        let mut spinner: Option<spinners::Spinner>;
+    // This is a crude way of killing any potentially running process when receiving a Ctrl-C
+    // signal. We collect all process IDs in the `PROCESSES` variable, regardless of whether
+    // they have already been terminated, and we try to kill all of them when receiving the
+    // signal.
+    tokio::spawn(async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("could not wait for signal");
+        cleanup();
+        std::process::exit(-1);
+    });
+    let statuses = run().await;
 
-        fn new_spinner() -> spinners::Spinner {
-            spinners::Spinner::new(
-                spinners::Spinners::Pong,
-                "waiting for events".purple().to_string(),
-            )
-        }
+    if !statuses.failed_steps_prefixes.is_empty() {
+        eprintln!("List of failed steps:");
+        statuses.failed_steps_prefixes.iter().for_each(|step| {
+            eprintln!("{} ⊢ [{}]", step, StatusResultValue::Error);
+        })
+    }
 
-        let modified_files: Arc<Mutex<Vec<PathBuf>>> = Default::default();
-
-        let modified_files_clone = modified_files.clone();
-        let mut watcher: notify::RecommendedWatcher =
-            notify::Watcher::new_immediate(move |res: notify::Result<notify::Event>| match res {
-                Ok(event) => {
-                    modified_files_clone.lock().unwrap().extend(
-                        event
-                            .paths
-                            .iter()
-                            .filter(|path| !is_ignored_path(path))
-                            .cloned(),
-                    );
-                }
-                Err(err) => panic!("watch error: {:?}", err),
-            })?;
-        watcher.watch(".", notify::RecursiveMode::Recursive)?;
-
-        run().await;
-
-        spinner = Some(new_spinner());
-        loop {
-            std::thread::sleep(std::time::Duration::from_millis(1_000));
-
-            // Take the list of modified files out of the mutex and avoid holding the lock guard.
-            let modified_files = std::mem::take(&mut *modified_files.lock().unwrap());
-
-            if modified_files.is_empty() {
-                continue;
-            } else {
-                if let Some(spinner) = spinner.take() {
-                    spinner.stop()
-                }
-                eprintln!();
-                eprintln!("{}", "event received; modified files:".purple());
-                for path in modified_files.iter() {
-                    eprintln!("{}", format!("- {:?}", path).purple());
-                }
-                eprintln!();
-                // TODO(#396): This does not work well with async, the `run` function can only be
-                // invoked once.
-                // run().await;
-                eprintln!();
-                spinner = Some(new_spinner());
-            }
-        }
-    } else {
-        // This is a crude way of killing any potentially running process when receiving a Ctrl-C
-        // signal. We collect all process IDs in the `PROCESSES` variable, regardless of whether
-        // they have already been terminated, and we try to kill all of them when receiving the
-        // signal.
-        tokio::spawn(async {
-            tokio::signal::ctrl_c()
-                .await
-                .expect("could not wait for signal");
-            cleanup();
-            std::process::exit(-1);
-        });
-        let statuses = run().await;
-
-        if !statuses.failed_steps_prefixes.is_empty() {
-            eprintln!("List of failed steps:");
-            statuses.failed_steps_prefixes.iter().for_each(|step| {
-                eprintln!("{} ⊢ [{}]", step, StatusResultValue::Error);
-            })
-        }
-
-        // If the overall status value is an error, terminate with a nonzero exit code.
-        if statuses.values.contains(&StatusResultValue::Error) {
-            std::process::exit(1);
-        }
+    // If the overall status value is an error, terminate with a nonzero exit code.
+    if statuses.values.contains(&StatusResultValue::Error) {
+        std::process::exit(1);
     }
 
     Ok(())
