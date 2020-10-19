@@ -841,7 +841,7 @@
             <span class="string">&quot;{}: Starting gRPC client pseudo-Node thread&quot;</span>,
             <span class="self">self</span>.<span class="ident">node_name</span>
         );
-        <span class="ident">async_runtime</span>.<span class="ident">block_on</span>(<span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">select</span>(
+        <span class="ident">async_runtime</span>.<span class="ident">block_on</span>(<span class="ident">futures_util</span>::<span class="ident">future</span>::<span class="ident">select</span>(
             <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="self">self</span>.<span class="ident">handle_loop</span>(<span class="ident">runtime</span>, <span class="ident">handle</span>)),
             <span class="ident">notify_receiver</span>,
         ));
