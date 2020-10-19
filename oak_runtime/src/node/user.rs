@@ -14,10 +14,14 @@
 // limitations under the License.
 //
 
-//! HTTP server pseudo-Node that can serve as a frontend for an Oak node.
-//! The server receives requests from the outside, wraps each request in
-//! an invocation and sends it to the designated Oak node to be processed
-//! asynchronously.
+//! A `UserNode` is a virtual node that is created per user request and serves as a router between
+//! an HTTP server pseudo-Node and an Oak node that serves the incoming HTTP requests. The
+//! `UserNode` forwards the requests to the Oak node, and returns the responses back to the HTTP
+//! server pseudo-Node. We set the user's identity (extracted from the incoming request) as both the
+//! declassification and endorsement privileges of the `UserNode`. This allows the `UserNode` to
+//! assign user-specific labels to the communication channels with the Oak node. The HTTP server
+//! pseudo-Node cannot create channels with such user-specific labels itself. User-specific labels
+//! are required to prevent any potential leakage by the Oak node.
 
 use crate::{
     io::{Receiver, ReceiverExt, Sender, SenderExt},
@@ -45,16 +49,16 @@ pub struct UserNode {
 
 impl UserNode {
     pub fn new(node_name: &str, config: UserNodeConfiguration) -> Result<Self, ConfigurationError> {
-        let mut endorsement = HashSet::new();
-        endorsement.insert(Tag {
+        let mut privileges = HashSet::new();
+        privileges.insert(Tag {
             tag: Some(oak_abi::label::tag::Tag::UserIdentityTag(UserIdentityTag {
                 public_key: config.privilege,
             })),
         });
 
         let privilege = NodePrivilege {
-            can_declassify_confidentiality_tags: endorsement.clone(),
-            can_endorse_integrity_tags: endorsement,
+            can_declassify_confidentiality_tags: privileges.clone(),
+            can_endorse_integrity_tags: privileges,
         };
         Ok(UserNode {
             node_name: node_name.to_string(),
