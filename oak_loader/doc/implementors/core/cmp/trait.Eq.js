@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["oak_loader"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html\" title=\"trait core::cmp::Eq\">Eq</a> for <a class=\"struct\" href=\"oak_loader/options/struct.ConfigEntry.html\" title=\"struct oak_loader::options::ConfigEntry\">ConfigEntry</a>","synthetic":false,"types":["oak_loader::options::ConfigEntry"]}];
+implementors["oak_loader"] = [{"text":"impl Eq for ConfigEntry","synthetic":false,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

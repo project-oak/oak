@@ -1,4 +1,7 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/internal.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>internal.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../runner/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/internal.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>internal.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../runner/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><span class="help-button">?</span>
+                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -1027,7 +1030,7 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Step</span> {
     <span class="ident">Single</span> {
         <span class="ident">name</span>: <span class="ident">String</span>,
-        <span class="ident">command</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span>,
+        <span class="ident">command</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span>,
     },
     <span class="ident">Multiple</span> {
         <span class="ident">name</span>: <span class="ident">String</span>,
@@ -1035,7 +1038,7 @@
     },
     <span class="ident">WithBackground</span> {
         <span class="ident">name</span>: <span class="ident">String</span>,
-        <span class="ident">background</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span>,
+        <span class="ident">background</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">Runnable</span><span class="op">&gt;</span>,
         <span class="ident">foreground</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Step</span><span class="op">&gt;</span>,
     },
 }
@@ -1091,7 +1094,7 @@
 <span class="doccomment">/// Run the provided step, printing out information about the execution, and returning a set of</span>
 <span class="doccomment">/// status results from the single or multiple steps that were executed.</span>
 <span class="attribute">#[<span class="ident">async_recursion</span>]</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_step</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="ident">Context</span>, <span class="ident">step</span>: <span class="ident">Step</span>, <span class="kw-2">mut</span> <span class="ident">run_status</span>: <span class="ident">Status</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StepResult</span> {
+<span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">run_step</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="ident">Context</span>, <span class="ident">step</span>: <span class="ident">Step</span>, <span class="kw-2">mut</span> <span class="ident">run_status</span>: <span class="ident">Status</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StepResult</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">step_result</span> <span class="op">=</span> <span class="ident">StepResult</span>::<span class="ident">new</span>();
     <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="ident">chrono</span>::<span class="ident">Utc</span>::<span class="ident">now</span>();
     <span class="kw">let</span> <span class="ident">time_of_day</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">format</span>(<span class="string">&quot;%H:%M:%S&quot;</span>);
@@ -1112,13 +1115,13 @@
             }
 
             <span class="macro">eprint</span><span class="macro">!</span>(<span class="string">&quot;[{}; {}]: {} ⊢ &quot;</span>, <span class="ident">time_of_day</span>, <span class="ident">run_status</span>, <span class="ident">context</span>);
-            <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">command</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">opt</span>).<span class="ident">result</span>().<span class="kw">await</span>;
+            <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">command</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">opt</span>).<span class="ident">result</span>().<span class="ident">await</span>;
             <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
             <span class="kw">let</span> <span class="ident">elapsed</span> <span class="op">=</span> <span class="ident">end</span>.<span class="ident">duration_since</span>(<span class="ident">start</span>);
             <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} [{:.0?}]&quot;</span>, <span class="ident">status</span>.<span class="ident">value</span>, <span class="ident">elapsed</span>);
 
             <span class="kw">let</span> <span class="ident">step_failed</span> <span class="op">=</span> <span class="ident">status</span>.<span class="ident">value</span> <span class="op">=</span><span class="op">=</span> <span class="ident">StatusResultValue</span>::<span class="ident">Error</span>;
-            <span class="kw">if</span> (<span class="ident">step_failed</span> <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">logs</span>) <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">status</span>.<span class="ident">logs</span>.<span class="ident">is_empty</span>() {
+            <span class="kw">if</span> (<span class="ident">step_failed</span> <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">logs</span>) <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">status</span>.<span class="ident">logs</span>.<span class="ident">is_empty</span>() {
                 <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="ident">context</span>, <span class="string">&quot;╔════════════════════════&quot;</span>.<span class="ident">blue</span>());
                 <span class="kw">for</span> <span class="ident">line</span> <span class="kw">in</span> <span class="ident">status</span>.<span class="ident">logs</span>.<span class="ident">lines</span>() {
                     <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} {} {}&quot;</span>, <span class="ident">context</span>, <span class="string">&quot;║&quot;</span>.<span class="ident">blue</span>(), <span class="ident">line</span>);
@@ -1136,14 +1139,14 @@
             <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;[{}; {}]: {} {{&quot;</span>, <span class="ident">time_of_day</span>, <span class="ident">run_status</span>, <span class="ident">context</span>);
             <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
             <span class="kw">for</span> <span class="ident">step</span> <span class="kw">in</span> <span class="ident">steps</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">run_step</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">step</span>, <span class="ident">run_status</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">run_step</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">step</span>, <span class="ident">run_status</span>.<span class="ident">clone</span>()).<span class="ident">await</span>;
                 <span class="ident">step_result</span>.<span class="ident">values</span> <span class="op">=</span> <span class="ident">step_result</span>.<span class="ident">values</span>.<span class="ident">union</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>.<span class="ident">values</span>).<span class="ident">cloned</span>().<span class="ident">collect</span>();
                 <span class="ident">step_result</span>
                     .<span class="ident">failed_steps_prefixes</span>
                     .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">result</span>.<span class="ident">failed_steps_prefixes</span>);
                 <span class="kw">let</span> <span class="ident">failed</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">values</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">StatusResultValue</span>::<span class="ident">Error</span>);
                 <span class="ident">run_status</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">failed</span>);
-                <span class="kw">if</span> <span class="ident">failed</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">keep_going</span> {
+                <span class="kw">if</span> <span class="ident">failed</span> <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">keep_going</span> {
                     <span class="kw">break</span>;
                 }
             }
@@ -1181,10 +1184,10 @@
             <span class="comment">// Small delay to make it more likely that the background process started.</span>
             <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">6_000</span>));
 
-            <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">read_to_end</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">io</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+            <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">read_to_end</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">io</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
                 <span class="ident">io</span>.<span class="ident">read_to_end</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>)
-                    .<span class="kw">await</span>
+                    .<span class="ident">await</span>
                     .<span class="ident">expect</span>(<span class="string">&quot;could not read from future&quot;</span>);
                 <span class="ident">buf</span>
             }
@@ -1192,23 +1195,23 @@
             <span class="kw">let</span> <span class="ident">background_stdout_future</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">spawn</span>(<span class="ident">read_to_end</span>(<span class="ident">running_background</span>.<span class="ident">stdout</span>()));
             <span class="kw">let</span> <span class="ident">background_stderr_future</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">spawn</span>(<span class="ident">read_to_end</span>(<span class="ident">running_background</span>.<span class="ident">stderr</span>()));
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">foreground_result</span> <span class="op">=</span> <span class="ident">run_step</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">foreground</span>, <span class="ident">run_status</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">foreground_result</span> <span class="op">=</span> <span class="ident">run_step</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">foreground</span>, <span class="ident">run_status</span>.<span class="ident">clone</span>()).<span class="ident">await</span>;
 
             <span class="comment">// TODO(#396): If the background task was already spontaneously terminated by now, it is</span>
             <span class="comment">// probably a sign that something went wrong, so we should return an error.</span>
             <span class="ident">running_background</span>.<span class="ident">kill</span>();
 
             <span class="kw">let</span> <span class="ident">stdout</span> <span class="op">=</span> <span class="ident">background_stdout_future</span>
-                .<span class="kw">await</span>
+                .<span class="ident">await</span>
                 .<span class="ident">expect</span>(<span class="string">&quot;could not read stdout&quot;</span>);
             <span class="kw">let</span> <span class="ident">stderr</span> <span class="op">=</span> <span class="ident">background_stderr_future</span>
-                .<span class="kw">await</span>
+                .<span class="ident">await</span>
                 .<span class="ident">expect</span>(<span class="string">&quot;could not read stderr&quot;</span>);
 
             <span class="kw">let</span> <span class="ident">logs</span> <span class="op">=</span> <span class="ident">format_logs</span>(<span class="kw-2">&amp;</span><span class="ident">stdout</span>, <span class="kw-2">&amp;</span><span class="ident">stderr</span>);
 
             <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;[{}; {}]: {} ⊢ (waiting)&quot;</span>, <span class="ident">time_of_day</span>, <span class="ident">run_status</span>, <span class="ident">context</span>);
-            <span class="kw">let</span> <span class="ident">background_status</span> <span class="op">=</span> <span class="ident">running_background</span>.<span class="ident">result</span>().<span class="kw">await</span>;
+            <span class="kw">let</span> <span class="ident">background_status</span> <span class="op">=</span> <span class="ident">running_background</span>.<span class="ident">result</span>().<span class="ident">await</span>;
             <span class="macro">eprintln</span><span class="macro">!</span>(
                 <span class="string">&quot;[{}; {}]: {} ⊢ (finished) {}&quot;</span>,
                 <span class="ident">time_of_day</span>, <span class="ident">run_status</span>, <span class="ident">context</span>, <span class="ident">background_status</span>.<span class="ident">value</span>
@@ -1217,7 +1220,7 @@
             <span class="kw">if</span> (<span class="ident">background_status</span>.<span class="ident">value</span> <span class="op">=</span><span class="op">=</span> <span class="ident">StatusResultValue</span>::<span class="ident">Error</span>
                 <span class="op">|</span><span class="op">|</span> <span class="ident">foreground_result</span>.<span class="ident">values</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">StatusResultValue</span>::<span class="ident">Error</span>)
                 <span class="op">|</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">opt</span>.<span class="ident">logs</span>)
-                <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">logs</span>.<span class="ident">is_empty</span>()
+                <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">logs</span>.<span class="ident">is_empty</span>()
             {
                 <span class="macro">eprintln</span><span class="macro">!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="ident">context</span>, <span class="string">&quot;╔════════════════════════&quot;</span>.<span class="ident">blue</span>());
                 <span class="kw">for</span> <span class="ident">line</span> <span class="kw">in</span> <span class="ident">logs</span>.<span class="ident">lines</span>() {
@@ -1288,7 +1291,7 @@
     <span class="doccomment">/// Run the provided command, printing a status message with the current prefix.</span>
     <span class="doccomment">/// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary</span>
     <span class="doccomment">/// to run was not found).</span>
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Running</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">Running</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">process</span>::<span class="ident">Command</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">executable</span>);
         <span class="ident">cmd</span>.<span class="ident">args</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">args</span>);
 
@@ -1412,24 +1415,24 @@
         <span class="ident">kill_process</span>(<span class="self">self</span>.<span class="ident">child</span>.<span class="ident">id</span>() <span class="kw">as</span> <span class="ident">i32</span>);
     }
 
-    <span class="kw">fn</span> <span class="ident">stdout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">stdout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">child</span>.<span class="ident">stdout</span>.<span class="ident">take</span>() {
             <span class="prelude-val">Some</span>(<span class="ident">stdout</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">stdout</span>),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">empty</span>()),
         }
     }
-    <span class="kw">fn</span> <span class="ident">stderr</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">stderr</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">child</span>.<span class="ident">stderr</span>.<span class="ident">take</span>() {
             <span class="prelude-val">Some</span>(<span class="ident">stderr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">stderr</span>),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">empty</span>()),
         }
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">result</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SingleStatusResult</span> {
+    <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">result</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SingleStatusResult</span> {
         <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">child</span>
             .<span class="ident">wait_with_output</span>()
-            .<span class="kw">await</span>
+            .<span class="ident">await</span>
             .<span class="ident">expect</span>(<span class="string">&quot;could not get exit status&quot;</span>);
         <span class="kw">let</span> <span class="ident">logs</span> <span class="op">=</span> <span class="ident">format_logs</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stdout</span>, <span class="kw-2">&amp;</span><span class="ident">output</span>.<span class="ident">stderr</span>);
         <span class="kw">if</span> <span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">success</span>() {
@@ -1468,7 +1471,7 @@
     <span class="doccomment">/// Returns a description of the task, e.g. the command line arguments that are part of it.</span>
     <span class="kw">fn</span> <span class="ident">description</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span>;
     <span class="doccomment">/// Starts the task and returns a [`Running`] implementation.</span>
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Running</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">Running</span><span class="op">&gt;</span>;
 }
 
 <span class="doccomment">/// A task that is currently running asynchronously.</span>
@@ -1477,20 +1480,20 @@
     <span class="doccomment">/// Attempts to kill the running task.</span>
     <span class="kw">fn</span> <span class="ident">kill</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {}
     <span class="doccomment">/// Returns an [`AsyncRead`] object to stream stdout logs from the task.</span>
-    <span class="kw">fn</span> <span class="ident">stdout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">stdout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">empty</span>())
     }
     <span class="doccomment">/// Returns an [`AsyncRead`] object to stream stderr logs from the task.</span>
-    <span class="kw">fn</span> <span class="ident">stderr</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">stderr</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">empty</span>())
     }
     <span class="doccomment">/// Returns the final result of the task, upon spontaneous termination.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">result</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SingleStatusResult</span>;
+    <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">result</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SingleStatusResult</span>;
 }
 
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">Running</span> <span class="kw">for</span> <span class="ident">SingleStatusResult</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">result</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SingleStatusResult</span> {
+    <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">result</span>(<span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SingleStatusResult</span> {
         <span class="kw-2">*</span><span class="self">self</span>
     }
 }
