@@ -16,7 +16,7 @@
 
 //! Roughtime client implementation to provide a source of trusted time.
 
-use futures::future::join_all;
+use futures_util::future::join_all;
 use log::{debug, info, warn};
 use roughenough::{
     client::{create_nonce, make_request, ParsedResponse, ResponseHandler},
