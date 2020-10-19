@@ -156,7 +156,7 @@ impl<T: ServerNode> crate::CommandHandler<Invocation> for T {
     /// to be written to.
     ///
     /// [`invoke`]: ServerNode::invoke
-    fn handle_command(&mut self, invocation: Invocation) -> std::result::Result<(), OakError> {
+    fn handle_command(&mut self, invocation: Invocation) -> anyhow::Result<()> {
         let response_writer = ChannelResponseWriter::new(
             invocation
                 .sender

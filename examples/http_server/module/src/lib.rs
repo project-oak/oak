@@ -36,7 +36,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
 pub struct StaticHttpServer;
 
 impl CommandHandler<Invocation> for StaticHttpServer {
-    fn handle_command(&mut self, invocation: Invocation) -> Result<(), OakError> {
+    fn handle_command(&mut self, invocation: Invocation) -> anyhow::Result<()> {
         let request = invocation.receive()?;
 
         info!("Handling a request to {}.", request.uri());
@@ -57,6 +57,7 @@ impl CommandHandler<Invocation> for StaticHttpServer {
 
         let res = invocation.send(&response);
         invocation.close_channels();
-        res
+        res?;
+        Ok(())
     }
 }

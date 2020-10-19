@@ -55,13 +55,14 @@ mod handler;
 #[cfg(test)]
 mod tests;
 
+use anyhow::Context;
 use database::load_database;
-use log::{debug, error};
+use log::debug;
 use oak::{
     grpc,
     io::{Receiver, ReceiverExt, SenderExt},
     proto::oak::invocation::GrpcInvocationReceiver,
-    CommandHandler, OakError,
+    CommandHandler,
 };
 use oak_abi::proto::oak::application::ConfigMap;
 use proto::oak::examples::trusted_database::{PointOfInterestMap, TrustedDatabaseCommand};
@@ -72,35 +73,24 @@ pub struct TrustedDatabaseNode {
 }
 
 impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
-    fn handle_command(&mut self, invocation: grpc::Invocation) -> Result<(), OakError> {
+    fn handle_command(&mut self, invocation: grpc::Invocation) -> anyhow::Result<()> {
         // Create a client request handler Node.
         debug!("Creating handler Node");
-        let (sender, receiver) =
-            oak::io::channel_create::<TrustedDatabaseCommand>().map_err(|error| {
-                error!("Couldn't create command channel: {:?}", error);
-                OakError::OakStatus(oak_abi::OakStatus::ErrInternal)
-            })?;
+        let (sender, receiver) = oak::io::channel_create::<TrustedDatabaseCommand>()
+            .context("Couldn't create command channel")?;
         // TODO(#1406): Use client assigned label for creating a new handler Node.
         oak::node_create(
             &oak::node_config::wasm("app", "handler_oak_main"),
             receiver.handle,
         )
-        .map_err(|error| {
-            error!("Couldn't create handler Node: {:?}", error);
-            OakError::OakStatus(oak_abi::OakStatus::ErrInternal)
-        })?;
-        oak::channel_close(receiver.handle.handle).map_err(|error| {
-            error!("Couldn't close receiver channel: {:?}", error);
-            OakError::OakStatus(oak_abi::OakStatus::ErrInternal)
-        })?;
+        .context("Couldn't create handler Node")?;
+        oak::channel_close(receiver.handle.handle).context("Couldn't close receiver channel")?;
 
         // Create a gRPC invocation channel for forwarding requests to the
         // `TrustedDatabaseHandlerNode`.
         let (invocation_sender, invocation_receiver) =
-            oak::io::channel_create::<grpc::Invocation>().map_err(|error| {
-                error!("Couldn't create gRPC invocation channel: {:?}", error);
-                OakError::OakStatus(oak_abi::OakStatus::ErrInternal)
-            })?;
+            oak::io::channel_create::<grpc::Invocation>()
+                .context("Couldn't create gRPC invocation channel")?;
 
         // Create a command message that contains a copy of the database.
         let command = TrustedDatabaseCommand {
@@ -112,22 +102,18 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
 
         // Send the command massage to create a `TrustedDatabaseHandlerNode`
         debug!("Sending command message to handler Node");
-        sender.send(&command).map_err(|error| {
-            error!("Couldn't send command to handler Node: {:?}", error);
-            OakError::OakStatus(oak_abi::OakStatus::ErrInternal)
-        })?;
-        oak::channel_close(sender.handle.handle).expect("Couldn't close sender channel");
+        sender
+            .send(&command)
+            .context("Couldn't send command to handler Node")?;
+        oak::channel_close(sender.handle.handle).context("Couldn't close sender channel")?;
 
         // Send the original gRPC invocation to the `TrustedDatabaseHandlerNode`
         debug!("Sending gRPC invocation to handler Node");
-        invocation_sender.send(&invocation).map_err(|error| {
-            error!("Couldn't send gRPC invocation to handler Node: {:?}", error);
-            OakError::OakStatus(oak_abi::OakStatus::ErrInternal)
-        })?;
-        oak::channel_close(invocation_sender.handle.handle).map_err(|error| {
-            error!("Couldn't close sender channel: {:?}", error);
-            OakError::OakStatus(oak_abi::OakStatus::ErrInternal)
-        })?;
+        invocation_sender
+            .send(&invocation)
+            .context("Couldn't send gRPC invocation to handler Node")?;
+        oak::channel_close(invocation_sender.handle.handle)
+            .context("Couldn't close sender channel")?;
 
         Ok(())
     }

@@ -425,9 +425,9 @@ pub fn set_panic_hook() {
 ///
 /// It has a single method for handling commands, which are [`Decodable`](crate::io::Decodable)
 /// objects that are received via the single incoming channel handle which is passed in at Node
-/// creation time. The return value is only used for logging in case of failure.
+/// creation time. The return value is only used for logging in case of error.
 pub trait CommandHandler<T: crate::io::Decodable> {
-    fn handle_command(&mut self, command: T) -> Result<(), crate::OakError>;
+    fn handle_command(&mut self, command: T) -> anyhow::Result<()>;
 }
 
 /// Run a command loop on the provided [`CommandHandler`]:
@@ -532,7 +532,7 @@ pub fn run_command_loop<
 ///
 /// impl oak::CommandHandler<oak::grpc::Invocation> for DummyNode {
 ///     // ...
-///     # fn handle_command(&mut self, command: oak::grpc::Invocation) -> Result<(), oak::OakError> {
+///     # fn handle_command(&mut self, command: oak::grpc::Invocation) -> anyhow::Result<()> {
 ///     #     unimplemented!()
 ///     # }
 /// }
@@ -570,7 +570,7 @@ pub fn run_command_loop<
 /// # struct DummyNode;
 /// #
 /// # impl oak::CommandHandler<oak::grpc::Invocation> for DummyNode {
-/// #     fn handle_command(&mut self, command: oak::grpc::Invocation) -> Result<(), oak::OakError> {
+/// #     fn handle_command(&mut self, command: oak::grpc::Invocation) -> anyhow::Result<()> {
 /// #         unimplemented!()
 /// #     }
 /// # }

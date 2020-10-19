@@ -763,6 +763,7 @@ dependencies = [
 name = "oak"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "byteorder",
  "fmt",
  "http",

@@ -807,6 +807,7 @@ dependencies = [
 name = "oak"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "assert_matches",
  "byteorder",
  "fmt",
