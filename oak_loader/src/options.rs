@@ -237,8 +237,7 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
 }
 
 /// Create a signature table for Oak runtime.
-/// Returns an [`oak_runtime::SignatureTable`] that maps each module hash to a vector of
-/// [`oak_runtime::SignatureBundle`].
+/// Returns an [`SignatureTable`] that maps each module hash to a vector of [`SignatureBundle`].
 /// Returned signatures are not verified yet, they are supposed to be verified by the `oak_runtime`.
 fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
     let mut sign_table = SignatureTable::default();

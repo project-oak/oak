@@ -126,7 +126,8 @@ pub trait HandleVisit {
 /// ```
 pub fn extract_handles<T: HandleVisit>(msg: &mut T) -> Vec<Handle> {
     let mut handles = Vec::new();
-    msg.visit(|handle: &mut Handle| {
+    // TODO(#1599): Remove the `let _` when the underlying issue is fixed.
+    let _ = msg.visit(|handle: &mut Handle| {
         handles.push(*handle);
         *handle = oak_abi::INVALID_HANDLE;
     });
@@ -168,7 +169,8 @@ pub fn extract_handles<T: HandleVisit>(msg: &mut T) -> Vec<Handle> {
 pub fn inject_handles<T: HandleVisit>(msg: &mut T, handles: &[Handle]) -> Result<(), OakError> {
     let mut handles = handles.iter();
     let mut result = Ok(());
-    msg.visit(|handle| {
+    // TODO(#1599): Remove the `let _` when the underlying issue is fixed.
+    let _ = msg.visit(|handle| {
         if let Some(to_inject) = handles.next() {
             *handle = *to_inject;
         } else {
