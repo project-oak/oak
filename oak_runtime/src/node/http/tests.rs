@@ -99,7 +99,6 @@ async fn test_https_server_can_serve_https_requests() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_https_server_cannot_serve_http_requests() {
     init_logger();
 
@@ -119,7 +118,6 @@ async fn test_https_server_cannot_serve_http_requests() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_https_server_does_not_terminate_after_a_bad_request() {
     init_logger();
 
