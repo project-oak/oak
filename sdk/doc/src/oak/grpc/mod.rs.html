@@ -521,7 +521,7 @@
     <span class="doccomment">/// to be written to.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`invoke`]: ServerNode::invoke</span>
-    <span class="kw">fn</span> <span class="ident">handle_command</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">invocation</span>: <span class="ident">Invocation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">handle_command</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">invocation</span>: <span class="ident">Invocation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">response_writer</span> <span class="op">=</span> <span class="ident">ChannelResponseWriter</span>::<span class="ident">new</span>(
             <span class="ident">invocation</span>
                 .<span class="ident">sender</span>

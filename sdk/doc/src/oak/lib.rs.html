@@ -1037,9 +1037,9 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// It has a single method for handling commands, which are [`Decodable`](crate::io::Decodable)</span>
 <span class="doccomment">/// objects that are received via the single incoming channel handle which is passed in at Node</span>
-<span class="doccomment">/// creation time. The return value is only used for logging in case of failure.</span>
+<span class="doccomment">/// creation time. The return value is only used for logging in case of error.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CommandHandler</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Decodable</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">handle_command</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">command</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw">crate</span>::<span class="ident">OakError</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">handle_command</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">command</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
 }
 
 <span class="doccomment">/// Run a command loop on the provided [`CommandHandler`]:</span>
@@ -1144,7 +1144,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// impl oak::CommandHandler&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
 <span class="doccomment">///     // ...</span>
-<span class="doccomment">///     # fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; Result&lt;(), oak::OakError&gt; {</span>
+<span class="doccomment">///     # fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; anyhow::Result&lt;()&gt; {</span>
 <span class="doccomment">///     #     unimplemented!()</span>
 <span class="doccomment">///     # }</span>
 <span class="doccomment">/// }</span>
@@ -1182,7 +1182,7 @@
 <span class="doccomment">/// # struct DummyNode;</span>
 <span class="doccomment">/// #</span>
 <span class="doccomment">/// # impl oak::CommandHandler&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
-<span class="doccomment">/// #     fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; Result&lt;(), oak::OakError&gt; {</span>
+<span class="doccomment">/// #     fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; anyhow::Result&lt;()&gt; {</span>
 <span class="doccomment">/// #         unimplemented!()</span>
 <span class="doccomment">/// #     }</span>
 <span class="doccomment">/// # }</span>
