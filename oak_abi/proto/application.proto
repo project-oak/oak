@@ -140,7 +140,7 @@ message HttpServerConfiguration {
 // of the `request receiver` channel, and as the confidentiality tag of the
 // `response sender` channel.
 message UserNodeConfiguration {
-  // Privilege of this node, set to the public_key identifying the user.  
+  // Privilege of this node, set to the public_key identifying the user.
   bytes privilege = 1;
 }
 

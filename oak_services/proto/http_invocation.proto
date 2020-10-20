@@ -35,9 +35,13 @@ message HttpInvocationSender {
   oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
 }
 
-message InnerHttpInvocation {
+// A wrapper for sending an HttpRequest and the channels required for communication between an HTTP
+// server pseudo-Node and an Oak node, via a temporary UserNode. The request label is also included
+// to avoid recomputing it in the UserNode.
+message OuterHttpInvocation {
   oak.encap.HttpRequest request = 1;
   oak.label.Label request_label = 2;
-  oak.handle.Sender invocation_sender = 3 [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
+  oak.handle.Sender invocation_sender = 3
+      [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
   oak.handle.Sender response_sender = 4 [(oak.handle.message_type) = ".oak.encap.HttpResponse"];
 }

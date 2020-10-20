@@ -28,7 +28,6 @@ pub mod http;
 mod logger;
 mod roughtime;
 mod storage;
-pub mod user;
 mod wasm;
 
 /// Trait encapsulating execution of a Node or pseudo-Node.
@@ -168,9 +167,10 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                     tls_config,
                 )?))
             }
-            Some(ConfigType::UserNodeConfig(config)) => {
-                Ok(Box::new(user::UserNode::new(node_name, config.clone())?))
-            }
+            Some(ConfigType::UserNodeConfig(config)) => Ok(Box::new(http::user::UserNode::new(
+                node_name,
+                config.clone(),
+            )?)),
             None => Err(ConfigurationError::InvalidNodeConfiguration),
         }
     }

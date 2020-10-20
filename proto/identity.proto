@@ -20,8 +20,9 @@ package oak.identity;
 
 import "google/protobuf/empty.proto";
 
-// Response from the client to a sining challenge. The client uses its private key to sign the hash of the challenge obtained from
-// the server. The response contains the signed hash along with the public key corresponding to the private key used for signing.
+// Response from the client to a signing challenge. The client uses its private key to sign the hash
+// of the challenge obtained from the server. The response contains the signed hash along with the
+// public key corresponding to the private key used for signing.
 message SignedChallenge {
   bytes signed_hash = 1;
   bytes public_key = 2;

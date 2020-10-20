@@ -22,7 +22,7 @@
 use crate::{
     io::{ReceiverExt, Sender, SenderExt},
     node::{ConfigurationError, Node},
-    proto::oak::invocation::{HttpInvocationSender, InnerHttpInvocation},
+    proto::oak::invocation::{HttpInvocationSender, OuterHttpInvocation},
     RuntimeProxy,
 };
 use core::task::{Context, Poll};
@@ -59,6 +59,7 @@ use oak_abi::proto::oak::application::{
 
 #[cfg(test)]
 pub mod tests;
+pub mod user;
 
 /// Checks that port is not reserved (i.e., is greater than 1023).
 fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
@@ -377,7 +378,8 @@ impl HttpRequestHandler {
     }
 }
 
-/// A pair of temporary channels to pass the HTTP request and to receive the response.
+/// A pair of temporary channels to pass the HTTP request to the UserNode, and to receive the
+/// response.
 struct Pipe {
     invocation_writer: oak_abi::Handle,
     invocation_reader: oak_abi::Handle,
@@ -411,8 +413,8 @@ impl Pipe {
         })
     }
 
-    /// Sends an instance of [`InnerHttpInvocation`] to the `UserNode` created for the `request`.
-    /// The [`InnerHttpInvocation`] instance contains the original request, the request
+    /// Sends an instance of [`OuterHttpInvocation`] to the `UserNode` created for the `request`.
+    /// The [`OuterHttpInvocation`] instance contains the original request, the request
     /// label (so the UserNode does not have to compute it again), and two request-specific
     /// channels, for sending the request to the Oak node and send the response (received from the
     /// Oak node) back to this HTTP server pseudo-Node.
@@ -424,14 +426,14 @@ impl Pipe {
         invocation_sender: oak_abi::Handle,
     ) -> Result<(), ()> {
         // Wrap the write-half of the `invocation channel`, which has its other half connected to
-        // the Oak node, in a [`Sender`], to use in the [`InnerHttpInvocation`] that will be sent to
+        // the Oak node, in a [`Sender`], to use in the [`OuterHttpInvocation`] that will be sent to
         // the Oak node.
         let inner_invocation_sender = Sender::new(WriteHandle {
             handle: invocation_sender,
         });
 
         // Wrap the write-half of the `response channel` in a [`Sender`] and send it to [`UserNode`]
-        // in the [`InnerHttpInvocation`], so that it can send the responses back to this HTTP
+        // in the [`OuterHttpInvocation`], so that it can send the responses back to this HTTP
         // server pseudo-Node.
         let response_sender = Sender::new(WriteHandle {
             handle: self.response_writer,
@@ -439,7 +441,7 @@ impl Pipe {
 
         // Create an invocation containing the original request, the request label (so the UserNode
         // does not have to compute it again), and request-specific channels.
-        let invocation = InnerHttpInvocation {
+        let invocation = OuterHttpInvocation {
             request: Some(request),
             request_label: Some(request_label),
             invocation_sender: Some(inner_invocation_sender),

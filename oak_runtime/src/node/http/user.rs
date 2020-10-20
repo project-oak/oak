@@ -26,7 +26,7 @@
 use crate::{
     io::{Receiver, ReceiverExt, Sender, SenderExt},
     node::{ConfigurationError, Node, NodePrivilege},
-    proto::oak::invocation::{HttpInvocation, InnerHttpInvocation},
+    proto::oak::invocation::{HttpInvocation, OuterHttpInvocation},
     RuntimeProxy,
 };
 use log::{error, info, warn};
@@ -39,7 +39,8 @@ use oak_services::proto::oak::encap::HttpRequest;
 use std::collections::HashSet;
 use tokio::sync::oneshot;
 
-/// Struct that represents a user node, with its privilege set to the user's identity.
+/// Struct that represents a user node, with its privilege set to the user's identity as both the
+/// declassification and the endorsement tags.
 pub struct UserNode {
     /// Pseudo-Node name.
     node_name: String,
@@ -49,16 +50,16 @@ pub struct UserNode {
 
 impl UserNode {
     pub fn new(node_name: &str, config: UserNodeConfiguration) -> Result<Self, ConfigurationError> {
-        let mut privileges = HashSet::new();
-        privileges.insert(Tag {
+        let mut privilege_tags = HashSet::new();
+        privilege_tags.insert(Tag {
             tag: Some(oak_abi::label::tag::Tag::UserIdentityTag(UserIdentityTag {
                 public_key: config.privilege,
             })),
         });
 
         let privilege = NodePrivilege {
-            can_declassify_confidentiality_tags: privileges.clone(),
-            can_endorse_integrity_tags: privileges,
+            can_declassify_confidentiality_tags: privilege_tags.clone(),
+            can_endorse_integrity_tags: privilege_tags,
         };
         Ok(UserNode {
             node_name: node_name.to_string(),
@@ -66,26 +67,29 @@ impl UserNode {
         })
     }
 
+    /// Creates a `request` and a `response` channel for communication with the Oak node. Uses the
+    /// `request` channel to send the HTTP request to the Oak node, and returns a handle to the
+    /// response channel for receiving the response from the Oak node.
     fn inject_http_request(
         &self,
         runtime: RuntimeProxy,
-        inner_http_invocation: InnerHttpInvocation,
+        outer_http_invocation: OuterHttpInvocation,
     ) -> Result<oak_abi::Handle, ()> {
-        // Create a pair of temporary channels to pass the HTTP request and to receive the
-        // response.
+        // Create a pair of temporary channels to pass the HTTP request to the Oak node, and to
+        // receive the response from it.
         let pipe = Pipe::new(
             &runtime,
-            &inner_http_invocation.request_label.unwrap(),
+            &outer_http_invocation.request_label.unwrap(),
             &self.privilege,
         )?;
 
         // Put the HTTP request message inside the per-invocation request channel.
-        pipe.insert_message(&runtime, inner_http_invocation.request.unwrap())?;
+        pipe.insert_message(&runtime, outer_http_invocation.request.unwrap())?;
 
         // Send an invocation message (with attached handles) to the Oak Node.
         pipe.send_invocation(
             &runtime,
-            inner_http_invocation
+            outer_http_invocation
                 .invocation_sender
                 .unwrap()
                 .handle
@@ -96,6 +100,55 @@ impl UserNode {
         pipe.close(&runtime);
 
         Ok(pipe.response_reader)
+    }
+
+    fn try_run(
+        self: Box<Self>,
+        runtime: RuntimeProxy,
+        startup_handle: oak_abi::Handle,
+    ) -> Result<(), ()> {
+        let receiver = Receiver::<OuterHttpInvocation>::new(ReadHandle {
+            handle: startup_handle,
+        });
+        let outer_http_invocation = receiver.receive(&runtime).map_err(|err| {
+            error!(
+                "{}: Failed to retrieve the outer HTTP invocation: {:?}",
+                self.node_name, err
+            )
+        })?;
+
+        // Send the request to the Oak node and get a handle to the channel containing the response.
+        let response_reader =
+            self.inject_http_request(runtime.clone(), outer_http_invocation.clone())?;
+
+        info!(
+            "@@@@@@ injected the request, and received response handle: {}",
+            response_reader
+        );
+        let response_receiver = crate::io::Receiver::new(ReadHandle {
+            handle: response_reader,
+        });
+
+        info!("@@@@@@ Waiting for the response to arrive");
+        let response = response_receiver.receive(&runtime).map_err(|err| {
+            error!(
+                "Could not receive the response from the Oak node on channel {}: {}.",
+                response_reader, err
+            )
+        })?;
+
+        info!("@@@@@@ Sending the response back to HTTP server pseudo-node.");
+        outer_http_invocation
+            .response_sender
+            .ok_or(())
+            .and_then(|sender| {
+                sender.send(response, &runtime).map_err(|err| {
+                    warn!(
+                        "{}: Could not send response to HTTP server pseudo-node: {}",
+                        self.node_name, err,
+                    )
+                })
+            })
     }
 }
 
@@ -110,58 +163,7 @@ impl Node for UserNode {
         startup_handle: oak_abi::Handle,
         _notify_receiver: oneshot::Receiver<()>,
     ) {
-        let receiver = Receiver::<InnerHttpInvocation>::new(ReadHandle {
-            handle: startup_handle,
-        });
-        let inner_http_invocation = match receiver.receive(&runtime) {
-            Ok(invocation) => invocation,
-            Err(status) => {
-                error!(
-                    "{}: Failed to retrieve inner HTTP invocation: {:?}",
-                    self.node_name, status
-                );
-                return;
-            }
-        };
-
-        // Response-reader that contains the response. this should be handed to the HTTP node
-        let response_reader =
-            match self.inject_http_request(runtime.clone(), inner_http_invocation.clone()) {
-                Ok(handle) => handle,
-                Err(_) => return,
-            };
-
-        info!(
-            "@@@@@@ injected the request, and received response handle: {}",
-            response_reader
-        );
-        let response_receiver = crate::io::Receiver::new(ReadHandle {
-            handle: response_reader,
-        });
-
-        info!("@@@@@@ Waiting on for the response to arrive");
-        let response = match response_receiver.receive(&runtime) {
-            Ok(rsp) => rsp,
-            Err(err) => {
-                error!(
-                    "Could not receive the response from the Oak node on channel {}: {}.",
-                    response_reader, err
-                );
-                return;
-            }
-        };
-
-        info!("@@@@@@ Sending the response back to HTTP spn.");
-        if let Err(err) = inner_http_invocation
-            .response_sender
-            .unwrap()
-            .send(response, &runtime)
-        {
-            error!(
-                "{}: Could not send response to HTTP server pseudo-node: {}",
-                self.node_name, err,
-            );
-        };
+        let _unit_result = self.try_run(runtime, startup_handle);
     }
 
     fn get_privilege(&self) -> NodePrivilege {
@@ -169,7 +171,8 @@ impl Node for UserNode {
     }
 }
 
-/// A pair of temporary channels to pass the HTTP request and to receive the response.
+/// A pair of temporary channels to pass the HTTP request to the Oak node, and to receive the
+/// response.
 struct Pipe {
     request_writer: oak_abi::Handle,
     request_reader: oak_abi::Handle,
@@ -183,8 +186,6 @@ impl Pipe {
         request_label: &Label,
         privilege: &NodePrivilege,
     ) -> Result<Self, ()> {
-        // Create a channel for passing HTTP requests to the Oak node. This channel is created with
-        // the label specified by the caller, and the identity of the caller.
         let request_reader_label = Label {
             confidentiality_tags: request_label.confidentiality_tags.clone(),
             integrity_tags: privilege
@@ -193,32 +194,33 @@ impl Pipe {
                 .into_iter()
                 .collect(),
         };
+        let response_writer_label = Label {
+            confidentiality_tags: privilege
+                .can_declassify_confidentiality_tags
+                .clone()
+                .into_iter()
+                .collect(),
+            integrity_tags: vec![],
+        };
 
         info!(
             "@@@@@@@@ Creating request_reader with {:?}",
             &request_reader_label
         );
+        // Create a channel for passing HTTP requests to the Oak node. This channel is created with
+        // the label specified by the caller, and the identity of the caller.
         let (request_writer, request_reader) = runtime
             .channel_create(&request_reader_label)
             .map_err(|err| {
                 warn!("could not create HTTP request channel: {:?}", err);
             })?;
 
-        // Create a channel for receiving HTTP responses from the Oak node. This channel is created
-        // with a label that has the identity of the caller as the confidentiality
-        // component.
-        let response_writer_label = Label {
-            confidentiality_tags: privilege
-                .can_endorse_integrity_tags
-                .clone()
-                .into_iter()
-                .collect(),
-            integrity_tags: vec![],
-        };
         info!(
             "@@@@@@@@ Creating response_writer with {:?}",
             &response_writer_label
         );
+        // Create a channel for receiving HTTP responses from the Oak node. This channel is created
+        // with a label that has the identity of the caller as the confidentiality component.
         let (response_writer, response_reader) = runtime
             .channel_create(&response_writer_label)
             .map_err(|err| {
@@ -233,6 +235,7 @@ impl Pipe {
         })
     }
 
+    /// Puts the HttpRequest in the `request_sender` channel, ready to be read by the Oak node.
     fn insert_message(&self, runtime: &RuntimeProxy, request: HttpRequest) -> Result<(), ()> {
         // Put the HTTP request message inside the per-invocation request channel.
         let sender = crate::io::Sender::new(WriteHandle {
@@ -247,6 +250,9 @@ impl Pipe {
         })
     }
 
+    /// Sends an instance of [`HttpInvocation`] to the Oak node. The [`HttpInvocation`] instance
+    /// contains two request-specific channels, one that allows the Oak node to read the request,
+    /// and one on which the Oak node sends the response.
     fn send_invocation(
         &self,
         runtime: &RuntimeProxy,
