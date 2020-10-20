@@ -15,13 +15,17 @@
 //
 
 import React from 'react';
+import { useHistory } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
 import ListSubheader from '@material-ui/core/ListSubheader';
 import Divider from '@material-ui/core/Divider';
+import IconButton from '@material-ui/core/IconButton';
+import MoreVertIcon from '@material-ui/icons/MoreVert';
+import { NodeId } from '~/components/Root';
 import Event from '~/components/Event';
 import introspectionEventsProto from '~/protoc_out/proto/introspection_events_pb';
 
@@ -41,9 +45,20 @@ const useStyles = makeStyles({
     backgroundColor: 'inherit',
     padding: 0,
   },
+  listItemWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: '10px',
+  },
   listIcon: {
     minWidth: 'unset',
     marginRight: '10px',
+  },
+  listItem: {
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
   },
   outerChildrenWrapper: {
     position: 'sticky',
@@ -76,11 +91,6 @@ type ReversedEvent = {
 
 type ReversedEvents = ReversedEvent[];
 
-enum EventType {
-  Future,
-  Past,
-}
-
 export default function EventList({
   presentEventIndex,
   totalEvents,
@@ -89,6 +99,7 @@ export default function EventList({
   children,
 }: EventListProps) {
   const classes = useStyles();
+  const history = useHistory();
   // Reverse the array of events (while storing the orginal index) to render
   // events in a reverse chronological order.
   const reversedEvents = totalEvents.reduce((acc, event, eventIndex) => {
@@ -104,30 +115,56 @@ export default function EventList({
     totalEvents.length - presentEventIndex - 1
   );
 
+  // Assemble a map of nodeIds to names, which allows for rendering event
+  // details in a more intuitive manner.
+  const nodeIdsToNodeNames = totalEvents.reduce((acc, event, eventIndex) => {
+    if (
+      event.getEventDetailsCase() ===
+      introspectionEventsProto.Event.EventDetailsCase.NODE_CREATED
+    ) {
+      const details = event.getNodeCreated()!;
+      const nodeId = details.getNodeId();
+      const name = details.getName();
+
+      acc.set(nodeId, name);
+    }
+
+    return acc;
+  }, new Map() as Map<NodeId, string>);
+
   function renderEvent({ eventIndex, event }: ReversedEvent) {
     return (
       // Usually it's not advisable to use the index as a key. However since
       // the list of events is append-only it's fine in this case.
       // Ref: https://reactjs.org/docs/lists-and-keys.html#keys
-      <ListItem
-        component="li"
-        key={eventIndex}
-        button
-        onClick={() => setPresentEventIndex(eventIndex)}
-        dense
-      >
-        <ListItemIcon
-          aria-hidden
-          classes={{
-            root: classes.listIcon,
-          }}
+      <div className={classes.listItemWrapper}>
+        <ListItem
+          component="li"
+          key={eventIndex}
+          button
+          onClick={() => setPresentEventIndex(eventIndex)}
+          dense
+          className={classes.listItem}
         >
-          {eventIndex}.
-        </ListItemIcon>
-        <ListItemText>
-          <Event event={event} />
-        </ListItemText>
-      </ListItem>
+          <ListItemIcon
+            aria-hidden
+            classes={{
+              root: classes.listIcon,
+            }}
+          >
+            {eventIndex}.
+          </ListItemIcon>
+          <ListItemText>
+            <Event event={event} nodeIdsToNodeNames={nodeIdsToNodeNames} />
+          </ListItemText>
+        </ListItem>
+        <IconButton
+          onClick={() => history.push(`/change/${eventIndex}`)}
+          aria-label="View change details"
+        >
+          <MoreVertIcon />
+        </IconButton>
+      </div>
     );
   }
 

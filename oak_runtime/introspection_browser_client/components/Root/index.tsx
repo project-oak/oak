@@ -24,6 +24,7 @@ import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 import StateGraph from '~/components/StateGraph';
 import EventList from '~/components/EventList';
+import { EventDetailsDialog } from '~/components/Event';
 import NodeDetails from '~/components/NodeDetails';
 import HandleDetails from '~/components/HandleDetails';
 import ChannelDetails from '~/components/ChannelDetails';
@@ -415,6 +416,15 @@ export default function Root() {
               open={Boolean(match)}
               onClose={() => history.push('/')}
               applicationState={applicationState}
+            />
+          )}
+        </Route>
+        <Route exact path="/change/:eventIndex">
+          {({ match, history }) => (
+            <EventDetailsDialog
+              open={Boolean(match)}
+              onClose={() => history.push('/')}
+              totalEvents={totalEvents}
             />
           )}
         </Route>

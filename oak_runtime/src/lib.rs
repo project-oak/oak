@@ -417,6 +417,10 @@ impl Runtime {
                     node_id: node_id.0,
                     handle,
                     channel_id: half.get_channel_id(),
+                    direction: match half.direction {
+                        ChannelHalfDirection::Read => Direction::Read as i32,
+                        ChannelHalfDirection::Write => Direction::Write as i32,
+                    },
                 }));
 
                 Ok(())
