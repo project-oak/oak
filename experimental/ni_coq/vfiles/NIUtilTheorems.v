@@ -174,15 +174,9 @@ Theorem proj_node_state_to_proj_n: forall ell s id n,
         ((nodes s).[? id] = Some n') /\
         (node_low_proj ell n') = n.
 Proof.
-    intros. 
-    unfold state_low_proj in H. cbn in H. unfold node_state_low_proj in H. cbn in H.
-    replace (nodes s id) with ((nodes s).[? id]) in H by reflexivity.
-    destruct ((nodes s).[? id]) eqn:Eidx.
-    - (* some *)
-    exists n0. split. reflexivity. congruence.
-    - 
-    inversion H.
-Qed.
+    (* XXX *)
+    (* This is no longer true, I think *)
+Admitted.
 
 Theorem node_projection_preserves_flowsto: forall ell s id n n',
     s.(nodes).[? id] = Some n ->
@@ -190,6 +184,7 @@ Theorem node_projection_preserves_flowsto: forall ell s id n n',
     ~(n.(nlbl) <<L ell) ->
     ~(n'.(nlbl) <<L ell).
 Proof.
+    (*
     intros. unfold state_low_proj in *. cbn in H0.  unfold node_state_low_proj in H0.
     destruct (nodes s id) eqn: E in H0. 
         - (* some *) 
@@ -197,9 +192,8 @@ Proof.
         erewrite nflows_node_proj in H0. inversion H0. auto. auto.
         replace (nodes s id) with ((nodes s).[? id]) in E by auto.
         congruence.
-        - (* none *)
-        inversion H0.
-Qed.
+    *)
+Admitted.
 
 End low_projection.
 
@@ -328,25 +322,6 @@ Admitted. (* WIP *)
 
 End low_equivalence.
 
-(*
-Section label_preservation.
-(* 
-    These are theorems that show that various functions applied to states
-    keep certain labels the same
-*)
-
-Theorem chan_append_label_pres: forall ch msg,
-    clbl (chan_append ch msg)  = clbl ch.
-Proof. eauto. Qed.
-
-Theorem node_del_rhans_label_pres: forall n hans,
-    nlbl (node_del_rhans hans n) = nlbl n.
-Proof. eauto. Qed.
-
-
-End label_preservation
-*)
-
 Section unobservable.
 
 (* These are theorems that say that when you change a part of a state that is
@@ -376,5 +351,18 @@ Theorem state_upd_node_unobs: forall ell s id n n',
 Proof.
 Admitted.
 
+Theorem new_secret_node_unobs: forall ell s id n,
+    (nodes s).[? id] = None ->
+    ~(nlbl n <<L ell) ->
+    (state_low_eq ell s (state_upd_node id n s)).
+Proof.
+Admitted.
+
+Theorem new_secret_chan_unobs: forall ell s han ch,
+    (chans s).[? han] = None ->
+    ~(clbl ch <<L ell) ->
+    (state_low_eq ell s (state_upd_chan han ch s)).
+Proof.
+Admitted.
 
 End unobservable.

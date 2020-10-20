@@ -187,25 +187,24 @@ Proof.
     -  (* CreateChannel; states loweq *) 
         assert ( ~ (lbl <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
-        eapply (state_upd_chan_unobs _ s h _ (new_chan lbl)
-            ltac:(eauto) ltac:(eauto) ltac:(eauto)).
+        eapply (new_secret_chan_unobs _ _ _ (new_chan lbl) ltac:(eauto)); eauto.
         eapply (state_low_eq_trans _ _ (state_upd_node id (node_add_rhan h n)
             (state_upd_chan h (new_chan lbl) s))).
         eapply state_upd_node_unobs; eauto.
-        pose proof state_upd_node_unobs.
         eapply (state_upd_node_unobs _ _ _ (node_add_rhan h n)); eauto.
         eapply upd_eq.
     - (* CreateNode; states loweq *)
         assert ( ~ (lbl <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
-        eapply (state_upd_node_unobs _ _ new_id _
+        pose proof new_secret_node_unobs.
+        eapply (new_secret_node_unobs _ _ new_id
             ( {|
                 nlbl := lbl;
                 read_handles := Ensembles.Singleton h;
                 write_handles := Ensembles.Empty_set;
                 ncall := Internal
               |}
-            ) ltac:(eauto) ltac:(eauto) ltac:(eauto)).
+            ) ltac:(eauto) ltac:(eauto)).
         eapply state_upd_node_unobs; eauto.
         replace ((nodes
         (state_upd_node new_id
@@ -222,17 +221,7 @@ Proof.
     erewrite <- (nflows_event_proj _ (-- n --) ltac:(eauto)).
     unfold event_low_eq. unfold low_eq.
     erewrite event_low_proj_idempotent. reflexivity.
-    (* It looks like the goals are all solved, but the existentials 
-    include things that are not provable. Apparently,
-    existential variables escape Coq's type system momentarily,
-    but then when the final proof is checked at the end, the proof of
-    false is detected*)
-    (* the reason these proofs don't go through is because
-    with the definition of chan_state_low_eq and node_state... 
-    creating/deleting nodes/channels, is observable, but these should not be
-    if the labels of the nodes/channels are secret
-    *)
-Admitted.
+Qed.
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
