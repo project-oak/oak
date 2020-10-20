@@ -66,7 +66,10 @@ cc_library(
     deps = [
         ":httplib_config",
         "//oak/common:label",
+        "//oak/common:identity",
         "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
     ],
 )
 

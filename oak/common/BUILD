@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
 
 package(
     licenses = ["notice"],
@@ -48,6 +48,23 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//oak_abi/proto:label_cc_proto",
+        "@com_google_absl//absl/base",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_proto_library(
+    name = "identity_cc_proto",
+    deps = ["//proto:identity_proto"],
+)
+
+cc_library(
+    name = "identity",
+    srcs = ["identity.cc"],
+    hdrs = ["identity.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":identity_cc_proto",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/strings",
     ],

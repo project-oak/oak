@@ -122,6 +122,10 @@ fn main() -> anyhow::Result<()> {
                 )),
             }?;
             let signature = SignatureBundle::create(&input, &key_pair)?;
+            println!(
+                "signed-hash: {:?}, pub-key: {:?}",
+                signature.signed_hash, signature.public_key
+            );
             signature.to_pem_file(&opt.signature_file)?;
             info!("Input file signed successfully");
         }

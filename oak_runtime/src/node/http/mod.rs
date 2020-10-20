@@ -253,7 +253,7 @@ impl Node for HttpServerNode {
 
         // Start the HTTP server.
         info!(
-            "{}: Starting HTTP server pseudo-Node on: {}",
+            "{}: @@@@@ Starting HTTP server pseudo-Node on: {}",
             self.node_name, self.address
         );
         async_runtime.block_on(server);
@@ -342,6 +342,7 @@ impl HttpRequestHandler {
         // Create the NodeConfiguration for UserNode, with its privilege set to the user's identity,
         // extracted from the request.
         let user_identity = get_user_identity(&request)?;
+        info!("@@@@@@@@ Got user identity {:?}.", user_identity.clone());
         let config = NodeConfiguration {
             name: "user_node".to_string(),
             config_type: Some(ConfigType::UserNodeConfig(UserNodeConfiguration {
@@ -583,6 +584,7 @@ fn verify_protobuf_challenge(signature: &[u8]) -> Result<Vec<u8>, ()> {
         crate::proto::oak::identity::SignedChallenge::decode(&signature[..]).map_err(|err| {
             warn!("Could not parse protobuf encoded signed challenge: {}", err);
         })?;
+    panic!("@@@@@@@!!!!!!!!@@@@@ got signature");
     verify_signed_challenge(signature)
         .map_err(|err| warn!("Could not verify the signature: {}", err))
 }
@@ -597,6 +599,7 @@ fn verify_signed_challenge(
             .map_err(|_err| OakStatus::ErrInternal)?,
     };
 
+    panic!("@@@@@@@!!!!!!!!@@@@@ Verifying signature");
     match sig_bundle.verify() {
         Ok(()) => Ok(signature.public_key),
         Err(_err) => {

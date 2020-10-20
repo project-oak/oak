@@ -26,3 +26,9 @@ proto_library(
     srcs = ["handle.proto"],
     deps = ["@com_google_protobuf//:descriptor_proto"],
 )
+
+proto_library(
+    name = "identity_proto",
+    srcs = ["identity.proto"],
+    deps = ["@com_google_protobuf//:descriptor_proto", "@com_google_protobuf//:empty_proto"],
+)
