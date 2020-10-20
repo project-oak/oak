@@ -50,6 +50,9 @@ pub const OAK_SIGNED_CHALLENGE_JSON_KEY: &str = "oak-signed-auth-challenge";
 /// The header key used for protobuf formatted signed authentication challenge.
 pub const OAK_SIGNED_CHALLENGE_PROTOBUF_KEY: &str = "oak-signed-auth-challenge-bin";
 
+/// Hash of "oak-challenge", the fixed challenge phrase.
+pub const OAK_CHALLENGE_PHRASE_BASE64_HASH: &str = "o0UQJfxNADV1BLonFxTfWWg7VRVfmoyGpKZ/g67FE2c=";
+
 /// Handle used to identify read or write channel halves.
 ///
 /// These handles are used for all host function calls.

@@ -590,8 +590,20 @@ fn verify_protobuf_challenge(signature: &[u8]) -> Result<Vec<u8>, ()> {
 fn verify_signed_challenge(
     signature: crate::proto::oak::identity::SignedChallenge,
 ) -> Result<Vec<u8>, OakStatus> {
-    // TO-DO: verify
-    Ok(signature.public_key)
+    let sig_bundle = oak_sign::SignatureBundle {
+        public_key: signature.public_key.clone(),
+        signed_hash: signature.signed_hash,
+        hash: base64::decode(oak_abi::OAK_CHALLENGE_PHRASE_BASE64_HASH)
+            .map_err(|_err| OakStatus::ErrInternal)?,
+    };
+
+    match sig_bundle.verify() {
+        Ok(()) => Ok(signature.public_key),
+        Err(_err) => {
+            warn!("Could not verify the signature");
+            Err(OakStatus::ErrInvalidArgs)
+        }
+    }
 }
 
 struct HttpResponseReceiver {

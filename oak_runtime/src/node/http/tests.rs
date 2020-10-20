@@ -27,8 +27,28 @@ use oak_abi::{
 use oak_io::Sender;
 use std::{fs, option::Option, thread::JoinHandle};
 
-static LOCAL_CA: &str = "../examples/certs/local/ca.pem";
-static GCP_CA: &str = "../examples/certs/gcp/ca.pem";
+const LOCAL_CA: &str = "../examples/certs/local/ca.pem";
+const GCP_CA: &str = "../examples/certs/gcp/ca.pem";
+
+/// Generated using the command:
+/// ```shell
+/// cargo run --manifest-path=oak_sign/Cargo.toml -- \
+///     generate \
+///     --private-key=http-test.key \
+///     --public-key=http-test.pub
+/// ```
+const BASE64_PUBLIC_KEY: &str = "yTOK5pP6S1ebFJeOhB8KUxBY293YbBo/TW5h1/1UdKM=";
+
+/// Generated using the command:
+/// ```shell
+/// cargo run --manifest-path=oak_sign/Cargo.toml -- \
+///     sign \
+///     --private-key=http-test.key \
+///     --input-string="oak-challenge" \
+///     --signature-file=http-test.sign
+/// ```
+const BASE64_SIGNED_HASH: &str =
+    "rpFVU/NAIDE62/hpE0DMobLsAJ+tDLNATgPLaX8PbN6v0XeACdCNspL0YY1QfyvJN2mq3Z2h4JWgS/lVkMcHAg==";
 
 struct HttpServerTester {
     runtime: RuntimeProxy,
@@ -274,8 +294,8 @@ async fn send_request(
     }
 
     let signature = crate::proto::oak::identity::SignedChallenge {
-        signed_hash: "hash".to_string().as_bytes().to_vec(),
-        public_key: "public_key".to_string().as_bytes().to_vec(),
+        signed_hash: base64::decode(BASE64_SIGNED_HASH).unwrap(),
+        public_key: base64::decode(BASE64_PUBLIC_KEY).unwrap(),
     };
 
     // The client thread may start sending the requests before the server is up. In this case, the
