@@ -20,19 +20,15 @@ use anyhow::{anyhow, Context};
 use http::uri::Uri;
 use log::info;
 use maplit::hashset;
-use oak_abi::label::{web_assembly_module_signature_tag, Label};
+use oak_abi::label::{confidentiality_label, web_assembly_module_signature_tag};
+use oak_client::{create_tls_channel, Interceptor};
 use private_set_intersection_client::proto::{
     private_set_intersection_client::PrivateSetIntersectionClient, GetIntersectionRequest,
     SubmitSetRequest,
 };
-use prost::Message;
 use std::collections::HashSet;
 use structopt::StructOpt;
-use tonic::{
-    metadata::MetadataValue,
-    transport::{Certificate, Channel, ClientTlsConfig},
-    Request,
-};
+use tonic::{transport::Channel, Request};
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Private Set Intersection Client")]
@@ -54,41 +50,21 @@ pub struct Opt {
     public_key: String,
 }
 
-/// Create a TLS channel for connecting to Oak.
-async fn create_channel(uri: &Uri, root_tls_certificate: &[u8]) -> anyhow::Result<Channel> {
-    info!("Connecting to Oak Application: {:?}", uri);
-    let tls_config =
-        ClientTlsConfig::new().ca_certificate(Certificate::from_pem(root_tls_certificate));
-    Channel::builder(uri.clone())
-        .tls_config(tls_config)
-        .context("Couldn't create TLS configuration")?
-        .connect()
-        .await
-        .context("Couldn't connect to Oak Application")
-}
-
 /// Create Oak gRPC client.
-fn create_client(
-    channel: Channel,
+async fn create_client(
+    uri: &Uri,
+    root_tls_certificate: &[u8],
     public_key: &[u8],
 ) -> anyhow::Result<PrivateSetIntersectionClient<Channel>> {
-    let public_key_tag = web_assembly_module_signature_tag(&public_key);
-    let mut label = Vec::new();
-    Label {
-        confidentiality_tags: vec![public_key_tag],
-        integrity_tags: vec![],
-    }
-    .encode(&mut label)
-    .context("Error encoding label")?;
+    info!("Connecting to Oak Application: {:?}", uri);
+    let channel = create_tls_channel(uri, root_tls_certificate)
+        .await
+        .context("Couldn't create TLS channel")?;
+    let label = confidentiality_label(web_assembly_module_signature_tag(public_key));
+    let interceptor = Interceptor::create(&label).context("Couldn't create gRPC interceptor")?;
     Ok(PrivateSetIntersectionClient::with_interceptor(
         channel,
-        move |mut request: Request<()>| {
-            request.metadata_mut().insert_bin(
-                oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
-                MetadataValue::from_bytes(label.as_ref()),
-            );
-            Ok(request)
-        },
+        interceptor,
     ))
 }
 
@@ -109,11 +85,9 @@ async fn main() -> anyhow::Result<()> {
         .contents;
 
     // Submit sets from different clients.
-    let channel_1 = create_channel(&uri, &root_tls_certificate)
+    let mut client_1 = create_client(&uri, &root_tls_certificate, &public_key_bytes)
         .await
-        .context("Couldn't create channel")?;
-    let mut client_1 =
-        create_client(channel_1, &public_key_bytes).context("Couldn't create gRPC client")?;
+        .context("Couldn't create gRPC client")?;
     let request = Request::new(SubmitSetRequest {
         set_id: opt.set_id.to_string(),
         values: vec!["a".to_string(), "b".to_string(), "c".to_string()],
@@ -123,11 +97,9 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Couldn't submit set")?;
 
-    let channel_2 = create_channel(&uri, &root_tls_certificate)
+    let mut client_2 = create_client(&uri, &root_tls_certificate, &public_key_bytes)
         .await
-        .context("Couldn't create channel")?;
-    let mut client_2 =
-        create_client(channel_2, &public_key_bytes).context("Couldn't create gRPC client")?;
+        .context("Couldn't create gRPC client")?;
     let request = Request::new(SubmitSetRequest {
         set_id: opt.set_id.to_string(),
         values: vec!["b".to_string(), "c".to_string(), "d".to_string()],
@@ -140,10 +112,8 @@ async fn main() -> anyhow::Result<()> {
     // Use an invalid public key.
     let invalid_public_key_bytes = base64::decode("vpxqTZOUq1FjcaB9uJYCuv4kAg+AsgMwubA6WE+2pmk=")
         .context("Couldn't decode public key")?;
-    let channel_3 = create_channel(&uri, &root_tls_certificate)
+    let mut invalid_client = create_client(&uri, &root_tls_certificate, &invalid_public_key_bytes)
         .await
-        .context("Couldn't create channel")?;
-    let mut invalid_client = create_client(channel_3, &invalid_public_key_bytes)
         .context("Couldn't create gRPC client")?;
 
     let request = Request::new(SubmitSetRequest {

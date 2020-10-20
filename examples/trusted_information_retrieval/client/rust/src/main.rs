@@ -16,15 +16,12 @@
 
 //! Client for the Trusted Information Retrieval example.
 
+use anyhow::Context;
 use log::info;
 use oak_abi::label::Label;
-use prost::Message;
+use oak_client::{create_tls_channel, Interceptor};
 use structopt::StructOpt;
-use tonic::{
-    metadata::MetadataValue,
-    transport::{Certificate, Channel, ClientTlsConfig},
-    Request,
-};
+use tonic::Request;
 use trusted_information_retrieval_client::proto::{
     trusted_information_retrieval_client::TrustedInformationRetrievalClient,
     GetPointOfInterestRequest,
@@ -49,41 +46,23 @@ pub struct Opt {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::from_args();
 
-    let uri = opt.uri.parse().expect("Error parsing URI");
+    let uri = opt.uri.parse().context("Error parsing URI")?;
     let root_tls_certificate = tokio::fs::read(&opt.root_tls_certificate)
         .await
-        .expect("Could not load certificate file");
+        .context("Could not load certificate file")?;
     let id = opt.id;
 
     info!("Connecting to Oak Application: {:?}", uri);
-    let tls_config =
-        ClientTlsConfig::new().ca_certificate(Certificate::from_pem(root_tls_certificate));
-    let channel = Channel::builder(uri)
-        .tls_config(tls_config)
-        .expect("Couldn't create TLS configuration")
-        .connect()
+    let channel = create_tls_channel(&uri, &root_tls_certificate)
         .await
-        .expect("Could not connect to Oak Application");
-
-    // TODO(#1097): Turn the following logic into a proper reusable client library.
-    let mut label = Vec::new();
-    Label::public_untrusted()
-        .encode(&mut label)
-        .expect("Error encoding label");
-    let mut client = TrustedInformationRetrievalClient::with_interceptor(
-        channel,
-        move |mut request: Request<()>| {
-            request.metadata_mut().insert_bin(
-                oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
-                MetadataValue::from_bytes(label.as_ref()),
-            );
-            Ok(request)
-        },
-    );
+        .context("Couldn't create TLS channel")?;
+    let label = Label::public_untrusted();
+    let interceptor = Interceptor::create(&label).context("Couldn't create gRPC interceptor")?;
+    let mut client = TrustedInformationRetrievalClient::with_interceptor(channel, interceptor);
 
     let request = Request::new(GetPointOfInterestRequest { id });
     info!("Sending request: {:?}", request);

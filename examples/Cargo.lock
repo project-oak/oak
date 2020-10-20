@@ -686,11 +686,13 @@ dependencies = [
 name = "hello_world_client"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "env_logger",
  "futures",
  "hello_world_grpc",
  "log",
  "oak_abi",
+ "oak_client",
  "oak_utils",
  "prost",
  "structopt",
@@ -1218,6 +1220,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "http",
+ "hyper",
+ "log",
+ "oak_abi",
+ "prost",
+ "tonic",
+]
+
+[[package]]
 name = "oak_derive"
 version = "0.1.0"
 dependencies = [
@@ -1304,7 +1320,7 @@ dependencies = [
  "hex",
  "log",
  "pem",
- "rand 0.3.23",
+ "rand 0.7.3",
  "ring",
  "sha2",
  "structopt",
@@ -1525,6 +1541,7 @@ dependencies = [
  "log",
  "maplit",
  "oak_abi",
+ "oak_client",
  "oak_utils",
  "pem",
  "prost",
@@ -2659,6 +2676,7 @@ dependencies = [
  "env_logger",
  "log",
  "oak_abi",
+ "oak_client",
  "oak_utils",
  "prost",
  "structopt",
@@ -2715,9 +2733,11 @@ dependencies = [
 name = "trusted_information_retrieval_client"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "env_logger",
  "log",
  "oak_abi",
+ "oak_client",
  "oak_utils",
  "prost",
  "structopt",
