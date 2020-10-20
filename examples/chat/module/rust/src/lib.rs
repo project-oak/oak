@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use log::{error, info, warn};
+use log::{info, warn};
 use oak::{
     grpc,
     io::{ReceiverExt, Sender, SenderExt},
@@ -42,7 +42,7 @@ struct Router {
 }
 
 impl oak::CommandHandler<oak::grpc::Invocation> for Router {
-    fn handle_command(&mut self, command: oak::grpc::Invocation) -> Result<(), oak::OakError> {
+    fn handle_command(&mut self, command: oak::grpc::Invocation) -> anyhow::Result<()> {
         // The router node has a public confidentiality label, and therefore cannot read the
         // contents of the request of the invocation (unless it happens to be public as well), but
         // it can always inspect its label.
@@ -68,8 +68,7 @@ impl oak::CommandHandler<oak::grpc::Invocation> for Router {
                 Ok(())
             }
             None => {
-                error!("received gRPC invocation without request channel");
-                Err(oak::OakStatus::ErrInvalidArgs.into())
+                anyhow::bail!("received gRPC invocation without request channel");
             }
         }
     }

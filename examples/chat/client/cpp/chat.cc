@@ -29,8 +29,9 @@
 
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
-// TODO: Replace this bearer token mechanism with a public / private key pair.
-ABSL_FLAG(std::string, room_access_token, "", "Base64-encoded room access token to join");
+ABSL_FLAG(std::string, room_public_key, "", "Base64-encoded public key of the room to join");
+ABSL_FLAG(std::string, room_private_key, "",
+          "Base64-encoded private key of the room to join; leave empty to generate a new one");
 ABSL_FLAG(std::string, handle, "", "User handle to display");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
