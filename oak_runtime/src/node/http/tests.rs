@@ -105,8 +105,31 @@ async fn test_https_server_can_serve_https_requests() {
     let mut http_server_tester = HttpServerTester::new(2525);
     let client_with_valid_tls = create_client(LOCAL_CA);
 
-    // Send an HTTPS request, and check that response has StatusCode::OK
-    let resp = send_request(client_with_valid_tls, "https://localhost:2525").await;
+    // Send an HTTPS request with an empty label, and check that response has StatusCode::OK
+    let label = oak_abi::label::Label::public_untrusted();
+    let resp = send_request(client_with_valid_tls, label, "https://localhost:2525").await;
+    assert!(resp.is_ok());
+    assert_eq!(
+        resp.unwrap().status(),
+        http::status::StatusCode::OK.as_u16()
+    );
+
+    // Stop the runtime and the servers
+    http_server_tester.cleanup();
+}
+
+#[tokio::test]
+async fn test_https_server_can_serve_https_requests_with_non_empty_label() {
+    init_logger();
+
+    // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
+    // HTTP requests.
+    let mut http_server_tester = HttpServerTester::new(2525);
+    let client_with_valid_tls = create_client(LOCAL_CA);
+
+    // Send an HTTPS request with a non-empty label, and check that response has StatusCode::OK
+    let label = oak_abi::label::Label::public_untrusted();
+    let resp = send_request(client_with_valid_tls, label, "https://localhost:2525").await;
     assert!(resp.is_ok());
     assert_eq!(
         resp.unwrap().status(),
@@ -128,8 +151,9 @@ async fn test_https_server_cannot_serve_http_requests() {
     let mut http_server_tester = HttpServerTester::new(2526);
     let client_with_valid_tls = create_client(LOCAL_CA);
 
-    // Send an HTTP request, and check that the server responds with an error
-    let resp = send_request(client_with_valid_tls, "http://localhost:2526").await;
+    // Send an HTTP request with empty label, and check that the server responds with an error
+    let label = oak_abi::label::Label::public_untrusted();
+    let resp = send_request(client_with_valid_tls, label, "http://localhost:2526").await;
     assert!(resp.is_err());
 
     // Stop the runtime and the servers
@@ -147,16 +171,24 @@ async fn test_https_server_does_not_terminate_after_a_bad_request() {
     let client_with_invalid_tls = create_client(GCP_CA);
 
     // Send a valid request, making sure that the server is started
-    let resp = send_request(client_with_valid_tls.clone(), "https://localhost:2527").await;
+    let label = oak_abi::label::Label::public_untrusted();
+    let resp = send_request(
+        client_with_valid_tls.clone(),
+        label,
+        "https://localhost:2527",
+    )
+    .await;
     assert!(resp.is_ok());
 
     // Send an HTTPS request with invalid certificate, and check that the server responds with error
-    let resp = send_request(client_with_invalid_tls, "https://localhost:2527").await;
+    let label = oak_abi::label::Label::public_untrusted();
+    let resp = send_request(client_with_invalid_tls, label, "https://localhost:2527").await;
     assert!(resp.is_err());
 
     // Send another valid request, and check that the server is alive and responsive
     // let client_with_valid_tls = create_client(LOCAL_CA);
-    let resp = send_request(client_with_valid_tls, "https://localhost:2527").await;
+    let label = oak_abi::label::Label::public_untrusted();
+    let resp = send_request(client_with_valid_tls, label, "https://localhost:2527").await;
     assert!(resp.is_ok());
 
     // Stop the runtime and the servers
@@ -279,12 +311,12 @@ fn create_client(
 
 async fn send_request(
     client: hyper::client::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
+    request_label: oak_abi::label::Label,
     uri: &str,
 ) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
     // Send a request, and wait for the response
-    let label = oak_abi::label::Label::public_untrusted();
     let mut label_bytes = vec![];
-    if let Err(err) = label.encode(&mut label_bytes) {
+    if let Err(err) = request_label.encode(&mut label_bytes) {
         panic!("Failed to encode label: {}", err);
     }
     let label_bytes = base64::encode(label_bytes);
