@@ -61,11 +61,20 @@ bool test_https_with_protobuf_label_and_identity_ok() {
 
   std::string signed_hash_base64 =
       "rpFVU/NAIDE62/hpE0DMobLsAJ+tDLNATgPLaX8PbN6v0XeACdCNspL0YY1QfyvJN2mq3Z2h4JWgS/lVkMcHAg==";
+  std::string signed_hash;
+  if (!absl::Base64Unescape(signed_hash_base64, &signed_hash)) {
+    LOG(FATAL) << "Failed to decode base64 signed challenge";
+  }
+
   std::string public_key_base64 = "yTOK5pP6S1ebFJeOhB8KUxBY293YbBo/TW5h1/1UdKM=";
+  std::string public_key;
+  if (!absl::Base64Unescape(public_key_base64, &public_key)) {
+    LOG(FATAL) << "Failed to decode base64 public-key";
+  }
 
   oak::identity::SignedChallenge sig;
-  sig.set_base64_signed_hash(signed_hash_base64);
-  sig.set_base64_public_key(public_key_base64);
+  sig.set_signed_hash(signed_hash);
+  sig.set_public_key(public_key);
   LOG(INFO) << "@@@@@@@@@@ Created signautre";
   std::string sig_str = sig.SerializeAsString();
   LOG(INFO) << "@@@@@@@@@@ Serialized signautre";
@@ -74,7 +83,7 @@ bool test_https_with_protobuf_label_and_identity_ok() {
   cli.set_ca_cert_path(CA_CERT_PATH);
   cli.enable_server_certificate_verification(true);
   httplib::Headers headers = {{"oak-label-bin", label_str},
-                              {"oak-signed-auth-challenge-bin", sig_str}};
+                              {"oak-signed-auth-challenge-bin", absl::Base64Escape(sig_str)}};
 
   auto res = cli.Get("/", headers);
   LOG(INFO) << "@@@@@@@@@@ Got result: " << res->status;

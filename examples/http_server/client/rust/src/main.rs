@@ -61,8 +61,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Signed challenge
     let signature = oak_abi::proto::oak::identity::SignedChallenge {
-        base64_signed_hash: BASE64_SIGNED_HASH.as_bytes().to_vec(),
-        base64_public_key: BASE64_PUBLIC_KEY.to_string().as_bytes().to_vec(),
+        signed_hash: base64::decode(BASE64_SIGNED_HASH).unwrap(),
+        public_key: base64::decode(BASE64_PUBLIC_KEY).unwrap(),
     };
 
     let path = &opt.ca_cert;

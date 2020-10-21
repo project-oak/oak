@@ -557,8 +557,12 @@ fn parse_json_label(label_str: &[u8]) -> Result<Label, OakStatus> {
     })
 }
 
-fn parse_protobuf_label(protobuf_label: &[u8]) -> Result<Label, OakStatus> {
-    Label::decode(protobuf_label).map_err(|err| {
+fn parse_protobuf_label(base64_protobuf_label: &[u8]) -> Result<Label, OakStatus> {
+    let protobuf_label = base64::decode(base64_protobuf_label).map_err(|err| {
+        warn!("Could not decode Base64 HTTP label: {}", err);
+        OakStatus::ErrInvalidArgs
+    })?;
+    Label::decode(&protobuf_label[..]).map_err(|err| {
         warn!("Could not parse HTTP label: {}", err);
         OakStatus::ErrInvalidArgs
     })
@@ -579,9 +583,12 @@ fn parse_json_signed_challenge(
     serde_json::from_str(&signature_str).map_err(|_err| OakStatus::ErrInvalidArgs)
 }
 
-fn verify_protobuf_challenge(signature: &[u8]) -> Result<Vec<u8>, ()> {
-    let signature =
-        oak_abi::proto::oak::identity::SignedChallenge::decode(signature).map_err(|err| {
+fn verify_protobuf_challenge(base64_signature: &[u8]) -> Result<Vec<u8>, ()> {
+    let signature = base64::decode(base64_signature).map_err(|err| {
+        warn!("Could not decode Base64 signed challenge: {}", err);
+    })?;
+    let signature = oak_abi::proto::oak::identity::SignedChallenge::decode(&signature[..])
+        .map_err(|err| {
             warn!("Could not parse protobuf encoded signed challenge: {}", err);
         })?;
     verify_signed_challenge(signature)
@@ -592,14 +599,8 @@ fn verify_signed_challenge(
     signature: oak_abi::proto::oak::identity::SignedChallenge,
 ) -> Result<Vec<u8>, OakStatus> {
     let sig_bundle = oak_sign::SignatureBundle {
-        public_key: base64::decode(&signature.base64_public_key).map_err(|err| {
-            warn!("Could not decode base64 public key: {}", err);
-            OakStatus::ErrInvalidArgs
-        })?,
-        signed_hash: base64::decode(&signature.base64_signed_hash).map_err(|err| {
-            warn!("Could not decode base64 signed hash: {}", err);
-            OakStatus::ErrInvalidArgs
-        })?,
+        public_key: signature.public_key.clone(),
+        signed_hash: signature.signed_hash,
         hash: base64::decode(oak_abi::OAK_CHALLENGE_PHRASE_BASE64_HASH).map_err(|err| {
             warn!(
                 "Could not decode base64 hash of the challenge phrase: {}",
@@ -610,7 +611,7 @@ fn verify_signed_challenge(
     };
 
     match sig_bundle.verify() {
-        Ok(()) => Ok(signature.base64_public_key),
+        Ok(()) => Ok(signature.public_key),
         Err(_err) => {
             warn!("Could not verify the signature");
             Err(OakStatus::ErrInvalidArgs)

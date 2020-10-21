@@ -292,15 +292,17 @@ async fn send_request(
     if let Err(err) = label.encode(&mut label_bytes) {
         panic!("Failed to encode label: {}", err);
     }
+    let label_bytes = base64::encode(label_bytes);
 
     let signature = oak_abi::proto::oak::identity::SignedChallenge {
-        base64_signed_hash: BASE64_SIGNED_HASH.as_bytes().to_vec(),
-        base64_public_key: BASE64_PUBLIC_KEY.to_string().as_bytes().to_vec(),
+        signed_hash: base64::decode(&BASE64_SIGNED_HASH).unwrap(),
+        public_key: base64::decode(&BASE64_PUBLIC_KEY).unwrap(),
     };
     let mut sig_bytes = vec![];
     if let Err(err) = signature.encode(&mut sig_bytes) {
         panic!("Failed to encode signature: {}", err);
     }
+    let sig_bytes = base64::encode(sig_bytes);
 
     // The client thread may start sending the requests before the server is up. In this case, the
     // request will be rejected with a "ConnectError". To make the tests are stable, we need to

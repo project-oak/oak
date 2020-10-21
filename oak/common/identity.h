@@ -176,39 +176,39 @@ class SignedChallenge :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kBase64SignedHashFieldNumber = 1,
-    kBase64PublicKeyFieldNumber = 2,
+    kSignedHashFieldNumber = 1,
+    kPublicKeyFieldNumber = 2,
   };
-  // bytes base64_signed_hash = 1;
-  void clear_base64_signed_hash();
-  const std::string& base64_signed_hash() const;
-  void set_base64_signed_hash(const std::string& value);
-  void set_base64_signed_hash(std::string&& value);
-  void set_base64_signed_hash(const char* value);
-  void set_base64_signed_hash(const void* value, size_t size);
-  std::string* mutable_base64_signed_hash();
-  std::string* release_base64_signed_hash();
-  void set_allocated_base64_signed_hash(std::string* base64_signed_hash);
+  // bytes signed_hash = 1;
+  void clear_signed_hash();
+  const std::string& signed_hash() const;
+  void set_signed_hash(const std::string& value);
+  void set_signed_hash(std::string&& value);
+  void set_signed_hash(const char* value);
+  void set_signed_hash(const void* value, size_t size);
+  std::string* mutable_signed_hash();
+  std::string* release_signed_hash();
+  void set_allocated_signed_hash(std::string* signed_hash);
   private:
-  const std::string& _internal_base64_signed_hash() const;
-  void _internal_set_base64_signed_hash(const std::string& value);
-  std::string* _internal_mutable_base64_signed_hash();
+  const std::string& _internal_signed_hash() const;
+  void _internal_set_signed_hash(const std::string& value);
+  std::string* _internal_mutable_signed_hash();
   public:
 
-  // bytes base64_public_key = 2;
-  void clear_base64_public_key();
-  const std::string& base64_public_key() const;
-  void set_base64_public_key(const std::string& value);
-  void set_base64_public_key(std::string&& value);
-  void set_base64_public_key(const char* value);
-  void set_base64_public_key(const void* value, size_t size);
-  std::string* mutable_base64_public_key();
-  std::string* release_base64_public_key();
-  void set_allocated_base64_public_key(std::string* base64_public_key);
+  // bytes public_key = 2;
+  void clear_public_key();
+  const std::string& public_key() const;
+  void set_public_key(const std::string& value);
+  void set_public_key(std::string&& value);
+  void set_public_key(const char* value);
+  void set_public_key(const void* value, size_t size);
+  std::string* mutable_public_key();
+  std::string* release_public_key();
+  void set_allocated_public_key(std::string* public_key);
   private:
-  const std::string& _internal_base64_public_key() const;
-  void _internal_set_base64_public_key(const std::string& value);
-  std::string* _internal_mutable_base64_public_key();
+  const std::string& _internal_public_key() const;
+  void _internal_set_public_key(const std::string& value);
+  std::string* _internal_mutable_public_key();
   public:
 
   // @@protoc_insertion_point(class_scope:oak.identity.SignedChallenge)
@@ -216,8 +216,8 @@ class SignedChallenge :
   class _Internal;
 
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr base64_signed_hash_;
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr base64_public_key_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr signed_hash_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr public_key_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_oak_5fabi_2fproto_2fidentity_2eproto;
 };
@@ -232,124 +232,124 @@ class SignedChallenge :
 #endif  // __GNUC__
 // SignedChallenge
 
-// bytes base64_signed_hash = 1;
-inline void SignedChallenge::clear_base64_signed_hash() {
-  base64_signed_hash_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+// bytes signed_hash = 1;
+inline void SignedChallenge::clear_signed_hash() {
+  signed_hash_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline const std::string& SignedChallenge::base64_signed_hash() const {
-  // @@protoc_insertion_point(field_get:oak.identity.SignedChallenge.base64_signed_hash)
-  return _internal_base64_signed_hash();
+inline const std::string& SignedChallenge::signed_hash() const {
+  // @@protoc_insertion_point(field_get:oak.identity.SignedChallenge.signed_hash)
+  return _internal_signed_hash();
 }
-inline void SignedChallenge::set_base64_signed_hash(const std::string& value) {
-  _internal_set_base64_signed_hash(value);
-  // @@protoc_insertion_point(field_set:oak.identity.SignedChallenge.base64_signed_hash)
+inline void SignedChallenge::set_signed_hash(const std::string& value) {
+  _internal_set_signed_hash(value);
+  // @@protoc_insertion_point(field_set:oak.identity.SignedChallenge.signed_hash)
 }
-inline std::string* SignedChallenge::mutable_base64_signed_hash() {
-  // @@protoc_insertion_point(field_mutable:oak.identity.SignedChallenge.base64_signed_hash)
-  return _internal_mutable_base64_signed_hash();
+inline std::string* SignedChallenge::mutable_signed_hash() {
+  // @@protoc_insertion_point(field_mutable:oak.identity.SignedChallenge.signed_hash)
+  return _internal_mutable_signed_hash();
 }
-inline const std::string& SignedChallenge::_internal_base64_signed_hash() const {
-  return base64_signed_hash_.GetNoArena();
+inline const std::string& SignedChallenge::_internal_signed_hash() const {
+  return signed_hash_.GetNoArena();
 }
-inline void SignedChallenge::_internal_set_base64_signed_hash(const std::string& value) {
+inline void SignedChallenge::_internal_set_signed_hash(const std::string& value) {
   
-  base64_signed_hash_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+  signed_hash_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
 }
-inline void SignedChallenge::set_base64_signed_hash(std::string&& value) {
+inline void SignedChallenge::set_signed_hash(std::string&& value) {
   
-  base64_signed_hash_.SetNoArena(
+  signed_hash_.SetNoArena(
     &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
-  // @@protoc_insertion_point(field_set_rvalue:oak.identity.SignedChallenge.base64_signed_hash)
+  // @@protoc_insertion_point(field_set_rvalue:oak.identity.SignedChallenge.signed_hash)
 }
-inline void SignedChallenge::set_base64_signed_hash(const char* value) {
+inline void SignedChallenge::set_signed_hash(const char* value) {
   GOOGLE_DCHECK(value != nullptr);
   
-  base64_signed_hash_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
-  // @@protoc_insertion_point(field_set_char:oak.identity.SignedChallenge.base64_signed_hash)
+  signed_hash_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:oak.identity.SignedChallenge.signed_hash)
 }
-inline void SignedChallenge::set_base64_signed_hash(const void* value, size_t size) {
+inline void SignedChallenge::set_signed_hash(const void* value, size_t size) {
   
-  base64_signed_hash_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  signed_hash_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       ::std::string(reinterpret_cast<const char*>(value), size));
-  // @@protoc_insertion_point(field_set_pointer:oak.identity.SignedChallenge.base64_signed_hash)
+  // @@protoc_insertion_point(field_set_pointer:oak.identity.SignedChallenge.signed_hash)
 }
-inline std::string* SignedChallenge::_internal_mutable_base64_signed_hash() {
+inline std::string* SignedChallenge::_internal_mutable_signed_hash() {
   
-  return base64_signed_hash_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  return signed_hash_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline std::string* SignedChallenge::release_base64_signed_hash() {
-  // @@protoc_insertion_point(field_release:oak.identity.SignedChallenge.base64_signed_hash)
+inline std::string* SignedChallenge::release_signed_hash() {
+  // @@protoc_insertion_point(field_release:oak.identity.SignedChallenge.signed_hash)
   
-  return base64_signed_hash_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  return signed_hash_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline void SignedChallenge::set_allocated_base64_signed_hash(std::string* base64_signed_hash) {
-  if (base64_signed_hash != nullptr) {
+inline void SignedChallenge::set_allocated_signed_hash(std::string* signed_hash) {
+  if (signed_hash != nullptr) {
     
   } else {
     
   }
-  base64_signed_hash_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), base64_signed_hash);
-  // @@protoc_insertion_point(field_set_allocated:oak.identity.SignedChallenge.base64_signed_hash)
+  signed_hash_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), signed_hash);
+  // @@protoc_insertion_point(field_set_allocated:oak.identity.SignedChallenge.signed_hash)
 }
 
-// bytes base64_public_key = 2;
-inline void SignedChallenge::clear_base64_public_key() {
-  base64_public_key_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+// bytes public_key = 2;
+inline void SignedChallenge::clear_public_key() {
+  public_key_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline const std::string& SignedChallenge::base64_public_key() const {
-  // @@protoc_insertion_point(field_get:oak.identity.SignedChallenge.base64_public_key)
-  return _internal_base64_public_key();
+inline const std::string& SignedChallenge::public_key() const {
+  // @@protoc_insertion_point(field_get:oak.identity.SignedChallenge.public_key)
+  return _internal_public_key();
 }
-inline void SignedChallenge::set_base64_public_key(const std::string& value) {
-  _internal_set_base64_public_key(value);
-  // @@protoc_insertion_point(field_set:oak.identity.SignedChallenge.base64_public_key)
+inline void SignedChallenge::set_public_key(const std::string& value) {
+  _internal_set_public_key(value);
+  // @@protoc_insertion_point(field_set:oak.identity.SignedChallenge.public_key)
 }
-inline std::string* SignedChallenge::mutable_base64_public_key() {
-  // @@protoc_insertion_point(field_mutable:oak.identity.SignedChallenge.base64_public_key)
-  return _internal_mutable_base64_public_key();
+inline std::string* SignedChallenge::mutable_public_key() {
+  // @@protoc_insertion_point(field_mutable:oak.identity.SignedChallenge.public_key)
+  return _internal_mutable_public_key();
 }
-inline const std::string& SignedChallenge::_internal_base64_public_key() const {
-  return base64_public_key_.GetNoArena();
+inline const std::string& SignedChallenge::_internal_public_key() const {
+  return public_key_.GetNoArena();
 }
-inline void SignedChallenge::_internal_set_base64_public_key(const std::string& value) {
+inline void SignedChallenge::_internal_set_public_key(const std::string& value) {
   
-  base64_public_key_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+  public_key_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
 }
-inline void SignedChallenge::set_base64_public_key(std::string&& value) {
+inline void SignedChallenge::set_public_key(std::string&& value) {
   
-  base64_public_key_.SetNoArena(
+  public_key_.SetNoArena(
     &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
-  // @@protoc_insertion_point(field_set_rvalue:oak.identity.SignedChallenge.base64_public_key)
+  // @@protoc_insertion_point(field_set_rvalue:oak.identity.SignedChallenge.public_key)
 }
-inline void SignedChallenge::set_base64_public_key(const char* value) {
+inline void SignedChallenge::set_public_key(const char* value) {
   GOOGLE_DCHECK(value != nullptr);
   
-  base64_public_key_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
-  // @@protoc_insertion_point(field_set_char:oak.identity.SignedChallenge.base64_public_key)
+  public_key_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:oak.identity.SignedChallenge.public_key)
 }
-inline void SignedChallenge::set_base64_public_key(const void* value, size_t size) {
+inline void SignedChallenge::set_public_key(const void* value, size_t size) {
   
-  base64_public_key_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  public_key_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       ::std::string(reinterpret_cast<const char*>(value), size));
-  // @@protoc_insertion_point(field_set_pointer:oak.identity.SignedChallenge.base64_public_key)
+  // @@protoc_insertion_point(field_set_pointer:oak.identity.SignedChallenge.public_key)
 }
-inline std::string* SignedChallenge::_internal_mutable_base64_public_key() {
+inline std::string* SignedChallenge::_internal_mutable_public_key() {
   
-  return base64_public_key_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  return public_key_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline std::string* SignedChallenge::release_base64_public_key() {
-  // @@protoc_insertion_point(field_release:oak.identity.SignedChallenge.base64_public_key)
+inline std::string* SignedChallenge::release_public_key() {
+  // @@protoc_insertion_point(field_release:oak.identity.SignedChallenge.public_key)
   
-  return base64_public_key_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  return public_key_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline void SignedChallenge::set_allocated_base64_public_key(std::string* base64_public_key) {
-  if (base64_public_key != nullptr) {
+inline void SignedChallenge::set_allocated_public_key(std::string* public_key) {
+  if (public_key != nullptr) {
     
   } else {
     
   }
-  base64_public_key_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), base64_public_key);
-  // @@protoc_insertion_point(field_set_allocated:oak.identity.SignedChallenge.base64_public_key)
+  public_key_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), public_key);
+  // @@protoc_insertion_point(field_set_allocated:oak.identity.SignedChallenge.public_key)
 }
 
 #ifdef __GNUC__

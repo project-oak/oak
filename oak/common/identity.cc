@@ -46,8 +46,8 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_oak_5fabi_2fproto_2fidentity_2
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  PROTOBUF_FIELD_OFFSET(::oak::identity::SignedChallenge, base64_signed_hash_),
-  PROTOBUF_FIELD_OFFSET(::oak::identity::SignedChallenge, base64_public_key_),
+  PROTOBUF_FIELD_OFFSET(::oak::identity::SignedChallenge, signed_hash_),
+  PROTOBUF_FIELD_OFFSET(::oak::identity::SignedChallenge, public_key_),
 };
 static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, sizeof(::oak::identity::SignedChallenge)},
@@ -59,9 +59,9 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
 
 const char descriptor_table_protodef_oak_5fabi_2fproto_2fidentity_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\034oak_abi/proto/identity.proto\022\014oak.iden"
-  "tity\032\033google/protobuf/empty.proto\"H\n\017Sig"
-  "nedChallenge\022\032\n\022base64_signed_hash\030\001 \001(\014"
-  "\022\031\n\021base64_public_key\030\002 \001(\014b\006proto3"
+  "tity\032\033google/protobuf/empty.proto\":\n\017Sig"
+  "nedChallenge\022\023\n\013signed_hash\030\001 \001(\014\022\022\n\npub"
+  "lic_key\030\002 \001(\014b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_oak_5fabi_2fproto_2fidentity_2eproto_deps[1] = {
   &::descriptor_table_google_2fprotobuf_2fempty_2eproto,
@@ -72,7 +72,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_oak
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_oak_5fabi_2fproto_2fidentity_2eproto_once;
 static bool descriptor_table_oak_5fabi_2fproto_2fidentity_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_oak_5fabi_2fproto_2fidentity_2eproto = {
-  &descriptor_table_oak_5fabi_2fproto_2fidentity_2eproto_initialized, descriptor_table_protodef_oak_5fabi_2fproto_2fidentity_2eproto, "oak_abi/proto/identity.proto", 155,
+  &descriptor_table_oak_5fabi_2fproto_2fidentity_2eproto_initialized, descriptor_table_protodef_oak_5fabi_2fproto_2fidentity_2eproto, "oak_abi/proto/identity.proto", 141,
   &descriptor_table_oak_5fabi_2fproto_2fidentity_2eproto_once, descriptor_table_oak_5fabi_2fproto_2fidentity_2eproto_sccs, descriptor_table_oak_5fabi_2fproto_2fidentity_2eproto_deps, 1, 1,
   schemas, file_default_instances, TableStruct_oak_5fabi_2fproto_2fidentity_2eproto::offsets,
   file_level_metadata_oak_5fabi_2fproto_2fidentity_2eproto, 1, file_level_enum_descriptors_oak_5fabi_2fproto_2fidentity_2eproto, file_level_service_descriptors_oak_5fabi_2fproto_2fidentity_2eproto,
@@ -100,21 +100,21 @@ SignedChallenge::SignedChallenge(const SignedChallenge& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
       _internal_metadata_(nullptr) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
-  base64_signed_hash_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (!from._internal_base64_signed_hash().empty()) {
-    base64_signed_hash_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.base64_signed_hash_);
+  signed_hash_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (!from._internal_signed_hash().empty()) {
+    signed_hash_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.signed_hash_);
   }
-  base64_public_key_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (!from._internal_base64_public_key().empty()) {
-    base64_public_key_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.base64_public_key_);
+  public_key_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (!from._internal_public_key().empty()) {
+    public_key_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.public_key_);
   }
   // @@protoc_insertion_point(copy_constructor:oak.identity.SignedChallenge)
 }
 
 void SignedChallenge::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_SignedChallenge_oak_5fabi_2fproto_2fidentity_2eproto.base);
-  base64_signed_hash_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  base64_public_key_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  signed_hash_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  public_key_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 SignedChallenge::~SignedChallenge() {
@@ -123,8 +123,8 @@ SignedChallenge::~SignedChallenge() {
 }
 
 void SignedChallenge::SharedDtor() {
-  base64_signed_hash_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  base64_public_key_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  signed_hash_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  public_key_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 void SignedChallenge::SetCachedSize(int size) const {
@@ -142,8 +142,8 @@ void SignedChallenge::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  base64_signed_hash_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  base64_public_key_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  signed_hash_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  public_key_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   _internal_metadata_.Clear();
 }
 
@@ -154,18 +154,18 @@ const char* SignedChallenge::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPAC
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     CHK_(ptr);
     switch (tag >> 3) {
-      // bytes base64_signed_hash = 1;
+      // bytes signed_hash = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
-          auto str = _internal_mutable_base64_signed_hash();
+          auto str = _internal_mutable_signed_hash();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // bytes base64_public_key = 2;
+      // bytes public_key = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 18)) {
-          auto str = _internal_mutable_base64_public_key();
+          auto str = _internal_mutable_public_key();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
         } else goto handle_unusual;
@@ -196,16 +196,16 @@ failure:
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // bytes base64_signed_hash = 1;
-  if (this->base64_signed_hash().size() > 0) {
+  // bytes signed_hash = 1;
+  if (this->signed_hash().size() > 0) {
     target = stream->WriteBytesMaybeAliased(
-        1, this->_internal_base64_signed_hash(), target);
+        1, this->_internal_signed_hash(), target);
   }
 
-  // bytes base64_public_key = 2;
-  if (this->base64_public_key().size() > 0) {
+  // bytes public_key = 2;
+  if (this->public_key().size() > 0) {
     target = stream->WriteBytesMaybeAliased(
-        2, this->_internal_base64_public_key(), target);
+        2, this->_internal_public_key(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -224,18 +224,18 @@ size_t SignedChallenge::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // bytes base64_signed_hash = 1;
-  if (this->base64_signed_hash().size() > 0) {
+  // bytes signed_hash = 1;
+  if (this->signed_hash().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
-        this->_internal_base64_signed_hash());
+        this->_internal_signed_hash());
   }
 
-  // bytes base64_public_key = 2;
-  if (this->base64_public_key().size() > 0) {
+  // bytes public_key = 2;
+  if (this->public_key().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
-        this->_internal_base64_public_key());
+        this->_internal_public_key());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -269,13 +269,13 @@ void SignedChallenge::MergeFrom(const SignedChallenge& from) {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from.base64_signed_hash().size() > 0) {
+  if (from.signed_hash().size() > 0) {
 
-    base64_signed_hash_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.base64_signed_hash_);
+    signed_hash_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.signed_hash_);
   }
-  if (from.base64_public_key().size() > 0) {
+  if (from.public_key().size() > 0) {
 
-    base64_public_key_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.base64_public_key_);
+    public_key_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.public_key_);
   }
 }
 
@@ -300,9 +300,9 @@ bool SignedChallenge::IsInitialized() const {
 void SignedChallenge::InternalSwap(SignedChallenge* other) {
   using std::swap;
   _internal_metadata_.Swap(&other->_internal_metadata_);
-  base64_signed_hash_.Swap(&other->base64_signed_hash_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  signed_hash_.Swap(&other->signed_hash_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
-  base64_public_key_.Swap(&other->base64_public_key_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  public_key_.Swap(&other->public_key_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
 }
 
