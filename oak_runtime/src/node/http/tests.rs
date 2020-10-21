@@ -17,7 +17,7 @@
 use super::*;
 use maplit::hashmap;
 use oak_abi::{
-    label::Label,
+    label::{confidentiality_label, tls_endpoint_tag, Label},
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, HttpServerConfiguration,
         NodeConfiguration,
@@ -74,6 +74,28 @@ fn init_logger() {
 }
 
 #[tokio::test]
+async fn test_https_server_can_serve_https_requests_with_non_empty_request() {
+    init_logger();
+
+    // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
+    // HTTP requests.
+    let mut http_server_tester = HttpServerTester::new(2524);
+    let client_with_valid_tls = create_client(LOCAL_CA);
+
+    // Send an HTTPS request, and check that response has StatusCode::OK
+    let label = confidentiality_label(tls_endpoint_tag("localhost"));
+    let resp = send_request(client_with_valid_tls, "https://localhost:2524", label).await;
+    assert!(resp.is_ok());
+    assert_eq!(
+        resp.unwrap().status(),
+        http::status::StatusCode::OK.as_u16()
+    );
+
+    // Stop the runtime and the servers
+    http_server_tester.cleanup();
+}
+
+#[tokio::test]
 async fn test_https_server_can_serve_https_requests() {
     init_logger();
 
@@ -83,7 +105,12 @@ async fn test_https_server_can_serve_https_requests() {
     let client_with_valid_tls = create_client(LOCAL_CA);
 
     // Send an HTTPS request, and check that response has StatusCode::OK
-    let resp = send_request(client_with_valid_tls, "https://localhost:2525").await;
+    let resp = send_request(
+        client_with_valid_tls,
+        "https://localhost:2525",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_ok());
     assert_eq!(
         resp.unwrap().status(),
@@ -106,7 +133,12 @@ async fn test_https_server_cannot_serve_http_requests() {
     let client_with_valid_tls = create_client(LOCAL_CA);
 
     // Send an HTTP request, and check that the server responds with an error
-    let resp = send_request(client_with_valid_tls, "http://localhost:2526").await;
+    let resp = send_request(
+        client_with_valid_tls,
+        "http://localhost:2526",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_err());
 
     // Stop the runtime and the servers
@@ -124,16 +156,31 @@ async fn test_https_server_does_not_terminate_after_a_bad_request() {
     let client_with_invalid_tls = create_client(GCP_CA);
 
     // Send a valid request, making sure that the server is started
-    let resp = send_request(client_with_valid_tls.clone(), "https://localhost:2527").await;
+    let resp = send_request(
+        client_with_valid_tls.clone(),
+        "https://localhost:2527",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_ok());
 
     // Send an HTTPS request with invalid certificate, and check that the server responds with error
-    let resp = send_request(client_with_invalid_tls, "https://localhost:2527").await;
+    let resp = send_request(
+        client_with_invalid_tls,
+        "https://localhost:2527",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_err());
 
     // Send another valid request, and check that the server is alive and responsive
     // let client_with_valid_tls = create_client(LOCAL_CA);
-    let resp = send_request(client_with_valid_tls, "https://localhost:2527").await;
+    let resp = send_request(
+        client_with_valid_tls,
+        "https://localhost:2527",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_ok());
 
     // Stop the runtime and the servers
@@ -186,8 +233,12 @@ fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak
     // exactly one handle in it.
     //
     // Create a channel for receiving invocations to pass to the HTTP server pseudo-Node.
+
+    // A non-empty label here results in PermissionDenied error.
+    // let label = confidentiality_label(tls_endpoint_tag("localhost"));
+    let label = Label::public_untrusted();
     let (invocation_sender, invocation_receiver) = runtime
-        .channel_create(&Label::public_untrusted())
+        .channel_create(&label)
         .expect("Could not create channel");
     let invocation_sender = HttpInvocationSender {
         sender: Some(Sender::<HttpInvocation>::new(WriteHandle {
@@ -256,14 +307,14 @@ fn create_client(
 async fn send_request(
     client: hyper::client::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
     uri: &str,
+    label: oak_abi::label::Label,
 ) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
     // Send a request, and wait for the response
-    let label = oak_abi::label::Label::public_untrusted();
     let mut label_bytes = vec![];
     if let Err(err) = label.encode(&mut label_bytes) {
         panic!("Failed to encode label: {}", err);
     }
-
+    let label_bytes = base64::encode(label_bytes);
     // The client thread may start sending the requests before the server is up. In this case, the
     // request will be rejected with a "ConnectError". To make the tests are stable, we need to
     // retry sending the requests until the server is up. To distinguish between these cases and

@@ -480,8 +480,9 @@ fn parse_json_label(label_str: Vec<u8>) -> Result<Label, OakStatus> {
     })
 }
 
-fn parse_protobuf_label(protobuf_label: &[u8]) -> Result<Label, OakStatus> {
-    Label::decode(protobuf_label).map_err(|err| {
+fn parse_protobuf_label(protobuf_label_b64: &[u8]) -> Result<Label, OakStatus> {
+    let protobuf_label = base64::decode(protobuf_label_b64).unwrap();
+    Label::decode(&protobuf_label[..]).map_err(|err| {
         warn!("Could not parse HTTP label: {}", err);
         OakStatus::ErrInvalidArgs
     })
