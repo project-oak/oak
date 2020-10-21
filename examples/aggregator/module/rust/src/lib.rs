@@ -230,9 +230,8 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     //     }],
     //     integrity_tags: vec![],
     // };
-    let grpc_client = oak::grpc::client::Client::new_with_label(
+    let grpc_client = oak::grpc::client::Client::new(
         &oak::node_config::grpc_client("https://localhost:8888"),
-        &Label::public_untrusted(),
     )
     .expect("Couldn't create gRPC client");
 
