@@ -336,7 +336,7 @@ impl HttpRequestHandler {
         request_label: Label,
     ) -> Result<HttpResponseReceiver, ()> {
         // Create a pair of channels for interacting with the UserNode.
-        let pipe = Pipe::new(&self.runtime.clone(), &request_label)?;
+        let pipe = Pipe::new(&self.runtime.clone())?;
 
         // Create the NodeConfiguration for UserNode, with its privilege set to the user's identity,
         // extracted from the request.
@@ -348,11 +348,11 @@ impl HttpRequestHandler {
             })),
         };
 
-        // Create the UserNode
+        // Create the UserNode.
         debug!("Creating UserNode.");
-        if let Err(err) = self
-            .runtime
-            .node_create(&config, &request_label, pipe.invocation_reader)
+        if let Err(err) =
+            self.runtime
+                .node_create(&config, &Label::public_untrusted(), pipe.invocation_reader)
         {
             error!("Could not create UserNode: {}", err);
             return Err(());
@@ -386,12 +386,12 @@ struct Pipe {
 }
 
 impl Pipe {
-    fn new(runtime: &RuntimeProxy, request_label: &Label) -> Result<Self, ()> {
+    fn new(runtime: &RuntimeProxy) -> Result<Self, ()> {
         // Create a channel for passing HTTP requests to the temporary UserNode. This channel is
-        // created with the label specified by the caller. This will fail if the label has a
-        // non-empty integrity component.
-        let (invocation_writer, invocation_reader) =
-            runtime.channel_create(&request_label).map_err(|err| {
+        // created with public_untrusted, so that the UserNode can read from it.
+        let (invocation_writer, invocation_reader) = runtime
+            .channel_create(&Label::public_untrusted())
+            .map_err(|err| {
                 warn!("could not create HTTP request channel: {:?}", err);
             })?;
 

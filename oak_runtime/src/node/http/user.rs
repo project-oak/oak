@@ -29,7 +29,7 @@ use crate::{
     proto::oak::invocation::{HttpInvocation, OuterHttpInvocation},
     RuntimeProxy,
 };
-use log::{error, warn};
+use log::{error, trace, warn};
 use oak_abi::{
     label::{Label, Tag, UserIdentityTag},
     proto::oak::application::UserNodeConfiguration,
@@ -79,19 +79,36 @@ impl UserNode {
         // receive the response from it.
         let pipe = Pipe::new(
             &runtime,
-            &outer_http_invocation.request_label.unwrap(),
+            &outer_http_invocation
+                .request_label
+                .ok_or(())
+                .map_err(|_err| {
+                    warn!("Cannot retrieve request_label from the OuterHttpInvocation");
+                })?,
             &self.privilege,
         )?;
 
         // Put the HTTP request message inside the per-invocation request channel.
-        pipe.insert_message(&runtime, outer_http_invocation.request.unwrap())?;
+        pipe.insert_message(
+            &runtime,
+            outer_http_invocation.request.ok_or(()).map_err(|_err| {
+                warn!("Cannot retrieve request from the OuterHttpInvocation");
+            })?,
+        )?;
 
         // Send an invocation message (with attached handles) to the Oak Node.
+        trace!(
+            "UserNode {:?}: Sending invocation on outer_http_invocation.invocation_sender",
+            self.node_name
+        );
         pipe.send_invocation(
             &runtime,
             outer_http_invocation
                 .invocation_sender
-                .unwrap()
+                .ok_or(())
+                .map_err(|_err| {
+                    warn!("Cannot retrieve invocation_sender from the OuterHttpInvocation");
+                })?
                 .handle
                 .handle,
         )?;

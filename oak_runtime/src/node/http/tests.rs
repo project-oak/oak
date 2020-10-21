@@ -18,7 +18,7 @@ use super::*;
 use crate::proto::oak::invocation::HttpInvocation;
 use maplit::hashmap;
 use oak_abi::{
-    label::Label,
+    label::{confidentiality_label, tls_endpoint_tag, Label},
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, HttpServerConfiguration,
         NodeConfiguration,
@@ -119,28 +119,6 @@ async fn test_https_server_can_serve_https_requests() {
 }
 
 #[tokio::test]
-async fn test_https_server_can_serve_https_requests_with_non_empty_label() {
-    init_logger();
-
-    // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
-    // HTTP requests.
-    let mut http_server_tester = HttpServerTester::new(2525);
-    let client_with_valid_tls = create_client(LOCAL_CA);
-
-    // Send an HTTPS request with a non-empty label, and check that response has StatusCode::OK
-    let label = oak_abi::label::Label::public_untrusted();
-    let resp = send_request(client_with_valid_tls, label, "https://localhost:2525").await;
-    assert!(resp.is_ok());
-    assert_eq!(
-        resp.unwrap().status(),
-        http::status::StatusCode::OK.as_u16()
-    );
-
-    // Stop the runtime and the servers
-    http_server_tester.cleanup();
-}
-
-#[tokio::test]
 async fn test_https_server_cannot_serve_http_requests() {
     init_logger();
 
@@ -190,6 +168,28 @@ async fn test_https_server_does_not_terminate_after_a_bad_request() {
     let label = oak_abi::label::Label::public_untrusted();
     let resp = send_request(client_with_valid_tls, label, "https://localhost:2527").await;
     assert!(resp.is_ok());
+
+    // Stop the runtime and the servers
+    http_server_tester.cleanup();
+}
+
+#[tokio::test]
+async fn test_https_server_can_serve_https_requests_with_non_empty_label() {
+    init_logger();
+
+    // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
+    // HTTP requests.
+    let mut http_server_tester = HttpServerTester::new(2528);
+    let client_with_valid_tls = create_client(LOCAL_CA);
+
+    // Send an HTTPS request with a non-empty label, and check that response has StatusCode::OK
+    let label = confidentiality_label(tls_endpoint_tag("localhost"));
+    let resp = send_request(client_with_valid_tls, label, "https://localhost:2528").await;
+    assert!(resp.is_ok());
+    assert_eq!(
+        resp.unwrap().status(),
+        http::status::StatusCode::OK.as_u16()
+    );
 
     // Stop the runtime and the servers
     http_server_tester.cleanup();
