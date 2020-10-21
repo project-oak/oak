@@ -68,12 +68,10 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::from_args();
 
-    let private_key = tokio::fs::read(&opt.grpc_tls_private_key)
-        .await
-        .context("Couldn't load private key")?;
-    let certificate = tokio::fs::read(&opt.grpc_tls_certificate)
-        .await
-        .context("Couldn't load certificate")?;
+    let private_key =
+        std::fs::read(&opt.grpc_tls_private_key).context("Couldn't load private key")?;
+    let certificate =
+        std::fs::read(&opt.grpc_tls_certificate).context("Couldn't load certificate")?;
 
     let identity = Identity::from_pem(certificate, private_key);
 

@@ -128,12 +128,10 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
     info!("Running backend database");
 
-    let private_key = tokio::fs::read(&opt.grpc_tls_private_key)
-        .await
-        .context("Couldn't load private key")?;
-    let certificate = tokio::fs::read(&opt.grpc_tls_certificate)
-        .await
-        .context("Couldn't load certificate")?;
+    let private_key =
+        std::fs::read(&opt.grpc_tls_private_key).context("Couldn't load private key")?;
+    let certificate =
+        std::fs::read(&opt.grpc_tls_certificate).context("Couldn't load certificate")?;
     let database_url = Url::parse(&opt.database_url).expect("Couldn't parse database URL");
 
     // Create a mutex-protected database.

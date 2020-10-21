@@ -28,7 +28,7 @@ pub async fn build_auth_client(
     ca_cert: &str,
     auth_server: &str,
 ) -> Result<AuthenticationClient<Channel>, Box<dyn std::error::Error>> {
-    let root_cert = tokio::fs::read(ca_cert).await?;
+    let root_cert = std::fs::read(ca_cert)?;
     let root_cert = Certificate::from_pem(root_cert);
     let tls_config = ClientTlsConfig::new().ca_certificate(root_cert);
 

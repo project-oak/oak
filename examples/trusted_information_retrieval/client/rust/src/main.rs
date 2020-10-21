@@ -51,9 +51,8 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
 
     let uri = opt.uri.parse().context("Error parsing URI")?;
-    let root_tls_certificate = tokio::fs::read(&opt.root_tls_certificate)
-        .await
-        .context("Could not load certificate file")?;
+    let root_tls_certificate =
+        std::fs::read(&opt.root_tls_certificate).context("Could not load certificate file")?;
     let id = opt.id;
 
     info!("Connecting to Oak Application: {:?}", uri);
