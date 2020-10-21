@@ -74,8 +74,10 @@ cc_grpc_library(
 proto_library(
     name = "identity_proto",
     srcs = ["identity.proto"],
-    deps = ["@com_google_protobuf//:descriptor_proto", 
-    "@com_google_protobuf//:empty_proto"],
+    deps = [
+        "@com_google_protobuf//:descriptor_proto",
+        "@com_google_protobuf//:empty_proto",
+    ],
 )
 
 cc_proto_library(

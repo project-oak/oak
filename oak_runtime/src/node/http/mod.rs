@@ -253,7 +253,7 @@ impl Node for HttpServerNode {
 
         // Start the HTTP server.
         info!(
-            "{}: @@@@@ Starting HTTP server pseudo-Node on: {}",
+            "{}: Starting HTTP server pseudo-Node on: {}",
             self.node_name, self.address
         );
         async_runtime.block_on(server);
@@ -336,13 +336,11 @@ impl HttpRequestHandler {
         request_label: Label,
     ) -> Result<HttpResponseReceiver, ()> {
         // Create a pair of channels for interacting with the UserNode.
-        info!("@@@@@@@@ Creating channel for communication with the UserNode.");
         let pipe = Pipe::new(&self.runtime.clone(), &request_label)?;
 
         // Create the NodeConfiguration for UserNode, with its privilege set to the user's identity,
         // extracted from the request.
         let user_identity = get_user_identity(&request)?;
-        info!("@@@@@@@@ Got user identity {:?}.", user_identity);
         let config = NodeConfiguration {
             name: "user_node".to_string(),
             config_type: Some(ConfigType::UserNodeConfig(UserNodeConfiguration {
@@ -351,7 +349,7 @@ impl HttpRequestHandler {
         };
 
         // Create the UserNode
-        info!("@@@@@@@@ Creating UserNode.");
+        debug!("Creating UserNode.");
         if let Err(err) = self
             .runtime
             .node_create(&config, &request_label, pipe.invocation_reader)
@@ -367,7 +365,6 @@ impl HttpRequestHandler {
             request_label,
             self.invocation_channel,
         )?;
-        info!("@@@@@ invocation inserted in UserNode channel");
 
         // Close all local handles except for the one that allows reading responses.
         pipe.close(&self.runtime);
@@ -393,13 +390,11 @@ impl Pipe {
         // Create a channel for passing HTTP requests to the temporary UserNode. This channel is
         // created with the label specified by the caller. This will fail if the label has a
         // non-empty integrity component.
-        info!("@@@@@@@@ Creating request_reader with {:?}", &request_label);
         let (invocation_writer, invocation_reader) =
             runtime.channel_create(&request_label).map_err(|err| {
                 warn!("could not create HTTP request channel: {:?}", err);
             })?;
 
-        info!("@@@@@@@@ Creating response_writer with public-untrusted.");
         let (response_writer, response_reader) = runtime
             .channel_create(&Label::public_untrusted())
             .map_err(|err| {
@@ -448,7 +443,6 @@ impl Pipe {
             invocation_sender: Some(inner_invocation_sender),
             response_sender: Some(response_sender),
         };
-        info!("@@@@@@@@ Sending invocation.");
         let invocation_writer = Sender::new(WriteHandle {
             handle: self.invocation_writer,
         });

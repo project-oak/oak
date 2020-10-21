@@ -29,7 +29,7 @@ use crate::{
     proto::oak::invocation::{HttpInvocation, OuterHttpInvocation},
     RuntimeProxy,
 };
-use log::{error, info, warn};
+use log::{error, warn};
 use oak_abi::{
     label::{Label, Tag, UserIdentityTag},
     proto::oak::application::UserNodeConfiguration,
@@ -120,16 +120,9 @@ impl UserNode {
         // Send the request to the Oak node and get a handle to the channel containing the response.
         let response_reader =
             self.inject_http_request(runtime.clone(), outer_http_invocation.clone())?;
-
-        info!(
-            "@@@@@@ injected the request, and received response handle: {}",
-            response_reader
-        );
         let response_receiver = crate::io::Receiver::new(ReadHandle {
             handle: response_reader,
         });
-
-        info!("@@@@@@ Waiting for the response to arrive");
         let response = response_receiver.receive(&runtime).map_err(|err| {
             error!(
                 "Could not receive the response from the Oak node on channel {}: {}.",
@@ -137,7 +130,6 @@ impl UserNode {
             )
         })?;
 
-        info!("@@@@@@ Sending the response back to HTTP server pseudo-node.");
         outer_http_invocation
             .response_sender
             .ok_or(())
@@ -203,10 +195,6 @@ impl Pipe {
             integrity_tags: vec![],
         };
 
-        info!(
-            "@@@@@@@@ Creating request_reader with {:?}",
-            &request_reader_label
-        );
         // Create a channel for passing HTTP requests to the Oak node. This channel is created with
         // the label specified by the caller, and the identity of the caller.
         let (request_writer, request_reader) = runtime
@@ -215,10 +203,6 @@ impl Pipe {
                 warn!("could not create HTTP request channel: {:?}", err);
             })?;
 
-        info!(
-            "@@@@@@@@ Creating response_writer with {:?}",
-            &response_writer_label
-        );
         // Create a channel for receiving HTTP responses from the Oak node. This channel is created
         // with a label that has the identity of the caller as the confidentiality component.
         let (response_writer, response_reader) = runtime
@@ -241,7 +225,6 @@ impl Pipe {
         let sender = crate::io::Sender::new(WriteHandle {
             handle: self.request_writer,
         });
-        info!("@@@@@@@@ Sending request to Oak node");
         sender.send(request, runtime).map_err(|err| {
             error!(
                 "Couldn't write the request to the HTTP request channel: {:?}",
@@ -270,7 +253,6 @@ impl Pipe {
         let invocation_sender = crate::io::Sender::new(WriteHandle {
             handle: invocation_channel,
         });
-        info!("@@@@@@@@ Sending invocation");
         invocation_sender
             .send(invocation, runtime)
             .map_err(|error| {

@@ -65,8 +65,8 @@ cc_library(
     hdrs = ["httptest.h"],
     deps = [
         ":httplib_config",
-        "//oak/common:label",
         "//oak/common:identity",
+        "//oak/common:label",
         "@com_github_google_glog//:glog",
     ],
 )
