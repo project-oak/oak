@@ -16,8 +16,6 @@
 
 #include "examples/abitest/client/cpp/httptest.h"
 
-#include "absl/flags/flag.h"
-#include "absl/flags/parse.h"
 #include "absl/strings/escaping.h"
 #include "glog/logging.h"
 #include "httplib_config.h"
