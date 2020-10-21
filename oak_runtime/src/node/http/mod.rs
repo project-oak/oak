@@ -342,7 +342,7 @@ impl HttpRequestHandler {
         // Create the NodeConfiguration for UserNode, with its privilege set to the user's identity,
         // extracted from the request.
         let user_identity = get_user_identity(&request)?;
-        info!("@@@@@@@@ Got user identity {:?}.", user_identity.clone());
+        info!("@@@@@@@@ Got user identity {:?}.", user_identity);
         let config = NodeConfiguration {
             name: "user_node".to_string(),
             config_type: Some(ConfigType::UserNodeConfig(UserNodeConfiguration {
@@ -574,34 +574,43 @@ fn verify_json_challenge(signature: &[u8]) -> Result<Vec<u8>, ()> {
 
 fn parse_json_signed_challenge(
     bytes: Vec<u8>,
-) -> Result<crate::proto::oak::identity::SignedChallenge, OakStatus> {
+) -> Result<oak_abi::proto::oak::identity::SignedChallenge, OakStatus> {
     let signature_str = String::from_utf8(bytes).map_err(|_err| OakStatus::ErrInvalidArgs)?;
     serde_json::from_str(&signature_str).map_err(|_err| OakStatus::ErrInvalidArgs)
 }
 
 fn verify_protobuf_challenge(signature: &[u8]) -> Result<Vec<u8>, ()> {
     let signature =
-        crate::proto::oak::identity::SignedChallenge::decode(&signature[..]).map_err(|err| {
+        oak_abi::proto::oak::identity::SignedChallenge::decode(signature).map_err(|err| {
             warn!("Could not parse protobuf encoded signed challenge: {}", err);
         })?;
-    panic!("@@@@@@@!!!!!!!!@@@@@ got signature");
     verify_signed_challenge(signature)
         .map_err(|err| warn!("Could not verify the signature: {}", err))
 }
 
 fn verify_signed_challenge(
-    signature: crate::proto::oak::identity::SignedChallenge,
+    signature: oak_abi::proto::oak::identity::SignedChallenge,
 ) -> Result<Vec<u8>, OakStatus> {
     let sig_bundle = oak_sign::SignatureBundle {
-        public_key: signature.public_key.clone(),
-        signed_hash: signature.signed_hash,
-        hash: base64::decode(oak_abi::OAK_CHALLENGE_PHRASE_BASE64_HASH)
-            .map_err(|_err| OakStatus::ErrInternal)?,
+        public_key: base64::decode(&signature.base64_public_key).map_err(|err| {
+            warn!("Could not decode base64 public key: {}", err);
+            OakStatus::ErrInvalidArgs
+        })?,
+        signed_hash: base64::decode(&signature.base64_signed_hash).map_err(|err| {
+            warn!("Could not decode base64 signed hash: {}", err);
+            OakStatus::ErrInvalidArgs
+        })?,
+        hash: base64::decode(oak_abi::OAK_CHALLENGE_PHRASE_BASE64_HASH).map_err(|err| {
+            warn!(
+                "Could not decode base64 hash of the challenge phrase: {}",
+                err
+            );
+            OakStatus::ErrInternal
+        })?,
     };
 
-    panic!("@@@@@@@!!!!!!!!@@@@@ Verifying signature");
     match sig_bundle.verify() {
-        Ok(()) => Ok(signature.public_key),
+        Ok(()) => Ok(signature.base64_public_key),
         Err(_err) => {
             warn!("Could not verify the signature");
             Err(OakStatus::ErrInvalidArgs)

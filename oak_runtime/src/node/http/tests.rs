@@ -293,10 +293,14 @@ async fn send_request(
         panic!("Failed to encode label: {}", err);
     }
 
-    let signature = crate::proto::oak::identity::SignedChallenge {
-        signed_hash: base64::decode(BASE64_SIGNED_HASH).unwrap(),
-        public_key: base64::decode(BASE64_PUBLIC_KEY).unwrap(),
+    let signature = oak_abi::proto::oak::identity::SignedChallenge {
+        base64_signed_hash: BASE64_SIGNED_HASH.as_bytes().to_vec(),
+        base64_public_key: BASE64_PUBLIC_KEY.to_string().as_bytes().to_vec(),
     };
+    let mut sig_bytes = vec![];
+    if let Err(err) = signature.encode(&mut sig_bytes) {
+        panic!("Failed to encode signature: {}", err);
+    }
 
     // The client thread may start sending the requests before the server is up. In this case, the
     // request will be rejected with a "ConnectError". To make the tests are stable, we need to
@@ -309,8 +313,8 @@ async fn send_request(
             .uri(uri)
             .header(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY, label_bytes.clone())
             .header(
-                oak_abi::OAK_SIGNED_CHALLENGE_JSON_KEY,
-                serde_json::to_string(&signature).unwrap(),
+                oak_abi::OAK_SIGNED_CHALLENGE_PROTOBUF_KEY,
+                sig_bytes.clone(),
             )
             .body(hyper::Body::empty())
             .unwrap();

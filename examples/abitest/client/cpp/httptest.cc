@@ -21,8 +21,8 @@
 #include "absl/strings/escaping.h"
 #include "glog/logging.h"
 #include "httplib_config.h"
+#include "oak_abi/proto/identity.pb.h"
 #include "oak_abi/proto/label.pb.h"
-#include "proto/identity.pb.h"
 
 const char* CA_CERT_PATH = "../../../../../../../../../examples/certs/local/ca.pem";
 const int PORT = 8383;
@@ -63,24 +63,11 @@ bool test_https_with_protobuf_label_and_identity_ok() {
 
   std::string signed_hash_base64 =
       "rpFVU/NAIDE62/hpE0DMobLsAJ+tDLNATgPLaX8PbN6v0XeACdCNspL0YY1QfyvJN2mq3Z2h4JWgS/lVkMcHAg==";
-  std::string signed_hash;
-  if (!absl::Base64Unescape(signed_hash_base64, &signed_hash)) {
-    LOG(FATAL) << "Could not decode public key: " << signed_hash_base64;
-  } else {
-    LOG(INFO) << "@@@@@@@@@@ signed_hash:" << signed_hash_base64;
-  }
   std::string public_key_base64 = "yTOK5pP6S1ebFJeOhB8KUxBY293YbBo/TW5h1/1UdKM=";
 
-  std::string public_key;
-  if (!absl::Base64Unescape(public_key_base64, &public_key)) {
-    LOG(FATAL) << "Could not decode public key: " << public_key_base64;
-  } else {
-    LOG(INFO) << "@@@@@@@@@@ public_key:" << public_key_base64;
-  }
-
   oak::identity::SignedChallenge sig;
-  sig.set_signed_hash(signed_hash);
-  sig.set_public_key(public_key);
+  sig.set_base64_signed_hash(signed_hash_base64);
+  sig.set_base64_public_key(public_key_base64);
   LOG(INFO) << "@@@@@@@@@@ Created signautre";
   std::string sig_str = sig.SerializeAsString();
   LOG(INFO) << "@@@@@@@@@@ Serialized signautre";

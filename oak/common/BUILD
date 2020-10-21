@@ -53,18 +53,13 @@ cc_library(
     ],
 )
 
-cc_proto_library(
-    name = "identity_cc_proto",
-    deps = ["//proto:identity_proto"],
-)
-
 cc_library(
     name = "identity",
     srcs = ["identity.cc"],
     hdrs = ["identity.h"],
     visibility = ["//visibility:public"],
     deps = [
-        ":identity_cc_proto",
+        "//oak_abi/proto:identity_cc_proto",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/strings",
     ],

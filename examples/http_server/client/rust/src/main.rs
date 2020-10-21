@@ -18,6 +18,26 @@ use anyhow::Context;
 use std::{fs, io};
 use structopt::StructOpt;
 
+/// Generated using the command:
+/// ```shell
+/// cargo run --manifest-path=oak_sign/Cargo.toml -- \
+///     generate \
+///     --private-key=http-test.key \
+///     --public-key=http-test.pub
+/// ```
+const BASE64_PUBLIC_KEY: &str = "yTOK5pP6S1ebFJeOhB8KUxBY293YbBo/TW5h1/1UdKM=";
+
+/// Generated using the command:
+/// ```shell
+/// cargo run --manifest-path=oak_sign/Cargo.toml -- \
+///     sign \
+///     --private-key=http-test.key \
+///     --input-string="oak-challenge" \
+///     --signature-file=http-test.sign
+/// ```
+const BASE64_SIGNED_HASH: &str =
+    "rpFVU/NAIDE62/hpE0DMobLsAJ+tDLNATgPLaX8PbN6v0XeACdCNspL0YY1QfyvJN2mq3Z2h4JWgS/lVkMcHAg==";
+
 #[derive(StructOpt, Clone)]
 #[structopt(about = "HTTPS server pseudo-Node Client Example.")]
 pub struct Opt {
@@ -38,6 +58,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .context("Could not serialize public/untrusted label to JSON.")?
         .into_bytes();
     let opt = Opt::from_args();
+
+    // Signed challenge
+    let signature = oak_abi::proto::oak::identity::SignedChallenge {
+        base64_signed_hash: BASE64_SIGNED_HASH.as_bytes().to_vec(),
+        base64_public_key: BASE64_PUBLIC_KEY.to_string().as_bytes().to_vec(),
+    };
 
     let path = &opt.ca_cert;
     let ca_file = fs::File::open(path).unwrap_or_else(|e| panic!("failed to open {}: {}", path, e));
@@ -61,6 +87,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .method("get")
         .uri("https://localhost:8080")
         .header(oak_abi::OAK_LABEL_HTTP_JSON_KEY, label_bytes)
+        .header(
+            oak_abi::OAK_SIGNED_CHALLENGE_JSON_KEY,
+            serde_json::to_string(&signature).unwrap(),
+        )
         .body(hyper::Body::empty())
         .unwrap();
 

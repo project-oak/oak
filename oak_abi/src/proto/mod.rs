@@ -24,4 +24,8 @@ pub mod oak {
     pub mod label {
         include!(concat!(env!("OUT_DIR"), "/oak.label.rs"));
     }
+
+    pub mod identity {
+        include!(concat!(env!("OUT_DIR"), "/oak.identity.rs"));
+    }
 }
