@@ -79,7 +79,6 @@ Theorem proj_pres_nid_fresh: forall ell s,
 Proof.
 Admitted.
 
-
 Definition idempotent {A: Type} (f: A -> A) := forall a, f (f a) = f a.
 
 Theorem node_low_proj_idempotent: forall ell, idempotent (node_low_proj ell).
