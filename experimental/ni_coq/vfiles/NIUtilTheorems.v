@@ -79,6 +79,7 @@ Theorem proj_pres_nid_fresh: forall ell s,
 Proof.
 Admitted.
 
+
 Definition idempotent {A: Type} (f: A -> A) := forall a, f (f a) = f a.
 
 Theorem node_low_proj_idempotent: forall ell, idempotent (node_low_proj ell).
@@ -169,17 +170,12 @@ Admitted.
 
 Theorem proj_node_state_to_proj_n: forall ell s id n,
     ((nodes (state_low_proj ell s)).[? id] = Some n) ->
-    n.(nlbl) <<L ell ->
     exists n',
         ((nodes s).[? id] = Some n') /\
         (node_low_proj ell n') = n.
 Proof.
-    intros.
-    inversion H. unfold node_state_low_proj in H2. 
-    Set Printing All. unfold fnd in H2.
-    destruct (nodes s id) eqn:E. 
-    - exists n0. split. eauto. congruence.
-    - admit. (* This case is not true *)
+    (* XXX *)
+    (* This is no longer true, I think *)
 Admitted.
 
 Theorem node_projection_preserves_flowsto: forall ell s id n n',
