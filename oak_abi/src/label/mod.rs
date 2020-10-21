@@ -71,6 +71,14 @@ impl crate::proto::oak::label::Label {
     }
 }
 
+/// Convenience function for creating labels with a single confidentiality tag.
+pub fn confidentiality_label(tag: Tag) -> crate::proto::oak::label::Label {
+    Label {
+        confidentiality_tags: vec![tag],
+        integrity_tags: vec![],
+    }
+}
+
 /// Creates a [`Tag`] having as principal the provided authorization bearer token.
 ///
 /// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto

@@ -14,9 +14,11 @@ name = "tir_client_bin"
 path = "src/main.rs"
 
 [dependencies]
+anyhow = "*"
 env_logger = "*"
 log = "*"
 oak_abi = "=0.1.0"
+oak_client = "=0.1.0"
 prost = "*"
 structopt = "*"
 tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }

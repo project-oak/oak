@@ -29,10 +29,9 @@ use async_trait::async_trait;
 use futures_util::FutureExt;
 use log::{debug, info, warn};
 use oak_abi::label::Label;
-use prost::Message;
+use oak_client::Interceptor;
 use tokio::sync::oneshot;
 use tonic::{
-    metadata::MetadataValue,
     transport::{Channel, Server},
     Request, Response, Status,
 };
@@ -126,18 +125,10 @@ impl NativeApplication {
             .connect()
             .await
             .expect("Couldn't connect to Oak Application");
+        let label = Label::public_untrusted();
+        let interceptor = Interceptor::create(&label).expect("Couldn't create gRPC interceptor");
 
-        let mut label = Vec::new();
-        Label::public_untrusted()
-            .encode(&mut label)
-            .expect("Error encoding label");
-        TrustedDatabaseClient::with_interceptor(channel, move |mut request: Request<()>| {
-            request.metadata_mut().insert_bin(
-                oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
-                MetadataValue::from_bytes(label.as_ref()),
-            );
-            Ok(request)
-        })
+        TrustedDatabaseClient::with_interceptor(channel, interceptor)
     }
 }
 
