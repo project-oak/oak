@@ -44,7 +44,7 @@ use oak::{
     io::{Receiver, ReceiverExt, SenderExt},
     proto::oak::invocation::{GrpcInvocation, GrpcInvocationReceiver, GrpcInvocationSender},
 };
-use oak_abi::{label::Label, proto::oak::application::ConfigMap};
+use oak_abi::proto::oak::application::ConfigMap;
 use proto::oak::examples::aggregator::{
     Aggregator, AggregatorClient, AggregatorDispatcher, AggregatorInit, Sample,
 };
