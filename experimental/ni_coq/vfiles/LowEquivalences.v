@@ -66,13 +66,13 @@ Definition event_low_proj (ell: level)(e: event_l): event_l :=
 
 Definition node_state_low_proj (ell: level)(ns: node_state): node_state :=
     fun id => match (ns id) with
-        | None => None
+        | None => Some (empty_node ell)
         | Some n => Some (node_low_proj ell n)
     end.
 
 Definition chan_state_low_proj (ell: level)(cs: chan_state): chan_state :=
     fun h => match (cs h) with
-        | None => None
+        | None => Some (empty_chan ell)
         | Some c => Some (chan_low_proj ell c)
     end.
 

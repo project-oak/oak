@@ -193,7 +193,16 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             of the usual one if an error is _not_ thrown.
             *)
         (msg_is_head ch msg) ->
-        ch.(clbl) <<L n.(nlbl) -> (* label of caller flowsTo label of ch *)
+        ch.(clbl) <<L n.(nlbl) -> 
+            (* label of channel flowsTo label of caller. 
+                checks that reading the message is safe
+             *)
+        n.(nlbl) <<L ch.(clbl) -> 
+            (* label of caller flowsTo label of ch. This check is less intuitive than the above.
+            However, reads are destructive because the channel is popped, so the calling node
+            is effectively doing a write to the channel. Any node that does a subsequent read
+            can detect whether or not the channel has been read because its contents may have 
+            been changed. This check rules out this more subtle leak *)
         let n' := node_get_hans n msg in
             (* node gets handles from channel *)
         let ch' := chan_pop ch in
