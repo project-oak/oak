@@ -52,9 +52,8 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
 
     let uri = opt.uri.parse().context("Error parsing URI")?;
-    let root_tls_certificate = tokio::fs::read(&opt.root_tls_certificate)
-        .await
-        .context("Couldn't load certificate file")?;
+    let root_tls_certificate =
+        std::fs::read(&opt.root_tls_certificate).context("Couldn't load certificate file")?;
     let latitude = opt.latitude;
     ensure!(
         latitude >= -90.0 && latitude <= 90.0,
