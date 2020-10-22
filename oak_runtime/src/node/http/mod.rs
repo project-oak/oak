@@ -325,11 +325,11 @@ impl HttpRequestHandler {
         }
     }
 
-    /// Creates a UserNode for this requests and sends the request to it. The UserNode will send the
-    /// request to the Oak node, collect the response, declassify it and send it back to this HTTP
-    /// server pseudo-Node.
-    /// If successful, returns an [`HttpResponseReceiver`] with a handle to the channel containing
-    /// the response.
+    /// Creates a [`crate::node::http::user::UserNode`] for this requests and sends the request to
+    /// it. The `UserNode` will send the request to the Oak node, collect the response,
+    /// declassify it and send it back to this HTTP server pseudo-Node.
+    /// If successful, this function returns an [`HttpResponseReceiver`] with a handle to the
+    /// channel containing the response.
     fn inject_http_request(
         &self,
         request: HttpRequest,
@@ -359,7 +359,7 @@ impl HttpRequestHandler {
         }
 
         // Forward the request to the UserNode.
-        pipe.insert_message(
+        pipe.send_message(
             &self.runtime,
             request,
             request_label,
@@ -409,12 +409,12 @@ impl Pipe {
         })
     }
 
-    /// Sends an instance of [`OuterHttpInvocation`] to the `UserNode` created for the `request`.
-    /// The [`OuterHttpInvocation`] instance contains the original request, the request
-    /// label (so the UserNode does not have to compute it again), and two request-specific
-    /// channels, for sending the request to the Oak node and send the response (received from the
-    /// Oak node) back to this HTTP server pseudo-Node.
-    fn insert_message(
+    /// Sends an instance of [`OuterHttpInvocation`] to the [`crate::node::http::user::UserNode`]
+    /// created for the `request`. The [`OuterHttpInvocation`] instance contains the original
+    /// request, the request label (so that the UserNode does not have to compute it again), and two
+    /// request-specific channels, for sending the request to the Oak node and sending the response
+    /// (received from the Oak node) back to this HTTP server pseudo-Node.
+    fn send_message(
         &self,
         runtime: &RuntimeProxy,
         request: HttpRequest,
@@ -422,21 +422,21 @@ impl Pipe {
         invocation_sender: oak_abi::Handle,
     ) -> Result<(), ()> {
         // Wrap the write-half of the `invocation channel`, which has its other half connected to
-        // the Oak node, in a [`Sender`], to use in the [`OuterHttpInvocation`] that will be sent to
+        // the Oak node, in a `Sender`, to use in the `OuterHttpInvocation` that will be sent to
         // the Oak node.
         let inner_invocation_sender = Sender::new(WriteHandle {
             handle: invocation_sender,
         });
 
-        // Wrap the write-half of the `response channel` in a [`Sender`] and send it to [`UserNode`]
-        // in the [`OuterHttpInvocation`], so that it can send the responses back to this HTTP
+        // Wrap the write-half of the `response channel` in a `Sender` and send it to `UserNode`
+        // in the `OuterHttpInvocation`, so that it can send the responses back to this HTTP
         // server pseudo-Node.
         let response_sender = Sender::new(WriteHandle {
             handle: self.response_writer,
         });
 
-        // Create an invocation containing the original request, the request label (so the UserNode
-        // does not have to compute it again), and request-specific channels.
+        // Create an invocation containing the original request, the request label (so that the
+        // `UserNode` does not have to compute it again), and request-specific channels.
         let invocation = OuterHttpInvocation {
             request: Some(request),
             request_label: Some(request_label),
@@ -454,7 +454,7 @@ impl Pipe {
         })
     }
 
-    // Close all local handles except for the one that allows reading responses.
+    /// Close all local handles except for the one that allows reading responses.
     fn close(&self, runtime: &RuntimeProxy) {
         if let Err(err) = runtime.channel_close(self.invocation_writer) {
             error!(
@@ -509,13 +509,14 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, OakStatus> {
 }
 
 /// Similar to the request label headers, signed challenge headers can either be JSON formatted or
-/// protobuf encoded. Exactly one of these formats should be provided. This method:
-/// (1) at most one signed challenge is provided,
-/// (2) parses the signed challenge
-/// (3) verifies that the signature is valid
-/// (4) if the signature is valid, returns the public key in the signed challenge as the user's
-/// identity. User identification is currently an optional feature, so if a challenge response is
-/// not provided, a public-untrusted label is returned.
+/// protobuf encoded. At most one of these formats should be provided. This method:
+/// (1) parses the signed challenge, if one is provided
+/// (2) verifies that the signature is valid
+/// (3) if the signature is valid, returns the public key in the signed challenge as the user's
+/// identity.
+///
+/// User identification is currently an optional feature, so if a challenge response is
+/// not provided, an empty vector is returned.
 fn get_user_identity(req: &HttpRequest) -> Result<Vec<u8>, ()> {
     let headers = (
         req.headers.as_ref().and_then(|map| {
@@ -589,6 +590,8 @@ fn verify_protobuf_challenge(base64_signature: &[u8]) -> Result<Vec<u8>, ()> {
         .map_err(|err| warn!("Could not verify the signature: {}", err))
 }
 
+/// Verifies the signed challenge retrieved from the HTTP request, and returns the public key if the
+/// signature is valid.
 fn verify_signed_challenge(
     signature: oak_abi::proto::oak::identity::SignedChallenge,
 ) -> Result<Vec<u8>, OakStatus> {

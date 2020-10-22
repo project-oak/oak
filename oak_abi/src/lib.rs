@@ -50,6 +50,7 @@ pub const OAK_SIGNED_CHALLENGE_JSON_KEY: &str = "oak-signed-auth-challenge";
 /// The header key used for protobuf formatted signed authentication challenge.
 pub const OAK_SIGNED_CHALLENGE_PROTOBUF_KEY: &str = "oak-signed-auth-challenge-bin";
 
+// TODO(#1357): Remove, or move to tests, when we have a per-connection challenge phrase.
 /// Hash of "oak-challenge", the fixed challenge phrase.
 pub const OAK_CHALLENGE_PHRASE_BASE64_HASH: &str = "o0UQJfxNADV1BLonFxTfWWg7VRVfmoyGpKZ/g67FE2c=";
 

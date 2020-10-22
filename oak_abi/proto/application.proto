@@ -138,9 +138,9 @@ message HttpServerConfiguration {
 // Describes the configuration of a UserNode that has the required privilege
 // to create invocations having the user's identity set as the integrity tag
 // of the `request receiver` channel, and as the confidentiality tag of the
-// `response sender` channel.
+// `response sender` channel between an Oak node and an HTTP or gRPC server pseudo-Node.
 message UserNodeConfiguration {
-  // Privilege of this node, set to the public_key identifying the user.
+  // Privilege of this node, set to a public key identifying the user.
   bytes privilege = 1;
 }
 

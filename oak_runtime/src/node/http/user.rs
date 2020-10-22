@@ -14,14 +14,14 @@
 // limitations under the License.
 //
 
-//! A `UserNode` is a virtual node that is created per user request and serves as a router between
+//! A [`UserNode`] is a virtual node that is created per HTTP request and serves as a router between
 //! an HTTP server pseudo-Node and an Oak node that serves the incoming HTTP requests. The
-//! `UserNode` forwards the requests to the Oak node, and returns the responses back to the HTTP
+//! [`UserNode`] forwards the requests to the Oak node, and returns the responses back to the HTTP
 //! server pseudo-Node. We set the user's identity (extracted from the incoming request) as both the
-//! declassification and endorsement privileges of the `UserNode`. This allows the `UserNode` to
+//! declassification and endorsement privileges of the [`UserNode`]. This allows the [`UserNode`] to
 //! assign user-specific labels to the communication channels with the Oak node. The HTTP server
 //! pseudo-Node cannot create channels with such user-specific labels itself. User-specific labels
-//! are required to prevent any potential leakage by the Oak node.
+//! are required to prevent any potential data leaks through the Oak node.
 
 use crate::{
     io::{Receiver, ReceiverExt, Sender, SenderExt},
@@ -51,11 +51,13 @@ pub struct UserNode {
 impl UserNode {
     pub fn new(node_name: &str, config: UserNodeConfiguration) -> Result<Self, ConfigurationError> {
         let mut privilege_tags = HashSet::new();
-        privilege_tags.insert(Tag {
-            tag: Some(oak_abi::label::tag::Tag::UserIdentityTag(UserIdentityTag {
+        let tag = match config.privilege.is_empty() {
+            true => None,
+            false => Some(oak_abi::label::tag::Tag::UserIdentityTag(UserIdentityTag {
                 public_key: config.privilege,
             })),
-        });
+        };
+        privilege_tags.insert(Tag { tag });
 
         let privilege = NodePrivilege {
             can_declassify_confidentiality_tags: privilege_tags.clone(),
@@ -277,7 +279,7 @@ impl Pipe {
             })
     }
 
-    // Close all local handles except for the one that allows reading responses.
+    /// Close all local handles except for the one that allows reading responses.
     fn close(&self, runtime: &RuntimeProxy) {
         if let Err(err) = runtime.channel_close(self.request_writer) {
             error!(
