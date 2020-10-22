@@ -44,7 +44,7 @@ use oak::{
     io::{Receiver, ReceiverExt, SenderExt},
     proto::oak::invocation::{GrpcInvocation, GrpcInvocationReceiver, GrpcInvocationSender},
 };
-use oak_abi::{label::Label, proto::oak::application::ConfigMap};
+use oak_abi::proto::oak::application::ConfigMap;
 use proto::oak::examples::aggregator::{
     Aggregator, AggregatorClient, AggregatorDispatcher, AggregatorInit, Sample,
 };
@@ -230,9 +230,8 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     //     }],
     //     integrity_tags: vec![],
     // };
-    let grpc_client = oak::grpc::client::Client::new_with_label(
+    let grpc_client = oak::grpc::client::Client::new(
         &oak::node_config::grpc_client("https://localhost:8888"),
-        &Label::public_untrusted(),
     )
     .expect("Couldn't create gRPC client");
 
