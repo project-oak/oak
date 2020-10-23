@@ -323,7 +323,7 @@ from the implicit incoming channel, usually via a `Receiver<ConfigMap>`
 instance.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/trusted_information_retrieval/module_0/rust/src/lib.rs Rust /oak::entrypoint/ /.*let config_map =.*/)
+[embedmd]:# (../examples/trusted_database/module/rust/src/lib.rs Rust /oak::entrypoint/ /.*let config_map =.*/)
 ```Rust
 oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     oak::logger::init_default();
