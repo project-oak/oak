@@ -214,12 +214,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37ab347416e802de484e4d03c7316c48f1ecb56574dfd4a46a80f173ce1de04d"
 
 [[package]]
-name = "fmt"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09904adae26440d46daeacb5ed7922fee69d43ebf84d31e078cd49652cecd718"
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -765,7 +759,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "byteorder",
- "fmt",
  "http",
  "log",
  "oak_abi",
@@ -807,7 +800,6 @@ name = "oak_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "env_logger",
  "http",
  "hyper",
  "log",
@@ -845,7 +837,6 @@ dependencies = [
  "byteorder",
  "bytes",
  "chrono",
- "futures",
  "futures-core",
  "futures-util",
  "hex",
@@ -903,7 +894,6 @@ dependencies = [
  "hex",
  "log",
  "pem",
- "rand",
  "ring",
  "sha2",
  "structopt",
@@ -929,15 +919,12 @@ dependencies = [
 name = "oak_utils"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "maplit",
  "proc-macro2",
  "prost",
  "prost-build",
  "quote",
  "tempfile",
  "tonic-build",
- "walkdir",
 ]
 
 [[package]]
@@ -1315,15 +1302,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
 
 [[package]]
-name = "same-file"
-version = "1.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
-dependencies = [
- "winapi-util",
-]
-
-[[package]]
 name = "sct"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1648,15 +1626,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "tonic"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1926,7 +1895,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "env_logger",
- "futures",
  "futures-core",
  "futures-util",
  "log",
@@ -1945,7 +1913,6 @@ dependencies = [
  "serde",
  "structopt",
  "tokio",
- "toml",
  "tonic",
  "trusted_database_client",
 ]
@@ -2051,17 +2018,6 @@ name = "version_check"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
-
-[[package]]
-name = "walkdir"
-version = "2.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "777182bc735b6424e1a57516d35ed72cb8019d85c8c9bf536dccb3445c1a2f7d"
-dependencies = [
- "same-file",
- "winapi 0.3.8",
- "winapi-util",
-]
 
 [[package]]
 name = "want"

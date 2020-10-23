@@ -8,8 +8,6 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "*"
-maplit = "*"
 proc-macro2 = "*"
 prost = { path = "../third_party/prost" }
 prost-build = { path = "../third_party/prost/prost-build" }
@@ -21,7 +19,6 @@ tonic-build = { version = "*", default-features = false, features = [
   "prost",
   "transport"
 ] }
-walkdir = "*"
 
 [patch.crates-io]
 prost = { path = "../third_party/prost" }

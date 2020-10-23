@@ -13,7 +13,6 @@ oak_io = "=0.1.0"
 oak_services = "=0.1.0"
 prost = "*"
 prost-types = "*"
-fmt = "*"
 http = "*"
 log = { version = "*", features = ["std"] }
 byteorder = "*"
@@ -21,6 +20,3 @@ rand_core = { version = "*", features = ["std"] }
 
 [build-dependencies]
 oak_utils = "*"
-
-[dev-dependencies]
-assert_matches = "*"

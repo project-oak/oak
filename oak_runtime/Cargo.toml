@@ -20,7 +20,6 @@ byteorder = { version = "*", default-features = false }
 bytes = "*"
 base64 = "*"
 chrono = "*"
-futures = "*"
 futures-core = "*"
 futures-util = "*"
 hex = "*"
@@ -65,7 +64,6 @@ env_logger = "*"
 hyper-rustls = { version = "*", default-features = false, features = [
   "webpki-tokio"
 ] }
-minisign = "*"
 regex = "*"
 wat = "*"
 
