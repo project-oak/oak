@@ -20,11 +20,6 @@ use oak_io::{handle::HandleVisit, Handle};
 struct Visited(Handle);
 
 impl HandleVisit for Visited {
-    fn visit<F: FnMut(&mut Handle)>(&mut self, mut f: F) -> F {
-        f(&mut self.0);
-        f
-    }
-
     fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
         f(init, &mut self.0)
     }

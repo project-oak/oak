@@ -52,17 +52,12 @@ fn struct_impls(name: &Ident, data: &syn::DataStruct) -> TokenStream {
             .collect(),
         Fields::Unit => Vec::new(),
     };
-    let body = accessors_visit(&accessors);
-    let fold_body = accessors_fold(&accessors);
+    let body = accessors_fold(&accessors);
 
     quote! {
         impl ::oak_io::handle::HandleVisit for #name {
-            fn visit<F: FnMut(&mut ::oak_io::Handle)>(&mut self, visitor: F) -> F {
-                #body
-            }
-
             fn fold<B>(&mut self, init: B, f: fn(B, &mut ::oak_io::Handle) -> B) -> B {
-                #fold_body
+                #body
             }
         }
     }
@@ -70,21 +65,12 @@ fn struct_impls(name: &Ident, data: &syn::DataStruct) -> TokenStream {
 
 fn enum_impls(name: &Ident, data: &syn::DataEnum) -> TokenStream {
     let variants: Vec<TokenStream> = data.variants.iter().map(variant_impl).collect();
-    let fold_variants: Vec<TokenStream> = data.variants.iter().map(fold_variant_impl).collect();
     quote! {
         impl ::oak_io::handle::HandleVisit for #name {
-            fn visit<F: FnMut(&mut ::oak_io::Handle)>(&mut self, visitor: F) -> F {
-                match self {
-                    #(
-                        #name::#variants,
-                    )*
-                }
-            }
-
             fn fold<B>(&mut self, init: B, f: fn(B, &mut ::oak_io::Handle) -> B) -> B {
                 match self {
                     #(
-                        #name::#fold_variants,
+                        #name::#variants,
                     )*
                 }
             }
@@ -93,39 +79,6 @@ fn enum_impls(name: &Ident, data: &syn::DataEnum) -> TokenStream {
 }
 
 fn variant_impl(variant: &syn::Variant) -> TokenStream {
-    let variant_ident = &variant.ident;
-    match &variant.fields {
-        Fields::Named(fields) => {
-            let fields: Vec<Ident> = fields.named.iter().flat_map(|f| f.ident.clone()).collect();
-            let body = accessors_visit(&fields);
-            quote! {
-                #variant_ident { #( #fields ),* } => {
-                    #body
-                }
-            }
-        }
-        Fields::Unnamed(fields) => {
-            // Name the fields _0, _1, ...
-            let accessors: Vec<Ident> = fields
-                .unnamed
-                .iter()
-                .enumerate()
-                .map(|(i, _)| format_ident!("_{}", i))
-                .collect();
-            let body = accessors_visit(&accessors);
-            quote! {
-                #variant_ident( #( #accessors ),* ) => {
-                    #body
-                }
-            }
-        }
-        Fields::Unit => quote! {
-            #variant_ident => visitor
-        },
-    }
-}
-
-fn fold_variant_impl(variant: &syn::Variant) -> TokenStream {
     let variant_ident = &variant.ident;
     match &variant.fields {
         Fields::Named(fields) => {
@@ -155,16 +108,6 @@ fn fold_variant_impl(variant: &syn::Variant) -> TokenStream {
         Fields::Unit => quote! {
             #variant_ident => init
         },
-    }
-}
-
-fn accessors_visit<T: ToTokens>(accessors: &[T]) -> TokenStream {
-    quote! {
-        let mut _v = visitor;
-        #(
-            _v  = #accessors.visit(_v);
-        )*
-        _v
     }
 }
 

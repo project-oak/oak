@@ -82,11 +82,6 @@ impl From<Handle> for WriteHandle {
 /// }
 ///
 /// impl HandleVisit for Thing {
-///     fn visit<F: FnMut(&mut Handle)>(&mut self, mut visitor: F) -> F {
-///         visitor(&mut self.handle);
-///         visitor
-///     }
-///
 ///     fn fold<B>(&mut self, init: B, mut f: fn(B, &mut Handle) -> B) -> B {
 ///         f(init, &mut self.handle)
 ///     }
@@ -96,15 +91,7 @@ pub trait HandleVisit {
     /// Invokes the provided closure on every handle contained in `self`.
     ///
     /// The mutable reference allows modifying the handles.
-    fn visit<F: FnMut(&mut Handle)>(&mut self, visitor: F) -> F;
-
-    fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
-        let mut accumulator = Some(init);
-        let _ = self.visit(|handle| {
-            accumulator = Some(f(accumulator.take().unwrap(), handle));
-        });
-        accumulator.unwrap()
-    }
+    fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B;
 }
 
 /// Return all handles in `T`.
@@ -124,11 +111,6 @@ pub trait HandleVisit {
 ///     handle: Handle,
 /// }
 /// # impl HandleVisit for Thing {
-/// #   fn visit<F: FnMut(&mut Handle)>(&mut self, mut visitor: F) -> F {
-/// #     visitor(&mut self.handle);
-/// #     visitor
-/// #   }
-/// #
 /// #   fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
 /// #       f(init, &mut self.handle)
 /// #   }
@@ -167,11 +149,6 @@ pub fn extract_handles<T: HandleVisit>(msg: &mut T) -> Vec<Handle> {
 ///     handle: Handle,
 /// }
 /// # impl HandleVisit for Thing {
-/// #   fn visit<F: FnMut(&mut Handle)>(&mut self, mut visitor: F) -> F {
-/// #     visitor(&mut self.handle);
-/// #     visitor
-/// #   }
-/// #
 /// #   fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
 /// #       f(init, &mut self.handle)
 /// #   }
@@ -207,10 +184,6 @@ macro_rules! handle_visit_blanket_impl {
     ($($t:ty),+) => {
         $(
             impl HandleVisit for $t {
-                fn visit<F: FnMut(&mut Handle)>(&mut self, visitor: F) -> F {
-                    visitor
-                }
-
                 fn fold<B>(&mut self, init: B, _: fn(B, &mut Handle) -> B) -> B {
                     init
                 }
@@ -242,14 +215,6 @@ pub use oak_derive::HandleVisit;
 
 // Optional fields
 impl<T: HandleVisit> HandleVisit for Option<T> {
-    fn visit<F: FnMut(&mut Handle)>(&mut self, visitor: F) -> F {
-        if let Some(inner) = self {
-            inner.visit(visitor)
-        } else {
-            visitor
-        }
-    }
-
     fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
         if let Some(inner) = self {
             inner.fold(init, f)
@@ -261,11 +226,6 @@ impl<T: HandleVisit> HandleVisit for Option<T> {
 
 // For repeated fields.
 impl<T: HandleVisit> HandleVisit for Vec<T> {
-    fn visit<F: FnMut(&mut Handle)>(&mut self, visitor: F) -> F {
-        self.iter_mut()
-            .fold(visitor, |visitor, item| item.visit(visitor))
-    }
-
     fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
         self.iter_mut().fold(init, |init, item| item.fold(init, f))
     }
@@ -273,10 +233,6 @@ impl<T: HandleVisit> HandleVisit for Vec<T> {
 
 // For recursive messages.
 impl<T: HandleVisit> HandleVisit for Box<T> {
-    fn visit<F: FnMut(&mut Handle)>(&mut self, visitor: F) -> F {
-        self.as_mut().visit(visitor)
-    }
-
     fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
         self.as_mut().fold(init, f)
     }
@@ -290,16 +246,6 @@ impl<T: HandleVisit> HandleVisit for Box<T> {
 impl<K: Ord + core::hash::Hash, V: HandleVisit, S> HandleVisit
     for std::collections::HashMap<K, V, S>
 {
-    fn visit<F: FnMut(&mut Handle)>(&mut self, visitor: F) -> F {
-        let mut entries: Vec<(&K, &mut V)> = self.iter_mut().collect();
-        // Can be unstable because keys are guaranteed to be unique.
-        entries.sort_unstable_by_key(|&(k, _)| k);
-        entries
-            .into_iter()
-            .map(|(_, v)| v)
-            .fold(visitor, |visitor, value| value.visit(visitor))
-    }
-
     fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
         let mut entries: Vec<(&K, &mut V)> = self.iter_mut().collect();
         // Can be unstable because keys are guaranteed to be unique.
