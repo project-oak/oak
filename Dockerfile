@@ -242,6 +242,14 @@ ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny
 
+# Install cargo-udeps
+# https://github.com/est31/cargo-udeps
+ARG udeps_version=v0.1.15
+ARG udeps_dir=cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu
+ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/${udeps_version}/cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu.tar.gz
+RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
+RUN chmod +x ${install_dir}/cargo-udeps
+
 # Unset $CARGO_HOME so that the new user will use the default value for it, which will point it to
 # its own home folder.
 ENV CARGO_HOME ""
