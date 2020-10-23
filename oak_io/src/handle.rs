@@ -93,6 +93,14 @@ pub trait HandleVisit {
     ///
     /// The mutable reference allows modifying the handles.
     fn visit<F: FnMut(&mut Handle)>(&mut self, visitor: F) -> F;
+
+    fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+        let mut accumulator = Some(init);
+        let _ = self.visit(|handle| {
+            accumulator = Some(f(accumulator.take().unwrap(), handle));
+        });
+        accumulator.unwrap()
+    }
 }
 
 /// Return all handles in `T`.
@@ -125,13 +133,11 @@ pub trait HandleVisit {
 /// assert_eq!(handles, vec![42]);
 /// ```
 pub fn extract_handles<T: HandleVisit>(msg: &mut T) -> Vec<Handle> {
-    let mut handles = Vec::new();
-    // TODO(#1599): Remove the `let _` when the underlying issue is fixed.
-    let _ = msg.visit(|handle: &mut Handle| {
+    msg.fold(Vec::new(), |mut handles, handle| {
         handles.push(*handle);
         *handle = oak_abi::INVALID_HANDLE;
-    });
-    handles
+        handles
+    })
 }
 
 /// Inject handles into a message.
@@ -167,20 +173,20 @@ pub fn extract_handles<T: HandleVisit>(msg: &mut T) -> Vec<Handle> {
 /// assert_eq!(thing, Thing { handle: 42 });
 /// ```
 pub fn inject_handles<T: HandleVisit>(msg: &mut T, handles: &[Handle]) -> Result<(), OakError> {
-    let mut handles = handles.iter();
-    let mut result = Ok(());
-    // TODO(#1599): Remove the `let _` when the underlying issue is fixed.
-    let _ = msg.visit(|handle| {
-        if let Some(to_inject) = handles.next() {
-            *handle = *to_inject;
+    msg.fold(Ok(handles.iter()), |handles, handle| {
+        let mut handles = handles?;
+        let to_inject = handles.next().ok_or(OakError::ProtobufDecodeError(None))?;
+        *handle = *to_inject;
+        Ok(handles)
+    })
+    // Check that there are no remaining handles
+    .and_then(|mut remaining_handles| {
+        if remaining_handles.next().is_some() {
+            Err(OakError::ProtobufDecodeError(None))
         } else {
-            result = Err(OakError::ProtobufDecodeError(None));
+            Ok(())
         }
-    });
-    if handles.next().is_some() {
-        result = Err(OakError::ProtobufDecodeError(None));
-    }
-    result
+    })
 }
 
 // A default implementation of the HandleVisit trait that does nothing
