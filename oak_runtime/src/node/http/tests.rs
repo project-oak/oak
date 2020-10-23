@@ -266,7 +266,10 @@ fn oak_node_simulator(runtime: &RuntimeProxy, invocation_receiver: oak_abi::Hand
         handle: invocation_receiver,
     });
 
-    while let Ok(invocation) = invocation_receiver.receive(runtime) {
+    while let Ok(invocation) = invocation_receiver.receive(&runtime) {
+        let request = invocation.receiver.unwrap().receive(&runtime);
+        info!("received request: {:?}", request);
+
         let resp = HttpResponse {
             body: vec![],
             status: http::status::StatusCode::OK.as_u16() as i32,

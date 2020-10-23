@@ -15,6 +15,7 @@
 //
 
 use anyhow::Context;
+use oak_abi::label::{confidentiality_label, tls_endpoint_tag};
 use std::{fs, io};
 use structopt::StructOpt;
 
@@ -33,7 +34,8 @@ pub struct Opt {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     // Send a request, and wait for the response
-    let label = oak_abi::label::Label::public_untrusted();
+    // let label = oak_abi::label::Label::public_untrusted();
+    let label = confidentiality_label(tls_endpoint_tag("localhost"));
     let label_bytes = serde_json::to_string(&label)
         .context("Could not serialize public/untrusted label to JSON.")?
         .into_bytes();
