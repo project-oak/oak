@@ -40,6 +40,7 @@ pub mod handle;
 pub mod http;
 pub mod io;
 pub mod logger;
+pub mod node;
 pub mod node_config;
 pub mod rand;
 pub mod roughtime;

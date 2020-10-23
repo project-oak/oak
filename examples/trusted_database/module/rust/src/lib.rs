@@ -61,6 +61,7 @@ use log::debug;
 use oak::{
     grpc,
     io::{Receiver, ReceiverExt, SenderExt},
+    node::WasmNode,
     proto::oak::invocation::GrpcInvocationReceiver,
     CommandHandler,
 };
@@ -76,15 +77,8 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
     fn handle_command(&mut self, invocation: grpc::Invocation) -> anyhow::Result<()> {
         // Create a client request handler Node.
         debug!("Creating handler Node");
-        let (sender, receiver) = oak::io::channel_create::<TrustedDatabaseCommand>()
-            .context("Couldn't create command channel")?;
         // TODO(#1406): Use client assigned label for creating a new handler Node.
-        oak::node_create(
-            &oak::node_config::wasm("app", "handler_oak_main"),
-            receiver.handle,
-        )
-        .context("Couldn't create handler Node")?;
-        oak::channel_close(receiver.handle.handle).context("Couldn't close receiver channel")?;
+        let sender = WasmNode::create("app", "handler_oak_main").context("Couldn't create handler Node")?;
 
         // Create a gRPC invocation channel for forwarding requests to the
         // `TrustedDatabaseHandlerNode`.
