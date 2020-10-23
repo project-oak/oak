@@ -61,7 +61,7 @@ fn struct_impls(name: &Ident, data: &syn::DataStruct) -> TokenStream {
                 #body
             }
 
-            fn fold<B, F: FnMut(B, &mut ::oak_io::Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+            fn fold<B>(&mut self, init: B, f: fn(B, &mut ::oak_io::Handle) -> B) -> B {
                 #fold_body
             }
         }
@@ -81,7 +81,7 @@ fn enum_impls(name: &Ident, data: &syn::DataEnum) -> TokenStream {
                 }
             }
 
-            fn fold<B, F: FnMut(B, &mut ::oak_io::Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+            fn fold<B>(&mut self, init: B, f: fn(B, &mut ::oak_io::Handle) -> B) -> B {
                 match self {
                     #(
                         #name::#fold_variants,
@@ -172,7 +172,7 @@ fn accessors_fold<T: ToTokens>(accessors: &[T]) -> TokenStream {
     quote! {
         let accumulator = init;
         #(
-            let accumulator = #accessors.fold(accumulator, &mut f);
+            let accumulator = #accessors.fold(accumulator, f);
         )*
         accumulator
     }

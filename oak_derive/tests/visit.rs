@@ -25,7 +25,7 @@ impl HandleVisit for Visited {
         f
     }
 
-    fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+    fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
         f(init, &mut self.0)
     }
 }
