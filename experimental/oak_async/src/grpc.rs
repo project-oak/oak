@@ -234,7 +234,7 @@ pub async fn invocation_to_requests_and_writer(
     })?;
     let response_writer = ChannelResponseWriter::new(sender);
 
-    let req1 = requests_pinned
+    let req1 = match requests_pinned
         .peek()
         .await
         .ok_or_else(|| {
@@ -242,19 +242,19 @@ pub async fn invocation_to_requests_and_writer(
             OakError::OakStatus(OakStatus::ErrBadHandle)
         })?
         .as_ref()
-        // `peek` only gives us a reference to the error, and `OakError` cannot implement `Clone`,
-        // so we need to do a poor man's clone here.
-        .map_err(|e| clone_error(e))?;
+    {
+        Ok(req) => req,
+        Err(_) => {
+            // Pull the error out of the stream instead of just peeking so we can own it.
+            let owned_err = requests.next().await;
+            match owned_err {
+                Some(Err(e)) => return Err(e),
+                // We have already established that the next item on the stream exists and is an
+                // error by peeking at it
+                _ => unreachable!(),
+            }
+        }
+    };
     let method_name = req1.method_name.clone();
     Ok((method_name, requests, response_writer))
-}
-
-// Poor man's clone for `OakError`
-fn clone_error(e: &OakError) -> OakError {
-    match e {
-        OakError::ProtobufDecodeError(e) => OakError::ProtobufDecodeError(e.clone()),
-        OakError::ProtobufEncodeError(e) => OakError::ProtobufEncodeError(e.clone()),
-        OakError::OakStatus(s) => OakError::OakStatus(*s),
-        OakError::IoError(e) => OakError::IoError(std::io::Error::new(e.kind(), e.to_string())),
-    }
 }
