@@ -382,6 +382,7 @@ fn run_ci() -> Step {
         steps: vec![
             check_format(),
             run_cargo_deny(),
+            run_cargo_udeps(),
             build_server(&BuildServer {
                 server_variant: ServerVariant::Base,
                 server_rust_toolchain: None,
@@ -1359,6 +1360,26 @@ fn run_cargo_deny() -> Step {
                 command: Cmd::new(
                     "cargo",
                     &["deny", &format!("--manifest-path={}", &entry), "check"],
+                ),
+            })
+            .collect(),
+    }
+}
+
+fn run_cargo_udeps() -> Step {
+    Step::Multiple {
+        name: "cargo udeps".to_string(),
+        steps: workspace_manifest_files()
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: Cmd::new(
+                    "cargo",
+                    &[
+                        "udeps",
+                        &format!("--manifest-path={}", &entry),
+                        "--all-targets",
+                    ],
                 ),
             })
             .collect(),
