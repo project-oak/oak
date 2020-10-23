@@ -24,6 +24,10 @@ impl HandleVisit for Visited {
         f(&mut self.0);
         f
     }
+
+    fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+        f(init, &mut self.0)
+    }
 }
 
 #[test]
@@ -127,14 +131,9 @@ mod enums {
     }
 }
 
-// Asserts that `t` is visited exactly `count` times when calling `HandleVisit::visit`.
-fn assert_visit<T: HandleVisit>(mut t: T, count: usize) {
-    let mut counter = 0;
+// Asserts that `t` is visited exactly `expected` times when calling `HandleVisit::fold`.
+fn assert_visit<T: HandleVisit>(mut t: T, expected: usize) {
+    let count = t.fold(0, |count, _| count + 1);
 
-    // TODO(#1599): Remove the `let _` when the underlying issue is fixed.
-    let _ = t.visit(|_| {
-        counter += 1;
-    });
-
-    assert_eq!(counter, count);
+    assert_eq!(count, expected);
 }

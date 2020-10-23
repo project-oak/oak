@@ -63,6 +63,10 @@ impl<T: Decodable> crate::handle::HandleVisit for Receiver<T> {
         visitor(&mut self.handle.handle);
         visitor
     }
+
+    fn fold<B, F: FnMut(B, &mut crate::Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+        f(init, &mut self.handle.handle)
+    }
 }
 
 impl<T: Decodable> Receiver<T> {

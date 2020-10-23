@@ -46,6 +46,10 @@ impl<T: Encodable> crate::handle::HandleVisit for Sender<T> {
         visitor(&mut self.handle.handle);
         visitor
     }
+
+    fn fold<B, F: FnMut(B, &mut crate::Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+        f(init, &mut self.handle.handle)
+    }
 }
 
 impl<T: Encodable> Sender<T> {

@@ -86,6 +86,10 @@ impl From<Handle> for WriteHandle {
 ///         visitor(&mut self.handle);
 ///         visitor
 ///     }
+///
+///     fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+///         f(init, &mut self.handle)
+///     }
 /// }
 /// ```
 pub trait HandleVisit {
@@ -123,6 +127,10 @@ pub trait HandleVisit {
 /// #   fn visit<F: FnMut(&mut Handle)>(&mut self, mut visitor: F) -> F {
 /// #     visitor(&mut self.handle);
 /// #     visitor
+/// #   }
+/// #
+/// #   fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+/// #       f(init, &mut self.handle)
 /// #   }
 /// # }
 ///
@@ -163,6 +171,10 @@ pub fn extract_handles<T: HandleVisit>(msg: &mut T) -> Vec<Handle> {
 /// #     visitor(&mut self.handle);
 /// #     visitor
 /// #   }
+/// #
+/// #   fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+/// #       f(init, &mut self.handle)
+/// #   }
 /// # }
 ///
 /// let handles = vec![42];
@@ -197,6 +209,10 @@ macro_rules! handle_visit_blanket_impl {
             impl HandleVisit for $t {
                 fn visit<F: FnMut(&mut Handle)>(&mut self, visitor: F) -> F {
                     visitor
+                }
+
+                fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, _: F) -> B {
+                    init
                 }
             }
         )+
@@ -233,6 +249,14 @@ impl<T: HandleVisit> HandleVisit for Option<T> {
             visitor
         }
     }
+
+    fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, f: F) -> B {
+        if let Some(inner) = self {
+            inner.fold(init, f)
+        } else {
+            init
+        }
+    }
 }
 
 // For repeated fields.
@@ -241,12 +265,21 @@ impl<T: HandleVisit> HandleVisit for Vec<T> {
         self.iter_mut()
             .fold(visitor, |visitor, item| item.visit(visitor))
     }
+
+    fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+        self.iter_mut()
+            .fold(init, |init, item| item.fold(init, &mut f))
+    }
 }
 
 // For recursive messages.
 impl<T: HandleVisit> HandleVisit for Box<T> {
     fn visit<F: FnMut(&mut Handle)>(&mut self, visitor: F) -> F {
         self.as_mut().visit(visitor)
+    }
+
+    fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, f: F) -> B {
+        self.as_mut().fold(init, f)
     }
 }
 
@@ -266,5 +299,15 @@ impl<K: Ord + core::hash::Hash, V: HandleVisit, S> HandleVisit
             .into_iter()
             .map(|(_, v)| v)
             .fold(visitor, |visitor, value| value.visit(visitor))
+    }
+
+    fn fold<B, F: FnMut(B, &mut Handle) -> B>(&mut self, init: B, mut f: F) -> B {
+        let mut entries: Vec<(&K, &mut V)> = self.iter_mut().collect();
+        // Can be unstable because keys are guaranteed to be unique.
+        entries.sort_unstable_by_key(|&(k, _)| k);
+        entries
+            .into_iter()
+            .map(|(_, v)| v)
+            .fold(init, |init, value| value.fold(init, &mut f))
     }
 }
