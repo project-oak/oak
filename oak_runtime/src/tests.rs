@@ -65,39 +65,18 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         }
     }
 
-    // Create a new Node.
-    info!("Create test Node");
-    let test_proxy = proxy.clone().runtime.proxy_for_new_node();
-    let new_node_id = test_proxy.node_id;
-    let new_node_name = format!("TestNode({})", new_node_id.0);
-    proxy.runtime.node_configure_instance(
-        new_node_id,
-        "test",
-        "test_module.test_function",
-        node_label,
-        node_privilege,
-    );
-
+    // Create a new Oak node.
     let node_instance = TestNode {
         node_body,
         node_privilege: node_privilege.clone(),
     };
-    info!("Start test Node instance");
-    let node_stopper = proxy
-        .runtime
-        .clone()
-        .node_start_instance(
-            &new_node_name,
-            Box::new(node_instance),
-            test_proxy,
-            oak_abi::INVALID_HANDLE,
-        )
-        .expect("failed to start test Node");
+    let (_write_handle, read_handle) = proxy
+        .channel_create(&Label::public_untrusted())
+        .expect("Could not create init channel");
 
-    // Wait for test Node execution to complete before terminating,
-    // so that any ABI functions invoked by the test Node don't just
-    // return `ErrTerminated`.
-    node_stopper.stop_node().expect("test thread panicked!");
+    proxy
+        .node_register(Box::new(node_instance), "test", node_label, read_handle)
+        .expect("Could not create Oak node!");
 
     info!("Stop runtime..");
     proxy.runtime.stop();
