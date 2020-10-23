@@ -72,6 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("Error while awaiting response");
 
     log::info!("response: {:?}", resp);
+    assert_eq!(resp.status(), http::StatusCode::OK);
     log::info!(
         "response body: {:?}",
         hyper::body::to_bytes(resp.into_body())

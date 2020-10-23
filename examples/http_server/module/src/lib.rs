@@ -37,19 +37,28 @@ pub struct StaticHttpServer;
 
 impl CommandHandler<Invocation> for StaticHttpServer {
     fn handle_command(&mut self, invocation: Invocation) -> anyhow::Result<()> {
-        let request = invocation.receive()?;
+        let response = match invocation.receive() {
+            Ok(request) => {
+                info!("Handling a request to {}.", request.uri());
 
-        info!("Handling a request to {}.", request.uri());
-
-        let response = match request.uri().path().as_ref() {
-            "/" => http::response::Builder::new()
-                .status(http::StatusCode::OK)
-                .header(http::header::CONTENT_TYPE, "text/html; charset=UTF-8")
-                .body(include_bytes!("../static/index.html").to_vec()),
-            _ => http::response::Builder::new()
-                .status(http::StatusCode::NOT_FOUND)
-                .body("not found".to_string().into_bytes()),
+                match request.uri().path().as_ref() {
+                    "/" => http::response::Builder::new()
+                        .status(http::StatusCode::OK)
+                        .header(http::header::CONTENT_TYPE, "text/html; charset=UTF-8")
+                        .body(include_bytes!("../static/index.html").to_vec()),
+                    _ => http::response::Builder::new()
+                        .status(http::StatusCode::NOT_FOUND)
+                        .body("not found".to_string().into_bytes()),
+                }
+            }
+            Err(err) => {
+                warn!("Could not read the request: {}", err);
+                http::response::Builder::new()
+                    .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                    .body("error".to_string().into_bytes())
+            }
         };
+
         let response = response.map_err(|err| {
             warn!("Could not build response: {}", err);
             OakError::OakStatus(OakStatus::ErrInternal)
