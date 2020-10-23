@@ -9,7 +9,6 @@ license = "Apache-2.0"
 anyhow = "*"
 async-trait = "*"
 env_logger = "*"
-futures = "*"
 futures-core = "*"
 futures-util = "*"
 log = "*"
@@ -26,7 +25,6 @@ rand = "*"
 serde = "*"
 structopt = "*"
 tokio = { version = "*", features = ["fs", "macros", "rt-threaded", "stream"] }
-toml = "*"
 tonic = { version = "*", features = ["tls"] }
 trusted_database_client = "*"
 quick-xml = { version = "*", features = ["serialize"] }
