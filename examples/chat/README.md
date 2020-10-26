@@ -19,7 +19,7 @@ Both these keys are also printed as base64 to allow sharing.
 In principle, it is also possible to share the public key with external parties,
 and therefore have the chat room act as an mailbox to which anyone in possession
 of the public key may send messages, but only the holders of the private key may
-read them.
+read them, but the provided client does not show this use case.
 
 ## Command Line Operation
 

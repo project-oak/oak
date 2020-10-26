@@ -21,7 +21,7 @@ use oak::{
     io::{ReceiverExt, Sender, SenderExt},
     Label,
 };
-use oak_abi::proto::oak::{application::ConfigMap, label::tag};
+use oak_abi::proto::oak::application::ConfigMap;
 use oak_services::proto::google::rpc;
 use proto::{Chat, ChatDispatcher, Message, SendMessageRequest, SubscribeRequest};
 use std::collections::HashMap;
@@ -43,25 +43,25 @@ struct Router {
     rooms: HashMap<Label, Sender<oak::grpc::Invocation>>,
 }
 
-/// Returns whether the provided label is valid in the context of the chat application.
+/// Returns whether the provided label is valid in the context of this chat application.
 ///
-/// Only labels with exactly one confidentiality component, itself corresponding to a public key,
-/// are allowed. Any other label would cause the application to get stuck and not be able to
+/// In principle a client may send requests with arbitrary labels, but only labels with exactly one
+/// confidentiality component, itself corresponding to a public key, are actually correctly handled
+/// by this application. Any other label would cause the application to get stuck and not be able to
 /// declassify data in the future, therefore in this case we fail early with an appropriate error
 /// code to the client.
-fn is_valid_label(label: &Label) -> bool {
+fn is_valid_label(_label: &Label) -> bool {
     true
-    /*
-    (label.confidentiality_tags.len() == 1)
-        && (if let Some(tag) = &label.confidentiality_tags[0].tag {
-            match tag {
-                tag::Tag::GrpcTag(_) => true,
-                _ => false,
-            }
-        } else {
-            false
-        })
-        */
+    // TODO(#1357): Verify that the label corresponds to exactly a single PublicKeyIdentityTag.
+    // (label.confidentiality_tags.len() == 1)
+    //     && (if let Some(tag) = &label.confidentiality_tags[0].tag {
+    //         match tag {
+    //             tag::Tag::GrpcTag(_) => true,
+    //             _ => false,
+    //         }
+    //     } else {
+    //         false
+    //     })
 }
 
 impl oak::CommandHandler<oak::grpc::Invocation> for Router {

@@ -29,9 +29,8 @@
 
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
-ABSL_FLAG(std::string, room_public_key, "", "Base64-encoded public key of the room to join");
-ABSL_FLAG(std::string, room_private_key, "",
-          "Base64-encoded private key of the room to join; leave empty to generate a new one");
+// TODO(#1357): Use a public / secret key pair instead of bearer token credentials.
+ABSL_FLAG(std::string, room_access_token, "", "Base64-encoded public key of the room to join");
 ABSL_FLAG(std::string, handle, "", "User handle to display");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
@@ -64,7 +63,8 @@ class Safe {
 
 void Prompt(const std::string& user_handle) { std::cout << user_handle << "> "; }
 
-// The current chat room is implicitly encoded as part of the gRPC stub.
+// Print incoming messages sent to the chat room, authenticating with the room private key which is
+// implicitly encoded as part of the gRPC stub.
 void ListenLoop(Chat::Stub* stub, const std::string& user_handle,
                 std::shared_ptr<Safe<bool>> done) {
   grpc::ClientContext context;
@@ -84,7 +84,8 @@ void ListenLoop(Chat::Stub* stub, const std::string& user_handle,
   std::cout << "\n\nRoom closed.\n\n";
 }
 
-// The current chat room is implicitly encoded as part of the gRPC stub.
+// Wait for user input and send each message to the chat room, with the room public key label which
+// is implicitly encoded as part of the gRPC stub.
 void SendLoop(Chat::Stub* stub, const std::string& user_handle, std::shared_ptr<Safe<bool>> done) {
   // Re-use the same SendMessageRequest object for each message.
   SendMessageRequest req;
@@ -136,6 +137,7 @@ void Chat(Chat::Stub* stub, const std::string& user_handle) {
 // to read messages sent by other clients.
 std::unique_ptr<Chat::Stub> create_stub(std::string address, std::string ca_cert,
                                         std::string room_access_token) {
+  // TODO(#1357): Use a public / secret key pair instead of bearer token credentials.
   auto call_credentials =
       oak::ApplicationClient::authorization_bearer_token_call_credentials(room_access_token);
   // Connect to the Oak Application.
@@ -164,6 +166,8 @@ int main(int argc, char** argv) {
   // If no room access token was provided, create a fresh one, and print it out so that other
   // clients may join the same room.
   if (room_access_token.empty()) {
+    // TODO(#1357): Generate a public / secret key pair and use it to authenticate the client and
+    // label requests.
     oak::NonceGenerator<64> generator;
     auto room_access_token_bytes = generator.NextNonce();
     room_access_token = std::string(room_access_token_bytes.begin(), room_access_token_bytes.end());
