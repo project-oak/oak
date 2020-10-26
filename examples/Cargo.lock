@@ -282,7 +282,6 @@ dependencies = [
  "base64",
  "chat_grpc",
  "env_logger",
- "futures",
  "log",
  "oak",
  "oak_abi",
