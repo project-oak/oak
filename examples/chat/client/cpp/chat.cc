@@ -137,12 +137,14 @@ void Chat(Chat::Stub* stub, const std::string& user_handle) {
 // to read messages sent by other clients.
 std::unique_ptr<Chat::Stub> create_stub(std::string address, std::string ca_cert,
                                         std::string room_access_token) {
-  // TODO(#1357): Use a public / secret key pair instead of bearer token credentials.
-  auto call_credentials =
-      oak::ApplicationClient::authorization_bearer_token_call_credentials(room_access_token);
+  // TODO(#1357): Use a public / secret key pair instead of bearer token credentials. In fact,
+  // currently not even bearer token credentials can be used, because the privilege is not correctly
+  // assigned to the gRPC server node, and any responses would never reach the client, so we use a
+  // public label as placeholder.
+  oak::label::Label label = oak::PublicUntrustedLabel();
   // Connect to the Oak Application.
   auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), call_credentials));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
   if (stub == nullptr) {
     LOG(FATAL) << "Failed to create application stub";
   }
