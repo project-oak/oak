@@ -289,6 +289,7 @@ dependencies = [
  "oak_io",
  "oak_runtime",
  "oak_services",
+ "oak_sign",
  "oak_tests",
  "oak_utils",
  "prost",
