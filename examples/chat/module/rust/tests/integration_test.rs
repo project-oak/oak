@@ -18,6 +18,7 @@ use assert_matches::assert_matches;
 use chat_grpc::proto::{chat_client::ChatClient, Message, SendMessageRequest, SubscribeRequest};
 use log::info;
 use serial_test::serial;
+use std::time::Duration;
 
 const MODULE_WASM_FILE_NAME: &str = "chat.wasm";
 
@@ -29,13 +30,23 @@ async fn test_chat() {
     let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "grpc_oak_main")
         .expect("Unable to configure runtime with test wasm!");
 
-    let room_key_pair = oak_sign::KeyBundle::generate().expect("could not generate room key pair");
+    let room_0_key_pair =
+        oak_sign::KeyBundle::generate().expect("could not generate room key pair");
+    let room_1_key_pair =
+        oak_sign::KeyBundle::generate().expect("could not generate room key pair");
 
-    let mut alice = Chatter::new(&room_key_pair, "Alice").await;
+    let mut alice = Chatter::new(&room_0_key_pair, "Alice").await;
     let mut alice_stream = alice.subscribe().await;
 
-    let mut bob = Chatter::new(&room_key_pair, "Bob").await;
+    let mut bob = Chatter::new(&room_0_key_pair, "Bob").await;
     let mut bob_stream = bob.subscribe().await;
+
+    // Eve joins a different room, so she should not receive any messages between Alice and Bob.
+    // Because of the asynchronous nature of the interaction, it is not possible to conclusively
+    // determine whether Eve did not receive a particular message, therefore below we just await
+    // for a short amount of time (via `tokio::time::timeout`) before assuming that she didn't.
+    let mut eve = Chatter::new(&room_1_key_pair, "Eve").await;
+    let mut eve_stream = eve.subscribe().await;
 
     alice.send("Hello").await;
     {
@@ -51,9 +62,13 @@ async fn test_chat() {
             expected_message,
             bob_stream.message().await.unwrap().unwrap()
         );
+        assert_matches!(
+            tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
+            Err(_)
+        );
     }
 
-    let mut charlie = Chatter::new(&room_key_pair, "Charlie").await;
+    let mut charlie = Chatter::new(&room_0_key_pair, "Charlie").await;
     // Do not subscribe Charlie yet.
 
     charlie.send("Hello there yourself").await;
@@ -69,6 +84,10 @@ async fn test_chat() {
         assert_eq!(
             expected_message,
             bob_stream.message().await.unwrap().unwrap()
+        );
+        assert_matches!(
+            tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
+            Err(_)
         );
     }
 
@@ -92,6 +111,10 @@ async fn test_chat() {
         assert_eq!(
             expected_message,
             charlie_stream.message().await.unwrap().unwrap()
+        );
+        assert_matches!(
+            tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
+            Err(_)
         );
     }
 
