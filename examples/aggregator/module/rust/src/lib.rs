@@ -211,7 +211,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     // Create an Aggregator Node.
     let (init_sender, init_receiver) = oak::io::channel_create::<AggregatorInit>(&Label::public_untrusted())
         .expect("Couldn't create initialization channel");
-    oak::node_create(&oak::node_config::wasm("app", "aggregator"), init_receiver.handle)
+    oak::node_create(&oak::node_config::wasm("app", "aggregator"), &Label::public_untrusted(), init_receiver.handle)
         .expect("Couldn't create gRPC worker node");
     oak::channel_close(init_receiver.handle.handle).expect("Couldn't close receiver channel");
 

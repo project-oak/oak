@@ -77,6 +77,7 @@ impl FrontendNode {
             let (wh, rh) = oak::channel_create(&Label::public_untrusted()).unwrap();
             oak::node_create(
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "channel_loser"),
+                &Label::public_untrusted(),
                 rh,
             )
             .expect("failed to create channel_loser ephemeral Node");
@@ -91,6 +92,7 @@ impl FrontendNode {
                 oak::http::init(HTTP_ADDR).expect("could not create HTTP server pseudo-Node!");
             oak::node_create(
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "http_oak_main"),
+                &Label::public_untrusted(),
                 http_channel.handle,
             )
             .expect("failed to create http_oak_main Node");
@@ -106,6 +108,7 @@ impl FrontendNode {
                 oak::channel_create(&Label::public_untrusted()).expect("could not create channel");
             oak::node_create(
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
+                &Label::public_untrusted(),
                 read_handle,
             )
             .expect("could not create node");
@@ -1453,6 +1456,7 @@ impl FrontendNode {
             Err(OakStatus::ErrInvalidArgs),
             oak::node_create(
                 &oak::node_config::wasm("no_such_module", BACKEND_ENTRYPOINT_NAME),
+                &Label::public_untrusted(),
                 self.backend_in[0]
             )
         );
@@ -1460,6 +1464,7 @@ impl FrontendNode {
             Err(OakStatus::ErrInvalidArgs),
             oak::node_create(
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, "no_such_entrypoint"),
+                &Label::public_untrusted(),
                 self.backend_in[0]
             )
         );
@@ -1470,6 +1475,7 @@ impl FrontendNode {
                     BACKEND_MODULE_NAME,
                     "backend_fake_main" /* exists but wrong signature */
                 ),
+                &Label::public_untrusted(),
                 self.backend_in[0]
             )
         );
@@ -1477,6 +1483,7 @@ impl FrontendNode {
             Err(OakStatus::ErrBadHandle),
             oak::node_create(
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
+                &Label::public_untrusted(),
                 oak::ReadHandle {
                     handle: oak_abi::INVALID_HANDLE
                 }
@@ -1487,6 +1494,7 @@ impl FrontendNode {
             Ok(()),
             oak::node_create(
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
+                &Label::public_untrusted(),
                 in_handle
             )
         );
@@ -1494,6 +1502,7 @@ impl FrontendNode {
             Ok(()),
             oak::node_create(
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
+                &Label::public_untrusted(),
                 in_handle
             )
         );
@@ -1680,6 +1689,7 @@ impl FrontendNode {
             Ok(()),
             oak::node_create(
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "panic_main"),
+                &Label::public_untrusted(),
                 in_handle
             )
         );
@@ -1767,7 +1777,12 @@ impl FrontendNode {
         // Include some handles which will be ignored.
         let (logging_handle, read_handle) =
             oak::channel_create(&Label::public_untrusted()).expect("could not create channel");
-        oak::node_create(&oak::node_config::log(), read_handle).expect("could not create node");
+        oak::node_create(
+            &oak::node_config::log(),
+            &Label::public_untrusted(),
+            read_handle,
+        )
+        .expect("could not create node");
         oak::channel_close(read_handle.handle).expect("could not close channel");
 
         expect!(is_valid(logging_handle.handle));
@@ -1979,12 +1994,14 @@ impl FrontendNode {
     // We can't really check any failures, but hopefully nothing crashes...
     fn test_grpc_server_fail_no_handle(&mut self) -> TestResult {
         let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
-
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with data.
         let (wh, rh) =
             oak::channel_create(&Label::public_untrusted()).expect("could not create channel");
-        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        expect_eq!(
+            Ok(()),
+            oak::node_create(&config, &Label::public_untrusted(), rh)
+        );
         oak::channel_write(wh, &[0x01, 0x02], &[]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
         expect_eq!(Ok(()), oak::channel_close(wh.handle));
@@ -1998,7 +2015,10 @@ impl FrontendNode {
         // read handle.
         let (wh, rh) =
             oak::channel_create(&Label::public_untrusted()).expect("could not create channel");
-        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        expect_eq!(
+            Ok(()),
+            oak::node_create(&config, &Label::public_untrusted(), rh)
+        );
         oak::channel_write(wh, &[], &[rh.handle]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
         expect_eq!(Ok(()), oak::channel_close(wh.handle));
@@ -2012,7 +2032,10 @@ impl FrontendNode {
         // handle and a read handle.
         let (wh, rh) =
             oak::channel_create(&Label::public_untrusted()).expect("could not create channel");
-        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        expect_eq!(
+            Ok(()),
+            oak::node_create(&config, &Label::public_untrusted(), rh)
+        );
         oak::channel_write(wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
         expect_eq!(Ok(()), oak::channel_close(wh.handle));
@@ -2237,7 +2260,10 @@ impl FrontendNode {
         // for an invocation channel in it, instead pass it a message with data.
         let (wh, rh) =
             oak::channel_create(&Label::public_untrusted()).expect("could not create channel");
-        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        expect_eq!(
+            Ok(()),
+            oak::node_create(&config, &Label::public_untrusted(), rh)
+        );
         oak::channel_write(wh, &[0x01, 0x02], &[]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
         expect_eq!(Ok(()), oak::channel_close(wh.handle));
@@ -2251,7 +2277,10 @@ impl FrontendNode {
         // read handle.
         let (wh, rh) =
             oak::channel_create(&Label::public_untrusted()).expect("could not create channel");
-        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        expect_eq!(
+            Ok(()),
+            oak::node_create(&config, &Label::public_untrusted(), rh)
+        );
         oak::channel_write(wh, &[], &[rh.handle]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
         expect_eq!(Ok(()), oak::channel_close(wh.handle));
@@ -2265,7 +2294,10 @@ impl FrontendNode {
         // handle and a read handle.
         let (wh, rh) =
             oak::channel_create(&Label::public_untrusted()).expect("could not create channel");
-        expect_eq!(Ok(()), oak::node_create(&config, rh));
+        expect_eq!(
+            Ok(()),
+            oak::node_create(&config, &Label::public_untrusted(), rh)
+        );
         oak::channel_write(wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
         expect_eq!(Ok(()), oak::channel_close(wh.handle));

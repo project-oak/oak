@@ -256,12 +256,6 @@ pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
     result_from_status(status as i32, ())
 }
 
-/// Similar to [`node_create_with_label`], but with a fixed label corresponding to "public
-/// untrusted".
-pub fn node_create(config: &NodeConfiguration, half: ReadHandle) -> Result<(), OakStatus> {
-    node_create_with_label(config, &Label::public_untrusted(), half)
-}
-
 /// Creates a new Node running the configuration identified by `config_name`, running the entrypoint
 /// identified by `entrypoint_name` (for a Web Assembly Node; this parameter is ignored when
 /// creating a pseudo-Node), with the provided `label`, and passing it the given handle.
@@ -270,7 +264,7 @@ pub fn node_create(config: &NodeConfiguration, half: ReadHandle) -> Result<(), O
 /// the label of the calling node must "flow to" the provided label.
 ///
 /// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
-pub fn node_create_with_label(
+pub fn node_create(
     config: &NodeConfiguration,
     label: &Label,
     half: ReadHandle,
