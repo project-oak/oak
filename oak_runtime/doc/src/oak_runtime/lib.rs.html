@@ -1332,6 +1332,21 @@
 <span id="1329">1329</span>
 <span id="1330">1330</span>
 <span id="1331">1331</span>
+<span id="1332">1332</span>
+<span id="1333">1333</span>
+<span id="1334">1334</span>
+<span id="1335">1335</span>
+<span id="1336">1336</span>
+<span id="1337">1337</span>
+<span id="1338">1338</span>
+<span id="1339">1339</span>
+<span id="1340">1340</span>
+<span id="1341">1341</span>
+<span id="1342">1342</span>
+<span id="1343">1343</span>
+<span id="1344">1344</span>
+<span id="1345">1345</span>
+<span id="1346">1346</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1362,6 +1377,7 @@
     <span class="ident">channel</span>::{<span class="ident">with_reader_channel</span>, <span class="ident">with_writer_channel</span>, <span class="ident">Channel</span>},
     <span class="ident">message</span>::<span class="ident">Message</span>,
     <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
+    <span class="ident">node</span>::<span class="ident">Node</span>,
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::{
         <span class="ident">event</span>::<span class="ident">EventDetails</span>, <span class="ident">ChannelCreated</span>, <span class="ident">Direction</span>, <span class="ident">Event</span>, <span class="ident">HandleCreated</span>, <span class="ident">HandleDestroyed</span>,
         <span class="ident">MessageDequeued</span>, <span class="ident">MessageEnqueued</span>, <span class="ident">NodeCreated</span>, <span class="ident">NodeDestroyed</span>,
@@ -2493,10 +2509,30 @@
     <span class="doccomment">/// This method is defined on [`Arc`] and not [`Runtime`] itself, so that</span>
     <span class="doccomment">/// the [`Arc`] can clone itself and be included in a [`RuntimeProxy`] object</span>
     <span class="doccomment">/// to be given to a new Node instance.</span>
-    <span class="kw">fn</span> <span class="ident">node_create</span>(
+    <span class="kw">fn</span> <span class="ident">node_create_and_register</span>(
         <span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfiguration</span>,
+        <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
+        <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="comment">// This only creates a Node instance, but does not start it.</span>
+        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_factory</span>.<span class="ident">create_node</span>(<span class="ident">config</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not create node: {:?}&quot;</span>, <span class="ident">err</span>);
+            <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
+        })<span class="question-mark">?</span>;
+
+        <span class="comment">// Register the instance within the `Runtime`.</span>
+        <span class="self">self</span>.<span class="ident">node_register</span>(<span class="ident">node_id</span>, <span class="ident">instance</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">name</span>, <span class="ident">label</span>, <span class="ident">initial_handle</span>)
+    }
+
+    <span class="doccomment">/// Registers the given [`Node`] instance within the [`Runtime`]. The registration fails if the</span>
+    <span class="doccomment">/// labels violate the IFC rules.</span>
+    <span class="kw">fn</span> <span class="ident">node_register</span>(
+        <span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
+        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
+        <span class="ident">instance</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">Node</span><span class="op">&gt;</span>,
+        <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
@@ -2516,13 +2552,7 @@
 
         <span class="kw">let</span> <span class="ident">new_node_proxy</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>().<span class="ident">proxy_for_new_node</span>();
         <span class="kw">let</span> <span class="ident">new_node_id</span> <span class="op">=</span> <span class="ident">new_node_proxy</span>.<span class="ident">node_id</span>;
-        <span class="kw">let</span> <span class="ident">new_node_name</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}({})&quot;</span>, <span class="ident">config</span>.<span class="ident">name</span>, <span class="ident">new_node_id</span>.<span class="number">0</span>);
-
-        <span class="comment">// This only creates a Node instance, but does not start it.</span>
-        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_factory</span>.<span class="ident">create_node</span>(<span class="ident">config</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;could not create node: {:?}&quot;</span>, <span class="ident">err</span>);
-            <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-        })<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">new_node_name</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}({})&quot;</span>, <span class="ident">node_name</span>, <span class="ident">new_node_id</span>.<span class="number">0</span>);
 
         <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">get_privilege</span>();
         <span class="kw">let</span> <span class="ident">node_type</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">node_type</span>();
