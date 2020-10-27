@@ -20,29 +20,8 @@ package oak.examples.chat;
 
 import "google/protobuf/empty.proto";
 
-message CreateRoomRequest {
-  // ID used to identify the room; knowledge of this value allows entry to the room. The client
-  // should create a random bearer token of sufficient entropy to use as the room ID.
-  //
-  // TODO(#212): Once more of the labelling / policy system is implemented in the Oak Runtime, the
-  // confidentiality of each chat room will not be based on the confidentiality of this value,
-  // rather by the labels attached to individual messages by the various clients.
-  bytes room_id = 1;
-
-  // Bearer token used to administer the room; knowledge of this value allows control over the room
-  // (including the ability to destroy the room). The client should create a random bearer token of
-  // sufficient entropy to use as the admin token.
-  bytes admin_token = 2;
-}
-
-message DestroyRoomRequest {
-  bytes room_id = 1;
-  bytes admin_token = 2;
-}
-
-message SubscribeRequest {
-  bytes room_id = 1;
-}
+// The chat room is identified by the Oak Label provided as part of gRPC metadata.
+message SubscribeRequest {}
 
 message Message {
   // Handle for the user; this is only used for UI purposes (and so does not need to be unique nor
@@ -51,15 +30,12 @@ message Message {
   string text = 1;
 }
 
+// The chat room is identified by the Oak Label provided as part of gRPC metadata.
 message SendMessageRequest {
-  bytes room_id = 1;
-  Message message = 3;
+  Message message = 1;
 }
 
 service Chat {
-  rpc CreateRoom(CreateRoomRequest) returns (google.protobuf.Empty);
-  rpc DestroyRoom(DestroyRoomRequest) returns (google.protobuf.Empty);
-
   // Subscribe to a chat room, in order to receive future messages sent to it.
   rpc Subscribe(SubscribeRequest) returns (stream Message);
 

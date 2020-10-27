@@ -15,62 +15,11 @@
 //
 
 use assert_matches::assert_matches;
-use chat_grpc::proto::{
-    chat_client::ChatClient, CreateRoomRequest, DestroyRoomRequest, Message, SendMessageRequest,
-    SubscribeRequest,
-};
-use futures::executor::block_on;
+use chat_grpc::proto::{chat_client::ChatClient, Message, SendMessageRequest, SubscribeRequest};
 use log::info;
 use serial_test::serial;
-use std::sync::{Arc, Condvar, Mutex};
-use tokio::sync::Semaphore;
 
 const MODULE_WASM_FILE_NAME: &str = "chat.wasm";
-
-#[tokio::test(core_threads = 2)]
-#[serial]
-async fn test_room_create() {
-    let _ = env_logger::builder().is_test(true).try_init();
-
-    let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "grpc_oak_main")
-        .expect("Unable to configure runtime with test wasm!");
-
-    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
-    let mut client = ChatClient::with_interceptor(channel, interceptor);
-
-    let req = CreateRoomRequest {
-        room_id: b"dummy room id".to_vec(),
-        admin_token: b"dummy admin token".to_vec(),
-    };
-    info!("Sending request: {:?}", req);
-    let result = client.create_room(req).await;
-    assert_matches!(result, Ok(_));
-
-    // Fail to destroy a non-existent room.
-    let req = DestroyRoomRequest {
-        room_id: b"unknown room id".to_vec(),
-        admin_token: b"dummy admin token".to_vec(),
-    };
-    info!("Sending request: {:?}", req);
-    let result = client.destroy_room(req).await;
-    assert_matches!(result, Err(_));
-
-    // Succeed in destroying the room created above.
-    let req = DestroyRoomRequest {
-        room_id: b"dummy room id".to_vec(),
-        admin_token: b"dummy admin token".to_vec(),
-    };
-    info!("Sending request: {:?}", req);
-    let result = client.destroy_room(req.clone()).await;
-    assert_matches!(result, Ok(_));
-
-    // ...but fail to destroy it a second time.
-    info!("Sending request: {:?}", req);
-    let result = client.destroy_room(req).await;
-    assert_matches!(result, Err(_));
-
-    runtime.stop();
-}
 
 #[tokio::test(core_threads = 4)]
 #[serial]
@@ -80,147 +29,153 @@ async fn test_chat() {
     let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "grpc_oak_main")
         .expect("Unable to configure runtime with test wasm!");
 
-    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
-    let mut client = ChatClient::with_interceptor(channel, interceptor);
+    let room_0_key_pair =
+        oak_sign::KeyBundle::generate().expect("could not generate room key pair");
+    let room_1_key_pair =
+        oak_sign::KeyBundle::generate().expect("could not generate room key pair");
 
-    let room_id = b"test room";
-    let req = CreateRoomRequest {
-        room_id: room_id.to_vec(),
-        admin_token: b"dummy admin token".to_vec(),
-    };
-    info!("Sending request: {:?}", req);
-    let result = client.create_room(req).await;
-    assert_matches!(result, Ok(_));
+    let mut alice = Chatter::new(&room_0_key_pair, "Alice").await;
+    let mut alice_stream = alice.subscribe().await;
 
-    let mut alice = Chatter::new(room_id, "Alice");
-    let mut bob = Chatter::new(room_id, "Bob");
+    let mut bob = Chatter::new(&room_0_key_pair, "Bob").await;
+    let mut bob_stream = bob.subscribe().await;
 
-    let msgs = Arc::new(ChatLog::default());
-    let msgs_ref = msgs.clone();
-    let subscribed = Arc::new(Semaphore::new(0));
-    let s = subscribed.clone();
-    let r = room_id.to_vec();
-    tokio::spawn(async move { subscribe(r, msgs_ref, s).await });
-    subscribed.acquire().await.forget();
+    // Eve joins a different room, so she should not receive any messages between Alice and Bob.
+    // Because of the asynchronous nature of the interaction, it is not possible to conclusively
+    // determine whether Eve did not receive a particular message, therefore below we just await
+    // for a short amount of time (via `tokio::time::timeout`) before assuming that she didn't.
+    let mut eve = Chatter::new(&room_1_key_pair, "Eve").await;
+    let mut eve_stream = eve.subscribe().await;
 
-    alice.send("Hello");
-    msgs.await_size(1);
-    assert_eq!(vec!["Alice: Hello"], msgs.contents());
+    alice.send("Hello").await;
+    {
+        let expected_message = Message {
+            user_handle: "Alice".to_string(),
+            text: "Hello".to_string(),
+        };
+        assert_eq!(
+            expected_message,
+            alice_stream.message().await.unwrap().unwrap()
+        );
+        assert_eq!(
+            expected_message,
+            bob_stream.message().await.unwrap().unwrap()
+        );
+        // TODO(#1357): Verify that Eve indeed does not receive the message.
+        // assert_matches!(
+        //     tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
+        //     Err(_)
+        // );
+        assert_eq!(
+            expected_message,
+            eve_stream.message().await.unwrap().unwrap()
+        );
+    }
 
-    bob.send("Hello there yourself");
-    msgs.await_size(2);
-    assert_eq!(
-        vec!["Alice: Hello", "Bob: Hello there yourself"],
-        msgs.contents()
-    );
+    let mut charlie = Chatter::new(&room_0_key_pair, "Charlie").await;
+    // Do not subscribe Charlie yet.
 
-    // A new subscription only sees subsequent messages.
-    let later_msgs = Arc::new(ChatLog::default());
-    let later_msgs_ref = later_msgs.clone();
-    let s = subscribed.clone();
-    let r = room_id.to_vec();
-    tokio::spawn(async move { subscribe(r, later_msgs_ref, s).await });
-    subscribed.acquire().await.forget();
+    charlie.send("Hello there yourself").await;
+    {
+        let expected_message = Message {
+            user_handle: "Charlie".to_string(),
+            text: "Hello there yourself".to_string(),
+        };
+        assert_eq!(
+            expected_message,
+            alice_stream.message().await.unwrap().unwrap()
+        );
+        assert_eq!(
+            expected_message,
+            bob_stream.message().await.unwrap().unwrap()
+        );
+        // TODO(#1357): Verify that Eve indeed does not receive the message.
+        // assert_matches!(
+        //     tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
+        //     Err(_)
+        // );
+        assert_eq!(
+            expected_message,
+            eve_stream.message().await.unwrap().unwrap()
+        );
+    }
 
-    alice.send("Hello again");
-    msgs.await_size(3);
-    assert_eq!(
-        vec![
-            "Alice: Hello",
-            "Bob: Hello there yourself",
-            "Alice: Hello again"
-        ],
-        msgs.contents()
-    );
-    later_msgs.await_size(1);
-    assert_eq!(vec!["Alice: Hello again"], later_msgs.contents());
+    // Subscribe Charlie after a few messages have been exchanged, and check it receives any new
+    // messages.
+    let mut charlie_stream = charlie.subscribe().await;
+    bob.send("Goodbye").await;
+    {
+        let expected_message = Message {
+            user_handle: "Bob".to_string(),
+            text: "Goodbye".to_string(),
+        };
+        assert_eq!(
+            expected_message,
+            alice_stream.message().await.unwrap().unwrap()
+        );
+        assert_eq!(
+            expected_message,
+            bob_stream.message().await.unwrap().unwrap()
+        );
+        assert_eq!(
+            expected_message,
+            charlie_stream.message().await.unwrap().unwrap()
+        );
+        // TODO(#1357): Verify that Eve indeed does not receive the message.
+        // assert_matches!(
+        //     tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
+        //     Err(_)
+        // );
+        assert_eq!(
+            expected_message,
+            eve_stream.message().await.unwrap().unwrap()
+        );
+    }
 
     runtime.stop();
 }
 
-// Thread-safe vector of messages.
-#[derive(Default)]
-struct ChatLog {
-    messages: Mutex<Vec<String>>,
-    cv: Condvar,
-}
-
-impl ChatLog {
-    pub fn contents(&self) -> Vec<String> {
-        let msgs = self.messages.lock().expect("lock poisoned");
-        msgs.iter().cloned().collect()
-    }
-
-    pub fn push_message(&self, msg: &Message) {
-        let mut msgs = self.messages.lock().expect("lock poisoned");
-        msgs.push(format!("{}: {}", msg.user_handle, msg.text));
-        self.cv.notify_all();
-    }
-
-    // Block until there are at least `count` messages available.
-    pub fn await_size(&self, count: usize) {
-        let mut msgs = self.messages.lock().expect("lock poisoned");
-        while msgs.len() < count {
-            msgs = self.cv.wait(msgs).unwrap();
-        }
-    }
-}
-
-struct Chatter {
+struct Chatter<'a> {
     pub client: ChatClient<tonic::transport::Channel>,
-    pub room_id: Vec<u8>,
+    pub room_key_pair: &'a oak_sign::KeyBundle,
     pub user_handle: String,
 }
 
-impl Chatter {
-    pub fn new(room_id: &[u8], user_handle: &str) -> Chatter {
+impl<'a> Chatter<'a> {
+    pub async fn new(
+        room_key_pair: &'a oak_sign::KeyBundle,
+        user_handle: &'static str,
+    ) -> Chatter<'a> {
         info!(
             "creating new Chatter({}, {})",
             user_handle,
-            base64::encode(room_id)
+            base64::encode(&room_key_pair.public_key())
         );
-        let (channel, interceptor) = block_on(oak_tests::channel_and_interceptor());
+        let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+        // TODO(#1357): Use key pair to authenticate this client and label requests.
         let client = ChatClient::with_interceptor(channel, interceptor);
         Chatter {
             client,
-            room_id: room_id.to_vec(),
+            room_key_pair,
             user_handle: user_handle.to_string(),
         }
     }
 
-    pub fn send(&mut self, text: &str) {
+    pub async fn send(&mut self, text: &str) {
         let req = SendMessageRequest {
-            room_id: self.room_id.clone(),
             message: Some(Message {
                 user_handle: self.user_handle.clone(),
                 text: text.to_string(),
             }),
         };
         info!("Sending request: {:?}", req);
-        let result = block_on(self.client.send_message(req));
+        let result = self.client.send_message(req).await;
         assert_matches!(result, Ok(_));
     }
-}
 
-async fn subscribe(room_id: Vec<u8>, msgs: Arc<ChatLog>, s: Arc<Semaphore>) {
-    info!("Subscribe to messages in room {}", base64::encode(&room_id));
-
-    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
-    let mut client = ChatClient::with_interceptor(channel, interceptor);
-    let req = SubscribeRequest {
-        room_id: room_id.clone(),
-    };
-    info!("Sending request: {:?}", req);
-    let mut stream = client.subscribe(req).await.unwrap().into_inner();
-    s.add_permits(1);
-
-    while let Some(msg) = stream.message().await.unwrap() {
-        info!("Received {:?}", msg);
-        msgs.push_message(&msg);
+    pub async fn subscribe(&mut self) -> tonic::Streaming<Message> {
+        let req = SubscribeRequest {};
+        info!("Sending request: {:?}", req);
+        self.client.subscribe(req).await.unwrap().into_inner()
     }
-
-    info!(
-        "Stream closed, ending subscription to room {}",
-        base64::encode(&room_id)
-    );
 }
