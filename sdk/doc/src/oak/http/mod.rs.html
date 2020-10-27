@@ -105,6 +105,9 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -131,6 +134,7 @@
 };
 <span class="kw">use</span> <span class="ident">http</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>};
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">warn</span>;
+<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">HeaderMap</span>, <span class="ident">HttpRequest</span>, <span class="ident">HttpResponse</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryInto</span>;
 
@@ -187,16 +191,18 @@
     <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">node_config</span>::<span class="ident">http_server</span>(<span class="ident">address</span>);
 
     <span class="comment">// Create a channel and pass the read half to a new http server pseudo-Node.</span>
-    <span class="kw">let</span> (<span class="ident">init_sender</span>, <span class="ident">init_receiver</span>) <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">channel_create</span>::<span class="op">&lt;</span><span class="ident">HttpInvocationSender</span><span class="op">&gt;</span>()
-        .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create init channel to HTTP server pseudo-node&quot;</span>);
-    <span class="kw">crate</span>::<span class="ident">node_create</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="ident">init_receiver</span>.<span class="ident">handle</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> (<span class="ident">init_sender</span>, <span class="ident">init_receiver</span>) <span class="op">=</span>
+        <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">channel_create</span>::<span class="op">&lt;</span><span class="ident">HttpInvocationSender</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())
+            .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create init channel to HTTP server pseudo-node&quot;</span>);
+    <span class="kw">crate</span>::<span class="ident">node_create</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>(), <span class="ident">init_receiver</span>.<span class="ident">handle</span>)<span class="question-mark">?</span>;
     <span class="ident">init_receiver</span>
         .<span class="ident">close</span>()
         .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t close init channel to HTTP server pseudo-node&quot;</span>);
 
     <span class="comment">// Create a separate channel for receiving invocations and pass it to an HTTP pseudo-Node.</span>
     <span class="kw">let</span> (<span class="ident">invocation_sender</span>, <span class="ident">invocation_receiver</span>) <span class="op">=</span>
-        <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">channel_create</span>::<span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create HTTP invocation channel&quot;</span>);
+        <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">channel_create</span>::<span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())
+            .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create HTTP invocation channel&quot;</span>);
 
     <span class="kw">let</span> <span class="ident">http_server_init</span> <span class="op">=</span> <span class="ident">HttpInvocationSender</span> {
         <span class="ident">sender</span>: <span class="prelude-val">Some</span>(<span class="ident">invocation_sender</span>),
