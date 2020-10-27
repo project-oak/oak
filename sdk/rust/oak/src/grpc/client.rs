@@ -41,7 +41,7 @@ impl Client {
     pub fn new_with_label(config: &NodeConfiguration, label: &Label) -> Option<Client> {
         let (invocation_sender, invocation_receiver) =
             crate::io::channel_create(label).expect("failed to create channel");
-        let status = crate::node_create_with_label(config, label, invocation_receiver.handle);
+        let status = crate::node_create(config, label, invocation_receiver.handle);
         invocation_receiver
             .close()
             .expect("failed to close channel");

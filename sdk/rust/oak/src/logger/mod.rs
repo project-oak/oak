@@ -86,7 +86,12 @@ pub fn init(level: Level) -> Result<(), SetLoggerError> {
     // Create a channel and pass the read half to a fresh logging Node.
     let (write_handle, read_handle) =
         crate::channel_create(&Label::public_untrusted()).expect("could not create channel");
-    crate::node_create(&crate::node_config::log(), read_handle).expect("could not create node");
+    crate::node_create(
+        &crate::node_config::log(),
+        &Label::public_untrusted(),
+        read_handle,
+    )
+    .expect("could not create node");
     crate::channel_close(read_handle.handle).expect("could not close channel");
 
     log::set_boxed_logger(Box::new(OakChannelLogger {

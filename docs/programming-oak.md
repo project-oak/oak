@@ -490,12 +490,8 @@ to the room:
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
                     let (wh, rh) =
                         oak::io::channel_create(&label).expect("could not create channel");
-                    oak::node_create_with_label(
-                        &oak::node_config::wasm("app", "room"),
-                        &label,
-                        rh.handle,
-                    )
-                    .expect("could not create node");
+                    oak::node_create(&oak::node_config::wasm("app", "room"), &label, rh.handle)
+                        .expect("could not create node");
                     rh.close().expect("could not close channel");
                     wh
                 });
