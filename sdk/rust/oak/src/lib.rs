@@ -224,12 +224,6 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Resul
     result_from_status(status as i32, ())
 }
 
-/// Similar to [`channel_create_with_label`], but with a fixed label corresponding to "public
-/// untrusted".
-pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
-    channel_create_with_label(&Label::public_untrusted())
-}
-
 /// Create a new unidirectional channel.
 ///
 /// The provided label must be equal or more restrictive than the label of the calling node, i.e.
@@ -237,7 +231,7 @@ pub fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
 ///
 /// On success, returns [`WriteHandle`] and a [`ReadHandle`] values for the
 /// write and read halves (respectively).
-pub fn channel_create_with_label(label: &Label) -> Result<(WriteHandle, ReadHandle), OakStatus> {
+pub fn channel_create(label: &Label) -> Result<(WriteHandle, ReadHandle), OakStatus> {
     let mut write = WriteHandle {
         handle: crate::handle::invalid(),
     };

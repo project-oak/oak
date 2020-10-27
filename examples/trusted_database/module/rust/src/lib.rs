@@ -64,7 +64,7 @@ use oak::{
     proto::oak::invocation::GrpcInvocationReceiver,
     CommandHandler,
 };
-use oak_abi::proto::oak::application::ConfigMap;
+use oak_abi::{label::Label, proto::oak::application::ConfigMap};
 use proto::oak::examples::trusted_database::{PointOfInterestMap, TrustedDatabaseCommand};
 
 /// Oak Node that contains an in-memory database.
@@ -76,8 +76,9 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
     fn handle_command(&mut self, invocation: grpc::Invocation) -> anyhow::Result<()> {
         // Create a client request handler Node.
         debug!("Creating handler Node");
-        let (sender, receiver) = oak::io::channel_create::<TrustedDatabaseCommand>()
-            .context("Couldn't create command channel")?;
+        let (sender, receiver) =
+            oak::io::channel_create::<TrustedDatabaseCommand>(&Label::public_untrusted())
+                .context("Couldn't create command channel")?;
         // TODO(#1406): Use client assigned label for creating a new handler Node.
         oak::node_create(
             &oak::node_config::wasm("app", "handler_oak_main"),
@@ -89,7 +90,7 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
         // Create a gRPC invocation channel for forwarding requests to the
         // `TrustedDatabaseHandlerNode`.
         let (invocation_sender, invocation_receiver) =
-            oak::io::channel_create::<grpc::Invocation>()
+            oak::io::channel_create::<grpc::Invocation>(&Label::public_untrusted())
                 .context("Couldn't create gRPC invocation channel")?;
 
         // Create a command message that contains a copy of the database.
