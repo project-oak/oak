@@ -281,6 +281,23 @@ RUN make depend && make -j"$(nproc)"&& make install_sw install_ssldirs
 ENV PKG_CONFIG_ALLOW_CROSS 1
 ENV OPENSSL_STATIC 1
 
+# Install sccache
+# https://github.com/mozilla/sccache
+ARG sccache_version=v0.2.15
+ARG sccache_dir=/usr/local/sccache
+ARG sccache_location=https://github.com/mozilla/sccache/releases/download/${sccache_version}/sccache-${sccache_version}-x86_64-unknown-linux-musl.tar.gz
+ENV PATH "${sccache_dir}:${PATH}"
+RUN mkdir --parents ${sccache_dir} \
+  && curl --location ${sccache_location} | tar --extract --gzip --directory=${sccache_dir} --strip-components=1 \
+  && chmod +x ${sccache_dir}/sccache
+
+ENV SCCACHE_GCS_BUCKET sccache-1
+ENV SCCACHE_GCS_KEY_PATH /workspaces/oak/.oak_remote_cache_key.json
+ENV SCCACHE_GCS_RW_MODE READ_WRITE
+ENV RUSTC_WRAPPER sccache
+# Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
+ENV CARGO_INCREMENTAL false
+
 # We use the `docker` user in order to maintain library paths on different
 # machines and to make Wasm modules reproducible.
 ARG USERNAME=docker

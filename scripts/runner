@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
+sccache --show-stats
 cargo run --manifest-path=./runner/Cargo.toml -- "$@"
+sccache --show-stats

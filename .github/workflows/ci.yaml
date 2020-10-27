@@ -108,5 +108,5 @@ jobs:
       # Build Android Hello-World application.
       - name: Build Android Hello-World
         run:
-          docker run --volume=$PWD:/opt/my-project --workdir=/opt/my-project
+          docker run --volume=$PWD:/workspaces/oak --workdir=/workspaces/oak
           gcr.io/oak-ci/oak-android:latest ./scripts/build_examples_android
