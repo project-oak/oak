@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{
-    io::SenderExt,
-    node::NodeBuilder,
-};
+use crate::{io::SenderExt, node::NodeBuilder};
 use log::{info, warn};
 use oak_abi::{label::Label, proto::oak::application::NodeConfiguration};
 

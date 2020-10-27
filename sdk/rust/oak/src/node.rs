@@ -43,42 +43,11 @@ impl NodeBuilder {
     /// If [`NodeBuilder::label`] is `None` - uses [`Label::public_untrusted`].
     /// Returns [`Sender`] for the initial channel to the newly created Node.
     pub fn build<T: Encodable + Decodable>(&self) -> Result<Sender<T>, OakStatus> {
-        let (sender, receiver) = match &self.label {
-            Some(label) => {
-                let (sender, receiver) = crate::io::channel_create_with_label::<T>(label)?;
-                crate::node_create_with_label(&self.config, label, receiver.handle)?;
-                (sender, receiver)
-            },
-            None => {
-                let (sender, receiver) = crate::io::channel_create::<T>()?;
-                crate::node_create(&self.config, receiver.handle)?;
-                (sender, receiver)
-            }
-        };
+        let public_label = Label::public_untrusted();
+        let label = self.label.as_ref().unwrap_or(&public_label);
+        let (sender, receiver) = crate::io::channel_create_with_label::<T>(&label)?;
+        crate::node_create_with_label(&self.config, &label, receiver.handle)?;
         crate::channel_close(receiver.handle.handle)?;
-        Ok(sender)
-    }
-}
-
-/// Method provider for creating Wasm Nodes.
-pub struct WasmNode<T: Encodable + Decodable> {
-    phantom: std::marker::PhantomData<T>,
-}
-
-impl<T: Encodable + Decodable> WasmNode<T> {
-    /// Creates a Wasm Node with a public label.
-    /// Returns [`Sender`] for the initial channel to the newly created Node.
-    pub fn create(module_name: &str, entrypoint_name: &str) -> Result<Sender<T>, OakStatus> {
-        Self::create_with_label(module_name, entrypoint_name, &Label::public_untrusted())
-    }
-
-    /// Creates a Wasm Node with specific `label`.
-    /// Returns [`Sender`] for the initial channel to the newly created Node.
-    pub fn create_with_label(module_name: &str, entrypoint_name: &str, label: &Label) -> Result<Sender<T>, OakStatus> {
-        let config = &crate::node_config::wasm(module_name, entrypoint_name);
-        let sender = NodeBuilder::new(config)
-            .label(label)
-            .build::<T>()?;
         Ok(sender)
     }
 }

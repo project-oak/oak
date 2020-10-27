@@ -19,10 +19,10 @@
 use crate::{
     grpc::Invocation,
     io::{Receiver, SenderExt},
+    node::NodeBuilder,
     proto::oak::invocation::GrpcInvocationSender,
     OakStatus,
 };
-use crate::node::NodeBuilder;
 
 /// Initializes a gRPC server pseudo-Node listening on the provided address.
 ///

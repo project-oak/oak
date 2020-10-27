@@ -42,7 +42,7 @@ use log::{debug, error, info};
 use oak::{
     grpc,
     io::{Receiver, ReceiverExt, SenderExt},
-    node::WasmNode,
+    node::NodeBuilder,
     proto::oak::invocation::{GrpcInvocation, GrpcInvocationReceiver, GrpcInvocationSender},
 };
 use oak_abi::proto::oak::application::ConfigMap;
@@ -210,7 +210,9 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
         oak::grpc::server::init(&config.grpc_server_listen_address).expect("Couldn't create gRPC server pseudo-Node");
 
     // Create an Aggregator Node.
-    let init_sender = WasmNode::create("app", "aggregator").expect("Couldn't create Aggregator Node");
+    let init_sender = NodeBuilder::new(&oak::node_config::wasm("app", "aggregator"))
+        .build()
+        .expect("Couldn't create Aggregator Node");
 
     // Create a gRPC client Node with a less restrictive label than the current Node.
     // In particular, the confidentiality component of the current Node label includes the

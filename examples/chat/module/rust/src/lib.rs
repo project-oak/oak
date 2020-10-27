@@ -18,7 +18,6 @@ use log::info;
 use oak::{
     grpc,
     io::{Sender, SenderExt},
-    node::WasmNode,
 };
 use oak_abi::proto::oak::application::ConfigMap;
 use proto::{
@@ -56,8 +55,12 @@ struct Room {
 
 impl Room {
     fn new(admin_token: AdminToken) -> Self {
+        let (wh, rh) = oak::channel_create().unwrap();
+        oak::node_create(&oak::node_config::wasm("app", "backend_oak_main"), rh)
+            .expect("could not create node");
+        oak::channel_close(rh.handle).expect("could not close channel");
         Room {
-            sender: WasmNode::create("app", "backend_oak_main").expect("Couldn't create node"),
+            sender: oak::io::Sender::new(wh),
             admin_token,
         }
     }
