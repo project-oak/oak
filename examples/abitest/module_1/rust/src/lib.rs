@@ -16,6 +16,7 @@
 
 use abitest_common::InternalMessage;
 use log::{error, info};
+use oak_abi::label::Label;
 use std::collections::HashSet;
 
 // Backend node for channel testing.  This node listens for read channel handles
@@ -116,7 +117,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
             info!("received frontend request: {:?}", internal_req);
 
             // Create a new channel and write the response into it.
-            let (new_write, new_read) = oak::channel_create()?;
+            let (new_write, new_read) = oak::channel_create(&Label::public_untrusted())?;
             let internal_rsp = InternalMessage {
                 msg: internal_req.msg + "xxx",
             };

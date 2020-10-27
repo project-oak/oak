@@ -21,6 +21,7 @@ use crate::{
     OakError, OakStatus,
 };
 use log::{error, warn};
+use oak_abi::label::Label;
 use oak_services::proto::google::rpc;
 pub use oak_services::proto::{
     google::rpc::*,
@@ -235,7 +236,8 @@ where
 {
     // Create a new channel for request message delivery.
     let (req_sender, req_receiver) =
-        crate::io::channel_create::<GrpcRequest>().expect("failed to create channel");
+        crate::io::channel_create::<GrpcRequest>(&Label::public_untrusted())
+            .expect("failed to create channel");
 
     // Put the request in a GrpcRequest wrapper and send it into the request
     // message channel.
@@ -246,7 +248,8 @@ where
 
     // Create a new channel for responses to arrive on.
     let (rsp_sender, rsp_receiver) =
-        crate::io::channel_create::<GrpcResponse>().expect("failed to create channel");
+        crate::io::channel_create::<GrpcResponse>(&Label::public_untrusted())
+            .expect("failed to create channel");
 
     // Build an Invocation holding the two channels and send it down the
     // specified channel.
