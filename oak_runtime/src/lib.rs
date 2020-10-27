@@ -27,6 +27,7 @@ use crate::{
     channel::{with_reader_channel, with_writer_channel, Channel},
     message::Message,
     metrics::Metrics,
+    node::Node,
     proto::oak::introspection_events::{
         event::EventDetails, ChannelCreated, Direction, Event, HandleCreated, HandleDestroyed,
         MessageDequeued, MessageEnqueued, NodeCreated, NodeDestroyed,
@@ -1158,10 +1159,30 @@ impl Runtime {
     /// This method is defined on [`Arc`] and not [`Runtime`] itself, so that
     /// the [`Arc`] can clone itself and be included in a [`RuntimeProxy`] object
     /// to be given to a new Node instance.
-    fn node_create(
+    fn node_create_and_register(
         self: Arc<Self>,
         node_id: NodeId,
         config: &NodeConfiguration,
+        label: &Label,
+        initial_handle: oak_abi::Handle,
+    ) -> Result<(), OakStatus> {
+        // This only creates a Node instance, but does not start it.
+        let instance = self.node_factory.create_node(config).map_err(|err| {
+            warn!("could not create node: {:?}", err);
+            OakStatus::ErrInvalidArgs
+        })?;
+
+        // Register the instance within the `Runtime`.
+        self.node_register(node_id, instance, &config.name, label, initial_handle)
+    }
+
+    /// Registers the given [`Node`] instance within the [`Runtime`]. The registration fails if the
+    /// labels violate the IFC rules.
+    fn node_register(
+        self: Arc<Self>,
+        node_id: NodeId,
+        instance: Box<dyn Node>,
+        node_name: &str,
         label: &Label,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
@@ -1181,13 +1202,7 @@ impl Runtime {
 
         let new_node_proxy = self.clone().proxy_for_new_node();
         let new_node_id = new_node_proxy.node_id;
-        let new_node_name = format!("{}({})", config.name, new_node_id.0);
-
-        // This only creates a Node instance, but does not start it.
-        let instance = self.node_factory.create_node(config).map_err(|err| {
-            warn!("could not create node: {:?}", err);
-            OakStatus::ErrInvalidArgs
-        })?;
+        let new_node_name = format!("{}({})", node_name, new_node_id.0);
 
         let node_privilege = instance.get_privilege();
         let node_type = instance.node_type();

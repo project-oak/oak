@@ -33,6 +33,9 @@ use std::{
     sync::{Arc, Mutex, RwLock},
 };
 
+#[cfg(test)]
+use crate::node::Node;
+
 /// A proxy object that binds together a reference to the underlying [`Runtime`] with a single
 /// [`NodeId`].
 ///
@@ -161,7 +164,7 @@ impl RuntimeProxy {
         self.runtime.is_terminating()
     }
 
-    /// See [`Runtime::node_create`].
+    /// See [`Runtime::node_create_and_register`].
     pub fn node_create(
         &self,
         config: &NodeConfiguration,
@@ -169,13 +172,42 @@ impl RuntimeProxy {
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
         debug!("{:?}: node_create({:?}, {:?})", self.node_id, config, label);
-        let result = self
-            .runtime
-            .clone()
-            .node_create(self.node_id, config, label, initial_handle);
+        let result = self.runtime.clone().node_create_and_register(
+            self.node_id,
+            config,
+            label,
+            initial_handle,
+        );
         debug!(
             "{:?}: node_create({:?}, {:?}) -> {:?}",
             self.node_id, config, label, result
+        );
+        result
+    }
+
+    /// See [`Runtime::node_register`]. This is exposed to facilitate testing.
+    #[cfg(test)]
+    pub fn node_register(
+        &self,
+        instance: Box<dyn Node>,
+        node_name: &str,
+        label: &Label,
+        initial_handle: oak_abi::Handle,
+    ) -> Result<(), OakStatus> {
+        debug!(
+            "{:?}: register_node_instance(node_name: {:?}, label: {:?})",
+            self.node_id, node_name, label
+        );
+        let result = self.runtime.clone().node_register(
+            self.node_id,
+            instance,
+            node_name,
+            label,
+            initial_handle,
+        );
+        debug!(
+            "{:?}: register_node_instance(node_name: {:?}, label: {:?}) -> {:?}",
+            self.node_id, node_name, label, result
         );
         result
     }
