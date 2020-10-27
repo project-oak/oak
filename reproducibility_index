@@ -1,7 +1,7 @@
 a1a20bc9748913d23b2b13c0ca3f654186cf8d10af8b6f5f670ab259b053f58f  ./examples/target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm
 4a166e13748d1476cfeccf6279cc99441b7a4d4a68ac17317cead923e600d338  ./examples/target/wasm32-unknown-unknown/release/abitest_1_backend.wasm
 f9273f9ccae373e9e6f9c3b83e41e8b9e8112e77514d5c87b61f6ebfb946318c  ./examples/target/wasm32-unknown-unknown/release/aggregator.wasm
-f6ceee10d398a09d3cf77b38affff58d02f18898d07db30ab26d9493d19ceb7e  ./examples/target/wasm32-unknown-unknown/release/chat.wasm
+5d14e8169aad14291697c66d20132ff7da7878be36d3dc20c9e2a03d1f3dc93d  ./examples/target/wasm32-unknown-unknown/release/chat.wasm
 eeb2b434a93e4a33e8da0f8f94fc0ae597bd23fa07dec40f42c9dd7e2cf39077  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
 f3282b8c8b741f4c8d66a8dac9f5a401e2b92e234332098a37537c9fe32a3141  ./examples/target/wasm32-unknown-unknown/release/http_server.wasm
 7642d1c2a93067509497a44a86aad9d5a596b56cd91eeb007ee133ad66c74ba2  ./examples/target/wasm32-unknown-unknown/release/injection.wasm
@@ -10,4 +10,4 @@ f3282b8c8b741f4c8d66a8dac9f5a401e2b92e234332098a37537c9fe32a3141  ./examples/tar
 05a876af715ce5cbabe558ca3a953f93b4b59835c5885fc1f73a6796c06676fb  ./examples/target/wasm32-unknown-unknown/release/running_average.wasm
 6e9062cc6a1549a76eaaa44f9435a0da73aca3fadbb93613f0c06cac374077f2  ./examples/target/wasm32-unknown-unknown/release/translator.wasm
 861d626413529f98af9e045e51445ae70e35ed340d9e0037e571a67a92019766  ./examples/target/wasm32-unknown-unknown/release/trusted_database.wasm
-dc6276bf8c2eb1c88a0ce4d78c9ccb235dc9364e0e2d0c965621ccf45d3ea091  ./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader
+8572da6118a21030269ef104be2a433e3928661714e6f3b0fb39476f5ac3f5a7  ./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader
