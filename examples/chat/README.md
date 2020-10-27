@@ -7,6 +7,9 @@ creates the application, the other clients connect to the created address:port).
 
 A client then creates a new **room**, which is identified by a random bearer
 access token which is needed to join that room and participate in chats there.
+The bearer token is used to authenticate the client over gRPC and label messages
+sent to that chat room. The room is implicitly created when the first message
+with the corresponding label is sent to it.
 
 ## Command Line Operation
 
