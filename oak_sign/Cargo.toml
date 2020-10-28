@@ -17,6 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "*"
+assert_matches = "*"
 env_logger = "*"
 hex = "*"
 log = "*"
