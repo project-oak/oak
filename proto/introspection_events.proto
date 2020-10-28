@@ -63,7 +63,9 @@ message NodeDestroyed {
 message ChannelCreated {
   uint64 channel_id = 1 [jstype = JS_STRING];
 
-  oak.label.Label label = 2;
+  string name = 2;
+
+  oak.label.Label label = 3;
 }
 
 message ChannelDestroyed {

@@ -141,7 +141,8 @@ impl RuntimeProxy {
 
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point Node.
-        let (write_handle, read_handle) = self.channel_create(&Label::public_untrusted())?;
+        let (write_handle, read_handle) =
+            self.channel_create("Initial channel", &Label::public_untrusted())?;
         debug!(
             "{:?}: created initial channel ({}, {})",
             self.node_id, write_handle, read_handle,
@@ -215,13 +216,17 @@ impl RuntimeProxy {
     /// See [`Runtime::channel_create`].
     pub fn channel_create(
         &self,
+        name: &str,
         label: &Label,
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
-        debug!("{:?}: channel_create({:?})", self.node_id, label);
-        let result = self.runtime.channel_create(self.node_id, label);
         debug!(
-            "{:?}: channel_create({:?}) -> {:?}",
-            self.node_id, label, result
+            "{:?}: channel_create({:?}, {:?})",
+            self.node_id, name, label
+        );
+        let result = self.runtime.channel_create(self.node_id, name, label);
+        debug!(
+            "{:?}: channel_create({:?}, {:?}) -> {:?}",
+            self.node_id, name, label, result
         );
         result
     }

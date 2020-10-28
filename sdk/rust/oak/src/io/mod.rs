@@ -29,9 +29,10 @@ pub use sender::SenderExt;
 
 /// Create a new channel for transmission of `Encodable` and `Decodable` types.
 pub fn channel_create<T: Encodable + Decodable>(
+    name: &str,
     label: &Label,
 ) -> Result<(Sender<T>, Receiver<T>), OakStatus> {
-    let (wh, rh) = crate::channel_create(label)?;
+    let (wh, rh) = crate::channel_create(name, label)?;
     Ok((Sender::<T>::new(wh), Receiver::<T>::new(rh)))
 }
 

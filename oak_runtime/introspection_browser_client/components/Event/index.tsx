@@ -148,6 +148,7 @@ function renderEventDescription(
         <ObjectAsDescriptionList
           object={{
             id: event.getChannelCreated()!.getChannelId(),
+            name: event.getChannelCreated()!.getName(),
             label: event.getChannelCreated()!.getLabel()!.toObject(),
           }}
           dlComponent={InlineDl}

@@ -207,14 +207,18 @@ impl WasmInterface {
         &mut self,
         write_addr: AbiPointer,
         read_addr: AbiPointer,
+        name_ptr: AbiPointer,
+        name_length: AbiPointerOffset,
         label_ptr: AbiPointer,
         label_length: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
         trace!(
-            "{}: channel_create({}, {}, {}, {})",
+            "{}: channel_create({}, {}, {}, {}, {}, {})",
             self.pretty_name,
             write_addr,
             read_addr,
+            name_ptr,
+            name_length,
             label_ptr,
             label_length
         );
@@ -226,6 +230,25 @@ impl WasmInterface {
 
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
+
+        let name_bytes = self
+            .get_memory()
+            .get(name_ptr, name_length as usize)
+            .map_err(|err| {
+                error!(
+                    "{}: channel_create(): Unable to read name from guest memory: {:?}",
+                    self.pretty_name, err
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+
+        let name = String::from_utf8(name_bytes).map_err(|err| {
+            error!(
+                "{}: channel_create(): Unabel to decode name as a string: {:?}",
+                self.pretty_name, err
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
 
         let label_bytes = self
             .get_memory()
@@ -239,13 +262,13 @@ impl WasmInterface {
             })?;
         let label = Label::deserialize(&label_bytes).ok_or_else(|| {
             error!(
-                "{}: channel_create: could not deserialize label",
+                "{}: channel_create(): could not deserialize label",
                 self.pretty_name
             );
             OakStatus::ErrInvalidArgs
         })?;
 
-        let (write_handle, read_handle) = self.runtime.channel_create(&label)?;
+        let (write_handle, read_handle) = self.runtime.channel_create(&name, &label)?;
 
         self.get_memory()
             .set_value(write_addr, write_handle as i64)
@@ -629,6 +652,8 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(1)?,
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
+                args.nth_checked(4)?,
+                args.nth_checked(5)?,
             )),
             CHANNEL_WRITE => map_host_errors(self.channel_write(
                 args.nth_checked(0)?,
@@ -727,6 +752,8 @@ fn oak_resolve_func(
                 &[
                     ABI_USIZE, // write handle (out)
                     ABI_USIZE, // read handle (out)
+                    ABI_USIZE, // name_buf
+                    ABI_USIZE, // name_len
                     ABI_USIZE, // label_buf
                     ABI_USIZE, // label_len
                 ][..],

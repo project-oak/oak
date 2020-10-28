@@ -206,7 +206,7 @@ fn create_server_node(runtime: &RuntimeProxy, port: u32) -> oak_abi::Handle {
 fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak_abi::Handle) {
     // create channel: one end to server_node::run; the other to the Oak node.
     let (init_sender, init_receiver) = runtime
-        .channel_create(&Label::public_untrusted())
+        .channel_create("HTTP initial channel", &Label::public_untrusted())
         .expect("Could not create channel");
 
     // At the start the HTTP server pseudo-Node expects to receive an invocation channel, with
@@ -214,7 +214,7 @@ fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak
     //
     // Create a channel for receiving invocations to pass to the HTTP server pseudo-Node.
     let (invocation_sender, invocation_receiver) = runtime
-        .channel_create(&Label::public_untrusted())
+        .channel_create("HTTP invocation channel", &Label::public_untrusted())
         .expect("Could not create channel");
     let invocation_sender = HttpInvocationSender {
         sender: Some(Sender::<HttpInvocation>::new(WriteHandle {

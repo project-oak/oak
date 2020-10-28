@@ -131,29 +131,37 @@
                       handleBuf,
                       handleCount,
                     ].join(', ')}) -> ${status}
-    bytes: [${bytes}]
-    bytes(string): "${bytesString}"
-    handles: [${handles}]`;
+      bytes: [${bytes}]
+      bytes(string): "${bytesString}"
+      handles: [${handles}]`;
                     this.trace.push(entry);
                     return status;
                   },
                   channel_create: (
                     writeHandle,
                     readHandle,
+                    nameBuf,
+                    nameSize,
                     labelBuf,
                     labelSize
                   ) => {
                     const status = OakStatus.values.OK;
+                    const name = new TextDecoder().decode(
+                      this.readMemory(nameBuf, nameSize)
+                    );
                     const label = Label.decode(
                       this.readMemory(labelBuf, labelSize)
                     );
                     const entry = `${new Date().toISOString()}: channel_create(${[
                       writeHandle,
                       readHandle,
+                      nameBuf,
+                      nameSize,
                       labelBuf,
                       labelSize,
                     ].join(', ')}) -> ${status}
-    label: ${JSON.stringify(label)}`;
+      name: ${JSON.stringify(name)}
+      label: ${JSON.stringify(label)}`;
                     this.trace.push(entry);
                     return status;
                   },
@@ -178,8 +186,8 @@
                       labelSize,
                       handle,
                     ].join(', ')}) -> ${status}
-    config: ${JSON.stringify(config)}
-    label: ${JSON.stringify(label)}`;
+      config: ${JSON.stringify(config)}
+      label: ${JSON.stringify(label)}`;
                     this.trace.push(entry);
                     this.createNode(config);
                     return status;

@@ -358,11 +358,13 @@ impl Pipe {
         // Create a channel for passing HTTP requests to the Oak node. This channel is created with
         // the label specified by the caller. This will fail if the label has a non-empty
         // integrity component.
-        let (request_writer, request_reader) = runtime.channel_create(&label).map_err(|err| {
-            warn!("could not create HTTP request channel: {:?}", err);
-        })?;
+        let (request_writer, request_reader) = runtime
+            .channel_create("HTTP request channel", &label)
+            .map_err(|err| {
+                warn!("could not create HTTP request channel: {:?}", err);
+            })?;
         let (response_writer, response_reader) = runtime
-            .channel_create(&Label::public_untrusted())
+            .channel_create("HTTP response channel", &Label::public_untrusted())
             .map_err(|err| {
                 warn!("could not create HTTP response channel: {:?}", err);
             })?;

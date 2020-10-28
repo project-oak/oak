@@ -235,9 +235,11 @@ where
     R: prost::Message,
 {
     // Create a new channel for request message delivery.
-    let (req_sender, req_receiver) =
-        crate::io::channel_create::<GrpcRequest>(&Label::public_untrusted())
-            .expect("failed to create channel");
+    let (req_sender, req_receiver) = crate::io::channel_create::<GrpcRequest>(
+        "gRPC request channel",
+        &Label::public_untrusted(),
+    )
+    .expect("failed to create channel");
 
     // Put the request in a GrpcRequest wrapper and send it into the request
     // message channel.
@@ -247,9 +249,11 @@ where
     req_sender.close().expect("failed to close channel");
 
     // Create a new channel for responses to arrive on.
-    let (rsp_sender, rsp_receiver) =
-        crate::io::channel_create::<GrpcResponse>(&Label::public_untrusted())
-            .expect("failed to create channel");
+    let (rsp_sender, rsp_receiver) = crate::io::channel_create::<GrpcResponse>(
+        "gRPC response channel",
+        &Label::public_untrusted(),
+    )
+    .expect("failed to create channel");
 
     // Build an Invocation holding the two channels and send it down the
     // specified channel.

@@ -76,9 +76,11 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
     fn handle_command(&mut self, invocation: grpc::Invocation) -> anyhow::Result<()> {
         // Create a client request handler Node.
         debug!("Creating handler Node");
-        let (sender, receiver) =
-            oak::io::channel_create::<TrustedDatabaseCommand>(&Label::public_untrusted())
-                .context("Couldn't create command channel")?;
+        let (sender, receiver) = oak::io::channel_create::<TrustedDatabaseCommand>(
+            "Command channel",
+            &Label::public_untrusted(),
+        )
+        .context("Couldn't create command channel")?;
         // TODO(#1406): Use client assigned label for creating a new handler Node.
         oak::node_create(
             &oak::node_config::wasm("app", "handler_oak_main"),
@@ -90,9 +92,11 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
 
         // Create a gRPC invocation channel for forwarding requests to the
         // `TrustedDatabaseHandlerNode`.
-        let (invocation_sender, invocation_receiver) =
-            oak::io::channel_create::<grpc::Invocation>(&Label::public_untrusted())
-                .context("Couldn't create gRPC invocation channel")?;
+        let (invocation_sender, invocation_receiver) = oak::io::channel_create::<grpc::Invocation>(
+            "gRPC invocation channel",
+            &Label::public_untrusted(),
+        )
+        .context("Couldn't create gRPC invocation channel")?;
 
         // Create a command message that contains a copy of the database.
         let command = TrustedDatabaseCommand {

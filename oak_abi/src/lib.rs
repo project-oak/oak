@@ -135,6 +135,9 @@ extern "C" {
     /// Returns handles for the the write and read halves of the Channel in the spaces given by
     /// `write` and `read`.
     ///
+    /// The name to assign to the newly created Channel is provided in the memory area given by
+    /// `name_buf` and `name_len` as a UTF-8 encoded string.
+    ///
     /// The label to assign to the newly created Channel is provided in the memory area given by
     /// `label_buf` and `label_len`.
     ///
@@ -144,6 +147,8 @@ extern "C" {
     pub fn channel_create(
         write: *mut u64,
         read: *mut u64,
+        name_buf: *const u8,
+        name_len: usize,
         label_buf: *const u8,
         label_len: usize,
     ) -> u32;

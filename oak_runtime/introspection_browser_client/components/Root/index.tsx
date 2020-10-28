@@ -86,6 +86,7 @@ interface Message {
 interface Channel {
   id: ChannelID;
   messages: Message[];
+  name: string;
   label: Label;
 }
 type Channels = Map<ChannelID, Channel>;
@@ -140,6 +141,7 @@ function eventReducer(
         applicationState.channels.set(channelId, {
           id: channelId,
           messages: [],
+          name: channel.getName(),
           label: channel.getLabel()!.toObject(),
         });
       }

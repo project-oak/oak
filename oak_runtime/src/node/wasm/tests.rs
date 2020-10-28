@@ -57,7 +57,7 @@ fn start_node(
         &SecureServerConfiguration::default(),
         &signature_table,
     );
-    let (_write_handle, read_handle) = proxy.channel_create(&Label::public_untrusted())?;
+    let (_write_handle, read_handle) = proxy.channel_create("", &Label::public_untrusted())?;
 
     let result = proxy.node_create(
         &NodeConfiguration {

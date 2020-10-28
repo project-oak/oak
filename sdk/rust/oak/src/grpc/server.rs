@@ -31,9 +31,11 @@ use oak_abi::label::Label;
 /// [`Receiver`]: oak_io::Receiver
 pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
     // Create a channel and pass the read half to a new gRPC server pseudo-Node.
-    let (init_sender, init_receiver) =
-        crate::io::channel_create::<GrpcInvocationSender>(&Label::public_untrusted())
-            .expect("Couldn't create init channel to gRPC server pseudo-node");
+    let (init_sender, init_receiver) = crate::io::channel_create::<GrpcInvocationSender>(
+        "gRPC initial channel",
+        &Label::public_untrusted(),
+    )
+    .expect("Couldn't create init channel to gRPC server pseudo-node");
     let config = crate::node_config::grpc_server(address);
     crate::node_create(&config, &Label::public_untrusted(), init_receiver.handle)?;
     init_receiver
@@ -41,9 +43,11 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
         .expect("Couldn't close init channel to gRPC server pseudo-node");
 
     // Create a separate channel for receiving invocations and pass it to a gRPC pseudo-Node.
-    let (invocation_sender, invocation_receiver) =
-        crate::io::channel_create::<Invocation>(&Label::public_untrusted())
-            .expect("Couldn't create gRPC invocation channel");
+    let (invocation_sender, invocation_receiver) = crate::io::channel_create::<Invocation>(
+        "gRPC invocation channel",
+        &Label::public_untrusted(),
+    )
+    .expect("Couldn't create gRPC invocation channel");
     let local_invocation_sender = invocation_sender.handle;
 
     let grpc_server_init = GrpcInvocationSender {

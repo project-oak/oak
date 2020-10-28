@@ -38,7 +38,7 @@ WASM_EXPORT void oak_main(oak_abi::Handle _handle) {
   // Create a channel to the gRPC server pseudo-Node.
   oak_abi::Handle write_handle;
   oak_abi::Handle read_handle;
-  oak_abi::OakStatus result = channel_create(&write_handle, &read_handle, nullptr, 0);
+  oak_abi::OakStatus result = channel_create(&write_handle, &read_handle, nullptr, 0, nullptr, 0);
   if (result != oak_abi::OakStatus::OK) {
     return;
   }
@@ -65,7 +65,7 @@ WASM_EXPORT void oak_main(oak_abi::Handle _handle) {
   // Create a separate channel for receiving invocations and pass it to the gRPC pseudo-Node.
   oak_abi::Handle grpc_out_handle;
   oak_abi::Handle grpc_in_handle;
-  result = channel_create(&grpc_out_handle, &grpc_in_handle, nullptr, 0);
+  result = channel_create(&grpc_out_handle, &grpc_in_handle, nullptr, 0, nullptr, 0);
   if (result != oak_abi::OakStatus::OK) {
     return;
   }

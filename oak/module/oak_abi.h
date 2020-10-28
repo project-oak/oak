@@ -52,7 +52,8 @@ oak_abi::OakStatus channel_write(oak_abi::Handle handle, uint8_t* buff, size_t u
 WASM_IMPORT("oak") oak_abi::OakStatus channel_close(oak_abi::Handle handle);
 WASM_IMPORT("oak")
 oak_abi::OakStatus channel_create(oak_abi::Handle* write_handle, oak_abi::Handle* read_handle,
-                                  uint8_t* label_buf, size_t label_size);
+                                  uint8_t* name_buf, size_t name_size, uint8_t* label_buf,
+                                  size_t label_size);
 WASM_IMPORT("oak")
 oak_abi::OakStatus channel_label_read(oak_abi::Handle handle, uint8_t* label_buf, size_t label_size,
                                       uint32_t* actual_size);
