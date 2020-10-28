@@ -23,14 +23,5 @@ wildcards = "allow"
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
-allow = [
-  "Apache-2.0",
-  "BSD-2-Clause",
-  "CC0-1.0",
-  # TODO(#1266): Check whether LGPL is OK.
-  "LGPL-3.0",
-  "MPL-2.0",
-  "ISC",
-  "MIT",
-]
+allow = ["Apache-2.0", "MPL-2.0", "MIT"]
 copyleft = "deny"

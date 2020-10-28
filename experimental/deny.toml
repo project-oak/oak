@@ -13,8 +13,6 @@ notice = "deny"
 ignore = [
   # TODO(#1267): Remove when mio no longer depends on net2.
   "RUSTSEC-2020-0016",
-  # TODO(#1268): Remove when ring and prometheus no longer depends on spin.
-  "RUSTSEC-2019-0031",
 ]
 
 # Deny multiple versions unless explicitly skipped.

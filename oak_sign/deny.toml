@@ -10,10 +10,6 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = [
-  # TODO(#1268): Remove when ring and prometheus no longer depends on spin.
-  "RUSTSEC-2019-0031",
-]
 
 # Deny multiple versions unless explicitly skipped.
 [bans]
