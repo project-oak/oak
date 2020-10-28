@@ -19,9 +19,11 @@ use oak_sign::{get_sha256_hex, KeyPair, SignatureBundle};
 
 const TEST_DATA: &str = "Test data";
 const TEST_SHA256: &str = "e27c8214be8b7cf5bccc7c08247e3cb0c1514a48ee1f63197fe4ef3ef51d7e6f";
+const INCORRECT_SIGNATURE: &str =
+    "JmtVw8SPMnU/f4fLSBvd+w96C2NAMFn7+rqGVHzWOItsdZ+T+TqBwnEcCNJrJ1wrQWXPwFk+8sRiRFFCOCJVAA==";
 
 #[test]
-fn key_pair_test() {
+fn key_pair_serialization_deserialization_test() {
     let generate_result = KeyPair::generate();
     assert_matches!(generate_result, Ok(_));
     let key_pair = generate_result.unwrap();
@@ -40,6 +42,14 @@ fn signature_test() {
 
     let verify_result = signature.verify();
     assert_matches!(verify_result, Ok(_));
+
+    let incorrect_signature = SignatureBundle {
+        public_key: signature.public_key.to_vec(),
+        signed_hash: INCORRECT_SIGNATURE.as_bytes().to_vec(),
+        hash: signature.signed_hash.to_vec(),
+    };
+    let incorrect_verify_result = incorrect_signature.verify();
+    assert_matches!(incorrect_verify_result, Err(_));
 }
 
 #[test]

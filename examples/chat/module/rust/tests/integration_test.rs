@@ -29,10 +29,8 @@ async fn test_chat() {
     let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "grpc_oak_main")
         .expect("Unable to configure runtime with test wasm!");
 
-    let room_0_key_pair =
-        oak_sign::KeyBundle::generate().expect("could not generate room key pair");
-    let room_1_key_pair =
-        oak_sign::KeyBundle::generate().expect("could not generate room key pair");
+    let room_0_key_pair = oak_sign::KeyPair::generate().expect("could not generate room key pair");
+    let room_1_key_pair = oak_sign::KeyPair::generate().expect("could not generate room key pair");
 
     let mut alice = Chatter::new(&room_0_key_pair, "Alice").await;
     let mut alice_stream = alice.subscribe().await;
@@ -137,19 +135,19 @@ async fn test_chat() {
 
 struct Chatter<'a> {
     pub client: ChatClient<tonic::transport::Channel>,
-    pub room_key_pair: &'a oak_sign::KeyBundle,
+    pub room_key_pair: &'a oak_sign::KeyPair,
     pub user_handle: String,
 }
 
 impl<'a> Chatter<'a> {
     pub async fn new(
-        room_key_pair: &'a oak_sign::KeyBundle,
+        room_key_pair: &'a oak_sign::KeyPair,
         user_handle: &'static str,
     ) -> Chatter<'a> {
         info!(
             "creating new Chatter({}, {})",
             user_handle,
-            base64::encode(&room_key_pair.public_key())
+            base64::encode(&room_key_pair.pkcs8_public_key())
         );
         let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
         // TODO(#1357): Use key pair to authenticate this client and label requests.
