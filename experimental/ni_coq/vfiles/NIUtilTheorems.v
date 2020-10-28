@@ -16,57 +16,22 @@ Require Import Coq.Classes.RelationClasses.
 
 Local Open Scope map_scope.
 
-Section misc_theorems.
-
-Theorem eq_nodes_have_eq_lbls: forall n1 n2,
-    n1 = n2 -> (nlbl n1) = (nlbl n2).
-Proof. congruence. Qed.
-
-Theorem state_upd_node_eq: forall id n s,
-    (state_upd_node id n s).(nodes).[? id] = Some n.
-Proof.
-    intros. eapply upd_eq.
-Qed.
-
-Theorem state_upd_node_neq: forall (id id': node_id) n s,
-    id' <> id ->
-    (state_upd_node id n s).(nodes).[?id'] = s.(nodes).[?id'].
-Proof.
-    intros. eapply upd_neq. congruence.
-Qed.
-
-End misc_theorems.
-
 Section low_projection.
 
-Theorem flows_node_proj: forall ell n,
-    (nlbl n <<L ell) ->
-    (node_low_proj ell n) = n.
+Theorem flows_labeled_proj {A: Type}: forall ell (x: @labeled A),
+    (lbl x <<L ell) ->
+    (low_proj ell x) = x.
 Proof.
-    intros. unfold node_low_proj. destruct (nlbl n <<? ell). reflexivity.
-    contradiction.
+    intros. destruct x. unfold low_proj. simpl in H.
+    destruct (lbl <<? ell); eauto; try contradiction.
 Qed.
 
-Theorem nflows_node_proj: forall ell n,
-    ~(nlbl n <<L ell) ->
-    (node_low_proj ell n) = (empty_node n.(nlbl)).
+Theorem nflows_labeled_proj {A: Type}: forall ell (x: @labeled A),
+    ~(lbl x <<L ell) ->
+    (low_proj ell x) = Labeled A None (lbl x).
 Proof.
-    intros. unfold node_low_proj. destruct (nlbl n <<? ell). contradiction.
-    reflexivity.
-Qed.
-
-Theorem flows_chan_proj: forall ell ch,
-    (clbl ch <<L ell) ->
-    (chan_low_proj ell ch) = ch.
-Proof.
-Admitted.
-
-
-Theorem nflows_event_proj: forall ell e,
-    ~(elbl e <<L ell) ->
-    (event_low_proj ell e) = empty_event e.(elbl).
-Proof.
-    intros. unfold event_low_proj. destruct (elbl e <<? ell); eauto. contradiction.
+    intros. destruct x. unfold low_proj. simpl in H.
+    destruct (lbl <<? ell); eauto; try contradiction.
 Qed.
 
 Theorem proj_pres_handle_fresh: forall ell s,
@@ -81,117 +46,106 @@ Admitted.
 
 Definition idempotent {A: Type} (f: A -> A) := forall a, f (f a) = f a.
 
-Theorem node_low_proj_idempotent: forall ell, idempotent (node_low_proj ell).
-Proof. 
-    intros. unfold idempotent. intros n.
-    unfold node_low_proj. destruct (nlbl n <<? ell) eqn:Hflows.
-    - (* flows *)
-        rewrite Hflows. reflexivity.
-    - (* not flows *) 
-        replace (nlbl (empty_node (nlbl n))) with (nlbl n) by auto.
-        rewrite Hflows. reflexivity.
+Theorem labeled_low_proj_idempotent {A: Type}: forall ell, idempotent (@low_proj A ell).
+Proof.
+    intros. unfold idempotent. intros x.
+    destruct x. unfold low_proj. destruct (lbl <<? ell)  eqn:Hflows;
+    rewrite Hflows;eauto.
 Qed.
 
-Theorem chan_low_proj_idempotent: forall ell, idempotent (chan_low_proj ell).
-    intros. unfold idempotent. intros ch.
-    unfold chan_low_proj. destruct (clbl ch <<? ell) eqn:Hflows.
-    - (* flows *)
-        rewrite Hflows. reflexivity.
-    - (* not flows *) 
-        replace (clbl (empty_chan (clbl ch))) with (clbl ch) by auto.
-        rewrite Hflows. reflexivity.
-Qed.
+Definition node_low_proj_idempotent := @labeled_low_proj_idempotent node.
+Definition chan_low_proj_idempotent := @labeled_low_proj_idempotent channel.
+Definition event_low_proj_idempotent := @labeled_low_proj_idempotent event.
 
 Theorem state_low_proj_idempotent: forall ell, idempotent (state_low_proj ell).
 Proof.
 Admitted.
 
-Theorem event_low_proj_idempotent: forall ell, idempotent (event_low_proj ell).
+Definition low_proj_loweq {A: Type}{a_low_proj: @low_proj_t A}
+    {a_low_eq: @low_eq_t A} := forall ell x,
+    (a_low_eq ell (a_low_proj ell x) x).
+
+Theorem labeled_low_proj_loweq {A: Type}:
+    @low_proj_loweq (@labeled A) low_proj low_eq.
+Proof.
+    unfold low_proj_loweq. unfold low_eq. unfold low_proj. intros.
+    destruct x. destruct (lbl <<? ell) eqn:Hflows;
+    rewrite Hflows; reflexivity.
+Qed.
+
+Theorem state_low_proj_loweq: 
+    @low_proj_loweq state state_low_proj state_low_eq.
 Proof.
 Admitted.
 
-Theorem state_low_proj_loweq: forall ell s,
-    (state_low_eq ell (state_low_proj ell s) s).
+Theorem low_projection_preserves_lbl {A: Type}: forall ell (x: @labeled A),
+    (low_proj ell x).(lbl) = x.(lbl).
 Proof.
-Admitted.
-
-Theorem node_low_proj_loweq: forall ell n,
-    (node_low_eq ell (node_low_proj ell n) n).
-Proof.
-    intros. unfold node_low_eq. unfold low_eq. unfold node_low_proj.
-    destruct (nlbl n <<? ell) eqn:Hflows. rewrite Hflows. reflexivity.
-    replace (nlbl (empty_node (nlbl n))) with (nlbl n) by auto.
-    rewrite Hflows. reflexivity.
+    intros. destruct x. simpl. destruct (lbl <<? ell); auto.
 Qed.
 
-Theorem chan_low_proj_loweq: forall ell ch,
-    (chan_low_eq ell (chan_low_proj ell ch) ch).
-Proof.
-    intros. unfold chan_low_eq. unfold low_eq. unfold chan_low_proj.
-    destruct (clbl ch <<? ell) eqn:Hflows. rewrite Hflows. reflexivity.
-    replace (clbl (empty_chan (clbl ch))) with (clbl ch) by auto.
-    rewrite Hflows. reflexivity.
-Qed.
-
-Theorem node_projection_preserves_lbl: forall ell n,
-    ((node_low_proj ell n).(nlbl) = n.(nlbl)).
-Proof.
-    intros. unfold node_low_proj. destruct (nlbl n <<? ell).
-    reflexivity. auto.
-Qed.
-
-Theorem chan_projection_preserves_lbl: forall ell ch,
-    (clbl (chan_low_proj ell ch)) = clbl ch.
-Proof.
-    intros. unfold chan_low_proj. destruct (clbl ch <<? ell).
-    reflexivity. auto.
-Qed.
+Definition node_projection_preserves_lbl :=
+    @low_projection_preserves_lbl node.
+Definition chan_projection_preserves_lbl := 
+    @low_projection_preserves_lbl channel.
 
 Theorem uncons_proj_chan_s: forall ell s han ch,
-    (chans (state_low_proj ell s)).[? han] = Some ch ->
+    (chans (state_low_proj ell s)).[? han] = ch ->
     exists ch',
-         (chans s).[? han] = Some ch' /\
-        chan_low_proj ell ch' = ch.
+        (chans s).[? han] = ch' /\
+        low_proj ell ch' = ch.
 Proof.
-Admitted. (* WIP *)
+Admitted.
+
+Theorem uncons_proj_node_s': forall ell s id,
+    (nodes (state_low_proj ell s)).[? id] = 
+    (low_proj ell (nodes s).[? id]).
+Proof.
+    unfold state_low_proj. unfold fnd. unfold node_state_low_proj. simpl. intros.
+    destruct (lbl (nodes s id) <<? ell); try reflexivity.
+    symmetry; eauto using flows_labeled_proj.
+Qed.
+
+Theorem uncons_proj_node_s: forall ell s id n,
+    (nodes (state_low_proj ell s)).[? id] = n ->
+    exists n',
+        ((nodes s).[? id] = n') /\
+        (low_proj ell n') = n.
+Proof.
+    intros. rewrite uncons_proj_node_s' in H.
+    unfold fnd in *. unfold state_low_proj in *. simpl in *.
+    exists (nodes s id); split; eauto.
+Qed.
 
 Theorem state_nidx_to_proj_state_idx: forall ell s id n,
-    ((nodes s).[? id] = Some n) ->
-    ((nodes (state_low_proj ell s)).[? id] = Some (node_low_proj ell n)).
+    ((nodes s).[? id] = n) ->
+    ((nodes (state_low_proj ell s)).[? id] = (node_low_proj ell n)).
 Proof.
 Admitted.
 
 Theorem state_hidx_to_proj_state_hidx: forall ell s h ch,
-    ((chans s).[? h] = Some ch) ->
-    ((chans (state_low_proj ell s)).[? h] = Some (chan_low_proj ell ch)).
+    ((chans s).[? h] = ch) ->
+    ((chans (state_low_proj ell s)).[? h] = (chan_low_proj ell ch)).
 Proof.
 Admitted.
 
-Theorem proj_node_state_to_proj_n: forall ell s id n,
-    ((nodes (state_low_proj ell s)).[? id] = Some n) ->
-    exists n',
-        ((nodes s).[? id] = Some n') /\
-        (node_low_proj ell n') = n.
+(* TODO give better name *)
+Theorem proj_node_state_to_proj_n: forall ell s id nl n,
+    ((nodes (state_low_proj ell s)).[? id] = nl) ->
+    nl.(obj) = Some n ->
+    exists nl' n',
+        (nodes s).[? id] = nl' /\
+        (node_low_proj ell nl') = nl /\
+        nl'.(obj) = Some n'.
 Proof.
-    (* XXX *)
-    (* This is no longer true, I think *)
 Admitted.
 
 Theorem node_projection_preserves_flowsto: forall ell s id n n',
-    s.(nodes).[? id] = Some n ->
-    (state_low_proj ell s).(nodes).[? id] = Some n' ->
-    ~(n.(nlbl) <<L ell) ->
-    ~(n'.(nlbl) <<L ell).
+    s.(nodes).[? id] = n ->
+    (state_low_proj ell s).(nodes).[? id] = n' ->
+    ~(n.(lbl) <<L ell) ->
+    ~(n'.(lbl) <<L ell).
 Proof.
-    (*
-    intros. unfold state_low_proj in *. cbn in H0.  unfold node_state_low_proj in H0.
-    destruct (nodes s id) eqn: E in H0. 
-        - (* some *) 
-        replace n0 with n in *.
-        erewrite nflows_node_proj in H0. inversion H0. auto. auto.
-        replace (nodes s id) with ((nodes s).[? id]) in E by auto.
-        congruence.
-    *)
 Admitted.
 
 End low_projection.
@@ -234,10 +188,10 @@ Proof.
 Qed.
 
 Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
-    (nodes s1).[? id] = Some n1 ->
+    (nodes s1).[? id] = n1 ->
     (state_low_eq ell s1 s2) ->
     exists n2,
-        (nodes s2).[? id] = Some n2 /\
+        (nodes s2).[? id] = n2 /\
         (node_low_eq ell n1 n2).
 Proof.
     intros. inversion H0. unfold node_state_low_proj in *. 
@@ -248,10 +202,10 @@ Admitted.
 
 Theorem node_low_eq_to_lbl_eq: forall ell n1 n2,
     (node_low_eq ell n1 n2) ->
-    (n1.(nlbl) = n2.(nlbl)).
+    (n1.(lbl) = n2.(lbl)).
 Proof.
     intros. inversion H.
-    assert ( nlbl (node_low_proj ell n1) = nlbl (node_low_proj ell n2)).
+    assert ( lbl (low_proj ell n1) = lbl (low_proj ell n2)).
     rewrite H1. reflexivity.
     rewrite !node_projection_preserves_lbl in H0.
     assumption.
@@ -279,46 +233,6 @@ Proof.
     congruence.
 Qed.
 
-Theorem trace_loweq_to_deref_node: forall ell t1 t2 id s1 n1,
-(* If two traces are low-equivalent and in the first trace:
-    - the head element has some state (it's not an emty trace)
-    - and in the head state, id can be dereferenced to some node
-    then:
-    - there must be some head state in the other trace (s2)
-    - and we must be able to also dereference id in s2 to some node 
-Mostly, this is just a consequence of the def of trace-low-equivalence.
-*)
-    (trace_low_eq ell t1 t2) ->
-    (head_st t1 = Some s1) ->
-    ((nodes s1).[? id] = Some n1) ->
-    (exists s2 n2,
-        head_st t2 = Some s2 /\ 
-        (nodes s2).[? id] = Some n2 ).
-Proof.
-    intros.
-    destruct (head_st t2) eqn:Ht2head.
-    - (* some s *)
-        destruct (nodes s).[? id] eqn:Hsid.
-            + (* some n *)
-                exists s. exists n.
-                split; (reflexivity || assumption).
-            + (* none *)
-                inversion H; subst.
-                * (* t1 = [] and t2 = [] *) discriminate H0.
-                * exfalso. inversion H4; subst. simpl in Ht2head.
-                admit. 
-                (* 
-                 unfold node_state_low_eq in H5.
-                 inversion Ht2head. rewrite H8 in H5. specialize (H5 id).
-                 rewrite Hsid in H5. simpl in H0. inversion H0.
-                 rewrite H9, H1 in H5. assumption.
-                *)
-    - (* none *)
-        inversion H; subst. 
-            + discriminate H0.
-            + inversion Ht2head.
-Admitted. (* WIP *)
-
 End low_equivalence.
 
 Section unobservable.
@@ -328,39 +242,23 @@ Section unobservable.
 *)
 
 Theorem set_call_unobs: forall ell s id n c,
-    (nodes s).[? id] = Some n ->
-    ~(nlbl n <<L ell) ->
+    (nodes s).[? id] = n ->
+    ~(lbl n <<L ell) ->
     (state_low_eq ell s (s_set_call s id c)).
 Proof.
 Admitted.
 
 Theorem state_upd_chan_unobs: forall ell s han ch ch',
-    (chans s).[? han] = Some ch ->
-    ~(clbl ch <<L ell) ->
-    (clbl ch = clbl ch') ->
+    (chans s).[? han] = ch ->
+    ~(lbl ch <<L ell) ->
     (state_low_eq ell s (state_upd_chan han ch' s)).
 Proof.
 Admitted.
 
 Theorem state_upd_node_unobs: forall ell s id n n',
-    (nodes s).[? id] = Some n ->
-    ~(nlbl n <<L ell) ->
-    (nlbl n = nlbl n') ->
+    (nodes s).[? id] = n ->
+    ~(lbl n <<L ell) ->
     (state_low_eq ell s (state_upd_node id n' s)).
-Proof.
-Admitted.
-
-Theorem new_secret_node_unobs: forall ell s id n,
-    (nodes s).[? id] = None ->
-    ~(nlbl n <<L ell) ->
-    (state_low_eq ell s (state_upd_node id n s)).
-Proof.
-Admitted.
-
-Theorem new_secret_chan_unobs: forall ell s han ch,
-    (chans s).[? han] = None ->
-    ~(clbl ch <<L ell) ->
-    (state_low_eq ell s (state_upd_chan han ch s)).
 Proof.
 Admitted.
 

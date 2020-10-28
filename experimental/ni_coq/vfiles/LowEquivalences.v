@@ -10,6 +10,9 @@ From OakIFC Require Import
     RuntimeModel
     EvAugSemantics.
 
+From RecordUpdate Require Import RecordSet.
+Import RecordSetNotations.
+
 (* Ensembles don't have implicit type params and this line fixes that *)
 Arguments Ensembles.Empty_set{U}.
 
@@ -29,52 +32,33 @@ are related even if their contents differ.
 
 
 (*============================================================================
-* Empty Things
-*===========================================================================*)
-Definition empty_chan (l:level): channel := {|
-    clbl := l;
-    ms := [];
-|}.
-
-Definition empty_node (l: level): node := {|
-    nlbl := l;
-    read_handles := Empty_set;
-    write_handles := Empty_set;
-    ncall := Internal; 
-|}.
-
-Definition empty_event (l: level): event_l := {|
-    elbl := l;
-    e := NilEv;
-|}.
-    
-
-(*============================================================================
 * Low Projections
 *===========================================================================*)
 
-Definition low_proj (A: Type): Type := level -> A -> A.
+Definition low_proj_t {A: Type}: Type := level -> A -> A.
+Definition low_proj {A: Type} ell ( labeled_thing: @labeled A) := 
+    match labeled_thing with
+        | Labeled _ o ell' => if( ell' <<? ell ) 
+            then labeled_thing
+            else Labeled A None ell'
+    end.
 
-Definition chan_low_proj (ell: level)(c: channel): channel :=
-    if(c.(clbl) <<? ell) then c else (empty_chan c.(clbl)).
+Definition node_low_proj := @low_proj node.
+Definition chan_low_proj := @low_proj channel.
+Definition event_low_proj := @low_proj event.
 
-Definition node_low_proj (ell: level)(n: node): node :=
-    if(n.(nlbl) <<? ell) then n else (empty_node n.(nlbl)).
-
-Definition event_low_proj (ell: level)(e: event_l): event_l :=
-    if(e.(elbl) <<? ell) then e else (empty_event e.(elbl)).
 
 Definition node_state_low_proj (ell: level)(ns: node_state): node_state :=
-    fun id => match (ns id) with
-        | None => Some (empty_node ell)
-        | Some n => Some (node_low_proj ell n)
-    end.
+    fun id => 
+        if (ns id).(lbl) <<? ell 
+            then (ns id)
+            else low_proj ell (ns id).
 
 Definition chan_state_low_proj (ell: level)(cs: chan_state): chan_state :=
-    fun h => match (cs h) with
-        | None => Some (empty_chan ell)
-        | Some c => Some (chan_low_proj ell c)
-    end.
+    fun h => 
+        if (cs h).(lbl) <<? ell
+            then (cs h)
+            else low_proj ell (cs h).
 
 Definition state_low_proj (ell: level)(s: state): state := {|
     nodes := node_state_low_proj ell s.(nodes);
@@ -85,15 +69,19 @@ Definition state_low_proj (ell: level)(s: state): state := {|
 * Low Equivalences
 *===========================================================================*)
 
-Definition low_eq {A: Type} (p: (low_proj A)):=
-    fun ell a1 a2 => (p ell a1) = (p ell a2).
+Definition low_eq_t {A: Type}: Type := level -> A -> A -> Prop.
+Definition low_eq {A: Type} ell (x: @labeled A) (y: @labeled A) :=
+    (low_proj ell x) = (low_proj ell y).
 
-Definition chan_low_eq := low_eq chan_low_proj.
-Definition node_low_eq := low_eq node_low_proj.
-Definition event_low_eq := low_eq event_low_proj.
-Definition node_state_low_eq := low_eq node_state_low_proj.
-Definition chan_state_low_eq := low_eq chan_state_low_proj.
-Definition state_low_eq := low_eq state_low_proj.
+Definition chan_low_eq := @low_eq channel.
+Definition node_low_eq := @low_eq node.
+Definition event_low_eq := @low_eq event.
+Definition node_state_low_eq := fun ell ns1 ns2 => 
+    (node_state_low_proj ell ns1) = (node_state_low_proj ell ns2).
+Definition chan_state_low_eq := fun ell cs1 cs2 =>
+    (chan_state_low_proj ell cs1) = (chan_state_low_proj ell cs2).
+Definition state_low_eq := fun ell s1 s2 =>
+    (state_low_proj ell s1) = (state_low_proj ell s2).
 
 (*============================================================================
 * Trace Low Equivalences

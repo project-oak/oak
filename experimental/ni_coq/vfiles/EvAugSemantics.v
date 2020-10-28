@@ -50,10 +50,10 @@ Definition trace := list (state * event_l).
 
 Declare Scope aug_scope.
 Local Open Scope aug_scope.
-Notation "n '--->' msg":= (EvL (OutEv msg) n.(nlbl)) (at level 10) : aug_scope.
-Notation "n '<---' msg":= (EvL (InEv msg) n.(nlbl)) (at level 10) : aug_scope.
-Notation "n '---'":= (EvL NilEv n.(nlbl)) (at level 10) : aug_scope.
-Notation "'--' n '--'" := (EvL (NCreateEv n) n.(nlbl)) (at level 10) : aug_scope.
+Notation "ell '--->' msg":= (Labeled event (Some (OutEv msg)) ell) (at level 10) : aug_scope.
+Notation "ell '<---' msg":= (Labeled event (Some (InEv msg)) ell) (at level 10) : aug_scope.
+Notation "ell '---'":= (Labeled event None ell) (at level 10) : aug_scope.
+Notation "'--' ell '--'" := (Labeled event (Some NCreateEv) ell) (at level 10) : aug_scope.
 
 
 Definition head_st (t: trace) :=
@@ -63,34 +63,34 @@ Definition head_st (t: trace) :=
     end.
 
 Inductive step_node_ev (id: node_id): call -> state -> state -> event_l -> Prop :=
-    | SWriteChanEv s n han msg s':
-        s.(nodes) .[?id] = Some n ->
+    | SWriteChanEv s nlbl han msg s':
+        (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id (WriteChannel han msg) s s' ->
-        step_node_ev id (WriteChannel han msg) s s' (n ---> msg)
-    | SReadChanEv s n han chan msg s':
-        s.(nodes) .[?id] = Some n ->
+        step_node_ev id (WriteChannel han msg) s s' (nlbl ---> msg)
+    | SReadChanEv s nlbl han chan msg s':
+        (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id (ReadChannel han) s s' ->
         msg_is_head chan msg ->
-        step_node_ev id (ReadChannel han) s s' (n <--- msg)
-    | SCreateChanEv s n lbl s':
+        step_node_ev id (ReadChannel han) s s' (nlbl <--- msg)
+    | SCreateChanEv s nlbl clbl s':
             (* It seems clear that no event is needed since nodes only observe
             * contents of channels indirectly via reads *)
-        s.(nodes) .[?id] = Some n ->
-        step_node id (CreateChannel lbl) s s' ->
-        step_node_ev id (CreateChannel lbl) s s' (n --- )
-    | SCreateNodeEv s n lbl h s':
-        s.(nodes) .[?id] = Some n ->
-        step_node id (CreateNode lbl h) s s' ->
-        step_node_ev id (CreateNode lbl h) s s' ( -- n -- )
-    | SInternalEv s n s':
-        s.(nodes) .[?id] = Some n ->
+        (s.(nodes) .[?id]).(lbl) = nlbl ->
+        step_node id (CreateChannel clbl) s s' ->
+        step_node_ev id (CreateChannel clbl) s s' (nlbl --- )
+    | SCreateNodeEv s nlbl new_lbl h s':
+        (s.(nodes) .[?id]).(lbl) = nlbl ->
+        step_node id (CreateNode new_lbl h) s s' ->
+        step_node_ev id (CreateNode new_lbl h) s s' ( -- nlbl -- )
+    | SInternalEv s nlbl s':
+        (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id Internal s s' ->
-        step_node_ev id Internal s s' (n ---).
+        step_node_ev id Internal s s' (nlbl ---).
 
 Inductive step_system_ev: state -> state -> event_l -> Prop :=
-    | SytsemEvSkip s ell: step_system_ev s s (EvL NilEv ell)
+    | SytsemEvSkip s ell: step_system_ev s s (ell ---) 
     | SystemEvStepNode id n c c' s s' e:
-        s.(nodes) .[?id] = Some n ->
+        (s.(nodes).[?id]).(obj) = Some n ->
         n.(ncall) = c ->
         step_node_ev id c s s' e ->
         let s'' := (s_set_call s' id c') in

@@ -306,7 +306,7 @@ Proof.
         reflexivity.
     - (* NodeStep *)
         rename s'' into s1''. rename s' into s1'. rename H2 into H_step_projs_s1'.
-        specialize (proj_node_state_to_proj_n ell s id n H0)
+        specialize (uncons_proj_node_s ell s id n H0)
             as [n' [Hidx_n' Hproj_n']].
         destruct (n'.(nlbl) <<? ell).
         *
