@@ -21,7 +21,7 @@
 
 use crate::{
     io::{ReceiverExt, SenderExt},
-    node::{ConfigurationError, Node},
+    node::{ConfigurationError, Node, NodePrivilege},
     proto::oak::invocation::{HttpInvocation, HttpInvocationSender},
     RuntimeProxy,
 };
@@ -196,6 +196,14 @@ impl HttpServerNode {
 impl Node for HttpServerNode {
     fn node_type(&self) -> &'static str {
         "http-server"
+    }
+
+    fn get_privilege(&self) -> NodePrivilege {
+        // This node needs to have `top` privilege to be able to declassify data tagged with any
+        // arbitrary user identities.
+        // TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to
+        // the top of the `user` sub-lattice.
+        NodePrivilege::top_privilege()
     }
 
     fn run(

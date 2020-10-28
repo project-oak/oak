@@ -66,8 +66,16 @@ impl crate::proto::oak::label::Label {
         // The target label must have (compared to the self label):
         // - same or more confidentiality tags
         // - same or fewer integrity tags
-        self_confidentiality_tags.is_subset(&other_confidentiality_tags)
-            && other_integrity_tags.is_subset(&self_integrity_tags)
+        // A special case is the `top` tag that may represent the set of all confidentiality tags,
+        // or the set of all integrity tags. Therefore, to be more accurate:
+        // - the target label must be `top`, or have same or more confidentiality tags than the self
+        //   label, and
+        // - the self label must be `top`, or the target label must have same or fewer integrity
+        //   tags than the self label
+        (other_confidentiality_tags.contains(&top())
+            || self_confidentiality_tags.is_subset(&other_confidentiality_tags))
+            && (self_integrity_tags.contains(&top())
+                || other_integrity_tags.is_subset(&self_integrity_tags))
     }
 }
 
@@ -124,4 +132,10 @@ pub fn tls_endpoint_tag(authority: &str) -> Tag {
             authority: authority.to_string(),
         })),
     }
+}
+
+/// Convenience function for creating the top tag.
+pub fn top() -> Tag {
+    let tag = Some(crate::proto::oak::label::tag::Tag::TopTag(Top {}));
+    Tag { tag }
 }

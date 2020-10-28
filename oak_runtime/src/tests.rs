@@ -316,6 +316,51 @@ fn create_channel_with_more_confidential_label_from_public_node_with_privilege_o
     );
 }
 
+/// Create a test Node with public confidentiality label and infinite privilege that:
+///
+/// - creates a Channel with a more confidential label and succeeds (same as previous test case)
+/// - writes to the newly created channel and succeeds (same as previous test case)
+/// - reads from the newly created channel and succeeds (same as previous test case, this time
+///   thanks to the infinite privilege)
+#[test]
+fn create_channel_with_more_confidential_label_from_public_node_with_top_privilege_ok() {
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let initial_label = Label::public_untrusted();
+    let more_confidential_label = Label {
+        confidentiality_tags: vec![tag_0],
+        integrity_tags: vec![],
+    };
+    run_node_body(
+        &initial_label,
+        &NodePrivilege::top_privilege(),
+        Box::new(move |runtime| {
+            let result = runtime.channel_create("", &more_confidential_label);
+            assert_eq!(true, result.is_ok());
+
+            let (write_handle, read_handle) = result.unwrap();
+
+            let message = NodeMessage {
+                bytes: vec![14, 12, 88],
+                handles: vec![],
+            };
+
+            {
+                // Writing to a more confidential Channel is always allowed.
+                let result = runtime.channel_write(write_handle, message.clone());
+                assert_eq!(Ok(()), result);
+            }
+
+            {
+                // Reading from a more confidential Channel is allowed because of the privilege.
+                let result = runtime.channel_read(read_handle);
+                assert_eq!(Ok(Some(message)), result);
+            }
+
+            Ok(())
+        }),
+    );
+}
+
 #[test]
 fn create_channel_with_more_confidential_label_from_non_public_node_with_privilege_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);

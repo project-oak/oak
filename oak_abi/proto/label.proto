@@ -43,6 +43,7 @@ message Tag {
     WebAssemblyModuleTag web_assembly_module_tag = 2;
     WebAssemblyModuleSignatureTag web_assembly_module_signature_tag = 3;
     TlsEndpointTag tls_endpoint_tag = 4;
+    Top top_tag = 5;
   }
 }
 
@@ -82,3 +83,8 @@ message TlsEndpointTag {
   // using the set of Certificate Authorities (CA) that are available to it.
   string authority = 1;
 }
+
+// Message representing top element of the principal lattice. It can be used as a confidentiality
+// tag to represent the top-secret level, or as a privilege to represent infinite downgrading
+// privilege.
+message Top {}
