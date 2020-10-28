@@ -16,6 +16,7 @@
 
 #include "examples/abitest/client/cpp/httptest.h"
 
+#include "absl/strings/escaping.h"
 #include "glog/logging.h"
 #include "httplib_config.h"
 #include "oak_abi/proto/label.pb.h"
@@ -47,7 +48,7 @@ bool test_https_with_protobuf_label_ok() {
   httplib::SSLClient cli("localhost", PORT);
   cli.set_ca_cert_path(CA_CERT_PATH);
   cli.enable_server_certificate_verification(true);
-  httplib::Headers headers = {{"oak-label-bin", label_str}};
+  httplib::Headers headers = {{"oak-label-bin", absl::Base64Escape(label_str)}};
 
   auto res = cli.Get("/", headers);
   return res && res->status == 200;
