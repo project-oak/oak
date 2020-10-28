@@ -64,7 +64,7 @@ oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     };
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(node, grpc_channel);
+    oak::run_command_loop(node, grpc_channel.iter());
 });
 ```
 <!-- prettier-ignore-end -->
@@ -112,7 +112,7 @@ oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     let dispatcher = TranslatorDispatcher::new(Node);
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel);
+    oak::run_command_loop(dispatcher, grpc_channel.iter());
 }
 ```
 <!-- prettier-ignore-end -->
@@ -144,7 +144,7 @@ pub extern "C" fn frontend_oak_main(_in_handle: u64) {
         let dispatcher = OakAbiTestServiceDispatcher::new(node);
         let grpc_channel =
             oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-        oak::run_command_loop(dispatcher, grpc_channel);
+        oak::run_command_loop(dispatcher, grpc_channel.iter());
     });
 }
 ```

@@ -17,7 +17,7 @@
 //! Simple example starting an Oak Application serving a static page over HTTP.
 
 use log::{info, warn};
-use oak::{http::Invocation, CommandHandler, OakError, OakStatus};
+use oak::{http::Invocation, io::ReceiverExt, CommandHandler, OakError, OakStatus};
 use oak_abi::proto::oak::application::ConfigMap;
 
 oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
@@ -27,7 +27,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
     let http_channel =
         oak::http::init("[::]:8080").expect("Could not create HTTP server pseudo-Node!");
 
-    oak::run_command_loop(node, http_channel);
+    oak::run_command_loop(node, http_channel.iter());
 });
 
 /// A simple HTTP server that responds with `OK` (200) to every request sent to `/`, and with

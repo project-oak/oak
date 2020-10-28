@@ -18,8 +18,7 @@
 //! underlying Oak platform functionality.
 
 use byteorder::WriteBytesExt;
-use io::ReceiverExt;
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, warn};
 use oak_abi::proto::oak::application::NodeConfiguration;
 use prost::Message;
 
@@ -411,92 +410,31 @@ pub fn set_panic_hook() {
 
 /// Trait implemented by Oak Nodes (or parts thereof) that operate on commands.
 ///
-/// It has a single method for handling commands, which are [`Decodable`](crate::io::Decodable)
-/// objects that are received via the single incoming channel handle which is passed in at Node
-/// creation time. The return value is only used for logging in case of error.
-pub trait CommandHandler<T: crate::io::Decodable> {
+/// It has a single method for handling commands, which are usually received via the single incoming
+/// channel handle which is passed in at Node creation time, or derived from such stream.
+pub trait CommandHandler<T> {
+    /// Handles a single command instance.
+    ///
+    /// The return value is only used for logging in case of error.
     fn handle_command(&mut self, command: T) -> anyhow::Result<()>;
 }
 
-/// Run a command loop on the provided [`CommandHandler`]:
+/// Runs a command loop on the provided [`CommandHandler`]:
 ///
-/// - wait for new messages on the provided channel `in_channel`
-/// - if the runtime signals that the Node was terminated while waiting, then exit the event loop
-/// - otherwise, read the available message via the provided channel handle
-/// - decode the message from (bytes + handles) to the specified command type `T`
-/// - pass the typed command object to the `Node::handle_command` method of the `node`, which
+/// - waits for new messages from the provided iterator
+/// - passes the typed command object to the `Node::handle_command` method of the `node`, which
 ///   executes a single iteration of the loop
 ///
 /// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just
 /// logged, and the loop continues with the next iteration.
-pub fn run_command_loop<
-    T: crate::io::Decodable,
-    N: CommandHandler<T>,
-    R: Into<crate::io::Receiver<T>>,
->(
+pub fn run_command_loop<T, N: CommandHandler<T>, R: Iterator<Item = T>>(
     mut command_handler: N,
-    receiver: R,
+    command_iterator: R,
 ) {
-    let receiver = receiver.into();
-    if !crate::handle::is_valid(receiver.handle.handle) {
-        error!("{:?}: invalid input handle", receiver);
-        return;
-    }
-    info!("{:?}: starting command loop", receiver);
-    loop {
-        // First wait until a message is available. If the Node was terminated while waiting, this
-        // will return `ErrTerminated`, which indicates that the event loop should be terminated.
-        // For any other error raised while waiting is logged, we try and determine whether it is
-        // transient or not, and then continue or terminate the event loop, respectively.
-        match receiver.wait() {
-            Err(status) => {
-                use crate::OakStatus::*;
-                match status {
-                    ErrTerminated => {
-                        info!(
-                            "{:?}: received termination status: {:?}; terminating event loop",
-                            receiver, status
-                        );
-                        return;
-                    }
-                    _ => {
-                        error!(
-                            "{:?}: received status: {:?}; but `Receiver::wait` never returns an error other than `ErrTerminated`",
-                            receiver, status
-                        );
-                        return;
-                    }
-                }
-            }
-            Ok(status) => match status {
-                ChannelReadStatus::ReadReady => trace!("{:?}: wait over", receiver),
-                ChannelReadStatus::Orphaned
-                | ChannelReadStatus::PermissionDenied
-                | ChannelReadStatus::InvalidChannel => {
-                    warn!(
-                        "{:?}: received invalid channel read status: {:?}; terminating event loop",
-                        receiver, status
-                    );
-                    return;
-                }
-                ChannelReadStatus::NotReady => {
-                    error!(
-                        "{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.",
-                        receiver);
-                    return;
-                }
-            },
-        }
-        match receiver.try_receive() {
-            Ok(command) => {
-                info!("{:?}: received command", receiver);
-                if let Err(err) = command_handler.handle_command(command) {
-                    error!("{:?}: error handling command: {}", receiver, err);
-                }
-            }
-            Err(err) => {
-                error!("{:?}: error receiving command: {}", receiver, err);
-            }
+    for command in command_iterator {
+        debug!("received command");
+        if let Err(err) = command_handler.handle_command(command) {
+            error!("error handling command: {}", err);
         }
     }
 }
@@ -536,7 +474,7 @@ pub fn run_command_loop<
 ///     let grpc_channel = oak::grpc::server::init(&grpc_server_listen_address)
 ///         .expect("could not create gRPC server pseudo-node");
 ///     let dispatcher = DummyNode::default();
-///     oak::run_command_loop(dispatcher, grpc_channel);
+///     oak::run_command_loop(dispatcher, grpc_channel.iter());
 /// });
 ///
 /// # fn main() {}
@@ -550,6 +488,7 @@ pub fn run_command_loop<
 /// expression too:
 ///
 /// ```
+/// use oak::io::ReceiverExt;
 /// use oak_abi::proto::oak::application::ConfigMap;
 ///
 /// # fn init_all_the_things() {}
@@ -568,7 +507,7 @@ pub fn run_command_loop<
 ///     let dispatcher = DummyNode::default();
 ///     let grpc_channel = oak::grpc::server::init("[::]:8080")
 ///         .expect("could not create gRPC server pseudo-node");
-///     oak::run_command_loop(dispatcher, grpc_channel);
+///     oak::run_command_loop(dispatcher, grpc_channel.iter());
 /// });
 /// #
 /// # fn main() {}

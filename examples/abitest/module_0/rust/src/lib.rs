@@ -25,7 +25,7 @@ use log::{debug, error, info, trace, warn};
 use oak::{
     grpc,
     handle::is_valid,
-    io::{ReceiverExt, SenderExt},
+    io::{Receiver, ReceiverExt, SenderExt},
     ChannelReadStatus, OakError, OakStatus,
 };
 use oak_abi::{
@@ -162,7 +162,7 @@ pub extern "C" fn frontend_oak_main(_in_handle: u64) {
         let dispatcher = OakAbiTestServiceDispatcher::new(node);
         let grpc_channel =
             oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-        oak::run_command_loop(dispatcher, grpc_channel);
+        oak::run_command_loop(dispatcher, grpc_channel.iter());
     });
 }
 
@@ -2411,12 +2411,13 @@ pub extern "C" fn channel_loser(_handle: u64) {
 #[no_mangle]
 pub extern "C" fn http_oak_main(http_channel: u64) {
     oak::logger::init_default();
-    let node = http_server::StaticHttpServer {};
+    let node = http_server::StaticHttpServer;
     oak::run_command_loop(
         node,
-        oak_io::handle::ReadHandle {
+        Receiver::new(oak_io::handle::ReadHandle {
             handle: http_channel,
-        },
+        })
+        .iter(),
     );
 }
 

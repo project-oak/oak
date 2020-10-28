@@ -26,7 +26,7 @@ pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.running_average.rs"));
 }
 
-use oak::grpc;
+use oak::{grpc, io::ReceiverExt};
 use oak_abi::proto::oak::application::ConfigMap;
 use proto::{GetAverageResponse, RunningAverage, RunningAverageDispatcher, SubmitSampleRequest};
 
@@ -34,7 +34,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
     let dispatcher = RunningAverageDispatcher::new(Node::default());
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel);
+    oak::run_command_loop(dispatcher, grpc_channel.iter());
 });
 
 #[derive(Default)]

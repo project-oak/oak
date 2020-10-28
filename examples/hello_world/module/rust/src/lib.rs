@@ -19,7 +19,7 @@ pub mod proto {
 }
 
 use log::info;
-use oak::grpc;
+use oak::{grpc, io::ReceiverExt};
 use oak_abi::proto::oak::application::ConfigMap;
 use proto::{HelloRequest, HelloResponse, HelloWorld, HelloWorldDispatcher};
 
@@ -32,7 +32,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
     let dispatcher = HelloWorldDispatcher::new(node);
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel);
+    oak::run_command_loop(dispatcher, grpc_channel.iter());
 });
 
 struct Node {
