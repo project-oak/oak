@@ -83,7 +83,12 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
     let (init_sender, init_receiver) =
         crate::io::channel_create::<HttpInvocationSender>("HTTP init", &Label::public_untrusted())
             .expect("Couldn't create init channel to HTTP server pseudo-node");
-    crate::node_create(&config, &Label::public_untrusted(), init_receiver.handle)?;
+    crate::node_create(
+        "http_server",
+        &config,
+        &Label::public_untrusted(),
+        init_receiver.handle,
+    )?;
     init_receiver
         .close()
         .expect("Couldn't close init channel to HTTP server pseudo-node");

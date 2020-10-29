@@ -1176,9 +1176,9 @@ impl Runtime {
         node_info.node_stopper = Some(node_stopper);
     }
 
-    /// Create a Node within the [`Runtime`] corresponding to a given module name and
-    /// entrypoint. The channel identified by `initial_handle` is installed in the new
-    /// Node's handle table and the new handle value is passed to the newly created Node.
+    /// Create a Node within the [`Runtime`] with the specified name and based on the provided
+    /// configuration. The channel identified by `initial_handle` is installed in the new Node's
+    /// handle table and the new handle value is passed to the newly created Node.
     ///
     /// The caller also specifies a [`Label`], which is assigned to the newly created Node. See
     /// <https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels> for more
@@ -1190,18 +1190,19 @@ impl Runtime {
     fn node_create_and_register(
         self: Arc<Self>,
         node_id: NodeId,
+        name: &str,
         config: &NodeConfiguration,
         label: &Label,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
         // This only creates a Node instance, but does not start it.
-        let instance = self.node_factory.create_node(config).map_err(|err| {
+        let instance = self.node_factory.create_node(name, config).map_err(|err| {
             warn!("could not create node: {:?}", err);
             OakStatus::ErrInvalidArgs
         })?;
 
         // Register the instance within the `Runtime`.
-        self.node_register(node_id, instance, &config.name, label, initial_handle)
+        self.node_register(node_id, instance, name, label, initial_handle)
     }
 
     /// Registers the given [`Node`] instance within the [`Runtime`]. The registration fails if the

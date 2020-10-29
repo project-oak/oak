@@ -111,6 +111,8 @@ impl WasmInterface {
     #[allow(clippy::too_many_arguments)]
     fn node_create(
         &self,
+        name_ptr: AbiPointer,
+        name_length: AbiPointerOffset,
         config_ptr: AbiPointer,
         config_length: AbiPointerOffset,
         label_ptr: AbiPointer,
@@ -118,10 +120,14 @@ impl WasmInterface {
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
         trace!(
-            "{}: node_create({}, {}, {})",
+            "{}: node_create({}, {}, {}, {}, {}, {}, {})",
             self.pretty_name,
+            name_ptr,
+            name_length,
             config_ptr,
             config_length,
+            label_ptr,
+            label_length,
             initial_handle
         );
 
@@ -129,6 +135,25 @@ impl WasmInterface {
             debug!("{}: node_create() returning terminated", self.pretty_name);
             return Err(OakStatus::ErrTerminated);
         }
+
+        let name_bytes = self
+            .get_memory()
+            .get(name_ptr, name_length as usize)
+            .map_err(|err| {
+                error!(
+                    "{}: node_create(): Unable to read name from guest memory: {:?}",
+                    self.pretty_name, err
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+
+        let name = String::from_utf8(name_bytes).map_err(|err| {
+            error!(
+                "{}: node_create(): Unabel to decode name as a string: {:?}",
+                self.pretty_name, err
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
 
         let config_bytes = self
             .get_memory()
@@ -168,7 +193,7 @@ impl WasmInterface {
         })?;
 
         self.runtime
-            .node_create(&config, &label, initial_handle)
+            .node_create(&name, &config, &label, initial_handle)
             .map_err(|err| {
                 error!(
                     "{}: node_create(): Could not create node: {:?}",
@@ -642,6 +667,8 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
                 args.nth_checked(4)?,
+                args.nth_checked(5)?,
+                args.nth_checked(6)?,
             )),
             RANDOM_GET => {
                 map_host_errors(self.random_get(args.nth_checked(0)?, args.nth_checked(1)?))
@@ -718,6 +745,8 @@ fn oak_resolve_func(
             NODE_CREATE,
             wasmi::Signature::new(
                 &[
+                    ABI_USIZE,      // name_buf
+                    ABI_USIZE,      // name_len
                     ABI_USIZE,      // config_buf
                     ABI_USIZE,      // config_len
                     ABI_USIZE,      // label_buf

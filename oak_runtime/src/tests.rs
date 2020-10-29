@@ -398,10 +398,10 @@ fn create_node_same_label_ok() {
         Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create("", &label_clone)?;
             let node_configuration = NodeConfiguration {
-                name: "test".to_string(),
                 config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
             };
-            let result = runtime.node_create(&node_configuration, &label_clone, read_handle);
+            let result =
+                runtime.node_create("test", &node_configuration, &label_clone, read_handle);
             assert_eq!(Ok(()), result);
             Ok(())
         }),
@@ -419,11 +419,9 @@ fn create_node_invalid_configuration_err() {
         Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create("", &label_clone)?;
             // Node configuration without config type.
-            let node_configuration = NodeConfiguration {
-                name: "test".to_string(),
-                config_type: None,
-            };
-            let result = runtime.node_create(&node_configuration, &label_clone, read_handle);
+            let node_configuration = NodeConfiguration { config_type: None };
+            let result =
+                runtime.node_create("test", &node_configuration, &label_clone, read_handle);
             assert_eq!(Err(OakStatus::ErrInvalidArgs), result);
             Ok(())
         }),
@@ -453,11 +451,14 @@ fn create_node_less_confidential_label_err() {
         Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create("", &initial_label_clone)?;
             let node_configuration = NodeConfiguration {
-                name: "test".to_string(),
                 config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
             };
-            let result =
-                runtime.node_create(&node_configuration, &less_confidential_label, read_handle);
+            let result = runtime.node_create(
+                "test",
+                &node_configuration,
+                &less_confidential_label,
+                read_handle,
+            );
             assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
@@ -484,11 +485,14 @@ fn create_node_more_confidential_label_ok() {
         Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create("", &initial_label_clone)?;
             let node_configuration = NodeConfiguration {
-                name: "test".to_string(),
                 config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
             };
-            let result =
-                runtime.node_create(&node_configuration, &more_confidential_label, read_handle);
+            let result = runtime.node_create(
+                "test",
+                &node_configuration,
+                &more_confidential_label,
+                read_handle,
+            );
             assert_eq!(Ok(()), result);
             Ok(())
         }),

@@ -24,24 +24,17 @@ pub struct Client {
 }
 
 impl Client {
-    /// Similar to [`Client::new_with_label`] but with a fixed label corresponding to "public
-    /// untrusted".
-    pub fn new(config: &NodeConfiguration) -> Option<Client> {
-        Client::new_with_label(config, &Label::public_untrusted())
-    }
-
     /// Creates a new Node that implements a gRPC service, and if successful return a Client.
     ///
-    /// The config name specifies the Node configuration that provides the service; the
-    /// entrypoint name is required if this specifies another WebAssembly Oak Node, but is
-    /// ignored if the Node configuration is for a gRPC client pseudo-Node (which acts as a
-    /// proxy for a remote non-Oak gRPC service).
+    /// The `node_name` is used for the newly create node.
+    ///
+    /// The `config` specifies the Node configuration that is used for creating the target node.
     ///
     /// The provided [`Label`] specifies the label for the newly created Node and Channel.
-    pub fn new_with_label(config: &NodeConfiguration, label: &Label) -> Option<Client> {
+    pub fn new(node_name: &str, config: &NodeConfiguration, label: &Label) -> Option<Client> {
         let (invocation_sender, invocation_receiver) =
             crate::io::channel_create("gRPC invocation", label).expect("failed to create channel");
-        let status = crate::node_create(config, label, invocation_receiver.handle);
+        let status = crate::node_create(node_name, config, label, invocation_receiver.handle);
         invocation_receiver
             .close()
             .expect("failed to close channel");

@@ -23,8 +23,11 @@ use crate::{
         StorageItem, StorageServiceClient,
     },
 };
-use oak_abi::proto::oak::application::{
-    node_configuration::ConfigType, NodeConfiguration, StorageProxyConfiguration,
+use oak_abi::{
+    label::Label,
+    proto::oak::application::{
+        node_configuration::ConfigType, NodeConfiguration, StorageProxyConfiguration,
+    },
 };
 
 /// Local representation of the connection to an external storage service.
@@ -35,10 +38,13 @@ pub struct Storage {
 impl Storage {
     /// Creates a [`Storage`] instance using the given configuration.
     pub fn new(config: &StorageProxyConfiguration) -> Option<Storage> {
-        crate::grpc::client::Client::new(&NodeConfiguration {
-            name: "storage".to_string(),
-            config_type: Some(ConfigType::StorageConfig(config.clone())),
-        })
+        crate::grpc::client::Client::new(
+            "storage",
+            &NodeConfiguration {
+                config_type: Some(ConfigType::StorageConfig(config.clone())),
+            },
+            &Label::public_untrusted(),
+        )
         .map(|client| Storage {
             client: StorageServiceClient(client),
         })

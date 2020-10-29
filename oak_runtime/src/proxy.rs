@@ -149,6 +149,7 @@ impl RuntimeProxy {
         );
 
         self.node_create(
+            "Initial",
             &node_configuration,
             // When first starting, we assign the least privileged label to the entry point Node.
             &Label::public_untrusted(),
@@ -168,20 +169,25 @@ impl RuntimeProxy {
     /// See [`Runtime::node_create_and_register`].
     pub fn node_create(
         &self,
+        name: &str,
         config: &NodeConfiguration,
         label: &Label,
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
-        debug!("{:?}: node_create({:?}, {:?})", self.node_id, config, label);
+        debug!(
+            "{:?}: node_create({:?}, {:?}, {:?})",
+            self.node_id, name, config, label
+        );
         let result = self.runtime.clone().node_create_and_register(
             self.node_id,
+            name,
             config,
             label,
             initial_handle,
         );
         debug!(
-            "{:?}: node_create({:?}, {:?}) -> {:?}",
-            self.node_id, config, label, result
+            "{:?}: node_create({:?}, {:?}, {:?}) -> {:?}",
+            self.node_id, name, config, label, result
         );
         result
     }

@@ -213,6 +213,10 @@ extern "C" {
 
     /// Creates a new Node instance running code identified by a serialized [`NodeConfiguration`].
     ///
+    /// The name of the new node is provided in the memory area given by `name_buf` and `name_len`.
+    /// The name does not have to be unique and can be empty. It is used in logs to help identify
+    /// nodes for debugging purposes.
+    ///
     /// The serialized configuration object is provided in the memory area given by `config_buf` and
     /// `config_len`.
     ///
@@ -224,6 +228,8 @@ extern "C" {
     /// [`OakStatus`]: crate::OakStatus
     /// [`NodeConfiguration`]: crate::proto::oak::application::NodeConfiguration
     pub fn node_create(
+        name_buf: *const u8,
+        name_len: usize,
         config_buf: *const u8,
         config_len: usize,
         label_buf: *const u8,

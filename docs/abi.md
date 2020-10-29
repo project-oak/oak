@@ -237,11 +237,13 @@ If creating the specified Node would violate
 [information flow control](/docs/concepts.md#labels), returns
 `ERR_PERMISSION_DENIED`.
 
-- `param[0]: usize`: Source buffer holding serialized `NodeConfiguration`
-- `param[1]: usize`: Serialized NodeConfiguration size in bytes
-- `param[2]: usize`: Source buffer holding serialized `Label`
-- `param[3]: usize`: Label size in bytes
-- `param[4]: usize`: Handle to channel
+- `param[0]: usize`: Source buffer holding the UTF-8 encoded name
+- `param[1]: usize`: Name size in bytes
+- `param[2]: usize`: Source buffer holding serialized `NodeConfiguration`
+- `param[3]: usize`: Serialized NodeConfiguration size in bytes
+- `param[4]: usize`: Source buffer holding serialized `Label`
+- `param[5]: usize`: Label size in bytes
+- `param[6]: usize`: Handle to channel
 - `result[0]: u32`: Status of operation
 
 ### `node_label_read`

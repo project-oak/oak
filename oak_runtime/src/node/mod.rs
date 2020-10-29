@@ -102,9 +102,9 @@ pub struct ServerNodeFactory {
 impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
     fn create_node(
         &self,
+        node_name: &str,
         node_configuration: &NodeConfiguration,
     ) -> Result<Box<dyn Node>, ConfigurationError> {
-        let node_name = &node_configuration.name;
         match &node_configuration.config_type {
             Some(ConfigType::LogConfig(LogConfiguration {})) => {
                 Ok(Box::new(logger::LogNode::new(node_name)))
@@ -175,6 +175,11 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
 /// A trait implemented by a concrete factory of nodes that creates nodes based on a Node
 /// configuration of type `T`.
 pub trait NodeFactory<T> {
-    /// Creates a new [`Node`] instance based on the provided Node configuration information.
-    fn create_node(&self, node_configuration: &T) -> Result<Box<dyn Node>, ConfigurationError>;
+    /// Creates a new [`Node`] instance with the specified name and based on the provided Node
+    /// configuration information.
+    fn create_node(
+        &self,
+        node_name: &str,
+        node_configuration: &T,
+    ) -> Result<Box<dyn Node>, ConfigurationError>;
 }

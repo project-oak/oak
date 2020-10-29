@@ -76,6 +76,7 @@ impl FrontendNode {
             // Second, start an ephemeral Node which also loses channels.
             let (wh, rh) = oak::channel_create("Initial", &Label::public_untrusted()).unwrap();
             oak::node_create(
+                FRONTEND_MODULE_NAME,
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "channel_loser"),
                 &Label::public_untrusted(),
                 rh,
@@ -91,6 +92,7 @@ impl FrontendNode {
             let http_channel =
                 oak::http::init(HTTP_ADDR).expect("could not create HTTP server pseudo-Node!");
             oak::node_create(
+                FRONTEND_MODULE_NAME,
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "http_oak_main"),
                 &Label::public_untrusted(),
                 http_channel.handle,
@@ -108,6 +110,7 @@ impl FrontendNode {
                 oak::channel_create("Initial", &Label::public_untrusted())
                     .expect("could not create channel");
             oak::node_create(
+                BACKEND_MODULE_NAME,
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
                 read_handle,
@@ -1421,6 +1424,7 @@ impl FrontendNode {
         let (out_handle, in_handle, _) = channel_create_raw();
 
         let valid_label_bytes = Label::public_untrusted().serialize();
+        let name_bytes = "Raw node".as_bytes();
 
         // This sequence of bytes should not deserialize as a [`oak_abi::proto::label::Label`]
         // or [`oak_abi::proto::oak::application::NodeConfiguration`] protobuf. We make
@@ -1433,12 +1437,21 @@ impl FrontendNode {
             NodeConfiguration::decode(invalid_proto_bytes.as_ref()).is_ok()
         );
 
+        // This is not a valid UTF-8 encoding.
+        let invalid_string_bytes = vec![240];
+        assert_eq!(
+            false,
+            std::str::from_utf8(invalid_string_bytes.as_ref()).is_ok()
+        );
+
         {
             let mut config_bytes = Vec::new();
             oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME)
                 .encode(&mut config_bytes)?;
             expect_eq!(OakStatus::Ok as u32, unsafe {
                 oak_abi::node_create(
+                    name_bytes.as_ptr(),
+                    name_bytes.len(),
                     config_bytes.as_ptr(),
                     config_bytes.len(),
                     valid_label_bytes.as_ptr(),
@@ -1454,6 +1467,59 @@ impl FrontendNode {
                 .encode(&mut config_bytes)?;
             expect_eq!(OakStatus::ErrInvalidArgs as u32, unsafe {
                 oak_abi::node_create(
+                    invalid_string_bytes.as_ptr(),
+                    invalid_string_bytes.len(),
+                    config_bytes.as_ptr(),
+                    config_bytes.len(),
+                    valid_label_bytes.as_ptr(),
+                    valid_label_bytes.len(),
+                    in_handle,
+                )
+            });
+        }
+
+        {
+            let mut config_bytes = Vec::new();
+            oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME)
+                .encode(&mut config_bytes)?;
+            expect_eq!(OakStatus::ErrInvalidArgs as u32, unsafe {
+                oak_abi::node_create(
+                    invalid_raw_offset() as *const u8,
+                    1,
+                    config_bytes.as_ptr(),
+                    config_bytes.len(),
+                    valid_label_bytes.as_ptr(),
+                    valid_label_bytes.len(),
+                    in_handle,
+                )
+            });
+        }
+
+        {
+            let mut config_bytes = Vec::new();
+            oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME)
+                .encode(&mut config_bytes)?;
+            expect_eq!(OakStatus::ErrInvalidArgs as u32, unsafe {
+                oak_abi::node_create(
+                    name_bytes.as_ptr(),
+                    name_bytes.len(),
+                    config_bytes.as_ptr(),
+                    config_bytes.len(),
+                    invalid_raw_offset() as *const u8,
+                    1,
+                    in_handle,
+                )
+            });
+        }
+
+        {
+            let mut config_bytes = Vec::new();
+            oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME)
+                .encode(&mut config_bytes)?;
+            expect_eq!(OakStatus::ErrInvalidArgs as u32, unsafe {
+                oak_abi::node_create(
+                    name_bytes.as_ptr(),
+                    name_bytes.len(),
                     config_bytes.as_ptr(),
                     config_bytes.len(),
                     invalid_proto_bytes.as_ptr(),
@@ -1466,7 +1532,9 @@ impl FrontendNode {
         {
             expect_eq!(OakStatus::ErrInvalidArgs as u32, unsafe {
                 oak_abi::node_create(
-                    invalid_raw_offset() as *mut u8,
+                    name_bytes.as_ptr(),
+                    name_bytes.len(),
+                    invalid_raw_offset() as *const u8,
                     1,
                     valid_label_bytes.as_ptr(),
                     valid_label_bytes.len(),
@@ -1478,6 +1546,8 @@ impl FrontendNode {
         {
             expect_eq!(OakStatus::ErrInvalidArgs as u32, unsafe {
                 oak_abi::node_create(
+                    name_bytes.as_ptr(),
+                    name_bytes.len(),
                     invalid_proto_bytes.as_ptr(),
                     invalid_proto_bytes.len(),
                     valid_label_bytes.as_ptr(),
@@ -1495,6 +1565,7 @@ impl FrontendNode {
         expect_eq!(
             Err(OakStatus::ErrInvalidArgs),
             oak::node_create(
+                "Non-existent",
                 &oak::node_config::wasm("no_such_module", BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
                 self.backend_in[0]
@@ -1503,6 +1574,7 @@ impl FrontendNode {
         expect_eq!(
             Err(OakStatus::ErrInvalidArgs),
             oak::node_create(
+                "No entrypoint",
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, "no_such_entrypoint"),
                 &Label::public_untrusted(),
                 self.backend_in[0]
@@ -1511,6 +1583,7 @@ impl FrontendNode {
         expect_eq!(
             Err(OakStatus::ErrInvalidArgs),
             oak::node_create(
+                "Invalid signature",
                 &oak::node_config::wasm(
                     BACKEND_MODULE_NAME,
                     "backend_fake_main" /* exists but wrong signature */
@@ -1522,6 +1595,7 @@ impl FrontendNode {
         expect_eq!(
             Err(OakStatus::ErrBadHandle),
             oak::node_create(
+                "Invalid handle",
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
                 oak::ReadHandle {
@@ -1534,6 +1608,7 @@ impl FrontendNode {
         expect_eq!(
             Ok(()),
             oak::node_create(
+                "Valid",
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
                 in_handle
@@ -1542,6 +1617,7 @@ impl FrontendNode {
         expect_eq!(
             Ok(()),
             oak::node_create(
+                "Valid2",
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
                 in_handle
@@ -1730,6 +1806,7 @@ impl FrontendNode {
         expect_eq!(
             Ok(()),
             oak::node_create(
+                FRONTEND_MODULE_NAME,
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "panic_main"),
                 &Label::public_untrusted(),
                 in_handle
@@ -1821,6 +1898,7 @@ impl FrontendNode {
         let (logging_handle, read_handle) = oak::channel_create("Test", &Label::public_untrusted())
             .expect("could not create channel");
         oak::node_create(
+            "log",
             &oak::node_config::log(),
             &Label::public_untrusted(),
             read_handle,
@@ -2044,7 +2122,7 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create(&config, &Label::public_untrusted(), rh)
+            oak::node_create("grpc_server", &config, &Label::public_untrusted(), rh)
         );
         oak::channel_write(wh, &[0x01, 0x02], &[]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
@@ -2061,7 +2139,7 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create(&config, &Label::public_untrusted(), rh)
+            oak::node_create("grpc_server", &config, &Label::public_untrusted(), rh)
         );
         oak::channel_write(wh, &[], &[rh.handle]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
@@ -2078,7 +2156,7 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create(&config, &Label::public_untrusted(), rh)
+            oak::node_create("grpc_server", &config, &Label::public_untrusted(), rh)
         );
         oak::channel_write(wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
@@ -2086,9 +2164,11 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_unary_method(&mut self) -> TestResult {
-        let grpc_stub = oak::grpc::client::Client::new(&oak::node_config::grpc_client(
-            "https://localhost:7878",
-        ))
+        let grpc_stub = oak::grpc::client::Client::new(
+            "grpc_client",
+            &oak::node_config::grpc_client("https://localhost:7878"),
+            &Label::public_untrusted(),
+        )
         .map(OakAbiTestServiceClient)
         .ok_or_else(|| {
             Box::new(std::io::Error::new(
@@ -2124,9 +2204,11 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_server_streaming_method(&mut self) -> TestResult {
-        let grpc_stub = oak::grpc::client::Client::new(&oak::node_config::grpc_client(
-            "https://localhost:7878",
-        ))
+        let grpc_stub = oak::grpc::client::Client::new(
+            "grpc_client",
+            &oak::node_config::grpc_client("https://localhost:7878"),
+            &Label::public_untrusted(),
+        )
         .map(OakAbiTestServiceClient)
         .ok_or_else(|| {
             Box::new(std::io::Error::new(
@@ -2202,9 +2284,11 @@ impl FrontendNode {
     fn test_absent_grpc_client_unary_method(&mut self) -> TestResult {
         // Expect to have a channel to a gRPC client pseudo-Node, but the remote
         // gRPC service is unavailable.
-        let grpc_stub = oak::grpc::client::Client::new(&oak::node_config::grpc_client(
-            "https://test.invalid:9999",
-        ))
+        let grpc_stub = oak::grpc::client::Client::new(
+            "grpc_client",
+            &oak::node_config::grpc_client("https://test.invalid:9999"),
+            &Label::public_untrusted(),
+        )
         .map(OakAbiTestServiceClient)
         .ok_or_else(|| {
             Box::new(std::io::Error::new(
@@ -2228,9 +2312,11 @@ impl FrontendNode {
     fn test_absent_grpc_client_server_streaming_method(&mut self) -> TestResult {
         // Expect to have a channel to a gRPC client pseudo-Node, but the remote
         // gRPC service is unavailable.
-        let grpc_stub = oak::grpc::client::Client::new(&oak::node_config::grpc_client(
-            "https://test.invalid:9999",
-        ))
+        let grpc_stub = oak::grpc::client::Client::new(
+            "grpc_client",
+            &oak::node_config::grpc_client("https://test.invalid:9999"),
+            &Label::public_untrusted(),
+        )
         .map(OakAbiTestServiceClient)
         .ok_or_else(|| {
             Box::new(std::io::Error::new(
@@ -2306,7 +2392,7 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create(&config, &Label::public_untrusted(), rh)
+            oak::node_create("http_server", &config, &Label::public_untrusted(), rh)
         );
         oak::channel_write(wh, &[0x01, 0x02], &[]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
@@ -2323,7 +2409,7 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create(&config, &Label::public_untrusted(), rh)
+            oak::node_create("http_server", &config, &Label::public_untrusted(), rh)
         );
         oak::channel_write(wh, &[], &[rh.handle]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
@@ -2340,7 +2426,7 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create(&config, &Label::public_untrusted(), rh)
+            oak::node_create("http_server", &config, &Label::public_untrusted(), rh)
         );
         oak::channel_write(wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
         expect_eq!(Ok(()), oak::channel_close(rh.handle));

@@ -82,7 +82,7 @@ oak::entrypoint!(grpc_fe<ConfigMap> => |_receiver| {
     let (to_provider_write_handle, to_provider_read_handle) = oak::channel_create("To-provider", &Label::public_untrusted()).unwrap();
     let (from_provider_write_handle, from_provider_read_handle) = oak::channel_create("From-provider", &Label::public_untrusted()).unwrap();
 
-    oak::node_create(&oak::node_config::wasm("app", "provider"), &Label::public_untrusted(), to_provider_read_handle)
+    oak::node_create("provider", &oak::node_config::wasm("app", "provider"), &Label::public_untrusted(), to_provider_read_handle)
         .expect("Failed to create provider");
     oak::channel_close(to_provider_read_handle.handle).expect("Failed to close channel");
 
@@ -224,6 +224,7 @@ impl oak::CommandHandler<BlobStoreRequest> for BlobStoreProvider {
             oak::channel_create("From-store", &Label::public_untrusted())
                 .context("Could not create channel")?;
         oak::node_create(
+            "store",
             &oak::node_config::wasm("app", "store"),
             &Label::public_untrusted(),
             to_store_read_handle,

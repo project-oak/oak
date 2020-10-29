@@ -20,8 +20,11 @@ use crate::{
     grpc,
     proto::oak::roughtime::{GetRoughtimeRequest, RoughtimeServiceClient},
 };
-use oak_abi::proto::oak::application::{
-    node_configuration::ConfigType, NodeConfiguration, RoughtimeClientConfiguration,
+use oak_abi::{
+    label::Label,
+    proto::oak::application::{
+        node_configuration::ConfigType, NodeConfiguration, RoughtimeClientConfiguration,
+    },
 };
 
 /// Local representation of the connection to an external Roughtime service.
@@ -33,12 +36,13 @@ impl Roughtime {
     /// Creates a [`Roughtime`] instance using the given configuration.
     pub fn new(config: &RoughtimeClientConfiguration) -> Option<Roughtime> {
         let config = NodeConfiguration {
-            name: "roughtime".to_string(),
             config_type: Some(ConfigType::RoughtimeClientConfig(config.clone())),
         };
-        crate::grpc::client::Client::new(&config).map(|client| Roughtime {
-            client: RoughtimeServiceClient(client),
-        })
+        crate::grpc::client::Client::new("roughtime", &config, &Label::public_untrusted()).map(
+            |client| Roughtime {
+                client: RoughtimeServiceClient(client),
+            },
+        )
     }
 
     /// Get the current Roughtime value as a Duration since UNIX epoch.
