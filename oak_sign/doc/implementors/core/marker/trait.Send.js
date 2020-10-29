@@ -1,4 +1,4 @@
 (function() {var implementors = {};
-implementors["oak_sign"] = [{"text":"impl Send for KeyBundle","synthetic":true,"types":[]},{"text":"impl Send for SignatureBundle","synthetic":true,"types":[]}];
+implementors["oak_sign"] = [{"text":"impl Send for KeyPair","synthetic":true,"types":[]},{"text":"impl Send for SignatureBundle","synthetic":true,"types":[]}];
 implementors["oak_sign_bin"] = [{"text":"impl Send for Opt","synthetic":true,"types":[]},{"text":"impl Send for Generate","synthetic":true,"types":[]},{"text":"impl Send for Sign","synthetic":true,"types":[]},{"text":"impl Send for Verify","synthetic":true,"types":[]},{"text":"impl Send for Command","synthetic":true,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

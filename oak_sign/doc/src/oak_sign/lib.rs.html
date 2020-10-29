@@ -182,6 +182,37 @@
 <span id="179">179</span>
 <span id="180">180</span>
 <span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -203,7 +234,7 @@
 <span class="kw">use</span> <span class="ident">pem</span>::<span class="ident">Pem</span>;
 <span class="kw">use</span> <span class="ident">ring</span>::{
     <span class="ident">rand</span>,
-    <span class="ident">signature</span>::{<span class="self">self</span>, <span class="ident">Ed25519KeyPair</span>, <span class="ident">KeyPair</span>},
+    <span class="ident">signature</span>::{<span class="self">self</span>, <span class="ident">Ed25519KeyPair</span>},
 };
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
@@ -216,39 +247,70 @@
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SIGNATURE_TAG</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;SIGNATURE&quot;</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">HASH_TAG</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;HASH&quot;</span>;
 
-<span class="doccomment">/// Convenience struct that encapsulates `Ed25519KeyPair`.</span>
-<span class="doccomment">/// Named `KeyBundle` since it uses the `ring::signature::KeyPair` trait.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeyBundle</span> {
-    <span class="ident">private_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Convenience struct that encapsulates `ring::signature::Ed25519KeyPair`.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeyPair</span> {
+    <span class="doccomment">/// PKCS#8 v2 encoded private key and public key.</span>
+    <span class="doccomment">/// https://tools.ietf.org/html/rfc5958</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The encoded version is kept because a parsed `key_pair` doesn&#39;t contain a method for</span>
+    <span class="doccomment">/// extracting private key bytes.</span>
+    <span class="doccomment">/// https://briansmith.org/rustdoc/ring/signature/struct.Ed25519KeyPair.html</span>
+    <span class="ident">pkcs8</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Parsed PKCS#8 v2 key pair representation.</span>
     <span class="ident">key_pair</span>: <span class="ident">Ed25519KeyPair</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">KeyBundle</span> {
+<span class="kw">impl</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">KeyPair</span> {
+    <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="comment">// The `clone` function is implemented as re-parsing, because `Ed25519KeyPair` doesn&#39;t</span>
+        <span class="comment">// implement `Clone` and all of its fields are private.</span>
+        <span class="ident">KeyPair</span>::<span class="ident">parse</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">pkcs8</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t clone key pair&quot;</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">KeyPair</span> {
+    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="comment">// Currently only comparing that the encoded version is the same, since `Ed25519KeyPair`</span>
+        <span class="comment">// doesn&#39;t implement `Eq` and all of its fields are private.</span>
+        <span class="comment">// https://github.com/briansmith/ring/blob/8d4e283c16f335166b0e969ccc321acf0de39c0b/src/ec/curve25519/ed25519/signing.rs#L27-L37</span>
+        <span class="self">self</span>.<span class="ident">pkcs8</span> <span class="op">=</span><span class="op">=</span> <span class="ident">other</span>.<span class="ident">pkcs8</span>
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Eq</span> <span class="kw">for</span> <span class="ident">KeyPair</span> {}
+
+<span class="kw">impl</span> <span class="ident">KeyPair</span> {
     <span class="doccomment">/// Generates a Ed25519 key pair.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeyBundle</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeyPair</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">rand</span>::<span class="ident">SystemRandom</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="ident">private_key</span> <span class="op">=</span> <span class="ident">Ed25519KeyPair</span>::<span class="ident">generate_pkcs8</span>(<span class="kw-2">&amp;</span><span class="ident">rng</span>)
             .<span class="ident">ok</span>()
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t generate key pair&quot;</span>)<span class="question-mark">?</span>;
-        <span class="ident">KeyBundle</span>::<span class="ident">parse</span>(<span class="ident">private_key</span>.<span class="ident">as_ref</span>())
+        <span class="ident">KeyPair</span>::<span class="ident">parse</span>(<span class="ident">private_key</span>.<span class="ident">as_ref</span>())
     }
 
-    <span class="doccomment">/// Parses a Ed25519 key pair from bytes.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">private_key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeyBundle</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">key_pair</span> <span class="op">=</span> <span class="ident">Ed25519KeyPair</span>::<span class="ident">from_pkcs8</span>(<span class="ident">private_key</span>)
+    <span class="doccomment">/// Parses a Ed25519 key pair from a PKCS#8 v2 encoded `pkcs8_key_pair`.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">pkcs8_key_pair</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeyPair</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">key_pair</span> <span class="op">=</span> <span class="ident">Ed25519KeyPair</span>::<span class="ident">from_pkcs8</span>(<span class="ident">pkcs8_key_pair</span>)
             .<span class="ident">ok</span>()
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse generated key pair&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">private_key</span>: <span class="ident">private_key</span>.<span class="ident">to_vec</span>(),
+            <span class="ident">pkcs8</span>: <span class="ident">pkcs8_key_pair</span>.<span class="ident">to_vec</span>(),
             <span class="ident">key_pair</span>,
         })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">private_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">private_key</span>.<span class="ident">to_vec</span>()
+    <span class="doccomment">/// Returns a PKCS#8 v2 encoded key pair.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pkcs8_key_pair</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">pkcs8</span>.<span class="ident">to_vec</span>()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Returns a PKCS#8 v2 encoded public key.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pkcs8_public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+        <span class="comment">// Trait `ring::signature::KeyPair` that contains `public_key` function is included locally</span>
+        <span class="comment">// in this function because it conflicts with [`KeyPair`].</span>
+        <span class="kw">use</span> <span class="ident">ring</span>::<span class="ident">signature</span>::<span class="ident">KeyPair</span>;
         <span class="self">self</span>.<span class="ident">key_pair</span>.<span class="ident">public_key</span>().<span class="ident">as_ref</span>().<span class="ident">to_vec</span>()
     }
 
@@ -257,7 +319,7 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SignatureBundle</span> {
     <span class="kw">pub</span> <span class="ident">public_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">signed_hash</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
@@ -266,10 +328,10 @@
 
 <span class="kw">impl</span> <span class="ident">SignatureBundle</span> {
     <span class="doccomment">/// Signs a SHA-256 hash of the `input` using `private_key`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">key_pair</span>: <span class="kw-2">&amp;</span><span class="ident">KeyBundle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SignatureBundle</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">key_pair</span>: <span class="kw-2">&amp;</span><span class="ident">KeyPair</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SignatureBundle</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident">get_sha256</span>(<span class="ident">input</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">SignatureBundle</span> {
-            <span class="ident">public_key</span>: <span class="ident">key_pair</span>.<span class="ident">public_key</span>(),
+            <span class="ident">public_key</span>: <span class="ident">key_pair</span>.<span class="ident">pkcs8_public_key</span>(),
             <span class="ident">signed_hash</span>: <span class="ident">key_pair</span>.<span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="ident">hash</span>),
             <span class="ident">hash</span>,
         })

@@ -1,4 +1,4 @@
 (function() {var implementors = {};
-implementors["oak_sign"] = [{"text":"impl Unpin for KeyBundle","synthetic":true,"types":[]},{"text":"impl Unpin for SignatureBundle","synthetic":true,"types":[]}];
+implementors["oak_sign"] = [{"text":"impl Unpin for KeyPair","synthetic":true,"types":[]},{"text":"impl Unpin for SignatureBundle","synthetic":true,"types":[]}];
 implementors["oak_sign_bin"] = [{"text":"impl Unpin for Opt","synthetic":true,"types":[]},{"text":"impl Unpin for Generate","synthetic":true,"types":[]},{"text":"impl Unpin for Sign","synthetic":true,"types":[]},{"text":"impl Unpin for Verify","synthetic":true,"types":[]},{"text":"impl Unpin for Command","synthetic":true,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
