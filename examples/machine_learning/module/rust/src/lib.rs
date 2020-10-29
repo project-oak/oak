@@ -18,7 +18,10 @@
 // https://github.com/AtheMathmo/rusty-machine/blob/master/examples/naive_bayes_dogs.rs .
 
 use log::{error, info, warn};
-use oak::grpc;
+use oak::{
+    grpc,
+    io::{Receiver, ReceiverExt},
+};
 use oak_abi::proto::oak::application::ConfigMap;
 use rand::prelude::*;
 use rand_distr::{Distribution, Normal, Standard};
@@ -147,7 +150,7 @@ struct Config {
     test_animals: Vec<Animal>,
 }
 
-oak::entrypoint!(oak_main<grpc::Invocation> => |receiver| {
+oak::entrypoint!(oak_main<grpc::Invocation> => |receiver: Receiver<grpc::Invocation>| {
     oak::logger::init_default();
     let node = Node {
         training_set_size: 1000,
@@ -155,7 +158,7 @@ oak::entrypoint!(oak_main<grpc::Invocation> => |receiver| {
         config: None,
         model: NaiveBayes::new(),
     };
-    oak::run_command_loop(node, receiver);
+    oak::run_command_loop(node, receiver.iter());
 });
 
 oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
@@ -168,7 +171,7 @@ oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     };
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(node, grpc_channel);
+    oak::run_command_loop(node, grpc_channel.iter());
 });
 
 struct Node {

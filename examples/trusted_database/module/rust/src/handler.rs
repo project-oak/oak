@@ -149,5 +149,5 @@ oak::entrypoint!(handler_oak_main<TrustedDatabaseCommand> => |command_receiver: 
     let dispatcher = TrustedDatabaseDispatcher::new(node);
     let invocation_receiver = receiver.receiver.expect("Empty gRPC invocation receiver");
     // The event loop only runs once because the `Main` Node sends a single invocation.
-    oak::run_command_loop(dispatcher, invocation_receiver);
+    oak::run_command_loop(dispatcher, invocation_receiver.iter());
 });

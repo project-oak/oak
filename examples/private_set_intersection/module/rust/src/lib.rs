@@ -38,7 +38,7 @@ pub mod proto {
     ));
 }
 
-use oak::grpc;
+use oak::{grpc, io::ReceiverExt};
 use oak_abi::proto::oak::application::ConfigMap;
 use proto::{
     GetIntersectionRequest, GetIntersectionResponse, PrivateSetIntersection,
@@ -50,7 +50,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
     let dispatcher = PrivateSetIntersectionDispatcher::new(Node::default());
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel);
+    oak::run_command_loop(dispatcher, grpc_channel.iter());
 });
 
 /// Maximum number of contributed private sets.

@@ -174,7 +174,7 @@ oak::entrypoint!(aggregator<AggregatorInit> => |init_receiver: Receiver<Aggregat
         }
     );
     let dispatcher = AggregatorDispatcher::new(node);
-    oak::run_command_loop(dispatcher, grpc_server_invocation_receiver);
+    oak::run_command_loop(dispatcher, grpc_server_invocation_receiver.iter());
 });
 
 #[derive(Debug, serde::Deserialize)]

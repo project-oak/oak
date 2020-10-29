@@ -18,10 +18,10 @@ use crate::{
     io::{Decodable, Receiver},
     ChannelReadStatus, Label, OakError, OakStatus,
 };
-use log::error;
+use log::{debug, error, info, trace, warn};
 
 /// SDK-specific functionality provided by a receiver.
-pub trait ReceiverExt<T> {
+pub trait ReceiverExt<T: Decodable> {
     /// Closes the underlying channel used by the receiver.
     fn close(&self) -> Result<(), OakStatus>;
 
@@ -39,6 +39,81 @@ pub trait ReceiverExt<T> {
     /// Returns [`ChannelReadStatus`] of the wrapped handle, or `Err(OakStatus::ErrTerminated)` if
     /// the Oak Runtime is terminating.
     fn wait(&self) -> Result<ChannelReadStatus, OakStatus>;
+
+    /// Consumes the receiver and returns an iterator that will block waiting for messages. It will
+    /// return None when the node terminates, or a non-transient error occurs when reading from the
+    /// channel. Transient errors will be silently ignored by this iterator, including cases in
+    /// which the incoming message cannot be decoded correctly.
+    ///
+    /// Also see [`std::sync::mpsc::Receiver::iter`].
+    fn iter(self) -> ReceiverIterator<T>;
+}
+
+/// Blocking iterator over incoming messages, created via [`ReceiverExt::iter`].
+pub struct ReceiverIterator<T: Decodable> {
+    inner: Receiver<T>,
+}
+
+impl<T: Decodable> Iterator for ReceiverIterator<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let receiver = &self.inner;
+        loop {
+            match receiver.wait() {
+                Err(status) => {
+                    use crate::OakStatus::*;
+                    match status {
+                        ErrTerminated => {
+                            info!(
+                            "{:?}: received node termination status: {:?}; terminating iterator",
+                            receiver, status
+                        );
+                            return None;
+                        }
+                        _ => {
+                            error!(
+                            "{:?}: received status: {:?}; but `Receiver::wait` should never return an error other than `ErrTerminated`",
+                            receiver, status
+                        );
+                            return None;
+                        }
+                    }
+                }
+                Ok(status) => match status {
+                    ChannelReadStatus::ReadReady => trace!("{:?}: wait over", receiver),
+                    ChannelReadStatus::Orphaned
+                    | ChannelReadStatus::PermissionDenied
+                    | ChannelReadStatus::InvalidChannel => {
+                        warn!(
+                        "{:?}: received invalid channel read status: {:?}; terminating iterator",
+                        receiver, status
+                    );
+                        return None;
+                    }
+                    ChannelReadStatus::NotReady => {
+                        error!(
+                        "{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.",
+                        receiver);
+                        return None;
+                    }
+                },
+            }
+            match receiver.try_receive() {
+                Ok(m) => {
+                    debug!("{:?}: received message", receiver);
+                    return Some(m);
+                }
+                Err(err) => {
+                    // Log error and continue with the next iteration.
+                    // We do this because the error may have been caused by an invalid or malformed
+                    // message, and we don't want to terminate the iterator early if that's the
+                    // case.
+                    error!("{:?}: error receiving message: {}", receiver, err);
+                }
+            }
+        }
+    }
 }
 
 impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
@@ -95,5 +170,9 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                 Err(OakStatus::ErrInternal)
             }
         }
+    }
+
+    fn iter(self) -> ReceiverIterator<T> {
+        ReceiverIterator { inner: self }
     }
 }

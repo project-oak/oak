@@ -98,7 +98,7 @@ oak::entrypoint!(grpc_fe<ConfigMap> => |_receiver| {
     let grpc_channel = oak::grpc::server::init("[::]:8080")
         .expect("could not create gRPC server pseudo-Node");
 
-    oak::run_command_loop(dispatcher, grpc_channel);
+    oak::run_command_loop(dispatcher, grpc_channel.iter());
 });
 
 oak::entrypoint!(provider<BlobStoreRequest> => |receiver: Receiver<BlobStoreRequest>| {
@@ -112,7 +112,7 @@ oak::entrypoint!(provider<BlobStoreRequest> => |receiver: Receiver<BlobStoreRequ
             .expect("Did not receive a decodable message")
             .sender
             .expect("No sender in received message");
-    oak::run_command_loop(BlobStoreProvider::new(frontend_sender), receiver);
+    oak::run_command_loop(BlobStoreProvider::new(frontend_sender), receiver.iter());
 });
 
 oak::entrypoint!(store<BlobRequest> => |receiver: Receiver<BlobRequest>| {
@@ -126,7 +126,7 @@ oak::entrypoint!(store<BlobRequest> => |receiver: Receiver<BlobRequest>| {
             .expect("Did not receive a write handle")
             .sender
             .expect("No write handle in received message");
-    oak::run_command_loop(BlobStoreImpl::new(sender), receiver);
+    oak::run_command_loop(BlobStoreImpl::new(sender), receiver.iter());
 });
 
 enum BlobStoreAccess {

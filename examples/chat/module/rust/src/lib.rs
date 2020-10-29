@@ -18,7 +18,7 @@ use anyhow::Context;
 use log::{info, warn};
 use oak::{
     grpc,
-    io::{ReceiverExt, Sender, SenderExt},
+    io::{Receiver, ReceiverExt, Sender, SenderExt},
     Label,
 };
 use oak_abi::proto::oak::application::ConfigMap;
@@ -109,17 +109,17 @@ oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     let router = Router::default();
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(router, grpc_channel);
+    oak::run_command_loop(router, grpc_channel.iter());
 });
 
 // A node that receives gRPC invocations for an individual label.
 //
 // Multiple instances of nodes with this entrypoint may be created at runtime, according to the
 // variety of labels of incoming requests.
-oak::entrypoint!(room<oak::grpc::Invocation> => |receiver| {
+oak::entrypoint!(room<oak::grpc::Invocation> => |receiver: Receiver<oak::grpc::Invocation>| {
     oak::logger::init_default();
     let dispatcher = ChatDispatcher::new(Room::default());
-    oak::run_command_loop(dispatcher, receiver);
+    oak::run_command_loop(dispatcher, receiver.iter());
 });
 
 /// A worker node implementation for an individual label.

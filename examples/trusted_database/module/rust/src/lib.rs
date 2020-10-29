@@ -127,5 +127,5 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     let points_of_interest = load_database(config_map).expect("Couldn't load database");
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("Couldn't create gRPC server pseudo-Node");
-    oak::run_command_loop(TrustedDatabaseNode { points_of_interest }, grpc_channel);
+    oak::run_command_loop(TrustedDatabaseNode { points_of_interest }, grpc_channel.iter());
 });
