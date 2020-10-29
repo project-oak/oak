@@ -539,3 +539,36 @@ macro_rules! entrypoint {
         }
     };
 }
+
+/// Similar to [`entrypoint`], but offers a less verbose API in case in which the handler is a
+/// [`CommandHandler`] instance. In this case, the type of incoming messages is inferred from the
+/// generic type associated with the handler instance, and only the entrypoint name needs to be
+/// specified.
+///
+/// The generated implementation of the body of this node sets up logging, and then immediately
+/// calls [`run_command_loop`] on the provided handler.
+///
+/// ```
+/// use oak_abi::proto::oak::application::ConfigMap;
+///
+/// struct Main;
+///
+/// impl oak::CommandHandler<ConfigMap> for Main {
+///     fn handle_command(&mut self, command: ConfigMap) -> anyhow::Result<()> {
+///         // ...
+/// #        unimplemented!()
+///     }
+/// }
+///
+/// oak::entrypoint_command_handler!(oak_main => Main);
+/// ```
+#[macro_export]
+macro_rules! entrypoint_command_handler {
+    ($name:ident => $handler:expr) => {
+        ::oak::entrypoint!($name < _ > => |receiver: ::oak::io::Receiver<_>| {
+            use ::oak::io::ReceiverExt;
+            oak::logger::init_default();
+            oak::run_command_loop($handler, receiver.iter());
+        });
+    };
+}
