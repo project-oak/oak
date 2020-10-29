@@ -69,6 +69,7 @@
 <span id="66">66</span>
 <span id="67">67</span>
 <span id="68">68</span>
+<span id="69">69</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -101,9 +102,10 @@
 
 <span class="doccomment">/// Create a new channel for transmission of `Encodable` and `Decodable` types.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_create</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span><span class="op">&gt;</span>(
+    <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> (<span class="ident">wh</span>, <span class="ident">rh</span>) <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">channel_create</span>(<span class="ident">label</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> (<span class="ident">wh</span>, <span class="ident">rh</span>) <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">channel_create</span>(<span class="ident">name</span>, <span class="ident">label</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((<span class="ident">Sender</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">wh</span>), <span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">rh</span>)))
 }
 

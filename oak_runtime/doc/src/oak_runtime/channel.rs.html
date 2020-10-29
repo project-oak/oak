@@ -352,6 +352,15 @@
 <span id="349">349</span>
 <span id="350">350</span>
 <span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -429,6 +438,12 @@
     <span class="doccomment">/// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels</span>
     <span class="kw">pub</span> <span class="ident">label</span>: <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>,
 
+    <span class="doccomment">/// The name for the channel.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The name does not have to be unique and can be empty. It is used in logs to help with</span>
+    <span class="doccomment">/// identifying channels during debugging.</span>
+    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
+
     <span class="doccomment">/// Weak reference to the Runtime used for sending introspection events.</span>
     <span class="ident">runtime_weak</span>: <span class="ident">Weak</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
 }
@@ -437,10 +452,11 @@
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
-            <span class="string">&quot;Channel {{ id={}, #readers={}, #writers={}, label={:?} }}&quot;</span>,
+            <span class="string">&quot;Channel {{ id={}, #readers={}, #writers={}, name={:?}, label={:?} }}&quot;</span>,
             <span class="self">self</span>.<span class="ident">id</span>,
             <span class="self">self</span>.<span class="ident">reader_count</span>.<span class="ident">load</span>(<span class="ident">SeqCst</span>),
             <span class="self">self</span>.<span class="ident">writer_count</span>.<span class="ident">load</span>(<span class="ident">SeqCst</span>),
+            <span class="self">self</span>.<span class="ident">name</span>,
             <span class="self">self</span>.<span class="ident">label</span>,
         )
     }
@@ -624,6 +640,7 @@
 <span class="kw">impl</span> <span class="ident">Channel</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">id</span>: <span class="ident">ChannelId</span>,
+        <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>,
         <span class="ident">runtime_weak</span>: <span class="ident">Weak</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Channel</span><span class="op">&gt;</span> {
@@ -635,6 +652,7 @@
             <span class="ident">reader_count</span>: <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>),
             <span class="ident">waiting_threads</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()),
             <span class="ident">label</span>: <span class="ident">label</span>.<span class="ident">clone</span>(),
+            <span class="ident">name</span>: <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}({})&quot;</span>, <span class="ident">name</span>, <span class="ident">id</span>),
             <span class="ident">runtime_weak</span>,
         })
     }
