@@ -568,6 +568,14 @@
 <span id="565">565</span>
 <span id="566">566</span>
 <span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -592,7 +600,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">io</span>::{<span class="ident">ReceiverExt</span>, <span class="ident">SenderExt</span>},
-    <span class="ident">node</span>::{<span class="ident">ConfigurationError</span>, <span class="ident">Node</span>},
+    <span class="ident">node</span>::{<span class="ident">ConfigurationError</span>, <span class="ident">Node</span>, <span class="ident">NodePrivilege</span>},
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">invocation</span>::{<span class="ident">HttpInvocation</span>, <span class="ident">HttpInvocationSender</span>},
     <span class="ident">RuntimeProxy</span>,
 };
@@ -767,6 +775,14 @@
 <span class="kw">impl</span> <span class="ident">Node</span> <span class="kw">for</span> <span class="ident">HttpServerNode</span> {
     <span class="kw">fn</span> <span class="ident">node_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="string">&quot;http-server&quot;</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
+        <span class="comment">// This node needs to have `top` privilege to be able to declassify data tagged with any</span>
+        <span class="comment">// arbitrary user identities.</span>
+        <span class="comment">// TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to</span>
+        <span class="comment">// the top of the `user` sub-lattice.</span>
+        <span class="ident">NodePrivilege</span>::<span class="ident">top_privilege</span>()
     }
 
     <span class="kw">fn</span> <span class="ident">run</span>(

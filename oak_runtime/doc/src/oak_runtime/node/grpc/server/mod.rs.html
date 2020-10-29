@@ -639,6 +639,14 @@
 <span id="636">636</span>
 <span id="637">637</span>
 <span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -664,7 +672,7 @@
     <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
     <span class="ident">node</span>::{
         <span class="ident">grpc</span>::{<span class="ident">codec</span>::<span class="ident">VecCodec</span>, <span class="ident">to_tonic_status</span>},
-        <span class="ident">ConfigurationError</span>, <span class="ident">Node</span>,
+        <span class="ident">ConfigurationError</span>, <span class="ident">Node</span>, <span class="ident">NodePrivilege</span>,
     },
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">invocation</span>::{<span class="ident">GrpcInvocation</span>, <span class="ident">GrpcInvocationSender</span>},
     <span class="ident">RuntimeProxy</span>,
@@ -766,6 +774,14 @@
 <span class="kw">impl</span> <span class="ident">Node</span> <span class="kw">for</span> <span class="ident">GrpcServerNode</span> {
     <span class="kw">fn</span> <span class="ident">node_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="string">&quot;grpc-server&quot;</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
+        <span class="comment">// This node needs to have `top` privilege to be able to declassify data tagged with any</span>
+        <span class="comment">// arbitrary user identities.</span>
+        <span class="comment">// TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to</span>
+        <span class="comment">// the top of the `user` sub-lattice.</span>
+        <span class="ident">NodePrivilege</span>::<span class="ident">top_privilege</span>()
     }
 
     <span class="kw">fn</span> <span class="ident">run</span>(
