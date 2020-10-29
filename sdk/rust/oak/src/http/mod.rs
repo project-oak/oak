@@ -81,7 +81,7 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
 
     // Create a channel and pass the read half to a new http server pseudo-Node.
     let (init_sender, init_receiver) =
-        crate::io::channel_create::<HttpInvocationSender>(&Label::public_untrusted())
+        crate::io::channel_create::<HttpInvocationSender>("HTTP init", &Label::public_untrusted())
             .expect("Couldn't create init channel to HTTP server pseudo-node");
     crate::node_create(&config, &Label::public_untrusted(), init_receiver.handle)?;
     init_receiver
@@ -90,7 +90,7 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
 
     // Create a separate channel for receiving invocations and pass it to an HTTP pseudo-Node.
     let (invocation_sender, invocation_receiver) =
-        crate::io::channel_create::<Invocation>(&Label::public_untrusted())
+        crate::io::channel_create::<Invocation>("HTTP invocation", &Label::public_untrusted())
             .expect("Couldn't create HTTP invocation channel");
 
     let http_server_init = HttpInvocationSender {

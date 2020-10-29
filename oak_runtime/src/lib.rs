@@ -746,6 +746,7 @@ impl Runtime {
     fn channel_create(
         self: &Arc<Self>,
         node_id: NodeId,
+        name: &str,
         label: &Label,
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
         if self.is_terminating() {
@@ -762,7 +763,7 @@ impl Runtime {
 
         // First get a pair of `ChannelHalf` objects.
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
-        let channel = Channel::new(channel_id, label, Arc::downgrade(&self));
+        let channel = Channel::new(channel_id, name, label, Arc::downgrade(&self));
         let write_half = ChannelHalf::new(channel.clone(), ChannelHalfDirection::Write);
         let read_half = ChannelHalf::new(channel, ChannelHalfDirection::Read);
         trace!(
@@ -777,6 +778,7 @@ impl Runtime {
         // channel.
         self.introspection_event(EventDetails::ChannelCreated(ChannelCreated {
             channel_id,
+            name: name.to_owned(),
             label: Some(label.clone()),
         }));
 

@@ -230,7 +230,7 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Resul
 ///
 /// On success, returns [`WriteHandle`] and a [`ReadHandle`] values for the
 /// write and read halves (respectively).
-pub fn channel_create(label: &Label) -> Result<(WriteHandle, ReadHandle), OakStatus> {
+pub fn channel_create(name: &str, label: &Label) -> Result<(WriteHandle, ReadHandle), OakStatus> {
     let mut write = WriteHandle {
         handle: crate::handle::invalid(),
     };
@@ -238,10 +238,13 @@ pub fn channel_create(label: &Label) -> Result<(WriteHandle, ReadHandle), OakSta
         handle: crate::handle::invalid(),
     };
     let label_bytes = label.serialize();
+    let name_bytes = name.as_bytes();
     let status = unsafe {
         oak_abi::channel_create(
             &mut write.handle as *mut u64,
             &mut read.handle as *mut u64,
+            name_bytes.as_ptr(),
+            name_bytes.len(),
             label_bytes.as_ptr(),
             label_bytes.len(),
         )

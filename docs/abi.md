@@ -181,9 +181,13 @@ If writing to the specified channel would violate
 
 ### `channel_create`
 
-Creates a new unidirectional Channel assigning the label specified by `param[2]`
-and `param[3]` to the newly created Channel, and returns the Channel handles for
-its read and write halves as output parameters in `param[0]` and `param[1]`.
+Creates a new unidirectional Channel assigning the name specified by `param[2]`
+and `param[3]` and the label specified in `param[4]` and `param[5]` to the newly
+created Channel, and returns the Channel handles for its read and write halves
+as output parameters in `param[0]` and `param[1]`.
+
+The name is a UTF-8 encoded string. It does not have to be unique and can be
+empty. It is used in logs to help with identifying channels during debugging.
 
 The label is a serialized [`Label`](/oak_abi/proto/label.proto) protobuf
 message.
@@ -200,8 +204,10 @@ If creating the specified Channel would violate
   for the write half of the channel (as a little-endian u64).
 - `param[1]: usize`: Address of an 8-byte location that will receive the handle
   for the read half of the channel (as a little-endian u64).
-- `param[2]: usize`: Source buffer holding serialized `Label`
-- `param[3]: usize`: Label size in bytes
+- `param[2]: usize`: Source buffer holding the UTF-8 encoded name
+- `param[3]: usize`: Size in bytes of the UTF-8 encoding of the name
+- `param[4]: usize`: Source buffer holding serialized `Label`
+- `param[5]: usize`: Label size in bytes
 - `result[0]: u32`: Status of operation
 
 ### `channel_close`

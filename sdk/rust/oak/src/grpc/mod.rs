@@ -236,7 +236,7 @@ where
 {
     // Create a new channel for request message delivery.
     let (req_sender, req_receiver) =
-        crate::io::channel_create::<GrpcRequest>(&Label::public_untrusted())
+        crate::io::channel_create::<GrpcRequest>("gRPC request", &Label::public_untrusted())
             .expect("failed to create channel");
 
     // Put the request in a GrpcRequest wrapper and send it into the request
@@ -248,7 +248,7 @@ where
 
     // Create a new channel for responses to arrive on.
     let (rsp_sender, rsp_receiver) =
-        crate::io::channel_create::<GrpcResponse>(&Label::public_untrusted())
+        crate::io::channel_create::<GrpcResponse>("gRPC response", &Label::public_untrusted())
             .expect("failed to create channel");
 
     // Build an Invocation holding the two channels and send it down the

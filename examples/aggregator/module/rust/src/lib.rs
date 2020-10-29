@@ -209,7 +209,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
         oak::grpc::server::init(&config.grpc_server_listen_address).expect("Couldn't create gRPC server pseudo-Node");
 
     // Create an Aggregator Node.
-    let (init_sender, init_receiver) = oak::io::channel_create::<AggregatorInit>(&Label::public_untrusted())
+    let (init_sender, init_receiver) = oak::io::channel_create::<AggregatorInit>("Aggregator init", &Label::public_untrusted())
         .expect("Couldn't create initialization channel");
     oak::node_create(&oak::node_config::wasm("app", "aggregator"), &Label::public_untrusted(), init_receiver.handle)
         .expect("Couldn't create gRPC worker node");
@@ -238,7 +238,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     // Send the initialization message to Aggregator Node containing a gRPC server invocation
     // receiver and a gRPC client invocation sender.
     debug!("Sending the initialization message to handler Node");
-    let (invocation_sender, invocation_receiver) = oak::io::channel_create::<grpc::Invocation>(&Label::public_untrusted())
+    let (invocation_sender, invocation_receiver) = oak::io::channel_create::<grpc::Invocation>("gRPC invocation", &Label::public_untrusted())
         .expect("Couldn't create gRPC invocation channel");
     let init_message = create_init_message(&invocation_receiver, &grpc_client.invocation_sender);
     init_sender.send(&init_message).expect("Couldn't send the initialization message to Aggregator Node");

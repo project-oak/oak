@@ -40,7 +40,7 @@ impl Client {
     /// The provided [`Label`] specifies the label for the newly created Node and Channel.
     pub fn new_with_label(config: &NodeConfiguration, label: &Label) -> Option<Client> {
         let (invocation_sender, invocation_receiver) =
-            crate::io::channel_create(label).expect("failed to create channel");
+            crate::io::channel_create("gRPC invocation", label).expect("failed to create channel");
         let status = crate::node_create(config, label, invocation_receiver.handle);
         invocation_receiver
             .close()

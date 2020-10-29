@@ -71,7 +71,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         node_privilege: node_privilege.clone(),
     };
     let (_write_handle, read_handle) = proxy
-        .channel_create(&Label::public_untrusted())
+        .channel_create("Initial", &Label::public_untrusted())
         .expect("Could not create init channel");
 
     proxy
@@ -123,7 +123,7 @@ fn create_channel_same_label_err() {
         Box::new(move |runtime| {
             // Attempt to perform an operation that requires the [`Runtime`] to have created an
             // appropriate [`NodeInfo`] instance.
-            let result = runtime.channel_create(&label_clone);
+            let result = runtime.channel_create("", &label_clone);
             assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
@@ -150,7 +150,7 @@ fn create_channel_less_confidential_label_err() {
         &initial_label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
-            let result = runtime.channel_create(&less_confidential_label);
+            let result = runtime.channel_create("", &less_confidential_label);
             assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
@@ -183,7 +183,7 @@ fn create_channel_less_confidential_label_declassification_err() {
             can_endorse_integrity_tags: hashset! { other_tag },
         },
         Box::new(move |runtime| {
-            let result = runtime.channel_create(&less_confidential_label);
+            let result = runtime.channel_create("", &less_confidential_label);
             assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
@@ -215,7 +215,7 @@ fn create_channel_less_confidential_label_no_privilege_err() {
             can_endorse_integrity_tags: hashset! { tag_0 },
         },
         Box::new(move |runtime| {
-            let result = runtime.channel_create(&less_confidential_label);
+            let result = runtime.channel_create("", &less_confidential_label);
             assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
@@ -241,7 +241,7 @@ fn create_channel_with_more_confidential_label_from_public_untrusted_node_ok() {
         &initial_label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
-            let result = runtime.channel_create(&more_confidential_label);
+            let result = runtime.channel_create("", &more_confidential_label);
             assert_eq!(true, result.is_ok());
 
             let (write_handle, read_handle) = result.unwrap();
@@ -289,7 +289,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_privilege_o
             can_endorse_integrity_tags: hashset! {},
         },
         Box::new(move |runtime| {
-            let result = runtime.channel_create(&more_confidential_label);
+            let result = runtime.channel_create("", &more_confidential_label);
             assert_eq!(true, result.is_ok());
 
             let (write_handle, read_handle) = result.unwrap();
@@ -335,7 +335,7 @@ fn create_channel_with_more_confidential_label_from_non_public_node_with_privile
             can_endorse_integrity_tags: hashset! {},
         },
         Box::new(move |runtime| {
-            let result = runtime.channel_create(&more_confidential_label);
+            let result = runtime.channel_create("", &more_confidential_label);
             assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
             Ok(())
         }),
@@ -351,7 +351,7 @@ fn create_node_same_label_ok() {
         &label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
-            let (_write_handle, read_handle) = runtime.channel_create(&label_clone)?;
+            let (_write_handle, read_handle) = runtime.channel_create("", &label_clone)?;
             let node_configuration = NodeConfiguration {
                 name: "test".to_string(),
                 config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
@@ -372,7 +372,7 @@ fn create_node_invalid_configuration_err() {
         &label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
-            let (_write_handle, read_handle) = runtime.channel_create(&label_clone)?;
+            let (_write_handle, read_handle) = runtime.channel_create("", &label_clone)?;
             // Node configuration without config type.
             let node_configuration = NodeConfiguration {
                 name: "test".to_string(),
@@ -406,7 +406,7 @@ fn create_node_less_confidential_label_err() {
         &initial_label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
-            let (_write_handle, read_handle) = runtime.channel_create(&initial_label_clone)?;
+            let (_write_handle, read_handle) = runtime.channel_create("", &initial_label_clone)?;
             let node_configuration = NodeConfiguration {
                 name: "test".to_string(),
                 config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
@@ -437,7 +437,7 @@ fn create_node_more_confidential_label_ok() {
         &initial_label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
-            let (_write_handle, read_handle) = runtime.channel_create(&initial_label_clone)?;
+            let (_write_handle, read_handle) = runtime.channel_create("", &initial_label_clone)?;
             let node_configuration = NodeConfiguration {
                 name: "test".to_string(),
                 config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
@@ -458,8 +458,8 @@ fn wait_on_channels_immediately_returns_if_any_channel_is_orphaned() {
         &label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
-            let (write_handle_0, read_handle_0) = runtime.channel_create(&label_clone)?;
-            let (_write_handle_1, read_handle_1) = runtime.channel_create(&label_clone)?;
+            let (write_handle_0, read_handle_0) = runtime.channel_create("", &label_clone)?;
+            let (_write_handle_1, read_handle_1) = runtime.channel_create("", &label_clone)?;
 
             // Close the write_handle; this should make the channel Orphaned
             let result = runtime.channel_close(write_handle_0);
@@ -486,7 +486,7 @@ fn wait_on_channels_blocks_if_all_channels_have_status_not_ready() {
         &label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
-            let (write_handle, read_handle) = runtime.channel_create(&label_clone)?;
+            let (write_handle, read_handle) = runtime.channel_create("", &label_clone)?;
 
             // Change the status of the channel concurrently, to unpark the waiting thread.
             let runtime_copy = runtime.clone();
@@ -516,8 +516,8 @@ fn wait_on_channels_immediately_returns_if_any_channel_is_invalid() {
         &label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
-            let (write_handle, _read_handle) = runtime.channel_create(&label_clone)?;
-            let (_write_handle, read_handle) = runtime.channel_create(&label_clone)?;
+            let (write_handle, _read_handle) = runtime.channel_create("", &label_clone)?;
+            let (_write_handle, read_handle) = runtime.channel_create("", &label_clone)?;
 
             let result = runtime.wait_on_channels(&[write_handle, read_handle]);
             assert_eq!(

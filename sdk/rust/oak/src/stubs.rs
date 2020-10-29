@@ -64,7 +64,14 @@ pub extern "C" fn channel_write(
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn channel_create(_write: *mut u64, _read: *mut u64) -> u32 {
+pub extern "C" fn channel_create(
+    _write: *mut u64,
+    _read: *mut u64,
+    _name_buf: *const u8,
+    _name_size: usize,
+    _label_buf: *const u8,
+    _label_size: usize,
+) -> u32 {
     panic!("stub function invoked!");
 }
 #[no_mangle]

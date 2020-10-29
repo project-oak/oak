@@ -74,6 +74,12 @@ pub struct Channel {
     /// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
     pub label: oak_abi::label::Label,
 
+    /// The name for the channel.
+    ///
+    /// The name does not have to be unique and can be empty. It is used in logs to help with
+    /// identifying channels during debugging.
+    pub name: String,
+
     /// Weak reference to the Runtime used for sending introspection events.
     runtime_weak: Weak<Runtime>,
 }
@@ -82,10 +88,11 @@ impl std::fmt::Debug for Channel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Channel {{ id={}, #readers={}, #writers={}, label={:?} }}",
+            "Channel {{ id={}, #readers={}, #writers={}, name={:?}, label={:?} }}",
             self.id,
             self.reader_count.load(SeqCst),
             self.writer_count.load(SeqCst),
+            self.name,
             self.label,
         )
     }
@@ -269,6 +276,7 @@ impl Drop for Channel {
 impl Channel {
     pub fn new(
         id: ChannelId,
+        name: &str,
         label: &oak_abi::label::Label,
         runtime_weak: Weak<Runtime>,
     ) -> Arc<Channel> {
@@ -280,6 +288,7 @@ impl Channel {
             reader_count: AtomicU64::new(0),
             waiting_threads: Mutex::new(HashMap::new()),
             label: label.clone(),
+            name: format!("{}({})", name, id),
             runtime_weak,
         })
     }
