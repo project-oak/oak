@@ -22,7 +22,7 @@ use crate::{
     metrics::Metrics,
     node::{
         grpc::{codec::VecCodec, to_tonic_status},
-        ConfigurationError, Node,
+        ConfigurationError, Node, NodePrivilege,
     },
     proto::oak::invocation::{GrpcInvocation, GrpcInvocationSender},
     RuntimeProxy,
@@ -124,6 +124,14 @@ impl GrpcServerNode {
 impl Node for GrpcServerNode {
     fn node_type(&self) -> &'static str {
         "grpc-server"
+    }
+
+    fn get_privilege(&self) -> NodePrivilege {
+        // This node needs to have `top` privilege to be able to declassify data tagged with any
+        // arbitrary user identities.
+        // TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to
+        // the top of the `user` sub-lattice.
+        NodePrivilege::top_privilege()
     }
 
     fn run(

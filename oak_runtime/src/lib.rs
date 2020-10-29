@@ -39,7 +39,7 @@ use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 use node::NodeFactory;
 use oak_abi::{
-    label::{Label, Tag},
+    label::{top, Label, Tag},
     proto::oak::application::{ApplicationConfiguration, ConfigMap, NodeConfiguration},
     ChannelReadStatus, OakStatus,
 };
@@ -227,6 +227,19 @@ impl NodePrivilege {
         Self {
             can_declassify_confidentiality_tags,
             can_endorse_integrity_tags,
+        }
+    }
+
+    /// Return the infinite privilege.
+    ///
+    /// A Node with this privilege can downgrade any data regardless of its label. It should only
+    /// be used by the trusted pseudo-nodes.
+    pub(crate) fn top_privilege() -> Self {
+        let mut top_tag = HashSet::new();
+        top_tag.insert(top());
+        NodePrivilege {
+            can_declassify_confidentiality_tags: top_tag.clone(),
+            can_endorse_integrity_tags: top_tag,
         }
     }
 }
@@ -575,9 +588,19 @@ impl Runtime {
     fn get_node_downgraded_label(&self, node_id: NodeId, initial_label: &Label) -> Label {
         // Retrieve the set of tags that the node may downgrade.
         let node_privilege = self.get_node_privilege(node_id);
-        Label {
+        let node_has_top_privilege = node_privilege
+            .can_declassify_confidentiality_tags
+            .contains(&top());
+
+        let confidentiality_tags = if node_has_top_privilege {
+            // Remove all the confidentiality tags if the node has the `top` privilege.
+            // TODO(#1631): When we have a separate top for each sub-lattice, this check should be
+            // done separately for each sub-lattice, removing only the tags belonging to that
+            // sub-lattice.
+            vec![]
+        } else {
             // Remove all the confidentiality tags that the Node may declassify.
-            confidentiality_tags: initial_label
+            initial_label
                 .confidentiality_tags
                 .iter()
                 .filter(|t| {
@@ -586,7 +609,10 @@ impl Runtime {
                         .contains(t)
                 })
                 .cloned()
-                .collect(),
+                .collect()
+        };
+        Label {
+            confidentiality_tags,
             // Add all the integrity tags that the Node may endorse.
             integrity_tags: initial_label
                 .integrity_tags
