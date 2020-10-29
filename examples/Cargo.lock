@@ -73,6 +73,7 @@ dependencies = [
  "aggregator_common",
  "aggregator_grpc",
  "assert_matches",
+ "either",
  "env_logger",
  "itertools",
  "log",

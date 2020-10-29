@@ -38,11 +38,12 @@ pub mod data;
 
 use aggregator_common::ThresholdAggregator;
 use data::SparseVector;
+use either::Either;
 use log::{debug, error, info};
 use oak::{
     grpc,
     io::{Receiver, ReceiverExt, SenderExt},
-    proto::oak::invocation::{GrpcInvocation, GrpcInvocationReceiver, GrpcInvocationSender},
+    proto::oak::invocation::{GrpcInvocation, GrpcInvocationSender},
 };
 use oak_abi::{label::Label, proto::oak::application::ConfigMap};
 use proto::oak::examples::aggregator::{
@@ -151,16 +152,15 @@ impl Aggregator for AggregatorNode {
     }
 }
 
-oak::entrypoint!(aggregator<AggregatorInit> => |init_receiver: Receiver<AggregatorInit>| {
+oak::entrypoint!(aggregator<Either<AggregatorInit, oak::grpc::Invocation>> => |receiver: Receiver<Either<AggregatorInit, oak::grpc::Invocation>>| {
     oak::logger::init_default();
 
+    let mut receiver_iterator = receiver.iter();
+
     // Receive the initialization message.
-    let init_message: AggregatorInit = init_receiver.receive().expect("Couldn't receive init message");
-    let grpc_server_invocation_receiver = init_message
-        .grpc_server_invocation_receiver
-        .expect("Couldn't receive gRPC invocation receiver")
-        .receiver
-        .expect("Empty gRPC invocation sender");
+    let init_message: AggregatorInit = receiver_iterator
+        .find_map(Either::left)
+        .expect("Couldn't receive init message");
     let grpc_client_invocation_sender = init_message
         .grpc_client_invocation_sender
         .expect("Couldn't receive gRPC invocation sender")
@@ -168,13 +168,11 @@ oak::entrypoint!(aggregator<AggregatorInit> => |init_receiver: Receiver<Aggregat
         .expect("Empty gRPC invocation sender");
 
     // Run event loop and handle incoming invocations.
-    let node = AggregatorNode::new(
-        oak::grpc::client::Client {
-            invocation_sender: grpc_client_invocation_sender
-        }
-    );
+    let node = AggregatorNode::new(oak::grpc::client::Client {
+        invocation_sender: grpc_client_invocation_sender,
+    });
     let dispatcher = AggregatorDispatcher::new(node);
-    oak::run_command_loop(dispatcher, grpc_server_invocation_receiver.iter());
+    oak::run_command_loop(dispatcher, receiver_iterator.filter_map(Either::right));
 });
 
 #[derive(Debug, serde::Deserialize)]
@@ -184,14 +182,8 @@ pub struct Config {
 }
 
 /// Create initialization message for Aggregator Node.
-fn create_init_message(
-    receiver: &oak::io::Receiver<GrpcInvocation>,
-    sender: &oak::io::Sender<GrpcInvocation>,
-) -> AggregatorInit {
+fn create_init_message(sender: &oak::io::Sender<GrpcInvocation>) -> AggregatorInit {
     AggregatorInit {
-        grpc_server_invocation_receiver: Some(GrpcInvocationReceiver {
-            receiver: Some(receiver.clone()),
-        }),
         grpc_client_invocation_sender: Some(GrpcInvocationSender {
             sender: Some(sender.clone()),
         }),
@@ -203,17 +195,31 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
 
     // Parse config.
     let config_map = receiver.receive().expect("Couldn't read config map");
-    let config: Config = toml::from_slice(&config_map.items.get("config").expect("Couldn't find config")).expect("Couldn't parse TOML config file");
+    let config: Config = toml::from_slice(
+        &config_map
+            .items
+            .get("config")
+            .expect("Couldn't find config"),
+    )
+    .expect("Couldn't parse TOML config file");
     info!("Parsed config: {:?}", config);
-    let grpc_server_channel =
-        oak::grpc::server::init(&config.grpc_server_listen_address).expect("Couldn't create gRPC server pseudo-Node");
+    let grpc_server_channel = oak::grpc::server::init(&config.grpc_server_listen_address)
+        .expect("Couldn't create gRPC server pseudo-Node");
 
     // Create an Aggregator Node.
-    let (init_sender, init_receiver) = oak::io::channel_create::<AggregatorInit>("Aggregator init", &Label::public_untrusted())
-        .expect("Couldn't create initialization channel");
-    oak::node_create(&oak::node_config::wasm("app", "aggregator"), &Label::public_untrusted(), init_receiver.handle)
-        .expect("Couldn't create gRPC worker node");
-    oak::channel_close(init_receiver.handle.handle).expect("Couldn't close receiver channel");
+    let (aggregator_sender, aggregator_receiver) = oak::io::channel_create::<
+        Either<AggregatorInit, oak::grpc::Invocation>,
+    >(
+        "Aggregator init", &Label::public_untrusted()
+    )
+    .expect("Couldn't create channel to aggregator node");
+    oak::node_create(
+        &oak::node_config::wasm("app", "aggregator"),
+        &Label::public_untrusted(),
+        aggregator_receiver.handle,
+    )
+    .expect("Couldn't create aggregator node");
+    oak::channel_close(aggregator_receiver.handle.handle).expect("Couldn't close receiver channel");
 
     // Create a gRPC client Node with a less restrictive label than the current Node.
     // In particular, the confidentiality component of the current Node label includes the
@@ -230,23 +236,22 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     //     }],
     //     integrity_tags: vec![],
     // };
-    let grpc_client = oak::grpc::client::Client::new(
-        &oak::node_config::grpc_client("https://localhost:8888"),
-    )
-    .expect("Couldn't create gRPC client");
+    let grpc_client =
+        oak::grpc::client::Client::new(&oak::node_config::grpc_client("https://localhost:8888"))
+            .expect("Couldn't create gRPC client");
 
     // Send the initialization message to Aggregator Node containing a gRPC server invocation
     // receiver and a gRPC client invocation sender.
-    debug!("Sending the initialization message to handler Node");
-    let (invocation_sender, invocation_receiver) = oak::io::channel_create::<grpc::Invocation>("gRPC invocation", &Label::public_untrusted())
-        .expect("Couldn't create gRPC invocation channel");
-    let init_message = create_init_message(&invocation_receiver, &grpc_client.invocation_sender);
-    init_sender.send(&init_message).expect("Couldn't send the initialization message to Aggregator Node");
+    debug!("Sending the initialization message to aggregator node");
+    let init_message = create_init_message(&grpc_client.invocation_sender);
+    aggregator_sender
+        .send(&Either::Left(init_message))
+        .expect("Couldn't send the initialization message to aggregator node");
 
     // Route gRPC invocations to Aggregator Node.
     while let Ok(invocation) = grpc_server_channel.receive() {
-        invocation_sender
-            .send(&invocation)
-            .expect("Couldn't send invocation to worker node");
+        aggregator_sender
+            .send(&Either::Right(invocation))
+            .expect("Couldn't send invocation to aggregator node");
     }
 });
