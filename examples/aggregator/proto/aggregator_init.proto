@@ -23,9 +23,7 @@ import "oak_services/proto/grpc_invocation.proto";
 
 // Initialization message that should be sent to Aggregator Oak Node.
 message AggregatorInit {
-  // Channel for receiving invocations from gRPC server.
-  oak.invocation.GrpcInvocationReceiver grpc_server_invocation_receiver = 1;
   // Channel for sending invocations to gRPC client that is connected to an external service, which
   // expects aggregated data from Oak.
-  oak.invocation.GrpcInvocationSender grpc_client_invocation_sender = 2;
+  oak.invocation.GrpcInvocationSender grpc_client_invocation_sender = 1;
 }
