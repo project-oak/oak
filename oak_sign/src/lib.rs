@@ -18,7 +18,7 @@ use anyhow::Context;
 use pem::Pem;
 use ring::{
     rand,
-    signature::{self, Ed25519KeyPair, KeyPair},
+    signature::{self, Ed25519KeyPair},
 };
 use std::{
     collections::HashMap,
@@ -31,39 +31,70 @@ pub const PUBLIC_KEY_TAG: &str = "PUBLIC KEY";
 pub const SIGNATURE_TAG: &str = "SIGNATURE";
 pub const HASH_TAG: &str = "HASH";
 
-/// Convenience struct that encapsulates `Ed25519KeyPair`.
-/// Named `KeyBundle` since it uses the `ring::signature::KeyPair` trait.
-pub struct KeyBundle {
-    private_key: Vec<u8>,
+/// Convenience struct that encapsulates `ring::signature::Ed25519KeyPair`.
+#[derive(Debug)]
+pub struct KeyPair {
+    /// PKCS#8 v2 encoded private key and public key.
+    /// https://tools.ietf.org/html/rfc5958
+    ///
+    /// The encoded version is kept because a parsed `key_pair` doesn't contain a method for
+    /// extracting private key bytes.
+    /// https://briansmith.org/rustdoc/ring/signature/struct.Ed25519KeyPair.html
+    pkcs8: Vec<u8>,
+    /// Parsed PKCS#8 v2 key pair representation.
     key_pair: Ed25519KeyPair,
 }
 
-impl KeyBundle {
+impl Clone for KeyPair {
+    fn clone(&self) -> Self {
+        // The `clone` function is implemented as re-parsing, because `Ed25519KeyPair` doesn't
+        // implement `Clone` and all of its fields are private.
+        KeyPair::parse(&self.pkcs8).expect("Couldn't clone key pair")
+    }
+}
+
+impl PartialEq for KeyPair {
+    fn eq(&self, other: &Self) -> bool {
+        // Currently only comparing that the encoded version is the same, since `Ed25519KeyPair`
+        // doesn't implement `Eq` and all of its fields are private.
+        // https://github.com/briansmith/ring/blob/8d4e283c16f335166b0e969ccc321acf0de39c0b/src/ec/curve25519/ed25519/signing.rs#L27-L37
+        self.pkcs8 == other.pkcs8
+    }
+}
+
+impl Eq for KeyPair {}
+
+impl KeyPair {
     /// Generates a Ed25519 key pair.
-    pub fn generate() -> anyhow::Result<KeyBundle> {
+    pub fn generate() -> anyhow::Result<KeyPair> {
         let rng = rand::SystemRandom::new();
         let private_key = Ed25519KeyPair::generate_pkcs8(&rng)
             .ok()
             .context("Couldn't generate key pair")?;
-        KeyBundle::parse(private_key.as_ref())
+        KeyPair::parse(private_key.as_ref())
     }
 
-    /// Parses a Ed25519 key pair from bytes.
-    pub fn parse(private_key: &[u8]) -> anyhow::Result<KeyBundle> {
-        let key_pair = Ed25519KeyPair::from_pkcs8(private_key)
+    /// Parses a Ed25519 key pair from a PKCS#8 v2 encoded `pkcs8_key_pair`.
+    pub fn parse(pkcs8_key_pair: &[u8]) -> anyhow::Result<KeyPair> {
+        let key_pair = Ed25519KeyPair::from_pkcs8(pkcs8_key_pair)
             .ok()
             .context("Couldn't parse generated key pair")?;
         Ok(Self {
-            private_key: private_key.to_vec(),
+            pkcs8: pkcs8_key_pair.to_vec(),
             key_pair,
         })
     }
 
-    pub fn private_key(&self) -> Vec<u8> {
-        self.private_key.to_vec()
+    /// Returns a PKCS#8 v2 encoded key pair.
+    pub fn pkcs8_key_pair(&self) -> Vec<u8> {
+        self.pkcs8.to_vec()
     }
 
-    pub fn public_key(&self) -> Vec<u8> {
+    /// Returns a PKCS#8 v2 encoded public key.
+    pub fn pkcs8_public_key(&self) -> Vec<u8> {
+        // Trait `ring::signature::KeyPair` that contains `public_key` function is included locally
+        // in this function because it conflicts with [`KeyPair`].
+        use ring::signature::KeyPair;
         self.key_pair.public_key().as_ref().to_vec()
     }
 
@@ -72,7 +103,7 @@ impl KeyBundle {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone, Debug, Default)]
 pub struct SignatureBundle {
     pub public_key: Vec<u8>,
     pub signed_hash: Vec<u8>,
@@ -81,10 +112,10 @@ pub struct SignatureBundle {
 
 impl SignatureBundle {
     /// Signs a SHA-256 hash of the `input` using `private_key`.
-    pub fn create(input: &[u8], key_pair: &KeyBundle) -> anyhow::Result<SignatureBundle> {
+    pub fn create(input: &[u8], key_pair: &KeyPair) -> anyhow::Result<SignatureBundle> {
         let hash = get_sha256(input);
         Ok(SignatureBundle {
-            public_key: key_pair.public_key(),
+            public_key: key_pair.pkcs8_public_key(),
             signed_hash: key_pair.sign(&hash),
             hash,
         })

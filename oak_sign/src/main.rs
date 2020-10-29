@@ -39,9 +39,12 @@
 use anyhow::{anyhow, Context};
 use log::info;
 use oak_sign::{
-    read_pem_file, write_pem_file, KeyBundle, SignatureBundle, PRIVATE_KEY_TAG, PUBLIC_KEY_TAG,
+    read_pem_file, write_pem_file, KeyPair, SignatureBundle, PRIVATE_KEY_TAG, PUBLIC_KEY_TAG,
 };
 use structopt::StructOpt;
+
+#[cfg(test)]
+mod tests;
 
 /// Command line options for `oak_sign`.
 #[derive(StructOpt, Clone)]
@@ -99,14 +102,22 @@ fn main() -> anyhow::Result<()> {
 
     match opt.cmd {
         Command::Generate(ref opt) => {
-            let key_pair = KeyBundle::generate()?;
-            write_pem_file(&opt.private_key, PRIVATE_KEY_TAG, &key_pair.private_key())?;
-            write_pem_file(&opt.public_key, PUBLIC_KEY_TAG, &key_pair.public_key())?;
+            let key_pair = KeyPair::generate()?;
+            write_pem_file(
+                &opt.private_key,
+                PRIVATE_KEY_TAG,
+                &key_pair.pkcs8_key_pair(),
+            )?;
+            write_pem_file(
+                &opt.public_key,
+                PUBLIC_KEY_TAG,
+                &key_pair.pkcs8_public_key(),
+            )?;
             info!("Key pair generated successfully");
         }
         Command::Sign(ref opt) => {
             let private_key = read_pem_file(&opt.private_key)?;
-            let key_pair = KeyBundle::parse(&private_key)?;
+            let key_pair = KeyPair::parse(&private_key)?;
             let input = match (&opt.input_file, &opt.input_string) {
                 (Some(input_file), None) => std::fs::read(&input_file)
                     .with_context(|| format!("Couldn't read input file {}", &input_file)),
