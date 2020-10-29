@@ -325,6 +325,12 @@
 <span id="322">322</span>
 <span id="323">323</span>
 <span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -453,7 +459,13 @@
             <span class="kw">for</span> <span class="ident">node_id</span> <span class="kw">in</span> <span class="ident">node_infos</span>.<span class="ident">keys</span>().<span class="ident">sorted</span>() {
                 <span class="kw">let</span> <span class="ident">node_info</span> <span class="op">=</span> <span class="ident">node_infos</span>.<span class="ident">get</span>(<span class="ident">node_id</span>).<span class="ident">unwrap</span>();
                 <span class="kw">for</span> <span class="ident">half</span> <span class="kw">in</span> <span class="ident">node_info</span>.<span class="ident">abi_handles</span>.<span class="ident">values</span>() {
-                    <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;    {}&quot;</span>, <span class="ident">half</span>.<span class="ident">dot_id</span>(),).<span class="ident">unwrap</span>();
+                    <span class="macro">writeln</span><span class="macro">!</span>(
+                        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>,
+                        <span class="string">r###&quot;    {} [label=&quot;{}&quot;]&quot;###</span>,
+                        <span class="ident">half</span>.<span class="ident">dot_id</span>(),
+                        <span class="ident">half</span>.<span class="ident">get_channel_name</span>(),
+                    )
+                    .<span class="ident">unwrap</span>();
                 }
             }
             <span class="macro">writeln</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="string">&quot;  }}&quot;</span>).<span class="ident">unwrap</span>();
