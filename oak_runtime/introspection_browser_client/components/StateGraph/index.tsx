@@ -72,8 +72,10 @@ function getGraphFromState(
         .flat()
     : [];
   const oakChannels = [...applicationState.channels.entries()].map(
-    ([channelId]) =>
-      `${getChannelDotId(channelId)} [URL="/dynamic/channel/${channelId}"]`
+    ([channelId, { name }]) =>
+      `${getChannelDotId(
+        channelId
+      )} [URL="/dynamic/channel/${channelId}" label="${name}"]`
   );
   const oakMessages = [
     ...applicationState.channels.entries(),
