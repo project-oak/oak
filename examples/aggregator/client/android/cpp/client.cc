@@ -46,8 +46,16 @@ JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_createChannel
                                                                                  jstring jca_cert) {
   auto address = env->GetStringUTFChars(jaddress, 0);
   auto ca_cert = env->GetStringUTFChars(jca_cert, 0);
-  // TODO(#1066): Assign a more restrictive label.
-  oak::label::Label label = oak::PublicUntrustedLabel();
+  // Label corresponding to the hash of the WebAssembly module that implements the aggregator logic.
+  //
+  // The intention is that only such module will be able to declassify the data sent over gRPC.
+  // When a new version of the aggregator module is "released", this value needs to be changed to
+  // reflect the hash of the new module.
+  //
+  // The particular value corresponds to the hash on the `aggregator.wasm` line in
+  // https://github.com/project-oak/oak/blob/hashes/reproducibility_index.
+  oak::label::Label label = oak::WebAssemblyModuleHashLabel(
+      absl::HexStringToBytes("e9f2453f98e2085b070f534cfa3b190672ee1afd348178c4d099c460d80013ab"));
   kChannel = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
   JNI_LOG("gRPC channel has been created");

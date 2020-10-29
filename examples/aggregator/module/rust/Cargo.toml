@@ -10,12 +10,15 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 aggregator_common = { path = "../../common" }
+anyhow = "*"
 either = "*"
+hex = "*"
 itertools = "*"
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
 oak_io = "=0.1.0"
+oak_services = "=0.1.0"
 prost = "*"
 serde = "*"
 toml = "*"
@@ -27,6 +30,7 @@ env_logger = "*"
 log = "*"
 maplit = "*"
 oak_runtime = "=0.1.0"
+oak_sign = "=0.1.0"
 oak_tests = "=0.1.0"
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
 tonic = { version = "*", features = ["tls"] }
