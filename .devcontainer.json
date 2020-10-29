@@ -8,5 +8,11 @@
     "esbenp.prettier-vscode",
     "matklad.rust-analyzer",
     "xaver.clang-format"
-  ]
+  ],
+  "settings": {
+    // Use the `rust-analyzer` binary installed in the Docker image.
+    "rust-analyzer.serverPath": "rust-analyzer",
+    // Ensure protobuf generated files are loaded correctly.
+    "rust-analyzer.cargo.loadOutDirsFromCheck": true
+  }
 }
