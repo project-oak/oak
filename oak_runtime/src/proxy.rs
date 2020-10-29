@@ -379,6 +379,17 @@ impl RuntimeProxy {
         result
     }
 
+    /// See [`Runtime::get_channel_label`].
+    pub fn get_channel_label(&self, handle: oak_abi::Handle) -> Result<Label, OakStatus> {
+        debug!("{:?}: get_channel_label({})", self.node_id, handle);
+        let result = self.runtime.get_channel_label(self.node_id, handle);
+        debug!(
+            "{:?}: get_channel_label({}) -> {:?}",
+            self.node_id, handle, result
+        );
+        result
+    }
+
     /// Return the direction of an ABI handle.
     pub fn channel_direction(
         &self,
