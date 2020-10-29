@@ -121,6 +121,12 @@ impl ChannelHalf {
         self.channel.id
     }
 
+    /// Get the ID of the underlying channel.  For debugging/introspection
+    /// purposes.
+    pub fn get_channel_name(&self) -> &str {
+        &self.channel.name
+    }
+
     /// Get read-only access to the channel's messages.  For debugging/introspection
     /// purposes.
     pub fn get_messages(&self) -> RwLockReadGuard<Messages> {
