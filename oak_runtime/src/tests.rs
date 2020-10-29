@@ -71,7 +71,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         node_privilege: node_privilege.clone(),
     };
     let (_write_handle, read_handle) = proxy
-        .channel_create("Initial channel", &Label::public_untrusted())
+        .channel_create("Initial", &Label::public_untrusted())
         .expect("Could not create init channel");
 
     proxy

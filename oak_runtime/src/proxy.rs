@@ -142,7 +142,7 @@ impl RuntimeProxy {
         // When first starting, we assign the least privileged label to the channel connecting the
         // outside world to the entry point Node.
         let (write_handle, read_handle) =
-            self.channel_create("Initial channel", &Label::public_untrusted())?;
+            self.channel_create("Initial", &Label::public_untrusted())?;
         debug!(
             "{:?}: created initial channel ({}, {})",
             self.node_id, write_handle, read_handle,

@@ -79,8 +79,8 @@ use proto::{
 
 oak::entrypoint!(grpc_fe<ConfigMap> => |_receiver| {
     oak::logger::init_default();
-    let (to_provider_write_handle, to_provider_read_handle) = oak::channel_create("To-provider channel", &Label::public_untrusted()).unwrap();
-    let (from_provider_write_handle, from_provider_read_handle) = oak::channel_create("From-provider channel", &Label::public_untrusted()).unwrap();
+    let (to_provider_write_handle, to_provider_read_handle) = oak::channel_create("To-provider", &Label::public_untrusted()).unwrap();
+    let (from_provider_write_handle, from_provider_read_handle) = oak::channel_create("From-provider", &Label::public_untrusted()).unwrap();
 
     oak::node_create(&oak::node_config::wasm("app", "provider"), &Label::public_untrusted(), to_provider_read_handle)
         .expect("Failed to create provider");
@@ -218,10 +218,10 @@ impl oak::CommandHandler<BlobStoreRequest> for BlobStoreProvider {
     fn handle_command(&mut self, _command: BlobStoreRequest) -> anyhow::Result<()> {
         // Create new BlobStore
         let (to_store_write_handle, to_store_read_handle) =
-            oak::channel_create("To-store channel", &Label::public_untrusted())
+            oak::channel_create("To-store", &Label::public_untrusted())
                 .context("Could not create channel")?;
         let (from_store_write_handle, from_store_read_handle) =
-            oak::channel_create("From-store channel", &Label::public_untrusted())
+            oak::channel_create("From-store", &Label::public_untrusted())
                 .context("Could not create channel")?;
         oak::node_create(
             &oak::node_config::wasm("app", "store"),

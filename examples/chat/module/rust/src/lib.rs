@@ -85,7 +85,7 @@ impl oak::CommandHandler<oak::grpc::Invocation> for Router {
                 // Check if there is a channel to a room with the desired label already, or create
                 // it if not.
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
-                    let (wh, rh) = oak::io::channel_create("Room initial channel", &label)
+                    let (wh, rh) = oak::io::channel_create("Room init", &label)
                         .expect("could not create channel");
                     oak::node_create(&oak::node_config::wasm("app", "room"), &label, rh.handle)
                         .expect("could not create node");

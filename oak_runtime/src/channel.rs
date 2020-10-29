@@ -76,8 +76,8 @@ pub struct Channel {
 
     /// The name for the channel.
     ///
-    /// The name does not have to be unique. It used in debug logs to help with identifying
-    /// channels.
+    /// The name does not have to be unique and can be empty. It is used in logs to help with
+    /// identifying channels during debugging.
     pub name: String,
 
     /// Weak reference to the Runtime used for sending introspection events.
@@ -288,7 +288,7 @@ impl Channel {
             reader_count: AtomicU64::new(0),
             waiting_threads: Mutex::new(HashMap::new()),
             label: label.clone(),
-            name: name.to_owned(),
+            name: format!("{}({})", name, id),
             runtime_weak,
         })
     }

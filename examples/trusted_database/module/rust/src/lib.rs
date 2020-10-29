@@ -77,7 +77,7 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
         // Create a client request handler Node.
         debug!("Creating handler Node");
         let (sender, receiver) = oak::io::channel_create::<TrustedDatabaseCommand>(
-            "Command channel",
+            "Command",
             &Label::public_untrusted(),
         )
         .context("Couldn't create command channel")?;
@@ -93,7 +93,7 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
         // Create a gRPC invocation channel for forwarding requests to the
         // `TrustedDatabaseHandlerNode`.
         let (invocation_sender, invocation_receiver) = oak::io::channel_create::<grpc::Invocation>(
-            "gRPC invocation channel",
+            "gRPC invocation",
             &Label::public_untrusted(),
         )
         .context("Couldn't create gRPC invocation channel")?;

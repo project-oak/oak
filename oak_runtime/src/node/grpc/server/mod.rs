@@ -427,13 +427,13 @@ impl GrpcInvocationHandler {
         // This will fail if the label has a non-empty integrity component.
         let (request_writer, request_reader) = self
             .runtime
-            .channel_create("gRPC request channel", &label)
+            .channel_create("gRPC request", &label)
             .map_err(|err| {
                 warn!("could not create gRPC request channel: {:?}", err);
             })?;
         let (response_writer, response_reader) = self
             .runtime
-            .channel_create("gRPC response channel", &Label::public_untrusted())
+            .channel_create("gRPC response", &Label::public_untrusted())
             .map_err(|err| {
                 warn!("could not create gRPC response channel: {:?}", err);
             })?;

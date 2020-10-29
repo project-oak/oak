@@ -186,6 +186,9 @@ and `param[3]` and the label specified in `param[4]` and `param[5]` to the newly
 created Channel, and returns the Channel handles for its read and write halves
 as output parameters in `param[0]` and `param[1]`.
 
+The name is a UTF-8 encoded string. It does not have to be unique and can be
+empty. It is used in logs to help with identifying channels during debugging.
+
 The label is a serialized [`Label`](/oak_abi/proto/label.proto) protobuf
 message.
 

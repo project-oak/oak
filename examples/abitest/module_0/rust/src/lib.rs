@@ -74,8 +74,7 @@ impl FrontendNode {
             lose_channels();
 
             // Second, start an ephemeral Node which also loses channels.
-            let (wh, rh) =
-                oak::channel_create("Initial channel", &Label::public_untrusted()).unwrap();
+            let (wh, rh) = oak::channel_create("Initial", &Label::public_untrusted()).unwrap();
             oak::node_create(
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "channel_loser"),
                 &Label::public_untrusted(),
@@ -106,7 +105,7 @@ impl FrontendNode {
         let mut backend_in = Vec::with_capacity(BACKEND_COUNT);
         for i in 0..BACKEND_COUNT {
             let (write_handle, read_handle) =
-                oak::channel_create("Initial channel", &Label::public_untrusted())
+                oak::channel_create("Initial", &Label::public_untrusted())
                     .expect("could not create channel");
             oak::node_create(
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
@@ -120,7 +119,7 @@ impl FrontendNode {
             // Create a back channel, and pass the write half to the backend
             // as the first message on the outbound channel.
             let (write_handle, read_handle) =
-                oak::channel_create("Back channel", &Label::public_untrusted())
+                oak::channel_create("Back", &Label::public_untrusted())
                     .expect("could not create channel");
             oak::channel_write(backend_out[i], &[], &[write_handle.handle])
                 .expect("could not write to channel");
@@ -648,7 +647,7 @@ impl FrontendNode {
         let mut handles = Vec::<(oak::WriteHandle, oak::ReadHandle)>::new();
         const CHANNEL_COUNT: usize = 50;
         for _ in 0..CHANNEL_COUNT {
-            match oak::channel_create("Test channel", &Label::public_untrusted()) {
+            match oak::channel_create("Test", &Label::public_untrusted()) {
                 Ok(pair) => handles.push(pair),
                 Err(status) => {
                     return Err(Box::new(OakError::OakStatus(status)));
@@ -678,14 +677,14 @@ impl FrontendNode {
     }
 
     fn test_channel_close(&mut self) -> TestResult {
-        let (w, r) = oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+        let (w, r) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         expect_eq!(Ok(()), oak::channel_close(w.handle));
         expect_eq!(Ok(()), oak::channel_close(r.handle));
         expect_eq!(Err(OakStatus::ErrBadHandle), oak::channel_close(w.handle));
         expect_eq!(Err(OakStatus::ErrBadHandle), oak::channel_close(9_999_999));
 
         // Can close ends in either order.
-        let (w, r) = oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+        let (w, r) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         expect_eq!(Ok(()), oak::channel_close(r.handle));
         expect_eq!(Ok(()), oak::channel_close(w.handle));
         Ok(())
@@ -776,7 +775,7 @@ impl FrontendNode {
 
     fn test_channel_read(&mut self) -> TestResult {
         let (out_channel, in_channel) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
 
         // No message pending.
         let mut buffer = Vec::<u8>::with_capacity(5);
@@ -875,7 +874,7 @@ impl FrontendNode {
 
     fn test_channel_read_orphan(&mut self) -> TestResult {
         let (out_channel, in_channel) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
 
         // Write a message to the channel.
         let buf = vec![0x01];
@@ -946,7 +945,7 @@ impl FrontendNode {
 
     fn test_channel_write(&mut self) -> TestResult {
         let (out_channel, in_channel) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
 
         // Empty message.
         let empty = vec![];
@@ -974,7 +973,7 @@ impl FrontendNode {
 
     fn test_channel_write_handle(&mut self) -> TestResult {
         let (out_channel, in_channel) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
 
         // Send a single handle.
         let empty = vec![];
@@ -1002,7 +1001,7 @@ impl FrontendNode {
 
     fn test_channel_write_orphan_empty(&mut self) -> TestResult {
         let (out_channel, in_channel) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
 
         // Close the only read handle for the channel.
         expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
@@ -1020,7 +1019,7 @@ impl FrontendNode {
 
     fn test_channel_write_orphan_full(&mut self) -> TestResult {
         let (out_channel, in_channel) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
 
         // Ensure that there are messages pending on the channel.
         let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -1040,14 +1039,13 @@ impl FrontendNode {
 
     fn test_channel_handle_recovered(&mut self) -> TestResult {
         // Set up a channel with a message in it.
-        let (lost_wh, lost_rh) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+        let (lost_wh, lost_rh) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         let data = vec![0x08, 0x0c];
         expect_eq!(Ok(()), oak::channel_write(lost_wh, &data, &[]));
 
         // Put a message with handle to the first channel into a second channel.
         let (holder_wh, holder_rh) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         expect_eq!(
             Ok(()),
             oak::channel_write(holder_wh, &[], &[lost_rh.handle])
@@ -1285,8 +1283,8 @@ impl FrontendNode {
     }
 
     fn test_channel_wait(&mut self) -> TestResult {
-        let (out1, in1) = oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
-        let (out2, in2) = oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+        let (out1, in1) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
+        let (out2, in2) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
 
         // Waiting on (just) non-read channel handles should fail immediately.
         expect_eq!(
@@ -1379,8 +1377,8 @@ impl FrontendNode {
     fn test_channel_wait_orphan(&mut self) -> TestResult {
         // Use 2 channels so there's always a ready channel to prevent
         // wait_on_channels blocking.
-        let (out1, in1) = oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
-        let (out2, in2) = oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+        let (out1, in1) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
+        let (out2, in2) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
 
         // Set up pending messages so each channel is read-ready.
         let data = vec![0x01, 0x02, 0x03];
@@ -1532,7 +1530,7 @@ impl FrontendNode {
             )
         );
         let (out_handle, in_handle) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         expect_eq!(
             Ok(()),
             oak::node_create(
@@ -1563,7 +1561,7 @@ impl FrontendNode {
         };
 
         // Expect valid handles to return correct label.
-        let (out_handle, in_handle) = oak::channel_create("Test channel", &label).unwrap();
+        let (out_handle, in_handle) = oak::channel_create("Test", &label).unwrap();
         let expected = Ok(label);
         expect_eq!(expected, oak::channel_label_read(in_handle.handle));
         expect_eq!(expected, oak::channel_label_read(out_handle.handle));
@@ -1726,7 +1724,7 @@ impl FrontendNode {
 
     fn test_node_panic(&mut self) -> TestResult {
         let (out_handle, in_handle) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         // Create a Node that panics. We can't see the panic, but the rest
         // of the Application should continue.
         expect_eq!(
@@ -1774,7 +1772,7 @@ impl FrontendNode {
         // Set up a fresh channel with a pending message so wait_on_channels
         // doesn't block.
         let (out_handle, in_handle) =
-            oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         let data = vec![0x01, 0x02, 0x03];
         expect_eq!(Ok(()), oak::channel_write(out_handle, &data, &[]));
 
@@ -1820,9 +1818,8 @@ impl FrontendNode {
     fn test_direct_log(&mut self) -> TestResult {
         // Send a message directly to a fresh logging Node (not via the log facade).
         // Include some handles which will be ignored.
-        let (logging_handle, read_handle) =
-            oak::channel_create("Test channel", &Label::public_untrusted())
-                .expect("could not create channel");
+        let (logging_handle, read_handle) = oak::channel_create("Test", &Label::public_untrusted())
+            .expect("could not create channel");
         oak::node_create(
             &oak::node_config::log(),
             &Label::public_untrusted(),
@@ -1832,9 +1829,8 @@ impl FrontendNode {
         oak::channel_close(read_handle.handle).expect("could not close channel");
 
         expect!(is_valid(logging_handle.handle));
-        let (out_handle, in_handle) =
-            oak::channel_create("Test channel", &Label::public_untrusted())
-                .expect("could not create channel");
+        let (out_handle, in_handle) = oak::channel_create("Test", &Label::public_untrusted())
+            .expect("could not create channel");
 
         oak::channel_write(
             logging_handle,
@@ -1874,7 +1870,7 @@ impl FrontendNode {
         let mut write_handles = Vec::with_capacity(CHANNEL_COUNT);
         for _ in 0..CHANNEL_COUNT {
             let (new_write, new_read) =
-                oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+                oak::channel_create("Test", &Label::public_untrusted()).unwrap();
             write_handles.push(new_write);
             read_handles.push(new_read.handle);
         }
@@ -2044,7 +2040,7 @@ impl FrontendNode {
         let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with data.
-        let (wh, rh) = oak::channel_create("Test channel", &Label::public_untrusted())
+        let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted())
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
@@ -2061,7 +2057,7 @@ impl FrontendNode {
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a single
         // read handle.
-        let (wh, rh) = oak::channel_create("Test channel", &Label::public_untrusted())
+        let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted())
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
@@ -2078,7 +2074,7 @@ impl FrontendNode {
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a write
         // handle and a read handle.
-        let (wh, rh) = oak::channel_create("Test channel", &Label::public_untrusted())
+        let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted())
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
@@ -2306,7 +2302,7 @@ impl FrontendNode {
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with data.
-        let (wh, rh) = oak::channel_create("Test channel", &Label::public_untrusted())
+        let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted())
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
@@ -2323,7 +2319,7 @@ impl FrontendNode {
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a single
         // read handle.
-        let (wh, rh) = oak::channel_create("Test channel", &Label::public_untrusted())
+        let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted())
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
@@ -2340,7 +2336,7 @@ impl FrontendNode {
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a write
         // handle and a read handle.
-        let (wh, rh) = oak::channel_create("Test channel", &Label::public_untrusted())
+        let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted())
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
@@ -2407,7 +2403,7 @@ fn from_proto(status: oak::grpc::Status) -> Box<dyn std::error::Error> {
 
 fn lose_channels() {
     // Create a channel holding a message that holds references to itself.
-    let (wh, rh) = oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+    let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
     let data = vec![0x01, 0x02, 0x03];
     oak::channel_write(wh, &data, &[wh.handle, rh.handle]).unwrap();
     // Close both handles so this channel is immediately lost.
@@ -2415,7 +2411,7 @@ fn lose_channels() {
     oak::channel_close(rh.handle).unwrap();
 
     // Create a channel holding a message that holds references to itself.
-    let (wh, rh) = oak::channel_create("Test channel", &Label::public_untrusted()).unwrap();
+    let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
     let data = vec![0x01, 0x02, 0x03];
     oak::channel_write(wh, &data, &[wh.handle, rh.handle]).unwrap();
     // Keep the write handle open, so this channel will be lost when
@@ -2483,7 +2479,7 @@ pub extern "C" fn http_oak_main(http_channel: u64) {
 fn new_channel_chain(nest_count: u32) -> Result<oak::ReadHandle, Box<dyn std::error::Error>> {
     // Set up a channel with a message in it.
     let (innermost_wh, innermost_rh) =
-        oak::channel_create("Innermost channel", &Label::public_untrusted()).unwrap();
+        oak::channel_create("Innermost", &Label::public_untrusted()).unwrap();
     let data = vec![0x08, 0x0c];
     expect_eq!(Ok(()), oak::channel_write(innermost_wh, &data, &[]));
     expect_eq!(Ok(()), oak::channel_close(innermost_wh.handle));
@@ -2492,7 +2488,7 @@ fn new_channel_chain(nest_count: u32) -> Result<oak::ReadHandle, Box<dyn std::er
     for _ in 0..nest_count {
         // Put a message with a handle to the previous channel into a new outer channel.
         let (outer_wh, outer_rh) =
-            oak::channel_create("Outer channel", &Label::public_untrusted()).unwrap();
+            oak::channel_create("Outer", &Label::public_untrusted()).unwrap();
         expect_eq!(
             Ok(()),
             oak::channel_write(outer_wh, &[], &[inner_rh.handle])

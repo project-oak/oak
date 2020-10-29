@@ -117,8 +117,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
             info!("received frontend request: {:?}", internal_req);
 
             // Create a new channel and write the response into it.
-            let (new_write, new_read) =
-                oak::channel_create("Reply channel", &Label::public_untrusted())?;
+            let (new_write, new_read) = oak::channel_create("Reply", &Label::public_untrusted())?;
             let internal_rsp = InternalMessage {
                 msg: internal_req.msg + "xxx",
             };
