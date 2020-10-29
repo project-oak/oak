@@ -125,7 +125,13 @@ impl Runtime {
             for node_id in node_infos.keys().sorted() {
                 let node_info = node_infos.get(node_id).unwrap();
                 for half in node_info.abi_handles.values() {
-                    writeln!(&mut s, "    {}", half.dot_id(),).unwrap();
+                    writeln!(
+                        &mut s,
+                        r###"    {} [label="{}"]"###,
+                        half.dot_id(),
+                        half.get_channel_name(),
+                    )
+                    .unwrap();
                 }
             }
             writeln!(&mut s, "  }}").unwrap();
