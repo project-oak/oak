@@ -1,0 +1,17 @@
+#!/bin/bash
+#
+# Clean chaches, build artifacts etc
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# Stash untracked but not ignored files
+git stash push --include-untracked
+
+# Delete remaining untracked files (defacto only ignored files), excluding auth
+# files. Use double --force to delete untracked nested repositories.
+git clean -d --force --force -x --exclude="/.oak_remote_cache_key.json" --exclude="**/client_secret_*.apps.googleusercontent.com.json"
+
+# Restore the previously stashed files
+git stash pop
