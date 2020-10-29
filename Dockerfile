@@ -250,6 +250,13 @@ ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/${udep
 RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
 RUN chmod +x ${install_dir}/cargo-udeps
 
+# Install rust-analyzer
+# https://github.com/rust-analyzer/rust-analyzer
+ARG rust_analyzer_version=2020-10-26
+ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-linux
+RUN curl --location ${rust_analyzer_location} > ${install_dir}/rust-analyzer
+RUN chmod +x ${install_dir}/rust-analyzer
+
 # Unset $CARGO_HOME so that the new user will use the default value for it, which will point it to
 # its own home folder.
 ENV CARGO_HOME ""
