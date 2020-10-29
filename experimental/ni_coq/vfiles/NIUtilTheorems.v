@@ -73,6 +73,10 @@ Proof.
     rewrite Hflows; reflexivity.
 Qed.
 
+Definition node_low_proj_loweq := @labeled_low_proj_loweq node.
+Definition chan_low_proj_loweq := @labeled_low_proj_loweq channel.
+Definition event_low_proj_loweq := @labeled_low_proj_loweq event.
+
 Theorem state_low_proj_loweq: 
     @low_proj_loweq state state_low_proj state_low_eq.
 Proof.
@@ -119,13 +123,13 @@ Qed.
 
 Theorem state_nidx_to_proj_state_idx: forall ell s id n,
     ((nodes s).[? id] = n) ->
-    ((nodes (state_low_proj ell s)).[? id] = (node_low_proj ell n)).
+    ((nodes (state_low_proj ell s)).[? id] = (low_proj ell n)).
 Proof.
 Admitted.
 
 Theorem state_hidx_to_proj_state_hidx: forall ell s h ch,
     ((chans s).[? h] = ch) ->
-    ((chans (state_low_proj ell s)).[? h] = (chan_low_proj ell ch)).
+    ((chans (state_low_proj ell s)).[? h] = (low_proj ell ch)).
 Proof.
 Admitted.
 
@@ -135,7 +139,7 @@ Theorem proj_node_state_to_proj_n: forall ell s id nl n,
     nl.(obj) = Some n ->
     exists nl' n',
         (nodes s).[? id] = nl' /\
-        (node_low_proj ell nl') = nl /\
+        (low_proj ell nl') = nl /\
         nl'.(obj) = Some n'.
 Proof.
 Admitted.
