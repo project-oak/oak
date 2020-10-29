@@ -31,6 +31,9 @@ fn key_pair_serialization_deserialization_test() {
     let pkcs8_key_pair = key_pair.pkcs8_key_pair();
     let parse_result = KeyPair::parse(&pkcs8_key_pair);
     assert_matches!(parse_result, Ok(_));
+    let parsed_key_pair = parse_result.unwrap();
+
+    assert_eq!(key_pair, parsed_key_pair);
 }
 
 #[test]

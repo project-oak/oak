@@ -53,6 +53,17 @@ impl Clone for KeyPair {
     }
 }
 
+impl PartialEq for KeyPair {
+    fn eq(&self, other: &Self) -> bool {
+        // Currently only comparing that the encoded version is the same, since `Ed25519KeyPair`
+        // doesn't implement `Eq` and all of its fields are private.
+        // https://github.com/briansmith/ring/blob/8d4e283c16f335166b0e969ccc321acf0de39c0b/src/ec/curve25519/ed25519/signing.rs#L27-L37
+        self.pkcs8 == other.pkcs8
+    }
+}
+
+impl Eq for KeyPair {}
+
 impl KeyPair {
     /// Generates a Ed25519 key pair.
     pub fn generate() -> anyhow::Result<KeyPair> {
