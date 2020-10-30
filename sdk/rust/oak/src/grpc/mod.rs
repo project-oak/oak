@@ -148,7 +148,8 @@ pub trait ServerNode {
     fn invoke(&mut self, method: &str, req: &[u8], writer: ChannelResponseWriter);
 }
 
-impl<T: ServerNode> crate::CommandHandler<Invocation> for T {
+impl<T: ServerNode> crate::CommandHandler for T {
+    type Command = Invocation;
     /// Handle incoming gRPC events for a [`ServerNode`].
     ///
     /// Invoking the given `node`'s [`invoke`] method for each incoming request that

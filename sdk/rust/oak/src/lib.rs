@@ -419,11 +419,20 @@ pub fn set_panic_hook() {
 ///
 /// It has a single method for handling commands, which are usually received via the single incoming
 /// channel handle which is passed in at Node creation time, or derived from such stream.
-pub trait CommandHandler<T> {
+pub trait CommandHandler {
+    type Command;
     /// Handles a single command instance.
     ///
     /// The return value is only used for logging in case of error.
-    fn handle_command(&mut self, command: T) -> anyhow::Result<()>;
+    fn handle_command(&mut self, command: Self::Command) -> anyhow::Result<()>;
+}
+
+pub trait Creatable: Sized {
+    fn create() -> anyhow::Result<Self>;
+}
+
+pub trait Entrypoint {
+    const ENTRYPOINT_NAME: &'static str;
 }
 
 /// Runs a command loop on the provided [`CommandHandler`]:
@@ -434,7 +443,7 @@ pub trait CommandHandler<T> {
 ///
 /// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just
 /// logged, and the loop continues with the next iteration.
-pub fn run_command_loop<T, N: CommandHandler<T>, R: Iterator<Item = T>>(
+pub fn run_command_loop<N: CommandHandler, R: Iterator<Item = N::Command>>(
     mut command_handler: N,
     command_iterator: R,
 ) {
@@ -568,11 +577,18 @@ macro_rules! entrypoint {
 /// ```
 #[macro_export]
 macro_rules! entrypoint_command_handler {
-    ($name:ident => $handler:expr) => {
+    ($name:ident => $handler:ty) => {
         ::oak::entrypoint!($name < _ > => |receiver: ::oak::io::Receiver<_>| {
             use ::oak::io::ReceiverExt;
-            oak::logger::init_default();
-            oak::run_command_loop($handler, receiver.iter());
+            use ::oak::Creatable;
+            ::oak::logger::init_default();
+            match <$handler>::create() {
+                Ok(handler) => ::oak::run_command_loop(handler, receiver.iter()),
+                Err(err) => ::log::error!("could not create handler: {:?}", err),
+            }
         });
+        impl ::oak::Entrypoint for $handler {
+            const ENTRYPOINT_NAME: &'static str = std::stringify!($name);
+        }
     };
 }

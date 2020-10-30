@@ -80,3 +80,24 @@ pub fn error_from_nonok_status(status: OakStatus) -> io::Error {
         }
     }
 }
+
+pub fn magic<C>(
+    wasm_module_name: &str,
+    node_name: &str,
+    label: &Label,
+) -> Result<Sender<C::Command>, OakStatus>
+where
+    C: crate::CommandHandler + crate::Creatable + crate::Entrypoint,
+    C::Command: Encodable + Decodable,
+{
+    let (sender, receiver) =
+        crate::io::channel_create::<C::Command>(&format!("{}-in", node_name), label)?;
+    crate::node_create(
+        node_name,
+        &crate::node_config::wasm(wasm_module_name, C::ENTRYPOINT_NAME),
+        label,
+        receiver.handle,
+    )?;
+    receiver.close()?;
+    Ok(sender)
+}

@@ -37,10 +37,18 @@ oak::entrypoint_command_handler!(main => Main);
 /// This node is in charge of creating the other top-level nodes, but does not process any request.
 struct Main;
 
-impl oak::CommandHandler<ConfigMap> for Main {
+impl oak::Creatable for Main {
+    fn create() -> anyhow::Result<Self> {
+        Ok(Main)
+    }
+}
+
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
         let grpc_channel =
             oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
+        let sender = oak::io::magic::<Router>("app", "router", &Label::public_untrusted());
         oak::node_create(
             "router",
             &oak::node_config::wasm("app", "router"),
@@ -52,7 +60,7 @@ impl oak::CommandHandler<ConfigMap> for Main {
     }
 }
 
-oak::entrypoint_command_handler!(router => Router::default());
+oak::entrypoint_command_handler!(router => Router);
 
 /// A node that routes each incoming gRPC invocation to a per-room worker node (either pre-existing,
 /// or newly created) that can handle requests with the label of the incoming request.
@@ -88,7 +96,14 @@ fn is_valid_label(_label: &Label) -> bool {
     //     })
 }
 
-impl oak::CommandHandler<oak::grpc::Invocation> for Router {
+impl oak::Creatable for Router {
+    fn create() -> anyhow::Result<Self> {
+        Ok(Router::default())
+    }
+}
+
+impl oak::CommandHandler for Router {
+    type Command = oak::grpc::Invocation;
     fn handle_command(&mut self, command: oak::grpc::Invocation) -> anyhow::Result<()> {
         // The router node has a public confidentiality label, and therefore cannot read the
         // contents of the request of the invocation (unless it happens to be public as well), but
@@ -109,8 +124,8 @@ impl oak::CommandHandler<oak::grpc::Invocation> for Router {
                 // Check if there is a channel to a room with the desired label already, or create
                 // it if not.
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
-                    oak::io::node_create("room", &label, &oak::node_config::wasm("app", "room"))
-                        .expect("could not create node")
+                    oak::io::magic::<ChatDispatcher<Room>>("app", "room", &label)
+                        .expect("could not create room node")
                 });
                 // Send the invocation to the dedicated worker node.
                 channel.send(&command)?;
@@ -123,7 +138,7 @@ impl oak::CommandHandler<oak::grpc::Invocation> for Router {
     }
 }
 
-oak::entrypoint_command_handler!(room => ChatDispatcher::new(Room::default()));
+oak::entrypoint_command_handler!(room => ChatDispatcher<Room>);
 
 /// A worker node implementation for an individual label, corresponding to a chat room between the
 /// set of user that share the key to that chat room.
@@ -165,5 +180,11 @@ impl Chat for Room {
                 "missing message",
             )),
         }
+    }
+}
+
+impl oak::Creatable for Room {
+    fn create() -> anyhow::Result<Self> {
+        Ok(Room::default())
     }
 }

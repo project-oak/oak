@@ -147,6 +147,12 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
                 }
             }
 
+            impl <T: #service_name + #oak_package::Creatable> #oak_package::Creatable for #dispatcher_name<T> {
+                fn create() -> ::anyhow::Result<Self> {
+                    T::create().map(#dispatcher_name::new)
+                }
+            }
+
             #[allow(dead_code)]
             pub struct #client_name(pub #oak_package::grpc::client::Client);
 
