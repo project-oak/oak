@@ -19,4 +19,4 @@ pub mod grpc;
 mod io;
 
 pub use executor::block_on;
-pub use io::{ChannelRead, ChannelReadStream, ReceiverAsync};
+pub use io::{run_command_loop, ChannelRead, ChannelReadStream, ReceiverAsync};
