@@ -890,6 +890,7 @@ dependencies = [
  "prost",
  "prost-build",
  "prost-types",
+ "serde",
 ]
 
 [[package]]

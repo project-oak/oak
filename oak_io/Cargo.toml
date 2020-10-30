@@ -15,6 +15,7 @@ prost = "*"
 prost-types = "*"
 either = "*"
 log = "*"
+serde = { version = "*", features = ["derive"] }
 
 [dev-dependencies]
 assert_matches = "*"
