@@ -267,10 +267,12 @@ pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
 ///
 /// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
 pub fn node_create(
+    name: &str,
     config: &NodeConfiguration,
     label: &Label,
     half: ReadHandle,
 ) -> Result<(), OakStatus> {
+    let name_bytes = name.as_bytes();
     let label_bytes = label.serialize();
     let mut config_bytes = Vec::new();
     config.encode(&mut config_bytes).map_err(|err| {
@@ -279,6 +281,8 @@ pub fn node_create(
     })?;
     let status = unsafe {
         oak_abi::node_create(
+            name_bytes.as_ptr(),
+            name_bytes.len(),
             config_bytes.as_ptr(),
             config_bytes.len(),
             label_bytes.as_ptr(),

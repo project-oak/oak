@@ -87,6 +87,7 @@ pub fn init(level: Level) -> Result<(), SetLoggerError> {
     let (write_handle, read_handle) = crate::channel_create("Logger", &Label::public_untrusted())
         .expect("could not create channel");
     crate::node_create(
+        "log",
         &crate::node_config::log(),
         &Label::public_untrusted(),
         read_handle,

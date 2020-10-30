@@ -166,6 +166,8 @@
                     return status;
                   },
                   node_create: (
+                    nameBuf,
+                    nameSize,
                     configBuf,
                     configLen,
                     labelBuf,
@@ -173,6 +175,9 @@
                     handle
                   ) => {
                     const status = OakStatus.values.OK;
+                    const name = new TextDecoder().decode(
+                      this.readMemory(nameBuf, nameSize)
+                    );
                     const config = NodeConfiguration.decode(
                       this.readMemory(configBuf, configLen)
                     );
@@ -180,12 +185,15 @@
                       this.readMemory(labelBuf, labelSize)
                     );
                     const entry = `${new Date().toISOString()}: node_create(${[
+                      nameBuf,
+                      nameSize,
                       configBuf,
                       configLen,
                       labelBuf,
                       labelSize,
                       handle,
                     ].join(', ')}) -> ${status}
+      name: ${JSON.stringify(name)}
       config: ${JSON.stringify(config)}
       label: ${JSON.stringify(label)}`;
                     this.trace.push(entry);

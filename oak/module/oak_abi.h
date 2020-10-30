@@ -63,8 +63,9 @@ WASM_IMPORT("oak")
 oak_abi::OakStatus node_privilege_read(uint8_t* label_buf, size_t label_size,
                                        uint32_t* actual_size);
 WASM_IMPORT("oak")
-oak_abi::OakStatus node_create(uint8_t* config_buf, size_t config_size, uint8_t* label_buf,
-                               size_t label_size, oak_abi::Handle handle);
+oak_abi::OakStatus node_create(uint8_t* name_buf, size_t name_size, uint8_t* config_buf,
+                               size_t config_size, uint8_t* label_buf, size_t label_size,
+                               oak_abi::Handle handle);
 WASM_IMPORT("oak")
 oak_abi::OakStatus random_get(uint8_t* buf, size_t buf_size);
 

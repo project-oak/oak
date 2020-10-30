@@ -176,7 +176,6 @@ pub fn runtime_config_wasm(
         app_config: ApplicationConfiguration {
             wasm_modules,
             initial_node_configuration: Some(NodeConfiguration {
-                name: "test".to_string(),
                 config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
                     wasm_module_name: module_config_name.to_string(),
                     wasm_entrypoint_name: entrypoint_name.to_string(),

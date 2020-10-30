@@ -60,8 +60,8 @@ fn start_node(
     let (_write_handle, read_handle) = proxy.channel_create("", &Label::public_untrusted())?;
 
     let result = proxy.node_create(
+        "test",
         &NodeConfiguration {
-            name: "test".to_string(),
             config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
                 wasm_module_name: module_name.to_string(),
                 wasm_entrypoint_name: entrypoint_name.to_string(),

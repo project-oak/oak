@@ -190,14 +190,18 @@ fn create_runtime() -> RuntimeProxy {
 fn create_server_node(runtime: &RuntimeProxy, port: u32) -> oak_abi::Handle {
     let (init_receiver, invocation_receiver) = create_communication_channel(runtime);
     let server_config = NodeConfiguration {
-        name: "test_server".to_string(),
         config_type: Some(ConfigType::HttpServerConfig(HttpServerConfiguration {
             address: format!("[::]:{}", port),
         })),
     };
 
     runtime
-        .node_create(&server_config, &Label::public_untrusted(), init_receiver)
+        .node_create(
+            "test_server",
+            &server_config,
+            &Label::public_untrusted(),
+            init_receiver,
+        )
         .expect("Could not create HTTP server node!");
 
     invocation_receiver

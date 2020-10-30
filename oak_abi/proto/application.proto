@@ -52,19 +52,14 @@ message ApplicationConfiguration {
 
 // NodeConfiguration indicates the configuration of a created Node.
 message NodeConfiguration {
-  // Display name of the newly created node instance, for debugging purposes.
-  //
-  // Does not need to be unique.
-  string name = 1;
-
   oneof config_type {
-    WebAssemblyConfiguration wasm_config = 2;
-    LogConfiguration log_config = 3;
-    StorageProxyConfiguration storage_config = 4;
-    GrpcServerConfiguration grpc_server_config = 5;
-    GrpcClientConfiguration grpc_client_config = 6;
-    RoughtimeClientConfiguration roughtime_client_config = 7;
-    HttpServerConfiguration http_server_config = 8;
+    WebAssemblyConfiguration wasm_config = 1;
+    LogConfiguration log_config = 2;
+    StorageProxyConfiguration storage_config = 3;
+    GrpcServerConfiguration grpc_server_config = 4;
+    GrpcClientConfiguration grpc_client_config = 5;
+    RoughtimeClientConfiguration roughtime_client_config = 6;
+    HttpServerConfiguration http_server_config = 7;
   }
 }
 

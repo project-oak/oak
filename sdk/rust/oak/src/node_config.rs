@@ -23,7 +23,6 @@ use oak_abi::proto::oak::application::{
 
 pub fn grpc_client(address: &str) -> NodeConfiguration {
     NodeConfiguration {
-        name: "grpc_client".to_string(),
         config_type: Some(ConfigType::GrpcClientConfig(GrpcClientConfiguration {
             uri: address.to_string(),
         })),
@@ -32,7 +31,6 @@ pub fn grpc_client(address: &str) -> NodeConfiguration {
 
 pub fn grpc_server(address: &str) -> NodeConfiguration {
     NodeConfiguration {
-        name: "grpc_server".to_string(),
         config_type: Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration {
             address: address.to_string(),
         })),
@@ -41,7 +39,6 @@ pub fn grpc_server(address: &str) -> NodeConfiguration {
 
 pub fn http_server(address: &str) -> NodeConfiguration {
     NodeConfiguration {
-        name: "http_server".to_string(),
         config_type: Some(ConfigType::HttpServerConfig(HttpServerConfiguration {
             address: address.to_string(),
         })),
@@ -50,7 +47,6 @@ pub fn http_server(address: &str) -> NodeConfiguration {
 
 pub fn wasm(module_name: &str, entrypoint_name: &str) -> NodeConfiguration {
     NodeConfiguration {
-        name: format!("wasm.{}.{}", module_name, entrypoint_name),
         config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
             wasm_module_name: module_name.to_string(),
             wasm_entrypoint_name: entrypoint_name.to_string(),
@@ -60,7 +56,6 @@ pub fn wasm(module_name: &str, entrypoint_name: &str) -> NodeConfiguration {
 
 pub fn log() -> NodeConfiguration {
     NodeConfiguration {
-        name: "log".to_string(),
         config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
     }
 }

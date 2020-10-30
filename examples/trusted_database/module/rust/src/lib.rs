@@ -83,6 +83,7 @@ impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
         .context("Couldn't create command channel")?;
         // TODO(#1406): Use client assigned label for creating a new handler Node.
         oak::node_create(
+            "handler",
             &oak::node_config::wasm("app", "handler_oak_main"),
             &Label::public_untrusted(),
             receiver.handle,

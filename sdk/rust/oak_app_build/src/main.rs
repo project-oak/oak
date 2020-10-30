@@ -230,7 +230,6 @@ async fn main() -> anyhow::Result<()> {
     let app_config = ApplicationConfiguration {
         wasm_modules: modules,
         initial_node_configuration: Some(NodeConfiguration {
-            name: manifest.name.clone(),
             config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
                 wasm_module_name: manifest.initial_node_configuration.wasm_module_name,
                 wasm_entrypoint_name: manifest.initial_node_configuration.wasm_entrypoint_name,

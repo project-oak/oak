@@ -53,7 +53,6 @@ mod common {
                 "module".to_string() => binary,
             },
             initial_node_configuration: Some(NodeConfiguration {
-                name: "test".to_string(),
                 config_type: Some(ConfigType::WasmConfig(WebAssemblyConfiguration {
                     wasm_module_name: "module".to_string(),
                     wasm_entrypoint_name: "oak_main".to_string(),

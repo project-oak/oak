@@ -35,7 +35,12 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
         crate::io::channel_create::<GrpcInvocationSender>("gRPC init", &Label::public_untrusted())
             .expect("Couldn't create init channel to gRPC server pseudo-node");
     let config = crate::node_config::grpc_server(address);
-    crate::node_create(&config, &Label::public_untrusted(), init_receiver.handle)?;
+    crate::node_create(
+        "grpc_server",
+        &config,
+        &Label::public_untrusted(),
+        init_receiver.handle,
+    )?;
     init_receiver
         .close()
         .expect("Couldn't close init channel to gRPC server pseudo-node");

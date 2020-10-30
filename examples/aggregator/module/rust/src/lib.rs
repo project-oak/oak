@@ -214,6 +214,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     )
     .expect("Couldn't create channel to aggregator node");
     oak::node_create(
+        "aggregator",
         &oak::node_config::wasm("app", "aggregator"),
         &Label::public_untrusted(),
         aggregator_receiver.handle,
@@ -236,9 +237,12 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     //     }],
     //     integrity_tags: vec![],
     // };
-    let grpc_client =
-        oak::grpc::client::Client::new(&oak::node_config::grpc_client("https://localhost:8888"))
-            .expect("Couldn't create gRPC client");
+    let grpc_client = oak::grpc::client::Client::new(
+        "grpc_client",
+        &oak::node_config::grpc_client("https://localhost:8888"),
+        &Label::public_untrusted(),
+    )
+    .expect("Couldn't create gRPC client");
 
     // Send the initialization message to Aggregator Node containing a gRPC server invocation
     // receiver and a gRPC client invocation sender.
