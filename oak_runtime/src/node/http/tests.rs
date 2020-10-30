@@ -15,9 +15,13 @@
 //
 
 use super::*;
+use crate::{
+    io::{ReceiverExt, SenderExt},
+    node::Node,
+};
 use maplit::hashmap;
 use oak_abi::{
-    label::Label,
+    label::{confidentiality_label, tls_endpoint_tag, Label},
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, HttpServerConfiguration,
         NodeConfiguration,
@@ -28,12 +32,12 @@ use std::fs;
 static LOCAL_CA: &str = "../examples/certs/local/ca.pem";
 static GCP_CA: &str = "../examples/certs/gcp/ca.pem";
 
-/// A simple Oak node that responds with 200 (OK) to every request it receives
-struct OakNodeForTest;
+/// A router node that creates a per-request [`EchoNode`] for each incoming request.
+struct RouterNode;
 
-impl crate::node::Node for OakNodeForTest {
+impl Node for RouterNode {
     fn node_type(&self) -> &'static str {
-        "test"
+        "test-router"
     }
     fn run(
         self: Box<Self>,
@@ -45,22 +49,98 @@ impl crate::node::Node for OakNodeForTest {
         let invocation_receiver = Receiver::<HttpInvocation>::new(ReadHandle { handle });
 
         while let Ok(invocation) = invocation_receiver.receive(&runtime) {
+            // Compare the request and response labels. If the echo-node (which gets the
+            // request-label) can write to the response-channel, let the `EchoNode` send the
+            // response. Otherwise, the RouterNode should send the response to the caller.
+            let request_label = invocation
+                .clone()
+                .receiver
+                .unwrap()
+                .label(&runtime)
+                .unwrap();
+            let response_label = invocation.clone().sender.unwrap().label(&runtime).unwrap();
+            let can_reply = request_label.flows_to(&response_label);
+            let echo_node = EchoNode { can_reply };
+
+            // Create a public init channel to send the invocation to the `EchoNode`.
+            let (write_handle, read_handle) = runtime
+                .channel_create("echo-init", &Label::public_untrusted())
+                .unwrap();
+
+            // Send the newly created invocation to the request channel.
+            let invocation_sender = crate::io::Sender::new(WriteHandle {
+                handle: write_handle,
+            });
+            invocation_sender
+                .send(invocation.clone(), &runtime)
+                .unwrap();
+            if let Err(error) = invocation_sender.close(&runtime) {
+                panic!("Could not close the `invocation_sender` channel: {}", error);
+            }
+            runtime
+                .node_register(
+                    Box::new(echo_node),
+                    "echo_name",
+                    &request_label,
+                    read_handle,
+                )
+                .unwrap();
+
+            if !can_reply {
+                // If the `EchoNode` cannot respond, send a 200 (OK) response to the user.
+                let resp = HttpResponse {
+                    body: vec![],
+                    status: http::status::StatusCode::OK.as_u16() as i32,
+                    headers: None,
+                };
+                invocation
+                    .sender
+                    .expect("Empty sender on invocation.")
+                    .send(resp, &runtime)
+                    .unwrap();
+            }
+        }
+    }
+}
+
+/// A simple Oak node that responds with 200 (OK) to every request it receives, and echos the
+/// request body and headers in the response.
+struct EchoNode {
+    can_reply: bool,
+}
+
+impl Node for EchoNode {
+    fn node_type(&self) -> &'static str {
+        "test-echo"
+    }
+
+    fn run(
+        self: Box<Self>,
+        runtime: RuntimeProxy,
+        handle: oak_abi::Handle,
+        _notify_receiver: oneshot::Receiver<()>,
+    ) {
+        let invocation_receiver = Receiver::<HttpInvocation>::new(ReadHandle { handle });
+        if let Ok(invocation) = invocation_receiver.receive(&runtime) {
             let request = invocation
                 .receiver
                 .unwrap()
                 .receive(&runtime)
                 .expect("Could not receive the request");
 
-            let resp = HttpResponse {
-                body: request.body,
-                status: http::status::StatusCode::OK.as_u16() as i32,
-                headers: request.headers,
-            };
-            invocation
-                .sender
-                .expect("Empty sender on invocation.")
-                .send(resp, &runtime)
-                .unwrap();
+            info!("Got the request: {:?}", request);
+            if self.can_reply {
+                let resp = HttpResponse {
+                    body: request.body,
+                    status: http::status::StatusCode::OK.as_u16() as i32,
+                    headers: request.headers,
+                };
+                invocation
+                    .sender
+                    .expect("Empty sender on invocation.")
+                    .send(resp, &runtime)
+                    .unwrap();
+            }
         }
     }
 }
@@ -79,7 +159,7 @@ impl HttpServerTester {
         // Create an Oak node that responds with 200 (OK) to every request it receives.
         runtime
             .node_register(
-                Box::new(OakNodeForTest),
+                Box::new(RouterNode),
                 "oak_node_for_test",
                 &Label::public_untrusted(),
                 invocation_receiver,
@@ -112,7 +192,12 @@ async fn test_https_server_can_serve_https_requests() {
     let client_with_valid_tls = create_client(LOCAL_CA);
 
     // Send an HTTPS request, and check that response has StatusCode::OK
-    let resp = send_request(client_with_valid_tls, "https://localhost:2525").await;
+    let resp = send_request(
+        client_with_valid_tls,
+        "https://localhost:2525",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_ok());
     let resp = resp.unwrap();
     assert_eq!(resp.status(), http::status::StatusCode::OK.as_u16());
@@ -134,7 +219,12 @@ async fn test_https_server_cannot_serve_http_requests() {
     let client_with_valid_tls = create_client(LOCAL_CA);
 
     // Send an HTTP request, and check that the server responds with an error
-    let resp = send_request(client_with_valid_tls, "http://localhost:2526").await;
+    let resp = send_request(
+        client_with_valid_tls,
+        "http://localhost:2526",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_err());
 
     // Stop the runtime and the servers
@@ -151,17 +241,58 @@ async fn test_https_server_does_not_terminate_after_a_bad_request() {
     let client_with_invalid_tls = create_client(GCP_CA);
 
     // Send a valid request, making sure that the server is started
-    let resp = send_request(client_with_valid_tls.clone(), "https://localhost:2527").await;
+    let resp = send_request(
+        client_with_valid_tls.clone(),
+        "https://localhost:2527",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_ok());
 
     // Send an HTTPS request with invalid certificate, and check that the server responds with error
-    let resp = send_request(client_with_invalid_tls, "https://localhost:2527").await;
+    let resp = send_request(
+        client_with_invalid_tls,
+        "https://localhost:2527",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_err());
 
     // Send another valid request, and check that the server is alive and responsive
     // let client_with_valid_tls = create_client(LOCAL_CA);
-    let resp = send_request(client_with_valid_tls, "https://localhost:2527").await;
+    let resp = send_request(
+        client_with_valid_tls,
+        "https://localhost:2527",
+        Label::public_untrusted(),
+    )
+    .await;
     assert!(resp.is_ok());
+
+    // Stop the runtime and the servers
+    http_server_tester.cleanup();
+}
+
+#[tokio::test]
+async fn test_https_server_can_serve_https_requests_with_non_empty_request_label() {
+    init_logger();
+
+    // Start a runtime with an HTTP server node, and a thread simulating an Oak node to respond to
+    // HTTP requests.
+    let mut http_server_tester = HttpServerTester::new(2528);
+    let client_with_valid_tls = create_client(LOCAL_CA);
+
+    // TODO(#1357): Use the user's identity as the label
+    let label = confidentiality_label(tls_endpoint_tag("localhost"));
+
+    // Send an HTTPS request, and check that response has StatusCode::OK
+    let resp = send_request(client_with_valid_tls, "https://localhost:2528", label).await;
+    assert!(resp.is_ok());
+    let resp = resp.unwrap();
+    assert_eq!(resp.status(), http::status::StatusCode::OK.as_u16());
+    // TODO(#1357): Uncomment when the user's identity is set as the label
+    // assert!(resp
+    //     .headers()
+    //     .contains_key(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY));
 
     // Stop the runtime and the servers
     http_server_tester.cleanup();
@@ -264,13 +395,14 @@ fn create_client(
 async fn send_request(
     client: hyper::client::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
     uri: &str,
+    label: Label,
 ) -> Result<http::response::Response<hyper::Body>, hyper::Error> {
     // Send a request, and wait for the response
-    let label = oak_abi::label::Label::public_untrusted();
     let mut label_bytes = vec![];
     if let Err(err) = label.encode(&mut label_bytes) {
         panic!("Failed to encode label: {}", err);
     }
+    let label_bytes = base64::encode(label_bytes);
 
     // The client thread may start sending the requests before the server is up. In this case, the
     // request will be rejected with a "ConnectError". To make the tests are stable, we need to
