@@ -21,12 +21,12 @@
 
 // TODO(#544)
 
-use crate::io::SenderExt;
+use crate::io::{Sender, SenderExt};
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 use oak_abi::label::Label;
 
 struct OakChannelLogger {
-    channel: crate::io::Sender<oak_services::proto::oak::log::LogMessage>,
+    channel: Sender<oak_services::proto::oak::log::LogMessage>,
 }
 
 impl Log for OakChannelLogger {
@@ -83,21 +83,14 @@ pub fn init_default() {
 ///
 /// An error is returned if a logger has already been set.
 pub fn init(level: Level) -> Result<(), SetLoggerError> {
-    // Create a channel and pass the read half to a fresh logging Node.
-    let (write_handle, read_handle) = crate::channel_create("Logger", &Label::public_untrusted())
-        .expect("could not create channel");
-    crate::node_create(
+    let sender = crate::io::node_create(
         "log",
-        &crate::node_config::log(),
         &Label::public_untrusted(),
-        read_handle,
+        &crate::node_config::log(),
     )
-    .expect("could not create node");
-    crate::channel_close(read_handle.handle).expect("could not close channel");
+    .expect("could not create log node");
 
-    log::set_boxed_logger(Box::new(OakChannelLogger {
-        channel: crate::io::Sender::new(write_handle),
-    }))?;
+    log::set_boxed_logger(Box::new(OakChannelLogger { channel: sender }))?;
     log::set_max_level(level.to_level_filter());
     Ok(())
 }

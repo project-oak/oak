@@ -27,13 +27,26 @@ pub use oak_io::{Decodable, Encodable, Message, Receiver, Sender};
 pub use receiver::ReceiverExt;
 pub use sender::SenderExt;
 
-/// Create a new channel for transmission of `Encodable` and `Decodable` types.
+/// Creates a new channel for transmission of [`Encodable`] and [`Decodable`] types.
 pub fn channel_create<T: Encodable + Decodable>(
     name: &str,
     label: &Label,
 ) -> Result<(Sender<T>, Receiver<T>), OakStatus> {
     let (wh, rh) = crate::channel_create(name, label)?;
     Ok((Sender::<T>::new(wh), Receiver::<T>::new(rh)))
+}
+
+/// Creates a node and corresponding inbound channel of the same type, and returns [`Sender`] for
+/// such channel.
+pub fn node_create<T: Encodable + Decodable>(
+    name: &str,
+    label: &Label,
+    node_config: &crate::NodeConfiguration,
+) -> Result<Sender<T>, OakStatus> {
+    let (sender, receiver) = channel_create(&format!("{}-in", name), label)?;
+    crate::node_create(name, node_config, label, receiver.handle)?;
+    receiver.close()?;
+    Ok(sender)
 }
 
 /// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].
