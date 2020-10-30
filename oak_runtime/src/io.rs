@@ -18,7 +18,7 @@
 
 use crate::RuntimeProxy;
 use log::{error, info};
-use oak_abi::{ChannelReadStatus, OakStatus};
+use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
 use oak_io::{Decodable, Encodable, OakError};
 pub use oak_io::{Receiver, Sender};
 
@@ -29,6 +29,9 @@ pub trait ReceiverExt<T> {
 
     /// Waits, reads and decodes a message from the [`Receiver::handle`].
     fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakError>;
+
+    /// Gets the label associated with this receiver.
+    fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError>;
 }
 
 impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
@@ -64,6 +67,13 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
             }
         }
     }
+
+    /// Gets the label associated with this receiver.
+    fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError> {
+        runtime
+            .get_channel_label(self.handle.handle)
+            .map_err(|err| err.into())
+    }
 }
 
 /// Extension trait for runtime-specific Sender functionality.
@@ -73,6 +83,9 @@ pub trait SenderExt<T> {
 
     /// Encodes and sends a message to the [`Sender::handle`].
     fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError>;
+
+    /// Gets the label associated with this sender.
+    fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError>;
 }
 
 impl<T: Encodable> SenderExt<T> for Sender<T> {
@@ -88,5 +101,12 @@ impl<T: Encodable> SenderExt<T> for Sender<T> {
         runtime
             .channel_write(self.handle.handle, message.encode()?)
             .map_err(|error| error.into())
+    }
+
+    /// Gets the label associated with this sender.
+    fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError> {
+        runtime
+            .get_channel_label(self.handle.handle)
+            .map_err(|err| err.into())
     }
 }

@@ -657,11 +657,7 @@ impl Runtime {
         handle: oak_abi::Handle,
         capacity: usize,
     ) -> Result<LabelReadStatus, OakStatus> {
-        let half = self.abi_to_half(node_id, handle)?;
-        let label = match half.direction {
-            ChannelHalfDirection::Read => self.get_reader_channel_label(&half)?,
-            ChannelHalfDirection::Write => self.get_writer_channel_label(&half)?,
-        };
+        let label = self.get_channel_label(node_id, handle)?;
         serialize_label(label, capacity)
     }
 
@@ -688,6 +684,19 @@ impl Runtime {
         capacity: usize,
     ) -> Result<LabelReadStatus, OakStatus> {
         serialize_label(self.get_node_privilege(node_id).into(), capacity)
+    }
+
+    /// Returns the [`Label`] associated with the channel handle.
+    fn get_channel_label(
+        &self,
+        node_id: NodeId,
+        handle: oak_abi::Handle,
+    ) -> Result<Label, OakStatus> {
+        let half = self.abi_to_half(node_id, handle)?;
+        match half.direction {
+            ChannelHalfDirection::Read => self.get_reader_channel_label(&half),
+            ChannelHalfDirection::Write => self.get_writer_channel_label(&half),
+        }
     }
 
     /// Returns whether the given Node is allowed to read from the provided channel read half,
