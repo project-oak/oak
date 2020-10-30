@@ -394,6 +394,17 @@
 <span id="391">391</span>
 <span id="392">392</span>
 <span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -772,6 +783,17 @@
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;{:?}: get_serialized_node_privilege(capacity={}) -&gt; {:?}&quot;</span>,
             <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">capacity</span>, <span class="ident">result</span>
+        );
+        <span class="ident">result</span>
+    }
+
+    <span class="doccomment">/// See [`Runtime::get_channel_label`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_channel_label</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{:?}: get_channel_label({})&quot;</span>, <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">handle</span>);
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">get_channel_label</span>(<span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">handle</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{:?}: get_channel_label({}) -&gt; {:?}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">result</span>
         );
         <span class="ident">result</span>
     }

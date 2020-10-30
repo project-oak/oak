@@ -1376,6 +1376,15 @@
 <span id="1373">1373</span>
 <span id="1374">1374</span>
 <span id="1375">1375</span>
+<span id="1376">1376</span>
+<span id="1377">1377</span>
+<span id="1378">1378</span>
+<span id="1379">1379</span>
+<span id="1380">1380</span>
+<span id="1381">1381</span>
+<span id="1382">1382</span>
+<span id="1383">1383</span>
+<span id="1384">1384</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -2036,11 +2045,7 @@
         <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
         <span class="ident">capacity</span>: <span class="ident">usize</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">label</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
-            <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>)<span class="question-mark">?</span>,
-            <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>)<span class="question-mark">?</span>,
-        };
+        <span class="kw">let</span> <span class="ident">label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_channel_label</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
         <span class="ident">serialize_label</span>(<span class="ident">label</span>, <span class="ident">capacity</span>)
     }
 
@@ -2067,6 +2072,19 @@
         <span class="ident">capacity</span>: <span class="ident">usize</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LabelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="ident">serialize_label</span>(<span class="self">self</span>.<span class="ident">get_node_privilege</span>(<span class="ident">node_id</span>).<span class="ident">into</span>(), <span class="ident">capacity</span>)
+    }
+
+    <span class="doccomment">/// Returns the [`Label`] associated with the channel handle.</span>
+    <span class="kw">fn</span> <span class="ident">get_channel_label</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
+        <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
+        <span class="kw">match</span> <span class="ident">half</span>.<span class="ident">direction</span> {
+            <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>),
+            <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>),
+        }
     }
 
     <span class="doccomment">/// Returns whether the given Node is allowed to read from the provided channel read half,</span>
