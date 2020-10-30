@@ -37,7 +37,9 @@ oak::entrypoint_command_handler!(main => Main);
 /// This node is in charge of creating the other top-level nodes, but does not process any request.
 struct Main;
 
-impl oak::CommandHandler<ConfigMap> for Main {
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
+
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
         let grpc_channel =
             oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
@@ -88,7 +90,9 @@ fn is_valid_label(_label: &Label) -> bool {
     //     })
 }
 
-impl oak::CommandHandler<oak::grpc::Invocation> for Router {
+impl oak::CommandHandler for Router {
+    type Command = oak::grpc::Invocation;
+
     fn handle_command(&mut self, command: oak::grpc::Invocation) -> anyhow::Result<()> {
         // The router node has a public confidentiality label, and therefore cannot read the
         // contents of the request of the invocation (unless it happens to be public as well), but

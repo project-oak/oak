@@ -72,7 +72,9 @@ pub struct TrustedDatabaseNode {
     points_of_interest: PointOfInterestMap,
 }
 
-impl CommandHandler<grpc::Invocation> for TrustedDatabaseNode {
+impl CommandHandler for TrustedDatabaseNode {
+    type Command = grpc::Invocation;
+
     fn handle_command(&mut self, invocation: grpc::Invocation) -> anyhow::Result<()> {
         // Create a client request handler Node.
         debug!("Creating handler Node");
