@@ -579,6 +579,12 @@
 <span id="576">576</span>
 <span id="577">577</span>
 <span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -1001,11 +1007,14 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// It has a single method for handling commands, which are usually received via the single incoming</span>
 <span class="doccomment">/// channel handle which is passed in at Node creation time, or derived from such stream.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CommandHandler</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CommandHandler</span> {
+    <span class="doccomment">/// Type of the command that is handled by this instance.</span>
+    <span class="kw">type</span> <span class="ident">Command</span>;
+
     <span class="doccomment">/// Handles a single command instance.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The return value is only used for logging in case of error.</span>
-    <span class="kw">fn</span> <span class="ident">handle_command</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">command</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">handle_command</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">command</span>: <span class="self">Self</span>::<span class="ident">Command</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
 }
 
 <span class="doccomment">/// Runs a command loop on the provided [`CommandHandler`]:</span>
@@ -1016,7 +1025,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just</span>
 <span class="doccomment">/// logged, and the loop continues with the next iteration.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_command_loop</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>: <span class="ident">CommandHandler</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">R</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_command_loop</span><span class="op">&lt;</span><span class="ident">N</span>: <span class="ident">CommandHandler</span>, <span class="ident">R</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">N</span>::<span class="ident">Command</span><span class="op">&gt;</span><span class="op">&gt;</span>(
     <span class="kw-2">mut</span> <span class="ident">command_handler</span>: <span class="ident">N</span>,
     <span class="ident">command_iterator</span>: <span class="ident">R</span>,
 ) {
@@ -1045,8 +1054,9 @@
 <span class="doccomment">/// #[derive(Default)]</span>
 <span class="doccomment">/// struct DummyNode;</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// impl oak::CommandHandler&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
+<span class="doccomment">/// impl oak::CommandHandler for DummyNode {</span>
 <span class="doccomment">///     // ...</span>
+<span class="doccomment">///     # type Command = oak::grpc::Invocation;</span>
 <span class="doccomment">///     # fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; anyhow::Result&lt;()&gt; {</span>
 <span class="doccomment">///     #     unimplemented!()</span>
 <span class="doccomment">///     # }</span>
@@ -1085,7 +1095,8 @@
 <span class="doccomment">/// # #[derive(Default)]</span>
 <span class="doccomment">/// # struct DummyNode;</span>
 <span class="doccomment">/// #</span>
-<span class="doccomment">/// # impl oak::CommandHandler&lt;oak::grpc::Invocation&gt; for DummyNode {</span>
+<span class="doccomment">/// # impl oak::CommandHandler for DummyNode {</span>
+<span class="doccomment">/// #     type Command = oak::grpc::Invocation;</span>
 <span class="doccomment">/// #     fn handle_command(&amp;mut self, command: oak::grpc::Invocation) -&gt; anyhow::Result&lt;()&gt; {</span>
 <span class="doccomment">/// #         unimplemented!()</span>
 <span class="doccomment">/// #     }</span>
@@ -1139,7 +1150,8 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// struct Main;</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// impl oak::CommandHandler&lt;ConfigMap&gt; for Main {</span>
+<span class="doccomment">/// impl oak::CommandHandler for Main {</span>
+<span class="doccomment">///     type Command = ConfigMap;</span>
 <span class="doccomment">///     fn handle_command(&amp;mut self, command: ConfigMap) -&gt; anyhow::Result&lt;()&gt; {</span>
 <span class="doccomment">///         // ...</span>
 <span class="doccomment">/// #        unimplemented!()</span>
