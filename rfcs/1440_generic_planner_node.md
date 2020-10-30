@@ -54,6 +54,10 @@ still strongly constrained.
 
 ## Detailed Design
 
+It is not yet clear what the best mark-up/serialisation format is to use for the
+manifest files, so for now the examples are written as Rust struct
+instantiations (but in some cases some fields are ommited for brevity).
+
 ### Planner Node
 
 The planner node will be the initial node created for an application. The
@@ -67,6 +71,11 @@ responsibility of each of the nodes to store these channels for future
 communications with other nodes. It will send a filtered version of the config
 map as part of the initialisation message, based on the configuration keys
 specified in the `config_files` field.
+
+The planner node will also create the required pseudo nodes based on the
+configuration. The initial version will only support a single gRPC server pseudo
+node and won't support HTTP server pseudo nodes. If required, support for these
+can be added as later improvements.
 
 ### Node and Channel Creation
 
@@ -82,135 +91,151 @@ trigger for dynamic node creation will be incoming invocations. The label of the
 channel associated with the request receiver on the invocation will be used to
 match the template label pattern and extract the parameters.
 
-A sub-graph template will also be able to define whether it is persistent or
-not. If it is persistent, an instance will be created the first time it is
-needed for a specific label. For future instances of the same label it will
-reuse the already-created nodes and channels. If it is not persistent, the
-subgraph will be recreated every time a matching label arrives. It is the
-responsibility of the nodes in question to close the channels and terminate once
-processing is complete to avoid running out of resources.
+A sub-graph template will also be able to define whether it is reusable or not.
+If it is reusable, an instance will be created the first time it is needed for a
+specific label on an incoming invocation. For future instances of the same label
+it will reuse the already-created invocation channels assocaited with that
+label. If it is not reusable, a new copy of the subgraph will be recreated every
+time a matching label arrives on a new gRPC invocation. The planner node will
+close the invocation channel to the non-reusable sub-graph immdeidately after it
+sent the invocation.
 
 The template will contain definitions of nodes and channels to be created. These
-definitions can use the parameters for specifying labels, names etc. The
-template will support a formatting mechanism to replace placeholders with
-parameter values. In most cases the parameter values will be byte arrays. The
-formatting will allow specification of conversions to strings so that it could
-be used in names etc. Initially only base64 encoding will be supported for
-converting from bytes to strings.
+definitions can use the parameters for specifying labels, names using a template
+string format. The template string formatting mechanism will replace
+placeholders with parameter values. In the case of public key identity tags, the
+extracted values will be byte arrays. The formatting will convert the byte array
+to a base64 encoding so that the resulting string will always be a valid string.
 
-As an example, if a parameter named `user_id` is extracted for the label, a
-user-specific node can use the base64 encoding of the user id to create a unique
-name:
+As an example, if a parameter named `user_id` is extracted from a specific
+public key identity tag, a user-specific node can use the base64 encoding of the
+user id to create a unique name:
 
-```toml
-[node_template]
-name = "user_{base64($user_id)}"
+```rust
+
+NodeTemplate { name: "user_{$user_id}", ... }
 
 ```
 
 The initial impementation of dynamic node creation will focus only on support
-for per-user labels, as it is the first motivating example we have. Each
-extracted parameter will be the matching bytes that represent the user identity
-(currently the HMAC of the bearer token, but in future it would be the user's
-public key).
+for public key labels (usualy this is per-user), as it is the first motivating
+example we have. Each extracted parameter will be the matching bytes that
+represent the public key.
 
 A new LabelTemplate protobuf object will be implemented to support parameterised
 labels. It will reuse the existing tags from the Label, but also add templated
 tags. These can be used for matching labels and extracting parameters, as well
 as generating concrete label instances given a parameter value.
 
-```proto
+```Proto
 
-// Template for generating labels given parameter values, or matching labels
-// and extracting parameter values.
+// Template for doing a wildcard match on a public key identity tag and
+// extracting the public key as a named paramter, or for generating a new public
+// key identity tag when given named parameter values.
+message PublicKeyIdentityTemplate {
+  string public_key_parameter_name = 1;
+}
+
+// Templated tags for supporting templated labels.
+message TagTemplate {
+  oneof tag {
+    PublicKeyIdentityTag public_key_identity_tag = 1;
+    // The first version will only support public key identity-based templates.
+    PublicKeyIdentityTemplate public_key_identity_tag = 2;
+    WebAssemblyModuleTag web_assembly_module_tag = 3;
+    WebAssemblyModuleSignatureTag web_assembly_module_signature_tag = 4;
+    TlsEndpointTag tls_endpoint_tag = 5;
+  }
+}
+
+// Template for pattern matching labels and extracting parameter values, or for
+// generating labels when given named parameter values.
 message LabelTemplate {
   repeated TagTemplate confidentiality_tags = 1;
   repeated TagTemplate integrity_tags = 2;
 }
 
-// Template for generating a user-specific gRPC tag given a user ID, or for
-// extracting a user ID parameter from a matched gRPC tag.
-message GrpcTagTemplate {
-  string user_id_parameter_name = 1;
-}
+```
 
+As an example, the following label template can be used to match a label that
+contains exactly one "wildcard" public key identity confidentiality tag and a
+specific Wasm confidentiality tag. It will extract the value of the public key
+from the identity tag as a parameter named "user_id".
 
-// Templated tags for supporting templated labels.
-message TagTemplate {
-  oneof tag {
-    GrpcTag grpc_tag = 1;
-    GrpcTagTemplate grpc_tag_template = 1;
-    WebAssemblyModuleTag web_assembly_module_tag = 2;
-    WebAssemblyModuleSignatureTag web_assembly_module_signature_tag = 3;
-    TlsEndpointTag tls_endpoint_tag = 4;
-  }
+```Rust
+
+let template = LabelTemplate {
+  confidentiality_tags: vec![
+    Tag::PublicKeyIdentityTemplate(
+      PublicKeyIdentityTemplate {
+        public_key_parameter_name: "user_id",
+      }
+    ),
+    Tag::WebAssemblyModuleTag(
+      WebAssemblyModuleTag {
+        web_assembly_module_hash_sha_256 = ...
+      }
+    ),
+  ],
+  integrity_tags: vec![],
 }
 
 ```
 
-As an example, the following can be used to define a label template matching a
-user-specific gRPC confidentiality tag and extracting the byte-array content of
-the tag as a parameter named user_id:
+The same label template can be used to construct a concrete label with the
+specified Wasm confidentiality tag and a specific public key identity tag by
+providing a parameter value named "user_id".
 
-```toml
-[[label_template.confidentiality_tags]]
+Potential example code:
 
-[label_template.confidentiality_tags.tag.grpc_tag_template]
-user_id_parameter_name = "user_id"
+```Rust
+
+fn match_and_extract(
+  template: LabelTemplate,
+  label: Label,
+) -> Result<NamedParameters, MatchError> {
+  ...;
+}
+
+fn label_from_template(
+  template: LabelTemplate,
+  parameters: NamedParameters,
+) -> Result<Label, TemplateError> {
+  ...;
+}
+
+let label = ...;
+let parameters = match_and_extract(template, label).unwrap();
+
+let new_label = label_from_template(template, parameters).unwrap();
+
+assert_eq!(label, new_label);
 
 ```
-
-Note: I am unsure about the exact TOML representation for this.
-
-Question: In general TOML is not great for deeply nested object hierarchies, so
-we should perhaps consider a different serialisation format. Prost does not
-support text-serialised protos. JSON is an option, but not that great for human
-readable config. YAML can handle the complex object hierarchies, but the
-specification is very complex and parsing YAML is considered risky due to
-potential of injection vulnerabilities that is common when trying to support
-dynamic local object creation as defined by the specification. The application
-configuration is in TOML format, so having to deal with multiple serialisation
-formats when creating an application is not a great developer experience. Is
-there a suitable format that will work for everything?
 
 ### Invocation Routing
 
-The planner node will be responsible for creating the required pseudo nodes as
-well. In the specific cases of HTTP- and gRPC pseudo nodes each pseudo node will
-send all invocations over a single dedicated invocation channel. The planner
-node will, by default, have the handle to receive these invocations and
-therefore be responsible for routing them to the right Wasm nodes based on the
-associated labels (specifically the label associated with the request receiver
-channel should match the label of the target Wasm node). Since it would be
-possible for multiple Wasm nodes to share the same label, the planner node would
-need an indication of which Wasm node should receive invocations with a specific
-label on the request receiver channel.
-
-If more advanced routing is required, the planner node could forward the
-invocation receiver channel to another node that can do the routing. The problem
-in this case is that the new node would have to be responsible for creating any
-per-label nodes as well if these nodes must be dynamically created, seeing that
-the planner node will no longer be able to see incoming invocations.
-
-Questions:
-
-- Would there be a requirement for multiple gRPC server pseudo nodes running on
-  different ports to each have a different configuration for Invocation routing?
-- Should we use special handling of channel types to determine the targets for
-  routing, or should we mark specific nodes as targeted invocation receivers?
-- Should we support overriding all routing so that the planner node still
-  receives all invocations, but always forward it to a single specified node
-  that is responsible for the routing?
+The planner node will also act as the router node. It will be responsible for
+creating the required pseudo nodes, including the gRPC pseudo node. In the
+specific cases of gRPC pseudo nodes it will send all invocations over a single
+dedicated invocation channel. The planner node will, by default, have the handle
+to receive these invocations and therefore be responsible for routing them to
+the right Wasm nodes based on the associated labels (specifically the label
+associated with the request receiver channel should match the label of the
+target Wasm node). Since it would be possible for multiple Wasm nodes to share
+the same label, the planner node would need an indication of which Wasm node
+should receive invocations with a specific label on the request receiver
+channel.
 
 ### Manifest File
 
 The manifest file will be passed to the application as part of the initial
-configuration map as a TOML file. The assumption is that each application will
-have one unique node graph manifest file, which will be maintained by the
-developer of the application. The node graph manifest should be consistent with
-the application configuration file and the defense-in-depth restrictions. As
-part of the future work we plan on building analysis tools to validate that this
-is the case.
+configuration map in some serialised format (details TBD). The assumption is
+that each application will have one unique node graph manifest file, which will
+be maintained by the developer of the application. The node graph manifest
+should be consistent with the application configuration file and the
+defense-in-depth restrictions. As part of the future work we plan on building
+analysis tools to validate that this is the case.
 
 The file will be deserialised into the following structure:
 
@@ -233,20 +258,15 @@ struct Node {
   config_files: Vec<String>,
 
   /// Whether this node should be the target node for all gRPC invocations
-  /// targeted at the specified label. This is only used if the planner node is
-  /// also responsible for invocation routing.
+  /// targeted at the specified label.
   ///
-  /// Note: it should be validated that this value is only true for one node
-  /// per label.
+  /// Note: it should be validated that this value is true for at most one node
+  /// per label. If multiple nodes with the same label has this value set to
+  /// true, the router would not know which node to use. If node nodes with a
+  /// specific label has the value set to true, the router node will not be
+  /// able to route incoming invocations for that label and will return an
+  /// error to the caller (not found).
   grpc_invocation_receiver: bool,
-
-  /// Whether this node should be the target node for all HTTP invocations
-  /// targeted at the specified label. This is only used if the planner node is
-  /// also responsible for invocation routing.
-  ///
-  /// Note: it should be validated that this value is only true for one node
-  /// per label.
-  http_invocation_receiver: bool,
 }
 
 /// A static channel definition.
@@ -271,7 +291,8 @@ struct Channel {
 
 /// A dyanimc node definition template.
 struct NodeTemplate {
-  /// Unique name for the node.
+  /// The template for constructing a unique name for the node. This can contain
+  /// tokens, e.g "user_{$user_id}".
   name: String,
 
   /// The template for constructing the label associated with the node using
@@ -301,9 +322,10 @@ struct NodeTemplate {
   http_invocation_receiver: bool,
 }
 
-/// A static channel definition.
+/// A dynamic channel definition template.
 struct ChannelTemplate {
-  /// Unique name of the channel.
+  /// The template for createing the unique name of the channel. This can
+  /// contain tokens, e.g "user_{$user_id}".
   name: String,
 
   /// The template for constructing the label associated with the channel using
@@ -311,14 +333,16 @@ struct ChannelTemplate {
   label: LabelTemplate,
 
   /// The name of the node that will receive the handle for the receiver half
-  /// of the channel.
+  /// of the channel. This can be a template as well and can contain tokens,
+  /// e.g "user_{$user_id}".
   ///
   /// Note: this is in anticipation of changing channels to a multi-producer,
   /// single-consumer model to resolve #1197.
   receiver_node: String,
 
   /// The names of nodes that will receive handles to the write-half of the
-  /// channel.
+  /// channel. These can be templates as well and therefor can contain tokens,
+  /// e.g "user_{$user_id}".
   sender_nodes: Vec<String>,
 }
 
