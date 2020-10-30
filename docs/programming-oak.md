@@ -488,17 +488,8 @@ to the room:
 [embedmd]:# (../examples/chat/module/rust/src/lib.rs Rust /.*self\.rooms\.entry\(/ /\}\);$/)
 ```Rust
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
-                    let (wh, rh) = oak::io::channel_create("Room init", &label)
-                        .expect("could not create channel");
-                    oak::node_create(
-                        "room",
-                        &oak::node_config::wasm("app", "room"),
-                        &label,
-                        rh.handle,
-                    )
-                    .expect("could not create node");
-                    rh.close().expect("could not close channel");
-                    wh
+                    oak::io::node_create("room", &label, &oak::node_config::wasm("app", "room"))
+                        .expect("could not create node")
                 });
 ```
 <!-- prettier-ignore-end-->

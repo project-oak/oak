@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::io::{ReceiverExt, SenderExt};
+use crate::io::SenderExt;
 use log::{info, warn};
 use oak_abi::{label::Label, proto::oak::application::NodeConfiguration};
 
@@ -32,14 +32,8 @@ impl Client {
     ///
     /// The provided [`Label`] specifies the label for the newly created Node and Channel.
     pub fn new(node_name: &str, config: &NodeConfiguration, label: &Label) -> Option<Client> {
-        let (invocation_sender, invocation_receiver) =
-            crate::io::channel_create("gRPC invocation", label).expect("failed to create channel");
-        let status = crate::node_create(node_name, config, label, invocation_receiver.handle);
-        invocation_receiver
-            .close()
-            .expect("failed to close channel");
-        match status {
-            Ok(_) => {
+        match crate::io::node_create(node_name, label, config) {
+            Ok(invocation_sender) => {
                 info!(
                     "Client created for '{:?}', accessible via channel {:?}",
                     config, invocation_sender.handle
