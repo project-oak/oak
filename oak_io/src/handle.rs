@@ -16,6 +16,7 @@
 include!(concat!(env!("OUT_DIR"), "/oak.handle.rs"));
 
 use crate::OakError;
+use log::error;
 use oak_abi::Handle;
 
 /// Wrapper for a handle to the read half of a channel.
@@ -164,13 +165,17 @@ pub fn extract_handles<T: HandleVisit>(msg: &mut T) -> Vec<Handle> {
 pub fn inject_handles<T: HandleVisit>(msg: &mut T, handles: &[Handle]) -> Result<(), OakError> {
     msg.fold(Ok(handles.iter()), |handles, handle| {
         let mut handles = handles?;
-        let to_inject = handles.next().ok_or(OakError::ProtobufDecodeError(None))?;
+        let to_inject = handles.next().ok_or_else(|| {
+            error!("Not enough handles provided to populate message");
+            OakError::ProtobufDecodeError(None)
+        })?;
         *handle = *to_inject;
         Ok(handles)
     })
     // Check that there are no remaining handles
     .and_then(|mut remaining_handles| {
         if remaining_handles.next().is_some() {
+            error!("Too many handles provided for message",);
             Err(OakError::ProtobufDecodeError(None))
         } else {
             Ok(())

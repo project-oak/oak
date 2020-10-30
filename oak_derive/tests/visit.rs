@@ -126,7 +126,7 @@ mod enums {
     }
 }
 
-// Asserts that `t` is visited exactly `expected` times when calling `HandleVisit::fold`.
+// Asserts that `t` is visited exactly `expected` times when calling [`HandleVisit::fold`].
 fn assert_visit<T: HandleVisit>(mut t: T, expected: usize) {
     let count = t.fold(0, |count, _| count + 1);
 
