@@ -241,6 +241,12 @@
 <span id="238">238</span>
 <span id="239">239</span>
 <span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -457,6 +463,10 @@
 
     <span class="doccomment">/// Creates a new Node instance running code identified by a serialized [`NodeConfiguration`].</span>
     <span class="doccomment">///</span>
+    <span class="doccomment">/// The name of the new node is provided in the memory area given by `name_buf` and `name_len`.</span>
+    <span class="doccomment">/// The name does not have to be unique and can be empty. It is used in logs to help identify</span>
+    <span class="doccomment">/// nodes for debugging purposes.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// The serialized configuration object is provided in the memory area given by `config_buf` and</span>
     <span class="doccomment">/// `config_len`.</span>
     <span class="doccomment">///</span>
@@ -468,6 +478,8 @@
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
     <span class="doccomment">/// [`NodeConfiguration`]: crate::proto::oak::application::NodeConfiguration</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_create</span>(
+        <span class="ident">name_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
+        <span class="ident">name_len</span>: <span class="ident">usize</span>,
         <span class="ident">config_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
         <span class="ident">config_len</span>: <span class="ident">usize</span>,
         <span class="ident">label_buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,

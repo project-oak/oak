@@ -68,13 +68,6 @@
 <span id="65">65</span>
 <span id="66">66</span>
 <span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -102,24 +95,17 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Client</span> {
-    <span class="doccomment">/// Similar to [`Client::new_with_label`] but with a fixed label corresponding to &quot;public</span>
-    <span class="doccomment">/// untrusted&quot;.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfiguration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
-        <span class="ident">Client</span>::<span class="ident">new_with_label</span>(<span class="ident">config</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())
-    }
-
     <span class="doccomment">/// Creates a new Node that implements a gRPC service, and if successful return a Client.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The config name specifies the Node configuration that provides the service; the</span>
-    <span class="doccomment">/// entrypoint name is required if this specifies another WebAssembly Oak Node, but is</span>
-    <span class="doccomment">/// ignored if the Node configuration is for a gRPC client pseudo-Node (which acts as a</span>
-    <span class="doccomment">/// proxy for a remote non-Oak gRPC service).</span>
+    <span class="doccomment">/// The `node_name` is used for the newly create node.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The `config` specifies the Node configuration that is used for creating the target node.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The provided [`Label`] specifies the label for the newly created Node and Channel.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_label</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfiguration</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfiguration</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">invocation_sender</span>, <span class="ident">invocation_receiver</span>) <span class="op">=</span>
             <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">channel_create</span>(<span class="string">&quot;gRPC invocation&quot;</span>, <span class="ident">label</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to create channel&quot;</span>);
-        <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">node_create</span>(<span class="ident">config</span>, <span class="ident">label</span>, <span class="ident">invocation_receiver</span>.<span class="ident">handle</span>);
+        <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">node_create</span>(<span class="ident">node_name</span>, <span class="ident">config</span>, <span class="ident">label</span>, <span class="ident">invocation_receiver</span>.<span class="ident">handle</span>);
         <span class="ident">invocation_receiver</span>
             .<span class="ident">close</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;failed to close channel&quot;</span>);
