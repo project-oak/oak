@@ -18,7 +18,7 @@ use anyhow::Context;
 use log::{info, warn};
 use oak::{
     grpc,
-    io::{Receiver, ReceiverExt, Sender, SenderExt},
+    io::{ReceiverExt, Sender, SenderExt},
     Label,
 };
 use oak_abi::proto::oak::application::ConfigMap;
@@ -29,6 +29,29 @@ use std::collections::HashMap;
 mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.chat.rs"));
 }
+
+oak::entrypoint_command_handler!(main => Main);
+
+/// Main entrypoint of the chat application.
+///
+/// This node is in charge of creating the other top-level nodes, but does not process any request.
+struct Main;
+
+impl oak::CommandHandler<ConfigMap> for Main {
+    fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
+        let grpc_channel =
+            oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
+        oak::node_create(
+            &oak::node_config::wasm("app", "router"),
+            &Label::public_untrusted(),
+            grpc_channel.handle,
+        )
+        .expect("could not create router node");
+        Ok(())
+    }
+}
+
+oak::entrypoint_command_handler!(router => Router::default());
 
 /// A node that routes each incoming gRPC invocation to a per-room worker node (either pre-existing,
 /// or newly created) that can handle requests with the label of the incoming request.
@@ -103,30 +126,13 @@ impl oak::CommandHandler<oak::grpc::Invocation> for Router {
     }
 }
 
-// Main entrypoint of the chat application.
-oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
-    oak::logger::init_default();
-    let router = Router::default();
-    let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(router, grpc_channel.iter());
-});
+oak::entrypoint_command_handler!(room => ChatDispatcher::new(Room::default()));
 
-// A node that receives gRPC invocations for an individual label.
-//
-// Multiple instances of nodes with this entrypoint may be created at runtime, according to the
-// variety of labels of incoming requests.
-oak::entrypoint!(room<oak::grpc::Invocation> => |receiver: Receiver<oak::grpc::Invocation>| {
-    oak::logger::init_default();
-    let dispatcher = ChatDispatcher::new(Room::default());
-    oak::run_command_loop(dispatcher, receiver.iter());
-});
-
-/// A worker node implementation for an individual label.
+/// A worker node implementation for an individual label, corresponding to a chat room between the
+/// set of user that share the key to that chat room.
 ///
-/// It is initially uninitialized, and it expects to receive a `create_room` message as its first
-/// request; this initializes the inner field, and moves the node to the initialized state, from
-/// which it receives messages from clients and sends out replies to subscribed clients.
+/// Multiple instances of this node may be created at runtime, according to the variety of labels of
+/// incoming requests.
 #[derive(Default)]
 struct Room {
     messages: Vec<Message>,
