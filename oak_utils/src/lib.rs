@@ -199,11 +199,12 @@ impl prost_build::ServiceGenerator for AsyncServiceGenerator {
             impl #name {
                 #[allow(dead_code)]
                 pub async fn from_invocation(invocation: #oak_package::grpc::Invocation) -> Result<#name, #oak_package::OakError> {
-                    let (method_name, requests, response_writer) = ::oak_async::grpc::invocation_to_requests_and_writer(invocation).await?;
-                    match method_name.as_str() {
+                    let ::oak_async::grpc::DecomposedInvocation { method, requests, response_writer } =
+                    ::oak_async::grpc::DecomposedInvocation::from(invocation).await?;
+                    match method.as_str() {
                         #(#method_matchers)*
                         _ => {
-                            ::log::error!("unknown method name: {}", method_name);
+                            ::log::error!("unknown method name: {}", method);
                             Err(#oak_package::OakStatus::ErrInvalidArgs.into())
                         }
                     }

@@ -159,10 +159,8 @@ pub struct GrpcRequestStream<T: Decodable> {
 // on to the handler.
 impl<T: Decodable> Unpin for GrpcRequestStream<T> {}
 
-// This should only be used by the Oak service generator. Not a stable API.
-#[doc(hidden)]
 impl GrpcRequestStream<()> {
-    pub fn new(inner: ChannelReadStream<GrpcRequest>) -> GrpcRequestStream<()> {
+    fn new(inner: ChannelReadStream<GrpcRequest>) -> GrpcRequestStream<()> {
         GrpcRequestStream {
             inner: inner.peekable(),
             is_drained: false,
@@ -171,6 +169,8 @@ impl GrpcRequestStream<()> {
     }
 
     // Casts this stream into the given message type.
+    // This should only be used by the Oak service generator. Not a stable API.
+    #[doc(hidden)]
     pub fn into_type<T: Decodable>(self) -> GrpcRequestStream<T> {
         GrpcRequestStream {
             inner: self.inner,
@@ -219,42 +219,51 @@ impl<T: Decodable> Stream for GrpcRequestStream<T> {
 
 // This should only be used by the Oak service generator. Not a stable API.
 #[doc(hidden)]
-pub async fn invocation_to_requests_and_writer(
-    invocation: Invocation,
-) -> Result<(String, GrpcRequestStream<()>, ChannelResponseWriter), OakError> {
-    let receiver = invocation.receiver.ok_or_else(|| {
-        error!("Invocation did not have a receiver");
-        OakError::OakStatus(OakStatus::ErrInvalidArgs)
-    })?;
-    let mut requests = GrpcRequestStream::new(receiver.receive_stream());
-    let requests_pinned = core::pin::Pin::new(&mut requests);
-    let sender = invocation.sender.ok_or_else(|| {
-        error!("Invocation did not have a sender");
-        OakError::OakStatus(OakStatus::ErrInvalidArgs)
-    })?;
-    let response_writer = ChannelResponseWriter::new(sender);
+pub struct DecomposedInvocation {
+    pub method: String,
+    pub requests: GrpcRequestStream<()>,
+    pub response_writer: ChannelResponseWriter,
+}
 
-    let req1 = match requests_pinned
-        .peek()
-        .await
-        .ok_or_else(|| {
-            error!("No request arrived for invocation");
-            OakError::OakStatus(OakStatus::ErrBadHandle)
-        })?
-        .as_ref()
-    {
-        Ok(req) => req,
-        Err(_) => {
-            // Pull the error out of the stream instead of just peeking so we can own it.
-            let owned_err = requests.next().await;
-            match owned_err {
-                Some(Err(e)) => return Err(e),
-                // We have already established that the next item on the stream exists and is an
-                // error by peeking at it
-                _ => unreachable!(),
+impl DecomposedInvocation {
+    pub async fn from(invocation: Invocation) -> Result<DecomposedInvocation, OakError> {
+        let receiver = invocation.receiver.ok_or_else(|| {
+            error!("Invocation did not have a receiver");
+            OakError::OakStatus(OakStatus::ErrInvalidArgs)
+        })?;
+        let mut requests = GrpcRequestStream::new(receiver.receive_stream());
+        let requests_pinned = core::pin::Pin::new(&mut requests);
+        let sender = invocation.sender.ok_or_else(|| {
+            error!("Invocation did not have a sender");
+            OakError::OakStatus(OakStatus::ErrInvalidArgs)
+        })?;
+        let response_writer = ChannelResponseWriter::new(sender);
+
+        let method = match requests_pinned
+            .peek()
+            .await
+            .ok_or_else(|| {
+                error!("No request arrived for invocation");
+                OakError::OakStatus(OakStatus::ErrBadHandle)
+            })?
+            .as_ref()
+        {
+            Ok(req) => req.method_name.clone(),
+            Err(_) => {
+                // Pull the error out of the stream instead of just peeking so we can own it.
+                let owned_err = requests.next().await;
+                match owned_err {
+                    Some(Err(e)) => return Err(e),
+                    // We have already established that the next item on the stream exists and is an
+                    // error by peeking at it
+                    _ => unreachable!(),
+                }
             }
-        }
-    };
-    let method_name = req1.method_name.clone();
-    Ok((method_name, requests, response_writer))
+        };
+        Ok(DecomposedInvocation {
+            method,
+            requests,
+            response_writer,
+        })
+    }
 }

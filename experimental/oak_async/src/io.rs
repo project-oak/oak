@@ -24,7 +24,7 @@ use core::{
     task::{Context, Poll},
 };
 use futures::stream::Stream;
-use log::{debug, info};
+use log::{debug, error, info};
 use oak::{
     io::{Decodable, Message, Receiver},
     OakError, OakStatus, ReadHandle,
@@ -153,6 +153,6 @@ where
         Err(OakStatus::ErrTerminated) => {
             info!("Received termination status, terminating command loop");
         }
-        Err(e) => panic!("Command loop received non-termination error: {:?}", e),
+        Err(e) => error!("Command loop received non-termination error: {:?}", e),
     }
 }
