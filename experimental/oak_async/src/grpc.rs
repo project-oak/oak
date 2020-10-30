@@ -217,6 +217,7 @@ impl<T: Decodable> Stream for GrpcRequestStream<T> {
     }
 }
 
+// A gRPC invocation decomposed into the method, request stream and response writer.
 // This should only be used by the Oak service generator. Not a stable API.
 #[doc(hidden)]
 pub struct DecomposedInvocation {
