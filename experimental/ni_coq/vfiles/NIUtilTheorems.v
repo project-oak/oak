@@ -46,11 +46,12 @@ Admitted.
 
 Definition idempotent {A: Type} (f: A -> A) := forall a, f (f a) = f a.
 
-Theorem labeled_low_proj_idempotent {A: Type}: forall ell, idempotent (@low_proj A ell).
+Theorem labeled_low_proj_idempotent {A: Type}:
+    forall ell, idempotent (@low_proj A ell).
 Proof.
     intros. unfold idempotent. intros x.
     destruct x. unfold low_proj. destruct (lbl <<? ell)  eqn:Hflows;
-    rewrite Hflows;eauto.
+    rewrite Hflows; eauto.
 Qed.
 
 Definition node_low_proj_idempotent := @labeled_low_proj_idempotent node.

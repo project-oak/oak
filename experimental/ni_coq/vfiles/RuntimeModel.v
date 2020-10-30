@@ -187,10 +187,10 @@ in the relation. This is checked in the global transition relation just below.
 *)
 Inductive step_node (id: node_id): call -> state -> state -> Prop :=
     | SWriteChan s n nlbl han ch clbl msg:
-        (s.(nodes).[?id]).(obj) = Some n ->    (* caller is a real node *)
-        (s.(nodes).[?id]).(lbl) = nlbl ->           (*... with lable nlbl *)
-        (s.(chans).[?han]).(obj) = Some ch ->  (* handle points to real channel ch *)
-        (s.(chans).[?han]).(lbl) = clbl ->           (* with label clbl *)
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
+        (s.(chans).[?han]) = Labeled channel (Some ch) clbl ->  
+            (* handle points to real channel ch  with label clbl*)
         In n.(write_handles) han ->     (* caller has write handle *)
         nlbl <<L clbl ->     (* label of caller flowsTo label of ch*)
         Included msg.(rhs) n.(read_handles) ->
@@ -205,10 +205,10 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
         step_node id (WriteChannel han msg) s
             (state_upd_chan han ch' (state_upd_node id n' s))
     | SReadChan s n nlbl han ch clbl msg:
-        (s.(nodes).[?id]).(obj) = Some n ->    (* caller is a real node *)
-        (s.(nodes).[?id]).(lbl) = nlbl ->           (*... with lable nlbl *)
-        (s.(chans).[?han]).(obj) = Some ch ->  (* handle points to real channel ch *)
-        (s.(chans).[?han]).(lbl) = clbl ->           (* with label clbl *)
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
+        (s.(chans).[?han]) = Labeled channel (Some ch) clbl ->  
+            (* handle points to real channel ch  with label clbl*)
         In n.(read_handles) han ->   (* caller has read handle *)
             (* A channel read happens only when there is a message
             available in the channel. TODO, re-check what really happens
@@ -234,8 +234,8 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
         step_node id (ReadChannel han) s
             (state_upd_chan han ch' (state_upd_node id n' s))
     | SCreateChan s n nlbl h clbl:
-        (s.(nodes).[?id]).(obj) = Some n ->    (* caller is a real node *)
-        (s.(nodes).[?id]).(lbl) = nlbl ->           (*... with lable nlbl *)
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
         nlbl <<L clbl ->
         handle_fresh s h ->
             let s0 := (state_upd_chan_labeled h {|
@@ -245,8 +245,8 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             let s' := state_upd_node id (node_add_whan h n) s1 in
             step_node id (CreateChannel clbl) s s'
     | SCreateNode s n nlbl new_id new_lbl h:
-        (s.(nodes).[?id]).(obj) = Some n ->    (* caller is a real node *)
-        (s.(nodes).[?id]).(lbl) = nlbl ->           (*... with lable nlbl *)
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
         nlbl <<L new_lbl ->
         (nid_fresh s new_id) ->
             (* create new node with read handle *)

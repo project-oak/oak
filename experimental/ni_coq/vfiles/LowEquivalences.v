@@ -73,8 +73,8 @@ Definition low_eq_t {A: Type}: Type := level -> A -> A -> Prop.
 Definition low_eq {A: Type} ell (x: @labeled A) (y: @labeled A) :=
     (low_proj ell x) = (low_proj ell y).
 
-Definition chan_low_eq := @low_eq channel.
 Definition node_low_eq := @low_eq node.
+Definition chan_low_eq := @low_eq channel.
 Definition event_low_eq := @low_eq event.
 Definition node_state_low_eq := fun ell ns1 ns2 => 
     (node_state_low_proj ell ns1) = (node_state_low_proj ell ns2).
