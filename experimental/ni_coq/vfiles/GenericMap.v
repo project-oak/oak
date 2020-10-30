@@ -74,16 +74,17 @@ Definition pg_fmap {KT: KeyT}{VT: Type}
         | None => None
     end.
 
-Notation "x '|->' v ';' m" := (pg_update m x v)
+Notation "x '|->' v ';' m" := (tg_update m x v)
   (at level 100, v at next level, right associativity) : map_scope.
-Notation "x '|->' v" := (pg_update pg_empty x v)
+Notation "x '|->' v" := (tg_update pg_empty x v)
   (at level 100) : map_scope.
 
 (* Make the notation compatible with ssreflect finmap to 
 * deal with laziness of me *)
-Notation "m '.[' k '<-' v ']'" := (pg_update m k v)
+Notation "m '.[' k '<-' v ']'" := (tg_update m k v)
   (at level 100) : map_scope.
-Definition fnd {KT: KeyT}{VT: Type} (m: (pg_map KT VT)) k :=  (m k).
+
+Definition fnd {KT: KeyT}{VT: Type} (m: (tg_map KT VT)) k :=  (m k).
 Notation "m '.[?' k ']'" := (fnd m k) 
 (at level 2, k at level 200, format "m .[?  k ]") : map_scope.
 

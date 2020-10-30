@@ -46,10 +46,10 @@ this model separates read and write handles into two different types
 *)
 
 Record channel := Chan {
-    clbl: level;         (* IFC label of the channel *)
     ms: list message;    (* list of pending messages in channel *)
 }.
-Instance etachannel : Settable _ := settable! Chan<clbl; ms>.
+Instance etachannel : Settable _ := settable! Chan<ms>.
+
 
 (* ABI Calls *)
 Inductive call: Type :=
@@ -72,13 +72,12 @@ Inductive call: Type :=
 (* TODO wait_on_channels, channel_close *)
 
 Record node := Node {
-    nlbl: level;
     read_handles: Ensemble handle;
     write_handles: Ensemble handle;
     ncall: call
 }.
 Instance etanode: Settable _ :=
-    settable! Node<nlbl; read_handles; write_handles; ncall>.
+    settable! Node<read_handles; write_handles; ncall>.
 
 Instance Knid: KeyT := {
     t := node_id; 
@@ -88,11 +87,23 @@ Instance Khandle: KeyT := {
     t := handle;
     eq_dec := dec_eq_h;
 }.
-Definition node_state := pg_map Knid node.
-Definition chan_state := pg_map Khandle channel.
+
+Record labeled {A: Type} := Labeled {
+    obj: option A;
+    lbl: level;
+}.
+
+Definition node_l := @labeled node.
+Definition channel_l := @labeled channel.
+
+Instance etalabeled_chan : Settable _ := settable! (Labeled channel)<obj; lbl >.
+Instance etalabeled_node : Settable _ := settable! (Labeled node)<obj ; lbl >.
+
+Definition node_state := tg_map Knid (@labeled node).
+Definition chan_state := tg_map Khandle (@labeled channel).
 Record state := State {
     nodes: node_state;
-    chans: chan_state
+    chans: chan_state;
 }.
 
 Instance etastate: Settable _ :=
@@ -123,10 +134,20 @@ Definition node_get_hans (n: node)(m: message): node :=
       <| write_handles := (Union n.(write_handles) m.(whs)) |>.
 
 Definition state_upd_node (nid: node_id)(n: node)(s: state): state :=
-    s <| nodes := s.(nodes) .[ nid <- n ] |>.
+    (* n_l is a (labeled node) with the same label as the old one,
+    but the contents updated to n *)
+    let n_l := s.(nodes).[? nid] <| obj  := Some n |> in
+    s <| nodes := s.(nodes) .[ nid <- n_l ] |>.
+
+Definition state_upd_node_labeled (nid: node_id )(n_l: node_l)(s: state): state :=
+    s<| nodes := s.(nodes).[nid <- n_l] |>.
 
 Definition state_upd_chan (h: handle)(ch: channel)(s: state): state :=
-    s <| chans := s.(chans) .[ h <- ch ] |>.
+    let ch_l := s.(chans).[? h] <| obj := Some ch |> in
+    s <| chans := s.(chans) .[ h <- ch_l ] |>.
+
+Definition state_upd_chan_labeled (h: handle)(ch_l: channel_l)(s: state): state :=
+    s <| chans := s.(chans) .[ h <- ch_l ] |>.
 
 Definition node_add_rhan (h: handle)(n: node): node:=
     n <| read_handles := Ensembles.Add n.(read_handles) h |>.
@@ -141,16 +162,15 @@ Definition node_del_rhans (hs: Ensemble handle)(n: node): node :=
     n <| read_handles := Ensembles.Setminus n.(read_handles) hs |>.
 
 Definition handle_fresh (s: state)(h: handle): Prop :=
-    s.(chans) .[?h] = None.
+    (s.(chans).[?h]).(obj) = None.
 
 Definition nid_fresh (s: state)(nid: node_id): Prop :=
-    s.(nodes) .[?nid] = None.
+    (s.(nodes).[?nid]).(obj) = None.
 
-Definition new_chan (lbl: level): channel :=
-    {| clbl := lbl; ms := [] |}.
+Definition new_chan := Some {| ms := [] |}.
 
 Definition s_set_call s id c :=
-    match s.(nodes).[?id] with
+    match (s.(nodes).[?id]).(obj) with
         | None => s
         | Some n => state_upd_node id (n <|ncall := c|>) s
     end.
@@ -166,11 +186,13 @@ but that there is no premise checking that this call is really the one used
 in the relation. This is checked in the global transition relation just below.
 *)
 Inductive step_node (id: node_id): call -> state -> state -> Prop :=
-    | SWriteChan s n han ch msg:
-        s.(nodes) .[?id] = Some n ->    (* caller is a real node *)
+    | SWriteChan s n nlbl han ch clbl msg:
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
+        (s.(chans).[?han]) = Labeled channel (Some ch) clbl ->  
+            (* handle points to real channel ch  with label clbl*)
         In n.(write_handles) han ->     (* caller has write handle *)
-        s.(chans) .[?han] = Some ch ->  (* handle points to real channel ch *)
-        (n.(nlbl) <<L ch.(clbl)) ->     (* label of caller flowsTo label of ch*)
+        nlbl <<L clbl ->     (* label of caller flowsTo label of ch*)
         Included msg.(rhs) n.(read_handles) ->
             (* caller has read handles it is sending *)
         Included msg.(whs) n.(write_handles) ->
@@ -182,10 +204,12 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             * handles (but not write handles) are linear *)
         step_node id (WriteChannel han msg) s
             (state_upd_chan han ch' (state_upd_node id n' s))
-    | SReadChan s n han ch msg:
-        s.(nodes) .[?id] = Some n -> (* caller is a real node *)
+    | SReadChan s n nlbl han ch clbl msg:
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
+        (s.(chans).[?han]) = Labeled channel (Some ch) clbl ->  
+            (* handle points to real channel ch  with label clbl*)
         In n.(read_handles) han ->   (* caller has read handle *)
-        s.(chans) .[?han] = Some ch -> (* handle points to real channel ch *)
             (* A channel read happens only when there is a message
             available in the channel. TODO, re-check what really happens
             when a message is not available, and possibly improve the model.
@@ -193,11 +217,11 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             of the usual one if an error is _not_ thrown.
             *)
         (msg_is_head ch msg) ->
-        ch.(clbl) <<L n.(nlbl) -> 
+        clbl <<L nlbl ->
             (* label of channel flowsTo label of caller. 
                 checks that reading the message is safe
              *)
-        n.(nlbl) <<L ch.(clbl) -> 
+        nlbl <<L clbl -> 
             (* label of caller flowsTo label of ch. This check is less intuitive than the above.
             However, reads are destructive because the channel is popped, so the calling node
             is effectively doing a write to the channel. Any node that does a subsequent read
@@ -209,27 +233,33 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             (* pop the message, clear the read/write handles in ch *)
         step_node id (ReadChannel han) s
             (state_upd_chan han ch' (state_upd_node id n' s))
-    | SCreateChan s n h lbl:
-        s.(nodes) .[?id] = Some n ->
-        n.(nlbl) <<L lbl ->
+    | SCreateChan s n nlbl h clbl:
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
+        nlbl <<L clbl ->
         handle_fresh s h ->
-            let s0 := (state_upd_chan h (new_chan lbl) s) in
+            let s0 := (state_upd_chan_labeled h {|
+                obj := new_chan; lbl := clbl;
+            |} s) in
             let s1 := state_upd_node id (node_add_rhan h n) s0 in
             let s' := state_upd_node id (node_add_whan h n) s1 in
-            step_node id (CreateChannel lbl) s s'
-    | SCreateNode s n new_id lbl h:
-        s.(nodes) .[?id] = Some n ->
-        n.(nlbl) <<L lbl ->
+            step_node id (CreateChannel clbl) s s'
+    | SCreateNode s n nlbl new_id new_lbl h:
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
+        nlbl <<L new_lbl ->
         (nid_fresh s new_id) ->
             (* create new node with read handle *)
-        let s0 := (state_upd_node new_id {| 
-                nlbl := lbl;
-                read_handles := (Singleton h);
-                write_handles := Empty_set handle;
-                ncall := Internal;
+        let s0 := (state_upd_node_labeled new_id {|
+                obj := Some {|
+                    read_handles := (Singleton h);
+                    write_handles := Empty_set handle;
+                    ncall := Internal;
+                |};
+                lbl := new_lbl;
             |} s) in
         let s' := state_upd_node id (node_add_rhan h n) s0 in
-        step_node id (CreateNode lbl h) s s'
+        step_node id (CreateNode new_lbl h) s s'
     | SInternal s: step_node id Internal s s.
 
 (* step for the full system which (non-deterministically) picks a thread to
@@ -247,7 +277,7 @@ Inductive step_system: state -> state -> Prop :=
     (* possibly also a termination case *)
     | SystemSkip s: step_system s s
     | SystemStepNode id n c c' s s':
-        s.(nodes) .[?id] = Some n ->
+        (s.(nodes) .[?id]).(obj) = Some n ->
         n.(ncall) = c ->
         step_node id c s s' ->
         step_system s (s_set_call s id c').

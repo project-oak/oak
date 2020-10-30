@@ -134,10 +134,12 @@ Hint Extern 4 (state_low_eq _ _ (state_low_proj _ _)) => symmetry : unwind.
 Hint Extern 2 (chan_low_proj _ _ = chan_low_proj _ _)
 => simple eapply chan_low_proj_loweq : unwind.
 
-Hint Extern 4 (_ <<L clbl (chan_low_proj _ _))
+Hint Extern 4 (_ <<L lbl (chan_low_proj _ _))
 => (rewrite chan_projection_preserves_lbl) : flowsto.
 
 Definition is_init(t: trace) := length t = 1.
+
+Definition empty_event (ell: level) := Labeled event None ell.
 
 Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
     (trace_low_eq ell t1_init t2_init) /\
@@ -148,15 +150,18 @@ Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
         (step_system_ev_multi t2_init t2n) /\
         (trace_low_eq ell t1n t2n)).
 
-Theorem unobservable_node_step: forall ell s s' e id n,
-    s.(nodes).[? id] = Some n ->
+Theorem unobservable_node_step: forall ell s s' e id nl n,
+    s.(nodes).[? id] = nl ->
+    nl.(obj) = Some n ->
     step_node_ev id n.(ncall) s s' e ->
-    ~(nlbl n <<L ell) ->
-    (state_low_eq ell s s') /\ (event_low_eq ell e (empty_event e.(elbl))).
+    ~(lbl nl <<L ell) ->
+    (state_low_eq ell s s') /\ (event_low_eq ell e (empty_event e.(lbl))).
 Proof.
-    intros. inversion H0; (split; [ inversion H4 | ] ); subst_lets; crush.
+    intros. inversion H1; (split; [ inversion H5 | ] ); subst_lets; crush.
+Admitted.
+(*
     - (* WriteChannel; states loweq *) 
-        assert ( ~ (clbl ch <<L ell) ) by eauto using ord_trans.
+        assert ( ~ (lbl (chans s).[? han] <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
         eapply (state_upd_node_unobs _ _ _ _ (node_del_rhans (rhs msg) n)
             ltac:(eauto) ltac:(eauto) ltac:(eauto)).
@@ -222,6 +227,7 @@ Proof.
     unfold event_low_eq. unfold low_eq.
     erewrite event_low_proj_idempotent. reflexivity.
 Qed.
+*)
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
@@ -232,53 +238,65 @@ Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
 Proof.
     intros. inversion H; subst. 
     - (* SystemSkip *)
-        exists (state_low_proj ell s1'), (EvL NilEv ell0); repeat try split.
+        exists (state_low_proj ell s1'), (empty_event ell0); repeat try split.
         constructor. symmetry. eapply state_low_proj_loweq.
     - (* NodeSetp *)
         rename s' into s1'. rename s'' into s1''. rename H2 into H_step_s1_s1'.
-        destruct (n.(nlbl) <<? ell).
+        remember ((nodes s1).[?id]) as nl.
+        destruct (nl.(lbl) <<? ell).
         * (* flowsto case *)
-            inversion H_step_s1_s1'; crush; 
-                pose proof (state_nidx_to_proj_state_idx ell _ _ _
+            inversion H_step_s1_s1'; crush; remember ((nodes s1).[?id]) as nl;
+                pose proof (state_nidx_to_proj_state_idx ell _ _ nl
                     ltac:(eauto)) as Hn_idx_s1proj;
-                (rewrite flows_node_proj in *; eauto);
+                (erewrite flows_labeled_proj in Hn_idx_s1proj; eauto);
                 inversion H3; crush.
             + (* WriteChannel *)
-                do 2 eexists; split_ands; [ | | reflexivity ].
+                do 2 eexists; split_ands; [ | | reflexivity ]; admit.
+                (*
                 1:apply_all_constructors;
                   solve [eauto using state_hidx_to_proj_state_hidx with flowsto].
                 subst_lets. eauto 7 with unwind.
+                *)
             + (* ReadChannel *)
+                admit.
+                (*
                 pose proof (state_hidx_to_proj_state_hidx ell _ _ _
                     ltac:(eauto)) as Hch_hidx_s1proj.
                 rewrite flows_chan_proj in *; eauto using ord_trans.
                 do 2 eexists; split_ands; [ | | reflexivity ].
                 1:apply_all_constructors; solve [eauto].
                 subst_lets. eauto with unwind.
+                *)
             + (* CreateChannel *)
-                do 2 eexists; split_ands; [ | | reflexivity ].
+                do 2 eexists; split_ands; [ | | reflexivity ]; admit.
+                (*
                 1:apply_all_constructors;
                   solve [eauto; rewrite ?proj_pres_handle_fresh; eauto].
                 subst_lets. eauto 6 with unwind.
+                *)
             + (* CreateNode *)
-                do 2 eexists; split_ands; [ | | reflexivity ].
+                do 2 eexists; split_ands; [ | | reflexivity ]; admit.
+                (*
                 1:apply_all_constructors;
                   solve [eauto; rewrite ?proj_pres_nid_fresh; eauto].
                 subst_lets. eauto with unwind.
+                *)
             +  (* Internal *)
-                do 2 eexists; split_ands; [ | | reflexivity ].
+                do 2 eexists; split_ands; [ | | reflexivity ]; admit.
+                (*
                 1:apply_all_constructors;
                   solve [eauto; rewrite ?proj_pres_nid_fresh; eauto].
                 subst_lets. eauto with unwind.
+                *)
         * (* not flowsTo case *)
             rename n0 into Hflows.
-            pose proof (unobservable_node_step _ _ _ _ _ _
+            pose proof (unobservable_node_step _ _ _ _ _ nl _ ltac:(eauto)
                 ltac:(eauto) H_step_s1_s1' ltac:(eauto))
                 as [Hustep Huev].
-            exists (state_low_proj ell s1), (empty_event (elbl e1));
+            exists (state_low_proj ell s1), (empty_event (lbl e1));
                 repeat split; crush.
             (* states leq *)
-            pose proof (state_loweq_to_deref_node _ _ _ _ _
+            pose proof (state_loweq_to_deref_node _ _ _ _ (nodes s1).[?id]
                 ltac:(eauto) ltac:(eauto)) 
                 as [ns1' [Hns1'idx Hns1'leq]].
             unfold s1''. transitivity s1'.
@@ -289,7 +307,7 @@ Proof.
             pose proof (state_low_proj_loweq ell s1); congruence.
             (* events leq *)
             congruence.
-Qed.
+Admitted.
 
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
     (step_system_ev (state_low_proj ell s) s1' e1) ->
@@ -300,21 +318,23 @@ Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
 Proof.
     intros. inversion H; subst.
     - (* SystemSkip *)
-        exists s, (EvL NilEv ell0). split. constructor.
+        exists s, (empty_event ell0). split. constructor.
         split. unfold state_low_eq. unfold low_eq.
         rewrite state_low_proj_idempotent. reflexivity.
         reflexivity.
     - (* NodeStep *)
         rename s'' into s1''. rename s' into s1'. rename H2 into H_step_projs_s1'.
-        specialize (proj_node_state_to_proj_n ell s id n H0)
+        remember ((nodes (state_low_proj ell s)).[? id]) as nl.
+        pose proof (uncons_proj_node_s _ _ _ nl ltac:(eauto))
             as [n' [Hidx_n' Hproj_n']].
-        destruct (n'.(nlbl) <<? ell).
+        destruct (nl.(lbl) <<? ell).
         *
-            (* flowsto case*) (* likely by inversion on H_step_projs_s1' *)
-            inversion H_step_projs_s1'; inversion H3;
-                (rewrite flows_node_proj in *; eauto); crush.
-            (* assert (n0 = n) by congruence; subst. *)
-            + (* WriteChannel *)
+            (* flowsto case*)
+            inversion H_step_projs_s1'; inversion H3; 
+                                                (* asterisk doesn't work here anymore? *)
+                (rewrite flows_labeled_proj in Hproj_n'; eauto); crush; admit.
+           (*
+           + (* WriteChannel *)
                 pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
                     as [ch2 [H_ch'_idx H_ch2_proj]].
                 remember (s_set_call (state_upd_chan han (chan_append ch2 msg)
@@ -362,15 +382,13 @@ Proof.
                 unfold s1''.
                 exists (s_set_call s id c'); eexists; repeat split; crush.
                 eauto with unwind.
+        *)
         (* by cases on the command by n in s *)
         * (* not flowsTo case *)
-            rename n0 into Hflows.
-            assert ((state_low_eq ell (state_low_proj ell s) s1') /\
-                (event_low_eq ell e1 (empty_event e1.(elbl))))
-                as [Hustep Huev] by
-                repeat (eauto || eapply unobservable_node_step
-                    || eapply node_projection_preserves_flowsto).
-            exists s, (empty_event (elbl e1));
+            pose proof (unobservable_node_step _ _ _ _ _ nl _ 
+                ltac:(eauto) ltac:(eauto) ltac:(eauto) ltac:(eauto))
+                as [Hustep Huev].
+            exists s, (empty_event (lbl e1));
                 repeat (split || constructor).
             + (* s1'' ={ell} s *)
                 apply state_low_eq_sym.
@@ -389,11 +407,11 @@ Proof.
                 specialize (state_loweq_to_deref_node ell s s1' id n'
                     Hidx_n' H_leq_s_s1') as [ns1' [Hidx_s1' H_leq_n'_n2]].
                 eapply set_call_unobs. eassumption.
-                replace (nlbl ns1') with (nlbl n')
+                replace (lbl ns1') with (lbl n')
                     by (eapply node_low_eq_to_lbl_eq; eassumption).
-                auto.
+                admit.
             + (* e1 ={ell} *) assumption.
-Qed.
+Admitted.
 
 Theorem possibilistic_ni_1step: forall ell s1 s2 s1' e1,
     (state_low_eq ell s1 s2) ->
