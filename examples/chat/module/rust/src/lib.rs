@@ -42,6 +42,7 @@ impl oak::CommandHandler<ConfigMap> for Main {
         let grpc_channel =
             oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
         oak::node_create(
+            "router",
             &oak::node_config::wasm("app", "router"),
             &Label::public_untrusted(),
             grpc_channel.handle,
