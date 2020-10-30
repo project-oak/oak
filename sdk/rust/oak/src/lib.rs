@@ -419,11 +419,14 @@ pub fn set_panic_hook() {
 ///
 /// It has a single method for handling commands, which are usually received via the single incoming
 /// channel handle which is passed in at Node creation time, or derived from such stream.
-pub trait CommandHandler<T> {
+pub trait CommandHandler {
+    /// Type of the command that is handled by this instance.
+    type Command;
+
     /// Handles a single command instance.
     ///
     /// The return value is only used for logging in case of error.
-    fn handle_command(&mut self, command: T) -> anyhow::Result<()>;
+    fn handle_command(&mut self, command: Self::Command) -> anyhow::Result<()>;
 }
 
 /// Runs a command loop on the provided [`CommandHandler`]:
@@ -434,7 +437,7 @@ pub trait CommandHandler<T> {
 ///
 /// Note the loop is only interrupted if the Node is terminated while waiting. Other errors are just
 /// logged, and the loop continues with the next iteration.
-pub fn run_command_loop<T, N: CommandHandler<T>, R: Iterator<Item = T>>(
+pub fn run_command_loop<N: CommandHandler, R: Iterator<Item = N::Command>>(
     mut command_handler: N,
     command_iterator: R,
 ) {
@@ -463,8 +466,9 @@ pub fn run_command_loop<T, N: CommandHandler<T>, R: Iterator<Item = T>>(
 /// #[derive(Default)]
 /// struct DummyNode;
 ///
-/// impl oak::CommandHandler<oak::grpc::Invocation> for DummyNode {
+/// impl oak::CommandHandler for DummyNode {
 ///     // ...
+///     # type Command = oak::grpc::Invocation;
 ///     # fn handle_command(&mut self, command: oak::grpc::Invocation) -> anyhow::Result<()> {
 ///     #     unimplemented!()
 ///     # }
@@ -503,7 +507,8 @@ pub fn run_command_loop<T, N: CommandHandler<T>, R: Iterator<Item = T>>(
 /// # #[derive(Default)]
 /// # struct DummyNode;
 /// #
-/// # impl oak::CommandHandler<oak::grpc::Invocation> for DummyNode {
+/// # impl oak::CommandHandler for DummyNode {
+/// #     type Command = oak::grpc::Invocation;
 /// #     fn handle_command(&mut self, command: oak::grpc::Invocation) -> anyhow::Result<()> {
 /// #         unimplemented!()
 /// #     }
@@ -557,7 +562,8 @@ macro_rules! entrypoint {
 ///
 /// struct Main;
 ///
-/// impl oak::CommandHandler<ConfigMap> for Main {
+/// impl oak::CommandHandler for Main {
+///     type Command = ConfigMap;
 ///     fn handle_command(&mut self, command: ConfigMap) -> anyhow::Result<()> {
 ///         // ...
 /// #        unimplemented!()

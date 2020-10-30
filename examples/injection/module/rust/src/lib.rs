@@ -214,7 +214,9 @@ impl BlobStoreProvider {
     }
 }
 
-impl oak::CommandHandler<BlobStoreRequest> for BlobStoreProvider {
+impl oak::CommandHandler for BlobStoreProvider {
+    type Command = BlobStoreRequest;
+
     fn handle_command(&mut self, _command: BlobStoreRequest) -> anyhow::Result<()> {
         // Create new BlobStore
         let (to_store_write_handle, to_store_read_handle) =
@@ -296,7 +298,9 @@ fn blob_index(id: u64) -> usize {
     (id - 1) as usize
 }
 
-impl oak::CommandHandler<BlobRequest> for BlobStoreImpl {
+impl oak::CommandHandler for BlobStoreImpl {
+    type Command = BlobRequest;
+
     fn handle_command(&mut self, request: BlobRequest) -> anyhow::Result<()> {
         let response = match request.request {
             Some(Request::Get(req)) => self.get_blob(req),

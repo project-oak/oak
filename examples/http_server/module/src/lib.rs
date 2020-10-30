@@ -35,7 +35,8 @@ oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
 /// should be modified with care!
 pub struct StaticHttpServer;
 
-impl CommandHandler<Invocation> for StaticHttpServer {
+impl CommandHandler for StaticHttpServer {
+    type Command = Invocation;
     fn handle_command(&mut self, invocation: Invocation) -> anyhow::Result<()> {
         let request = invocation.receive()?;
 
