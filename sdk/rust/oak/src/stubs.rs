@@ -36,86 +36,48 @@
 //! This module therefore provides stub definitions of the ABI functions for
 //! those host platforms that need them at library link time, so that `cargo
 //! build` works.
+//!
+//! Note that these stub definitions do *not* need to have the correct
+//! signatures, so arguments are skipped below to reduce the number of things
+//! that need to be kept in sync.
 
 #[no_mangle]
-pub extern "C" fn wait_on_channels(_buf: *mut u8, _count: u32) -> u32 {
+pub extern "C" fn wait_on_channels() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn channel_read(
-    _handle: u64,
-    _buf: *mut u8,
-    _size: usize,
-    _actual_size: *mut u32,
-    _handle_buf: *mut u8,
-    _handle_count: u32,
-    _actual_handle_count: *mut u32,
-) -> u32 {
+pub extern "C" fn channel_read() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn channel_write(
-    _handle: u64,
-    _buf: *const u8,
-    _size: usize,
-    _handle_buf: *const u8,
-    _handle_count: u32,
-) -> u32 {
+pub extern "C" fn channel_write() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn channel_create(
-    _write: *mut u64,
-    _read: *mut u64,
-    _name_buf: *const u8,
-    _name_size: usize,
-    _label_buf: *const u8,
-    _label_size: usize,
-) -> u32 {
+pub extern "C" fn channel_create() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn channel_close(_handle: u64) -> u32 {
+pub extern "C" fn channel_close() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn node_create(
-    _name_buf: *const u8,
-    _name_len: usize,
-    _config_buf: *const u8,
-    _config_len: usize,
-    _label_buf: *const u8,
-    _label_len: usize,
-    _handle: u64,
-) -> u32 {
+pub extern "C" fn node_create() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn channel_label_read(
-    _handle: u64,
-    _label_buf: *mut u8,
-    _label_size: usize,
-    _actual_size: *mut u32,
-) -> u32 {
+pub extern "C" fn channel_label_read() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn node_label_read(
-    _label_buf: *mut u8,
-    _label_size: usize,
-    _actual_size: *mut u32,
-) -> u32 {
+pub extern "C" fn node_label_read() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn node_privilege_read(
-    _label_buf: *mut u8,
-    _label_size: usize,
-    _actual_size: *mut u32,
-) -> u32 {
+pub extern "C" fn node_privilege_read() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
-pub extern "C" fn random_get(_buf: *mut u8, _len: usize) -> u32 {
+pub extern "C" fn random_get() {
     panic!("stub function invoked!");
 }
