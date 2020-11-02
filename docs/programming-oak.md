@@ -488,7 +488,7 @@ to the room:
 [embedmd]:# (../examples/chat/module/rust/src/lib.rs Rust /.*self\.rooms\.entry\(/ /\}\);$/)
 ```Rust
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
-                    oak::io::node_create("room", &label, &oak::node_config::wasm("app", "room"))
+                    oak::io::entrypoint_node_create::<ChatDispatcher<Room>>("room", &label, "app")
                         .expect("could not create node")
                 });
 ```

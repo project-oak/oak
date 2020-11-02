@@ -449,6 +449,17 @@ pub fn run_command_loop<N: CommandHandler, R: Iterator<Item = N::Command>>(
     }
 }
 
+/// Trait implemented by structs that correspond to entrypoint of Wasm nodes.
+///
+/// This statically ties together the Wasm entrypoint name (i.e. the name of the Wasm exported
+/// function) to the associated constant of this trait.
+///
+/// This trait is automatically implemented for types used as part of [`entrypoint_command_handler`]
+/// entrypoint definitions.
+pub trait WasmEntrypoint {
+    const ENTRYPOINT_NAME: &'static str;
+}
+
 /// Register a new Node entrypoint.
 ///
 /// This registers the entrypoint name and the expression that runs an event loop, and it includes
@@ -554,12 +565,16 @@ macro_rules! entrypoint {
 /// generic type associated with the handler instance, and only the entrypoint name needs to be
 /// specified.
 ///
-/// The generated implementation of the body of this node sets up logging, and then immediately
-/// calls [`run_command_loop`] on the provided handler.
+/// The generated implementation of the body of this node sets up logging, creates an instance of
+/// the handler, and then immediately calls [`run_command_loop`] on this instance.
+///
+/// It also automatically implements the [`WasmEntrypoint`] trait for the provided handler type
+/// which reflect the entrypoint name given via the macro invocation.
 ///
 /// ```
 /// use oak_abi::proto::oak::application::ConfigMap;
 ///
+/// #[derive(Default)]
 /// struct Main;
 ///
 /// impl oak::CommandHandler for Main {
@@ -574,11 +589,14 @@ macro_rules! entrypoint {
 /// ```
 #[macro_export]
 macro_rules! entrypoint_command_handler {
-    ($name:ident => $handler:expr) => {
+    ($name:ident => $handler:ty) => {
         ::oak::entrypoint!($name < _ > => |receiver: ::oak::io::Receiver<_>| {
             use ::oak::io::ReceiverExt;
-            oak::logger::init_default();
-            oak::run_command_loop($handler, receiver.iter());
+            ::oak::logger::init_default();
+            ::oak::run_command_loop(<$handler>::default(), receiver.iter());
         });
+        impl ::oak::WasmEntrypoint for $handler {
+            const ENTRYPOINT_NAME: &'static str = std::stringify!($name);
+        }
     };
 }
