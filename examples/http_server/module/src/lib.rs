@@ -17,25 +17,39 @@
 //! Simple example starting an Oak Application serving a static page over HTTP.
 
 use log::{info, warn};
-use oak::{http::Invocation, io::ReceiverExt, CommandHandler, OakError, OakStatus};
+use oak::{http::Invocation, CommandHandler, Label, OakError, OakStatus};
 use oak_abi::proto::oak::application::ConfigMap;
 
-oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
-    oak::logger::init_default();
-    let node = StaticHttpServer;
-    info!("Starting HTTP server pseudo-node on port 8080.");
-    let http_channel =
-        oak::http::init("[::]:8080").expect("Could not create HTTP server pseudo-Node!");
+oak::entrypoint_command_handler!(oak_main => Main);
 
-    oak::run_command_loop(node, http_channel.iter());
-});
+#[derive(Default)]
+struct Main;
 
-/// A simple HTTP server that responds with `OK` (200) to every request sent to `/`, and with
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
+
+    fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
+        let http_handler_sender = oak::io::entrypoint_node_create::<StaticHttpHandler>(
+            "router",
+            &Label::public_untrusted(),
+            "app",
+        )
+        .expect("could not create handler node");
+        oak::http::init_with_sender("[::]:8080", http_handler_sender)
+            .expect("could not create HTTP server pseudo-Node");
+        Ok(())
+    }
+}
+
+oak::entrypoint_command_handler!(http_handler => StaticHttpHandler);
+
+/// A simple HTTP handler that responds with `OK` (200) to every request sent to `/`, and with
 /// `NOT_FOUND` (400) to any other request. It is used in the `abitest`. So its functionality
 /// should be modified with care!
-pub struct StaticHttpServer;
+#[derive(Default)]
+pub struct StaticHttpHandler;
 
-impl CommandHandler for StaticHttpServer {
+impl CommandHandler for StaticHttpHandler {
     type Command = Invocation;
 
     fn handle_command(&mut self, invocation: Invocation) -> anyhow::Result<()> {
