@@ -6,7 +6,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-futures = "*"
+futures = "0.3"
 futures-core = "*"
 log = "0.4"
 oak = "*"

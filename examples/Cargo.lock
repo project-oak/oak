@@ -1129,8 +1129,6 @@ name = "oak_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "futures-core",
- "futures-util",
  "http",
  "hyper",
  "log",
