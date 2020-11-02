@@ -83,14 +83,108 @@ impl<L: Decodable, R: Decodable> Decodable for Either<L, R> {
     }
 }
 
+/// A wrapper struct that holds an init message, plus the handle of a channel from which to read
+/// command messages. This is useful for patterns in which an Oak node needs some data at
+/// initialization time, but then handles commands of a different type and possibly coming from a
+/// different channel, to be processed in an event-loop pattern.
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitWrapper<Init, Command: Decodable> {
+    init: Init,
+    command_receiver: Receiver<Command>,
+}
+
+/// Implementation of [`Encodable`] for [`InitWrapper`] that encodes the handle of the command
+/// receiver channel in the first handle of the resulting [`Message`].
+impl<Init: Encodable, Command: Encodable + Decodable> Encodable for InitWrapper<Init, Command> {
+    fn encode(&self) -> Result<Message, OakError> {
+        let mut init_message = self.init.encode()?;
+        // Insert the handle of the command receiver handle at the beginning of the handle list
+        // (i.e. at position 0).
+        init_message
+            .handles
+            .insert(0, self.command_receiver.handle.handle);
+        Ok(init_message)
+    }
+}
+
+/// Implementation of [`Decodable`] for [`InitWrapper`] that decodes the handle of the command
+/// receiver channel from the first handle of the provided [`Message`].
+impl<Init: Decodable, Command: Decodable> Decodable for InitWrapper<Init, Command> {
+    fn decode(message: &Message) -> Result<Self, OakError> {
+        match message.handles.get(0) {
+            Some(handle) => {
+                let init_message = Message {
+                    bytes: message.bytes.clone(),
+                    handles: message.handles[1..].to_vec(),
+                };
+                Ok(Self {
+                    init: Init::decode(&init_message)?,
+                    command_receiver: Receiver::new(ReadHandle::from(*handle)),
+                })
+            }
+            _ => Err(OakStatus::ErrInvalidArgs.into()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
 
+    #[derive(Debug, PartialEq)]
+    struct TestStruct {
+        receiver_0: Receiver<()>,
+        field_0: u8,
+        receiver_1: Receiver<()>,
+        field_1: u8,
+    }
+
+    impl Encodable for TestStruct {
+        fn encode(&self) -> Result<Message, OakError> {
+            Ok(Message {
+                bytes: vec![self.field_0, self.field_1],
+                handles: vec![self.receiver_0.handle.handle, self.receiver_1.handle.handle],
+            })
+        }
+    }
+    impl Decodable for TestStruct {
+        fn decode(message: &Message) -> Result<Self, OakError> {
+            match (message.bytes.as_slice(), message.handles.as_slice()) {
+                ([byte_0, byte_1], [handle_0, handle_1]) => Ok(TestStruct {
+                    receiver_0: Receiver::from(ReadHandle::from(*handle_0)),
+                    field_0: *byte_0,
+                    receiver_1: Receiver::from(ReadHandle::from(*handle_1)),
+                    field_1: *byte_1,
+                }),
+                _ => panic!("invalid Message for TestStruct"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_struct_round_trip() {
+        let original = TestStruct {
+            receiver_0: Receiver::from(ReadHandle::from(100)),
+            field_0: 10,
+            receiver_1: Receiver::from(ReadHandle::from(101)),
+            field_1: 11,
+        };
+        let encoded = original.encode().unwrap();
+        assert_eq!(
+            Message {
+                bytes: vec![10, 11],
+                handles: vec![100, 101],
+            },
+            encoded
+        );
+        let decoded = TestStruct::decode(&encoded).unwrap();
+        assert_eq!(original, decoded);
+    }
+
     #[test]
     fn either_round_trip() {
-        type T = Either<u32, u32>;
+        type T = Either<u32, TestStruct>;
 
         {
             // This test case is just a baseline reference for the ones below, to spell out the
@@ -100,7 +194,7 @@ mod tests {
             assert_eq!(
                 Message {
                     bytes: vec![8, 196, 15],
-                    handles: vec![]
+                    handles: vec![],
                 },
                 encoded
             );
@@ -115,7 +209,7 @@ mod tests {
             assert_eq!(
                 Message {
                     bytes: vec![0, 8, 196, 15],
-                    handles: vec![]
+                    handles: vec![],
                 },
                 encoded
             );
@@ -124,13 +218,18 @@ mod tests {
         }
 
         {
-            let original = T::Right(1988);
+            let original = T::Right(TestStruct {
+                receiver_0: Receiver::from(ReadHandle::from(100)),
+                field_0: 10,
+                receiver_1: Receiver::from(ReadHandle::from(101)),
+                field_1: 11,
+            });
             let encoded = original.encode().unwrap();
             // Note the first byte corresponds to the variant == 1.
             assert_eq!(
                 Message {
-                    bytes: vec![1, 8, 196, 15],
-                    handles: vec![]
+                    bytes: vec![1, 10, 11],
+                    handles: vec![100, 101],
                 },
                 encoded
             );
@@ -148,6 +247,34 @@ mod tests {
                 T::decode(&encoded_invalid),
                 Err(OakError::OakStatus(OakStatus::ErrInvalidArgs))
             );
+        }
+    }
+
+    #[test]
+    fn init_wrapper_round_trip() {
+        type T = InitWrapper<TestStruct, ()>;
+
+        {
+            let original = T {
+                init: TestStruct {
+                    receiver_0: Receiver::from(ReadHandle::from(100)),
+                    field_0: 10,
+                    receiver_1: Receiver::from(ReadHandle::from(101)),
+                    field_1: 11,
+                },
+                command_receiver: Receiver::from(ReadHandle::from(123)),
+            };
+            let encoded = original.encode().unwrap();
+            // Note the handle list contains the command receiver handle at the beginning.
+            assert_eq!(
+                Message {
+                    bytes: vec![10, 11],
+                    handles: vec![123, 100, 101],
+                },
+                encoded
+            );
+            let decoded = T::decode(&encoded).unwrap();
+            assert_eq!(original, decoded);
         }
     }
 }
