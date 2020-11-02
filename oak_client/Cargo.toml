@@ -11,6 +11,8 @@ license = "Apache-2.0"
 anyhow = "*"
 http = "*"
 hyper = "*"
+futures-core = "*"
+futures-util = "*"
 log = "*"
 oak_abi = { path = "../oak_abi" }
 prost = "*"
