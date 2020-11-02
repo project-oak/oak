@@ -155,11 +155,11 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
                 #(#client_methods)*
             }
         };
-        out.push_str("\n");
+        out.push('\n');
         // TODO(#832): Currently the generated output is squashed on a single line; consider passing
         // it through rustfmt, if it does not increase compile time too much.
         out.push_str(&format!("{}", gen));
-        out.push_str("\n");
+        out.push('\n');
     }
 }
 
@@ -221,7 +221,7 @@ impl prost_build::ServiceGenerator for AsyncServiceGenerator {
             }
         };
         out.push_str(&format!("{}", gen));
-        out.push_str("\n");
+        out.push('\n');
 
         // Eventually the sync code generation will be removed, but until then we also generate that
         // code.
