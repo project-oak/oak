@@ -402,6 +402,12 @@
 <span id="399">399</span>
 <span id="400">400</span>
 <span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -537,6 +543,12 @@
             <span class="kw">impl</span> <span class="op">&lt;</span><span class="ident">T</span>: #<span class="ident">service_name</span><span class="op">&gt;</span> #<span class="ident">dispatcher_name</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
                 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">node</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">dispatcher_name</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
                     #<span class="ident">dispatcher_name</span>(<span class="ident">node</span>)
+                }
+            }
+
+            <span class="kw">impl</span> <span class="op">&lt;</span><span class="ident">T</span>: #<span class="ident">service_name</span> <span class="op">+</span> <span class="ident">Default</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> #<span class="ident">dispatcher_name</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+                <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+                    <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">T</span>::<span class="ident">default</span>())
                 }
             }
 
