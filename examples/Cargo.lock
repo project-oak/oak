@@ -1399,6 +1399,7 @@ checksum = "c36fa947111f5c62a733b652544dd0016a43ce89619538a8ef92724a6f501a20"
 name = "private_set_intersection"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "assert_matches",
  "env_logger",
  "log",
@@ -1784,6 +1785,7 @@ dependencies = [
 name = "running_average"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "assert_matches",
  "env_logger",
  "log",

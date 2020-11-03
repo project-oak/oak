@@ -26,24 +26,41 @@ pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.running_average.rs"));
 }
 
-use oak::{grpc, io::ReceiverExt};
+use anyhow::Context;
+use oak::{grpc, Label};
 use oak_abi::proto::oak::application::ConfigMap;
 use proto::{GetAverageResponse, RunningAverage, RunningAverageDispatcher, SubmitSampleRequest};
 
-oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
-    let dispatcher = RunningAverageDispatcher::new(Node::default());
-    let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel.iter());
-});
+#[derive(Default)]
+struct Main;
+
+oak::entrypoint_command_handler!(oak_main => Main);
+
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
+
+    fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
+        let handler_sender = oak::io::entrypoint_node_create::<RunningAverageDispatcher<Handler>>(
+            "handler",
+            &Label::public_untrusted(),
+            "app",
+        )
+        .context("could not create handler node")?;
+        oak::grpc::server::init_with_sender("[::]:8080", handler_sender)
+            .context("could not create gRPC server pseudo-Node")?;
+        Ok(())
+    }
+}
 
 #[derive(Default)]
-struct Node {
+struct Handler {
     sum: u64,
     count: u64,
 }
 
-impl RunningAverage for Node {
+oak::entrypoint_command_handler!(handler => RunningAverageDispatcher<Handler>);
+
+impl RunningAverage for Handler {
     fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<()> {
         self.sum += req.value;
         self.count += 1;
