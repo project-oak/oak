@@ -105,7 +105,7 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
                 false =>
                     quote! {
                         pub fn #method_name(&self, req: #input_type) -> #oak_package::grpc::Result<#output_type> {
-                            #oak_package::grpc::invoke_grpc_method(#method_name_string, &req, &self.0.invocation_sender)
+                            #oak_package::grpc::invoke_grpc_method(#method_name_string, &req, &self.0)
                         }
                     },
                 true =>
@@ -115,7 +115,7 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
                     // the underlying handle.
                     quote! {
                         pub fn #method_name(&self, req: #input_type) -> #oak_package::grpc::Result<#oak_package::io::Receiver<#oak_package::grpc::GrpcResponse>> {
-                            #oak_package::grpc::invoke_grpc_method_stream(#method_name_string, &req, &self.0.invocation_sender)
+                            #oak_package::grpc::invoke_grpc_method_stream(#method_name_string, &req, &self.0)
                         }
                     },
             }
@@ -162,7 +162,7 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
             }
 
             #[allow(dead_code)]
-            pub struct #client_name(pub #oak_package::grpc::client::Client);
+            pub struct #client_name(pub #oak_package::io::Sender<#oak_package::grpc::Invocation>);
 
             #[allow(dead_code)]
             impl #client_name {

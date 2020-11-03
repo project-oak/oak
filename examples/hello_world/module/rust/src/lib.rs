@@ -67,10 +67,7 @@ impl oak::WithInit for Node {
 
     fn create(init: Self::Init) -> Self {
         Node {
-            translator: init
-                .right()
-                .map(|invocation_sender| grpc::client::Client { invocation_sender })
-                .map(translator_common::TranslatorClient),
+            translator: init.right().map(translator_common::TranslatorClient),
         }
     }
 }

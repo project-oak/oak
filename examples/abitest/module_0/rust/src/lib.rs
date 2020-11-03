@@ -2164,18 +2164,14 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_unary_method(&mut self) -> TestResult {
-        let grpc_stub = oak::grpc::client::Client::new(
-            "grpc_client",
-            &oak::node_config::grpc_client("https://localhost:7878"),
-            &Label::public_untrusted(),
-        )
-        .map(OakAbiTestServiceClient)
-        .ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "no gRPC client channel available",
-            ))
-        })?;
+        let grpc_stub = oak::grpc::client::init("https://localhost:7878")
+            .map(OakAbiTestServiceClient)
+            .map_err(|_err| {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "no gRPC client channel available",
+                ))
+            })?;
 
         // Successful unary method invocation of external service via gRPC client pseudo-Node.
         let ok_req = GrpcTestRequest {
@@ -2204,18 +2200,14 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_server_streaming_method(&mut self) -> TestResult {
-        let grpc_stub = oak::grpc::client::Client::new(
-            "grpc_client",
-            &oak::node_config::grpc_client("https://localhost:7878"),
-            &Label::public_untrusted(),
-        )
-        .map(OakAbiTestServiceClient)
-        .ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "no gRPC client channel available",
-            ))
-        })?;
+        let grpc_stub = oak::grpc::client::init("https://localhost:7878")
+            .map(OakAbiTestServiceClient)
+            .map_err(|_err| {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "no gRPC client channel available",
+                ))
+            })?;
         // Successful server-streaming method invocation of external service via
         // gRPC client pseudo-Node.
         let ok_req = GrpcTestRequest {
@@ -2284,18 +2276,14 @@ impl FrontendNode {
     fn test_absent_grpc_client_unary_method(&mut self) -> TestResult {
         // Expect to have a channel to a gRPC client pseudo-Node, but the remote
         // gRPC service is unavailable.
-        let grpc_stub = oak::grpc::client::Client::new(
-            "grpc_client",
-            &oak::node_config::grpc_client("https://test.invalid:9999"),
-            &Label::public_untrusted(),
-        )
-        .map(OakAbiTestServiceClient)
-        .ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "no gRPC client channel available",
-            ))
-        })?;
+        let grpc_stub = oak::grpc::client::init("https://test.invalid:9999")
+            .map(OakAbiTestServiceClient)
+            .map_err(|_err| {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "no gRPC client channel available",
+                ))
+            })?;
         let req = GrpcTestRequest {
             method_result: Some(proto::grpc_test_request::MethodResult::OkText(
                 "test".to_string(),
@@ -2312,18 +2300,14 @@ impl FrontendNode {
     fn test_absent_grpc_client_server_streaming_method(&mut self) -> TestResult {
         // Expect to have a channel to a gRPC client pseudo-Node, but the remote
         // gRPC service is unavailable.
-        let grpc_stub = oak::grpc::client::Client::new(
-            "grpc_client",
-            &oak::node_config::grpc_client("https://test.invalid:9999"),
-            &Label::public_untrusted(),
-        )
-        .map(OakAbiTestServiceClient)
-        .ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "no gRPC client channel available",
-            ))
-        })?;
+        let grpc_stub = oak::grpc::client::init("https://test.invalid:9999")
+            .map(OakAbiTestServiceClient)
+            .map_err(|_err| {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "no gRPC client channel available",
+                ))
+            })?;
         let req = GrpcTestRequest {
             method_result: Some(proto::grpc_test_request::MethodResult::OkText(
                 "test".to_string(),
