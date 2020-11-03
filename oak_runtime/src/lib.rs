@@ -583,9 +583,9 @@ impl Runtime {
     }
 
     /// Returns the least restrictive (i.e. least confidential, most trusted) label that this Node
-    /// may downgrade `initial_label` to. This takes into account all the [downgrade
-    /// privilege](NodeInfo::privilege) that the node possesses.
-    fn get_node_downgraded_label(&self, node_id: NodeId, initial_label: &Label) -> Label {
+    /// may downgrade `initial_label` to. This takes into account all the downgrade privilege that
+    /// the node possesses.
+    pub fn get_node_downgraded_label(&self, node_id: NodeId, initial_label: &Label) -> Label {
         // Retrieve the set of tags that the node may downgrade.
         let node_privilege = self.get_node_privilege(node_id);
         let node_has_top_privilege = node_privilege

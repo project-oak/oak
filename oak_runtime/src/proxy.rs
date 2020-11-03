@@ -390,6 +390,30 @@ impl RuntimeProxy {
         result
     }
 
+    /// See [`Runtime::get_node_label`].
+    pub fn get_node_label(&self) -> Label {
+        debug!("{:?}: get_node_label()", self.node_id);
+        let result = self.runtime.get_node_label(self.node_id);
+        debug!("{:?}: get_node_label() -> {:?}", self.node_id, result);
+        result
+    }
+
+    /// See [`Runtime::get_node_downgraded_label`].
+    pub fn get_node_downgraded_label(&self, initial_label: &Label) -> Label {
+        debug!(
+            "{:?}: get_node_downgraded_label({:?})",
+            self.node_id, initial_label
+        );
+        let result = self
+            .runtime
+            .get_node_downgraded_label(self.node_id, initial_label);
+        debug!(
+            "{:?}: get_node_downgraded_label({:?}) -> {:?}",
+            self.node_id, initial_label, result
+        );
+        result
+    }
+
     /// Return the direction of an ABI handle.
     pub fn channel_direction(
         &self,

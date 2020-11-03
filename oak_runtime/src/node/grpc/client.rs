@@ -27,7 +27,7 @@ use crate::{
 };
 use log::{debug, error, info, trace, warn};
 use maplit::hashset;
-use oak_abi::{proto::oak::application::GrpcClientConfiguration, Handle, OakStatus};
+use oak_abi::{label::Label, proto::oak::application::GrpcClientConfiguration, Handle, OakStatus};
 use oak_io::{handle::ReadHandle, OakError};
 use oak_services::proto::{google::rpc, oak::encap::GrpcResponse};
 use tokio::sync::oneshot;
@@ -87,8 +87,6 @@ impl GrpcClientNode {
         // We compute the node privilege once and for all at start and just store it, since it does
         // not change throughout the node execution.
         let node_privilege = grpc_client_node_privilege(&uri);
-        // TODO(#814): Actually check that the newly created node can write to the
-        // "public_untrusted" label, taking into account its own label and privilege.
         Ok(Self {
             node_name: node_name.to_string(),
             uri,
@@ -174,6 +172,23 @@ impl GrpcClientNode {
             error
         })?;
         debug!("Incoming gRPC request: {:?}", request);
+
+        let current_label = runtime.get_node_label();
+        let downgraded_label = runtime.get_node_downgraded_label(&current_label);
+        // We can only send data outside of Oak if the current node has the privilege to declassify
+        // the label to "Public". For the gRPC client node this means that the current node's
+        // confidentiality label must be no higher than the TlsEndpointTag matching its URI
+        // authority.
+        if !downgraded_label.flows_to(&Label::public_untrusted()) {
+            error!(
+                "Insufficient downgrading privilege to declassify label {:?} to public.",
+                current_label
+            );
+            send_error(
+                rpc::Code::PermissionDenied,
+                "Couldn't connect to gRPC server due to IFC restrictions.",
+            );
+        }
 
         if self.grpc_client.is_none() {
             // Connect to an external gRPC service.
