@@ -208,6 +208,10 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
     | SWriteChan s n nlbl han clbl msg:
         (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
             (* caller is a real node with label nlbl *)
+        (s.(chans).[? han]).(lbl) = clbl ->
+            (* the handle has label clbl, though the call does not
+            check whether or not a channel is allocated to the handle
+            to avoid leaks (it can be Some or None) *)
         In n.(write_handles) han ->     (* caller has write handle *)
         nlbl <<L clbl ->     (* label of caller flowsTo label of ch*)
         Included msg.(rhs) n.(read_handles) ->

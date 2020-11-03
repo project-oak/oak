@@ -277,6 +277,9 @@ Proof.
                 pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
                 logical_simplify.
                 apply_all_constructors; eauto. congruence.
+                erewrite state_hidx_to_proj_state_hidx'.
+                erewrite low_projection_preserves_lbl.
+                eauto.
                 (* low-equiv *)
                 subst_lets. eauto 7 with unwind.
             + (* ReadChannel *)
