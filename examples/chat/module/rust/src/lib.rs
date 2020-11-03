@@ -41,15 +41,14 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
-        let grpc_channel =
-            oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-        oak::node_create(
+        let router_sender = oak::io::node_create::<oak::grpc::Invocation>(
             "router",
-            &oak::node_config::wasm("app", "router"),
             &Label::public_untrusted(),
-            grpc_channel.handle,
+            &oak::node_config::wasm("app", "router"),
         )
         .expect("could not create router node");
+        oak::grpc::server::init_with_sender("[::]:8080", router_sender)
+            .expect("could not create gRPC server pseudo-Node");
         Ok(())
     }
 }
