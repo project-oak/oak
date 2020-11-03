@@ -600,6 +600,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
+ "either",
  "env_logger",
  "hello_world_grpc",
  "log",

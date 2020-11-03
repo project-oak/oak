@@ -89,8 +89,8 @@ impl<L: Decodable, R: Decodable> Decodable for Either<L, R> {
 /// different channel, to be processed in an event-loop pattern.
 #[derive(Clone, Debug, PartialEq)]
 pub struct InitWrapper<Init, Command: Decodable> {
-    init: Init,
-    command_receiver: Receiver<Command>,
+    pub init: Init,
+    pub command_receiver: Receiver<Command>,
 }
 
 /// Implementation of [`Encodable`] for [`InitWrapper`] that encodes the handle of the command

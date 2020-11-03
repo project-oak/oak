@@ -18,30 +18,64 @@ pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.hello_world.rs"));
 }
 
+use either::Either;
 use log::info;
-use oak::{grpc, io::ReceiverExt};
+use oak::grpc;
 use oak_abi::{label::Label, proto::oak::application::ConfigMap};
+use oak_io::Sender;
 use proto::{HelloRequest, HelloResponse, HelloWorld, HelloWorldDispatcher};
 
-oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
-    oak::logger::init_default();
-    let node = Node {
-        translator: grpc::client::Client::new(
+#[derive(Default)]
+struct Main;
+
+oak::entrypoint_command_handler!(oak_main => Main);
+
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
+
+    fn handle_command(&mut self, _command: Self::Command) -> anyhow::Result<()> {
+        let translator_sender_result = oak::io::node_create::<grpc::Invocation>(
             "translator",
+            &Label::public_untrusted(),
             &oak::node_config::wasm("translator", "oak_main"),
-            &Label::public_untrusted()
-        )
-        .map(translator_common::TranslatorClient),
-    };
-    let dispatcher = HelloWorldDispatcher::new(node);
-    let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel.iter());
-});
+        );
+        let handler_init_sender = oak::io::entrypoint_node_create::<HelloWorldDispatcher<Node>>(
+            "handler",
+            &Label::public_untrusted(),
+            "app",
+        )?;
+        let handler_command_sender = oak::io::send_init(
+            handler_init_sender,
+            translator_sender_result
+                .map(Either::Right)
+                .unwrap_or(Either::Left(())),
+            &Label::public_untrusted(),
+        )?;
+        oak::grpc::server::init_with_sender("[::]:8080", handler_command_sender)?;
+        Ok(())
+    }
+}
 
 struct Node {
     translator: Option<translator_common::TranslatorClient>,
 }
+
+impl oak::WithInit for Node {
+    // Since `Option<T>` is not directly `Encodable` and `Decodable`, we emulate it via a
+    // `Either<(), T>`, which is isomorphic to it.
+    type Init = Either<(), Sender<grpc::Invocation>>;
+
+    fn create(init: Self::Init) -> Self {
+        Node {
+            translator: init
+                .right()
+                .map(|invocation_sender| grpc::client::Client { invocation_sender })
+                .map(translator_common::TranslatorClient),
+        }
+    }
+}
+
+oak::entrypoint_command_handler_init!(node => HelloWorldDispatcher<Node>);
 
 impl Node {
     fn translate(&self, text: &str, from_lang: &str, to_lang: &str) -> Option<String> {
