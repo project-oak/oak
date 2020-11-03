@@ -1,9 +1,9 @@
-2dd46624e7908b233c49fbf804ed20f8f0e3caf781c7ff18b204e6723b93e847  ./examples/target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm
+40ea94f2b605903392dfb748c06501dfacdda27fe4544d4b5f4e25dea856ff8f  ./examples/target/wasm32-unknown-unknown/release/abitest_0_frontend.wasm
 98a992348c88fd51afcdc4f0271aa26af942c926ecdc56229fbac9dfd093de98  ./examples/target/wasm32-unknown-unknown/release/abitest_1_backend.wasm
 e7179f4e72b52f11436f317d805d4c0f1558bfd4fb9cf54d475639274ddb42c8  ./examples/target/wasm32-unknown-unknown/release/aggregator.wasm
 8b59edd99595ca402376b5ac767c2c0d87df5d859b72b9f51e8349be844887a0  ./examples/target/wasm32-unknown-unknown/release/chat.wasm
 71cf5c9181882f1500ca0d4b4ed70b0175d5cfdf80f48fba66b61bd16ee5c6e7  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
-1bd3cb090668a68ae2606df188cef3f0daf5d4b1d0079b94488b7245168d94df  ./examples/target/wasm32-unknown-unknown/release/http_server.wasm
+eeca136c62ef63f31d927b73e83060d10b894c1bb19735db311f8d5f3cded0d2  ./examples/target/wasm32-unknown-unknown/release/http_server.wasm
 fcc90db46b15bcfe2f1671c752498d0bdf956d8bd679493d70b92cddfb2034ed  ./examples/target/wasm32-unknown-unknown/release/injection.wasm
 7453375724fcda1855be658e412796238719fc1d925c4bbe1efb38610c73cb35  ./examples/target/wasm32-unknown-unknown/release/machine_learning.wasm
 817bfc5127f2355edf204e2d43f1f3346356473423e8ba4b05721d3659c3b72c  ./examples/target/wasm32-unknown-unknown/release/private_set_intersection.wasm
