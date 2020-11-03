@@ -560,11 +560,11 @@
                 #(#<span class="ident">client_methods</span>)<span class="op">*</span>
             }
         };
-        <span class="ident">out</span>.<span class="ident">push_str</span>(<span class="string">&quot;\n&quot;</span>);
+        <span class="ident">out</span>.<span class="ident">push</span>(<span class="string">&#39;\n&#39;</span>);
         <span class="comment">// TODO(#832): Currently the generated output is squashed on a single line; consider passing</span>
         <span class="comment">// it through rustfmt, if it does not increase compile time too much.</span>
         <span class="ident">out</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">gen</span>));
-        <span class="ident">out</span>.<span class="ident">push_str</span>(<span class="string">&quot;\n&quot;</span>);
+        <span class="ident">out</span>.<span class="ident">push</span>(<span class="string">&#39;\n&#39;</span>);
     }
 }
 
@@ -626,7 +626,7 @@
             }
         };
         <span class="ident">out</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">gen</span>));
-        <span class="ident">out</span>.<span class="ident">push_str</span>(<span class="string">&quot;\n&quot;</span>);
+        <span class="ident">out</span>.<span class="ident">push</span>(<span class="string">&#39;\n&#39;</span>);
 
         <span class="comment">// Eventually the sync code generation will be removed, but until then we also generate that</span>
         <span class="comment">// code.</span>
