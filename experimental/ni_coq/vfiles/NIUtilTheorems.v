@@ -271,24 +271,27 @@ Section unobservable.
     not visible to ell the old and new state are ell-equivalent
 *)
 
-Theorem set_call_unobs: forall ell s id n c,
-    (nodes s).[? id] = n ->
-    ~(lbl n <<L ell) ->
+Theorem set_call_unobs: forall ell s id c,
+    ~(lbl (nodes s).[? id] <<L ell) ->
     (state_low_eq ell s (s_set_call s id c)).
 Proof.
 Admitted.
 
-Theorem state_upd_chan_unobs: forall ell s han ch ch',
-    (chans s).[? han] = ch ->
-    ~(lbl ch <<L ell) ->
-    (state_low_eq ell s (state_upd_chan han ch' s)).
+Theorem state_upd_chan_unobs: forall ell s han ch,
+    ~(lbl (chans s).[? han] <<L ell) ->
+    (state_low_eq ell s (state_upd_chan han ch s)).
 Proof.
 Admitted.
 
-Theorem state_upd_node_unobs: forall ell s id n n',
-    (nodes s).[? id] = n ->
-    ~(lbl n <<L ell) ->
-    (state_low_eq ell s (state_upd_node id n' s)).
+Theorem state_chan_append_labeled_unobs: forall ell s han msg,
+    ~(lbl (chans s).[? han] <<L ell) ->
+    (state_low_eq ell s (state_chan_append_labeled han msg s)).
+Proof.
+Admitted.
+
+Theorem state_upd_node_unobs: forall ell s id n,
+    ~(lbl (nodes s).[? id] <<L ell) ->
+    (state_low_eq ell s (state_upd_node id n s)).
 Proof.
 Admitted.
 

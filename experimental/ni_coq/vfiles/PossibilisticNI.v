@@ -160,6 +160,15 @@ Theorem unobservable_node_step: forall ell s s' e id nl n,
     (state_low_eq ell s s') /\ (event_low_eq ell e (empty_event e.(lbl))).
 Proof.
     intros. inversion H1; (split; [ inversion H5 | ] ); subst_lets; crush.
+    - (* WriteChannel; states loweq *)
+        assert ((nodes s).[? id].(lbl) = nlbl0) by (rewrite H11; reflexivity).
+        assert (~ nlbl0 <<L ell) by congruence.
+        assert ( ~ (lbl (chans s).[? han] <<L ell) ) by eauto using ord_trans.
+        eapply state_low_eq_trans.
+        eapply state_upd_node_unobs; eauto.
+        eapply state_chan_append_labeled_unobs; eauto.
+    - (* WriteChannel; events loweq*)
+        
 Admitted.
 (*
     - (* WriteChannel; states loweq *) 
@@ -489,7 +498,9 @@ Proof.
                 eapply set_call_unobs. eauto.
                 replace (lbl ns1') with (lbl n')
                     by (eapply node_low_eq_to_lbl_eq; eassumption).
-                admit.
+                replace (lbl n') with (lbl nl). eauto.
+                rewrite <- Hproj_n'.
+                eapply low_projection_preserves_lbl.
             + (* e1 ={ell} *) assumption.
 Admitted.
 
