@@ -224,6 +224,10 @@ Creates a new Node running the Node configuration identified by `param[0]` and
 newly created Node, passing in an initial handle to the read half of a channel
 identified by `param[4]`.
 
+The name is a UTF-8 encoded string. It does not have to be unique and can be
+empty. It is used in logs and introspection to help with identifying nodes
+during debugging.
+
 The Node configuration is a serialized
 [`NodeConfiguration`](/oak_abi/proto/application.proto) protobuf message, and
 the label is a serialized [`Label`](/oak_abi/proto/label.proto) protobuf
