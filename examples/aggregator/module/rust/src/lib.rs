@@ -228,7 +228,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     // Node creation. This is only allowed if the current Node actually has the
     // appropriate capability (i.e. the correct WebAssembly module hash) as specified by
     // the label component being removed, as set by the client.
-    // TODO(#814): Uncomment and use correct confidentiality labels.
+    // TODO(#1674): Uncomment and use correct confidentiality labels once this can be supported.
     // let label = Label {
     //     confidentiality_tags: vec![Tag {
     //         tag: Some(tag::Tag::TlsEndpointTag(TlsEndpointTag {

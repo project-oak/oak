@@ -78,6 +78,7 @@ int main(int argc, char** argv) {
   //
   // The particular value corresponds to the hash on the `aggregator.wasm` line in
   // https://github.com/project-oak/oak/blob/hashes/reproducibility_index.
+  // TODO(#1674): Add the appropriate TlsEndpointTag to the label as well once it can be supported.
   oak::label::Label label = oak::WebAssemblyModuleHashLabel(
       absl::HexStringToBytes("05493131b2041ee7fbbcb41758133b420862c57374d318454646f51014afa838"));
   // Connect to the Oak Application.
