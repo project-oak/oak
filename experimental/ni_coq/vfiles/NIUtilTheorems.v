@@ -16,6 +16,29 @@ Require Import Coq.Classes.RelationClasses.
 
 Local Open Scope map_scope.
 
+Section misc.
+Theorem can_split_node_index: forall s id n ell,
+    (nodes s).[? id] = {| obj := Some n; lbl := ell |} ->
+    (obj (nodes s).[? id] = Some n) /\
+    (lbl (nodes s).[? id] = ell).
+Proof.
+    intros. split; destruct ((nodes s).[? id]).
+    - unfold RuntimeModel.obj. inversion H. reflexivity.
+    - unfold RuntimeModel.lbl. inversion H. reflexivity.
+Qed.
+
+Theorem can_split_chan_index: forall s han ch ell,
+    (chans s).[? han] = {| obj := Some ch; lbl := ell|} ->
+    (obj (chans s).[? han] = Some ch) /\
+    (lbl (chans s).[? han] = ell).
+Proof.
+    intros. split; destruct ((chans s).[? han]).
+    - unfold RuntimeModel.obj. inversion H. reflexivity.
+    - unfold RuntimeModel.lbl. inversion H. reflexivity.
+Qed.
+
+End misc.
+
 Section low_projection.
 
 Theorem flows_labeled_proj {A: Type}: forall ell (x: @labeled A),
@@ -33,16 +56,6 @@ Proof.
     intros. destruct x. unfold low_proj. simpl in H.
     destruct (lbl <<? ell); eauto; try contradiction.
 Qed.
-
-Theorem proj_pres_handle_fresh: forall ell s,
-    handle_fresh (state_low_proj ell s) = handle_fresh s.
-Proof.
-Admitted.
-
-Theorem proj_pres_nid_fresh: forall ell s,
-    nid_fresh (state_low_proj ell s) = nid_fresh s.
-Proof.
-Admitted.
 
 Definition idempotent {A: Type} (f: A -> A) := forall a, f (f a) = f a.
 

@@ -32,6 +32,12 @@ Definition state_unwind (f: state -> state):
 but we have to fix the way the definitions are curried.
 *)
 
+Theorem state_upd_node_eq_unwind: forall ell id n s1 s2,
+    state_low_eq ell s1 s2 ->
+    state_low_eq ell (state_upd_node id n s1) (state_upd_node id n s2).
+Proof.
+Admitted.
+
 Theorem state_upd_node_unwind: forall ell id n1 n2 n1obj n2obj s1 s2,
     node_low_eq ell n1 n2 ->
     n1.(obj) = Some n1obj ->
@@ -51,6 +57,12 @@ Theorem chan_append_unwind: forall ell ch1 ch2 ch1obj ch2obj msg,
 Proof.
 Admitted. (* WIP // TODO *)
 
+Theorem state_upd_chan_eq_unwind: forall ell han ch s1 s2,
+    state_low_eq ell s1 s2 ->
+    state_low_eq ell (state_upd_chan han ch s1) (state_upd_chan han ch s2).
+Proof.
+Admitted.
+
 Theorem state_upd_chan_unwind: forall ell han ch1 ch2 ch1obj ch2obj s1 s2,
     chan_low_eq ell ch1 ch2 ->
     ch1.(obj) = Some ch1obj ->
@@ -67,10 +79,18 @@ Theorem state_upd_node_labeled_unwind: forall ell id n1 n2 s1 s2,
 Proof.
 Admitted.
 
-Theorem state_upd_chan_labeled_unwind: forall ell id ch1 ch2 s1 s2,
+Theorem state_upd_chan_labeled_unwind: forall ell h ch1 ch2 s1 s2,
     chan_low_eq ell ch1 ch2 ->
     state_low_eq ell s1 s2 ->
-    state_low_eq ell (state_upd_chan_labeled id ch1 s1) (state_upd_chan_labeled id ch2 s2).
+    state_low_eq ell (state_upd_chan_labeled h ch1 s1) (state_upd_chan_labeled h ch2 s2).
+Proof.
+Admitted.
+
+Theorem state_chan_append_labeled_unwind: forall ell han msg s1 s2,
+    state_low_eq ell s1 s2 ->
+    state_low_eq ell 
+        (state_chan_append_labeled han msg s1)
+        (state_chan_append_labeled han msg s2).
 Proof.
 Admitted.
 
