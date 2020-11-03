@@ -2541,9 +2541,9 @@ pub extern "C" fn channel_loser(_handle: u64) {
 #[no_mangle]
 pub extern "C" fn http_oak_main(http_channel: u64) {
     oak::logger::init_default();
-    let node = http_server::StaticHttpServer;
+    let handler = http_server::StaticHttpHandler;
     oak::run_command_loop(
-        node,
+        handler,
         Receiver::new(oak_io::handle::ReadHandle {
             handle: http_channel,
         })
