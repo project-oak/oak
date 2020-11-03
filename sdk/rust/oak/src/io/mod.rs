@@ -49,6 +49,20 @@ pub fn node_create<T: Encodable + Decodable>(
     Ok(sender)
 }
 
+/// Creates a node and corresponding inbound channel of the same type, for nodes that are
+/// instantiated via the [`crate::entrypoint_command_handler`] macro.
+pub fn entrypoint_node_create<T: crate::WasmEntrypoint + crate::CommandHandler>(
+    name: &str,
+    label: &Label,
+    wasm_module_name: &str,
+) -> Result<Sender<T::Command>, OakStatus>
+where
+    T::Command: Encodable + Decodable,
+{
+    let node_config = &crate::node_config::wasm(wasm_module_name, T::ENTRYPOINT_NAME);
+    node_create(name, label, node_config)
+}
+
 /// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].
 ///
 /// Panics if passed an `OakStatus::Ok` value.

@@ -35,6 +35,7 @@ oak::entrypoint_command_handler!(main => Main);
 /// Main entrypoint of the chat application.
 ///
 /// This node is in charge of creating the other top-level nodes, but does not process any request.
+#[derive(Default)]
 struct Main;
 
 impl oak::CommandHandler for Main {
@@ -53,7 +54,7 @@ impl oak::CommandHandler for Main {
     }
 }
 
-oak::entrypoint_command_handler!(router => Router::default());
+oak::entrypoint_command_handler!(router => Router);
 
 /// A node that routes each incoming gRPC invocation to a per-room worker node (either pre-existing,
 /// or newly created) that can handle requests with the label of the incoming request.
@@ -112,7 +113,7 @@ impl oak::CommandHandler for Router {
                 // Check if there is a channel to a room with the desired label already, or create
                 // it if not.
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
-                    oak::io::node_create("room", &label, &oak::node_config::wasm("app", "room"))
+                    oak::io::entrypoint_node_create::<ChatDispatcher<Room>>("room", &label, "app")
                         .expect("could not create node")
                 });
                 // Send the invocation to the dedicated worker node.
@@ -126,7 +127,7 @@ impl oak::CommandHandler for Router {
     }
 }
 
-oak::entrypoint_command_handler!(room => ChatDispatcher::new(Room::default()));
+oak::entrypoint_command_handler!(room => ChatDispatcher<Room>);
 
 /// A worker node implementation for an individual label, corresponding to a chat room between the
 /// set of user that share the key to that chat room.
