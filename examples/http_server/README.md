@@ -5,9 +5,9 @@ with "Hello from HTTP server!\n" to all requests.
 
 This Oak Application has an
 [HTTP server pseudo-node](/docs/concepts.md#pseudo-nodes) that connects to a
-`StaticHttpServer` that implements
+`StaticHttpHandler` that implements
 [Node](https://project-oak.github.io/oak/sdk/doc/oak/trait.Node.html).
-`StaticHttpServer` is the node serving HTTP requests.
+`StaticHttpHandler` is the main logic of the node serving HTTP requests.
 
 To run the example interactively:
 

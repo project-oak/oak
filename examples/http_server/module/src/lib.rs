@@ -30,7 +30,7 @@ impl oak::CommandHandler for Main {
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
         let http_handler_sender = oak::io::entrypoint_node_create::<StaticHttpHandler>(
-            "router",
+            "handler",
             &Label::public_untrusted(),
             "app",
         )
