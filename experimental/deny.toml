@@ -22,11 +22,11 @@ wildcards = "allow"
 
 [[bans.skip]]
 name = "pin-project"
-version = "=1.0.1"
+version = "=0.4.27"
 
 [[bans.skip]]
 name = "pin-project-internal"
-version = "=1.0.1"
+version = "=0.4.27"
 
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.

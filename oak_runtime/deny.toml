@@ -26,11 +26,11 @@ version = "=0.19.0"
 
 [[bans.skip]]
 name = "pin-project"
-version = "=1.0.1"
+version = "=0.4.23"
 
 [[bans.skip]]
 name = "pin-project-internal"
-version = "=1.0.1"
+version = "=0.4.23"
 
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
