@@ -38,16 +38,17 @@ pub struct Storage {
 impl Storage {
     /// Creates a [`Storage`] instance using the given configuration.
     pub fn new(config: &StorageProxyConfiguration) -> Option<Storage> {
-        crate::grpc::client::Client::new(
+        crate::io::node_create(
             "storage",
+            &Label::public_untrusted(),
             &NodeConfiguration {
                 config_type: Some(ConfigType::StorageConfig(config.clone())),
             },
-            &Label::public_untrusted(),
         )
-        .map(|client| Storage {
-            client: StorageServiceClient(client),
+        .map(|invocation_sender| Storage {
+            client: StorageServiceClient(invocation_sender),
         })
+        .ok()
     }
 
     /// Read the value associated with the given `name` from the storage

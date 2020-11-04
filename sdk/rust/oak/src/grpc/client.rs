@@ -14,48 +14,17 @@
 // limitations under the License.
 //
 
-use crate::io::SenderExt;
-use log::{info, warn};
-use oak_abi::{label::Label, proto::oak::application::NodeConfiguration};
+use crate::{grpc::Invocation, OakStatus};
+use oak_abi::label::Label;
+use oak_io::Sender;
 
-/// Client for a gRPC service in another Node.
-pub struct Client {
-    pub invocation_sender: crate::io::Sender<crate::grpc::Invocation>,
-}
-
-impl Client {
-    /// Creates a new Node that implements a gRPC service, and if successful return a Client.
-    ///
-    /// The `node_name` is used for the newly create node.
-    ///
-    /// The `config` specifies the Node configuration that is used for creating the target node.
-    ///
-    /// The provided [`Label`] specifies the label for the newly created Node and Channel.
-    pub fn new(node_name: &str, config: &NodeConfiguration, label: &Label) -> Option<Client> {
-        match crate::io::node_create(node_name, label, config) {
-            Ok(invocation_sender) => {
-                info!(
-                    "Client created for '{:?}', accessible via channel {:?}",
-                    config, invocation_sender.handle
-                );
-                Some(Client { invocation_sender })
-            }
-            Err(status) => {
-                warn!("failed to create Client for '{:?}': {:?}", config, status);
-                None
-            }
-        }
-    }
-}
-
-impl Drop for Client {
-    fn drop(&mut self) {
-        info!("Closing Client channel {:?}", self.invocation_sender.handle);
-        if let Err(status) = self.invocation_sender.close() {
-            warn!(
-                "Failed to close Client channel {:?}: {:?}",
-                self.invocation_sender.handle, status
-            );
-        }
-    }
+/// Initializes a gRPC client pseudo-Node connecting to the provided address.
+///
+/// Returns a [`Sender`] to write gRPC [`Invocation`]s to.
+pub fn init(address: &str) -> Result<Sender<Invocation>, OakStatus> {
+    let config = crate::node_config::grpc_client(address);
+    // TODO(#1669): Assign an appropriate label to the newly created node, based on the provided
+    // address. If the label is higher (more confidential) than what the newly created gRPC
+    // pseudo-node is able to declassify, the Runtime should return an error at node creation time.
+    crate::io::node_create::<Invocation>("grpc_client", &Label::public_untrusted(), &config)
 }

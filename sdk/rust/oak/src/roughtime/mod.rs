@@ -38,11 +38,11 @@ impl Roughtime {
         let config = NodeConfiguration {
             config_type: Some(ConfigType::RoughtimeClientConfig(config.clone())),
         };
-        crate::grpc::client::Client::new("roughtime", &config, &Label::public_untrusted()).map(
-            |client| Roughtime {
-                client: RoughtimeServiceClient(client),
-            },
-        )
+        crate::io::node_create("roughtime", &Label::public_untrusted(), &config)
+            .map(|invocation_sender| Roughtime {
+                client: RoughtimeServiceClient(invocation_sender),
+            })
+            .ok()
     }
 
     /// Get the current Roughtime value as a Duration since UNIX epoch.
