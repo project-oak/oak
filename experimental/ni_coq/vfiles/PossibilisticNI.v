@@ -168,7 +168,13 @@ Proof.
         eapply state_upd_node_unobs; eauto.
         eapply state_chan_append_labeled_unobs; eauto.
     - (* WriteChannel; events loweq*)
-        
+        simpl. Check nflows_labeled_proj.
+        unfold event_low_eq. unfold low_eq.
+        erewrite nflows_labeled_proj.
+        erewrite nflows_labeled_proj.
+        all: eauto.
+    - (* ReadChannel; states loweq *)
+
 Admitted.
 (*
     - (* WriteChannel; states loweq *) 
@@ -239,8 +245,6 @@ Admitted.
     erewrite event_low_proj_idempotent. reflexivity.
 Qed.
 *)
-
-
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
@@ -351,6 +355,14 @@ Proof.
             (* events leq *)
             congruence.
 Qed.
+(*
+=======
+            admit. (* depends on soon-to-change def of state low-eqs *)
+            pose proof (state_low_proj_loweq ell s1).
+            all: congruence.
+Admitted.
+>>>>>>> 4b5dd548 (Fixup from old PR.)
+*)
 
 Lemma separate_lableled {A} (o : option A) (l : level) (x : labeled) :
   obj x = o -> lbl x = l -> x = Labeled _ o l.

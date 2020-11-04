@@ -17,25 +17,25 @@ Require Import Coq.Classes.RelationClasses.
 Local Open Scope map_scope.
 
 Section misc.
-Theorem can_split_node_index: forall s id n ell,
-    (nodes s).[? id] = {| obj := Some n; lbl := ell |} ->
-    (obj (nodes s).[? id] = Some n) /\
-    (lbl (nodes s).[? id] = ell).
-Proof.
-    intros. split; destruct ((nodes s).[? id]).
-    - unfold RuntimeModel.obj. inversion H. reflexivity.
-    - unfold RuntimeModel.lbl. inversion H. reflexivity.
-Qed.
+  Theorem can_split_node_index: forall s id n ell,
+      (nodes s).[? id] = {| obj := Some n; lbl := ell |} ->
+      (obj (nodes s).[? id] = Some n) /\
+      (lbl (nodes s).[? id] = ell).
+  Proof.
+      intros. split; destruct ((nodes s).[? id]).
+      - unfold RuntimeModel.obj. inversion H. reflexivity.
+      - unfold RuntimeModel.lbl. inversion H. reflexivity.
+  Qed.
 
-Theorem can_split_chan_index: forall s han ch ell,
-    (chans s).[? han] = {| obj := Some ch; lbl := ell|} ->
-    (obj (chans s).[? han] = Some ch) /\
-    (lbl (chans s).[? han] = ell).
-Proof.
+  Theorem can_split_chan_index: forall s han ch ell,
+      (chans s).[? han] = {| obj := Some ch; lbl := ell|} ->
+      (obj (chans s).[? han] = Some ch) /\
+      (lbl (chans s).[? han] = ell).
+  Proof.
     intros. split; destruct ((chans s).[? han]).
     - unfold RuntimeModel.obj. inversion H. reflexivity.
     - unfold RuntimeModel.lbl. inversion H. reflexivity.
-Qed.
+  Qed.
 
 End misc.
 
@@ -267,32 +267,32 @@ End low_equivalence.
 
 Section unobservable.
 
-(* These are theorems that say that when you change a part of a state that is
-    not visible to ell the old and new state are ell-equivalent
-*)
-
-Theorem set_call_unobs: forall ell s id c,
-    ~(lbl (nodes s).[? id] <<L ell) ->
-    (state_low_eq ell s (s_set_call s id c)).
-Proof.
-Admitted.
-
-Theorem state_upd_chan_unobs: forall ell s han ch,
-    ~(lbl (chans s).[? han] <<L ell) ->
-    (state_low_eq ell s (state_upd_chan han ch s)).
-Proof.
-Admitted.
-
-Theorem state_chan_append_labeled_unobs: forall ell s han msg,
-    ~(lbl (chans s).[? han] <<L ell) ->
-    (state_low_eq ell s (state_chan_append_labeled han msg s)).
-Proof.
-Admitted.
-
-Theorem state_upd_node_unobs: forall ell s id n,
-    ~(lbl (nodes s).[? id] <<L ell) ->
-    (state_low_eq ell s (state_upd_node id n s)).
-Proof.
-Admitted.
-
+  (* These are theorems that say that when you change a part of a state that is
+      not visible to ell the old and new state are ell-equivalent
+  *)
+  
+  Theorem set_call_unobs: forall ell s id c,
+      ~(lbl (nodes s).[? id] <<L ell) ->
+      (state_low_eq ell s (s_set_call s id c)).
+  Proof.
+  Admitted.
+  
+  Theorem state_upd_chan_unobs: forall ell s han ch,
+      ~(lbl (chans s).[? han] <<L ell) ->
+      (state_low_eq ell s (state_upd_chan han ch s)).
+  Proof.
+  Admitted.
+  
+  Theorem state_chan_append_labeled_unobs: forall ell s han msg,
+      ~(lbl (chans s).[? han] <<L ell) ->
+      (state_low_eq ell s (state_chan_append_labeled han msg s)).
+  Proof.
+  Admitted.
+  
+  Theorem state_upd_node_unobs: forall ell s id n,
+      ~(lbl (nodes s).[? id] <<L ell) ->
+      (state_low_eq ell s (state_upd_node id n s)).
+  Proof.
+  Admitted.
+  
 End unobservable.
