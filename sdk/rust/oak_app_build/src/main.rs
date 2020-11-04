@@ -126,10 +126,10 @@ async fn download_file_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
     let url: Url = url
         .parse()
         .with_context(|| format!("Couldn't parse URL {}", url))?;
-
     let response = reqwest::get(url.clone())
         .await
         .with_context(|| format!("Couldn't send request to {}", url))?;
+
     // `reqwest` automatically handles redirects.
     // https://docs.rs/reqwest/0.10.8/reqwest/redirect/index.html
     if response.status().is_success() {
