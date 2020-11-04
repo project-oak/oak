@@ -20,6 +20,7 @@
 use byteorder::WriteBytesExt;
 use log::{debug, error, warn};
 use oak_abi::proto::oak::application::NodeConfiguration;
+use oak_io::{Decodable, Encodable};
 use prost::Message;
 
 // Re-export ABI and Services constants and structs that are also visible as part of the SDK API.
@@ -452,12 +453,27 @@ pub fn run_command_loop<N: CommandHandler, R: Iterator<Item = N::Command>>(
 /// Trait implemented by structs that correspond to entrypoint of Wasm nodes.
 ///
 /// This statically ties together the Wasm entrypoint name (i.e. the name of the Wasm exported
-/// function) to the associated constant of this trait.
+/// function) and the type of messages that the node accepts with this trait.
 ///
 /// This trait is automatically implemented for types used as part of [`entrypoint_command_handler`]
 /// entrypoint definitions.
 pub trait WasmEntrypoint {
+    /// Name of the WebAssembly exported function that corresponds to the entrypoint of this Node.
     const ENTRYPOINT_NAME: &'static str;
+
+    /// Type of message that the Node accepts on its inbound channel.
+    type Message: Encodable + Decodable;
+}
+
+/// Trait implemented by structs that require an initialization step by receiving data over the
+/// inbound channel (usually wrapped within a [`oak_io::InitWrapper`] message).
+pub trait WithInit {
+    type Init;
+
+    /// Creates an instance of this struct based on the provided initialization data.
+    ///
+    /// Panics if there is any error.
+    fn create(init: Self::Init) -> Self;
 }
 
 /// Register a new Node entrypoint.
@@ -593,10 +609,33 @@ macro_rules! entrypoint_command_handler {
         ::oak::entrypoint!($name < _ > => |receiver: ::oak::io::Receiver<_>| {
             use ::oak::io::ReceiverExt;
             ::oak::logger::init_default();
-            ::oak::run_command_loop(<$handler>::default(), receiver.iter());
+            let instance = <$handler>::default();
+            ::oak::run_command_loop(instance, receiver.iter());
         });
         impl ::oak::WasmEntrypoint for $handler {
             const ENTRYPOINT_NAME: &'static str = std::stringify!($name);
+            type Message = <$handler as ::oak::CommandHandler>::Command;
+        }
+    };
+}
+
+/// Similar to [`entrypoint_command_handler`], but for nodes that expect to receive initialization
+/// data via an [`oak_io::InitWrapper`] instance over the inbound channel before processing
+/// subsequent commands.
+#[macro_export]
+macro_rules! entrypoint_command_handler_init {
+    ($name:ident => $handler:ty) => {
+        ::oak::entrypoint!($name < _ > => |receiver: ::oak::io::Receiver<::oak_io::InitWrapper<_, _>>| {
+            use ::oak::io::ReceiverExt;
+            use ::oak::WithInit;
+            ::oak::logger::init_default();
+            let init_wrapper = receiver.receive().expect("could not receive init");
+            let instance = <$handler>::create(init_wrapper.init);
+            ::oak::run_command_loop(instance, init_wrapper.command_receiver.iter());
+        });
+        impl ::oak::WasmEntrypoint for $handler {
+            const ENTRYPOINT_NAME: &'static str = std::stringify!($name);
+            type Message = ::oak_io::InitWrapper<<$handler as ::oak::WithInit>::Init, <$handler as ::oak::CommandHandler>::Command>;
         }
     };
 }

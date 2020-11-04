@@ -51,16 +51,33 @@ pub fn node_create<T: Encodable + Decodable>(
 
 /// Creates a node and corresponding inbound channel of the same type, for nodes that are
 /// instantiated via the [`crate::entrypoint_command_handler`] macro.
-pub fn entrypoint_node_create<T: crate::WasmEntrypoint + crate::CommandHandler>(
+pub fn entrypoint_node_create<T: crate::WasmEntrypoint>(
     name: &str,
     label: &Label,
     wasm_module_name: &str,
-) -> Result<Sender<T::Command>, OakStatus>
-where
-    T::Command: Encodable + Decodable,
-{
+) -> Result<Sender<T::Message>, OakStatus> {
     let node_config = &crate::node_config::wasm(wasm_module_name, T::ENTRYPOINT_NAME);
     node_create(name, label, node_config)
+}
+
+/// Sends an init message over the provided [`Sender`], which is consumed by this method, and
+/// returns a [`Sender`] for subsequent commands.
+///
+/// Useful for sending initial data to nodes instantiated via the
+/// [`crate::entrypoint_command_handler_init`] macro.
+pub fn send_init<Init: Encodable + Decodable, Command: Encodable + Decodable>(
+    sender: Sender<oak_io::InitWrapper<Init, Command>>,
+    init: Init,
+    command_channel_label: &Label,
+) -> Result<Sender<Command>, oak_io::OakError> {
+    let (command_sender, command_receiver) =
+        channel_create::<Command>("command sender", command_channel_label)?;
+    let init_wrapper = oak_io::InitWrapper {
+        init,
+        command_receiver,
+    };
+    sender.send(&init_wrapper)?;
+    Ok(command_sender)
 }
 
 /// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].

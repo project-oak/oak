@@ -141,6 +141,14 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
                 }
             }
 
+            impl <T: #service_name + #oak_package::WithInit> #oak_package::WithInit for #dispatcher_name<T> {
+                type Init = T::Init;
+
+                fn create(init: Self::Init) -> Self {
+                    Self::new(T::create(init))
+                }
+            }
+
             #[allow(clippy::unit_arg)]
             impl <T: #service_name> #oak_package::grpc::ServerNode for #dispatcher_name<T> {
                 fn invoke(&mut self, method: &str, req: &[u8], writer: #oak_package::grpc::ChannelResponseWriter) {
