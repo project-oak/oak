@@ -1041,32 +1041,31 @@ fn run_buildifier(mode: FormatMode) -> Step {
 }
 
 fn run_prettier(mode: FormatMode) -> Step {
-    Step::Multiple {
-        name: "prettier".to_string(),
-        steps: source_files()
-            .filter(|path| {
-                is_markdown_file(path)
-                    || is_yaml_file(path)
-                    || is_toml_file(path)
-                    || is_html_file(path)
-                    || is_javascript_file(path)
-                    || is_typescript_file(path)
-            })
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new(
-                    "prettier",
-                    &[
-                        match mode {
-                            FormatMode::Check => "--check",
-                            FormatMode::Fix => "--write",
-                        },
-                        &entry,
-                    ],
-                ),
-            })
-            .collect(),
+    // We run prettier as a single command on all the files at once instead of once per file,
+    // because it takes a considerable time to start up for each invocation. See #1680.
+    let files = source_files()
+        .filter(|path| {
+            is_markdown_file(path)
+                || is_yaml_file(path)
+                || is_toml_file(path)
+                || is_html_file(path)
+                || is_javascript_file(path)
+                || is_typescript_file(path)
+        })
+        .map(to_string)
+        .collect::<Vec<_>>();
+    Step::Single {
+        name: "prettier (coalesced)".to_string(),
+        command: Cmd::new(
+            "prettier",
+            spread![
+                match mode {
+                    FormatMode::Check => "--check".to_string(),
+                    FormatMode::Fix => "--write".to_string(),
+                },
+                ...files
+            ],
+        ),
     }
 }
 
