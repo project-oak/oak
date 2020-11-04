@@ -124,8 +124,8 @@ Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
 (* Hints for [eauto with unwind] *)
 Hint Resolve state_upd_chan_unwind chan_append_unwind chan_low_proj_loweq
-    chan_low_proj_idempotent state_upd_node_eq_unwind set_call_unwind 
-    state_upd_chan_eq_unwind state_low_proj_loweq 
+    chan_low_proj_idempotent state_upd_node_unwind set_call_unwind
+    state_upd_chan_unwind state_low_proj_loweq
     state_upd_chan_labeled_unwind
     state_chan_append_labeled_unwind: unwind.
 Hint Extern 4 (node_low_eq _ _ _) => reflexivity : unwind.
@@ -341,6 +341,33 @@ Proof.
             congruence.
 Qed.
 
+Lemma separate_lableled {A} (o : option A) (l : level) (x : labeled) :
+  obj x = o -> lbl x = l -> x = Labeled _ o l.
+Proof. destruct x; cbn; congruence. Qed.
+
+Ltac separate_hyp T :=
+  repeat match goal with
+         | H : ?s = Labeled T ?o ?l |- _ =>
+           assert (obj s = o /\ lbl s = l) by (rewrite H; tauto);
+           clear H; logical_simplify
+         end.
+Ltac separate_goal := apply separate_lableled.
+
+Lemma invert_chans_state_low_proj_flowsto ell lvl s han :
+  lvl <<L ell ->
+  lvl <<L (chans (state_low_proj ell s)).[? han].(lbl) ->
+  lvl <<L (chans s).[? han].(lbl).
+Proof.
+  destruct s.
+  repeat match goal with
+         | _ => progress cbn [state_low_proj
+                               RuntimeModel.chans RuntimeModel.lbl ]
+         | _ => progress cbv [low_proj chan_state_low_proj fnd]
+         | _ => destruct_match
+         | _ => tauto
+         end.
+Qed.
+
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
     (step_system_ev (state_low_proj ell s) s1' e1) ->
     (exists s2' e2,
@@ -361,11 +388,29 @@ Proof.
             as [n' [Hidx_n' Hproj_n']].
         destruct (nl.(lbl) <<? ell).
         *
-            (* flowsto case*)
-            inversion H_step_projs_s1'; inversion H3; 
-                                                (* asterisk doesn't work here anymore? *)
-                (rewrite flows_labeled_proj in Hproj_n'; eauto); crush; admit.
-           (*
+          (* flowsto case*)
+            inversion H_step_projs_s1'; inversion H3;
+              (rewrite @flows_labeled_proj in *; eauto); crush;
+                lazymatch goal with
+                | |- _ <<L _ => erewrite <-low_projection_preserves_lbl; rewrite Hproj_n';
+                                solve [eauto]
+                | _ => idtac
+                end.
+        + (* WriteChannel *)
+          remember (s_set_call (state_chan_append_labeled han msg
+                                                          (state_upd_node id n'0 s)) id c') as s2''.
+          separate_hyp node.
+          eexists s2'', (lbl _ ---> msg); repeat split.
+          { crush; try congruence;
+              [ separate_goal; eauto; congruence | ].
+            rewrite <-Hproj_n' in *.
+            eauto using invert_chans_state_low_proj_flowsto. }
+          { crush; subst_lets; eauto with unwind. }
+        + (* ReadChannel *) admit.
+        + (* CreateChannel *) admit.
+        + (* CreateNode *) admit.
+        + (* Internal *) admit.
+          (*
            + (* WriteChannel *)
                 pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
                     as [ch2 [H_ch'_idx H_ch2_proj]].
