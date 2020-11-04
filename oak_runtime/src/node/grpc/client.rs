@@ -99,6 +99,20 @@ impl GrpcClientNode {
     /// Main loop that handles gRPC invocations from the `handle`, sends gRPC requests to an
     /// external gRPC service and writes gRPC responses back to the invocation channel.
     async fn handle_loop(&mut self, runtime: RuntimeProxy, handle: Handle) -> Result<(), OakError> {
+        let current_label = runtime.get_node_label();
+        let downgraded_label = runtime.get_node_downgraded_label(&current_label);
+        // We can only send data outside of Oak if the current node has the privilege to declassify
+        // the label to "Public". For the gRPC client node this means that the current node's
+        // confidentiality label must be no higher than the TlsEndpointTag matching its URI
+        // authority.
+        if !downgraded_label.flows_to(&Label::public_untrusted()) {
+            error!(
+                "Insufficient downgrading privilege to declassify label {:?} to public.",
+                current_label
+            );
+            return Err(OakError::OakStatus(OakStatus::ErrPermissionDenied));
+        }
+
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
@@ -172,23 +186,6 @@ impl GrpcClientNode {
             error
         })?;
         debug!("Incoming gRPC request: {:?}", request);
-
-        let current_label = runtime.get_node_label();
-        let downgraded_label = runtime.get_node_downgraded_label(&current_label);
-        // We can only send data outside of Oak if the current node has the privilege to declassify
-        // the label to "Public". For the gRPC client node this means that the current node's
-        // confidentiality label must be no higher than the TlsEndpointTag matching its URI
-        // authority.
-        if !downgraded_label.flows_to(&Label::public_untrusted()) {
-            error!(
-                "Insufficient downgrading privilege to declassify label {:?} to public.",
-                current_label
-            );
-            send_error(
-                rpc::Code::PermissionDenied,
-                "Couldn't connect to gRPC server due to IFC restrictions.",
-            );
-        }
 
         if self.grpc_client.is_none() {
             // Connect to an external gRPC service.

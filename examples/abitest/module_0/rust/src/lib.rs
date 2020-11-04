@@ -2186,7 +2186,7 @@ impl FrontendNode {
         let ok_rsp = GrpcTestResponse {
             text: "test".to_string(),
         };
-        expect_eq!(grpc_stub.unary_method(ok_req.clone()), Ok(ok_rsp));
+        expect_eq!(grpc_stub.unary_method(ok_req), Ok(ok_rsp));
 
         // Errored unary method invocation of external service via gRPC client pseudo-Node.
         let err_req = GrpcTestRequest {
@@ -2201,26 +2201,13 @@ impl FrontendNode {
             result.unwrap_err().code
         );
 
-        // Attempt to call an external gRPC service using a client with an incorrect confidentiality
-        // label.
+        // Attempt to create a gRPC client pseudo node with an invalid label.
         let invalid_authority_grpc_stub = oak::grpc::client::Client::new(
             "grpc_client",
             &oak::node_config::grpc_client("https://localhost:7878"),
             &confidentiality_label(tls_endpoint_tag("google.com")),
-        )
-        .map(OakAbiTestServiceClient)
-        .ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "no gRPC client channel available",
-            ))
-        })?;
-        let permission_denied_result = invalid_authority_grpc_stub.unary_method(ok_req);
-        expect_matches!(permission_denied_result, Err(_));
-        expect_eq!(
-            grpc::Code::PermissionDenied as i32,
-            permission_denied_result.unwrap_err().code
         );
+        expect!(invalid_authority_grpc_stub.is_none());
 
         Ok(())
     }
