@@ -51,6 +51,7 @@ const STORAGE_NAME_PREFIX: &str = "abitest";
 
 const HTTP_ADDR: &str = "[::]:8383";
 const ADDITIONAL_TEST_SERVER_ADDR: &str = "[::]:8081";
+const ADDITIONAL_TEST_SERVER_ADDR_2: &str = "[::]:8082";
 
 struct FrontendNode {
     backend_out: Vec<oak::WriteHandle>,
@@ -2336,7 +2337,7 @@ impl FrontendNode {
 
     fn test_http_server_create(&mut self) -> TestResult {
         // Create an HTTP server pseudo-Node.
-        let result = oak::http::init(ADDITIONAL_TEST_SERVER_ADDR);
+        let result = oak::http::init(ADDITIONAL_TEST_SERVER_ADDR_2);
         expect_matches!(result, Ok(_));
         let invocation_receiver = result.unwrap();
         // Close the only read-handle for the invocation handle, which should
