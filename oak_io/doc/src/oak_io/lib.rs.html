@@ -373,8 +373,8 @@
 <span class="doccomment">/// different channel, to be processed in an event-loop pattern.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">InitWrapper</span><span class="op">&lt;</span><span class="ident">Init</span>, <span class="ident">Command</span>: <span class="ident">Decodable</span><span class="op">&gt;</span> {
-    <span class="ident">init</span>: <span class="ident">Init</span>,
-    <span class="ident">command_receiver</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">Command</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">init</span>: <span class="ident">Init</span>,
+    <span class="kw">pub</span> <span class="ident">command_receiver</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">Command</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Implementation of [`Encodable`] for [`InitWrapper`] that encodes the handle of the command</span>
