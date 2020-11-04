@@ -70,6 +70,8 @@ async fn test_abi() {
     let (runtime, mut client) = setup().await;
     {
         // Skip tests that require the existence of an external service.
+        //  - storage and gRPC client test require details of a gRPC service to connect to
+        //  - Roughtime tests connect to the internet.
         let mut req = AbiTestRequest::default();
         req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
 
@@ -119,7 +121,11 @@ async fn test_leaks() {
         );
 
         // Run tests that are supposed to leave Node/channel counts in a known state.
+        // Skip tests that require the existence of an external service.
+        //  - storage and gRPC client test require details of a gRPC service to connect to
+        //  - Roughtime tests connect to the internet.
         let mut req = AbiTestRequest::default();
+        req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
         req.predictable_counts = true;
 
         debug!("Sending request: {:?}", req);
@@ -147,6 +153,11 @@ async fn test_leaks() {
         }
 
         if after_nodes != want_nodes || after_channels != want_channels {
+            error!(
+                "Batch test showed unexpected count change: got: node_delta={} channel_delta={}, want node_delta={} channel_delta={}",
+                (after_nodes-before_nodes), (after_channels-before_channels),
+                (want_nodes-before_nodes), (want_channels-before_channels),
+            );
             // One of the batch of tests has triggered an unexpected object count.
             // Repeat the tests one by one to find out which.
             let mut details = Vec::new();
@@ -180,13 +191,11 @@ async fn test_leaks() {
                         result.name, before_nodes, after_nodes, before_channels, after_channels,
                     ));
                 }
-                panic!("Leak of Nodes or channels found");
             }
             for detail in details {
                 info!("{}", detail);
             }
-            assert_eq!(want_nodes, after_nodes);
-            assert_eq!(want_channels, after_channels);
+            panic!("Leak of Nodes or channels found");
         }
     } // ensure futures are all dropped
     drop(client);
