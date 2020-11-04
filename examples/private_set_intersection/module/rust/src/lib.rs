@@ -38,7 +38,8 @@ pub mod proto {
     ));
 }
 
-use oak::{grpc, io::ReceiverExt};
+use anyhow::Context;
+use oak::{grpc, Label};
 use oak_abi::proto::oak::application::ConfigMap;
 use proto::{
     GetIntersectionRequest, GetIntersectionResponse, PrivateSetIntersection,
@@ -46,12 +47,24 @@ use proto::{
 };
 use std::collections::{HashMap, HashSet};
 
-oak::entrypoint!(oak_main<ConfigMap> => |_receiver| {
-    let dispatcher = PrivateSetIntersectionDispatcher::new(Node::default());
-    let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel.iter());
-});
+#[derive(Default)]
+struct Main;
+
+oak::entrypoint_command_handler!(oak_main => Main);
+
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
+
+    fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
+        let handler_sender = oak::io::entrypoint_node_create::<
+            PrivateSetIntersectionDispatcher<Handler>,
+        >("handler", &Label::public_untrusted(), "app")
+        .context("could not create handler node")?;
+        oak::grpc::server::init_with_sender("[::]:8080", handler_sender)
+            .context("could not create gRPC server pseudo-Node")?;
+        Ok(())
+    }
+}
 
 /// Maximum number of contributed private sets.
 pub const SET_THRESHOLD: u64 = 2;
@@ -67,7 +80,7 @@ struct SetIntersection {
 }
 
 #[derive(Default)]
-struct Node {
+struct Handler {
     /// Map from set ID to `SetIntersection`.
     ///
     /// this allows multiple sets of clients to compute their own intersections, also explain what
@@ -75,7 +88,9 @@ struct Node {
     sets: HashMap<String, SetIntersection>,
 }
 
-impl PrivateSetIntersection for Node {
+oak::entrypoint_command_handler!(handler => PrivateSetIntersectionDispatcher<Handler>);
+
+impl PrivateSetIntersection for Handler {
     fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<()> {
         let mut current_set = self.sets.entry(req.set_id).or_default();
 

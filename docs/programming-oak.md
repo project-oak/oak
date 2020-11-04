@@ -74,9 +74,9 @@ store it. For example, the running average example has a `Node` `struct` with a
 running sum and count of samples:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/running_average/module/rust/src/lib.rs Rust /.*struct Node {.*/ /^}/)
+[embedmd]:# (../examples/running_average/module/rust/src/lib.rs Rust /.*struct Handler {.*/ /^}/)
 ```Rust
-struct Node {
+struct Handler {
     sum: u64,
     count: u64,
 }
