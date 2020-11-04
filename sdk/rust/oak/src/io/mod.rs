@@ -44,7 +44,14 @@ pub fn node_create<T: Encodable + Decodable>(
     node_config: &crate::NodeConfiguration,
 ) -> Result<Sender<T>, OakStatus> {
     let (sender, receiver) = channel_create(&format!("{}-in", name), label)?;
-    crate::node_create(name, node_config, label, receiver.handle)?;
+    match crate::node_create(name, node_config, label, receiver.handle) {
+        Ok(_) => {}
+        Err(e) => {
+            let _ = sender.close();
+            let _ = receiver.close();
+            return Err(e);
+        }
+    };
     receiver.close()?;
     Ok(sender)
 }

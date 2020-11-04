@@ -80,7 +80,13 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
     let (invocation_sender, invocation_receiver) =
         crate::io::channel_create::<Invocation>("HTTP invocation", &Label::public_untrusted())
             .expect("Couldn't create HTTP invocation channel");
-    init_with_sender(address, invocation_sender)?;
+    match init_with_sender(address, invocation_sender) {
+        Ok(_) => {}
+        Err(e) => {
+            let _ = invocation_receiver.close();
+            return Err(e);
+        }
+    };
     Ok(invocation_receiver)
 }
 
@@ -93,11 +99,17 @@ pub fn init_with_sender(
 ) -> Result<(), OakStatus> {
     let config = crate::node_config::http_server(address);
     // Create a channel and pass the read half to a new HTTP server pseudo-Node.
-    let init_sender = crate::io::node_create::<HttpInvocationSender>(
+    let init_sender = match crate::io::node_create::<HttpInvocationSender>(
         "http_server",
         &Label::public_untrusted(),
         &config,
-    )?;
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            let _ = invocation_sender.close();
+            return Err(e);
+        }
+    };
 
     let http_server_init = HttpInvocationSender {
         sender: Some(invocation_sender),
@@ -108,6 +120,11 @@ pub fn init_with_sender(
     init_sender
         .close()
         .expect("Couldn't close init message channel to HTTP server pseudo-node");
+    http_server_init
+        .sender
+        .unwrap()
+        .close()
+        .expect("Couldn't close local copy of invocation sender channel");
 
     Ok(())
 }
