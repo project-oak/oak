@@ -124,8 +124,10 @@ Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
 (* Hints for [eauto with unwind] *)
 Hint Resolve state_upd_chan_unwind chan_append_unwind chan_low_proj_loweq
-    chan_low_proj_idempotent state_upd_node_unwind set_call_unwind 
-    state_low_proj_loweq : unwind.
+    chan_low_proj_idempotent state_upd_node_eq_unwind set_call_unwind 
+    state_upd_chan_eq_unwind state_low_proj_loweq 
+    state_upd_chan_labeled_unwind
+    state_chan_append_labeled_unwind: unwind.
 Hint Extern 4 (node_low_eq _ _ _) => reflexivity : unwind.
 Hint Extern 4 (chan_low_eq _ _ _) => reflexivity : unwind.
 (* meant to be case where we have (cleq ch (proj ch) ) and want to swap order *)
@@ -229,6 +231,8 @@ Admitted.
 Qed.
 *)
 
+
+
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
     (exists s2' e2,
@@ -249,45 +253,73 @@ Proof.
                 pose proof (state_nidx_to_proj_state_idx ell _ _ nl
                     ltac:(eauto)) as Hn_idx_s1proj;
                 (erewrite flows_labeled_proj in Hn_idx_s1proj; eauto);
-                inversion H3; crush.
+                inversion H3; crush; subst_lets.
+                all: try replace n0 with n in * by
+                (pose proof (can_split_node_index _ _ _ _ ltac:(eauto));
+                    logical_simplify; congruence). 
+            (*
+                I can't quite get this to work. Coq complains
+                about s1 not being found in environment
+                all: try rename s1' into s1. 
+                    attempt to try SInternal from erroring
+                    in following tactic:
+                all: try lazymatch goal with
+                    | H: (nodes s1).[? id] = _ |- _ =>
+                        rewrite H in Hn_idx_s1proj;
+                        pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
+                        logical_simplify
+                end.
+            *)
             + (* WriteChannel *)
-                do 2 eexists; split_ands; [ | | reflexivity ]; admit.
-                (*
-                1:apply_all_constructors;
-                  solve [eauto using state_hidx_to_proj_state_hidx with flowsto].
-                subst_lets. eauto 7 with unwind.
-                *)
-            + (* ReadChannel *)
-                admit.
-                (*
-                pose proof (state_hidx_to_proj_state_hidx ell _ _ _
-                    ltac:(eauto)) as Hch_hidx_s1proj.
-                rewrite flows_chan_proj in *; eauto using ord_trans.
                 do 2 eexists; split_ands; [ | | reflexivity ].
-                1:apply_all_constructors; solve [eauto].
-                subst_lets. eauto with unwind.
-                *)
-            + (* CreateChannel *)
-                do 2 eexists; split_ands; [ | | reflexivity ]; admit.
-                (*
-                1:apply_all_constructors;
-                  solve [eauto; rewrite ?proj_pres_handle_fresh; eauto].
+                (* step *)
+                rewrite H5 in Hn_idx_s1proj;
+                pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
+                logical_simplify.
+                apply_all_constructors; eauto. congruence.
+                erewrite state_hidx_to_proj_state_hidx'.
+                erewrite low_projection_preserves_lbl.
+                eauto.
+                (* low-equiv *)
+                subst_lets. eauto 7 with unwind.
+            + (* ReadChannel *)
+                do 2 eexists; split_ands; [ | | reflexivity ].
+                (* step *)
+                rewrite H5 in Hn_idx_s1proj;
+                pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
+                logical_simplify.
+                apply_all_constructors; eauto. congruence.
+                pose proof (state_hidx_to_proj_state_hidx ell _ _ _ ltac:(eauto)).
+                assert (nlbl <<L ell) by congruence.  (* the last eauto needs this *)
+                rewrite flows_labeled_proj in H12; eauto.
+                simpl. eauto using ord_trans.
+                (* state low_eq *)
                 subst_lets. eauto 6 with unwind.
-                *)
+            + (* CreateChannel *)
+                do 2 eexists; split_ands; [ | | reflexivity ]. 
+                (* step *)
+                rewrite H4 in Hn_idx_s1proj;
+                pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
+                logical_simplify.
+                apply_all_constructors; eauto. congruence.
+                (* state loweq *)
+                subst_lets. eauto 7 with unwind.
             + (* CreateNode *)
-                do 2 eexists; split_ands; [ | | reflexivity ]; admit.
-                (*
-                1:apply_all_constructors;
-                  solve [eauto; rewrite ?proj_pres_nid_fresh; eauto].
-                subst_lets. eauto with unwind.
-                *)
+                do 2 eexists; split_ands; [ | | reflexivity ].
+                rewrite H5 in Hn_idx_s1proj;
+                pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
+                logical_simplify.
+                apply_all_constructors; eauto. congruence.
+                eauto with unwind.
             +  (* Internal *)
-                do 2 eexists; split_ands; [ | | reflexivity ]; admit.
-                (*
-                1:apply_all_constructors;
-                  solve [eauto; rewrite ?proj_pres_nid_fresh; eauto].
-                subst_lets. eauto with unwind.
-                *)
+                do 2 eexists; split_ands; [ | | reflexivity ].
+                eapply SystemEvStepNode; eauto.
+                rewrite Hn_idx_s1proj. eauto.
+                rewrite <- H1.
+                eapply SInternalEv.
+                congruence.
+                econstructor.
+                eauto with unwind.
         * (* not flowsTo case *)
             rename n0 into Hflows.
             pose proof (unobservable_node_step _ _ _ _ _ nl _ ltac:(eauto)
@@ -307,7 +339,7 @@ Proof.
             pose proof (state_low_proj_loweq ell s1); congruence.
             (* events leq *)
             congruence.
-Admitted.
+Qed.
 
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
     (step_system_ev (state_low_proj ell s) s1' e1) ->
