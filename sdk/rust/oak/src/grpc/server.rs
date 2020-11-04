@@ -18,7 +18,7 @@
 
 use crate::{
     grpc::Invocation,
-    io::{Receiver, Sender, SenderExt},
+    io::{Receiver, ReceiverExt, Sender, SenderExt},
     proto::oak::invocation::GrpcInvocationSender,
     OakStatus,
 };
@@ -34,7 +34,13 @@ pub fn init(address: &str) -> Result<Receiver<Invocation>, OakStatus> {
     let (invocation_sender, invocation_receiver) =
         crate::io::channel_create::<Invocation>("gRPC invocation", &Label::public_untrusted())
             .expect("Couldn't create gRPC invocation channel");
-    init_with_sender(address, invocation_sender)?;
+    match init_with_sender(address, invocation_sender) {
+        Ok(_) => {}
+        Err(e) => {
+            let _ = invocation_receiver.close();
+            return Err(e);
+        }
+    };
     Ok(invocation_receiver)
 }
 
@@ -47,11 +53,17 @@ pub fn init_with_sender(
 ) -> Result<(), OakStatus> {
     let config = crate::node_config::grpc_server(address);
     // Create a channel and pass the read half to a new gRPC server pseudo-Node.
-    let init_sender = crate::io::node_create::<GrpcInvocationSender>(
+    let init_sender = match crate::io::node_create::<GrpcInvocationSender>(
         "grpc_server",
         &Label::public_untrusted(),
         &config,
-    )?;
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            let _ = invocation_sender.close();
+            return Err(e);
+        }
+    };
 
     let grpc_server_init = GrpcInvocationSender {
         sender: Some(invocation_sender),
@@ -62,6 +74,11 @@ pub fn init_with_sender(
     init_sender
         .close()
         .expect("Couldn't close init message channel to gRPC server pseudo-node");
+    grpc_server_init
+        .sender
+        .unwrap()
+        .close()
+        .expect("Couldn't close local copy of invocation sender channel");
 
     Ok(())
 }
