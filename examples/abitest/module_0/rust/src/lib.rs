@@ -75,9 +75,10 @@ impl FrontendNode {
             lose_channels();
 
             // Second, start an ephemeral Node which also loses channels.
-            let (wh, rh) = oak::channel_create("Initial", &Label::public_untrusted()).unwrap();
+            let (wh, rh) =
+                oak::channel_create("channel_loser-initial", &Label::public_untrusted()).unwrap();
             oak::node_create(
-                FRONTEND_MODULE_NAME,
+                "channel_loser",
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "channel_loser"),
                 &Label::public_untrusted(),
                 rh,
@@ -93,7 +94,7 @@ impl FrontendNode {
             let http_channel =
                 oak::http::init(HTTP_ADDR).expect("could not create HTTP server pseudo-Node!");
             oak::node_create(
-                FRONTEND_MODULE_NAME,
+                "http_oak_main",
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "http_oak_main"),
                 &Label::public_untrusted(),
                 http_channel.handle,
@@ -108,10 +109,10 @@ impl FrontendNode {
         let mut backend_in = Vec::with_capacity(BACKEND_COUNT);
         for i in 0..BACKEND_COUNT {
             let (write_handle, read_handle) =
-                oak::channel_create("Initial", &Label::public_untrusted())
+                oak::channel_create("backend-initial", &Label::public_untrusted())
                     .expect("could not create channel");
             oak::node_create(
-                BACKEND_MODULE_NAME,
+                BACKEND_ENTRYPOINT_NAME,
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
                 read_handle,
@@ -1807,7 +1808,7 @@ impl FrontendNode {
         expect_eq!(
             Ok(()),
             oak::node_create(
-                FRONTEND_MODULE_NAME,
+                "panic_main",
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "panic_main"),
                 &Label::public_untrusted(),
                 in_handle
@@ -2474,7 +2475,7 @@ fn from_proto(status: oak::grpc::Status) -> Box<dyn std::error::Error> {
 
 fn lose_channels() {
     // Create a channel holding a message that holds references to itself.
-    let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
+    let (wh, rh) = oak::channel_create("Closed-self-ref", &Label::public_untrusted()).unwrap();
     let data = vec![0x01, 0x02, 0x03];
     oak::channel_write(wh, &data, &[wh.handle, rh.handle]).unwrap();
     // Close both handles so this channel is immediately lost.
@@ -2482,7 +2483,7 @@ fn lose_channels() {
     oak::channel_close(rh.handle).unwrap();
 
     // Create a channel holding a message that holds references to itself.
-    let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
+    let (wh, rh) = oak::channel_create("Lost-self-ref", &Label::public_untrusted()).unwrap();
     let data = vec![0x01, 0x02, 0x03];
     oak::channel_write(wh, &data, &[wh.handle, rh.handle]).unwrap();
     // Keep the write handle open, so this channel will be lost when
@@ -2490,8 +2491,10 @@ fn lose_channels() {
     oak::channel_close(rh.handle).unwrap();
 
     // Create a pair of channels, each holding a message that holds references to the other
-    let (wh_a, rh_a) = oak::channel_create("Test channel a", &Label::public_untrusted()).unwrap();
-    let (wh_b, rh_b) = oak::channel_create("Test channel b", &Label::public_untrusted()).unwrap();
+    let (wh_a, rh_a) =
+        oak::channel_create("Closed-cross-ref-channel-a", &Label::public_untrusted()).unwrap();
+    let (wh_b, rh_b) =
+        oak::channel_create("Closed-cross-ref-channel-b", &Label::public_untrusted()).unwrap();
     oak::channel_write(wh_a, &data, &[wh_b.handle, rh_b.handle]).unwrap();
     oak::channel_write(wh_b, &data, &[wh_a.handle, rh_a.handle]).unwrap();
     // Close all handles so these channels are immediately lost.
@@ -2501,8 +2504,10 @@ fn lose_channels() {
     oak::channel_close(rh_b.handle).unwrap();
 
     // Create a pair of channels, each holding a message that holds references to the other
-    let (wh_a, rh_a) = oak::channel_create("Test channel a", &Label::public_untrusted()).unwrap();
-    let (wh_b, rh_b) = oak::channel_create("Test channel b", &Label::public_untrusted()).unwrap();
+    let (wh_a, rh_a) =
+        oak::channel_create("Lost-cross-ref-channel-a", &Label::public_untrusted()).unwrap();
+    let (wh_b, rh_b) =
+        oak::channel_create("Lost-cross-ref-channel-b", &Label::public_untrusted()).unwrap();
     oak::channel_write(wh_a, &data, &[wh_b.handle, rh_b.handle]).unwrap();
     oak::channel_write(wh_b, &data, &[wh_a.handle, rh_a.handle]).unwrap();
     // Keep the write handles open.
