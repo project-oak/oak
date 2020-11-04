@@ -300,7 +300,7 @@ impl OakAbiTestService for FrontendNode {
             "NodePrivilegeReadRaw",
             (Self::test_node_privilege_read_raw, Count::Unchanged),
         );
-        tests.insert("NodePanic", (Self::test_node_panic, Count::Unsure));
+        tests.insert("NodePanic", (Self::test_node_panic, Count::Unchanged));
         tests.insert(
             "RandomGetRaw",
             (Self::test_random_get_raw, Count::Unchanged),
@@ -325,7 +325,7 @@ impl OakAbiTestService for FrontendNode {
         );
         tests.insert(
             "GrpcServerInvalidAddress",
-            (Self::test_grpc_server_invalid_address, Count::Unsure),
+            (Self::test_grpc_server_invalid_address, Count::Unchanged),
         );
         tests.insert(
             "GrpcServerFailNoHandle",
@@ -367,23 +367,23 @@ impl OakAbiTestService for FrontendNode {
         );
         tests.insert(
             "HttpServerReservedPort",
-            (Self::test_http_server_reserved_port, Count::Unsure),
+            (Self::test_http_server_reserved_port, Count::Unchanged),
         );
         tests.insert(
             "HttpServerInvalidAddress",
-            (Self::test_http_server_invalid_address, Count::Unsure),
+            (Self::test_http_server_invalid_address, Count::Unchanged),
         );
         tests.insert(
             "HttpServerFailNoHandle",
-            (Self::test_http_server_fail_no_handle, Count::Unsure),
+            (Self::test_http_server_fail_no_handle, Count::Unchanged),
         );
         tests.insert(
             "HttpServerFailReadHandle",
-            (Self::test_http_server_fail_read_handle, Count::Unsure),
+            (Self::test_http_server_fail_read_handle, Count::Unchanged),
         );
         tests.insert(
             "HttpServerFailTwoHandles",
-            (Self::test_http_server_fail_two_handles, Count::Unsure),
+            (Self::test_http_server_fail_two_handles, Count::Unchanged),
         );
         tests.insert(
             "RoughtimeClient",
