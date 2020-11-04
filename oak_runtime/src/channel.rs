@@ -195,8 +195,9 @@ impl std::fmt::Debug for ChannelHalf {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Channel {} {}",
+            "Channel {} ('{}') {}",
             self.channel.id,
+            self.channel.name,
             match self.direction {
                 ChannelHalfDirection::Write => "WRITE",
                 ChannelHalfDirection::Read => "READ",
