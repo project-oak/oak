@@ -96,11 +96,11 @@
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">NodeConfiguration</span> {
             <span class="ident">config_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">RoughtimeClientConfig</span>(<span class="ident">config</span>.<span class="ident">clone</span>())),
         };
-        <span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">new</span>(<span class="string">&quot;roughtime&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>()).<span class="ident">map</span>(
-            <span class="op">|</span><span class="ident">client</span><span class="op">|</span> <span class="ident">Roughtime</span> {
-                <span class="ident">client</span>: <span class="ident">RoughtimeServiceClient</span>(<span class="ident">client</span>),
-            },
-        )
+        <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">node_create</span>(<span class="string">&quot;roughtime&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>(), <span class="kw-2">&amp;</span><span class="ident">config</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">invocation_sender</span><span class="op">|</span> <span class="ident">Roughtime</span> {
+                <span class="ident">client</span>: <span class="ident">RoughtimeServiceClient</span>(<span class="ident">invocation_sender</span>),
+            })
+            .<span class="ident">ok</span>()
     }
 
     <span class="doccomment">/// Get the current Roughtime value as a Duration since UNIX epoch.</span>

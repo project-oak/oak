@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Client","Client for a gRPC service in another Node."]]});
+initSidebarItems({"fn":[["init","Initializes a gRPC client pseudo-Node connecting to the provided address."]]});

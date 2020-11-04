@@ -524,7 +524,7 @@
                 <span class="bool-val">false</span> <span class="op">=</span><span class="op">&gt;</span>
                     <span class="macro">quote</span><span class="macro">!</span> {
                         <span class="kw">pub</span> <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span> {
-                            #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(#<span class="ident">method_name_string</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
+                            #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(#<span class="ident">method_name_string</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)
                         }
                     },
                 <span class="bool-val">true</span> <span class="op">=</span><span class="op">&gt;</span>
@@ -534,7 +534,7 @@
                     <span class="comment">// the underlying handle.</span>
                     <span class="macro">quote</span><span class="macro">!</span> {
                         <span class="kw">pub</span> <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>#<span class="ident">oak_package</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">GrpcResponse</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-                            #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method_stream</span>(#<span class="ident">method_name_string</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">invocation_sender</span>)
+                            #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method_stream</span>(#<span class="ident">method_name_string</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)
                         }
                     },
             }
@@ -581,7 +581,7 @@
             }
 
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-            <span class="kw">pub</span> <span class="kw">struct</span> #<span class="ident">client_name</span>(<span class="kw">pub</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">Client</span>);
+            <span class="kw">pub</span> <span class="kw">struct</span> #<span class="ident">client_name</span>(<span class="kw">pub</span> #<span class="ident">oak_package</span>::<span class="ident">io</span>::<span class="ident">Sender</span><span class="op">&lt;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">Invocation</span><span class="op">&gt;</span>);
 
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
             <span class="kw">impl</span> #<span class="ident">client_name</span> {
