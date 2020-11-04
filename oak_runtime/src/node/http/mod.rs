@@ -143,9 +143,17 @@ impl HttpServerNode {
         });
 
         // Low-level server creation is needed, to be able to validate TLS streams.
-        let mut tcp = TcpListener::bind(&self.address)
-            .await
-            .expect("Could not create TCP listener.");
+        let mut tcp = match TcpListener::bind(&self.address).await {
+            Ok(tcp) => tcp,
+            Err(e) => {
+                error!(
+                    "{:?}: Could not create TCP listener: {:?}",
+                    std::thread::current().id(),
+                    e
+                );
+                return;
+            }
+        };
         let tls_server = self.build_tls_server(&mut tcp);
         let server = Server::builder(tls_server).serve(service);
 
