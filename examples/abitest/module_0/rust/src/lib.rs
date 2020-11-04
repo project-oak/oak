@@ -100,6 +100,9 @@ impl FrontendNode {
                 http_channel.handle,
             )
             .expect("failed to create http_oak_main Node");
+            // Close local handle to the HTTP invocation channel now that it's been passed
+            // to the separate HTTP handling node.
+            http_channel.close().unwrap();
         }
 
         oak::logger::init(log::Level::Debug).expect("could not initialize logging node");
