@@ -33,10 +33,20 @@ pub use receiver::Receiver;
 pub use sender::Sender;
 
 /// A simple holder for bytes + handles, using internally owned buffers.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Message {
     pub bytes: Vec<u8>,
     pub handles: Vec<Handle>,
+}
+
+/// Manual `Debug` implementation to allow hex display.
+impl std::fmt::Debug for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Message")
+            .field("handles", &self.handles)
+            .field("bytes", &format_args!("{}", hex::encode(&self.bytes)))
+            .finish()
+    }
 }
 
 /// Implementation of [`Encodable`] for [`Either`] that encodes the variant (0 or 1) in the first

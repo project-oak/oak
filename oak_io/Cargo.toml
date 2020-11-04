@@ -8,6 +8,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+hex = "*"
 oak_abi = { path = "../oak_abi" }
 oak_derive = { path = "../oak_derive" }
 prost = "*"

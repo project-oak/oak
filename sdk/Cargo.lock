@@ -827,6 +827,7 @@ name = "oak_io"
 version = "0.1.0"
 dependencies = [
  "either",
+ "hex",
  "oak_abi",
  "oak_derive",
  "oak_utils",
