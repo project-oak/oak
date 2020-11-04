@@ -221,6 +221,10 @@ impl Node for HttpServerNode {
         "http-server"
     }
 
+    fn external_facing(&self) -> bool {
+        true
+    }
+
     fn get_privilege(&self) -> NodePrivilege {
         // This node needs to have `top` privilege to be able to declassify data tagged with any
         // arbitrary user identities.

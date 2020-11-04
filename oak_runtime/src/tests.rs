@@ -51,6 +51,9 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         fn node_type(&self) -> &'static str {
             "test"
         }
+        fn external_facing(&self) -> bool {
+            false
+        }
         fn run(
             self: Box<Self>,
             runtime: RuntimeProxy,

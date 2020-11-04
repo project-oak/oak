@@ -242,6 +242,38 @@ impl NodePrivilege {
             can_endorse_integrity_tags: top_tag,
         }
     }
+
+    /// Generates a new [`Label`] from `label` that is downgraded as much as possible using the
+    /// current privilege.
+    fn downgrade_label(&self, label: &Label) -> Label {
+        let has_top_privilege = self.can_declassify_confidentiality_tags.contains(&top());
+
+        let confidentiality_tags = if has_top_privilege {
+            // Remove all the confidentiality tags if the node has the `top` privilege.
+            // TODO(#1631): When we have a separate top for each sub-lattice, this check should be
+            // done separately for each sub-lattice, removing only the tags belonging to that
+            // sub-lattice.
+            vec![]
+        } else {
+            // Remove all the confidentiality tags that the Node may declassify.
+            label
+                .confidentiality_tags
+                .iter()
+                .filter(|t| !self.can_declassify_confidentiality_tags.contains(t))
+                .cloned()
+                .collect()
+        };
+        Label {
+            confidentiality_tags,
+            // Add all the integrity tags that the Node may endorse.
+            integrity_tags: label
+                .integrity_tags
+                .iter()
+                .chain(self.can_endorse_integrity_tags.iter())
+                .cloned()
+                .collect(),
+        }
+    }
 }
 
 impl std::convert::From<NodePrivilege> for Label {
@@ -588,39 +620,7 @@ impl Runtime {
     fn get_node_downgraded_label(&self, node_id: NodeId, initial_label: &Label) -> Label {
         // Retrieve the set of tags that the node may downgrade.
         let node_privilege = self.get_node_privilege(node_id);
-        let node_has_top_privilege = node_privilege
-            .can_declassify_confidentiality_tags
-            .contains(&top());
-
-        let confidentiality_tags = if node_has_top_privilege {
-            // Remove all the confidentiality tags if the node has the `top` privilege.
-            // TODO(#1631): When we have a separate top for each sub-lattice, this check should be
-            // done separately for each sub-lattice, removing only the tags belonging to that
-            // sub-lattice.
-            vec![]
-        } else {
-            // Remove all the confidentiality tags that the Node may declassify.
-            initial_label
-                .confidentiality_tags
-                .iter()
-                .filter(|t| {
-                    !node_privilege
-                        .can_declassify_confidentiality_tags
-                        .contains(t)
-                })
-                .cloned()
-                .collect()
-        };
-        Label {
-            confidentiality_tags,
-            // Add all the integrity tags that the Node may endorse.
-            integrity_tags: initial_label
-                .integrity_tags
-                .iter()
-                .chain(node_privilege.can_endorse_integrity_tags.iter())
-                .cloned()
-                .collect(),
-        }
+        node_privilege.downgrade_label(initial_label)
     }
 
     /// Returns a clone of the [`NodePrivilege`] of the provided Node.
@@ -1236,14 +1236,31 @@ impl Runtime {
         // by the current Node, since in general this may be lower than "public untrusted".
         self.validate_can_write_to_label(node_id, label)?;
 
+        let node_type = instance.node_type();
+        let node_privilege = instance.get_privilege();
+
+        // If the new node has any ability to communicate externally, we should make sure that it
+        // has the privilege to downgrade its label to "public untrusted".
+        if instance.external_facing() {
+            let downgraded_label = node_privilege.downgrade_label(label);
+            debug!(
+                "Maximum downgraded label for node {}: {:?}",
+                node_name, &downgraded_label
+            );
+            if !downgraded_label.flows_to(&Label::public_untrusted()) {
+                error!(
+                    "Node {} of type {} has insufficent privilege.",
+                    node_name, node_type
+                );
+                return Err(OakStatus::ErrPermissionDenied);
+            }
+        }
+
         let reader = self.abi_to_read_half(node_id, initial_handle)?;
 
         let new_node_proxy = self.clone().proxy_for_new_node();
         let new_node_id = new_node_proxy.node_id;
         let new_node_name = format!("{}({})", node_name, new_node_id.0);
-
-        let node_privilege = instance.get_privilege();
-        let node_type = instance.node_type();
 
         self.node_configure_instance(
             new_node_id,

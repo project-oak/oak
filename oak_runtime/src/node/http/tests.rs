@@ -41,6 +41,9 @@ impl Node for RouterNode {
     fn node_type(&self) -> &'static str {
         "test-router"
     }
+    fn external_facing(&self) -> bool {
+        false
+    }
     fn run(
         self: Box<Self>,
         runtime: RuntimeProxy,
@@ -114,6 +117,9 @@ struct EchoNode {
 impl Node for EchoNode {
     fn node_type(&self) -> &'static str {
         "test-echo"
+    }
+    fn external_facing(&self) -> bool {
+        false
     }
 
     fn run(

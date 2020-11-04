@@ -149,6 +149,10 @@ impl super::Node for RoughtimeClientNode {
         "roughtime-client"
     }
 
+    fn external_facing(&self) -> bool {
+        true
+    }
+
     /// Runs the node.
     fn run(
         self: Box<Self>,

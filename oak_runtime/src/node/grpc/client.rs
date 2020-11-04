@@ -87,8 +87,6 @@ impl GrpcClientNode {
         // We compute the node privilege once and for all at start and just store it, since it does
         // not change throughout the node execution.
         let node_privilege = grpc_client_node_privilege(&uri);
-        // TODO(#814): Actually check that the newly created node can write to the
-        // "public_untrusted" label, taking into account its own label and privilege.
         Ok(Self {
             node_name: node_name.to_string(),
             uri,
@@ -374,6 +372,10 @@ impl<'a> ResponseHandler<'a> {
 impl Node for GrpcClientNode {
     fn node_type(&self) -> &'static str {
         "grpc-client"
+    }
+
+    fn external_facing(&self) -> bool {
+        true
     }
 
     fn run(

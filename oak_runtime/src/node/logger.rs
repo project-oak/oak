@@ -46,6 +46,10 @@ impl super::Node for LogNode {
         "logger"
     }
 
+    fn external_facing(&self) -> bool {
+        true
+    }
+
     /// Main execution loop for the logging pseudo-Node just waits for incoming
     /// `LogMessage`s and outputs them.
     fn run(

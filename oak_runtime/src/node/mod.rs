@@ -32,10 +32,13 @@ mod wasm;
 
 /// Trait encapsulating execution of a Node or pseudo-Node.
 pub trait Node: Send {
-    /// Return a name for this type of Node.
+    /// Returns a name for this type of Node.
     fn node_type(&self) -> &'static str;
 
-    /// Execute the Node, using the provided `Runtime` reference and initial handle.  The method
+    /// Returns a value indicating whether the Node can communicate externally.
+    fn external_facing(&self) -> bool;
+
+    /// Executes the Node, using the provided `Runtime` reference and initial handle.  The method
     /// should continue execution until the Node terminates.
     ///
     /// `notify_receiver` receives a notification from the Runtime upon termination. This
@@ -47,6 +50,7 @@ pub trait Node: Send {
         notify_receiver: oneshot::Receiver<()>,
     );
 
+    /// Gets the privilege associated with the Node.
     fn get_privilege(&self) -> NodePrivilege {
         NodePrivilege::default()
     }
