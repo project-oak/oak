@@ -367,6 +367,7 @@
 <span id="364">364</span>
 <span id="365">365</span>
 <span id="366">366</span>
+<span id="367">367</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -565,8 +566,9 @@
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
-            <span class="string">&quot;Channel {} {}&quot;</span>,
+            <span class="string">&quot;Channel {} (&#39;{}&#39;) {}&quot;</span>,
             <span class="self">self</span>.<span class="ident">channel</span>.<span class="ident">id</span>,
+            <span class="self">self</span>.<span class="ident">channel</span>.<span class="ident">name</span>,
             <span class="kw">match</span> <span class="self">self</span>.<span class="ident">direction</span> {
                 <span class="ident">ChannelHalfDirection</span>::<span class="ident">Write</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;WRITE&quot;</span>,
                 <span class="ident">ChannelHalfDirection</span>::<span class="ident">Read</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;READ&quot;</span>,

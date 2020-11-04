@@ -281,6 +281,16 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -317,10 +327,20 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sender</span>::<span class="ident">Sender</span>;
 
 <span class="doccomment">/// A simple holder for bytes + handles, using internally owned buffers.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Message</span> {
     <span class="kw">pub</span> <span class="ident">bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Handle</span><span class="op">&gt;</span>,
+}
+
+<span class="doccomment">/// Manual `Debug` implementation to allow hex display.</span>
+<span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">Message</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+        <span class="ident">f</span>.<span class="ident">debug_struct</span>(<span class="string">&quot;Message&quot;</span>)
+            .<span class="ident">field</span>(<span class="string">&quot;handles&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">handles</span>)
+            .<span class="ident">field</span>(<span class="string">&quot;bytes&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format_args</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">hex</span>::<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">bytes</span>)))
+            .<span class="ident">finish</span>()
+    }
 }
 
 <span class="doccomment">/// Implementation of [`Encodable`] for [`Either`] that encodes the variant (0 or 1) in the first</span>
