@@ -126,16 +126,26 @@ async fn download_file_from_url(url: &str) -> anyhow::Result<Vec<u8>> {
     let url: Url = url
         .parse()
         .with_context(|| format!("Couldn't parse URL {}", url))?;
-
     let response = reqwest::get(url.clone())
         .await
-        .with_context(|| format!("Couldn't download file from {}", url))?;
-    let data = response
-        .bytes()
-        .await
-        .context("Couldn't retrieve file from HTTP response")?
-        .to_vec();
-    Ok(data)
+        .with_context(|| format!("Couldn't send request to {}", url))?;
+
+    // `reqwest` automatically handles redirects.
+    // https://docs.rs/reqwest/0.10.8/reqwest/redirect/index.html
+    if response.status().is_success() {
+        let data = response
+            .bytes()
+            .await
+            .context("Couldn't retrieve file from HTTP response")?
+            .to_vec();
+        Ok(data)
+    } else {
+        Err(anyhow!(
+            "Couldn't download file from {}, status {:?}",
+            url,
+            response.status().canonical_reason()
+        ))
+    }
 }
 
 /// Load Wasm module from file or URL if specified.
@@ -159,21 +169,18 @@ async fn load_module(manifest_dir: &Path, module: &Module) -> anyhow::Result<Vec
                         cache_path.as_path(),
                         external.url,
                     );
-                    let data = download_file_from_url(&external.url).await?;
-
-                    // Save the downloaded Wasm module into the cache directory.
-                    std::fs::create_dir_all(cache_path.parent().unwrap())
-                        .context("Couldn't create cache directory")?;
-                    fs::write(&cache_path, &data).with_context(|| {
-                        format!("Couldn't write file {:?}", cache_path.as_path())
-                    })?;
-                    data
+                    download_file_from_url(&external.url).await?
                 }
             };
 
             // Check SHA256 sum of the Wasm module.
             let sha256_sum = get_sha256(&data);
             if sha256_sum == external.sha256 {
+                // Save the downloaded Wasm module into the cache directory.
+                std::fs::create_dir_all(cache_path.parent().unwrap())
+                    .context("Couldn't create cache directory")?;
+                fs::write(&cache_path, &data)
+                    .with_context(|| format!("Couldn't write file {:?}", cache_path.as_path()))?;
                 Ok(data)
             } else {
                 Err(anyhow!(
