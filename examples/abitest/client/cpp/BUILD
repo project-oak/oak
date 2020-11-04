@@ -44,6 +44,7 @@ cc_library(
     name = "httplib_config",
     hdrs = ["httplib_config.h"],
     deps = [
+        "@boringssl//:ssl",
         "@cpp_httplib//:httplib",
     ],
 )
