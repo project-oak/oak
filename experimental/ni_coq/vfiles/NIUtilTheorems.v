@@ -121,7 +121,6 @@ Theorem uncons_proj_node_s': forall ell s id,
 Proof.
     unfold state_low_proj. unfold fnd. unfold node_state_low_proj. simpl. intros.
     destruct (lbl (nodes s id) <<? ell); try reflexivity.
-    symmetry; eauto using flows_labeled_proj.
 Qed.
 
 Theorem uncons_proj_node_s: forall ell s id n,
@@ -175,14 +174,6 @@ End low_projection.
 
 Section low_equivalence.
 
-Global Instance state_low_eq_refl: forall ell, Reflexive (state_low_eq ell) | 10.
-Proof. congruence. Qed.
-
-Global Instance state_low_eq_trans: forall ell, Transitive (state_low_eq ell) | 10.
-Proof. congruence. Qed.
-
-Global Instance state_low_eq_sym: forall ell, Symmetric (state_low_eq ell) | 10.
-Proof. congruence. Qed.
 
 Global Instance node_state_low_eq_refl: forall ell, Reflexive (node_state_low_eq ell) | 10.
 Proof. congruence. Qed.
@@ -192,6 +183,27 @@ Proof. congruence. Qed.
 
 Global Instance node_state_low_eq_sym: forall ell, Symmetric (node_state_low_eq ell) | 10.
 Proof. congruence. Qed.
+
+Global Instance chan_state_low_eq_refl: forall ell, Reflexive (chan_state_low_eq ell) | 10.
+Proof. congruence. Qed.
+
+Global Instance chan_state_low_eq_trans: forall ell, Transitive (chan_state_low_eq ell) | 10.
+Proof. congruence. Qed.
+
+Global Instance chan_state_low_eq_sym: forall ell, Symmetric (chan_state_low_eq ell) | 10.
+Proof. congruence. Qed.
+
+Global Instance state_low_eq_refl: forall ell, Reflexive (state_low_eq ell) | 10.
+Proof. unfold state_low_eq. unfold Reflexive. eauto.  Qed.
+
+Global Instance state_low_eq_trans: forall ell, Transitive (state_low_eq ell) | 10.
+Proof. cbv [Transitive state_low_eq]. intros. destruct H, H0. split. 
+    (* seems it should be possible to use Transitive for node_state, chan_state here*)
+Admitted.
+
+Global Instance state_low_eq_sym: forall ell, Symmetric (state_low_eq ell) | 10.
+Proof. intros. unfold Symmetric. unfold state_low_eq. intros. destruct H. split; eauto.
+Qed.
 
 Global Instance event_low_eq_refl: forall ell, Reflexive (event_low_eq ell) | 10.
 Proof. congruence. Qed.
@@ -207,8 +219,7 @@ Theorem state_loweq_from_substates: forall ell s1 s2,
     chan_state_low_eq ell (chans s1) (chans s2) ->
     state_low_eq ell s1 s2.
 Proof.
-    intros. unfold state_low_eq. unfold low_eq. unfold state_low_proj. congruence.
-Qed.
+Admitted.
 
 Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
     (nodes s1).[? id] = n1 ->
@@ -218,9 +229,6 @@ Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
         (node_low_eq ell n1 n2).
 Proof.
     intros. inversion H0. unfold node_state_low_proj in *. 
-    match type of H2 with
-        ?f = ?g => assert (f id = g id)
-    end.
 Admitted. 
 
 Theorem node_low_eq_to_lbl_eq: forall ell n1 n2,
