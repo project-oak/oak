@@ -416,6 +416,13 @@
 <span id="413">413</span>
 <span id="414">414</span>
 <span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -774,6 +781,13 @@
     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">out_dir</span>) <span class="op">=</span> <span class="ident">options</span>.<span class="ident">out_dir_override</span> {
         <span class="ident">prost_config</span>.<span class="ident">out_dir</span>(<span class="ident">out_dir</span>);
     }
+    <span class="ident">prost_config</span>
+        <span class="comment">// We require identity-related types to be serializable and deserializable to and from JSON.</span>
+        .<span class="ident">type_attribute</span>(
+            <span class="string">&quot;.oak.identity&quot;</span>,
+            <span class="string">&quot;#[derive(serde::Deserialize, serde::Serialize)]&quot;</span>,
+        )
+        .<span class="ident">type_attribute</span>(<span class="string">&quot;.oak.identity&quot;</span>, <span class="string">&quot;#[serde(rename_all = \&quot;camelCase\&quot;)]&quot;</span>);
     <span class="ident">prost_config</span>
         <span class="comment">// We require label-related types to be comparable and hashable so that they can be used in</span>
         <span class="comment">// hash-based collections.</span>

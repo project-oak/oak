@@ -142,6 +142,17 @@
 <span id="139">139</span>
 <span id="140">140</span>
 <span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -279,9 +290,20 @@
     }
 }
 
+<span class="doccomment">/// Creates a [`Tag`] having as principal the provided identification Ed25519 public key.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public_key_identity_tag</span>(<span class="ident">public_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Tag</span> {
+    <span class="ident">Tag</span> {
+        <span class="ident">tag</span>: <span class="prelude-val">Some</span>(<span class="ident">tag</span>::<span class="ident">Tag</span>::<span class="ident">PublicKeyIdentityTag</span>(<span class="ident">PublicKeyIdentityTag</span> {
+            <span class="ident">public_key</span>,
+        })),
+    }
+}
+
 <span class="doccomment">/// Convenience function for creating the top tag.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">top</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Tag</span> {
-    <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">label</span>::<span class="ident">tag</span>::<span class="ident">Tag</span>::<span class="ident">TopTag</span>(<span class="ident">Top</span> {}));
+    <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">tag</span>::<span class="ident">Tag</span>::<span class="ident">TopTag</span>(<span class="ident">Top</span> {}));
     <span class="ident">Tag</span> { <span class="ident">tag</span> }
 }
 </pre></div>
