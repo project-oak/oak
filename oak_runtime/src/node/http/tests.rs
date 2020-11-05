@@ -17,7 +17,7 @@
 use super::*;
 use crate::{
     io::{ReceiverExt, SenderExt},
-    node::Node,
+    node::{Node, NodeIsolation},
     proto::oak::invocation::HttpInvocation,
 };
 use maplit::hashmap;
@@ -41,8 +41,10 @@ impl Node for RouterNode {
     fn node_type(&self) -> &'static str {
         "test-router"
     }
-    fn external_facing(&self) -> bool {
-        false
+    fn isolation(&self) -> NodeIsolation {
+        // Even though this node is not actually sandboxed, we are simulating a Wasm node during
+        // testing.
+        NodeIsolation::Sandboxed
     }
     fn run(
         self: Box<Self>,
@@ -118,8 +120,10 @@ impl Node for EchoNode {
     fn node_type(&self) -> &'static str {
         "test-echo"
     }
-    fn external_facing(&self) -> bool {
-        false
+    fn isolation(&self) -> NodeIsolation {
+        // Even though this node is not actually sandboxed, we are simulating a Wasm node during
+        // testing.
+        NodeIsolation::Sandboxed
     }
 
     fn run(

@@ -27,7 +27,7 @@ use crate::{
     channel::{with_reader_channel, with_writer_channel, Channel},
     message::Message,
     metrics::Metrics,
-    node::Node,
+    node::{Node, NodeIsolation},
     proto::oak::introspection_events::{
         event::EventDetails, ChannelCreated, Direction, Event, HandleCreated, HandleDestroyed,
         MessageDequeued, MessageEnqueued, NodeCreated, NodeDestroyed,
@@ -1239,20 +1239,30 @@ impl Runtime {
         let node_type = instance.node_type();
         let node_privilege = instance.get_privilege();
 
-        // If the new node has any ability to communicate externally, we should make sure that it
-        // has the privilege to downgrade its label to "public untrusted".
-        if instance.external_facing() {
-            let downgraded_label = node_privilege.downgrade_label(label);
-            debug!(
-                "Maximum downgraded label for node {}: {:?}",
-                node_name, &downgraded_label
-            );
-            if !downgraded_label.flows_to(&Label::public_untrusted()) {
-                error!(
-                    "Node {} of type {} has insufficent privilege.",
-                    node_name, node_type
+        // If the new node is not sandboxed it can communicate externally without restriction, so we
+        // should make sure that it has the privilege to downgrade its label to "public untrusted"
+        // before registering and starting it.
+        match instance.isolation() {
+            NodeIsolation::Uncontrolled => {
+                let downgraded_label = node_privilege.downgrade_label(label);
+                debug!(
+                    "Maximum downgraded label for node {}: {:?}",
+                    node_name, &downgraded_label
                 );
-                return Err(OakStatus::ErrPermissionDenied);
+                if !downgraded_label.flows_to(&Label::public_untrusted()) {
+                    error!(
+                        "Node {} of type {} has insufficent privilege.",
+                        node_name, node_type
+                    );
+                    return Err(OakStatus::ErrPermissionDenied);
+                };
+            }
+            NodeIsolation::Sandboxed => {
+                trace!(
+                    "Node {} of type {} is sandboxed, so not checking privilege.",
+                    node_name,
+                    node_type
+                );
             }
         }
 

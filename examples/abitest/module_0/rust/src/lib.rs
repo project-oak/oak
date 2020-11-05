@@ -21,6 +21,7 @@ pub mod proto {
 use abitest_common::InternalMessage;
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq, expect_matches};
+use http::Uri;
 use log::{debug, error, info, trace, warn};
 use oak::{
     grpc,
@@ -53,6 +54,9 @@ const STORAGE_NAME_PREFIX: &str = "abitest";
 const HTTP_ADDR: &str = "[::]:8383";
 const ADDITIONAL_TEST_SERVER_ADDR: &str = "[::]:8081";
 const ADDITIONAL_TEST_SERVER_ADDR_2: &str = "[::]:8082";
+
+const GRPC_CLIENT_ADDRESS: &str = "https://localhost:7878";
+const STORAGE_PROXY_ADDRESS: &str = "https://localhost:7867";
 
 struct FrontendNode {
     backend_out: Vec<oak::WriteHandle>,
@@ -146,7 +150,7 @@ impl FrontendNode {
             backend_out,
             backend_in,
             storage: oak::storage::Storage::new(&StorageProxyConfiguration {
-                address: "https://localhost:7867".to_string(),
+                address: STORAGE_PROXY_ADDRESS.to_string(),
             }),
             absent_storage: oak::storage::Storage::new(&StorageProxyConfiguration {
                 address: "https://test.invalid:9999".to_string(),
@@ -2206,7 +2210,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_unary_method(&mut self) -> TestResult {
-        let grpc_stub = oak::grpc::client::init("https://localhost:7878")
+        let grpc_stub = oak::grpc::client::init(GRPC_CLIENT_ADDRESS)
             .map(OakAbiTestServiceClient)
             .map_err(|_err| {
                 Box::new(std::io::Error::new(
@@ -2242,7 +2246,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_server_streaming_method(&mut self) -> TestResult {
-        let grpc_stub = oak::grpc::client::init("https://localhost:7878")
+        let grpc_stub = oak::grpc::client::init(GRPC_CLIENT_ADDRESS)
             .map(OakAbiTestServiceClient)
             .map_err(|_err| {
                 Box::new(std::io::Error::new(
@@ -2506,6 +2510,8 @@ impl FrontendNode {
 
     fn test_grpc_server_pseudo_node_privilege(&mut self) -> TestResult {
         // gRPC server pseudo node can be created even with Top confidentiality.
+        // TODO(#1631): Update test if the gRPC server pseudo node's declassification privilege is
+        // lowered to be the top of the user sub-lattice, rather than the global top.
         let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
         let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
         let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
@@ -2520,8 +2526,10 @@ impl FrontendNode {
 
     fn test_http_server_pseudo_node_privilege(&mut self) -> TestResult {
         // HTTP server pseudo node can be created even with Top confidentiality.
+        // TODO(#1631): Update test if the HTTP server pseudo node's declassification privilege is
+        // lowered to be the top of the user sub-lattice, rather than the global top.
         let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
-        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR_2);
         let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
         expect_eq!(
             Ok(()),
@@ -2537,9 +2545,14 @@ impl FrontendNode {
         {
             // URI authority.
             let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
-                "localhost:7878",
+                GRPC_CLIENT_ADDRESS
+                    .parse::<Uri>()
+                    .unwrap()
+                    .authority()
+                    .unwrap()
+                    .as_str(),
             ));
-            let config = oak::node_config::grpc_client("https://localhost:7878");
+            let config = oak::node_config::grpc_client(GRPC_CLIENT_ADDRESS);
             let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
             expect_eq!(Ok(()), oak::node_create("grpc_client", &config, &label, rh));
             expect_eq!(Ok(()), oak::channel_close(rh.handle));
@@ -2552,7 +2565,7 @@ impl FrontendNode {
             let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
                 "google.com",
             ));
-            let config = oak::node_config::grpc_client("https://localhost:7878");
+            let config = oak::node_config::grpc_client(GRPC_CLIENT_ADDRESS);
             let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
             expect_eq!(
                 Err(OakStatus::ErrPermissionDenied),
@@ -2567,7 +2580,12 @@ impl FrontendNode {
     fn test_roughtime_client_pseudo_node_privilege(&mut self) -> TestResult {
         // Roughtime client pseudo node cannot be created with a non-public label.
         let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
-            "localhost:7878",
+            GRPC_CLIENT_ADDRESS
+                .parse::<Uri>()
+                .unwrap()
+                .authority()
+                .unwrap()
+                .as_str(),
         ));
         let config = NodeConfiguration {
             config_type: Some(ConfigType::RoughtimeClientConfig(
@@ -2589,11 +2607,16 @@ impl FrontendNode {
     fn test_storage_pseudo_node_privilege(&mut self) -> TestResult {
         // Storage pseudo node cannot be created with a non-public label.
         let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
-            "localhost:7867",
+            STORAGE_PROXY_ADDRESS
+                .parse::<Uri>()
+                .unwrap()
+                .authority()
+                .unwrap()
+                .as_str(),
         ));
         let config = NodeConfiguration {
             config_type: Some(ConfigType::StorageConfig(StorageProxyConfiguration {
-                address: "https://localhost:7867".to_string(),
+                address: STORAGE_PROXY_ADDRESS.to_string(),
             })),
         };
         let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
@@ -2609,7 +2632,12 @@ impl FrontendNode {
     fn test_logger_pseudo_node_privilege(&mut self) -> TestResult {
         // Logger pseudo node cannot be created with a non-public label.
         let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
-            "localhost:7867",
+            GRPC_CLIENT_ADDRESS
+                .parse::<Uri>()
+                .unwrap()
+                .authority()
+                .unwrap()
+                .as_str(),
         ));
         let config = oak::node_config::log();
         let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");

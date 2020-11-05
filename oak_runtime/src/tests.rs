@@ -16,8 +16,15 @@
 
 use super::*;
 use maplit::{hashmap, hashset};
-use oak_abi::proto::oak::application::{
-    node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
+use oak_abi::{
+    label::{
+        authorization_bearer_token_hmac_tag, confidentiality_label, public_key_identity_tag,
+        tls_endpoint_tag, web_assembly_module_signature_tag, web_assembly_module_tag, Label,
+    },
+    proto::oak::application::{
+        node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration,
+        NodeConfiguration,
+    },
 };
 
 pub fn init_logging() {
@@ -51,8 +58,10 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         fn node_type(&self) -> &'static str {
             "test"
         }
-        fn external_facing(&self) -> bool {
-            false
+        fn isolation(&self) -> NodeIsolation {
+            // Even though this node is not actually sandboxed, we are simulating a Wasm node during
+            // testing.
+            NodeIsolation::Sandboxed
         }
         fn run(
             self: Box<Self>,
@@ -596,4 +605,104 @@ fn wait_on_channels_immediately_returns_if_the_input_list_is_empty() {
             Ok(())
         }),
     );
+}
+
+#[test]
+fn downgrade_multiple_labels_using_top_privilege() {
+    init_logging();
+    let top_privilege = NodePrivilege::top_privilege();
+
+    let wasm_tag = web_assembly_module_tag(&[1, 2, 3]);
+    let signature_tag = web_assembly_module_signature_tag(&[1, 2, 3]);
+    let bearer_token_tag = authorization_bearer_token_hmac_tag(&[1, 2, 3]);
+    let public_key_identity_tag = public_key_identity_tag(vec![1, 2, 3]);
+    let tls_endpoint_tag = tls_endpoint_tag("google.com");
+
+    let wasm_label = confidentiality_label(wasm_tag.clone());
+    let signature_label = confidentiality_label(signature_tag.clone());
+    let bearer_token_label = confidentiality_label(bearer_token_tag.clone());
+    let public_key_identity_label = confidentiality_label(public_key_identity_tag.clone());
+    let tls_endpoint_label = confidentiality_label(tls_endpoint_tag.clone());
+    let mixed_label = Label {
+        confidentiality_tags: vec![
+            wasm_tag,
+            signature_tag,
+            bearer_token_tag,
+            public_key_identity_tag,
+            tls_endpoint_tag,
+        ],
+        integrity_tags: vec![],
+    };
+
+    // The top privilege can downgrade any label to "public".
+    assert!(top_privilege
+        .downgrade_label(&wasm_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&signature_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&bearer_token_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&public_key_identity_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&tls_endpoint_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&mixed_label)
+        .flows_to(&Label::public_untrusted()));
+}
+
+#[test]
+fn downgrade_tls_label_using_tls_privilege() {
+    init_logging();
+    let tls_endpoint_tag_1 = tls_endpoint_tag("google.com");
+    let tls_endpoint_tag_2 = tls_endpoint_tag("localhost");
+    let tls_privilege = NodePrivilege {
+        can_declassify_confidentiality_tags: hashset! { tls_endpoint_tag_1.clone() },
+        can_endorse_integrity_tags: hashset! {},
+    };
+
+    let tls_endpoint_label_1 = confidentiality_label(tls_endpoint_tag_1.clone());
+    let tls_endpoint_label_2 = confidentiality_label(tls_endpoint_tag_2.clone());
+    let mixed_tls_endpoint_label = Label {
+        confidentiality_tags: vec![tls_endpoint_tag_1, tls_endpoint_tag_2],
+        integrity_tags: vec![],
+    };
+
+    // Can downgrade the label with the same TLS endpoint tag.
+    assert!(tls_privilege
+        .downgrade_label(&tls_endpoint_label_1)
+        .flows_to(&Label::public_untrusted()));
+    // Cannot downgrade the label with a different TLS endpoint tag.
+    assert!(!tls_privilege
+        .downgrade_label(&tls_endpoint_label_2)
+        .flows_to(&Label::public_untrusted()));
+    // Can partially downgrade the combined label.
+    assert!(tls_privilege
+        .downgrade_label(&mixed_tls_endpoint_label)
+        .flows_to(&tls_endpoint_label_2));
+    assert!(!tls_privilege
+        .downgrade_label(&mixed_tls_endpoint_label)
+        .flows_to(&tls_endpoint_label_1));
+}
+
+#[test]
+fn downgrade_wasm_label_using_signature_privilege_does_not_do_aything() {
+    init_logging();
+    let signature_tag = web_assembly_module_signature_tag(&[1, 2, 3]);
+    let signature_privilege = NodePrivilege {
+        can_declassify_confidentiality_tags: hashset! { signature_tag },
+        can_endorse_integrity_tags: hashset! {},
+    };
+
+    let wasm_tag = web_assembly_module_tag(&[1, 2, 3]);
+    let wasm_label = confidentiality_label(wasm_tag);
+
+    // Signature privilege cannot downgrade a Wasm confidentiality label.
+    assert!(!signature_privilege
+        .downgrade_label(&wasm_label)
+        .flows_to(&Label::public_untrusted()));
 }

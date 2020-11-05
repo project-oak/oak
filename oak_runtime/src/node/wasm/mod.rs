@@ -17,8 +17,8 @@
 //! WebAssembly Node functionality.
 
 use crate::{
-    node::ConfigurationError, LabelReadStatus, NodeMessage, NodePrivilege, NodeReadStatus,
-    RuntimeProxy, SignatureTable,
+    node::{ConfigurationError, NodeIsolation},
+    LabelReadStatus, NodeMessage, NodePrivilege, NodeReadStatus, RuntimeProxy, SignatureTable,
 };
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, trace, warn};
@@ -1083,8 +1083,9 @@ impl super::Node for WasmNode {
     fn node_type(&self) -> &'static str {
         "wasm"
     }
-    fn external_facing(&self) -> bool {
-        false
+    fn isolation(&self) -> NodeIsolation {
+        // The Wasm sandbox restricts the external communictions from the Node.
+        NodeIsolation::Sandboxed
     }
 
     /// Runs this instance of a Wasm Node.
