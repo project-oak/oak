@@ -400,8 +400,40 @@ impl OakAbiTestService for FrontendNode {
             (Self::test_roughtime_client_misconfig, Count::Unsure),
         );
         tests.insert(
-            "PseudoNodePrivilege",
-            (Self::test_pseudo_node_privilege, Count::Unchanged),
+            "GrpcServerPseudoNodePrivilege",
+            (
+                Self::test_grpc_server_pseudo_node_privilege,
+                Count::Unchanged,
+            ),
+        );
+        tests.insert(
+            "HttpServerPseudoNodePrivilege",
+            (
+                Self::test_http_server_pseudo_node_privilege,
+                Count::Unchanged,
+            ),
+        );
+        tests.insert(
+            "GrpcClientPseudoNodePrivilege",
+            (
+                Self::test_grpc_client_pseudo_node_privilege,
+                Count::Unchanged,
+            ),
+        );
+        tests.insert(
+            "RoughtimeClientPseudoNodePrivilege",
+            (
+                Self::test_roughtime_client_pseudo_node_privilege,
+                Count::Unchanged,
+            ),
+        );
+        tests.insert(
+            "StoragePseudoNodePrivilege",
+            (Self::test_storage_pseudo_node_privilege, Count::Unchanged),
+        );
+        tests.insert(
+            "LoggerPseudoNodePrivilege",
+            (Self::test_logger_pseudo_node_privilege, Count::Unchanged),
         );
 
         for (&name, &info) in &tests {
@@ -2472,38 +2504,38 @@ impl FrontendNode {
         Ok(())
     }
 
-    fn test_pseudo_node_privilege(&mut self) -> TestResult {
+    fn test_grpc_server_pseudo_node_privilege(&mut self) -> TestResult {
         // gRPC server pseudo node can be created even with Top confidentiality.
-        {
-            let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
-            let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
-            let (wh, rh) =
-                oak::channel_create("Test", &top_label).expect("could not create channel");
-            expect_eq!(
-                Ok(()),
-                oak::node_create("grpc_server", &config, &top_label, rh)
-            );
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
-        }
+        let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
+        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
+        expect_eq!(
+            Ok(()),
+            oak::node_create("grpc_server", &config, &top_label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
 
+    fn test_http_server_pseudo_node_privilege(&mut self) -> TestResult {
         // HTTP server pseudo node can be created even with Top confidentiality.
-        {
-            let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
-            let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR);
-            let (wh, rh) =
-                oak::channel_create("Test", &top_label).expect("could not create channel");
-            expect_eq!(
-                Ok(()),
-                oak::node_create("http_server", &config, &top_label, rh)
-            );
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
-        }
+        let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
+        expect_eq!(
+            Ok(()),
+            oak::node_create("http_server", &config, &top_label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
 
+    fn test_grpc_client_pseudo_node_privilege(&mut self) -> TestResult {
         // gRPC client pseudo node can be created with TLS endpoint confidentiality tag matching its
-        // URI authority.
         {
+            // URI authority.
             let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
                 "localhost:7878",
             ));
@@ -2529,62 +2561,64 @@ impl FrontendNode {
             expect_eq!(Ok(()), oak::channel_close(rh.handle));
             expect_eq!(Ok(()), oak::channel_close(wh.handle));
         }
+        Ok(())
+    }
 
+    fn test_roughtime_client_pseudo_node_privilege(&mut self) -> TestResult {
         // Roughtime client pseudo node cannot be created with a non-public label.
-        {
-            let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
-                "localhost:7878",
-            ));
-            let config = NodeConfiguration {
-                config_type: Some(ConfigType::RoughtimeClientConfig(
-                    RoughtimeClientConfiguration {
-                        ..Default::default()
-                    },
-                )),
-            };
-            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
-            expect_eq!(
-                Err(OakStatus::ErrPermissionDenied),
-                oak::node_create("roughtime_client", &config, &label, rh)
-            );
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
-        }
+        let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
+            "localhost:7878",
+        ));
+        let config = NodeConfiguration {
+            config_type: Some(ConfigType::RoughtimeClientConfig(
+                RoughtimeClientConfiguration {
+                    ..Default::default()
+                },
+            )),
+        };
+        let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+        expect_eq!(
+            Err(OakStatus::ErrPermissionDenied),
+            oak::node_create("roughtime_client", &config, &label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
 
+    fn test_storage_pseudo_node_privilege(&mut self) -> TestResult {
         // Storage pseudo node cannot be created with a non-public label.
-        {
-            let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
-                "localhost:7867",
-            ));
-            let config = NodeConfiguration {
-                config_type: Some(ConfigType::StorageConfig(StorageProxyConfiguration {
-                    address: "https://localhost:7867".to_string(),
-                })),
-            };
-            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
-            expect_eq!(
-                Err(OakStatus::ErrPermissionDenied),
-                oak::node_create("storage", &config, &label, rh)
-            );
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
-        }
+        let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
+            "localhost:7867",
+        ));
+        let config = NodeConfiguration {
+            config_type: Some(ConfigType::StorageConfig(StorageProxyConfiguration {
+                address: "https://localhost:7867".to_string(),
+            })),
+        };
+        let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+        expect_eq!(
+            Err(OakStatus::ErrPermissionDenied),
+            oak::node_create("storage", &config, &label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
 
+    fn test_logger_pseudo_node_privilege(&mut self) -> TestResult {
         // Logger pseudo node cannot be created with a non-public label.
-        {
-            let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
-                "localhost:7867",
-            ));
-            let config = oak::node_config::log();
-            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
-            expect_eq!(
-                Err(OakStatus::ErrPermissionDenied),
-                oak::node_create("logger", &config, &label, rh)
-            );
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
-        }
-
+        let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
+            "localhost:7867",
+        ));
+        let config = oak::node_config::log();
+        let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+        expect_eq!(
+            Err(OakStatus::ErrPermissionDenied),
+            oak::node_create("logger", &config, &label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())
     }
 }

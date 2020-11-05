@@ -374,10 +374,6 @@ impl Node for GrpcClientNode {
         "grpc-client"
     }
 
-    fn external_facing(&self) -> bool {
-        true
-    }
-
     fn run(
         mut self: Box<Self>,
         runtime: RuntimeProxy,

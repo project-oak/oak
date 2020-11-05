@@ -36,7 +36,9 @@ pub trait Node: Send {
     fn node_type(&self) -> &'static str;
 
     /// Returns a value indicating whether the Node can communicate externally.
-    fn external_facing(&self) -> bool;
+    fn external_facing(&self) -> bool {
+        true
+    }
 
     /// Executes the Node, using the provided `Runtime` reference and initial handle.  The method
     /// should continue execution until the Node terminates.

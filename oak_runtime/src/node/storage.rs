@@ -39,10 +39,6 @@ impl super::Node for StorageNode {
         "storage"
     }
 
-    fn external_facing(&self) -> bool {
-        true
-    }
-
     fn run(
         self: Box<Self>,
         _runtime: RuntimeProxy,
