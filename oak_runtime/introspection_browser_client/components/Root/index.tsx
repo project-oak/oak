@@ -23,6 +23,7 @@ import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 import StateGraph from '~/components/StateGraph';
+import EventListWrapper from '~/components/EventListWrapper';
 import EventList from '~/components/EventList';
 import { EventDetailsDialog } from '~/components/Event';
 import NodeDetails from '~/components/NodeDetails';
@@ -314,13 +315,6 @@ const useStyles = makeStyles((theme: Theme) =>
       display: 'flex',
       flexGrow: 1,
     },
-    eventListWrapper: {
-      position: 'relative',
-      width: '40%',
-      maxWidth: '500px',
-      backgroundColor: theme.palette.grey[100],
-      borderLeft: `1px solid ${theme.palette.grey[300]}`,
-    },
     eventList: {
       display: 'flex',
       flexDirection: 'column',
@@ -363,7 +357,7 @@ export default function Root() {
         <Route path="/">
           <div className={classes.contentWrapper}>
             <StateGraph applicationState={applicationState}></StateGraph>
-            <div className={classes.eventListWrapper}>
+            <EventListWrapper>
               <EventList
                 className={classes.eventList}
                 totalEvents={totalEvents}
@@ -391,7 +385,7 @@ export default function Root() {
                   )}
                 />
               </EventList>
-            </div>
+            </EventListWrapper>
           </div>
         </Route>
         <Route exact path="/node/:nodeId">
