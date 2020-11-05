@@ -104,26 +104,19 @@ Section low_projection.
     intros. eauto. intros. eapply top_is_top.
   Qed.
   
-  Theorem low_projection_preserves_observability {A: Type}: forall ell (x: @labeled A),
-    x.(lbl) <<L ell -> (low_proj ell x).(lbl) <<L ell.
+  Theorem low_proj_preserves_obs {A: Type}: forall ell (x: @labeled A),
+    x.(lbl) <<L ell <-> (low_proj ell x).(lbl) <<L ell.
   Proof.
       destruct x. cbv [RuntimeModel.lbl].
-      unfold low_proj. destruct_match.  eauto. contradiction.
+      unfold low_proj. split; destruct_match. 
+      (* -> *)
+      eauto. contradiction.
+      (* <- *)
+      eauto. intros. pose proof (top_is_top ell).
+      replace ell with top by (apply ord_anti; auto).
+      apply top_is_top. 
   Qed.
     
-  (*
-  Theorem low_projection_preserves_lbl {A: Type}: forall ell (x: @labeled A),
-      (low_proj ell x).(lbl) = x.(lbl).
-  Proof.
-      intros. destruct x. simpl. destruct (lbl <<? ell); auto.
-  Qed.
-  
-  Definition node_projection_preserves_lbl :=
-      @low_projection_preserves_lbl node.
-  Definition chan_projection_preserves_lbl := 
-      @low_projection_preserves_lbl channel.
-  *)
-  
   Theorem uncons_proj_chan_s: forall ell s han ch,
       (chans (state_low_proj ell s)).[? han] = ch ->
       exists ch',
@@ -179,14 +172,6 @@ Section low_projection.
   Proof.
   Admitted.
   
-  Theorem node_projection_preserves_flowsto: forall ell s id n n',
-      s.(nodes).[? id] = n ->
-      (state_low_proj ell s).(nodes).[? id] = n' ->
-      ~(n.(lbl) <<L ell) ->
-      ~(n'.(lbl) <<L ell).
-  Proof.
-  Admitted.
-
   Theorem proj_preserves_fresh_han: forall ell s h,
       fresh_han s h ->
       fresh_han (state_low_proj ell s) h.

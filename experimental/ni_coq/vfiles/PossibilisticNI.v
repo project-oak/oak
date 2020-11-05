@@ -335,13 +335,13 @@ Proof.
         destruct (nl.(lbl) <<? ell).
         * (* flowsto case *)
             inversion H_step_s1_s1'; crush; remember ((nodes s1).[?id]) as nl;
-                pose proof (state_nidx_to_proj_state_idx ell _ _ nl
-                    ltac:(eauto)) as Hn_idx_s1proj;
-                (erewrite flows_labeled_proj in Hn_idx_s1proj; eauto);
-                inversion H3; crush; subst_lets.
-                all: try replace n0 with n in * by
-                (pose proof (can_split_node_index _ _ _ _ ltac:(eauto));
-                    logical_simplify; congruence). 
+            pose proof (state_nidx_to_proj_state_idx ell _ _ nl
+                ltac:(eauto)) as Hn_idx_s1proj;
+            (erewrite flows_labeled_proj in Hn_idx_s1proj; eauto);
+            inversion H3; crush; subst_lets.
+            all: try replace n0 with n in * by
+            (pose proof (can_split_node_index _ _ _ _ ltac:(eauto));
+                logical_simplify; congruence). 
             (*
                 I can't quite get this to work. Coq complains
                 about s1 not being found in environment
@@ -447,31 +447,30 @@ Proof.
         pose proof (uncons_proj_node_s _ _ _ nl ltac:(eauto))
             as [n' [Hidx_n' Hproj_n']].
         destruct (nl.(lbl) <<? ell).
-        * admit.
-          (* flowsto case*)
-          (*
-            inversion H_step_projs_s1'; inversion H3;
-              (rewrite @flows_labeled_proj in *; eauto); crush;
-                lazymatch goal with
-                | |- _ <<L _ => erewrite <-low_projection_preserves_lbl; rewrite Hproj_n';
-                                solve [eauto]
+        * (* flowsto case*)
+            inversion H_step_projs_s1'; inversion H3.
+            all: rewrite @flows_labeled_proj in *; eauto; crush.
+            all: erewrite uncons_proj_node_s' in *.
+            all: lazymatch goal with
+                | H: lbl (low_proj _ _ ) <<L _ |- _ <<L _ =>
+                    rewrite <- low_proj_preserves_obs in H; eauto
                 | _ => idtac
-                end.
-            *)
-        (* WriteChannel *)
-          (*
-          remember (s_set_call (state_chan_append_labeled han msg
-                                                          (state_upd_node id n'0 s)) id c') as s2''.
-          separate_hyp node.
-          eexists s2'', (lbl _ ---> msg). split.
-          { crush; try congruence;
-              [ separate_goal; eauto; congruence | ].
-            rewrite <-Hproj_n' in *.
-            eauto using invert_chans_state_low_proj_flowsto. }
-          split.
-          { crush; subst_lets; eauto with unwind. }
-          { crush. congruence. }
-          *)
+            end.
+            all: separate_hyp node; separate_hyp channel.
+            + (* WriteChannel *)
+                remember (s_set_call (state_chan_append_labeled han msg
+                                        (state_upd_node id n'0 s)) id c') as s2''.
+                eexists s2'', (lbl _ ---> msg); split; [ | split].
+                { crush; try congruence. 
+                    separate_goal; eauto; congruence.
+                  rewrite <-Hproj_n' in *.
+                  eauto using invert_chans_state_low_proj_flowsto. }
+                { crush; subst_lets; eauto with unwind. }
+                { crush. congruence. }
+            + (* ReadChannel *) admit.
+            + (* CreateChannel *) admit.
+            + (* CreateNode *) admit. 
+            + (* Internal *) admit.
           (*
            + (* WriteChannel *)
                 pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
