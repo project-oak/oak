@@ -186,6 +186,24 @@
 <span id="183">183</span>
 <span id="184">184</span>
 <span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -221,10 +239,20 @@
 
 <span class="doccomment">/// Trait encapsulating execution of a Node or pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Node</span>: <span class="ident">Send</span> {
-    <span class="doccomment">/// Return a name for this type of Node.</span>
+    <span class="doccomment">/// Returns a name for this type of Node.</span>
     <span class="kw">fn</span> <span class="ident">node_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
 
-    <span class="doccomment">/// Execute the Node, using the provided `Runtime` reference and initial handle.  The method</span>
+    <span class="doccomment">/// Returns a value indicating the isolation of a Node. If a Node is sandboxed (e.g. a Wasm</span>
+    <span class="doccomment">/// node), the sandbox restricts external communcations. Uncontrolled nodes (e.g pseudo Nodes</span>
+    <span class="doccomment">/// that are part of the runtime) have no restrictions enforced on external communications.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Unless a node uses a trusted sandbox to restrict communications this function should always</span>
+    <span class="doccomment">/// return [`NodeIsolation::Uncontrolled`]</span>
+    <span class="kw">fn</span> <span class="ident">isolation</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodeIsolation</span> {
+        <span class="ident">NodeIsolation</span>::<span class="ident">Uncontrolled</span>
+    }
+
+    <span class="doccomment">/// Executes the Node, using the provided `Runtime` reference and initial handle.  The method</span>
     <span class="doccomment">/// should continue execution until the Node terminates.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// `notify_receiver` receives a notification from the Runtime upon termination. This</span>
@@ -236,9 +264,17 @@
         <span class="ident">notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     );
 
+    <span class="doccomment">/// Gets the privilege associated with the Node.</span>
     <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
         <span class="ident">NodePrivilege</span>::<span class="ident">default</span>()
     }
+}
+
+<span class="doccomment">/// Indication of the level of isolation of a node.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">NodeIsolation</span> {
+    <span class="ident">Sandboxed</span>,
+    <span class="ident">Uncontrolled</span>,
 }
 
 <span class="doccomment">/// A enumeration for errors occuring when creating a new [`Node`] instance.</span>

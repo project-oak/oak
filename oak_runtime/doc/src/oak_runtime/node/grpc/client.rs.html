@@ -437,8 +437,6 @@
 <span id="434">434</span>
 <span id="435">435</span>
 <span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -529,8 +527,6 @@
         <span class="comment">// We compute the node privilege once and for all at start and just store it, since it does</span>
         <span class="comment">// not change throughout the node execution.</span>
         <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="ident">grpc_client_node_privilege</span>(<span class="kw-2">&amp;</span><span class="ident">uri</span>);
-        <span class="comment">// TODO(#814): Actually check that the newly created node can write to the</span>
-        <span class="comment">// &quot;public_untrusted&quot; label, taking into account its own label and privilege.</span>
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">node_name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
             <span class="ident">uri</span>,

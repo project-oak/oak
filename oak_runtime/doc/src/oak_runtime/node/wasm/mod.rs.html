@@ -1134,6 +1134,10 @@
 <span id="1131">1131</span>
 <span id="1132">1132</span>
 <span id="1133">1133</span>
+<span id="1134">1134</span>
+<span id="1135">1135</span>
+<span id="1136">1136</span>
+<span id="1137">1137</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1154,8 +1158,8 @@
 <span class="doccomment">//! WebAssembly Node functionality.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">node</span>::<span class="ident">ConfigurationError</span>, <span class="ident">LabelReadStatus</span>, <span class="ident">NodeMessage</span>, <span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>,
-    <span class="ident">RuntimeProxy</span>, <span class="ident">SignatureTable</span>,
+    <span class="ident">node</span>::{<span class="ident">ConfigurationError</span>, <span class="ident">NodeIsolation</span>},
+    <span class="ident">LabelReadStatus</span>, <span class="ident">NodeMessage</span>, <span class="ident">NodePrivilege</span>, <span class="ident">NodeReadStatus</span>, <span class="ident">RuntimeProxy</span>, <span class="ident">SignatureTable</span>,
 };
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
@@ -1286,7 +1290,7 @@
 
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">name_bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;{}: node_create(): Unabel to decode name as a string: {:?}&quot;</span>,
+                <span class="string">&quot;{}: node_create(): Unable to decode name as a string: {:?}&quot;</span>,
                 <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">err</span>
             );
             <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
@@ -1406,7 +1410,7 @@
 
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">name_bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;{}: channel_create(): Unabel to decode name as a string: {:?}&quot;</span>,
+                <span class="string">&quot;{}: channel_create(): Unable to decode name as a string: {:?}&quot;</span>,
                 <span class="self">self</span>.<span class="ident">pretty_name</span>, <span class="ident">err</span>
             );
             <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
@@ -2219,6 +2223,10 @@
 <span class="kw">impl</span> <span class="kw">super</span>::<span class="ident">Node</span> <span class="kw">for</span> <span class="ident">WasmNode</span> {
     <span class="kw">fn</span> <span class="ident">node_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="string">&quot;wasm&quot;</span>
+    }
+    <span class="kw">fn</span> <span class="ident">isolation</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodeIsolation</span> {
+        <span class="comment">// The Wasm sandbox restricts the external communictions from the Node.</span>
+        <span class="ident">NodeIsolation</span>::<span class="ident">Sandboxed</span>
     }
 
     <span class="doccomment">/// Runs this instance of a Wasm Node.</span>
