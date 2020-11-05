@@ -121,10 +121,10 @@ impl FrontendNode {
         let mut backend_in = Vec::with_capacity(BACKEND_COUNT);
         for i in 0..BACKEND_COUNT {
             let (write_handle, read_handle) =
-                oak::channel_create("backend-initial", &Label::public_untrusted())
+                oak::channel_create(&format!("to-backend-{}", i), &Label::public_untrusted())
                     .expect("could not create channel");
             oak::node_create(
-                BACKEND_ENTRYPOINT_NAME,
+                &format!("{}-{}", BACKEND_ENTRYPOINT_NAME, i),
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
                 read_handle,
@@ -136,7 +136,7 @@ impl FrontendNode {
             // Create a back channel, and pass the write half to the backend
             // as the first message on the outbound channel.
             let (write_handle, read_handle) =
-                oak::channel_create("Back", &Label::public_untrusted())
+                oak::channel_create(&format!("from-backend-{}", i), &Label::public_untrusted())
                     .expect("could not create channel");
             oak::channel_write(backend_out[i], &[], &[write_handle.handle])
                 .expect("could not write to channel");
