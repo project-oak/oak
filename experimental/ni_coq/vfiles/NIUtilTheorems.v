@@ -197,9 +197,7 @@ Global Instance state_low_eq_refl: forall ell, Reflexive (state_low_eq ell) | 10
 Proof. unfold state_low_eq. unfold Reflexive. eauto.  Qed.
 
 Global Instance state_low_eq_trans: forall ell, Transitive (state_low_eq ell) | 10.
-Proof. cbv [Transitive state_low_eq]. intros. destruct H, H0. split. 
-    (* seems it should be possible to use Transitive for node_state, chan_state here*)
-Admitted.
+Proof. cbv [Transitive state_low_eq]. intros. destruct H, H0. split; congruence. Qed.
 
 Global Instance state_low_eq_sym: forall ell, Symmetric (state_low_eq ell) | 10.
 Proof. intros. unfold Symmetric. unfold state_low_eq. intros. destruct H. split; eauto.
