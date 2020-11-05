@@ -192,7 +192,12 @@ Proof.
     intros. eauto.
 Qed.
 
-Definition fresh_han s h := s.(chans).[?h] = Labeled channel None top.
+Theorem chan_state_fe: forall ell chs1 chs2,
+    (forall h, low_eq ell chs1.[?h] chs2.[?h]) ->
+    chan_state_low_eq ell chs1 chs2.
+Proof.
+    (* shouldn't be needed after change to state loweq defs *)
+Admitted.
 
 Theorem new_secret_chan_unobs: forall ell ell' s h ,
     ~( ell' <<L ell) ->
@@ -200,11 +205,24 @@ Theorem new_secret_chan_unobs: forall ell ell' s h ,
     state_low_eq ell s (state_upd_chan_labeled h 
             {| obj := new_chan; lbl := ell'|} s).
 Proof.
-    intros. cbv [state_low_eq state_low_proj].
+    cbv [state_low_eq state_low_proj fresh_han new_chan]. intros.
     eapply state_low_eq_parts; [cbv [state_upd_chan_labeled]; reflexivity | ].
-    cbv [chan_state_low_eq chan_state_low_proj].
-Admitted.
-
+    eapply chan_state_fe.
+    intros. simpl. cbv [low_eq]. destruct s. cbv [RuntimeModel.chans] in *.
+    unfold low_proj.
+    destruct (dec_eq_h h h0). 
+    - rewrite <- e. rewrite H0.
+    replace 
+        ((chans .[ h <- {| obj := Some {| ms := [] |}; lbl := ell' |}]).[? h])
+        with
+        ({| obj := Some {| ms := [] |}; lbl := ell' |}) by (symmetry; eapply upd_eq).
+    destruct (top <<? ell); destruct (ell' <<? ell); (contradiction || reflexivity).
+    -  replace 
+        ( (chans .[ h <- {| obj := Some {| ms := [] |}; lbl := ell' |}]).[? h0])
+        with
+        (chans.[? h0]).
+        reflexivity. symmetry. apply upd_neq; auto. 
+Qed.
 
 Theorem unobservable_node_step: forall ell s s' e id nl n,
     s.(nodes).[? id] = nl ->
@@ -230,22 +248,30 @@ Proof.
         eapply (state_upd_chan_unobs _ _ _ (chan_pop ch)
             ltac:(eauto)).
     - (* CreateChannel *)
+        assert ( ~ (clbl <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
-        eapply (new_secret_chan_unobs _ _ _ (new_chan lbl) ltac:(eauto)).
-
-    - (*ReadChannel; events loweq *)
-
+        eapply (new_secret_chan_unobs _ clbl); eauto.
+        eapply (state_low_eq_trans _ _ 
+            (state_upd_node id (node_add_rhan h n0)
+            (state_upd_chan_labeled h {| obj := new_chan; lbl := clbl |} s))).
+        eapply state_upd_node_unobs; eauto.
+        eapply state_upd_node_unobs; eauto. simpl. 
+        (* wishing for erewrite upd_eq; eauto to work here.*)
+        (* I also tried making upd_eq_rev to try to get rid of the
+        need for symmetry, but that didn't seem to help *)
+        replace
+            ((nodes s .[ id <- (nodes s).[? id] <| obj ::=
+            (fun _ : option node => Some (node_add_rhan h n0)) |>]).[? id])
+            with
+            (
+                (nodes s).[? id] <| obj ::= (fun _ : option node => Some (node_add_rhan h n0)) |>
+            ).
+        eauto.
+        symmetry. eapply upd_eq.
+    - (* CreateNode *)
+        admit.
 Admitted.
 (*
-    -  (* CreateChannel; states loweq *) 
-        assert ( ~ (lbl <<L ell) ) by eauto using ord_trans.
-        eapply state_low_eq_trans.
-        eapply (new_secret_chan_unobs _ _ _ (new_chan lbl) ltac:(eauto)); eauto.
-        eapply (state_low_eq_trans _ _ (state_upd_node id (node_add_rhan h n)
-            (state_upd_chan h (new_chan lbl) s))).
-        eapply state_upd_node_unobs; eauto.
-        eapply (state_upd_node_unobs _ _ _ (node_add_rhan h n)); eauto.
-        eapply upd_eq.
     - (* CreateNode; states loweq *)
         assert ( ~ (lbl <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
@@ -276,6 +302,21 @@ Admitted.
     erewrite event_low_proj_idempotent. reflexivity.
 Qed.
 *)
+
+Theorem low_eq_to_unobs {A: Type}: forall ell (x1 x2: @labeled A),
+    low_eq ell x1 x2 ->
+    ~(x1.(lbl) <<L ell) ->
+    ~(x2.(lbl) <<L ell).
+Proof.
+    destruct x1, x2. cbv [low_eq low_proj RuntimeModel.lbl].
+    intros. destruct (lbl <<? ell); destruct (lbl0 <<? ell);
+        try eauto; try contradiction. 
+    inversion H. unfold not. intros.
+    pose proof top_is_top ell. 
+    pose proof (ord_anti ell top ltac:(eauto) ltac:(eauto)).
+    rewrite H5 in n.
+    pose proof top_is_top lbl. contradiction.
+Qed.
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
@@ -322,7 +363,7 @@ Proof.
                 logical_simplify.
                 apply_all_constructors; eauto. congruence.
                 erewrite state_hidx_to_proj_state_hidx'.
-                erewrite low_projection_preserves_lbl.
+                eapply proj_labels_increase.
                 eauto.
                 (* low-equiv *)
                 subst_lets. eauto 7 with unwind.
@@ -346,6 +387,7 @@ Proof.
                 pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
                 logical_simplify.
                 apply_all_constructors; eauto. congruence.
+                eapply proj_preserves_fresh_han; eauto.
                 (* state loweq *)
                 subst_lets. eauto 7 with unwind.
             + (* CreateNode *)
@@ -354,6 +396,7 @@ Proof.
                 pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
                 logical_simplify.
                 apply_all_constructors; eauto. congruence.
+                eapply proj_preserves_fresh_nid; eauto.
                 eauto with unwind.
             +  (* Internal *)
                 do 2 eexists; split_ands; [ | | reflexivity ].
@@ -378,48 +421,13 @@ Proof.
             unfold s1''. transitivity s1'.
             symmetry. 
             eapply set_call_unobs; eauto.
-            erewrite node_low_eq_to_lbl_eq; eauto.
-            symmetry; eauto.
-            erewrite <- Heqnl in Hns1'leq. eapply Hns1'leq.
+            rewrite <- Hns1'idx in Hns1'leq.
+            eapply low_eq_to_unobs; eauto. 
+            congruence.
             pose proof (state_low_proj_loweq ell s1). 
             symmetry. transitivity s1; congruence.
             (* events leq *)
             congruence.
-Qed.
-(*
-=======
-            admit. (* depends on soon-to-change def of state low-eqs *)
-            pose proof (state_low_proj_loweq ell s1).
-            all: congruence.
-Admitted.
->>>>>>> 4b5dd548 (Fixup from old PR.)
-*)
-
-Lemma separate_lableled {A} (o : option A) (l : level) (x : labeled) :
-  obj x = o -> lbl x = l -> x = Labeled _ o l.
-Proof. destruct x; cbn; congruence. Qed.
-
-Ltac separate_hyp T :=
-  repeat match goal with
-         | H : ?s = Labeled T ?o ?l |- _ =>
-           assert (obj s = o /\ lbl s = l) by (rewrite H; tauto);
-           clear H; logical_simplify
-         end.
-Ltac separate_goal := apply separate_lableled.
-
-Lemma invert_chans_state_low_proj_flowsto ell lvl s han :
-  lvl <<L ell ->
-  lvl <<L (chans (state_low_proj ell s)).[? han].(lbl) ->
-  lvl <<L (chans s).[? han].(lbl).
-Proof.
-  destruct s.
-  repeat match goal with
-         | _ => progress cbn [state_low_proj
-                               RuntimeModel.chans RuntimeModel.lbl ]
-         | _ => progress cbv [low_proj chan_state_low_proj fnd]
-         | _ => destruct_match
-         | _ => tauto
-         end.
 Qed.
 
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
@@ -439,8 +447,9 @@ Proof.
         pose proof (uncons_proj_node_s _ _ _ nl ltac:(eauto))
             as [n' [Hidx_n' Hproj_n']].
         destruct (nl.(lbl) <<? ell).
-        *
+        * admit.
           (* flowsto case*)
+          (*
             inversion H_step_projs_s1'; inversion H3;
               (rewrite @flows_labeled_proj in *; eauto); crush;
                 lazymatch goal with
@@ -448,7 +457,9 @@ Proof.
                                 solve [eauto]
                 | _ => idtac
                 end.
-        + (* WriteChannel *)
+            *)
+        (* WriteChannel *)
+          (*
           remember (s_set_call (state_chan_append_labeled han msg
                                                           (state_upd_node id n'0 s)) id c') as s2''.
           separate_hyp node.
@@ -460,10 +471,7 @@ Proof.
           split.
           { crush; subst_lets; eauto with unwind. }
           { crush. congruence. }
-        + (* ReadChannel *) admit.
-        + (* CreateChannel *) admit.
-        + (* CreateNode *) admit.
-        + (* Internal *) admit.
+          *)
           (*
            + (* WriteChannel *)
                 pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
@@ -538,12 +546,16 @@ Proof.
                 }
                 specialize (state_loweq_to_deref_node ell s s1' id n'
                     Hidx_n' H_leq_s_s1') as [ns1' [Hidx_s1' H_leq_n'_n2]].
-                eapply set_call_unobs. eauto.
+                eapply set_call_unobs.
+                admit.
+                (*
+                eassumption.
                 replace (lbl ns1') with (lbl n')
                     by (eapply node_low_eq_to_lbl_eq; eassumption).
                 replace (lbl n') with (lbl nl). eauto.
                 rewrite <- Hproj_n'.
                 eapply low_projection_preserves_lbl.
+                *)
             + (* e1 ={ell} *) assumption.
 Admitted.
 
@@ -589,13 +601,13 @@ Proof.
   all:repeat erewrite (state_low_eq_implies_node_lookup_eq ell s1 s2) in * by eauto.
   all:repeat erewrite (state_low_eq_implies_chan_lookup_eq ell s1 s2) in * by eauto.
   all:eexists; split.
-  all:lazymatch goal with
+  all:try lazymatch goal with
       | |- step_node _ _ _ _ =>
         econstructor; solve [eauto]
       | _ => subst_lets
       end.
   all:eauto using state_low_eq_projection with unwind.
-Qed.
+Admitted.
 
 Lemma step_node_ev_projection ell s1 s2 s3 id c e :
   state_low_eq ell s1 s2 ->

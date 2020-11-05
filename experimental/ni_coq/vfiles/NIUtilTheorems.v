@@ -5,7 +5,8 @@ From OakIFC Require Import
         RuntimeModel
         EvAugSemantics
         Events
-        LowEquivalences.
+        LowEquivalences
+        Tactics.
 Require Import Coq.Lists.List.
 Import ListNotations.
 From RecordUpdate Require Import RecordSet.
@@ -96,7 +97,20 @@ Section low_projection.
       @low_proj_loweq state state_low_proj state_low_eq.
   Proof.
   Admitted.
- 
+
+  Theorem proj_labels_increase {A: Type }: forall ell ell' (x: @labeled A),
+    ell' <<L x.(lbl) -> ell' <<L (low_proj ell x).(lbl).
+    destruct x. cbv [RuntimeModel.lbl]. unfold low_proj. destruct_match.
+    intros. eauto. intros. eapply top_is_top.
+  Qed.
+  
+  Theorem low_projection_preserves_observability {A: Type}: forall ell (x: @labeled A),
+    x.(lbl) <<L ell -> (low_proj ell x).(lbl) <<L ell.
+  Proof.
+      destruct x. cbv [RuntimeModel.lbl].
+      unfold low_proj. destruct_match.  eauto. contradiction.
+  Qed.
+    
   (*
   Theorem low_projection_preserves_lbl {A: Type}: forall ell (x: @labeled A),
       (low_proj ell x).(lbl) = x.(lbl).
@@ -170,6 +184,20 @@ Section low_projection.
       (state_low_proj ell s).(nodes).[? id] = n' ->
       ~(n.(lbl) <<L ell) ->
       ~(n'.(lbl) <<L ell).
+  Proof.
+  Admitted.
+
+  Theorem proj_preserves_fresh_han: forall ell s h,
+      fresh_han s h ->
+      fresh_han (state_low_proj ell s) h.
+  Proof.
+      (* depends on concurrent change to def of states, but
+      should be true *)
+  Admitted.
+
+  Theorem proj_preserves_fresh_nid: forall ell s id,
+      fresh_nid s id ->
+      fresh_nid (state_low_proj ell s) id.
   Proof.
   Admitted.
 
