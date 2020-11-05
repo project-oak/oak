@@ -8,6 +8,7 @@ From OakIFC Require Import
     EvAugSemantics
     Events
     LowEquivalences
+    Tactics
     NIUtilTheorems.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
@@ -31,20 +32,22 @@ Definition state_unwind (f: state -> state):
 
 but we have to fix the way the definitions are curried.
 *)
-
-Theorem state_upd_node_eq_unwind: forall ell id n s1 s2,
+Theorem state_upd_node_unwind : forall ell id n s1 s2,
     state_low_eq ell s1 s2 ->
     state_low_eq ell (state_upd_node id n s1) (state_upd_node id n s2).
 Proof.
-Admitted.
+  destruct s1, s2; intros *.
+  inversion 1; subst.
+  cbv [state_upd_node state_low_eq state_low_proj set].
+  cbn [RuntimeModel.nodes RuntimeModel.chans].
+  (* this is not provable as stated; because the node-maps are functions, the
+     fact that they return the same result for every input doesn't mean they
+     obey Leibniz equality. The [low_eq] definition should probably say,
+     instead of [low_proj ell x = low_proj ell y], something like:
 
-Theorem state_upd_node_unwind: forall ell id n1 n2 n1obj n2obj s1 s2,
-    node_low_eq ell n1 n2 ->
-    n1.(obj) = Some n1obj ->
-    n2.(obj) = Some n2obj ->
-    state_low_eq ell s1 s2 ->
-    state_low_eq ell (state_upd_node id n1obj s1) (state_upd_node id n2obj s2).
-Proof.
+     (forall id, nodes (low_proj_ell x) id = nodes (low_proj ell y) id)
+     /\ (forall han, chans (low_proj_ell x) han = chans (low_proj ell y) han)
+   *)
 Admitted. (* WIP // TODO *)
 
 Theorem chan_append_unwind: forall ell ch1 ch2 ch1obj ch2obj msg,
@@ -57,18 +60,9 @@ Theorem chan_append_unwind: forall ell ch1 ch2 ch1obj ch2obj msg,
 Proof.
 Admitted. (* WIP // TODO *)
 
-Theorem state_upd_chan_eq_unwind: forall ell han ch s1 s2,
+Theorem state_upd_chan_unwind: forall ell han ch s1 s2,
     state_low_eq ell s1 s2 ->
     state_low_eq ell (state_upd_chan han ch s1) (state_upd_chan han ch s2).
-Proof.
-Admitted.
-
-Theorem state_upd_chan_unwind: forall ell han ch1 ch2 ch1obj ch2obj s1 s2,
-    chan_low_eq ell ch1 ch2 ->
-    ch1.(obj) = Some ch1obj ->
-    ch2.(obj) = Some ch2obj ->
-    state_low_eq ell s1 s2 ->
-    state_low_eq ell (state_upd_chan han ch1obj s1) (state_upd_chan han ch2obj s2).
 Proof.
 Admitted.
 
