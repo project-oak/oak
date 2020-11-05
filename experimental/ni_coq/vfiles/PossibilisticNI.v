@@ -243,7 +243,7 @@ Proof.
     intros. inversion H; subst. 
     - (* SystemSkip *)
         exists (state_low_proj ell s1'), (empty_event ell0); repeat try split.
-        constructor. symmetry. eapply state_low_proj_loweq.
+        constructor. all: symmetry; eapply state_low_proj_loweq.
     - (* NodeSetp *)
         rename s' into s1'. rename s'' into s1''. rename H2 into H_step_s1_s1'.
         remember ((nodes s1).[?id]) as nl.
@@ -325,8 +325,8 @@ Proof.
             pose proof (unobservable_node_step _ _ _ _ _ nl _ ltac:(eauto)
                 ltac:(eauto) H_step_s1_s1' ltac:(eauto))
                 as [Hustep Huev].
-            exists (state_low_proj ell s1), (empty_event (lbl e1));
-                repeat split; crush.
+            exists (state_low_proj ell s1), (empty_event (lbl e1)).
+            split. crush. split.
             (* states leq *)
             pose proof (state_loweq_to_deref_node _ _ _ _ (nodes s1).[?id]
                 ltac:(eauto) ltac:(eauto)) 
@@ -336,7 +336,9 @@ Proof.
             eapply set_call_unobs; eauto.
             erewrite node_low_eq_to_lbl_eq; eauto.
             symmetry; eauto.
-            pose proof (state_low_proj_loweq ell s1); congruence.
+            erewrite <- Heqnl in Hns1'leq. eapply Hns1'leq.
+            pose proof (state_low_proj_loweq ell s1). 
+            symmetry. transitivity s1; congruence.
             (* events leq *)
             congruence.
 Qed.
@@ -378,9 +380,7 @@ Proof.
     intros. inversion H; subst.
     - (* SystemSkip *)
         exists s, (empty_event ell0). split. constructor.
-        split. unfold state_low_eq. unfold low_eq.
-        rewrite state_low_proj_idempotent. reflexivity.
-        reflexivity.
+        split. eapply state_low_proj_loweq. reflexivity.
     - (* NodeStep *)
         rename s'' into s1''. rename s' into s1'. rename H2 into H_step_projs_s1'.
         remember ((nodes (state_low_proj ell s)).[? id]) as nl.
@@ -400,12 +400,14 @@ Proof.
           remember (s_set_call (state_chan_append_labeled han msg
                                                           (state_upd_node id n'0 s)) id c') as s2''.
           separate_hyp node.
-          eexists s2'', (lbl _ ---> msg); repeat split.
+          eexists s2'', (lbl _ ---> msg). split.
           { crush; try congruence;
               [ separate_goal; eauto; congruence | ].
             rewrite <-Hproj_n' in *.
             eauto using invert_chans_state_low_proj_flowsto. }
+          split.
           { crush; subst_lets; eauto with unwind. }
+          { crush. congruence. }
         + (* ReadChannel *) admit.
         + (* CreateChannel *) admit.
         + (* CreateNode *) admit.
@@ -465,30 +467,122 @@ Proof.
             pose proof (unobservable_node_step _ _ _ _ _ nl _ 
                 ltac:(eauto) ltac:(eauto) ltac:(eauto) ltac:(eauto))
                 as [Hustep Huev].
-            exists s, (empty_event (lbl e1));
-                repeat (split || constructor).
+            exists s, (empty_event (lbl e1)); split; [ | split].
+            constructor.
             + (* s1'' ={ell} s *)
                 apply state_low_eq_sym.
                 eapply (state_low_eq_trans _ s s1' s1'').
                 eapply (state_low_eq_trans _ s (state_low_proj ell s) s1').
                 apply state_low_eq_sym.
-                eapply state_low_proj_idempotent. assumption.
+                eapply state_low_proj_loweq.
                 unfold s1''. 
+                subst_lets. congruence.
                 assert (H_leq_s_s1': state_low_eq ell s s1'). {
                     eapply (state_low_eq_trans _ s
                         (state_low_proj ell s) s1').
                     apply state_low_eq_sym.
-                    eapply state_low_proj_idempotent.
+                    eapply state_low_proj_loweq.
                     assumption.
                 }
                 specialize (state_loweq_to_deref_node ell s s1' id n'
                     Hidx_n' H_leq_s_s1') as [ns1' [Hidx_s1' H_leq_n'_n2]].
-                eapply set_call_unobs. eassumption.
+                eapply set_call_unobs. eauto.
                 replace (lbl ns1') with (lbl n')
                     by (eapply node_low_eq_to_lbl_eq; eassumption).
                 admit.
             + (* e1 ={ell} *) assumption.
 Admitted.
+
+Lemma state_low_eq_implies_node_lookup_eq ell s1 s2 :
+  state_low_eq ell s1 s2 ->
+  forall id,
+    (nodes (state_low_proj ell s2)).[? id]
+    = (nodes (state_low_proj ell s1)).[? id].
+Proof.
+  cbv [state_low_proj state_low_eq node_state_low_proj fnd].
+  cbn [nodes chans]. intros; logical_simplify.
+  congruence.
+Qed.
+
+Lemma state_low_eq_implies_chan_lookup_eq ell s1 s2 :
+  state_low_eq ell s1 s2 ->
+  forall han,
+    (chans (state_low_proj ell s2)).[? han]
+    = (chans (state_low_proj ell s1)).[? han].
+Proof.
+  cbv [state_low_proj state_low_eq chan_state_low_proj fnd].
+  cbn [nodes chans]. intros; logical_simplify.
+  congruence.
+Qed.
+
+Lemma state_low_eq_projection ell s1 s2 :
+  state_low_eq ell s1 s2 ->
+  state_low_eq ell (state_low_proj ell s1) (state_low_proj ell s2).
+Proof.
+  cbv [state_low_proj state_low_eq node_state_low_proj chan_state_low_proj fnd].
+  cbn [nodes chans]. intros; logical_simplify.
+  split; intros; congruence.
+Qed.
+
+Lemma step_node_projection ell s1 s2 s3 id c :
+  state_low_eq ell s1 s2 ->
+  step_node id c (state_low_proj ell s2) s3 ->
+  (exists s4, state_low_eq ell s3 s4
+         /\ step_node id c (state_low_proj ell s1) s4).
+Proof.
+  intros Hleq Hstep. pose proof (state_low_eq_sym _ _ _ Hleq).
+  invert_clean Hstep; intros.
+  all:repeat erewrite (state_low_eq_implies_node_lookup_eq ell s1 s2) in * by eauto.
+  all:repeat erewrite (state_low_eq_implies_chan_lookup_eq ell s1 s2) in * by eauto.
+  all:eexists; split.
+  all:lazymatch goal with
+      | |- step_node _ _ _ _ =>
+        econstructor; solve [eauto]
+      | _ => subst_lets
+      end.
+  all:eauto using state_low_eq_projection with unwind.
+Qed.
+
+Lemma step_node_ev_projection ell s1 s2 s3 id c e :
+  state_low_eq ell s1 s2 ->
+  step_node_ev id c (state_low_proj ell s2) s3 e ->
+  (exists s4, state_low_eq ell s3 s4
+         /\ step_node_ev id c (state_low_proj ell s1) s4 e).
+Proof.
+  intros Hleq Hstep. invert_clean Hstep; intros.
+  all:lazymatch goal with
+      | H : step_node _ _ _ _ |- _ =>
+        eapply step_node_projection in H; [ | solve [eauto] ]
+      end.
+  all:logical_simplify.
+  all:eexists; split; [ solve [eauto] | econstructor ].
+  all:repeat erewrite (state_low_eq_implies_node_lookup_eq ell s1 s2) by eauto.
+  all:repeat erewrite (state_low_eq_implies_chan_lookup_eq ell s1 s2) by eauto.
+  all:eauto.
+Qed.
+
+Lemma step_system_ev_projection ell s1 s2 s3 e :
+  state_low_eq ell s1 s2 ->
+  step_system_ev (state_low_proj ell s2) s3 e ->
+  (exists s4, state_low_eq ell s3 s4
+         /\ step_system_ev (state_low_proj ell s1) s4 e).
+Proof.
+  intros Hleq Hstep. pose proof (state_low_eq_sym _ _ _ Hleq).
+  invert_clean Hstep; intros.
+  { eexists; split.
+    { apply state_low_eq_projection.
+      apply state_low_eq_sym; eauto. }
+    { econstructor; eauto. } }
+  { lazymatch goal with
+    | H : step_node_ev _ _ _ _ _ |- _ =>
+      eapply step_node_ev_projection in H; [ | solve [eauto] ]
+    end.
+    logical_simplify. subst_lets.
+    eexists; split; eauto; [ | econstructor; eauto ];
+      [ solve [eauto with unwind] | ].
+    erewrite state_low_eq_implies_node_lookup_eq by eauto.
+    eauto. }
+Qed.
 
 Theorem possibilistic_ni_1step: forall ell s1 s2 s1' e1,
     (state_low_eq ell s1 s2) ->
@@ -500,15 +594,20 @@ Theorem possibilistic_ni_1step: forall ell s1 s2 s1' e1,
 Proof.
     intros ell s1 s2 s1' e1 H_leq_s1_s2 Hstep_s1_s1'.
     specialize (step_implies_lowproj_steps_leq ell s1 s1' e1 Hstep_s1_s1')
-        as [s3' [ e3 [Hstep_s1_s3 [H_leq_s1'_s3' H_leq_e1_e3]]]].
-    assert (H_s2_proj_s3': (step_system_ev (state_low_proj ell s2) s3' e3)).
-        { replace (state_low_proj ell s1) with 
-            (state_low_proj ell s2) in Hstep_s1_s3. assumption. }
-    specialize (low_proj_steps_implies_leq_step ell s2 s3' e3 H_s2_proj_s3')
-        as [s2' [ e2 [Hstep_s2_s2' [H_leq_s3'_s2' H_leq_e3_e2]]]].
+      as [s3' [ e3 [Hstep_s1_s3 [H_leq_s1'_s3' H_leq_e1_e3]]]].
+    eapply step_system_ev_projection in Hstep_s1_s3;
+      [ | symmetry; eassumption ].
+    logical_simplify.
+    match goal with
+      | H : step_system_ev (state_low_proj ell s2) _ _ |- _ =>
+        apply low_proj_steps_implies_leq_step in H;
+          destruct H
+          as [s2' [ e2 [Hstep_s2_s2' [H_leq_s3'_s2' H_leq_e3_e2]]]]
+    end.
     exists s2', e2. split. assumption. split.
-    - eapply (state_low_eq_trans _ s1' s3' s2'); congruence.
-    - eapply (event_low_eq_trans _ e1 e3 e2); congruence.
+    - eapply state_low_eq_trans; eauto;
+        eapply state_low_eq_trans; eauto.
+    - eapply event_low_eq_trans; eauto.
 Qed.
 
 Theorem possibilistic_ni_unwind_t: forall ell t1 t2 t1',
