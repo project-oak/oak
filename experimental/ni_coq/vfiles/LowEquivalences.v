@@ -40,7 +40,11 @@ Definition low_proj {A: Type} ell ( labeled_thing: @labeled A) :=
     match labeled_thing with
         | Labeled _ o ell' => if( ell' <<? ell ) 
             then labeled_thing
-            else Labeled A None ell'
+            else Labeled A None top
+                (* Importantly, the label of the secret thing is NOT ell'
+                but instead the top of the information flow lattice 
+                (secret, untrusted) which means the specifc label is 
+                *)
     end.
 
 Definition node_low_proj := @low_proj node.

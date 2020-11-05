@@ -120,6 +120,34 @@ Local Ltac apply_all_constructors :=
   | _ => idtac (* ignore goals that don't match one of the previous patterns *)
   end.
 
+Lemma separate_lableled {A} (o : option A) (l : level) (x : labeled) :
+  obj x = o -> lbl x = l -> x = Labeled _ o l.
+Proof. destruct x; cbn; congruence. Qed.
+
+Ltac separate_hyp T :=
+  repeat match goal with
+         | H : ?s = Labeled T ?o ?l |- _ =>
+           assert (obj s = o /\ lbl s = l) by (rewrite H; tauto);
+           clear H; logical_simplify
+         end.
+Ltac separate_goal := apply separate_lableled.
+
+Lemma invert_chans_state_low_proj_flowsto ell lvl s han :
+  lvl <<L ell ->
+  lvl <<L (chans (state_low_proj ell s)).[? han].(lbl) ->
+  lvl <<L (chans s).[? han].(lbl).
+Proof.
+  destruct s.
+  repeat match goal with
+         | _ => progress cbn [state_low_proj
+                               RuntimeModel.chans RuntimeModel.lbl ]
+         | _ => progress cbv [low_proj chan_state_low_proj fnd]
+         | _ => destruct_match
+         | _ => tauto
+         end.
+    intros.
+Admitted.
+
 Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
 (* Hints for [eauto with unwind] *)
@@ -136,8 +164,11 @@ Hint Extern 4 (state_low_eq _ _ (state_low_proj _ _)) => symmetry : unwind.
 Hint Extern 2 (chan_low_proj _ _ = chan_low_proj _ _)
 => simple eapply chan_low_proj_loweq : unwind.
 
-Hint Extern 4 (_ <<L lbl (chan_low_proj _ _))
-=> (rewrite chan_projection_preserves_lbl) : flowsto.
+(* hits for eauto in event part of the unobservable step proof *)
+Hint Extern 4 (low_proj _ _  = _ ) => erewrite nflows_labeled_proj : unobs_ev.
+Hint Extern 4 (_  = low_proj _ _ ) => erewrite nflows_labeled_proj : unobs_ev.
+Hint Extern 4 (event_low_eq _ _ _) => unfold event_low_eq : unobs_ev.
+Hint Extern 4 (low_eq _ _ _) => unfold low_eq : unobs_ev.
 
 Definition is_init(t: trace) := length t = 1.
 
@@ -152,6 +183,29 @@ Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
         (step_system_ev_multi t2_init t2n) /\
         (trace_low_eq ell t1n t2n)).
 
+Theorem state_low_eq_parts: forall ell s1 s2,
+    node_state_low_eq ell s1.(nodes) s2.(nodes) -> 
+    chan_state_low_eq ell s1.(chans) s2.(chans) ->
+    state_low_eq ell s1 s2.
+Proof.
+    cbv [node_state_low_eq chan_state_low_eq state_low_eq].
+    intros. eauto.
+Qed.
+
+Definition fresh_han s h := s.(chans).[?h] = Labeled channel None top.
+
+Theorem new_secret_chan_unobs: forall ell ell' s h ,
+    ~( ell' <<L ell) ->
+    fresh_han s h ->
+    state_low_eq ell s (state_upd_chan_labeled h 
+            {| obj := new_chan; lbl := ell'|} s).
+Proof.
+    intros. cbv [state_low_eq state_low_proj].
+    eapply state_low_eq_parts; [cbv [state_upd_chan_labeled]; reflexivity | ].
+    cbv [chan_state_low_eq chan_state_low_proj].
+Admitted.
+
+
 Theorem unobservable_node_step: forall ell s s' e id nl n,
     s.(nodes).[? id] = nl ->
     nl.(obj) = Some n ->
@@ -159,53 +213,30 @@ Theorem unobservable_node_step: forall ell s s' e id nl n,
     ~(lbl nl <<L ell) ->
     (state_low_eq ell s s') /\ (event_low_eq ell e (empty_event e.(lbl))).
 Proof.
-    intros. inversion H1; (split; [ inversion H5 | ] ); subst_lets; crush.
-    - (* WriteChannel; states loweq *)
-        assert ((nodes s).[? id].(lbl) = nlbl0) by (rewrite H11; reflexivity).
-        assert (~ nlbl0 <<L ell) by congruence.
+    intros. inversion H1; (split; [ inversion H5 | ] ); subst_lets; crush; 
+        eauto with unobs_ev. (* handles all event-low-eq cases: *) 
+        all: separate_hyp node; separate_hyp channel.
+        all: assert (~ nlbl0 <<L ell) by congruence.
+    - (* WriteChannel *)
         assert ( ~ (lbl (chans s).[? han] <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
         eapply state_upd_node_unobs; eauto.
         eapply state_chan_append_labeled_unobs; eauto.
-    - (* WriteChannel; events loweq*)
-        simpl. Check nflows_labeled_proj.
-        unfold event_low_eq. unfold low_eq.
-        erewrite nflows_labeled_proj.
-        erewrite nflows_labeled_proj.
-        all: eauto.
-    - (* ReadChannel; states loweq *)
+    - (* ReadChannel; *)
+        assert ( ~ (clbl <<L ell) ) by eauto using ord_trans.
+        eapply state_low_eq_trans.
+        eapply (state_upd_node_unobs _ _ _  
+            (node_get_hans n0 msg0) ltac:(eauto)).
+        eapply (state_upd_chan_unobs _ _ _ (chan_pop ch)
+            ltac:(eauto)).
+    - (* CreateChannel *)
+        eapply state_low_eq_trans.
+        eapply (new_secret_chan_unobs _ _ _ (new_chan lbl) ltac:(eauto)).
+
+    - (*ReadChannel; events loweq *)
 
 Admitted.
 (*
-    - (* WriteChannel; states loweq *) 
-        assert ( ~ (lbl (chans s).[? han] <<L ell) ) by eauto using ord_trans.
-        eapply state_low_eq_trans.
-        eapply (state_upd_node_unobs _ _ _ _ (node_del_rhans (rhs msg) n)
-            ltac:(eauto) ltac:(eauto) ltac:(eauto)).
-        eapply (state_upd_chan_unobs _
-            (state_upd_node id (node_del_rhans (rhs msg) n) s)
-            _ _ (chan_append ch msg)
-            ltac:(eauto) ltac:(eauto) ltac:(eauto)).
-    - (* WriteChannel; events loweq*)
-        erewrite <- (nflows_event_proj _ (n ---> msg) ltac:(eauto)).
-        unfold event_low_eq. unfold low_eq. 
-        erewrite event_low_proj_idempotent. reflexivity.
-    - (* ReadChannel; states loweq *)
-        pose proof (state_upd_chan_unobs).
-        (* This is the part of the proof where
-        the label check for destructive updates to the
-        channel are needed. See also:
-        https://github.com/project-oak/oak/issues/1197#issuecomment-712175755
-        *)
-        assert ( ~ (clbl ch <<L ell) ) by eauto using ord_trans.
-        eapply state_low_eq_trans.
-        eapply (state_upd_node_unobs _ _ _ _ (node_get_hans n msg0) 
-            ltac:(eauto) ltac:(eauto) ltac:(eauto)).
-        eapply state_upd_chan_unobs; eauto.
-    - (* ReadChannel; events loweq *)
-        erewrite <- (nflows_event_proj _ (n <--- msg) ltac:(eauto)).
-        unfold event_low_eq. unfold low_eq.
-        erewrite event_low_proj_idempotent. reflexivity.
     -  (* CreateChannel; states loweq *) 
         assert ( ~ (lbl <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
