@@ -21,6 +21,7 @@ fn main() {
         &[
             "../oak_abi/proto/application.proto",
             "../oak_abi/proto/label.proto",
+            "../oak_abi/proto/identity.proto",
             "../oak_abi/proto/oak_abi.proto",
         ],
         &[".."],

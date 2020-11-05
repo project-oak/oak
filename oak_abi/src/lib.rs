@@ -44,6 +44,15 @@ pub const OAK_LABEL_HTTP_JSON_KEY: &str = "oak-label";
 /// The header key used for protobuf encoded Labels in HTTP requests.
 pub const OAK_LABEL_HTTP_PROTOBUF_KEY: &str = "oak-label-bin";
 
+/// The header key used for JSON formatted signed authentication challenge.
+pub const OAK_SIGNED_CHALLENGE_JSON_KEY: &str = "oak-signed-auth-challenge";
+
+/// The header key used for protobuf formatted signed authentication challenge.
+pub const OAK_SIGNED_CHALLENGE_PROTOBUF_KEY: &str = "oak-signed-auth-challenge-bin";
+
+// TODO(#1357): Remove, or move to tests, when we have a per-connection challenge string.
+pub const OAK_CHALLENGE: &str = "oak-challenge";
+
 /// Handle used to identify read or write channel halves.
 ///
 /// These handles are used for all host function calls.

@@ -19,15 +19,36 @@
 #include "absl/strings/escaping.h"
 #include "glog/logging.h"
 #include "httplib_config.h"
+#include "oak_abi/proto/identity.pb.h"
 #include "oak_abi/proto/label.pb.h"
 
 const char* CA_CERT_PATH = "../../../../../../../../../examples/certs/local/ca.pem";
 const int PORT = 8383;
 
+// Generated using the command:
+// ```shell
+// cargo run --manifest-path=oak_sign/Cargo.toml -- \
+//     generate \
+//     --private-key=http-test.key \
+//     --public-key=http-test.pub
+// ```
+const char* PUBLIC_KEY_BASE64 = "yTOK5pP6S1ebFJeOhB8KUxBY293YbBo/TW5h1/1UdKM=";
+
+// Generated using the command:
+// ```shell
+// cargo run --manifest-path=oak_sign/Cargo.toml -- \
+//     sign \
+//     --private-key=http-test.key \
+//     --input-string="oak-challenge" \
+//     --signature-file=http-test.sign
+// ```
+const char* SIGNED_HASH_BASE64 =
+    "rpFVU/NAIDE62/hpE0DMobLsAJ+tDLNATgPLaX8PbN6v0XeACdCNspL0YY1QfyvJN2mq3Z2h4JWgS/lVkMcHAg==";
+
 // Simple manual test case registry.
 const std::map<std::string, HttpTestFn> http_tests = {
     {"HttpsWithJsonLabelOk", test_https_with_json_label_ok},
-    {"HttpsWithProtobufLabelOk", test_https_with_protobuf_label_ok},
+    {"HttpsWithProtobufLabelAndIdentityOk", test_https_with_protobuf_label_and_identity_ok},
     {"HttpsWithoutLabelErrBadRequest", test_https_without_label_err_bad_request},
     {"UnsecureHttpErr", test_unsecure_http_err},
 };
@@ -42,13 +63,29 @@ bool test_https_with_json_label_ok() {
   return res && res->status == 200;
 }
 
-bool test_https_with_protobuf_label_ok() {
+bool test_https_with_protobuf_label_and_identity_ok() {
   oak::label::Label label;
-  std::string label_str = label.SerializeAsString();
+  std::string label_str = absl::Base64Escape(label.SerializeAsString());
+
+  std::string signed_hash;
+  if (!absl::Base64Unescape(SIGNED_HASH_BASE64, &signed_hash)) {
+    LOG(FATAL) << "Failed to decode base64 signed challenge";
+  }
+  std::string public_key;
+  if (!absl::Base64Unescape(PUBLIC_KEY_BASE64, &public_key)) {
+    LOG(FATAL) << "Failed to decode base64 public key";
+  }
+
+  oak::identity::SignedChallenge signature;
+  signature.set_signed_hash(signed_hash);
+  signature.set_public_key(public_key);
+  std::string base64_proto_signature = absl::Base64Escape(signature.SerializeAsString());
+
   httplib::SSLClient cli("localhost", PORT);
   cli.set_ca_cert_path(CA_CERT_PATH);
   cli.enable_server_certificate_verification(true);
-  httplib::Headers headers = {{"oak-label-bin", absl::Base64Escape(label_str)}};
+  httplib::Headers headers = {{"oak-label-bin", label_str},
+                              {"oak-signed-auth-challenge-bin", base64_proto_signature}};
 
   auto res = cli.Get("/", headers);
   return res && res->status == 200;

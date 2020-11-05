@@ -25,7 +25,7 @@ typedef bool (*HttpTestFn)();
 extern const std::map<std::string, HttpTestFn> http_tests;
 
 bool test_https_with_json_label_ok();
-bool test_https_with_protobuf_label_ok();
+bool test_https_with_protobuf_label_and_identity_ok();
 bool test_https_without_label_err_bad_request();
 bool test_unsecure_http_err();
 

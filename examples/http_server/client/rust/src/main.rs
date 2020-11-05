@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use anyhow::Context;
+use anyhow::{Context, Result};
 use std::{fs, io};
 use structopt::StructOpt;
 
@@ -30,7 +30,7 @@ pub struct Opt {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     env_logger::init();
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
@@ -38,6 +38,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .context("Could not serialize public/untrusted label to JSON.")?
         .into_bytes();
     let opt = Opt::from_args();
+
+    let key_pair = oak_sign::KeyPair::generate()?;
+    let signature =
+        oak_sign::SignatureBundle::create(oak_abi::OAK_CHALLENGE.as_bytes(), &key_pair)?;
+
+    // Signed challenge
+    let signature = oak_abi::proto::oak::identity::SignedChallenge {
+        signed_hash: signature.signed_hash,
+        public_key: key_pair.pkcs8_public_key(),
+    };
 
     let path = &opt.ca_cert;
     let ca_file = fs::File::open(path).unwrap_or_else(|e| panic!("failed to open {}: {}", path, e));
@@ -61,6 +71,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .method("get")
         .uri("https://localhost:8080")
         .header(oak_abi::OAK_LABEL_HTTP_JSON_KEY, label_bytes)
+        .header(
+            oak_abi::OAK_SIGNED_CHALLENGE_JSON_KEY,
+            serde_json::to_string(&signature).unwrap(),
+        )
         .body(hyper::Body::empty())
         .unwrap();
 

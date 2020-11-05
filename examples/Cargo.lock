@@ -707,11 +707,13 @@ name = "https_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "env_logger",
  "hyper",
  "hyper-rustls",
  "log",
  "oak_abi",
+ "oak_sign",
  "prost",
  "rustls",
  "serde_json",

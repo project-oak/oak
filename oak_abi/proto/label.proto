@@ -43,7 +43,8 @@ message Tag {
     WebAssemblyModuleTag web_assembly_module_tag = 2;
     WebAssemblyModuleSignatureTag web_assembly_module_signature_tag = 3;
     TlsEndpointTag tls_endpoint_tag = 4;
-    Top top_tag = 5;
+    PublicKeyIdentityTag public_key_identity_tag = 5;
+    Top top_tag = 6;
   }
 }
 
@@ -82,6 +83,14 @@ message TlsEndpointTag {
   // The TLS authority (host:port) of the remote endpoint, which is validated by the Oak Runtime
   // using the set of Certificate Authorities (CA) that are available to it.
   string authority = 1;
+}
+
+// Policies related to identities, specified using a cryptographic public key.
+message PublicKeyIdentityTag {
+  // Public key counterpart of the private key that is used to sign an authentication challenge. 
+  // In the current implementation it is represented as a serialized Ed25519 public key.
+  // https://ed25519.cr.yp.to
+  bytes public_key = 1;
 }
 
 // Message representing top element of the principal lattice. It can be used as a confidentiality
