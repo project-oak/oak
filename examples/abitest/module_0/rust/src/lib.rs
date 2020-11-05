@@ -51,9 +51,13 @@ const BACKEND_MODULE_NAME: &str = "backend_module";
 const BACKEND_ENTRYPOINT_NAME: &str = "backend_oak_main";
 const STORAGE_NAME_PREFIX: &str = "abitest";
 
+// Distinct listening addresses to avoid port-in-use errors
 const HTTP_ADDR: &str = "[::]:8383";
-const ADDITIONAL_TEST_SERVER_ADDR: &str = "[::]:8081";
-const ADDITIONAL_TEST_SERVER_ADDR_2: &str = "[::]:8082";
+const ADDITIONAL_TEST_GRPC_SERVER_ADDR: &str = "[::]:8081";
+const ADDITIONAL_TEST_HTTP_SERVER_ADDR: &str = "[::]:8082";
+const ADDITIONAL_TEST_GRPC_SERVER_ADDR_2: &str = "[::]:8083";
+const ADDITIONAL_TEST_HTTP_SERVER_ADDR_2: &str = "[::]:8084";
+const ADDITIONAL_TEST_FAIL_SERVER_ADDR: &str = "[::]:8085";
 
 const GRPC_CLIENT_ADDRESS: &str = "https://localhost:7878";
 const STORAGE_PROXY_ADDRESS: &str = "https://localhost:7867";
@@ -2138,7 +2142,7 @@ impl FrontendNode {
 
     fn test_grpc_server_second(&mut self) -> TestResult {
         // Create a second gRPC server Node on a different port.
-        let result = oak::grpc::server::init(ADDITIONAL_TEST_SERVER_ADDR);
+        let result = oak::grpc::server::init(ADDITIONAL_TEST_GRPC_SERVER_ADDR);
         expect_matches!(result, Ok(_));
         let invocation_receiver = result.unwrap();
         // Close the only read-handle for the invocation handle, which should
@@ -2161,7 +2165,7 @@ impl FrontendNode {
     // several steps. Test various failure conditions for each of those steps.
     // We can't really check any failures, but hopefully nothing crashes...
     fn test_grpc_server_fail_no_handle(&mut self) -> TestResult {
-        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with data.
         let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted())
@@ -2176,7 +2180,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_server_fail_read_handle(&mut self) -> TestResult {
-        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a single
@@ -2193,7 +2197,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_server_fail_two_handles(&mut self) -> TestResult {
-        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a write
@@ -2382,7 +2386,7 @@ impl FrontendNode {
 
     fn test_http_server_create(&mut self) -> TestResult {
         // Create an HTTP server pseudo-Node.
-        let result = oak::http::init(ADDITIONAL_TEST_SERVER_ADDR_2);
+        let result = oak::http::init(ADDITIONAL_TEST_HTTP_SERVER_ADDR);
         expect_matches!(result, Ok(_));
         let invocation_receiver = result.unwrap();
         // Close the only read-handle for the invocation handle, which should
@@ -2414,7 +2418,7 @@ impl FrontendNode {
     // conditions for each of those steps. We can't really check any failures, but hopefully nothing
     // crashes...
     fn test_http_server_fail_no_handle(&mut self) -> TestResult {
-        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with data.
@@ -2430,7 +2434,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_http_server_fail_read_handle(&mut self) -> TestResult {
-        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a single
@@ -2447,7 +2451,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_http_server_fail_two_handles(&mut self) -> TestResult {
-        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a write
@@ -2513,7 +2517,7 @@ impl FrontendNode {
         // TODO(#1631): Update test if the gRPC server pseudo node's declassification privilege is
         // lowered to be the top of the user sub-lattice, rather than the global top.
         let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
-        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_GRPC_SERVER_ADDR_2);
         let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
         expect_eq!(
             Ok(()),
@@ -2529,7 +2533,7 @@ impl FrontendNode {
         // TODO(#1631): Update test if the HTTP server pseudo node's declassification privilege is
         // lowered to be the top of the user sub-lattice, rather than the global top.
         let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
-        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR_2);
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_HTTP_SERVER_ADDR_2);
         let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
         expect_eq!(
             Ok(()),
