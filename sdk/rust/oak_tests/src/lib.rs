@@ -145,7 +145,13 @@ pub fn runtime_config(
     .cloned()
     .collect();
 
-    runtime_config_wasm(wasm, DEFAULT_MODULE_NAME, entrypoint_name, config_map)
+    runtime_config_wasm(
+        wasm,
+        DEFAULT_MODULE_NAME,
+        entrypoint_name,
+        config_map,
+        oak_runtime::SignatureTable::default(),
+    )
 }
 
 /// Build the configuration needed to launch a test Runtime instance that runs the given collection
@@ -155,6 +161,7 @@ pub fn runtime_config_wasm(
     module_config_name: &str,
     entrypoint_name: &str,
     config_map: ConfigMap,
+    sign_table: oak_runtime::SignatureTable,
 ) -> oak_runtime::RuntimeConfiguration {
     oak_runtime::RuntimeConfiguration {
         metrics_port: Some(9090),
@@ -183,7 +190,7 @@ pub fn runtime_config_wasm(
             }),
         },
         config_map,
-        sign_table: oak_runtime::SignatureTable::default(),
+        sign_table,
     }
 }
 

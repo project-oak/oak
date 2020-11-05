@@ -126,6 +126,7 @@ async fn test_trusted_database() {
         MAIN_MODULE_NAME,
         MAIN_ENTRYPOINT_NAME,
         config_map,
+        oak_runtime::SignatureTable::default(),
     );
     let runtime =
         oak_runtime::configure_and_run(config).expect("Couldn't configure runtime with test wasm");
