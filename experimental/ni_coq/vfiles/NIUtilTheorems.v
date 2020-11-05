@@ -217,7 +217,8 @@ Theorem state_loweq_from_substates: forall ell s1 s2,
     chan_state_low_eq ell (chans s1) (chans s2) ->
     state_low_eq ell s1 s2.
 Proof.
-Admitted.
+  intros. unfold state_low_eq. unfold low_eq. unfold state_low_proj. eauto.
+Qed.
 
 Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
     (nodes s1).[? id] = n1 ->
