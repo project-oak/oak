@@ -43,6 +43,8 @@ pub struct TrustedDatabaseHandlerNode {
     points_of_interest: PointOfInterestMap,
 }
 
+oak::impl_dispatcher!(impl TrustedDatabaseHandlerNode : TrustedDatabaseDispatcher);
+
 /// A gRPC service implementation for the Private Information Retrieval example.
 impl TrustedDatabase for TrustedDatabaseHandlerNode {
     // Find Point Of Interest based on id.
@@ -146,8 +148,7 @@ oak::entrypoint!(handler_oak_main<TrustedDatabaseCommand> => |command_receiver: 
 
     // Run event loop and handle incoming invocations.
     let node = TrustedDatabaseHandlerNode { points_of_interest: command.points_of_interest.expect("No database entries") };
-    let dispatcher = TrustedDatabaseDispatcher::new(node);
     let invocation_receiver = receiver.receiver.expect("Empty gRPC invocation receiver");
     // The event loop only runs once because the `Main` Node sends a single invocation.
-    oak::run_command_loop(dispatcher, invocation_receiver.iter());
+    oak::run_command_loop(node, invocation_receiver.iter());
 });
