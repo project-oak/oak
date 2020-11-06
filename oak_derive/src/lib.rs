@@ -52,11 +52,11 @@ fn struct_impls(name: &Ident, data: &syn::DataStruct) -> TokenStream {
             .collect(),
         Fields::Unit => Vec::new(),
     };
-    let body = accessors_visit(&accessors);
+    let body = accessors_fold(&accessors);
 
     quote! {
         impl ::oak_io::handle::HandleVisit for #name {
-            fn visit<F: FnMut(&mut ::oak_io::Handle)>(&mut self, visitor: F) -> F {
+            fn fold<B>(&mut self, init: B, f: fn(B, &mut ::oak_io::Handle) -> B) -> B {
                 #body
             }
         }
@@ -67,7 +67,7 @@ fn enum_impls(name: &Ident, data: &syn::DataEnum) -> TokenStream {
     let variants: Vec<TokenStream> = data.variants.iter().map(variant_impl).collect();
     quote! {
         impl ::oak_io::handle::HandleVisit for #name {
-            fn visit<F: FnMut(&mut ::oak_io::Handle)>(&mut self, visitor: F) -> F {
+            fn fold<B>(&mut self, init: B, f: fn(B, &mut ::oak_io::Handle) -> B) -> B {
                 match self {
                     #(
                         #name::#variants,
@@ -83,7 +83,7 @@ fn variant_impl(variant: &syn::Variant) -> TokenStream {
     match &variant.fields {
         Fields::Named(fields) => {
             let fields: Vec<Ident> = fields.named.iter().flat_map(|f| f.ident.clone()).collect();
-            let body = accessors_visit(&fields);
+            let body = accessors_fold(&fields);
             quote! {
                 #variant_ident { #( #fields ),* } => {
                     #body
@@ -98,7 +98,7 @@ fn variant_impl(variant: &syn::Variant) -> TokenStream {
                 .enumerate()
                 .map(|(i, _)| format_ident!("_{}", i))
                 .collect();
-            let body = accessors_visit(&accessors);
+            let body = accessors_fold(&accessors);
             quote! {
                 #variant_ident( #( #accessors ),* ) => {
                     #body
@@ -106,17 +106,17 @@ fn variant_impl(variant: &syn::Variant) -> TokenStream {
             }
         }
         Fields::Unit => quote! {
-            #variant_ident => visitor
+            #variant_ident => init
         },
     }
 }
 
-fn accessors_visit<T: ToTokens>(accessors: &[T]) -> TokenStream {
+fn accessors_fold<T: ToTokens>(accessors: &[T]) -> TokenStream {
     quote! {
-        let mut _v = visitor;
+        let accumulator = init;
         #(
-            _v  = #accessors.visit(_v);
+            let accumulator = #accessors.fold(accumulator, f);
         )*
-        _v
+        accumulator
     }
 }
