@@ -40,14 +40,6 @@ Proof.
   inversion 1; subst.
   cbv [state_upd_node state_low_eq state_low_proj set].
   cbn [RuntimeModel.nodes RuntimeModel.chans].
-  (* this is not provable as stated; because the node-maps are functions, the
-     fact that they return the same result for every input doesn't mean they
-     obey Leibniz equality. The [low_eq] definition should probably say,
-     instead of [low_proj ell x = low_proj ell y], something like:
-
-     (forall id, nodes (low_proj_ell x) id = nodes (low_proj ell y) id)
-     /\ (forall han, chans (low_proj_ell x) han = chans (low_proj ell y) han)
-   *)
 Admitted. (* WIP // TODO *)
 
 Theorem chan_append_unwind: forall ell ch1 ch2 ch1obj ch2obj msg,
