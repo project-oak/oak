@@ -66,9 +66,11 @@ cc_library(
     hdrs = ["httptest.h"],
     deps = [
         ":httplib_config",
-        "//oak/common:identity",
         "//oak/common:label",
+        "//oak_abi/proto:identity_cc_proto",
         "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/base",
+        "@com_google_absl//absl/strings",
     ],
 )
 
