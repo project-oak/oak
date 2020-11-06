@@ -60,6 +60,7 @@ message NodeConfiguration {
     GrpcClientConfiguration grpc_client_config = 5;
     RoughtimeClientConfiguration roughtime_client_config = 6;
     HttpServerConfiguration http_server_config = 7;
+    HttpClientConfiguration http_client_config = 8;
   }
 }
 
@@ -121,12 +122,24 @@ message RoughtimeClientConfiguration {
 }
 
 // HttpServerConfiguration describes the configuration of an HTTP server
-// pseudo-Node (which is provided by the Oak Runtime), that processes HTTP/2
+// pseudo-Node (which is provided by the Oak Runtime), that processes HTTP
 // requests from external (non-Oak) clients.
 message HttpServerConfiguration {
   // The endpoint address for the HTTP server to listen on.
   // `address` is represented as an "ip_address:tcp_port" string.
   string address = 1;
+}
+
+// HttpClientConfiguration describes the configuration of an HTTP client
+// pseudo-Node (which is provided by the Oak Runtime), connected to a specific
+// external (non-Oak) HTTP or HTTPS service.
+message HttpClientConfiguration {
+  // The authority supported by this client. The authority must match the label of the HTTP Client
+  // pseudo-Node. If the authority is non-empty, only HTTPS requests with the same authority
+  // component in their URIs can be handled. If the authority is empty, the client must be public
+  // and it may handle arbitrary requests to any HTTP or HTTPS services. The authority is also used to
+  // set the privilege of the node.
+  string authority = 1;
 }
 
 // Information to identify a particular Roughtime server.

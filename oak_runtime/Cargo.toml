@@ -16,6 +16,7 @@ oak_introspection_client = []
 default = ["oak_debug"]
 
 [dependencies]
+anyhow = "*"
 byteorder = { version = "*", default-features = false }
 bytes = "*"
 base64 = "*"
@@ -25,6 +26,9 @@ futures-util = "*"
 hex = "*"
 http = "*"
 hyper = "*"
+hyper-rustls = { version = "*", default-features = false, features = [
+  "webpki-tokio"
+] }
 itertools = "*"
 jsonwebtoken = "*"
 lazy_static = "*"

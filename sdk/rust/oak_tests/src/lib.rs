@@ -201,7 +201,10 @@ fn create_http_config() -> Option<oak_runtime::HttpConfiguration> {
         "../../../certs/local/local.pem",
         "../../../certs/local/local.key",
     )?;
-    Some(oak_runtime::HttpConfiguration { tls_config })
+    Some(oak_runtime::HttpConfiguration {
+        tls_config,
+        http_client_root_tls_certificate: include_bytes!("../certs/ca.pem").to_vec(),
+    })
 }
 
 /// Build a labeled channel and interceptor suitable for building a client that

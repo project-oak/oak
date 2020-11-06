@@ -16,13 +16,11 @@
 
 //! gRPC client pseudo-Node functionality.
 
+pub use crate::proto::oak::invocation::GrpcInvocation as Invocation;
 use crate::{
     io::{Receiver, ReceiverExt},
     metrics::Metrics,
-    node::{
-        grpc::{codec::VecCodec, invocation::Invocation},
-        ConfigurationError, Node,
-    },
+    node::{grpc::codec::VecCodec, invocation::InvocationExt, ConfigurationError, Node},
     NodePrivilege, RuntimeProxy,
 };
 use log::{debug, error, info, trace, warn};
