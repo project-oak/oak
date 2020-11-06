@@ -279,7 +279,37 @@ Theorem set_call_unobs: forall ell s id c,
     ~(lbl (nodes s).[? id] <<L ell) ->
     (state_low_eq ell s (s_set_call s id c)).
 Proof.
-Admitted.
+    intros. unfold fnd in H. split; intros; simpl; subst.
+    - (* node_state_low_proj *)
+        destruct (dec_eq_nid nid id). (* Either nid = id, or not; split these cases*)
+        * (* nid = id, so s_set_call is relevant *)
+            subst. unfold node_state_low_proj.
+            assert ( lbl (nodes (s_set_call s id c) id) = lbl (nodes s id) ).
+            {
+                unfold s_set_call. unfold fnd. destruct_match; try congruence.
+                simpl. unfold fnd. unfold tg_update.
+                destruct (eq_dec id id); simpl; congruence.
+            }
+            destruct (nodes s id); destruct (nodes (s_set_call s id c) id).
+            simpl in H0; simpl in H; simpl.
+            destruct (lbl <<? ell); destruct (lbl0 <<? ell); try contradiction; subst; congruence.
+        * (* nid <> id, so s_set_call is irrelevant *)
+            unfold node_state_low_proj.
+            assert ( nodes (s_set_call s id c) nid = nodes s nid ).
+            {
+                unfold s_set_call. unfold fnd. destruct_match; try congruence.
+                simpl. unfold fnd. unfold tg_update.
+                destruct (eq_dec id nid); congruence.
+            }
+            rewrite H. congruence.
+    - (* chan_state_low_proj *)
+        unfold chan_state_low_proj.
+        assert (chans (s_set_call s id c) han = chans s han).
+        {
+            unfold s_set_call. unfold fnd. destruct_match; simpl; congruence.
+        }
+        rewrite H. congruence.
+Qed.
 
 Theorem state_upd_chan_unobs: forall ell s han ch,
     ~(lbl (chans s).[? han] <<L ell) ->
