@@ -151,11 +151,46 @@ Admitted.
 Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
 (* Hints for [eauto with unwind] *)
-Hint Resolve state_upd_chan_unwind chan_append_unwind chan_low_proj_loweq
-    chan_low_proj_idempotent state_upd_node_unwind set_call_unwind
-    state_upd_chan_unwind state_low_proj_loweq
+
+Theorem state_upd_node_valid: forall s id n,
+    valid_node (state_upd_node id n s) id.
+Proof.
+    cbv [valid_node state_upd_node RuntimeModel.obj fnd].
+    intros. exists n. destruct s. simpl. erewrite upd_eq.
+    eauto.
+Qed.
+
+Theorem fresh_or_valid: forall s id id',
+    valid_node s id ->
+    fresh_nid s id' ->
+    id <> id'.
+Proof.
+    intros. cbv [valid_node fresh_nid] in *. destruct H.
+    separate_hyp node. destruct (dec_eq_nid id id'); congruence.
+Qed.
+
+Theorem state_upd_node_labeled_uneq: forall s id id' n,
+    valid_node s id ->
+    fresh_nid s id' ->
+    valid_node (state_upd_node_labeled id' n s) id.
+Proof.
+    intros. pose proof (fresh_or_valid _ _ _ ltac:(eauto) ltac:(eauto)).
+    cbv [valid_node state_upd_node RuntimeModel.obj fnd].
+    intros. destruct H. exists x. destruct s. simpl in *. erewrite upd_neq; eauto.
+Qed.
+
+Hint Resolve state_upd_chan_unwind
+    state_upd_node_unwind set_call_unwind
     state_upd_chan_labeled_unwind
-    state_chan_append_labeled_unwind: unwind.
+    state_chan_append_labeled_unwind
+    state_upd_node_labeled_unwind
+    (* these are not unwinds, but probably only useful when unwinding *)
+    state_upd_node_labeled_uneq
+    state_upd_node_valid 
+    (* consider moving these into separate hint database: *)
+    chan_low_proj_loweq chan_low_proj_idempotent 
+    proj_preserves_fresh_nid
+    state_low_proj_loweq labeled_low_proj_loweq: unwind.
 Hint Extern 4 (node_low_eq _ _ _) => reflexivity : unwind.
 Hint Extern 4 (chan_low_eq _ _ _) => reflexivity : unwind.
 (* meant to be case where we have (cleq ch (proj ch) ) and want to swap order *)
@@ -163,6 +198,16 @@ Hint Extern 4 (chan_low_eq _ _ (chan_low_proj _ _)) => symmetry : unwind.
 Hint Extern 4 (state_low_eq _ _ (state_low_proj _ _)) => symmetry : unwind.
 Hint Extern 2 (chan_low_proj _ _ = chan_low_proj _ _)
 => simple eapply chan_low_proj_loweq : unwind.
+
+Ltac validate_node := 
+    lazymatch goal with
+        | H: obj _ = Some _ |- exists n, obj _ = Some n => 
+            exists n; (eauto || congruence)
+    end.
+
+Hint Extern 4 (valid_node _ _) => unfold valid_node : unwind.
+Hint Extern 4 (exists _, obj _ = Some _) => validate_node : unwind.
+Hint Extern 4 (valid_chan _ _) => unfold valid_chan; separate_hyp channel; eexists; eauto : unwind.
 
 (* hits for eauto in event part of the unobservable step proof *)
 Hint Extern 4 (low_proj _ _  = _ ) => erewrite nflows_labeled_proj : unobs_ev.
@@ -366,38 +411,39 @@ Proof.
                 eapply proj_labels_increase.
                 eauto.
                 (* low-equiv *)
-                subst_lets. eauto 7 with unwind.
+                eauto 7 with unwind.
             + (* ReadChannel *)
-                do 2 eexists; split_ands; [ | | reflexivity ].
-                (* step *)
                 rewrite H5 in Hn_idx_s1proj;
                 pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
                 logical_simplify.
-                apply_all_constructors; eauto. congruence.
                 pose proof (state_hidx_to_proj_state_hidx ell _ _ _ ltac:(eauto)).
                 assert (nlbl <<L ell) by congruence.  (* the last eauto needs this *)
-                rewrite flows_labeled_proj in H12; eauto.
-                simpl. eauto using ord_trans.
-                (* state low_eq *)
-                subst_lets. eauto 6 with unwind.
-            + (* CreateChannel *)
-                do 2 eexists; split_ands; [ | | reflexivity ]. 
+                rewrite flows_labeled_proj in H12 by eauto using ord_trans.
+                do 2 eexists; split_ands; [ | | reflexivity ].
                 (* step *)
+                apply_all_constructors; eauto; congruence.
+                (* state low_eq *)
+                eauto 7 with unwind.
+            + (* CreateChannel *)
                 rewrite H4 in Hn_idx_s1proj;
                 pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
                 logical_simplify.
+                do 2 eexists; split_ands; [ | | reflexivity ]. 
+                (* step *)
                 apply_all_constructors; eauto. congruence.
                 eapply proj_preserves_fresh_han; eauto.
                 (* state loweq *)
-                subst_lets. eauto 7 with unwind.
+                eauto 8 with unwind.
             + (* CreateNode *)
-                do 2 eexists; split_ands; [ | | reflexivity ].
                 rewrite H5 in Hn_idx_s1proj;
                 pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
                 logical_simplify.
+                do 2 eexists; split_ands; [ | | reflexivity ].
+                (* step *)
                 apply_all_constructors; eauto. congruence.
                 eapply proj_preserves_fresh_nid; eauto.
-                eauto with unwind.
+                (* state low_eq *)
+                eauto 10 with unwind.
             +  (* Internal *)
                 do 2 eexists; split_ands; [ | | reflexivity ].
                 eapply SystemEvStepNode; eauto.
@@ -465,7 +511,7 @@ Proof.
                     separate_goal; eauto; congruence.
                   rewrite <-Hproj_n' in *.
                   eauto using invert_chans_state_low_proj_flowsto. }
-                { crush; subst_lets; eauto with unwind. }
+                { crush; subst_lets; eauto 6 with unwind. }
                 { crush. congruence. }
             + (* ReadChannel *) admit.
             + (* CreateChannel *) admit.

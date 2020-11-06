@@ -161,17 +161,6 @@ Theorem state_hidx_to_proj_state_hidx: forall ell s h ch,
 Proof.
 Admitted.
 
-(* TODO give better name *)
-Theorem proj_node_state_to_proj_n: forall ell s id nl n,
-    ((nodes (state_low_proj ell s)).[? id] = nl) ->
-    nl.(obj) = Some n ->
-    exists nl' n',
-        (nodes s).[? id] = nl' /\
-        (low_proj ell nl') = nl /\
-        nl'.(obj) = Some n'.
-Proof.
-Admitted.
-
 Theorem proj_preserves_fresh_han: forall ell s h,
     fresh_han s h ->
     fresh_han (state_low_proj ell s) h.

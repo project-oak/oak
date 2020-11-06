@@ -32,28 +32,40 @@ Definition state_unwind (f: state -> state):
 
 but we have to fix the way the definitions are curried.
 *)
+Definition valid_node s id := exists n, s.(nodes).[? id].(obj) = Some n.
+
 Theorem state_upd_node_unwind : forall ell id n s1 s2,
     state_low_eq ell s1 s2 ->
+    valid_node s1 id ->
+    valid_node s2 id ->
     state_low_eq ell (state_upd_node id n s1) (state_upd_node id n s2).
 Proof.
   destruct s1, s2; intros *.
   inversion 1; subst.
-  cbv [state_upd_node state_low_eq state_low_proj set].
-  cbn [RuntimeModel.nodes RuntimeModel.chans].
-Admitted. (* WIP // TODO *)
+  cbv [state_upd_node state_low_eq state_low_proj set] in *.
+  cbn [RuntimeModel.nodes RuntimeModel.chans] in *.
+  split; try congruence; intros.
+  destruct (dec_eq_nid id nid).
+  - (* id = nid *)
+    rewrite e in *. specialize (H0 nid).
+    inversion H2. inversion H3.
+    cbv [node_state_low_proj low_proj fnd RuntimeModel.lbl RuntimeModel.obj] in *.
+    simpl in *.
+    erewrite upd_eq. erewrite upd_eq. 
+    destruct (nodes nid), (nodes0 nid).
+    destruct (lbl <<? ell), (lbl0 <<? ell); try congruence.
+  - (* id <> nid *)
+    cbv [node_state_low_proj node_state_low_eq] in *.
+    erewrite upd_neq. erewrite upd_neq.
+    specialize (H0 nid). all: congruence.
+Qed.
 
-Theorem chan_append_unwind: forall ell ch1 ch2 ch1obj ch2obj msg,
-    chan_low_eq ell ch1 ch2 ->
-    ch1.(obj) = Some ch1obj ->
-    ch2.(obj) = Some ch2obj ->
-    chan_low_eq ell 
-        (ch1 <| obj := Some (chan_append ch1obj msg) |>)
-        (ch2 <| obj := Some (chan_append ch2obj msg) |>).
-Proof.
-Admitted. (* WIP // TODO *)
+Definition valid_chan s h := exists ch, s.(chans).[? h].(obj) = Some ch.
 
 Theorem state_upd_chan_unwind: forall ell han ch s1 s2,
     state_low_eq ell s1 s2 ->
+    valid_chan s1 han ->
+    valid_chan s2 han ->
     state_low_eq ell (state_upd_chan han ch s1) (state_upd_chan han ch s2).
 Proof.
 Admitted.
@@ -88,9 +100,3 @@ Proof.
     unfold s_set_call.
     destruct (s1.(nodes).[? id]) eqn:E1; destruct (s2.(nodes).[? id]) eqn:E2.
 Admitted.
-
-Hint Resolve state_upd_chan_unwind chan_append_unwind
-                set_call_unwind state_upd_node_unwind
-                state_upd_chan_labeled_unwind
-                state_upd_node_labeled_unwind
-                labeled_low_proj_loweq : unwind.
