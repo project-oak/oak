@@ -423,6 +423,16 @@
 <span id="420">420</span>
 <span id="421">421</span>
 <span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -496,26 +506,31 @@
         });
 
         <span class="kw">let</span> <span class="ident">dispatcher_name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}Dispatcher&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>);
-        <span class="kw">let</span> <span class="ident">dispatcher_methods</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">methods</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">method</span><span class="op">|</span> {
+        <span class="kw">let</span> <span class="ident">dispatcher_invocable_methods</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">methods</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">method</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">name</span>);
-            <span class="kw">let</span> <span class="ident">method_name_string</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;/{}.{}/{}&quot;</span>, <span class="ident">service</span>.<span class="ident">package</span>, <span class="ident">service</span>.<span class="ident">proto_name</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>);
-            <span class="comment">// Figure out which generic function applies.</span>
-            <span class="kw">let</span> <span class="ident">handle_invocation</span> <span class="op">=</span> <span class="kw">match</span> (<span class="ident">method</span>.<span class="ident">client_streaming</span>, <span class="ident">method</span>.<span class="ident">server_streaming</span>) {
+            <span class="kw">let</span> <span class="ident">method_name_string</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+                <span class="string">&quot;/{}.{}/{}&quot;</span>,
+                <span class="ident">service</span>.<span class="ident">package</span>, <span class="ident">service</span>.<span class="ident">proto_name</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>
+            );
+            <span class="comment">// Figure out which `ServerMethod` variant applies.</span>
+            <span class="kw">let</span> <span class="ident">invocable_method</span> <span class="op">=</span> <span class="kw">match</span> (<span class="ident">method</span>.<span class="ident">client_streaming</span>, <span class="ident">method</span>.<span class="ident">server_streaming</span>) {
                 (<span class="bool-val">false</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">handle_req_rsp</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> (<span class="self">self</span>.<span class="number">0</span>).#<span class="ident">method_name</span>(<span class="ident">r</span>), <span class="ident">req</span>, <span class="ident">writer</span>)
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ServerMethod</span>::<span class="ident">UnaryUnary</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
                 },
                 (<span class="bool-val">false</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">handle_req_stream</span>(<span class="op">|</span><span class="ident">r</span>, <span class="ident">w</span><span class="op">|</span> (<span class="self">self</span>.<span class="number">0</span>).#<span class="ident">method_name</span>(<span class="ident">r</span>, <span class="ident">w</span>), <span class="ident">req</span>, <span class="ident">writer</span>)
+                    <span class="comment">// The response type is not actually used in the method signature, so we need to manually specify a placeholder.</span>
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ServerMethod</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, ()<span class="op">&gt;</span>::<span class="ident">UnaryStream</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
                 },
                 (<span class="bool-val">true</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">handle_stream_rsp</span>(<span class="op">|</span><span class="ident">rr</span><span class="op">|</span> (<span class="self">self</span>.<span class="number">0</span>).#<span class="ident">method_name</span>(<span class="ident">rr</span>), <span class="ident">req</span>, <span class="ident">writer</span>)
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ServerMethod</span>::<span class="ident">StreamUnary</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
                 },
                 (<span class="bool-val">true</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">handle_stream_stream</span>(<span class="op">|</span><span class="ident">rr</span>, <span class="ident">w</span><span class="op">|</span> (<span class="self">self</span>.<span class="number">0</span>).#<span class="ident">method_name</span>(<span class="ident">rr</span>, <span class="ident">w</span>), <span class="ident">req</span>, <span class="ident">writer</span>)
+                    <span class="comment">// The response type is not actually used in the method signature, so we need to manually specify a placeholder.</span>
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ServerMethod</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, ()<span class="op">&gt;</span>::<span class="ident">StreamStream</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
                 },
             };
             <span class="macro">quote</span><span class="macro">!</span> {
-                #<span class="ident">method_name_string</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="ident">handle_invocation</span>
+                #<span class="ident">method_name_string</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="ident">invocable_method</span>
             }
         });
 
@@ -559,6 +574,13 @@
                 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">node</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">dispatcher_name</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
                     #<span class="ident">dispatcher_name</span>(<span class="ident">node</span>)
                 }
+
+                <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server_method</span>(<span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">dyn</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">Invocable</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+                    <span class="kw">match</span> <span class="ident">method_name</span> {
+                        #(#<span class="ident">dispatcher_invocable_methods</span>,)<span class="op">*</span>
+                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>
+                    }
+                }
             }
 
             <span class="kw">impl</span> <span class="op">&lt;</span><span class="ident">T</span>: #<span class="ident">service_name</span> <span class="op">+</span> <span class="ident">Default</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> #<span class="ident">dispatcher_name</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
@@ -577,12 +599,10 @@
 
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">unit_arg</span>)]</span>
             <span class="kw">impl</span> <span class="op">&lt;</span><span class="ident">T</span>: #<span class="ident">service_name</span><span class="op">&gt;</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ServerNode</span> <span class="kw">for</span> #<span class="ident">dispatcher_name</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-                <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">method</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ChannelResponseWriter</span>) {
-                    <span class="kw">match</span> <span class="ident">method</span> {
-                        #(#<span class="ident">dispatcher_methods</span>,)<span class="op">*</span>
-                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                            ::<span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;unknown method name: {}&quot;</span>, <span class="ident">method</span>);
-                        }
+                <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ChannelResponseWriter</span>) {
+                    <span class="kw">match</span> #<span class="ident">dispatcher_name</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">server_method</span>(<span class="ident">method_name</span>) {
+                        <span class="prelude-val">Some</span>(<span class="ident">server_method</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">server_method</span>.<span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="number">0</span>, <span class="ident">req</span>, <span class="ident">writer</span>),
+                        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> ::<span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;unknown method name: {}&quot;</span>, <span class="ident">method_name</span>),
                     }
                 }
             }

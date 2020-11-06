@@ -366,9 +366,6 @@
 <span id="363">363</span>
 <span id="364">364</span>
 <span id="365">365</span>
-<span id="366">366</span>
-<span id="367">367</span>
-<span id="368">368</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -667,76 +664,73 @@
     <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>)
 }
 
-<span class="doccomment">/// Generic function that handles request deserialization and response</span>
-<span class="doccomment">/// serialization (and sending down a channel) for a function that handles a</span>
-<span class="doccomment">/// request/response pair.</span>
+<span class="doccomment">/// Trait implemented by all server method variants, applied to a server receiver instance having</span>
+<span class="doccomment">/// concrete type `T`.</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Invocable</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Generic function that handles request deserialization and response serialization (and</span>
+    <span class="doccomment">/// sending down a channel) for a function that handles a request / response pair (either unary</span>
+    <span class="doccomment">/// or streaming).</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Panics if [de-]serialization or channel operations fail.</span>
+    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">target</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>);
+}
+
+<span class="doccomment">/// Enum with variants for all combinations of {request, response} × {unary , streaming}, each</span>
+<span class="doccomment">/// containing a pointer to the function of the appropriate type defined on a service</span>
+<span class="doccomment">/// implementation.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Panics if [de-]serialization or channel operations fail.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_req_rsp</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node_fn</span>: <span class="ident">C</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>)
+<span class="doccomment">/// The functions are &quot;uncurried&quot;, i.e. they include an explicit parameter for the receiver type,</span>
+<span class="doccomment">/// which corresponds to `self` in the method definition.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Note that the variants with response stream do not make use of the type parameter `Q`, so this</span>
+<span class="doccomment">/// must be manually specified when creating one of those instances if the compiler cannot infer it</span>
+<span class="doccomment">/// from the context.</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ServerMethod</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span> {
+    <span class="ident">UnaryUnary</span>(<span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">R</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span>),
+    <span class="ident">UnaryStream</span>(<span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">R</span>, <span class="ident">ChannelResponseWriter</span>)),
+    <span class="ident">StreamUnary</span>(<span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span>),
+    <span class="ident">StreamStream</span>(<span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>, <span class="ident">ChannelResponseWriter</span>)),
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span> <span class="ident">Invocable</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ServerMethod</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">C</span>: <span class="ident">FnMut</span>(<span class="ident">R</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span>,
     <span class="ident">R</span>: <span class="ident">prost</span>::<span class="ident">Message</span> <span class="op">+</span> <span class="ident">Default</span>,
     <span class="ident">Q</span>: <span class="ident">prost</span>::<span class="ident">Message</span>,
 {
-    <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">R</span>::<span class="ident">decode</span>(<span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>);
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">node_fn</span>(<span class="ident">r</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">rsp</span>, <span class="ident">WriteMode</span>::<span class="ident">Close</span>),
-        <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>.<span class="ident">close</span>(<span class="prelude-val">Err</span>(<span class="ident">status</span>)),
-    };
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">result</span> {
-        <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Failed to process response: {:?}&quot;</span>, <span class="ident">e</span>)
+    <span class="kw">fn</span> <span class="ident">invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">target</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>) {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">ServerMethod</span>::<span class="ident">UnaryUnary</span>(<span class="ident">server_method</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">R</span>::<span class="ident">decode</span>(<span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>);
+                <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">server_method</span>(<span class="ident">target</span>, <span class="ident">r</span>) {
+                    <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">rsp</span>, <span class="ident">WriteMode</span>::<span class="ident">Close</span>),
+                    <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>.<span class="ident">close</span>(<span class="prelude-val">Err</span>(<span class="ident">status</span>)),
+                };
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">result</span> {
+                    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Failed to process response: {:?}&quot;</span>, <span class="ident">e</span>)
+                }
+            }
+            <span class="ident">ServerMethod</span>::<span class="ident">UnaryStream</span>(<span class="ident">server_method</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">R</span>::<span class="ident">decode</span>(<span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>);
+                <span class="ident">server_method</span>(<span class="ident">target</span>, <span class="ident">r</span>, <span class="ident">writer</span>)
+            }
+            <span class="ident">ServerMethod</span>::<span class="ident">StreamUnary</span>(<span class="ident">server_method</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// TODO(#97): better client-side streaming</span>
+                <span class="kw">let</span> <span class="ident">rr</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">R</span>::<span class="ident">decode</span>(<span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>)];
+                <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">server_method</span>(<span class="ident">target</span>, <span class="ident">rr</span>) {
+                    <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">rsp</span>, <span class="ident">WriteMode</span>::<span class="ident">Close</span>),
+                    <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>.<span class="ident">close</span>(<span class="prelude-val">Err</span>(<span class="ident">status</span>)),
+                };
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">result</span> {
+                    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Failed to process response: {:?}&quot;</span>, <span class="ident">e</span>)
+                }
+            }
+            <span class="ident">ServerMethod</span>::<span class="ident">StreamStream</span>(<span class="ident">server_method</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// TODO(#97): better client-side streaming</span>
+                <span class="kw">let</span> <span class="ident">rr</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">R</span>::<span class="ident">decode</span>(<span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>)];
+                <span class="ident">server_method</span>(<span class="ident">target</span>, <span class="ident">rr</span>, <span class="ident">writer</span>)
+            }
+        }
     }
-}
-
-<span class="doccomment">/// Generic function that handles request deserialization and response</span>
-<span class="doccomment">/// serialization (and sending down a channel) for a function that handles a</span>
-<span class="doccomment">/// request and streams responses.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Panics if [de-]serialization or channel operations fail.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_req_stream</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node_fn</span>: <span class="ident">C</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>)
-<span class="kw">where</span>
-    <span class="ident">C</span>: <span class="ident">FnMut</span>(<span class="ident">R</span>, <span class="ident">ChannelResponseWriter</span>),
-    <span class="ident">R</span>: <span class="ident">prost</span>::<span class="ident">Message</span> <span class="op">+</span> <span class="ident">Default</span>,
-{
-    <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">R</span>::<span class="ident">decode</span>(<span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>);
-    <span class="ident">node_fn</span>(<span class="ident">r</span>, <span class="ident">writer</span>)
-}
-
-<span class="doccomment">/// Generic function that handles request deserialization and response</span>
-<span class="doccomment">/// serialization (and sending down a channel) for a function that handles a</span>
-<span class="doccomment">/// stream of requests to produce a response.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Panics if [de-]serialization or channel operations fail.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_stream_rsp</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">R</span>, <span class="ident">Q</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node_fn</span>: <span class="ident">C</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>)
-<span class="kw">where</span>
-    <span class="ident">C</span>: <span class="ident">FnMut</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span>,
-    <span class="ident">R</span>: <span class="ident">prost</span>::<span class="ident">Message</span> <span class="op">+</span> <span class="ident">Default</span>,
-    <span class="ident">Q</span>: <span class="ident">prost</span>::<span class="ident">Message</span> <span class="op">+</span> <span class="ident">Default</span>,
-{
-    <span class="comment">// TODO(#97): better client-side streaming</span>
-    <span class="kw">let</span> <span class="ident">rr</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">R</span>::<span class="ident">decode</span>(<span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>)];
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">node_fn</span>(<span class="ident">rr</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">rsp</span>, <span class="ident">WriteMode</span>::<span class="ident">Close</span>),
-        <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">writer</span>.<span class="ident">close</span>(<span class="prelude-val">Err</span>(<span class="ident">status</span>)),
-    };
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">result</span> {
-        <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Failed to process response: {:?}&quot;</span>, <span class="ident">e</span>)
-    }
-}
-
-<span class="doccomment">/// Generic function that handles request deserialization and response</span>
-<span class="doccomment">/// serialization (and sending down a channel) for a function that handles a</span>
-<span class="doccomment">/// stream of requests to produce a stream of responses.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Panics if [de-]serialization or channel operations fail.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_stream_stream</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">node_fn</span>: <span class="ident">C</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">writer</span>: <span class="ident">ChannelResponseWriter</span>)
-<span class="kw">where</span>
-    <span class="ident">C</span>: <span class="ident">FnMut</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>, <span class="ident">ChannelResponseWriter</span>),
-    <span class="ident">R</span>: <span class="ident">prost</span>::<span class="ident">Message</span> <span class="op">+</span> <span class="ident">Default</span>,
-{
-    <span class="comment">// TODO(#97): better client-side streaming</span>
-    <span class="kw">let</span> <span class="ident">rr</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">R</span>::<span class="ident">decode</span>(<span class="ident">req</span>).<span class="ident">expect</span>(<span class="string">&quot;Failed to parse request protobuf message&quot;</span>)];
-    <span class="ident">node_fn</span>(<span class="ident">rr</span>, <span class="ident">writer</span>)
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "oak";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
