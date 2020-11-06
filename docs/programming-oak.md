@@ -64,7 +64,7 @@ oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     };
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(node, grpc_channel.iter());
+    oak::run_command_loop(MachineLearningDispatcher::new(node), grpc_channel.iter());
 });
 ```
 <!-- prettier-ignore-end -->
