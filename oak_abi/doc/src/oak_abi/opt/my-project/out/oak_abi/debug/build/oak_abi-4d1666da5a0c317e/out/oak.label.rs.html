@@ -235,7 +235,7 @@
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PublicKeyIdentityTag</span> {
-    <span class="doccomment">/// Public key counterpart of the private key that is used to sign an authentication challenge. </span>
+    <span class="doccomment">/// Public key counterpart of the private key that is used to sign an authentication challenge.</span>
     <span class="doccomment">/// In the current implementation it is represented as a serialized Ed25519 public key.</span>
     <span class="doccomment">/// https://ed25519.cr.yp.to</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
