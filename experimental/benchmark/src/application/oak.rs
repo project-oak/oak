@@ -60,7 +60,7 @@ impl OakApplication {
         let runtime = oak_runtime::configure_and_run(config)
             .expect("Couldn't configure runtime with test wasm");
 
-        let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+        let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
         let client = TrustedDatabaseClient::with_interceptor(channel, interceptor);
 
         OakApplication { runtime, client }
