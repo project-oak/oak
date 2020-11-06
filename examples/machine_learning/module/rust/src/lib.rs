@@ -166,7 +166,7 @@ oak::entrypoint!(oak_main<grpc::Invocation> => |receiver: Receiver<grpc::Invocat
         config: None,
         model: NaiveBayes::new(),
     };
-    oak::run_command_loop(MachineLearningDispatcher::new(node), receiver.iter());
+    oak::run_command_loop(node, receiver.iter());
 });
 
 oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
@@ -179,7 +179,7 @@ oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     };
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(MachineLearningDispatcher::new(node), grpc_channel.iter());
+    oak::run_command_loop(node, grpc_channel.iter());
 });
 
 struct Node {
@@ -188,6 +188,8 @@ struct Node {
     config: Option<Config>,
     model: NaiveBayes<naive_bayes::Gaussian>,
 }
+
+oak::impl_dispatcher!(impl Node : MachineLearningDispatcher);
 
 impl MachineLearning for Node {
     fn data(&mut self, _req: MlData) -> grpc::Result<MlResponse> {

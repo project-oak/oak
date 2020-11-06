@@ -131,42 +131,14 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
             }
 
             #[allow(dead_code)]
-            pub struct #dispatcher_name<T: #service_name>(T);
+            pub struct #dispatcher_name;
 
             #[allow(dead_code)]
-            impl <T: #service_name> #dispatcher_name<T> {
-                pub fn new(node: T) -> #dispatcher_name<T> {
-                    #dispatcher_name(node)
-                }
-
-                pub fn server_method(method_name: &str) -> Option<&dyn #oak_package::grpc::Invocable<T>> {
+            impl #dispatcher_name {
+                pub fn server_method<T: #service_name>(method_name: &str) -> Option<&dyn #oak_package::grpc::Invocable<T>> {
                     match method_name {
                         #(#dispatcher_invocable_methods,)*
                         _ => None
-                    }
-                }
-            }
-
-            impl <T: #service_name + Default> Default for #dispatcher_name<T> {
-                fn default() -> Self {
-                    Self::new(T::default())
-                }
-            }
-
-            impl <T: #service_name + #oak_package::WithInit> #oak_package::WithInit for #dispatcher_name<T> {
-                type Init = T::Init;
-
-                fn create(init: Self::Init) -> Self {
-                    Self::new(T::create(init))
-                }
-            }
-
-            #[allow(clippy::unit_arg)]
-            impl <T: #service_name> #oak_package::grpc::ServerNode for #dispatcher_name<T> {
-                fn invoke(&mut self, method_name: &str, req: &[u8], writer: #oak_package::grpc::ChannelResponseWriter) {
-                    match #dispatcher_name::<T>::server_method(method_name) {
-                        Some(server_method) => server_method.invoke(&mut self.0, req, writer),
-                        None => ::log::error!("unknown method name: {}", method_name),
                     }
                 }
             }

@@ -40,7 +40,7 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
-        let handler_sender = oak::io::entrypoint_node_create::<RunningAverageDispatcher<Handler>>(
+        let handler_sender = oak::io::entrypoint_node_create::<Handler>(
             "handler",
             &Label::public_untrusted(),
             "app",
@@ -58,7 +58,8 @@ struct Handler {
     count: u64,
 }
 
-oak::entrypoint_command_handler!(handler => RunningAverageDispatcher<Handler>);
+oak::entrypoint_command_handler!(handler => Handler);
+oak::impl_dispatcher!(impl Handler : RunningAverageDispatcher);
 
 impl RunningAverage for Handler {
     fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<()> {

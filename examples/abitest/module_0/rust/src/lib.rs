@@ -178,12 +178,13 @@ pub extern "C" fn frontend_oak_main(_in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
         let node = FrontendNode::new();
-        let dispatcher = OakAbiTestServiceDispatcher::new(node);
         let grpc_channel =
             oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-        oak::run_command_loop(dispatcher, grpc_channel.iter());
+        oak::run_command_loop(node, grpc_channel.iter());
     });
 }
+
+oak::impl_dispatcher!(impl FrontendNode : OakAbiTestServiceDispatcher);
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 type TestFn = fn(&mut FrontendNode) -> TestResult;
