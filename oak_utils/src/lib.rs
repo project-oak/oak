@@ -70,26 +70,31 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
         });
 
         let dispatcher_name = format_ident!("{}Dispatcher", service.name);
-        let dispatcher_methods = service.methods.iter().map(|method| {
+        let dispatcher_invocable_methods = service.methods.iter().map(|method| {
             let method_name = format_ident!("{}", method.name);
-            let method_name_string = format!("/{}.{}/{}", service.package, service.proto_name, method.proto_name);
-            // Figure out which generic function applies.
-            let handle_invocation = match (method.client_streaming, method.server_streaming) {
+            let method_name_string = format!(
+                "/{}.{}/{}",
+                service.package, service.proto_name, method.proto_name
+            );
+            // Figure out which `ServerMethod` variant applies.
+            let invocable_method = match (method.client_streaming, method.server_streaming) {
                 (false, false) => quote! {
-                    #oak_package::grpc::handle_req_rsp(|r| (self.0).#method_name(r), req, writer)
+                    Some(&#oak_package::grpc::ServerMethod::UnaryUnary(T::#method_name))
                 },
                 (false, true) => quote! {
-                    #oak_package::grpc::handle_req_stream(|r, w| (self.0).#method_name(r, w), req, writer)
+                    // The response type is not actually used in the method signature, so we need to manually specify a placeholder.
+                    Some(&#oak_package::grpc::ServerMethod::<_, _, ()>::UnaryStream(T::#method_name))
                 },
                 (true, false) => quote! {
-                    #oak_package::grpc::handle_stream_rsp(|rr| (self.0).#method_name(rr), req, writer)
+                    Some(&#oak_package::grpc::ServerMethod::StreamUnary(T::#method_name))
                 },
                 (true, true) => quote! {
-                    #oak_package::grpc::handle_stream_stream(|rr, w| (self.0).#method_name(rr, w), req, writer)
+                    // The response type is not actually used in the method signature, so we need to manually specify a placeholder.
+                    Some(&#oak_package::grpc::ServerMethod::<_, _, ()>::StreamStream(T::#method_name))
                 },
             };
             quote! {
-                #method_name_string => #handle_invocation
+                #method_name_string => #invocable_method
             }
         });
 
@@ -133,6 +138,13 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
                 pub fn new(node: T) -> #dispatcher_name<T> {
                     #dispatcher_name(node)
                 }
+
+                pub fn server_method(method_name: &str) -> Option<&dyn #oak_package::grpc::Invocable<T>> {
+                    match method_name {
+                        #(#dispatcher_invocable_methods,)*
+                        _ => None
+                    }
+                }
             }
 
             impl <T: #service_name + Default> Default for #dispatcher_name<T> {
@@ -151,12 +163,10 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
 
             #[allow(clippy::unit_arg)]
             impl <T: #service_name> #oak_package::grpc::ServerNode for #dispatcher_name<T> {
-                fn invoke(&mut self, method: &str, req: &[u8], writer: #oak_package::grpc::ChannelResponseWriter) {
-                    match method {
-                        #(#dispatcher_methods,)*
-                        _ => {
-                            ::log::error!("unknown method name: {}", method);
-                        }
+                fn invoke(&mut self, method_name: &str, req: &[u8], writer: #oak_package::grpc::ChannelResponseWriter) {
+                    match #dispatcher_name::<T>::server_method(method_name) {
+                        Some(server_method) => server_method.invoke(&mut self.0, req, writer),
+                        None => ::log::error!("unknown method name: {}", method_name),
                     }
                 }
             }

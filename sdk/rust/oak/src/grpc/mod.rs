@@ -295,74 +295,71 @@ where
     Ok(rsp)
 }
 
-/// Generic function that handles request deserialization and response
-/// serialization (and sending down a channel) for a function that handles a
-/// request/response pair.
+/// Trait implemented by all server method variants, applied to a server receiver instance having
+/// concrete type `T`.
+pub trait Invocable<T> {
+    /// Generic function that handles request deserialization and response serialization (and
+    /// sending down a channel) for a function that handles a request / response pair (either unary
+    /// or streaming).
+    ///
+    /// Panics if [de-]serialization or channel operations fail.
+    fn invoke(&self, target: &mut T, req: &[u8], writer: ChannelResponseWriter);
+}
+
+/// Enum with variants for all combinations of {request, response} × {unary , streaming}, each
+/// containing a pointer to the function of the appropriate type defined on a service
+/// implementation.
 ///
-/// Panics if [de-]serialization or channel operations fail.
-pub fn handle_req_rsp<C, R, Q>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
+/// The functions are "uncurried", i.e. they include an explicit parameter for the receiver type,
+/// which corresponds to `self` in the method definition.
+///
+/// Note that the variants with response stream do not make use of the type parameter `Q`, so this
+/// must be manually specified when creating one of those instances if the compiler cannot infer it
+/// from the context.
+pub enum ServerMethod<T, R, Q> {
+    UnaryUnary(fn(&mut T, R) -> Result<Q>),
+    UnaryStream(fn(&mut T, R, ChannelResponseWriter)),
+    StreamUnary(fn(&mut T, Vec<R>) -> Result<Q>),
+    StreamStream(fn(&mut T, Vec<R>, ChannelResponseWriter)),
+}
+
+impl<T, R, Q> Invocable<T> for ServerMethod<T, R, Q>
 where
-    C: FnMut(R) -> Result<Q>,
     R: prost::Message + Default,
     Q: prost::Message,
 {
-    let r = R::decode(req).expect("Failed to parse request protobuf message");
-    let result = match node_fn(r) {
-        Ok(rsp) => writer.write(&rsp, WriteMode::Close),
-        Err(status) => writer.close(Err(status)),
-    };
-    if let Err(e) = result {
-        panic!("Failed to process response: {:?}", e)
+    fn invoke(&self, target: &mut T, req: &[u8], writer: ChannelResponseWriter) {
+        match self {
+            ServerMethod::UnaryUnary(server_method) => {
+                let r = R::decode(req).expect("Failed to parse request protobuf message");
+                let result = match server_method(target, r) {
+                    Ok(rsp) => writer.write(&rsp, WriteMode::Close),
+                    Err(status) => writer.close(Err(status)),
+                };
+                if let Err(e) = result {
+                    panic!("Failed to process response: {:?}", e)
+                }
+            }
+            ServerMethod::UnaryStream(server_method) => {
+                let r = R::decode(req).expect("Failed to parse request protobuf message");
+                server_method(target, r, writer)
+            }
+            ServerMethod::StreamUnary(server_method) => {
+                // TODO(#97): better client-side streaming
+                let rr = vec![R::decode(req).expect("Failed to parse request protobuf message")];
+                let result = match server_method(target, rr) {
+                    Ok(rsp) => writer.write(&rsp, WriteMode::Close),
+                    Err(status) => writer.close(Err(status)),
+                };
+                if let Err(e) = result {
+                    panic!("Failed to process response: {:?}", e)
+                }
+            }
+            ServerMethod::StreamStream(server_method) => {
+                // TODO(#97): better client-side streaming
+                let rr = vec![R::decode(req).expect("Failed to parse request protobuf message")];
+                server_method(target, rr, writer)
+            }
+        }
     }
-}
-
-/// Generic function that handles request deserialization and response
-/// serialization (and sending down a channel) for a function that handles a
-/// request and streams responses.
-///
-/// Panics if [de-]serialization or channel operations fail.
-pub fn handle_req_stream<C, R>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
-where
-    C: FnMut(R, ChannelResponseWriter),
-    R: prost::Message + Default,
-{
-    let r = R::decode(req).expect("Failed to parse request protobuf message");
-    node_fn(r, writer)
-}
-
-/// Generic function that handles request deserialization and response
-/// serialization (and sending down a channel) for a function that handles a
-/// stream of requests to produce a response.
-///
-/// Panics if [de-]serialization or channel operations fail.
-pub fn handle_stream_rsp<C, R, Q>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
-where
-    C: FnMut(Vec<R>) -> Result<Q>,
-    R: prost::Message + Default,
-    Q: prost::Message + Default,
-{
-    // TODO(#97): better client-side streaming
-    let rr = vec![R::decode(req).expect("Failed to parse request protobuf message")];
-    let result = match node_fn(rr) {
-        Ok(rsp) => writer.write(&rsp, WriteMode::Close),
-        Err(status) => writer.close(Err(status)),
-    };
-    if let Err(e) = result {
-        panic!("Failed to process response: {:?}", e)
-    }
-}
-
-/// Generic function that handles request deserialization and response
-/// serialization (and sending down a channel) for a function that handles a
-/// stream of requests to produce a stream of responses.
-///
-/// Panics if [de-]serialization or channel operations fail.
-pub fn handle_stream_stream<C, R>(mut node_fn: C, req: &[u8], writer: ChannelResponseWriter)
-where
-    C: FnMut(Vec<R>, ChannelResponseWriter),
-    R: prost::Message + Default,
-{
-    // TODO(#97): better client-side streaming
-    let rr = vec![R::decode(req).expect("Failed to parse request protobuf message")];
-    node_fn(rr, writer)
 }
