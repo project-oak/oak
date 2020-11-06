@@ -87,7 +87,7 @@ message TlsEndpointTag {
 
 // Policies related to identities, specified using a cryptographic public key.
 message PublicKeyIdentityTag {
-  // Public key counterpart of the private key that is used to sign an authentication challenge. 
+  // Public key counterpart of the private key that is used to sign an authentication challenge.
   // In the current implementation it is represented as a serialized Ed25519 public key.
   // https://ed25519.cr.yp.to
   bytes public_key = 1;
