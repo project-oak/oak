@@ -287,7 +287,7 @@ Proof.
     destruct (dec_eq_nid nid id); subst; destruct_match; try congruence; simpl.
     - (* nid = id, so s_set_call is relevant *)
         rewrite upd_eq. unfold fnd. unfold low_proj.
-        destruct_match. simpl. simpl in H0.
+        destruct_match. simpl. simpl in H.
         destruct (lbl <<? ell); congruence.
     - (* nid <> id, so s_set_call is irrelevant *)
         rewrite upd_neq; auto.
