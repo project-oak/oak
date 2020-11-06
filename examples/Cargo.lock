@@ -912,6 +912,7 @@ dependencies = [
  "oak",
  "oak_abi",
  "oak_io",
+ "oak_utils",
  "prost",
  "rand 0.7.3",
  "rand_distr",
