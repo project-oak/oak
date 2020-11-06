@@ -23,19 +23,6 @@ ignore = [
 multiple-versions = "deny"
 wildcards = "allow"
 
-# TODO(#1270): Remove when no longer needed by tonic and rustls.
-[[bans.skip]]
-name = "base64"
-version = "=0.11.0"
-
-[[bans.skip]]
-name = "tokio-rustls"
-version = "=0.13.1"
-
-[[bans.skip]]
-name = "rustls"
-version = "=0.17.0"
-
 [[bans.skip]]
 name = "pin-project"
 version = "=0.4.22"
