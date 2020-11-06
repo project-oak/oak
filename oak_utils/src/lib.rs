@@ -79,18 +79,18 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
             // Figure out which `ServerMethod` variant applies.
             let invocable_method = match (method.client_streaming, method.server_streaming) {
                 (false, false) => quote! {
-                    Some(Box::new(#oak_package::grpc::ServerMethod::UnaryUnary(T::#method_name)))
+                    Some(&#oak_package::grpc::ServerMethod::UnaryUnary(T::#method_name))
                 },
                 (false, true) => quote! {
                     // The response type is not actually used in the method signature, so we need to manually specify a placeholder.
-                    Some(Box::new(#oak_package::grpc::ServerMethod::<_, _, ()>::UnaryStream(T::#method_name)))
+                    Some(&#oak_package::grpc::ServerMethod::<_, _, ()>::UnaryStream(T::#method_name))
                 },
                 (true, false) => quote! {
-                    Some(Box::new(#oak_package::grpc::ServerMethod::StreamUnary(T::#method_name)))
+                    Some(&#oak_package::grpc::ServerMethod::StreamUnary(T::#method_name))
                 },
                 (true, true) => quote! {
                     // The response type is not actually used in the method signature, so we need to manually specify a placeholder.
-                    Some(Box::new(#oak_package::grpc::ServerMethod::<_, _, ()>::StreamStream(T::#method_name)))
+                    Some(&#oak_package::grpc::ServerMethod::<_, _, ()>::StreamStream(T::#method_name))
                 },
             };
             quote! {
@@ -134,12 +134,12 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
             pub struct #dispatcher_name<T: #service_name>(T);
 
             #[allow(dead_code)]
-            impl <'a, T: #service_name + 'a> #dispatcher_name<T> {
+            impl <T: #service_name> #dispatcher_name<T> {
                 pub fn new(node: T) -> #dispatcher_name<T> {
                     #dispatcher_name(node)
                 }
 
-                pub fn server_method(method_name: &str) -> Option<Box<dyn #oak_package::grpc::Invocable<T> + 'a>> {
+                pub fn server_method(method_name: &str) -> Option<&dyn #oak_package::grpc::Invocable<T>> {
                     match method_name {
                         #(#dispatcher_invocable_methods,)*
                         _ => None
@@ -165,7 +165,7 @@ impl prost_build::ServiceGenerator for OakServiceGenerator {
             impl <T: #service_name> #oak_package::grpc::ServerNode for #dispatcher_name<T> {
                 fn invoke(&mut self, method_name: &str, req: &[u8], writer: #oak_package::grpc::ChannelResponseWriter) {
                     match #dispatcher_name::<T>::server_method(method_name) {
-                        Some(mut server_method) => server_method.invoke(&mut self.0, req, writer),
+                        Some(server_method) => server_method.invoke(&mut self.0, req, writer),
                         None => ::log::error!("unknown method name: {}", method_name),
                     }
                 }

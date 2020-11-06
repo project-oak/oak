@@ -303,7 +303,7 @@ pub trait Invocable<T> {
     /// or streaming).
     ///
     /// Panics if [de-]serialization or channel operations fail.
-    fn invoke(&mut self, target: &mut T, req: &[u8], writer: ChannelResponseWriter);
+    fn invoke(&self, target: &mut T, req: &[u8], writer: ChannelResponseWriter);
 }
 
 /// Enum with variants for all combinations of {request, response} × {unary , streaming}, each
@@ -328,7 +328,7 @@ where
     R: prost::Message + Default,
     Q: prost::Message,
 {
-    fn invoke(&mut self, target: &mut T, req: &[u8], writer: ChannelResponseWriter) {
+    fn invoke(&self, target: &mut T, req: &[u8], writer: ChannelResponseWriter) {
         match self {
             ServerMethod::UnaryUnary(server_method) => {
                 let r = R::decode(req).expect("Failed to parse request protobuf message");
