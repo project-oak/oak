@@ -2164,6 +2164,7 @@ dependencies = [
  "log",
  "oak_abi",
  "oak_client",
+ "oak_sign",
  "oak_utils",
  "prost",
  "structopt",

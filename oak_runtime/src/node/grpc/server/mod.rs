@@ -29,7 +29,11 @@ use crate::{
 };
 use hyper::service::Service;
 use log::{debug, error, info, trace, warn};
-use oak_abi::{label::Label, proto::oak::application::GrpcServerConfiguration, OakStatus};
+use oak_abi::{
+    label::{confidentiality_label, public_key_identity_tag, Label},
+    proto::oak::{application::GrpcServerConfiguration, identity::SignedChallenge},
+    OakStatus,
+};
 use oak_io::{
     handle::{ReadHandle, WriteHandle},
     OakError, Receiver, Sender,
@@ -294,7 +298,7 @@ enum OakLabelError {
     InvalidLabel,
 }
 
-/// Returns the [`Label`] defined as part of the the metadata of an incoming gRPC request.
+/// Returns the [`Label`] defined as part of the metadata of an incoming gRPC request.
 ///
 /// Returns an error if there is not exactly one label specified by the caller:
 ///
@@ -302,7 +306,7 @@ enum OakLabelError {
 ///   mistake
 /// - more than one labels means that the caller specified multiple IFC restrictions; if the
 ///   intention was to allow multiple alternative ones, they need to be combined in a single label,
-///   once conjunctions are supported
+///   once disjunctions are supported
 fn get_oak_label(metadata_map: &MetadataMap) -> Result<Label, OakLabelError> {
     let labels = metadata_map
         .get_all_bin(oak_abi::OAK_LABEL_GRPC_METADATA_KEY)
@@ -330,6 +334,80 @@ fn get_oak_label(metadata_map: &MetadataMap) -> Result<Label, OakLabelError> {
         warn!("could not parse gRPC label: {}", err);
         OakLabelError::InvalidLabel
     })
+}
+
+enum OakIdentityError {
+    MultipleIdentities,
+    InvalidIdentity,
+}
+
+impl From<OakIdentityError> for tonic::Status {
+    fn from(v: OakIdentityError) -> Self {
+        match v {
+            OakIdentityError::MultipleIdentities => {
+                tonic::Status::invalid_argument("Missing identities")
+            }
+            OakIdentityError::InvalidIdentity => {
+                tonic::Status::invalid_argument("Invalid identity")
+            }
+        }
+    }
+}
+
+/// Returns the [`Label`] created from the identity given as part of the metadata of an incoming
+/// gRPC request.
+/// Providing the user's identity is optional, so if a signed challenge is not provided, a
+/// `public_untrusted` label is returned.
+///
+/// An error is returned if more than one signed challenge is specified by the caller, or in case
+/// the provided signature cannot be verified.
+fn get_user_identity_label(metadata_map: &MetadataMap) -> Result<Label, OakIdentityError> {
+    let signature = metadata_map
+        .get_all_bin(oak_abi::OAK_SIGNED_CHALLENGE_GRPC_METADATA_KEY)
+        .iter()
+        .collect::<Vec<_>>();
+    if signature.is_empty() {
+        info!("no signed challenge provided.");
+        return Ok(Label::public_untrusted());
+    }
+    if signature.len() >= 2 {
+        warn!(
+            "incorrect number of signed challenge found: {}, expected: 1",
+            signature.len()
+        );
+        return Err(OakIdentityError::MultipleIdentities);
+    }
+    let signature_bytes = signature[0].to_bytes().map_err(|err| {
+        warn!("could not convert signed challenge to bytes: {}", err);
+        OakIdentityError::InvalidIdentity
+    })?;
+    let signed_challenge = SignedChallenge::decode(signature_bytes).map_err(|err| {
+        warn!("could not parse gRPC label: {}", err);
+        OakIdentityError::InvalidIdentity
+    })?;
+
+    let public_key = verify_signed_challenge(signed_challenge)?;
+    Ok(confidentiality_label(public_key_identity_tag(public_key)))
+}
+
+/// Verifies the signed challenge retrieved from the gRPC request, and returns the public key if the
+/// signature is valid.
+fn verify_signed_challenge(signature: SignedChallenge) -> Result<Vec<u8>, OakIdentityError> {
+    let hash = oak_sign::get_sha256(oak_abi::OAK_CHALLENGE.as_bytes());
+
+    let sig_bundle = oak_sign::SignatureBundle {
+        public_key: signature.public_key.clone(),
+        signed_hash: signature.signed_hash,
+        hash,
+    };
+
+    match sig_bundle.verify() {
+        Ok(()) => Ok(signature.public_key),
+        Err(err) => {
+            warn!("could not verify the signature: {}", err);
+            Err(OakIdentityError::InvalidIdentity)
+        }
+    }
 }
 
 /// Handler for an individual gRPC method invocation.
@@ -369,6 +447,8 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
                 request.get_ref().len(),
                 oak_label
             );
+            let identity_label = get_user_identity_label(&request.metadata())?;
+
             // Create an encapsulated gRPC request.
             // TODO(#97): Add client-streaming support.
             let grpc_request = GrpcRequest {
@@ -380,7 +460,7 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
             // Inject the encapsulated gRPC request into the Oak Application.
             debug!("inject encapsulated request into Oak Node");
             let response_iter = handler
-                .inject_grpc_request(grpc_request, &oak_label)
+                .inject_grpc_request(grpc_request, &oak_label, &identity_label)
                 .map_err(|()| tonic::Status::new(tonic::Code::Internal, ""))?;
             let (tx, rx) = mpsc::unbounded_channel();
 
@@ -428,6 +508,7 @@ impl GrpcInvocationHandler {
         &self,
         request: GrpcRequest,
         label: &Label,
+        identity_label: &Label,
     ) -> Result<GrpcResponseIterator, ()> {
         // Create a pair of temporary channels to pass the gRPC request and to receive the response.
 
@@ -439,9 +520,11 @@ impl GrpcInvocationHandler {
             .map_err(|err| {
                 warn!("could not create gRPC request channel: {:?}", err);
             })?;
+        // The channel containing the response is created with the label containing the identity of
+        // the user.
         let (response_writer, response_reader) = self
             .runtime
-            .channel_create_with_downgrade("gRPC response", &Label::public_untrusted())
+            .channel_create_with_downgrade("gRPC response", identity_label)
             .map_err(|err| {
                 warn!("could not create gRPC response channel: {:?}", err);
             })?;

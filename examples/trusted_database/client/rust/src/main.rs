@@ -19,7 +19,10 @@
 use anyhow::{ensure, Context};
 use log::info;
 use oak_abi::label::Label;
-use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
+use oak_client::{
+    create_tls_channel,
+    interceptors::{auth::AuthInterceptor, combine, label::LabelInterceptor},
+};
 use structopt::StructOpt;
 use tonic::Request;
 use trusted_database_client::proto::{
@@ -72,8 +75,13 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Couldn't create TLS channel")?;
     let label = Label::public_untrusted();
-    let interceptor =
+    let label_interceptor =
         LabelInterceptor::create(&label).context("Couldn't create gRPC interceptor")?;
+
+    let key_pair = oak_sign::KeyPair::generate()?;
+    let auth_interceptor = AuthInterceptor::create(key_pair);
+
+    let interceptor = combine(label_interceptor, auth_interceptor);
     let mut client = TrustedDatabaseClient::with_interceptor(channel, interceptor);
 
     let request = Request::new(ListPointsOfInterestRequest {

@@ -19,7 +19,7 @@ use log::error;
 use oak_abi::proto::oak::identity::SignedChallenge;
 use oak_sign::KeyPair;
 use prost::Message;
-use tonic::{metadata::MetadataValue, Request, Status};
+use tonic::{metadata::MetadataValue, Code, Request, Status};
 
 /// Intercepts gRPC requests and authenticates the client with the provided [`KeyPair`].
 pub struct AuthInterceptor {
@@ -40,10 +40,17 @@ impl AuthInterceptor {
 impl Interceptor for AuthInterceptor {
     fn process(&self, request: Request<()>) -> Result<Request<()>, Status> {
         let mut request = request;
+
+        let signature =
+            oak_sign::SignatureBundle::create(oak_abi::OAK_CHALLENGE.as_bytes(), &self.key_pair)
+                .map_err(|err| Status::new(Code::InvalidArgument, format!("{:?}", err)))?;
+
+        // Signed challenge
         let signed_challenge = SignedChallenge {
-            signed_hash: self.key_pair.sign(oak_abi::OAK_CHALLENGE.as_bytes()),
+            signed_hash: signature.signed_hash,
             public_key: self.key_pair.pkcs8_public_key(),
         };
+
         let mut signed_challenge_bytes = Vec::new();
         signed_challenge
             .encode(&mut signed_challenge_bytes)
