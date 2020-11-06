@@ -197,9 +197,9 @@ fn create_http_config() -> Option<oak_runtime::HttpConfiguration> {
     Some(oak_runtime::HttpConfiguration { tls_config })
 }
 
-/// Build a channel and interceptor suitable for building a client that connects
-/// to a Runtime under test.
-pub async fn channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor>) {
+/// Build a labeled channel and interceptor suitable for building a client that
+/// connects to a Runtime under test.
+pub async fn channel_and_interceptor(label: &Label) -> (Channel, impl Into<tonic::Interceptor>) {
     // Build a channel that connects to the Runtime under test.
     let uri = RUNTIME_URI.parse().expect("Error parsing URI");
     let tls_config = ClientTlsConfig::new()
@@ -235,17 +235,23 @@ pub async fn channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor
 
     // Build an interceptor that will attach a public-untrusted Oak label to
     // every gRPC request.
-    let mut label = Vec::new();
-    Label::public_untrusted()
-        .encode(&mut label)
+    let mut encoded_label = Vec::new();
+    label
+        .encode(&mut encoded_label)
         .expect("Error encoding label");
     let interceptor = move |mut request: Request<()>| {
         request.metadata_mut().insert_bin(
             oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
-            MetadataValue::from_bytes(label.as_ref()),
+            MetadataValue::from_bytes(encoded_label.as_ref()),
         );
         Ok(request)
     };
 
     (channel, interceptor)
+}
+
+/// Build a public-untrusted channel and interceptor suitable for building a
+/// client that connects to a Runtime under test.
+pub async fn public_channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor>) {
+    channel_and_interceptor(&Label::public_untrusted()).await
 }

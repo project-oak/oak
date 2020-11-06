@@ -27,7 +27,7 @@ async fn test_translate() {
     let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "grpc_oak_main")
         .expect("Unable to configure runtime with test wasm!");
 
-    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
     let mut client = TranslatorClient::with_interceptor(channel, interceptor);
 
     let req = TranslateRequest {

@@ -55,7 +55,7 @@ async fn test_aggregator() {
     )
     .expect("Unable to configure runtime with test wasm!");
 
-    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
     let mut client = AggregatorClient::with_interceptor(channel, interceptor);
 
     for i in 0..SAMPLE_THRESHOLD as u32 {
