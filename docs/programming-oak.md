@@ -30,42 +30,51 @@ things from there.
 
 ### Per-Node Boilerplate
 
-An Oak Node needs to provide a single
-[main entrypoint](abi.md#exported-function), which is the point at which Node
-execution begins. However, Node authors don't _have_ to implement this function
-themselves; for a Node which receives messages (a combination of bytes and
-handles) that can be
+An Oak Node needs to provide a single [entrypoint](abi.md#exported-function),
+which is the point at which Node execution begins. However, Node authors don't
+_have_ to implement this function themselves; for a Node which receives messages
+(a combination of bytes and handles) that can be
 [decoded](https://project-oak.github.io/oak/sdk/doc/oak/io/trait.Decodable.html)
 into a Rust type, there are helper functions in the Oak SDK that make this
 easier.
 
 To use these helpers, an Oak Node should be a `struct` of some kind to represent
 the internal state of the Node itself (which may be empty), implement the
-[`oak::Node`](https://project-oak.github.io/oak/sdk/doc/oak/trait.Node.html)
+[`oak::CommandHandler`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html)
 trait for it, then define an
-[`entrypoint`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint.html)
+[`entrypoint_command_handler!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint_command_handler.html)
 so the Oak SDK knows how to instantiate it.
 
-The defined entrypoint should run an `oak::run_event_loop` function that is
-specified with a channel handle (used for reading messages) and an Oak Node that
-receives these messages. For example, such a handle could be provided by the
-gRPC server pseudo-Node:
-
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/machine_learning/module/rust/src/lib.rs Rust /^oak::entrypoint!\(grpc_oak_main.*/ /}\);$/)
+[embedmd]:# (../examples/hello_world/module/rust/src/lib.rs Rust /^#\[derive/ /^}$/)
 ```Rust
-oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
-    oak::logger::init_default();
-    let node = Node {
-        training_set_size: 1000,
-        test_set_size: 1000,
-        config: None,
-        model: NaiveBayes::new(),
-    };
-    let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(node, grpc_channel.iter());
-});
+#[derive(Default)]
+struct Main;
+
+oak::entrypoint_command_handler!(oak_main => Main);
+
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
+
+    fn handle_command(&mut self, _command: Self::Command) -> anyhow::Result<()> {
+        let translator_sender_result = oak::io::node_create::<grpc::Invocation>(
+            "translator",
+            &Label::public_untrusted(),
+            &oak::node_config::wasm("translator", "handler"),
+        );
+        let handler_init_sender =
+            oak::io::entrypoint_node_create::<Node>("handler", &Label::public_untrusted(), "app")?;
+        let handler_command_sender = oak::io::send_init(
+            handler_init_sender,
+            translator_sender_result
+                .map(Either::Right)
+                .unwrap_or(Either::Left(())),
+            &Label::public_untrusted(),
+        )?;
+        oak::grpc::server::init_with_sender("[::]:8080", handler_command_sender)?;
+        Ok(())
+    }
+}
 ```
 <!-- prettier-ignore-end -->
 
@@ -83,6 +92,12 @@ struct Handler {
 ```
 <!-- prettier-ignore-end -->
 
+The
+[`entrypoint_command_handler!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint_command_handler.html)
+macro in turn defines the exported function using the lower-level
+[`entrypoint!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint.html)
+macro, which requires a function to run as the node entry point.
+
 Under the covers the
 [`entrypoint!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint.html)
 macro converts the provided function body into an
@@ -93,36 +108,49 @@ macro converts the provided function body into an
 For Nodes that act as gRPC servers (the normal "front door" for an Oak
 Application), the easiest way to use a gRPC service implementation is to:
 
+- implement the auto-generated gRPC service trait for the Node handler `struct`.
+- automatically make the handler implement the `CommandHandler` trait by using
+  the
+  [`impl_dispatcher!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.impl_dispatcher.html)
+  macro, specifying the appropriate auto-generated gRPC dispatcher.
+- create an instance of the handler node via
+  [`entrypoint_node_create`](https://project-oak.github.io/oak/sdk/doc/oak/io/fn.entrypoint_node_create.html)
+  or by manually calling
+  [`node_create`](https://project-oak.github.io/oak/sdk/doc/oak/io/fn.node_create.html),
+  which returns a
+  [`Sender`](https://project-oak.github.io/oak/sdk/doc/oak/io/struct.Sender.html)
+  of
+  [`GrpcInvocation`](https://project-oak.github.io/oak/sdk/doc/oak/proto/oak/invocation/struct.GrpcInvocation.html)
+  messages to send to the handler.
 - call the
-  [`oak::grpc::server::init()`](https://project-oak.github.io/oak/sdk/doc/oak/grpc/server/fn.init.html)
-  helper from the Oak SDK to set up a
-  [gRPC server pseudo-Node](concepts.md#pseudo-nodes) and acquire a channel to
-  receive gRPC invocations on
-- wrap the Node `struct` in the automatically generated `Dispatcher`, as
-  described in the [next section](#generated-grpc-service-code)
-- pass the `Dispatcher` and the channel handle to the
-  [`run_event_loop()`](https://project-oak.github.io/oak/sdk/doc/oak/fn.run_event_loop.html)
-  function.
+  [`oak::grpc::server::init_with_sender`](https://project-oak.github.io/oak/sdk/doc/oak/grpc/server/fn.init_with_sender.html)
+  helper passing it the sender to the newly created handler.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /oak::entrypoint!\(grpc_oak_main/ /^}/)
+[embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /oak::entrypoint_command_handler!\(oak_main/ /^}/)
 ```Rust
-oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
-    oak::logger::init_default();
-    let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(Node, grpc_channel.iter());
+oak::entrypoint_command_handler!(oak_main => Main);
+
+#[derive(Default)]
+struct Main;
+
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
+
+    fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
+        let handler_sender = oak::io::entrypoint_node_create::<Handler>(
+            "handler",
+            &Label::public_untrusted(),
+            "app",
+        )
+        .context("could not create handler node")?;
+        oak::grpc::server::init_with_sender("[::]:8080", handler_sender)
+            .context("could not create gRPC server pseudo-Node")?;
+        Ok(())
+    }
 }
 ```
 <!-- prettier-ignore-end -->
-
-Alternatively a Node can implement the
-[`oak::grpc::ServerNode`](https://project-oak.github.io/oak/sdk/doc/oak/grpc/trait.ServerNode.html)
-trait (which provides an automatic implementation of the
-[`Node`](https://project-oak.github.io/oak/sdk/doc/oak/trait.Node.html))
-manually. The
-[machine learning example](https://github.com/project-oak/oak/blob/main/examples/machine_learning/module/rust/src/lib.rs)
-demonstrates this.
 
 #### Panic Handling
 
@@ -182,8 +210,8 @@ The autogenerated code includes three parts, described in more detail below:
 
 The first part is a trait definition that includes a method for each of the
 methods in the gRPC service, taking the relevant (auto-generated) request and
-response types. The Oak Node implements the gRPC service by implementing this
-trait.
+response types. The Oak Node handler struct implements the gRPC service by
+implementing this trait.
 
 ```Rust
 pub trait Translator {
@@ -192,20 +220,22 @@ pub trait Translator {
 ```
 
 The second part of the autogenerated code includes a `Dispatcher` struct which
-maps a request (as a method name and encoded request) to an invocation of the
-relevant method on the service trait. This `Dispatcher` struct can then form the
-entire implementation of the `ServerNode::invoke()` method described in the
-previous section.
+maps a request method name to a pointer to the relevant method on the service
+trait. This `Dispatcher` struct can then be used with the
+[`impl_dispatcher!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.impl_dispatcher.html)
+macro to generate the entire implementation of the
+[`ServerNode::invoke`](https://project-oak.github.io/oak/sdk/doc/oak/grpc/trait.ServerNode.html#tymethod.invoke)
+method, and then in turn of
+[`CommandHandler::handle_command`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html#tymethod.handle_command).
 
 Taken altogether, these two parts cover all of the boilerplate needed to have a
 Node act as a gRPC server:
 
-- The main `oak_main` entrypoint invokes `oak::grpc::event_loop` with a
-  `Dispatcher` and a handle for a channel from a gRPC server pseudo-Node.
-- This `Dispatcher` is created by wrapping a Node `struct` that implements the
-  gRPC generated service trait.
-- The `Dispatcher` implements `oak::grpc::ServerNode` so the `event_loop()`
-  method can call into the relevant per-service method of the Node.
+- The "main" node creates the handler node implementation and the gRPC server
+  pseudo-Node, connecting them together
+- The handler node struct implements the methods defined on the service trait,
+  and delegats to the auto-generated `Dispatcher` via the `impl_dispatcher!`
+  macro.
 
 Finally, the third part of the autogenerated code includes a stub implementation
 of the client side for the gRPC service. If a Node offers a gRPC service to
@@ -242,8 +272,7 @@ unstable, `-Zunstable-options` is required as well.
 
 In order to load an Oak Application into the Oak Server its configuration must
 be serialized into a binary file that will be parsed by the
-[_Application Configuration Serializer_](../sdk/rust/oak_config_serializer), as
-follows:
+[_Oak Application Builder_](../sdk/rust/oak_app_build), as follows:
 
 ```bash
 cargo run --manifest-path=sdk/rust/oak_app_build/Cargo.toml -- \
@@ -266,10 +295,10 @@ translator = { path = "examples/hello_world/bin/translator.wasm" }
 All these steps are implemented as a part of the
 `./scripts/runner run-examples --example-name=hello_world` script.
 
-Oak Config Serializer also allows to download Wasm modules from
-[Google Cloud Storage](https://cloud.google.com/storage). In order to do this,
-the application configuration file should include `external` as a module
-location:
+Oak Application Builder also allows to download Wasm modules from
+[Google Cloud Storage](https://cloud.google.com/storage) (or any other URL). In
+order to do this, the application configuration file should include `external`
+as a module location:
 
 ```toml
 name = "hello_world"
@@ -280,8 +309,8 @@ translator = { path = "examples/hello_world/bin/translator.wasm" }
 
 ```
 
-It is also possible to save compiled Wasm modules to Google Cloud Storage using
-the following script:
+It is also possible to upload compiled Wasm modules to Google Cloud Storage
+using the following script:
 
 ```bash
 ./scripts/push_example -e hello_world
@@ -317,8 +346,13 @@ as a single message on the initial Node's initial channel (and then closes the
 channel).
 
 The initial Node of an Application can retrieve this configuration by reading
-from the implicit incoming channel, usually via a `Receiver<ConfigMap>`
-instance.
+from the implicit incoming channel, usually by implementing the
+[`CommandHandler`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html)
+trait setting the
+[`Command`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html#associatedtype.Command)
+associated type to
+[`ConfigMap`](https://project-oak.github.io/oak/sdk/doc/oak/proto/oak/application/struct.ConfigMap.html),
+or manually reading from the initial `Receiver`:
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/trusted_database/module/rust/src/lib.rs Rust /oak::entrypoint/ /.*let config_map =.*/)

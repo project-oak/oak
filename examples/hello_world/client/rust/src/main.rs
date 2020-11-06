@@ -20,7 +20,8 @@
 #![feature(async_closure)]
 
 use anyhow::Context;
-use hello_world_grpc::proto::{hello_world_client::HelloWorldClient, HelloRequest};
+use futures::StreamExt;
+use hello_world_grpc::proto::{hello_world_client::HelloWorldClient, HelloRequest, HelloResponse};
 use log::info;
 use oak_abi::label::Label;
 use oak_client::{create_tls_channel, Interceptor};
@@ -58,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Couldn't create TLS channel")?;
     let label = Label::public_untrusted();
     let interceptor = Interceptor::create(&label).context("Couldn't create gRPC interceptor")?;
-    let client = HelloWorldClient::with_interceptor(channel, interceptor);
+    let mut client = HelloWorldClient::with_interceptor(channel, interceptor);
 
     let worlds = vec!["WORLD", "MONDO", "世界", "MONDE"];
     info!("Sending requests");
@@ -86,6 +87,35 @@ async fn main() -> anyhow::Result<()> {
 
     // Join all the tasks. NB: this is where the tasks are being run!
     futures::future::join_all(responses).await;
+
+    let req = Request::new(HelloRequest {
+        greeting: "WORLDS".to_string(),
+    });
+    let responses: Vec<HelloResponse> = client
+        .lots_of_replies(req)
+        .await
+        .expect("could not receive streaming response")
+        .into_inner()
+        .collect::<Vec<Result<HelloResponse, tonic::Status>>>()
+        .await
+        .into_iter()
+        .filter_map(|v| v.ok())
+        .collect();
+    // Make sure that the translated response was received.
+    assert_eq!(
+        vec![
+            HelloResponse {
+                reply: "HELLO WORLDS!".to_string()
+            },
+            HelloResponse {
+                reply: "BONJOUR MONDES!".to_string()
+            },
+            HelloResponse {
+                reply: "HELLO AGAIN WORLDS!".to_string()
+            }
+        ],
+        responses
+    );
 
     Ok(())
 }
