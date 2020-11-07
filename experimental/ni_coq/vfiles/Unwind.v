@@ -54,6 +54,10 @@ Proof.
     inversion H0; subst;
     pose proof (ord_anti ell top ltac:(eauto) ltac:(eauto));
     congruence.
+    - specialize (H0 nid).
+    cbv [node_state_low_proj low_proj fnd RuntimeModel.lbl 
+        RuntimeModel.obj] in *.
+    simpl in *. erewrite upd_neq; auto. erewrite upd_neq; auto.
 Qed.
 
 Theorem chan_append_unwind: forall ell ch1 ch2 ch1obj ch2obj msg,
