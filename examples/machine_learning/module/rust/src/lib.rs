@@ -17,12 +17,20 @@
 // This model was inspired by
 // https://github.com/AtheMathmo/rusty-machine/blob/master/examples/naive_bayes_dogs.rs .
 
-use log::{error, info, warn};
+pub mod proto {
+    include!(concat!(
+        env!("OUT_DIR"),
+        "/oak.examples.machine_learning.rs"
+    ));
+}
+
+use log::{info, warn};
 use oak::{
     grpc,
     io::{Receiver, ReceiverExt},
 };
 use oak_abi::proto::oak::application::ConfigMap;
+use proto::{MachineLearning, MachineLearningDispatcher, MlData, MlLearn, MlPredict, MlResponse};
 use rand::prelude::*;
 use rand_distr::{Distribution, Normal, Standard};
 use rusty_machine::{
@@ -181,107 +189,104 @@ struct Node {
     model: NaiveBayes<naive_bayes::Gaussian>,
 }
 
-impl oak::grpc::ServerNode for Node {
-    fn invoke(&mut self, method: &str, _req: &[u8], writer: grpc::ChannelResponseWriter) {
-        match method {
-            "/oak.examples.machine_learning.MachineLearning/Data" => {
-                info!("Data");
-                //(self.training_set_size, self.test_set_size) = (1000, 1000);
-                // Generate all of our train and test data
-                let (training_matrix, target_matrix, test_matrix, test_animals) =
-                    generate_animal_data(self.training_set_size, self.test_set_size);
-                self.config = Some(Config {
-                    training_matrix,
-                    target_matrix,
-                    test_matrix,
-                    test_animals,
-                });
-            }
-            "/oak.examples.machine_learning.MachineLearning/Learn" => {
-                info!("Training model");
-                //self.model = NaiveBayes::<naive_bayes::Gaussian>::new();
-                match self.config {
-                    Some(ref c) => self
-                        .model
-                        .train(&c.training_matrix, &c.target_matrix)
-                        .expect("failed to train model of dogs"),
-                    None => {
-                        warn!("config not set");
-                    }
-                }
-            }
-            "/oak.examples.machine_learning.MachineLearning/Predict" => {
-                info!("Predicting");
-                let mut predictions = None;
-                match self.config {
-                    Some(ref c) => {
-                        predictions = Some(
-                            self.model
-                                .predict(&c.test_matrix)
-                                .expect("failed to predict dogs!?"),
-                        )
-                    }
-                    None => {
-                        warn!("config not set");
-                    }
-                }
-                // Score how well we did.
-                let mut hits = 0;
-                let unprinted_total = self.test_set_size.saturating_sub(10) as usize;
-                match self.config {
-                    Some(ref c) => {
-                        if let Some(ref p) = predictions {
-                            for (animal, prediction) in c
-                                .test_animals
-                                .iter()
-                                .zip(p.iter_rows())
-                                .take(unprinted_total)
-                            {
-                                evaluate_prediction(&mut hits, animal, prediction);
-                            }
-                        }
-                    }
-                    None => {
-                        warn!("test_animals not set");
-                        return;
-                    }
-                }
+oak::impl_dispatcher!(impl Node : MachineLearningDispatcher);
 
-                if unprinted_total > 0 {
-                    info!("...");
-                }
-
-                if let Some(ref c) = self.config {
-                    if let Some(ref p) = predictions {
-                        for (animal, prediction) in c
-                            .test_animals
-                            .iter()
-                            .zip(p.iter_rows())
-                            .skip(unprinted_total)
-                        {
-                            let (actual_type, accurate) =
-                                evaluate_prediction(&mut hits, animal, prediction);
-                            info!(
-                                "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
-                                animal.type_, actual_type, accurate
-                            );
-                        }
-                    }
-                }
-                info!(
-                    "Accuracy: {}/{} = {:.1}%",
-                    hits,
-                    self.test_set_size,
-                    (f64::from(hits)) / (f64::from(self.test_set_size as u32)) * 100.
-                );
-            }
-            _ => {
-                error!("unknown method name: {}", method);
-                panic!("unknown method name");
+impl MachineLearning for Node {
+    fn data(&mut self, _req: MlData) -> grpc::Result<MlResponse> {
+        info!("Data");
+        //(self.training_set_size, self.test_set_size) = (1000, 1000);
+        // Generate all of our train and test data
+        let (training_matrix, target_matrix, test_matrix, test_animals) =
+            generate_animal_data(self.training_set_size, self.test_set_size);
+        self.config = Some(Config {
+            training_matrix,
+            target_matrix,
+            test_matrix,
+            test_animals,
+        });
+        Ok(MlResponse::default())
+    }
+    fn learn(&mut self, _req: MlLearn) -> grpc::Result<MlResponse> {
+        info!("Training model");
+        //self.model = NaiveBayes::<naive_bayes::Gaussian>::new();
+        match self.config {
+            Some(ref c) => self
+                .model
+                .train(&c.training_matrix, &c.target_matrix)
+                .expect("failed to train model of dogs"),
+            None => {
+                warn!("config not set");
             }
         }
-        writer
-            .write_empty(grpc::WriteMode::Close)
-            .expect("Failed to write empty response");
+        Ok(MlResponse::default())
+    }
+    fn predict(&mut self, _req: MlPredict) -> grpc::Result<MlResponse> {
+        info!("Predicting");
+        let mut predictions = None;
+        match self.config {
+            Some(ref c) => {
+                predictions = Some(
+                    self.model
+                        .predict(&c.test_matrix)
+                        .expect("failed to predict dogs!?"),
+                )
+            }
+            None => {
+                warn!("config not set");
+            }
+        }
+        // Score how well we did.
+        let mut hits = 0;
+        let unprinted_total = self.test_set_size.saturating_sub(10) as usize;
+        match self.config {
+            Some(ref c) => {
+                if let Some(ref p) = predictions {
+                    for (animal, prediction) in c
+                        .test_animals
+                        .iter()
+                        .zip(p.iter_rows())
+                        .take(unprinted_total)
+                    {
+                        evaluate_prediction(&mut hits, animal, prediction);
+                    }
+                }
+            }
+            None => {
+                warn!("test_animals not set");
+                return Err(grpc::build_status(
+                    grpc::Code::InvalidArgument,
+                    "test_animals not set",
+                ));
+            }
+        }
+
+        if unprinted_total > 0 {
+            info!("...");
+        }
+
+        if let Some(ref c) = self.config {
+            if let Some(ref p) = predictions {
+                for (animal, prediction) in c
+                    .test_animals
+                    .iter()
+                    .zip(p.iter_rows())
+                    .skip(unprinted_total)
+                {
+                    let (actual_type, accurate) =
+                        evaluate_prediction(&mut hits, animal, prediction);
+                    info!(
+                        "Predicted: {:?}; Actual: {:?}; Accurate? {:?}",
+                        animal.type_, actual_type, accurate
+                    );
+                }
+            }
+        }
+        info!(
+            "Accuracy: {}/{} = {:.1}%",
+            hits,
+            self.test_set_size,
+            (f64::from(hits)) / (f64::from(self.test_set_size as u32)) * 100.
+        );
+        Ok(MlResponse::default())
     }
 }

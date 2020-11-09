@@ -149,7 +149,7 @@ impl<'a> Chatter<'a> {
             user_handle,
             base64::encode(&room_key_pair.pkcs8_public_key())
         );
-        let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+        let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
         // TODO(#1357): Use key pair to authenticate this client and label requests.
         let client = ChatClient::with_interceptor(channel, interceptor);
         Chatter {

@@ -113,7 +113,7 @@ impl oak::CommandHandler for Router {
                 // Check if there is a channel to a room with the desired label already, or create
                 // it if not.
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
-                    oak::io::entrypoint_node_create::<ChatDispatcher<Room>>("room", &label, "app")
+                    oak::io::entrypoint_node_create::<Room>("room", &label, "app")
                         .expect("could not create node")
                 });
                 // Send the invocation to the dedicated worker node.
@@ -127,7 +127,8 @@ impl oak::CommandHandler for Router {
     }
 }
 
-oak::entrypoint_command_handler!(room => ChatDispatcher<Room>);
+oak::entrypoint_command_handler!(room => Room);
+oak::impl_dispatcher!(impl Room : ChatDispatcher);
 
 /// A worker node implementation for an individual label, corresponding to a chat room between the
 /// set of user that share the key to that chat room.

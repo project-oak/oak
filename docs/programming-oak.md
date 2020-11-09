@@ -109,10 +109,9 @@ Application), the easiest way to use a gRPC service implementation is to:
 ```Rust
 oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
-    let dispatcher = TranslatorDispatcher::new(Node);
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel.iter());
+    oak::run_command_loop(Node, grpc_channel.iter());
 }
 ```
 <!-- prettier-ignore-end -->
@@ -141,10 +140,9 @@ pub extern "C" fn frontend_oak_main(_in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
         let node = FrontendNode::new();
-        let dispatcher = OakAbiTestServiceDispatcher::new(node);
         let grpc_channel =
             oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-        oak::run_command_loop(dispatcher, grpc_channel.iter());
+        oak::run_command_loop(node, grpc_channel.iter());
     });
 }
 ```
@@ -488,7 +486,7 @@ to the room:
 [embedmd]:# (../examples/chat/module/rust/src/lib.rs Rust /.*self\.rooms\.entry\(/ /\}\);$/)
 ```Rust
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
-                    oak::io::entrypoint_node_create::<ChatDispatcher<Room>>("room", &label, "app")
+                    oak::io::entrypoint_node_create::<Room>("room", &label, "app")
                         .expect("could not create node")
                 });
 ```
@@ -579,7 +577,7 @@ async fn test_say_hello() {
     let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
     let mut client = HelloWorldClient::with_interceptor(channel, interceptor);
 
     let req = HelloRequest {

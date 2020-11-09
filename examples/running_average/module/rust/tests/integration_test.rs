@@ -34,7 +34,7 @@ async fn test_running_average() {
     let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
-    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
     let mut client = RunningAverageClient::with_interceptor(channel, interceptor);
 
     submit_sample(&mut client, 100).await;

@@ -144,6 +144,7 @@ dependencies = [
  "assert_matches",
  "either",
  "hex",
+ "log",
  "oak_abi",
  "oak_derive",
  "oak_utils",

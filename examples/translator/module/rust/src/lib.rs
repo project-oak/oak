@@ -29,8 +29,7 @@ use translator_common::proto::{
 // at start-of-day.
 oak::entrypoint!(oak_main<grpc::Invocation> => |receiver: Receiver<grpc::Invocation>| {
     oak::logger::init_default();
-    let dispatcher = TranslatorDispatcher::new(Node);
-    oak::run_command_loop(dispatcher, receiver.iter());
+    oak::run_command_loop(Node, receiver.iter());
 });
 
 // The `grpc_oak_main` entrypoint is used when the Translator acts as a standalone Oak
@@ -39,13 +38,14 @@ oak::entrypoint!(oak_main<grpc::Invocation> => |receiver: Receiver<grpc::Invocat
 // pseudo-Node.
 oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
     oak::logger::init_default();
-    let dispatcher = TranslatorDispatcher::new(Node);
     let grpc_channel =
         oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel.iter());
+    oak::run_command_loop(Node, grpc_channel.iter());
 });
 
 struct Node;
+
+oak::impl_dispatcher!(impl Node : TranslatorDispatcher);
 
 impl Translator for Node {
     fn translate(&mut self, req: TranslateRequest) -> grpc::Result<TranslateResponse> {

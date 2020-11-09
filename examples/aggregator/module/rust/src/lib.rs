@@ -64,6 +64,8 @@ pub struct AggregatorNode {
     aggregators: HashMap<String, Option<ThresholdAggregator<SparseVector>>>,
 }
 
+oak::impl_dispatcher!(impl AggregatorNode : AggregatorDispatcher);
+
 impl AggregatorNode {
     fn new(invocation_sender: Sender<grpc::Invocation>) -> Self {
         AggregatorNode {
@@ -169,8 +171,7 @@ oak::entrypoint!(aggregator<Either<AggregatorInit, oak::grpc::Invocation>> => |r
 
     // Run event loop and handle incoming invocations.
     let node = AggregatorNode::new(grpc_client_invocation_sender);
-    let dispatcher = AggregatorDispatcher::new(node);
-    oak::run_command_loop(dispatcher, receiver_iterator.filter_map(Either::right));
+    oak::run_command_loop(node, receiver_iterator.filter_map(Either::right));
 });
 
 #[derive(Debug, serde::Deserialize)]

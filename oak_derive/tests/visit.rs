@@ -20,9 +20,8 @@ use oak_io::{handle::HandleVisit, Handle};
 struct Visited(Handle);
 
 impl HandleVisit for Visited {
-    fn visit<F: FnMut(&mut Handle)>(&mut self, mut f: F) -> F {
-        f(&mut self.0);
-        f
+    fn fold<B>(&mut self, init: B, f: fn(B, &mut Handle) -> B) -> B {
+        f(init, &mut self.0)
     }
 }
 
@@ -127,14 +126,9 @@ mod enums {
     }
 }
 
-// Asserts that `t` is visited exactly `count` times when calling `HandleVisit::visit`.
-fn assert_visit<T: HandleVisit>(mut t: T, count: usize) {
-    let mut counter = 0;
+// Asserts that `t` is visited exactly `expected` times when calling [`HandleVisit::fold`].
+fn assert_visit<T: HandleVisit>(mut t: T, expected: usize) {
+    let count = t.fold(0, |count, _| count + 1);
 
-    // TODO(#1599): Remove the `let _` when the underlying issue is fixed.
-    let _ = t.visit(|_| {
-        counter += 1;
-    });
-
-    assert_eq!(counter, count);
+    assert_eq!(count, expected);
 }

@@ -54,16 +54,6 @@ cc_library(
 )
 
 cc_library(
-    name = "identity",
-    visibility = ["//visibility:public"],
-    deps = [
-        "//oak_abi/proto:identity_cc_proto",
-        "@com_google_absl//absl/base",
-        "@com_google_absl//absl/strings",
-    ],
-)
-
-cc_library(
     name = "nonce_generator",
     srcs = [],
     hdrs = ["nonce_generator.h"],

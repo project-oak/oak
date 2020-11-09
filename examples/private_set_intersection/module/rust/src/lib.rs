@@ -56,9 +56,11 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
-        let handler_sender = oak::io::entrypoint_node_create::<
-            PrivateSetIntersectionDispatcher<Handler>,
-        >("handler", &Label::public_untrusted(), "app")
+        let handler_sender = oak::io::entrypoint_node_create::<Handler>(
+            "handler",
+            &Label::public_untrusted(),
+            "app",
+        )
         .context("could not create handler node")?;
         oak::grpc::server::init_with_sender("[::]:8080", handler_sender)
             .context("could not create gRPC server pseudo-Node")?;
@@ -88,7 +90,8 @@ struct Handler {
     sets: HashMap<String, SetIntersection>,
 }
 
-oak::entrypoint_command_handler!(handler => PrivateSetIntersectionDispatcher<Handler>);
+oak::entrypoint_command_handler!(handler => Handler);
+oak::impl_dispatcher!(impl Handler : PrivateSetIntersectionDispatcher);
 
 impl PrivateSetIntersection for Handler {
     fn submit_set(&mut self, req: SubmitSetRequest) -> grpc::Result<()> {

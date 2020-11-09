@@ -121,17 +121,20 @@ impl Runtime {
                 "    node [shape=ellipse style=filled fillcolor=green]"
             )
             .unwrap();
+            let mut seen = HashSet::new();
             let node_infos = self.node_infos.read().unwrap();
             for node_id in node_infos.keys().sorted() {
                 let node_info = node_infos.get(node_id).unwrap();
                 for half in node_info.abi_handles.values() {
-                    writeln!(
-                        &mut s,
-                        r###"    {} [label="{}"]"###,
-                        half.dot_id(),
-                        half.get_channel_name(),
-                    )
-                    .unwrap();
+                    if seen.insert(half.dot_id()) {
+                        writeln!(
+                            &mut s,
+                            r###"    {} [label="{}"]"###,
+                            half.dot_id(),
+                            half.get_channel_name(),
+                        )
+                        .unwrap();
+                    }
                 }
             }
             writeln!(&mut s, "  }}").unwrap();

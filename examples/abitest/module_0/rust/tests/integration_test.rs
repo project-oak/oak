@@ -58,7 +58,7 @@ async fn setup() -> (
     let runtime =
         oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
 
-    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
     let client = OakAbiTestServiceClient::with_interceptor(channel, interceptor);
 
     (runtime, client)
