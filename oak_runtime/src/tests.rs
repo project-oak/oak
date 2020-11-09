@@ -26,6 +26,7 @@ use oak_abi::{
         NodeConfiguration,
     },
 };
+use std::sync::mpsc;
 
 pub fn init_logging() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -52,6 +53,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     struct TestNode {
         node_body: Box<NodeBody>,
         node_privilege: NodePrivilege,
+        result_sender: mpsc::SyncSender<Result<(), OakStatus>>,
     };
 
     impl crate::node::Node for TestNode {
@@ -69,7 +71,10 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
             _handle: oak_abi::Handle,
             _notify_receiver: oneshot::Receiver<()>,
         ) {
-            let _ = (self.node_body)(runtime);
+            // Run the test body.
+            let result = (self.node_body)(runtime);
+            // Make the result of the test visible outside of this thread.
+            self.result_sender.send(result).unwrap();
         }
 
         fn get_privilege(&self) -> NodePrivilege {
@@ -77,10 +82,13 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         }
     }
 
+    let (result_sender, result_receiver) = mpsc::sync_channel(1);
+
     // Create a new Oak node.
     let node_instance = TestNode {
         node_body,
         node_privilege: node_privilege.clone(),
+        result_sender,
     };
     let (_write_handle, read_handle) = proxy
         .channel_create("Initial", &Label::public_untrusted())
@@ -89,6 +97,12 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     proxy
         .node_register(Box::new(node_instance), "test", node_label, read_handle)
         .expect("Could not create Oak node!");
+
+    // Wait for the test Node to complete execution before terminating the Runtime.
+    let result_value = result_receiver
+        .recv()
+        .expect("test node disconnected, probably due to panic/assert fail in test");
+    assert_eq!(result_value, Ok(()));
 
     info!("Stop runtime..");
     proxy.runtime.stop();
