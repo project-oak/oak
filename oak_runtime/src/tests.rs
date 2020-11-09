@@ -22,8 +22,8 @@ use oak_abi::{
         tls_endpoint_tag, web_assembly_module_signature_tag, web_assembly_module_tag, Label,
     },
     proto::oak::application::{
-        node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration,
-        NodeConfiguration,
+        node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
+        LogConfiguration, NodeConfiguration,
     },
 };
 use std::sync::mpsc;
@@ -46,7 +46,22 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     info!("Create runtime for test");
     let proxy = crate::RuntimeProxy::create_runtime(
         &configuration,
-        &SecureServerConfiguration::default(),
+        &SecureServerConfiguration {
+            grpc_config: Some(GrpcConfiguration {
+                grpc_server_tls_identity: Some(Identity::from_pem(
+                    include_str!("../../examples/certs/local/local.pem"),
+                    include_str!("../../examples/certs/local/local.key"),
+                )),
+                grpc_client_root_tls_certificate: Some(
+                    crate::config::load_certificate(&include_str!(
+                        "../../examples/certs/local/ca.pem"
+                    ))
+                    .unwrap(),
+                ),
+                oidc_client_info: None,
+            }),
+            http_config: None,
+        },
         &signature_table,
     );
 
@@ -413,10 +428,10 @@ fn create_channel_with_more_confidential_label_from_non_public_node_with_privile
     );
 }
 
-/// Create a test Node that creates a Node with the same label and succeeds.
+/// Create a test Node that creates a Node with the same public untrusted label and succeeds.
 #[test]
 fn create_node_same_label_ok() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -437,7 +452,7 @@ fn create_node_same_label_ok() {
 /// Create a test Node that creates a Node with an invalid configuration and fails.
 #[test]
 fn create_node_invalid_configuration_err() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -454,50 +469,18 @@ fn create_node_invalid_configuration_err() {
     );
 }
 
-/// Create a test Node that creates a Node with a less confidential label and fails.
-///
-/// If this succeeded, it would be a violation of information flow control, since the original
-/// confidential Node would be able to spawn "less confidential / public" Nodes and use their side
-/// effects as a covert channel to exfiltrate confidential data.
+/// Create a test Node with a non public_trusted label, which is then unable to create channels
+/// of any sort, regardless of label.
 #[test]
-fn create_node_less_confidential_label_err() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let initial_label = Label {
-        confidentiality_tags: vec![tag_0],
-        integrity_tags: vec![],
-    };
-    let less_confidential_label = Label {
-        confidentiality_tags: vec![],
-        integrity_tags: vec![],
-    };
-    let initial_label_clone = initial_label.clone();
-    run_node_body(
-        &initial_label,
-        &NodePrivilege::default(),
-        Box::new(move |runtime| {
-            let (_write_handle, read_handle) = runtime.channel_create("", &initial_label_clone)?;
-            let node_configuration = NodeConfiguration {
-                config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
-            };
-            let result = runtime.node_create(
-                "test",
-                &node_configuration,
-                &less_confidential_label,
-                read_handle,
-            );
-            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
-            Ok(())
-        }),
-    );
-}
-
-/// Create a test Node that creates a Node with a more confidential label and succeeds.
-#[test]
-fn create_node_more_confidential_label_ok() {
+fn create_channel_by_nonpublic_node_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone()],
+        integrity_tags: vec![],
+    };
+    let less_confidential_label = Label {
+        confidentiality_tags: vec![],
         integrity_tags: vec![],
     };
     let more_confidential_label = Label {
@@ -509,14 +492,54 @@ fn create_node_more_confidential_label_ok() {
         &initial_label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
+            let result = runtime.channel_create("test-same-label", &initial_label_clone);
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
+            let result = runtime.channel_create("test-less-label", &less_confidential_label);
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
+            let result = runtime.channel_create("test-more-label", &more_confidential_label);
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
+            Ok(())
+        }),
+    );
+}
+
+/// Create a public_untrusted test Node that creates a Node with a more confidential label and
+/// succeeds.
+#[test]
+fn create_node_more_confidential_label_ok() {
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let initial_label = Label::public_untrusted();
+    let more_confidential_label = Label {
+        confidentiality_tags: vec![tag_0.clone()],
+        integrity_tags: vec![],
+    };
+    let even_more_confidential_label = Label {
+        confidentiality_tags: vec![tag_0, tag_1],
+        integrity_tags: vec![],
+    };
+    let initial_label_clone = initial_label.clone();
+    run_node_body(
+        &initial_label,
+        &NodePrivilege::default(),
+        Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create("", &initial_label_clone)?;
             let node_configuration = NodeConfiguration {
-                config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
+                config_type: Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration {
+                    address: "[::]:6502".to_string(),
+                })),
             };
             let result = runtime.node_create(
                 "test",
                 &node_configuration,
                 &more_confidential_label,
+                read_handle,
+            );
+            assert_eq!(Ok(()), result);
+            let result = runtime.node_create(
+                "test",
+                &node_configuration,
+                &even_more_confidential_label,
                 read_handle,
             );
             assert_eq!(Ok(()), result);
@@ -527,7 +550,7 @@ fn create_node_more_confidential_label_ok() {
 
 #[test]
 fn wait_on_channels_immediately_returns_if_any_channel_is_orphaned() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -555,7 +578,7 @@ fn wait_on_channels_immediately_returns_if_any_channel_is_orphaned() {
 
 #[test]
 fn wait_on_channels_blocks_if_all_channels_have_status_not_ready() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -585,7 +608,7 @@ fn wait_on_channels_blocks_if_all_channels_have_status_not_ready() {
 
 #[test]
 fn wait_on_channels_immediately_returns_if_any_channel_is_invalid() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -609,7 +632,7 @@ fn wait_on_channels_immediately_returns_if_any_channel_is_invalid() {
 
 #[test]
 fn wait_on_channels_immediately_returns_if_the_input_list_is_empty() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     run_node_body(
         &label,
         &NodePrivilege::default(),
