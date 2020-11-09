@@ -36,7 +36,7 @@ _have_ to implement this function themselves; for a Node which receives messages
 (a combination of bytes and handles) that can be
 [decoded](https://project-oak.github.io/oak/sdk/doc/oak/io/trait.Decodable.html)
 into a Rust type, there are helper functions in the Oak SDK that make this
-easier.
+easier, and are the idiomatic and recommended way of implementing Applications.
 
 To use these helpers, an Oak Node should be a `struct` of some kind to represent
 the internal state of the Node itself (which may be empty), implement the
@@ -45,58 +45,11 @@ trait for it, then define an
 [`entrypoint_command_handler!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint_command_handler.html)
 so the Oak SDK knows how to instantiate it.
 
-<!-- prettier-ignore-start -->
-[embedmd]:# (../examples/hello_world/module/rust/src/lib.rs Rust /^#\[derive/ /^}$/)
-```Rust
-#[derive(Default)]
-struct Main;
-
-oak::entrypoint_command_handler!(oak_main => Main);
-
-impl oak::CommandHandler for Main {
-    type Command = ConfigMap;
-
-    fn handle_command(&mut self, _command: Self::Command) -> anyhow::Result<()> {
-        let translator_sender_result = oak::io::node_create::<grpc::Invocation>(
-            "translator",
-            &Label::public_untrusted(),
-            &oak::node_config::wasm("translator", "handler"),
-        );
-        let handler_init_sender =
-            oak::io::entrypoint_node_create::<Node>("handler", &Label::public_untrusted(), "app")?;
-        let handler_command_sender = oak::io::send_init(
-            handler_init_sender,
-            translator_sender_result
-                .map(Either::Right)
-                .unwrap_or(Either::Left(())),
-            &Label::public_untrusted(),
-        )?;
-        oak::grpc::server::init_with_sender("[::]:8080", handler_command_sender)?;
-        Ok(())
-    }
-}
-```
-<!-- prettier-ignore-end -->
-
-If the Node needs per-instance state, this Node `struct` is an ideal place to
-store it. For example, the running average example has a `Node` `struct` with a
-running sum and count of samples:
-
-<!-- prettier-ignore-start -->
-[embedmd]:# (../examples/running_average/module/rust/src/lib.rs Rust /.*struct Handler {.*/ /^}/)
-```Rust
-struct Handler {
-    sum: u64,
-    count: u64,
-}
-```
-<!-- prettier-ignore-end -->
-
 The
 [`entrypoint_command_handler!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint_command_handler.html)
-macro in turn defines the exported function using the lower-level
+macro defines the exported function using the lower-level
 [`entrypoint!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint.html)
-macro, which requires a function to run as the node entry point.
+macro (which requires a function to run as the Node entry point).
 
 Under the covers the
 [`entrypoint!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint.html)
@@ -105,26 +58,121 @@ macro converts the provided function body into an
 [taking care](#panic-handling) of
 [handling `panic`s](https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics).
 
-For Nodes that act as gRPC servers (the normal "front door" for an Oak
-Application), the easiest way to use a gRPC service implementation is to:
+For an Oak Application that exposes itself as a gRPC server (the normal "front
+door" for an Oak Application), the easiest way to set things up is to define two
+nodes:
 
+- a main Node
+- a gRPC service handler Node
+
+We will describe them in the next sections, starting with the gRPC service
+handler Node.
+
+#### gRPC Service Handler Node
+
+This Node implements the logic related to handling
+[`GrpcInvocation`](https://project-oak.github.io/oak/sdk/doc/oak/proto/oak/invocation/struct.GrpcInvocation.html)
+messages coming from a gRPC server pseudo-Node.
+
+In order to implement it:
+
+- define a `struct` holding the internal state of the gRPC service, or just an
+  empty `struct` if no state is needed.
 - implement the auto-generated gRPC service trait for the Node handler `struct`.
-- automatically make the handler implement the `CommandHandler` trait by using
-  the
+- define an
   [`impl_dispatcher!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.impl_dispatcher.html)
-  macro, specifying the appropriate auto-generated gRPC dispatcher.
-- create an instance of the handler node via
+  entry, specifying the appropriate auto-generated gRPC dispatcher, in order to
+  automatically make the handler `struct` implement the
+  [`CommandHandler`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html)
+  trait.
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /oak::entrypoint_command_handler!\(handler/ /^}/)
+```Rust
+oak::entrypoint_command_handler!(handler => Handler);
+oak::impl_dispatcher!(impl Handler : TranslatorDispatcher);
+
+#[derive(Default)]
+struct Handler;
+
+impl Translator for Handler {
+    fn translate(&mut self, req: TranslateRequest) -> grpc::Result<TranslateResponse> {
+        info!(
+            "attempt to translate '{}' from {} to {}",
+            req.text, req.from_lang, req.to_lang
+        );
+        let mut rsp = TranslateResponse::default();
+        rsp.translated_text = match req.from_lang.as_str() {
+            "en" => match req.text.as_str() {
+                "WORLDS" => match req.to_lang.as_str() {
+                    "fr" => "MONDES".to_string(),
+                    "it" => "MONDI".to_string(),
+                    _ => {
+                        info!("output language {} not found", req.to_lang);
+                        return Err(grpc::build_status(
+                            grpc::Code::NotFound,
+                            "Output language not found",
+                        ));
+                    }
+                },
+                _ => {
+                    info!(
+                        "input text '{}' in {} not recognized",
+                        req.text, req.from_lang
+                    );
+                    return Err(grpc::build_status(
+                        grpc::Code::NotFound,
+                        "Input text unrecognized",
+                    ));
+                }
+            },
+            _ => {
+                info!("input language '{}' not recognized", req.from_lang);
+                return Err(grpc::build_status(
+                    grpc::Code::NotFound,
+                    "Input language unrecognized",
+                ));
+            }
+        };
+        info!("translation '{}'", rsp.translated_text);
+        Ok(rsp)
+    }
+}
+```
+<!-- prettier-ignore-end -->
+
+#### Main Node
+
+It is common for an Oak Application to define a "main" Node which is the overall
+entry point of the Application, and it is in charge of creating all the other
+Nodes and Channels that are going to be used by the Application. This Node is
+also modelled as a
+[`oak::CommandHandler`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html)
+whose command type is
+[`ConfigMap`](https://project-oak.github.io/oak/sdk/doc/oak/proto/oak/application/struct.ConfigMap.html),
+even though in practice it is expected to receive a single
+[`ConfigMap`](https://project-oak.github.io/oak/sdk/doc/oak/proto/oak/application/struct.ConfigMap.html)
+instance, so the "loop" is only really executed exactly once.
+
+- from the body of the main Node of the Application, create an instance of the
+  handler Node via
   [`entrypoint_node_create`](https://project-oak.github.io/oak/sdk/doc/oak/io/fn.entrypoint_node_create.html)
-  or by manually calling
-  [`node_create`](https://project-oak.github.io/oak/sdk/doc/oak/io/fn.node_create.html),
+  (or by manually calling
+  [`node_create`](https://project-oak.github.io/oak/sdk/doc/oak/io/fn.node_create.html)),
   which returns a
   [`Sender`](https://project-oak.github.io/oak/sdk/doc/oak/io/struct.Sender.html)
   of
   [`GrpcInvocation`](https://project-oak.github.io/oak/sdk/doc/oak/proto/oak/invocation/struct.GrpcInvocation.html)
-  messages to send to the handler.
+  messages to send to the handler Node.
 - call the
   [`oak::grpc::server::init_with_sender`](https://project-oak.github.io/oak/sdk/doc/oak/grpc/server/fn.init_with_sender.html)
-  helper passing it the sender to the newly created handler.
+  helper by passing the newly created
+  [`Sender`](https://project-oak.github.io/oak/sdk/doc/oak/io/struct.Sender.html)
+  to it; this creates a new gRPC server pseudo-Node that sends gRPC invocations
+  to the provided
+  [`Sender`](https://project-oak.github.io/oak/sdk/doc/oak/io/struct.Sender.html),
+  which in this case is connected directly to the gRPC server handler Node that
+  we have previously defined.
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /oak::entrypoint_command_handler!\(oak_main/ /^}/)
@@ -231,10 +279,10 @@ method, and then in turn of
 Taken altogether, these two parts cover all of the boilerplate needed to have a
 Node act as a gRPC server:
 
-- The "main" node creates the handler node implementation and the gRPC server
+- The "main" Node creates the handler Node implementation and the gRPC server
   pseudo-Node, connecting them together
-- The handler node struct implements the methods defined on the service trait,
-  and delegats to the auto-generated `Dispatcher` via the `impl_dispatcher!`
+- The handler Node struct implements the methods defined on the service trait,
+  and delegates to the auto-generated `Dispatcher` via the `impl_dispatcher!`
   macro.
 
 Finally, the third part of the autogenerated code includes a stub implementation
@@ -251,7 +299,7 @@ Application Configuration File.
 
 Each of these steps is described in the following sections.
 
-### Compiling to WASM Module
+### Compiling to Wasm Module
 
 In order to build a WebAssembly module for an Oak WebAssembly Node, written in
 Rust, `cargo build` should be used with `--target=wasm32-unknown-unknown`, as
@@ -295,10 +343,10 @@ translator = { path = "examples/hello_world/bin/translator.wasm" }
 All these steps are implemented as a part of the
 `./scripts/runner run-examples --example-name=hello_world` script.
 
-Oak Application Builder also allows to download Wasm modules from
-[Google Cloud Storage](https://cloud.google.com/storage) (or any other URL). In
-order to do this, the application configuration file should include `external`
-as a module location:
+The Oak Application Builder also allows Wasm modules to be downloaded from an
+external URL, such as [Google Cloud Storage](https://cloud.google.com/storage).
+In order to do this, the application configuration file should include
+`external` as a module location:
 
 ```toml
 name = "hello_world"
@@ -549,7 +597,7 @@ handle for the _write_ half of a different channel, which is then used for
 responses &ndash; so the new Node has a way of _sending_ externally, as well as
 receiving.
 
-For nodes that communicate by exchanging messages that are serialized protocol
+For Nodes that communicate by exchanging messages that are serialized protocol
 buffer messages, the Oak SDK allows encoding channel handles into protobuf
 messages:
 

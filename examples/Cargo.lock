@@ -605,6 +605,7 @@ dependencies = [
  "env_logger",
  "hello_world_grpc",
  "log",
+ "maplit",
  "oak",
  "oak_abi",
  "oak_io",
@@ -613,6 +614,7 @@ dependencies = [
  "oak_utils",
  "prost",
  "tokio",
+ "tonic",
  "translator_common",
 ]
 

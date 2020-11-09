@@ -30,13 +30,13 @@ mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.examples.chat.rs"));
 }
 
-oak::entrypoint_command_handler!(main => Main);
-
 /// Main entrypoint of the chat application.
 ///
 /// This node is in charge of creating the other top-level nodes, but does not process any request.
 #[derive(Default)]
 struct Main;
+
+oak::entrypoint_command_handler!(main => Main);
 
 impl oak::CommandHandler for Main {
     type Command = ConfigMap;
@@ -54,8 +54,6 @@ impl oak::CommandHandler for Main {
     }
 }
 
-oak::entrypoint_command_handler!(router => Router);
-
 /// A node that routes each incoming gRPC invocation to a per-room worker node (either pre-existing,
 /// or newly created) that can handle requests with the label of the incoming request.
 ///
@@ -68,6 +66,8 @@ struct Router {
     /// the `room` entry point of this module.
     rooms: HashMap<Label, Sender<oak::grpc::Invocation>>,
 }
+
+oak::entrypoint_command_handler!(router => Router);
 
 /// Returns whether the provided label is valid in the context of this chat application.
 ///
