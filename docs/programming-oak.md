@@ -656,20 +656,60 @@ framework via the Oak Runtime:
 async fn test_say_hello() {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
+    let runtime_config = oak_tests::runtime_config_wasm(
+        hashmap! {
+            MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_WASM_FILE_NAME, oak_tests::Profile::Debug).expect("Couldn't compile main module"),
+            TRANSLATOR_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(TRANSLATOR_MODULE_MANIFEST, TRANSLATOR_MODULE_WASM_FILE_NAME, oak_tests::Profile::Debug).expect("Couldn't compile translator module"),
+        },
+        MAIN_MODULE_NAME,
+        MAIN_ENTRYPOINT_NAME,
+        ConfigMap::default(),
+    );
+    let runtime = oak_runtime::configure_and_run(runtime_config)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
     let mut client = HelloWorldClient::with_interceptor(channel, interceptor);
 
-    let req = HelloRequest {
-        greeting: "world".into(),
-    };
-    info!("Sending request: {:?}", req);
-
-    let result = client.say_hello(req).await;
-    assert_matches!(result, Ok(_));
-    assert_eq!("HELLO world!", result.unwrap().into_inner().reply);
+    {
+        let req = HelloRequest {
+            greeting: "world".into(),
+        };
+        info!("Sending request: {:?}", req);
+        let result = client.say_hello(req.clone()).await;
+        assert_matches!(result, Ok(_));
+        assert_eq!("HELLO world!", result.unwrap().into_inner().reply);
+    }
+    {
+        let req = HelloRequest {
+            greeting: "WORLDS".into(),
+        };
+        info!("Sending request: {:?}", req);
+        let result = client.lots_of_replies(req).await;
+        assert_matches!(result, Ok(_));
+        // Make sure that the translated response was received.
+        assert_eq!(
+            vec![
+                HelloResponse {
+                    reply: "HELLO WORLDS!".to_string()
+                },
+                HelloResponse {
+                    reply: "BONJOUR MONDES!".to_string()
+                },
+                HelloResponse {
+                    reply: "HELLO AGAIN WORLDS!".to_string()
+                },
+            ],
+            result
+                .unwrap()
+                .into_inner()
+                .collect::<Vec<Result<HelloResponse, tonic::Status>>>()
+                .await
+                .into_iter()
+                .filter_map(Result::ok)
+                .collect::<Vec<HelloResponse>>()
+        );
+    }
 
     runtime.stop();
 }
@@ -678,32 +718,21 @@ async fn test_say_hello() {
 
 This has a little bit of boilerplate to explain:
 
-- The `oak_tests` crate provides a `run_single_module_default` method that is
-  designed for use with single-Node Applications. It assumes that the Node has a
-  main entrypoint called `oak_main`, which it runs in a separate thread.
-- The injection of the gRPC request has to specify the method name (in the call
-  to `oak_tests::grpc_request()`).
+- The
+  [`oak_tests`](https://project-oak.github.io/oak/sdk/doc/oak_tests/index.html)
+  crate provides a
+  [`run_single_module_default`](https://project-oak.github.io/oak/sdk/doc/oak_tests/fn.run_single_module_default.html)
+  method that is designed for use with single-Node Applications. It assumes that
+  the Node has a main entrypoint called `oak_main`, which it runs in a separate
+  thread.
+- It additionally exposes a
+  [`runtime_config_wasm`](https://project-oak.github.io/oak/sdk/doc/oak_tests/fn.runtime_config_wasm.html)
+  method that allows configuring more complex Applications with multiple Nodes,
+  like in this case.
+- The
+  [`oak_tests::public_channel_and_interceptor`](https://project-oak.github.io/oak/sdk/doc/oak_tests/fn.public_channel_and_interceptor.html)
+  method returns a gRPC
+  [`Channel`](https://docs.rs/tonic/0.3.1/tonic/transport/channel/struct.Channel.html)
+  that can be used to send requests to the Application under test
 - The per-Node thread needs to be stopped at the end of the test
-  (`oak_runtime::stop`).
-
-### Testing Multi-Node Applications
-
-It's also possible to test an Oak Application that's built from multiple Nodes,
-by defining an appropriate `ApplicationConfiguration` instance and then
-`oak_runtime::Runtime::configure_and_run(application_configuration, ...)` to
-configure and run the Runtime.
-
-<!-- prettier-ignore-start -->
-[embedmd]:# (../examples/abitest/module_0/rust/tests/integration_test.rs Rust / +let wasm_modules =/ /unable to configure runtime.*/)
-```Rust
-    let wasm_modules = build_wasm().expect("failed to build wasm modules");
-    let config = oak_tests::runtime_config_wasm(
-        wasm_modules,
-        FRONTEND_MODULE_NAME,
-        FRONTEND_ENTRYPOINT_NAME,
-        ConfigMap::default(),
-    );
-    let runtime =
-        oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
-```
-<!-- prettier-ignore-end -->
+  ([`oak_runtime::Runtime::stop`](https://project-oak.github.io/oak/oak_runtime/doc/oak_runtime/struct.Runtime.html#method.stop)).
