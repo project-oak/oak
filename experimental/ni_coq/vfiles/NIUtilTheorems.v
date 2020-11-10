@@ -279,7 +279,19 @@ Theorem set_call_unobs: forall ell s id c,
     ~(lbl (nodes s).[? id] <<L ell) ->
     (state_low_eq ell s (s_set_call s id c)).
 Proof.
-Admitted.
+    intros. unfold fnd in H. split; intros; simpl; subst.
+    (* chan_state_low_proj *)
+    2: unfold s_set_call, chan_state_low_proj; destruct_match; auto.
+    (* node_state_low_proj *)
+    unfold node_state_low_proj, s_set_call.
+    destruct (dec_eq_nid nid id); subst; destruct_match; try congruence; simpl.
+    - (* nid = id, so s_set_call is relevant *)
+        rewrite upd_eq. unfold fnd. unfold low_proj.
+        destruct_match. simpl in *.
+        destruct (lbl <<? ell); congruence.
+    - (* nid <> id, so s_set_call is irrelevant *)
+        rewrite upd_neq; auto.
+Qed.
 
 Theorem state_upd_chan_unobs: forall ell s han ch,
     ~(lbl (chans s).[? han] <<L ell) ->
