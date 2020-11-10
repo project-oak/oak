@@ -21,13 +21,13 @@ translator_common = "=0.1.0"
 [dev-dependencies]
 assert_matches = "*"
 env_logger = "*"
-maplit = "*"
 hello_world_grpc = "=0.1.0"
 log = "*"
+maplit = "*"
 oak_runtime = "=0.1.0"
 oak_tests = "=0.1.0"
-tonic = "*"
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+tonic = "*"
 
 [build-dependencies]
 oak_utils = "*"
