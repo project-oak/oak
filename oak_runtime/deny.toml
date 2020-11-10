@@ -32,6 +32,10 @@ version = "=0.4.23"
 name = "pin-project-internal"
 version = "=0.4.23"
 
+[[bans.skip]]
+name = "cfg-if"
+version = "=0.1.10"
+
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
@@ -42,6 +46,7 @@ allow = [
   "ISC",
   "MIT",
   "OpenSSL",
+  "BSD-3-Clause",
 ]
 copyleft = "deny"
 
