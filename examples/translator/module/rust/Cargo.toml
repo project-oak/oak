@@ -18,6 +18,7 @@ tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
 translator_grpc = "=0.1.0"
 
 [dependencies]
+anyhow = "*"
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"

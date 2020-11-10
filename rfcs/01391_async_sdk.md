@@ -35,7 +35,7 @@ Support for asynchronous Rust consists of the following components:
 
 - executor for futures that runs in an Oak node.
 - async
-  [event loop](https://project-oak.github.io/oak/sdk/doc/oak/fn.run_event_loop.html).
+  [event loop](https://project-oak.github.io/oak/sdk/doc/oak/fn.run_command_loop.html).
 - asynchronous primitives for reading from channels. These are tightly coupled
   to the executor.
 - spawn functionality for concurrent execution of futures.

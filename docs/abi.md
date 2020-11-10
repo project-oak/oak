@@ -253,7 +253,7 @@ If creating the specified Node would violate
 ### `node_label_read`
 
 Returns the label for the calling Node, as a serialized
-[`Label`](/oak/proto/label.proto) protobuf message.
+[`Label`](/oak_abi/proto/label.proto) protobuf message.
 
 If the provided space for label data (`param[0]` and `param[1]`) is not large
 enough, the function returns `BUFFER_TOO_SMALL` and the required size is written
@@ -269,7 +269,7 @@ in the space provided by `param[2]`.
 ### `channel_label_read`
 
 Returns the label for the specified channel, as a serialized
-[`Label`](/oak/proto/label.proto) protobuf message.
+[`Label`](/oak_abi/proto/label.proto) protobuf message.
 
 If the provided space for label data (`param[1]` and `param[2]`) is not large
 enough, the function returns `BUFFER_TOO_SMALL` and the required size is written
@@ -286,7 +286,7 @@ in the space provided by `param[3]`.
 ### `node_privilege_read`
 
 Returns a label indicating the downgrade privilege of the calling Node, as a
-serialized [`Label`](/oak/proto/label.proto) protobuf message.
+serialized [`Label`](/oak_abi/proto/label.proto) protobuf message.
 
 If the provided space for label data (`param[0]` and `param[1]`) is not large
 enough, the function returns `BUFFER_TOO_SMALL` and the required size is written

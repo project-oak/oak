@@ -87,7 +87,7 @@ fn load_signature(signature_path: &str) -> SignatureBundle {
 
 #[test]
 fn wasm_starting_module_without_content_fails() {
-    // Loads an empty module that does not have the necessary entry point, so it should fail
+    // Loads an empty module that does not have the necessary entrypoint, so it should fail
     // immediately.
     let binary = read("testdata/empty.wasm").expect("Couldn't read Wasm file");
 
