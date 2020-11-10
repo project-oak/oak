@@ -36,11 +36,29 @@ Theorem state_upd_node_unwind : forall ell id n s1 s2,
     state_low_eq ell s1 s2 ->
     state_low_eq ell (state_upd_node id n s1) (state_upd_node id n s2).
 Proof.
-  destruct s1, s2; intros *.
-  inversion 1; subst.
-  cbv [state_upd_node state_low_eq state_low_proj set].
-  cbn [RuntimeModel.nodes RuntimeModel.chans].
-Admitted. (* WIP // TODO *)
+    destruct s1, s2; intros *.
+    inversion 1; subst.
+    cbv [state_upd_node state_low_eq state_low_proj set] in *.
+    cbn [RuntimeModel.nodes RuntimeModel.chans] in *.
+    split; try congruence; intros.
+    destruct (dec_eq_nid id nid).
+    - rewrite e in *. specialize (H0 nid).
+    cbv [node_state_low_proj low_proj fnd RuntimeModel.lbl RuntimeModel.obj] in *.
+    simpl in *. erewrite upd_eq. erewrite upd_eq.
+    destruct (nodes nid), (nodes0 nid).
+    pose proof (top_is_top ell).
+    pose proof (top_is_top lbl).
+    pose proof (top_is_top lbl0).
+    destruct (lbl <<? ell), (lbl0 <<? ell); try congruence.
+    all:
+    inversion H0; subst;
+    pose proof (ord_anti ell top ltac:(eauto) ltac:(eauto));
+    congruence.
+    - specialize (H0 nid).
+    cbv [node_state_low_proj low_proj fnd RuntimeModel.lbl 
+        RuntimeModel.obj] in *.
+    simpl in *. erewrite upd_neq; auto. erewrite upd_neq; auto.
+Qed.
 
 Theorem chan_append_unwind: forall ell ch1 ch2 ch1obj ch2obj msg,
     chan_low_eq ell ch1 ch2 ->
