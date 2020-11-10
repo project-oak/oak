@@ -297,18 +297,52 @@ Theorem state_upd_chan_unobs: forall ell s han ch,
     ~(lbl (chans s).[? han] <<L ell) ->
     (state_low_eq ell s (state_upd_chan han ch s)).
 Proof.
-Admitted.
+    intros. unfold fnd in H. split; intros; simpl; subst.
+    (* node_state_low_proj *) congruence.
+    (* chan_state_low_proj *)
+    unfold chan_state_low_proj.
+    destruct (dec_eq_h han0 han); subst.
+    - (* han0 = han *)
+        rewrite upd_eq. unfold fnd. unfold low_proj.
+        destruct_match. simpl in *.
+        destruct (lbl <<? ell); congruence.
+    - (* han0 <> han *)
+        rewrite upd_neq; auto.
+Qed.
 
 Theorem state_chan_append_labeled_unobs: forall ell s han msg,
     ~(lbl (chans s).[? han] <<L ell) ->
     (state_low_eq ell s (state_chan_append_labeled han msg s)).
 Proof.
-Admitted.
+    intros. unfold fnd in H. split; intros; simpl.
+    (* node_state_low_proj *) congruence.
+    (* chan_state_low_proj *)
+    unfold chan_state_low_proj.
+    destruct (dec_eq_h han0 han); subst.
+    - (* han0 = han *)
+        rewrite upd_eq. unfold chan_append_labeled, fnd.
+        destruct (chans s han); cbv [RuntimeModel.obj RuntimeModel.lbl] in *.
+        destruct_match. simpl. destruct (lbl <<? ell).
+        contradiction. congruence. congruence.
+    - (* han0 <> han *)
+        rewrite upd_neq; auto.
+Qed.
 
 Theorem state_upd_node_unobs: forall ell s id n,
     ~(lbl (nodes s).[? id] <<L ell) ->
     (state_low_eq ell s (state_upd_node id n s)).
 Proof.
-Admitted.
+    intros. unfold fnd in H. split; intros; simpl.
+    (* chan_state_low_proj *) 2:congruence.
+    (* node_state_low_proj *)
+    unfold node_state_low_proj.
+    destruct (dec_eq_nid nid id); subst.
+    - (* nid = id *)
+        rewrite upd_eq. unfold fnd, low_proj.
+        destruct_match. simpl in *.
+        destruct (lbl <<? ell); try congruence.
+    - (* nid <> id *)
+        rewrite upd_neq; auto.
+Qed.
   
 End unobservable.
