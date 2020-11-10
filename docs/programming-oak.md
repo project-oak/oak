@@ -49,7 +49,7 @@ The
 [`entrypoint_command_handler!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint_command_handler.html)
 macro defines the exported function using the lower-level
 [`entrypoint!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint.html)
-macro (which requires a function to run as the Node entry point).
+macro (which requires a function to run as the Node entrypoint).
 
 Under the covers the
 [`entrypoint!`](https://project-oak.github.io/oak/sdk/doc/oak/macro.entrypoint.html)
@@ -144,7 +144,7 @@ impl Translator for Handler {
 #### Main Node
 
 It is common for an Oak Application to define a "main" Node which is the overall
-entry point of the Application, and it is in charge of creating all the other
+entrypoint of the Application, and it is in charge of creating all the other
 Nodes and Channels that are going to be used by the Application. This Node is
 also modelled as a
 [`oak::CommandHandler`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html)

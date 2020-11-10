@@ -63,7 +63,7 @@ impl oak::CommandHandler for Main {
 #[derive(Default)]
 struct Router {
     /// Maps each label to a channel to a dedicated worker node for that label, corresponding to
-    /// the `room` entry point of this module.
+    /// the `room` entrypoint of this module.
     rooms: HashMap<Label, Sender<oak::grpc::Invocation>>,
 }
 
