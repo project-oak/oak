@@ -1163,13 +1163,15 @@ impl Runtime {
             )
         };
 
-        let node_infos = self.node_infos.read().unwrap();
-        let node_name = &node_infos.get(&node_id).expect("Invalid node_id").name;
+        {
+            let node_infos = self.node_infos.read().unwrap();
+            let node_name = &node_infos.get(&node_id).expect("Invalid node_id").name;
 
-        debug!(
-            "{:?}: remove_node_id() found open handles on exit: {:?}",
-            node_name, remaining_handles
-        );
+            debug!(
+                "{:?}: remove_node_id() found open handles on exit: {:?}",
+                node_name, remaining_handles
+            );
+        }
 
         for handle in remaining_handles {
             self.channel_close(node_id, handle)
