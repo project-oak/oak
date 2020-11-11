@@ -94,7 +94,7 @@ created gRPC client pseudo-Node.
 An Oak Node that acts as a gRPC server typically implements the
 [`oak::grpc::ServerNode`](https://project-oak.github.io/oak/sdk/doc/oak/grpc/trait.ServerNode.html)
 trait, which is used with the
-[`oak::run_event_loop()`](https://project-oak.github.io/oak/sdk/doc/oak/fn.run_event_loop.html)
+[`oak::run_command_loop()`](https://project-oak.github.io/oak/sdk/doc/oak/fn.run_command_loop.html)
 function to services gRPC requests in a loop, invoking the trait's
 [`invoke()`](https://project-oak.github.io/oak/sdk/doc/oak/grpc/trait.ServerNode.html#tymethod.invoke)
 method for each request.
@@ -107,9 +107,9 @@ world over HTTP, via an explicitly created
 [HTTP server pseudo-Node](concepts.md#pseudo-nodes).
 
 An Oak Node that acts as an HTTP server is used with the
-[`oak::run_event_loop()`](https://project-oak.github.io/oak/sdk/doc/oak/fn.run_event_loop.html)
+[`oak::run_command_loop()`](https://project-oak.github.io/oak/sdk/doc/oak/fn.run_command_loop.html)
 function to services HTTP requests in a loop, calling the
-[`Node::handle_command()`](https://project-oak.github.io/oak/sdk/doc/oak/trait.Node.html#tymethod.handle_command)
+[`CommandHandler::handle_command()`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html#tymethod.handle_command)
 method for each request.
 
 ### `oak::storage` Module
@@ -126,11 +126,6 @@ The
 module holds functionality for retrieving an approximate wall clock time via a
 consensus of [Roughtime](https://roughtime.googlesource.com/roughtime) servers,
 as a `Duration` since the UNIX epoch.
-
-### `oak::proto` Module
-
-The [`oak::proto`](https://project-oak.github.io/oak/sdk/doc/proto/index.html)
-module holds auto-generated submodules for dealing with protocol buffers.
 
 ### `oak::logger` Module
 

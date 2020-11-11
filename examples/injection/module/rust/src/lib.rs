@@ -94,11 +94,10 @@ oak::entrypoint!(grpc_fe<ConfigMap> => |_receiver| {
     let frontend = BlobStoreFrontend::new(
             Sender::new(to_provider_write_handle),
             Receiver::new(from_provider_read_handle));
-    let dispatcher = BlobStoreDispatcher::new(frontend);
     let grpc_channel = oak::grpc::server::init("[::]:8080")
         .expect("could not create gRPC server pseudo-Node");
 
-    oak::run_command_loop(dispatcher, grpc_channel.iter());
+    oak::run_command_loop(frontend, grpc_channel.iter());
 });
 
 oak::entrypoint!(provider<BlobStoreRequest> => |receiver: Receiver<BlobStoreRequest>| {
@@ -140,6 +139,8 @@ enum BlobStoreAccess {
 struct BlobStoreFrontend {
     store: BlobStoreAccess,
 }
+
+oak::impl_dispatcher!(impl BlobStoreFrontend : BlobStoreDispatcher);
 
 impl BlobStoreFrontend {
     pub fn new(

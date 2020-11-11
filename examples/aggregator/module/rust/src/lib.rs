@@ -64,6 +64,8 @@ pub struct AggregatorNode {
     aggregators: HashMap<String, Option<ThresholdAggregator<SparseVector>>>,
 }
 
+oak::impl_dispatcher!(impl AggregatorNode : AggregatorDispatcher);
+
 impl AggregatorNode {
     fn new(invocation_sender: Sender<grpc::Invocation>) -> Self {
         AggregatorNode {
@@ -169,8 +171,7 @@ oak::entrypoint!(aggregator<Either<AggregatorInit, oak::grpc::Invocation>> => |r
 
     // Run event loop and handle incoming invocations.
     let node = AggregatorNode::new(grpc_client_invocation_sender);
-    let dispatcher = AggregatorDispatcher::new(node);
-    oak::run_command_loop(dispatcher, receiver_iterator.filter_map(Either::right));
+    oak::run_command_loop(node, receiver_iterator.filter_map(Either::right));
 });
 
 #[derive(Debug, serde::Deserialize)]
@@ -226,7 +227,7 @@ oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
     // Node creation. This is only allowed if the current Node actually has the
     // appropriate capability (i.e. the correct WebAssembly module hash) as specified by
     // the label component being removed, as set by the client.
-    // TODO(#814): Uncomment and use correct confidentiality labels.
+    // TODO(#1674): Uncomment and use correct confidentiality labels.
     // let label = Label {
     //     confidentiality_tags: vec![Tag {
     //         tag: Some(tag::Tag::TlsEndpointTag(TlsEndpointTag {

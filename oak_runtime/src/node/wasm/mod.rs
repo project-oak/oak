@@ -17,8 +17,8 @@
 //! WebAssembly Node functionality.
 
 use crate::{
-    node::ConfigurationError, LabelReadStatus, NodeMessage, NodePrivilege, NodeReadStatus,
-    RuntimeProxy, SignatureTable,
+    node::{ConfigurationError, NodeIsolation},
+    LabelReadStatus, NodeMessage, NodePrivilege, NodeReadStatus, RuntimeProxy, SignatureTable,
 };
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, trace, warn};
@@ -149,7 +149,7 @@ impl WasmInterface {
 
         let name = String::from_utf8(name_bytes).map_err(|err| {
             error!(
-                "{}: node_create(): Unabel to decode name as a string: {:?}",
+                "{}: node_create(): Unable to decode name as a string: {:?}",
                 self.pretty_name, err
             );
             OakStatus::ErrInvalidArgs
@@ -269,7 +269,7 @@ impl WasmInterface {
 
         let name = String::from_utf8(name_bytes).map_err(|err| {
             error!(
-                "{}: channel_create(): Unabel to decode name as a string: {:?}",
+                "{}: channel_create(): Unable to decode name as a string: {:?}",
                 self.pretty_name, err
             );
             OakStatus::ErrInvalidArgs
@@ -1082,6 +1082,10 @@ fn wasm_node_privilege(
 impl super::Node for WasmNode {
     fn node_type(&self) -> &'static str {
         "wasm"
+    }
+    fn isolation(&self) -> NodeIsolation {
+        // The Wasm sandbox restricts the external communictions from the Node.
+        NodeIsolation::Sandboxed
     }
 
     /// Runs this instance of a Wasm Node.

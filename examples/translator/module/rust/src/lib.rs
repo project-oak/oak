@@ -14,40 +14,44 @@
 // limitations under the License.
 //
 
+use anyhow::Context;
 use log::info;
-use oak::{
-    grpc,
-    io::{Receiver, ReceiverExt},
-};
+use oak::{grpc, Label};
 use oak_abi::proto::oak::application::ConfigMap;
 use translator_common::proto::{
     TranslateRequest, TranslateResponse, Translator, TranslatorDispatcher,
 };
 
-// The `oak_main` entrypoint is used when the Translator acts as a library Node for a
-// wider Application. In this case, invocations arrive directly over the channel received
-// at start-of-day.
-oak::entrypoint!(oak_main<grpc::Invocation> => |receiver: Receiver<grpc::Invocation>| {
-    oak::logger::init_default();
-    let dispatcher = TranslatorDispatcher::new(Node);
-    oak::run_command_loop(dispatcher, receiver.iter());
-});
+oak::entrypoint_command_handler!(oak_main => Main);
 
-// The `grpc_oak_main` entrypoint is used when the Translator acts as a standalone Oak
-// Application. In this case, it creates a gRPC server pseudo-Node on startup, and
-// invocations arrive from the outside world over the channel that connects with the
-// pseudo-Node.
-oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
-    oak::logger::init_default();
-    let dispatcher = TranslatorDispatcher::new(Node);
-    let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-    oak::run_command_loop(dispatcher, grpc_channel.iter());
-});
+#[derive(Default)]
+struct Main;
 
-struct Node;
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
 
-impl Translator for Node {
+    fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
+        let handler_sender = oak::io::entrypoint_node_create::<Handler>(
+            "handler",
+            &Label::public_untrusted(),
+            "app",
+        )
+        .context("could not create handler node")?;
+        oak::grpc::server::init_with_sender("[::]:8080", handler_sender)
+            .context("could not create gRPC server pseudo-Node")?;
+        Ok(())
+    }
+}
+
+// The `handler` entrypoint is also used when the Translator acts as a library Node for a wider
+// Application. In this case, invocations arrive directly over the channel received at start-of-day.
+oak::entrypoint_command_handler!(handler => Handler);
+oak::impl_dispatcher!(impl Handler : TranslatorDispatcher);
+
+#[derive(Default)]
+struct Handler;
+
+impl Translator for Handler {
     fn translate(&mut self, req: TranslateRequest) -> grpc::Result<TranslateResponse> {
         info!(
             "attempt to translate '{}' from {} to {}",

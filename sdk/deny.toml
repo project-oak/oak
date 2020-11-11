@@ -23,19 +23,6 @@ ignore = [
 multiple-versions = "deny"
 wildcards = "allow"
 
-# TODO(#1270): Remove when no longer needed by tonic and rustls.
-[[bans.skip]]
-name = "base64"
-version = "=0.11.0"
-
-[[bans.skip]]
-name = "tokio-rustls"
-version = "=0.13.1"
-
-[[bans.skip]]
-name = "rustls"
-version = "=0.17.0"
-
 [[bans.skip]]
 name = "pin-project"
 version = "=0.4.22"
@@ -44,10 +31,22 @@ version = "=0.4.22"
 name = "pin-project-internal"
 version = "=0.4.22"
 
+[[bans.skip]]
+name = "cfg-if"
+version = "=0.1.10"
+
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
-allow = ["Apache-2.0", "MPL-2.0", "ISC", "MIT", "OpenSSL", "Zlib"]
+allow = [
+  "Apache-2.0",
+  "MPL-2.0",
+  "ISC",
+  "MIT",
+  "OpenSSL",
+  "Zlib",
+  "BSD-3-Clause"
+]
 copyleft = "deny"
 
 [[licenses.clarify]]

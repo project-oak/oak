@@ -188,6 +188,10 @@ Definition node_del_rhans (hs: Ensemble handle)(n: node): node :=
 
 Definition new_chan := Some {| ms := [] |}.
 
+Definition fresh_han s h := s.(chans).[?h] = Labeled channel None top.
+
+Definition fresh_nid s id := s.(nodes).[?id] = Labeled node None top.
+
 Definition s_set_call s id c :=
     match (s.(nodes).[?id]).(obj) with
         | None => s
@@ -256,6 +260,8 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
     | SCreateChan s n nlbl h clbl:
         (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
             (* caller is a real node with label nlbl *)
+        fresh_han s h ->
+            (* the target handle is not in use *)
         nlbl <<L clbl ->
             let s0 := (state_upd_chan_labeled h {|
                 obj := new_chan; lbl := clbl;
@@ -266,6 +272,8 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
     | SCreateNode s n nlbl new_id new_lbl h:
         (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
             (* caller is a real node with label nlbl *)
+        fresh_nid s id ->
+            (* target nid is not in use *)
         nlbl <<L new_lbl ->
             (* create new node with read handle *)
         let s0 := (state_upd_node_labeled new_id {|

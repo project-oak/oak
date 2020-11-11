@@ -21,6 +21,7 @@ pub mod proto {
 use abitest_common::InternalMessage;
 use byteorder::WriteBytesExt;
 use expect::{expect, expect_eq, expect_matches};
+use http::Uri;
 use log::{debug, error, info, trace, warn};
 use oak::{
     grpc,
@@ -31,7 +32,8 @@ use oak::{
 use oak_abi::{
     label::Label,
     proto::oak::application::{
-        ConfigMap, NodeConfiguration, RoughtimeClientConfiguration, StorageProxyConfiguration,
+        node_configuration::ConfigType, ConfigMap, NodeConfiguration, RoughtimeClientConfiguration,
+        StorageProxyConfiguration,
     },
 };
 use prost::Message;
@@ -49,9 +51,16 @@ const BACKEND_MODULE_NAME: &str = "backend_module";
 const BACKEND_ENTRYPOINT_NAME: &str = "backend_oak_main";
 const STORAGE_NAME_PREFIX: &str = "abitest";
 
+// Distinct listening addresses to avoid port-in-use errors
 const HTTP_ADDR: &str = "[::]:8383";
-const ADDITIONAL_TEST_SERVER_ADDR: &str = "[::]:8081";
-const ADDITIONAL_TEST_SERVER_ADDR_2: &str = "[::]:8082";
+const ADDITIONAL_TEST_GRPC_SERVER_ADDR: &str = "[::]:8081";
+const ADDITIONAL_TEST_HTTP_SERVER_ADDR: &str = "[::]:8082";
+const ADDITIONAL_TEST_GRPC_SERVER_ADDR_2: &str = "[::]:8083";
+const ADDITIONAL_TEST_HTTP_SERVER_ADDR_2: &str = "[::]:8084";
+const ADDITIONAL_TEST_FAIL_SERVER_ADDR: &str = "[::]:8085";
+
+const GRPC_CLIENT_ADDRESS: &str = "https://localhost:7878";
+const STORAGE_PROXY_ADDRESS: &str = "https://localhost:7867";
 
 struct FrontendNode {
     backend_out: Vec<oak::WriteHandle>,
@@ -112,10 +121,10 @@ impl FrontendNode {
         let mut backend_in = Vec::with_capacity(BACKEND_COUNT);
         for i in 0..BACKEND_COUNT {
             let (write_handle, read_handle) =
-                oak::channel_create("backend-initial", &Label::public_untrusted())
+                oak::channel_create(&format!("to-backend-{}", i), &Label::public_untrusted())
                     .expect("could not create channel");
             oak::node_create(
-                BACKEND_ENTRYPOINT_NAME,
+                &format!("{}-{}", BACKEND_ENTRYPOINT_NAME, i),
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
                 read_handle,
@@ -127,7 +136,7 @@ impl FrontendNode {
             // Create a back channel, and pass the write half to the backend
             // as the first message on the outbound channel.
             let (write_handle, read_handle) =
-                oak::channel_create("Back", &Label::public_untrusted())
+                oak::channel_create(&format!("from-backend-{}", i), &Label::public_untrusted())
                     .expect("could not create channel");
             oak::channel_write(backend_out[i], &[], &[write_handle.handle])
                 .expect("could not write to channel");
@@ -145,7 +154,7 @@ impl FrontendNode {
             backend_out,
             backend_in,
             storage: oak::storage::Storage::new(&StorageProxyConfiguration {
-                address: "https://localhost:7867".to_string(),
+                address: STORAGE_PROXY_ADDRESS.to_string(),
             }),
             absent_storage: oak::storage::Storage::new(&StorageProxyConfiguration {
                 address: "https://test.invalid:9999".to_string(),
@@ -169,12 +178,13 @@ pub extern "C" fn frontend_oak_main(_in_handle: u64) {
     let _ = std::panic::catch_unwind(|| {
         oak::set_panic_hook();
         let node = FrontendNode::new();
-        let dispatcher = OakAbiTestServiceDispatcher::new(node);
         let grpc_channel =
             oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
-        oak::run_command_loop(dispatcher, grpc_channel.iter());
+        oak::run_command_loop(node, grpc_channel.iter());
     });
 }
+
+oak::impl_dispatcher!(impl FrontendNode : OakAbiTestServiceDispatcher);
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 type TestFn = fn(&mut FrontendNode) -> TestResult;
@@ -397,6 +407,42 @@ impl OakAbiTestService for FrontendNode {
         tests.insert(
             "MisconfiguredRoughtimeClient",
             (Self::test_roughtime_client_misconfig, Count::Unsure),
+        );
+        tests.insert(
+            "GrpcServerPseudoNodePrivilege",
+            (
+                Self::test_grpc_server_pseudo_node_privilege,
+                Count::Unchanged,
+            ),
+        );
+        tests.insert(
+            "HttpServerPseudoNodePrivilege",
+            (
+                Self::test_http_server_pseudo_node_privilege,
+                Count::Unchanged,
+            ),
+        );
+        tests.insert(
+            "GrpcClientPseudoNodePrivilege",
+            (
+                Self::test_grpc_client_pseudo_node_privilege,
+                Count::Unchanged,
+            ),
+        );
+        tests.insert(
+            "RoughtimeClientPseudoNodePrivilege",
+            (
+                Self::test_roughtime_client_pseudo_node_privilege,
+                Count::Unchanged,
+            ),
+        );
+        tests.insert(
+            "StoragePseudoNodePrivilege",
+            (Self::test_storage_pseudo_node_privilege, Count::Unchanged),
+        );
+        tests.insert(
+            "LoggerPseudoNodePrivilege",
+            (Self::test_logger_pseudo_node_privilege, Count::Unchanged),
         );
 
         for (&name, &info) in &tests {
@@ -2097,7 +2143,7 @@ impl FrontendNode {
 
     fn test_grpc_server_second(&mut self) -> TestResult {
         // Create a second gRPC server Node on a different port.
-        let result = oak::grpc::server::init(ADDITIONAL_TEST_SERVER_ADDR);
+        let result = oak::grpc::server::init(ADDITIONAL_TEST_GRPC_SERVER_ADDR);
         expect_matches!(result, Ok(_));
         let invocation_receiver = result.unwrap();
         // Close the only read-handle for the invocation handle, which should
@@ -2120,7 +2166,7 @@ impl FrontendNode {
     // several steps. Test various failure conditions for each of those steps.
     // We can't really check any failures, but hopefully nothing crashes...
     fn test_grpc_server_fail_no_handle(&mut self) -> TestResult {
-        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with data.
         let (wh, rh) = oak::channel_create("Test", &Label::public_untrusted())
@@ -2135,7 +2181,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_server_fail_read_handle(&mut self) -> TestResult {
-        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a single
@@ -2152,7 +2198,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_server_fail_two_handles(&mut self) -> TestResult {
-        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a write
@@ -2169,7 +2215,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_unary_method(&mut self) -> TestResult {
-        let grpc_stub = oak::grpc::client::init("https://localhost:7878")
+        let grpc_stub = oak::grpc::client::init(GRPC_CLIENT_ADDRESS)
             .map(OakAbiTestServiceClient)
             .map_err(|_err| {
                 Box::new(std::io::Error::new(
@@ -2205,7 +2251,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_grpc_client_server_streaming_method(&mut self) -> TestResult {
-        let grpc_stub = oak::grpc::client::init("https://localhost:7878")
+        let grpc_stub = oak::grpc::client::init(GRPC_CLIENT_ADDRESS)
             .map(OakAbiTestServiceClient)
             .map_err(|_err| {
                 Box::new(std::io::Error::new(
@@ -2341,7 +2387,7 @@ impl FrontendNode {
 
     fn test_http_server_create(&mut self) -> TestResult {
         // Create an HTTP server pseudo-Node.
-        let result = oak::http::init(ADDITIONAL_TEST_SERVER_ADDR_2);
+        let result = oak::http::init(ADDITIONAL_TEST_HTTP_SERVER_ADDR);
         expect_matches!(result, Ok(_));
         let invocation_receiver = result.unwrap();
         // Close the only read-handle for the invocation handle, which should
@@ -2373,7 +2419,7 @@ impl FrontendNode {
     // conditions for each of those steps. We can't really check any failures, but hopefully nothing
     // crashes...
     fn test_http_server_fail_no_handle(&mut self) -> TestResult {
-        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with data.
@@ -2389,7 +2435,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_http_server_fail_read_handle(&mut self) -> TestResult {
-        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a single
@@ -2406,7 +2452,7 @@ impl FrontendNode {
         Ok(())
     }
     fn test_http_server_fail_two_handles(&mut self) -> TestResult {
-        let config = oak::node_config::http_server(ADDITIONAL_TEST_SERVER_ADDR);
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
         // Rather than passing the newly-created Node a message with a write handle
         // for an invocation channel in it, instead pass it a message with a write
@@ -2464,6 +2510,148 @@ impl FrontendNode {
         // always fail to get the time.
         let result = roughtime.get_roughtime();
         expect_matches!(result, Err(_));
+        Ok(())
+    }
+
+    fn test_grpc_server_pseudo_node_privilege(&mut self) -> TestResult {
+        // gRPC server pseudo node can be created even with Top confidentiality.
+        // TODO(#1631): Update test if the gRPC server pseudo node's declassification privilege is
+        // lowered to be the top of the user sub-lattice, rather than the global top.
+        let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
+        let config = oak::node_config::grpc_server(ADDITIONAL_TEST_GRPC_SERVER_ADDR_2);
+        let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
+        expect_eq!(
+            Ok(()),
+            oak::node_create("grpc_server", &config, &top_label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
+
+    fn test_http_server_pseudo_node_privilege(&mut self) -> TestResult {
+        // HTTP server pseudo node can be created even with Top confidentiality.
+        // TODO(#1631): Update test if the HTTP server pseudo node's declassification privilege is
+        // lowered to be the top of the user sub-lattice, rather than the global top.
+        let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
+        let config = oak::node_config::http_server(ADDITIONAL_TEST_HTTP_SERVER_ADDR_2);
+        let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
+        expect_eq!(
+            Ok(()),
+            oak::node_create("http_server", &config, &top_label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
+
+    fn test_grpc_client_pseudo_node_privilege(&mut self) -> TestResult {
+        // gRPC client pseudo node can be created with TLS endpoint confidentiality tag matching its
+        {
+            // URI authority.
+            let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
+                GRPC_CLIENT_ADDRESS
+                    .parse::<Uri>()
+                    .unwrap()
+                    .authority()
+                    .unwrap()
+                    .as_str(),
+            ));
+            let config = oak::node_config::grpc_client(GRPC_CLIENT_ADDRESS);
+            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            expect_eq!(Ok(()), oak::node_create("grpc_client", &config, &label, rh));
+            expect_eq!(Ok(()), oak::channel_close(rh.handle));
+            expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        }
+
+        // gRPC client pseudo node can not be created with non-matching TLS endpoint
+        // confidentiality tag.
+        {
+            let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
+                "google.com",
+            ));
+            let config = oak::node_config::grpc_client(GRPC_CLIENT_ADDRESS);
+            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            expect_eq!(
+                Err(OakStatus::ErrPermissionDenied),
+                oak::node_create("grpc_client", &config, &label, rh)
+            );
+            expect_eq!(Ok(()), oak::channel_close(rh.handle));
+            expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        }
+        Ok(())
+    }
+
+    fn test_roughtime_client_pseudo_node_privilege(&mut self) -> TestResult {
+        // Roughtime client pseudo node cannot be created with a non-public label.
+        let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
+            GRPC_CLIENT_ADDRESS
+                .parse::<Uri>()
+                .unwrap()
+                .authority()
+                .unwrap()
+                .as_str(),
+        ));
+        let config = NodeConfiguration {
+            config_type: Some(ConfigType::RoughtimeClientConfig(
+                RoughtimeClientConfiguration {
+                    ..Default::default()
+                },
+            )),
+        };
+        let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+        expect_eq!(
+            Err(OakStatus::ErrPermissionDenied),
+            oak::node_create("roughtime_client", &config, &label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
+
+    fn test_storage_pseudo_node_privilege(&mut self) -> TestResult {
+        // Storage pseudo node cannot be created with a non-public label.
+        let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
+            STORAGE_PROXY_ADDRESS
+                .parse::<Uri>()
+                .unwrap()
+                .authority()
+                .unwrap()
+                .as_str(),
+        ));
+        let config = NodeConfiguration {
+            config_type: Some(ConfigType::StorageConfig(StorageProxyConfiguration {
+                address: STORAGE_PROXY_ADDRESS.to_string(),
+            })),
+        };
+        let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+        expect_eq!(
+            Err(OakStatus::ErrPermissionDenied),
+            oak::node_create("storage", &config, &label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        Ok(())
+    }
+
+    fn test_logger_pseudo_node_privilege(&mut self) -> TestResult {
+        // Logger pseudo node cannot be created with a non-public label.
+        let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
+            GRPC_CLIENT_ADDRESS
+                .parse::<Uri>()
+                .unwrap()
+                .authority()
+                .unwrap()
+                .as_str(),
+        ));
+        let config = oak::node_config::log();
+        let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+        expect_eq!(
+            Err(OakStatus::ErrPermissionDenied),
+            oak::node_create("logger", &config, &label, rh)
+        );
+        expect_eq!(Ok(()), oak::channel_close(rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())
     }
 }

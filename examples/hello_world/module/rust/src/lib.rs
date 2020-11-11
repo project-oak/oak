@@ -37,13 +37,10 @@ impl oak::CommandHandler for Main {
         let translator_sender_result = oak::io::node_create::<grpc::Invocation>(
             "translator",
             &Label::public_untrusted(),
-            &oak::node_config::wasm("translator", "oak_main"),
+            &oak::node_config::wasm("translator", "handler"),
         );
-        let handler_init_sender = oak::io::entrypoint_node_create::<HelloWorldDispatcher<Node>>(
-            "handler",
-            &Label::public_untrusted(),
-            "app",
-        )?;
+        let handler_init_sender =
+            oak::io::entrypoint_node_create::<Node>("handler", &Label::public_untrusted(), "app")?;
         let handler_command_sender = oak::io::send_init(
             handler_init_sender,
             translator_sender_result
@@ -72,7 +69,8 @@ impl oak::WithInit for Node {
     }
 }
 
-oak::entrypoint_command_handler_init!(node => HelloWorldDispatcher<Node>);
+oak::entrypoint_command_handler_init!(node => Node);
+oak::impl_dispatcher!(impl Node : HelloWorldDispatcher);
 
 impl Node {
     fn translate(&self, text: &str, from_lang: &str, to_lang: &str) -> Option<String> {

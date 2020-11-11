@@ -45,10 +45,26 @@ version = "=0.4.23"
 name = "pin-project-internal"
 version = "=0.4.23"
 
+[[bans.skip]]
+name = "cfg-if"
+version = "=0.1.10"
+
+[[bans.skip]]
+name = "lock_api"
+version = "=0.3.4"
+
+[[bans.skip]]
+name = "parking_lot"
+version = "=0.10.2"
+
+[[bans.skip]]
+name = "parking_lot_core"
+version = "=0.7.2"
+
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
-allow = ["Apache-2.0", "MPL-2.0", "ISC", "MIT", "OpenSSL"]
+allow = ["Apache-2.0", "MPL-2.0", "ISC", "MIT", "OpenSSL", "BSD-3-Clause"]
 copyleft = "deny"
 
 [[licenses.clarify]]

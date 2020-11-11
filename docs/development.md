@@ -217,7 +217,7 @@ client code for the Oak Application, to produce a binary that runs on the host
 system. Because the client talks to the Oak Application over gRPC, the client
 can be written in any language that supports gRPC; most of the example clients
 are written in C++, but there are clients in
-[Go](/examples/translator/client/translator.go) and
+[Go](/examples/translator/client/go/translator.go) and
 [Rust](/examples/authentication/client/src/main.rs).
 
 ### Build Runtime Server

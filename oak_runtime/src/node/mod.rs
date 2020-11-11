@@ -32,10 +32,20 @@ mod wasm;
 
 /// Trait encapsulating execution of a Node or pseudo-Node.
 pub trait Node: Send {
-    /// Return a name for this type of Node.
+    /// Returns a name for this type of Node.
     fn node_type(&self) -> &'static str;
 
-    /// Execute the Node, using the provided `Runtime` reference and initial handle.  The method
+    /// Returns a value indicating the isolation of a Node. If a Node is sandboxed (e.g. a Wasm
+    /// node), the sandbox restricts external communcations. Uncontrolled nodes (e.g pseudo Nodes
+    /// that are part of the runtime) have no restrictions enforced on external communications.
+    ///
+    /// Unless a node uses a trusted sandbox to restrict communications this function should always
+    /// return [`NodeIsolation::Uncontrolled`]
+    fn isolation(&self) -> NodeIsolation {
+        NodeIsolation::Uncontrolled
+    }
+
+    /// Executes the Node, using the provided `Runtime` reference and initial handle.  The method
     /// should continue execution until the Node terminates.
     ///
     /// `notify_receiver` receives a notification from the Runtime upon termination. This
@@ -47,9 +57,17 @@ pub trait Node: Send {
         notify_receiver: oneshot::Receiver<()>,
     );
 
+    /// Gets the privilege associated with the Node.
     fn get_privilege(&self) -> NodePrivilege {
         NodePrivilege::default()
     }
+}
+
+/// Indication of the level of isolation of a node.
+#[derive(Debug)]
+pub enum NodeIsolation {
+    Sandboxed,
+    Uncontrolled,
 }
 
 /// A enumeration for errors occuring when creating a new [`Node`] instance.

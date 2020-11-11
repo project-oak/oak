@@ -15,30 +15,80 @@
 //
 
 use assert_matches::assert_matches;
-use hello_world_grpc::proto::{hello_world_client::HelloWorldClient, HelloRequest};
+use hello_world_grpc::proto::{hello_world_client::HelloWorldClient, HelloRequest, HelloResponse};
 use log::info;
+use maplit::hashmap;
+use oak::proto::oak::application::ConfigMap;
+use tokio::stream::StreamExt;
 
-const MODULE_WASM_FILE_NAME: &str = "hello_world.wasm";
+const MAIN_MODULE_NAME: &str = "app";
+const MAIN_ENTRYPOINT_NAME: &str = "oak_main";
+const MAIN_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";
+const MAIN_MODULE_WASM_FILE_NAME: &str = "hello_world.wasm";
+
+const TRANSLATOR_MODULE_NAME: &str = "translator";
+const TRANSLATOR_MODULE_MANIFEST: &str = "../../../translator/module/rust/Cargo.toml";
+const TRANSLATOR_MODULE_WASM_FILE_NAME: &str = "translator.wasm";
 
 // Test invoking the SayHello Node service method via the Oak runtime.
 #[tokio::test(core_threads = 2)]
 async fn test_say_hello() {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
+    let runtime_config = oak_tests::runtime_config_wasm(
+        hashmap! {
+            MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_WASM_FILE_NAME, oak_tests::Profile::Debug).expect("Couldn't compile main module"),
+            TRANSLATOR_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(TRANSLATOR_MODULE_MANIFEST, TRANSLATOR_MODULE_WASM_FILE_NAME, oak_tests::Profile::Debug).expect("Couldn't compile translator module"),
+        },
+        MAIN_MODULE_NAME,
+        MAIN_ENTRYPOINT_NAME,
+        ConfigMap::default(),
+    );
+    let runtime = oak_runtime::configure_and_run(runtime_config)
         .expect("Unable to configure runtime with test wasm!");
 
-    let (channel, interceptor) = oak_tests::channel_and_interceptor().await;
+    let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
     let mut client = HelloWorldClient::with_interceptor(channel, interceptor);
 
-    let req = HelloRequest {
-        greeting: "world".into(),
-    };
-    info!("Sending request: {:?}", req);
-
-    let result = client.say_hello(req).await;
-    assert_matches!(result, Ok(_));
-    assert_eq!("HELLO world!", result.unwrap().into_inner().reply);
+    {
+        let req = HelloRequest {
+            greeting: "world".into(),
+        };
+        info!("Sending request: {:?}", req);
+        let result = client.say_hello(req.clone()).await;
+        assert_matches!(result, Ok(_));
+        assert_eq!("HELLO world!", result.unwrap().into_inner().reply);
+    }
+    {
+        let req = HelloRequest {
+            greeting: "WORLDS".into(),
+        };
+        info!("Sending request: {:?}", req);
+        let result = client.lots_of_replies(req).await;
+        assert_matches!(result, Ok(_));
+        // Make sure that the translated response was received.
+        assert_eq!(
+            vec![
+                HelloResponse {
+                    reply: "HELLO WORLDS!".to_string()
+                },
+                HelloResponse {
+                    reply: "BONJOUR MONDES!".to_string()
+                },
+                HelloResponse {
+                    reply: "HELLO AGAIN WORLDS!".to_string()
+                },
+            ],
+            result
+                .unwrap()
+                .into_inner()
+                .collect::<Vec<Result<HelloResponse, tonic::Status>>>()
+                .await
+                .into_iter()
+                .filter_map(Result::ok)
+                .collect::<Vec<HelloResponse>>()
+        );
+    }
 
     runtime.stop();
 }

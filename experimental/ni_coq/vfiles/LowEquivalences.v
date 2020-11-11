@@ -40,25 +40,45 @@ Definition low_proj {A: Type} ell ( labeled_thing: @labeled A) :=
     match labeled_thing with
         | Labeled _ o ell' => if( ell' <<? ell ) 
             then labeled_thing
-            else Labeled A None ell'
+            else Labeled A None top
     end.
+    (* 
+    Importantly, the label of the secret thing is NOT ell'
+    but instead the top of the information flow lattice 
+    (secret, untrusted) which means that in this formulation,
+    labels are not completely public. Instead, an observer at level
+    ell can see:
+        - whether the label of an object flows to ell, for any object.
+        - the precise label of the object if its label does flow to ell.
+    Putting it another way, the label ell' of a secret object is not observable,
+    but whether or not (ell' <<L ell) is observable.
+
+    This defintion is necessary in order to make the theorem provable while
+    still supporting dynamic creation of nodes and channels. 
+    Noninterference proofs often rely on theorems that roughly say "when a
+    secret step is taken, no public state is updated". (In this code, these
+    theorems often have "unobs" in their names. In the literature these are
+    sometimes called clearance). To create a node
+    or channel, a new labeled object appears, which is effectively a "label
+    change". If labels are public, we can't prove the "unobs" theorems because
+    because the node/channel creation calls DO create new labels and therefore
+    do update public state. 
+    
+    By revealing only partial information about labels to an arbitrary
+    observer, we can show that since secret nodes can only create secret
+    objects, these label changes in the secret part of the lattice are actually
+    hidden.
+    *)
 
 Definition node_low_proj := @low_proj node.
 Definition chan_low_proj := @low_proj channel.
 Definition event_low_proj := @low_proj event.
 
-
 Definition node_state_low_proj (ell: level)(ns: node_state): node_state :=
-    fun id => 
-        if (ns id).(lbl) <<? ell 
-            then (ns id)
-            else low_proj ell (ns id).
+    fun id => low_proj ell (ns id).
 
 Definition chan_state_low_proj (ell: level)(cs: chan_state): chan_state :=
-    fun h => 
-        if (cs h).(lbl) <<? ell
-            then (cs h)
-            else low_proj ell (cs h).
+    fun h => low_proj ell (cs h).
 
 Definition state_low_proj (ell: level)(s: state): state := {|
     nodes := node_state_low_proj ell s.(nodes);
@@ -76,12 +96,15 @@ Definition low_eq {A: Type} ell (x: @labeled A) (y: @labeled A) :=
 Definition node_low_eq := @low_eq node.
 Definition chan_low_eq := @low_eq channel.
 Definition event_low_eq := @low_eq event.
-Definition node_state_low_eq := fun ell ns1 ns2 => 
-    (node_state_low_proj ell ns1) = (node_state_low_proj ell ns2).
+Definition node_state_low_eq := fun ell ns1 ns2 =>
+    forall nid, (node_state_low_proj ell ns1) nid = (node_state_low_proj ell ns2) nid.
 Definition chan_state_low_eq := fun ell cs1 cs2 =>
-    (chan_state_low_proj ell cs1) = (chan_state_low_proj ell cs2).
+    forall han, (chan_state_low_proj ell cs1) han = (chan_state_low_proj ell cs2) han.
 Definition state_low_eq := fun ell s1 s2 =>
-    (state_low_proj ell s1) = (state_low_proj ell s2).
+    (forall nid, (state_low_proj ell s1).(nodes) nid =
+        (state_low_proj ell s2).(nodes) nid) /\
+    (forall han, (state_low_proj ell s1).(chans) han=
+        (state_low_proj ell s2).(chans) han ).
 
 (*============================================================================
 * Trace Low Equivalences

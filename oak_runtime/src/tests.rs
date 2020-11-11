@@ -16,9 +16,17 @@
 
 use super::*;
 use maplit::{hashmap, hashset};
-use oak_abi::proto::oak::application::{
-    node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
+use oak_abi::{
+    label::{
+        authorization_bearer_token_hmac_tag, confidentiality_label, public_key_identity_tag,
+        tls_endpoint_tag, web_assembly_module_signature_tag, web_assembly_module_tag, Label,
+    },
+    proto::oak::application::{
+        node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
+        LogConfiguration, NodeConfiguration,
+    },
 };
+use std::sync::mpsc;
 
 pub fn init_logging() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -38,18 +46,39 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     info!("Create runtime for test");
     let proxy = crate::RuntimeProxy::create_runtime(
         &configuration,
-        &SecureServerConfiguration::default(),
+        &SecureServerConfiguration {
+            grpc_config: Some(GrpcConfiguration {
+                grpc_server_tls_identity: Some(Identity::from_pem(
+                    include_str!("../../examples/certs/local/local.pem"),
+                    include_str!("../../examples/certs/local/local.key"),
+                )),
+                grpc_client_root_tls_certificate: Some(
+                    crate::config::load_certificate(&include_str!(
+                        "../../examples/certs/local/ca.pem"
+                    ))
+                    .unwrap(),
+                ),
+                oidc_client_info: None,
+            }),
+            http_config: None,
+        },
         &signature_table,
     );
 
     struct TestNode {
         node_body: Box<NodeBody>,
         node_privilege: NodePrivilege,
+        result_sender: mpsc::SyncSender<Result<(), OakStatus>>,
     };
 
     impl crate::node::Node for TestNode {
         fn node_type(&self) -> &'static str {
             "test"
+        }
+        fn isolation(&self) -> NodeIsolation {
+            // Even though this node is not actually sandboxed, we are simulating a Wasm node during
+            // testing.
+            NodeIsolation::Sandboxed
         }
         fn run(
             self: Box<Self>,
@@ -57,7 +86,10 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
             _handle: oak_abi::Handle,
             _notify_receiver: oneshot::Receiver<()>,
         ) {
-            let _ = (self.node_body)(runtime);
+            // Run the test body.
+            let result = (self.node_body)(runtime);
+            // Make the result of the test visible outside of this thread.
+            self.result_sender.send(result).unwrap();
         }
 
         fn get_privilege(&self) -> NodePrivilege {
@@ -65,10 +97,13 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         }
     }
 
+    let (result_sender, result_receiver) = mpsc::sync_channel(1);
+
     // Create a new Oak node.
     let node_instance = TestNode {
         node_body,
         node_privilege: node_privilege.clone(),
+        result_sender,
     };
     let (_write_handle, read_handle) = proxy
         .channel_create("Initial", &Label::public_untrusted())
@@ -77,6 +112,12 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     proxy
         .node_register(Box::new(node_instance), "test", node_label, read_handle)
         .expect("Could not create Oak node!");
+
+    // Wait for the test Node to complete execution before terminating the Runtime.
+    let result_value = result_receiver
+        .recv()
+        .expect("test node disconnected, probably due to panic/assert fail in test");
+    assert_eq!(result_value, Ok(()));
 
     info!("Stop runtime..");
     proxy.runtime.stop();
@@ -387,10 +428,10 @@ fn create_channel_with_more_confidential_label_from_non_public_node_with_privile
     );
 }
 
-/// Create a test Node that creates a Node with the same label and succeeds.
+/// Create a test Node that creates a Node with the same public untrusted label and succeeds.
 #[test]
 fn create_node_same_label_ok() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -411,7 +452,7 @@ fn create_node_same_label_ok() {
 /// Create a test Node that creates a Node with an invalid configuration and fails.
 #[test]
 fn create_node_invalid_configuration_err() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -428,50 +469,18 @@ fn create_node_invalid_configuration_err() {
     );
 }
 
-/// Create a test Node that creates a Node with a less confidential label and fails.
-///
-/// If this succeeded, it would be a violation of information flow control, since the original
-/// confidential Node would be able to spawn "less confidential / public" Nodes and use their side
-/// effects as a covert channel to exfiltrate confidential data.
+/// Create a test Node with a non public_trusted label, which is then unable to create channels
+/// of any sort, regardless of label.
 #[test]
-fn create_node_less_confidential_label_err() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let initial_label = Label {
-        confidentiality_tags: vec![tag_0],
-        integrity_tags: vec![],
-    };
-    let less_confidential_label = Label {
-        confidentiality_tags: vec![],
-        integrity_tags: vec![],
-    };
-    let initial_label_clone = initial_label.clone();
-    run_node_body(
-        &initial_label,
-        &NodePrivilege::default(),
-        Box::new(move |runtime| {
-            let (_write_handle, read_handle) = runtime.channel_create("", &initial_label_clone)?;
-            let node_configuration = NodeConfiguration {
-                config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
-            };
-            let result = runtime.node_create(
-                "test",
-                &node_configuration,
-                &less_confidential_label,
-                read_handle,
-            );
-            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
-            Ok(())
-        }),
-    );
-}
-
-/// Create a test Node that creates a Node with a more confidential label and succeeds.
-#[test]
-fn create_node_more_confidential_label_ok() {
+fn create_channel_by_nonpublic_node_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone()],
+        integrity_tags: vec![],
+    };
+    let less_confidential_label = Label {
+        confidentiality_tags: vec![],
         integrity_tags: vec![],
     };
     let more_confidential_label = Label {
@@ -483,14 +492,54 @@ fn create_node_more_confidential_label_ok() {
         &initial_label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
+            let result = runtime.channel_create("test-same-label", &initial_label_clone);
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
+            let result = runtime.channel_create("test-less-label", &less_confidential_label);
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
+            let result = runtime.channel_create("test-more-label", &more_confidential_label);
+            assert_eq!(Err(OakStatus::ErrPermissionDenied), result);
+            Ok(())
+        }),
+    );
+}
+
+/// Create a public_untrusted test Node that creates a Node with a more confidential label and
+/// succeeds.
+#[test]
+fn create_node_more_confidential_label_ok() {
+    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let initial_label = Label::public_untrusted();
+    let more_confidential_label = Label {
+        confidentiality_tags: vec![tag_0.clone()],
+        integrity_tags: vec![],
+    };
+    let even_more_confidential_label = Label {
+        confidentiality_tags: vec![tag_0, tag_1],
+        integrity_tags: vec![],
+    };
+    let initial_label_clone = initial_label.clone();
+    run_node_body(
+        &initial_label,
+        &NodePrivilege::default(),
+        Box::new(move |runtime| {
             let (_write_handle, read_handle) = runtime.channel_create("", &initial_label_clone)?;
             let node_configuration = NodeConfiguration {
-                config_type: Some(ConfigType::LogConfig(LogConfiguration {})),
+                config_type: Some(ConfigType::GrpcServerConfig(GrpcServerConfiguration {
+                    address: "[::]:6502".to_string(),
+                })),
             };
             let result = runtime.node_create(
                 "test",
                 &node_configuration,
                 &more_confidential_label,
+                read_handle,
+            );
+            assert_eq!(Ok(()), result);
+            let result = runtime.node_create(
+                "test",
+                &node_configuration,
+                &even_more_confidential_label,
                 read_handle,
             );
             assert_eq!(Ok(()), result);
@@ -501,7 +550,7 @@ fn create_node_more_confidential_label_ok() {
 
 #[test]
 fn wait_on_channels_immediately_returns_if_any_channel_is_orphaned() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -529,7 +578,7 @@ fn wait_on_channels_immediately_returns_if_any_channel_is_orphaned() {
 
 #[test]
 fn wait_on_channels_blocks_if_all_channels_have_status_not_ready() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -559,7 +608,7 @@ fn wait_on_channels_blocks_if_all_channels_have_status_not_ready() {
 
 #[test]
 fn wait_on_channels_immediately_returns_if_any_channel_is_invalid() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     let label_clone = label.clone();
     run_node_body(
         &label,
@@ -583,7 +632,7 @@ fn wait_on_channels_immediately_returns_if_any_channel_is_invalid() {
 
 #[test]
 fn wait_on_channels_immediately_returns_if_the_input_list_is_empty() {
-    let label = test_label();
+    let label = Label::public_untrusted();
     run_node_body(
         &label,
         &NodePrivilege::default(),
@@ -593,4 +642,104 @@ fn wait_on_channels_immediately_returns_if_the_input_list_is_empty() {
             Ok(())
         }),
     );
+}
+
+#[test]
+fn downgrade_multiple_labels_using_top_privilege() {
+    init_logging();
+    let top_privilege = NodePrivilege::top_privilege();
+
+    let wasm_tag = web_assembly_module_tag(&[1, 2, 3]);
+    let signature_tag = web_assembly_module_signature_tag(&[1, 2, 3]);
+    let bearer_token_tag = authorization_bearer_token_hmac_tag(&[1, 2, 3]);
+    let public_key_identity_tag = public_key_identity_tag(vec![1, 2, 3]);
+    let tls_endpoint_tag = tls_endpoint_tag("google.com");
+
+    let wasm_label = confidentiality_label(wasm_tag.clone());
+    let signature_label = confidentiality_label(signature_tag.clone());
+    let bearer_token_label = confidentiality_label(bearer_token_tag.clone());
+    let public_key_identity_label = confidentiality_label(public_key_identity_tag.clone());
+    let tls_endpoint_label = confidentiality_label(tls_endpoint_tag.clone());
+    let mixed_label = Label {
+        confidentiality_tags: vec![
+            wasm_tag,
+            signature_tag,
+            bearer_token_tag,
+            public_key_identity_tag,
+            tls_endpoint_tag,
+        ],
+        integrity_tags: vec![],
+    };
+
+    // The top privilege can downgrade any label to "public".
+    assert!(top_privilege
+        .downgrade_label(&wasm_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&signature_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&bearer_token_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&public_key_identity_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&tls_endpoint_label)
+        .flows_to(&Label::public_untrusted()));
+    assert!(top_privilege
+        .downgrade_label(&mixed_label)
+        .flows_to(&Label::public_untrusted()));
+}
+
+#[test]
+fn downgrade_tls_label_using_tls_privilege() {
+    init_logging();
+    let tls_endpoint_tag_1 = tls_endpoint_tag("google.com");
+    let tls_endpoint_tag_2 = tls_endpoint_tag("localhost");
+    let tls_privilege = NodePrivilege {
+        can_declassify_confidentiality_tags: hashset! { tls_endpoint_tag_1.clone() },
+        can_endorse_integrity_tags: hashset! {},
+    };
+
+    let tls_endpoint_label_1 = confidentiality_label(tls_endpoint_tag_1.clone());
+    let tls_endpoint_label_2 = confidentiality_label(tls_endpoint_tag_2.clone());
+    let mixed_tls_endpoint_label = Label {
+        confidentiality_tags: vec![tls_endpoint_tag_1, tls_endpoint_tag_2],
+        integrity_tags: vec![],
+    };
+
+    // Can downgrade the label with the same TLS endpoint tag.
+    assert!(tls_privilege
+        .downgrade_label(&tls_endpoint_label_1)
+        .flows_to(&Label::public_untrusted()));
+    // Cannot downgrade the label with a different TLS endpoint tag.
+    assert!(!tls_privilege
+        .downgrade_label(&tls_endpoint_label_2)
+        .flows_to(&Label::public_untrusted()));
+    // Can partially downgrade the combined label.
+    assert!(tls_privilege
+        .downgrade_label(&mixed_tls_endpoint_label)
+        .flows_to(&tls_endpoint_label_2));
+    assert!(!tls_privilege
+        .downgrade_label(&mixed_tls_endpoint_label)
+        .flows_to(&tls_endpoint_label_1));
+}
+
+#[test]
+fn downgrade_wasm_label_using_signature_privilege_does_not_do_aything() {
+    init_logging();
+    let signature_tag = web_assembly_module_signature_tag(&[1, 2, 3]);
+    let signature_privilege = NodePrivilege {
+        can_declassify_confidentiality_tags: hashset! { signature_tag },
+        can_endorse_integrity_tags: hashset! {},
+    };
+
+    let wasm_tag = web_assembly_module_tag(&[1, 2, 3]);
+    let wasm_label = confidentiality_label(wasm_tag);
+
+    // Signature privilege cannot downgrade a Wasm confidentiality label.
+    assert!(!signature_privilege
+        .downgrade_label(&wasm_label)
+        .flows_to(&Label::public_untrusted()));
 }
