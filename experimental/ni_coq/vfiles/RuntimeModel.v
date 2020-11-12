@@ -4,7 +4,13 @@ Require Import Coq.Sets.Ensembles.
 From OakIFC Require Import
     Lattice
     Parameters
-    GenericMap.
+    GenericMap
+    State
+    ModelSemUtils.
+
+(* This file is the top-level model of the Oak runtime 
+* where labels are considered partially secret 
+*)
 
 (* RecordUpdate is a conveninece feature that provides functional updates for
 * records with notation: https://github.com/tchajed/coq-record-update *)
@@ -14,7 +20,6 @@ From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 Local Open Scope map_scope.
 
-(* This file is the top-level model of the Oak runtime *)
 
 (* Ensembles don't have implicit type params and these lines fix that *)
 Arguments Ensembles.In {U}.
@@ -22,181 +27,8 @@ Arguments Ensembles.Add {U}.
 Arguments Ensembles.Subtract {U}.
 Arguments Ensembles.Singleton {U}.
 Arguments Ensembles.Union {U}.
-Arguments Ensembles.Setminus{U}.
-Arguments Ensembles.Included{U}.
-
-(*============================================================================
- Commands, State, Etc.
-============================================================================*)
-(* These are messages sent over channels *)
-Record message := Message {
-    bytes : data;            (* the data part of the message *)
-    rhs : Ensemble handle;   (* a set of read handles being sent *)
-    whs : Ensemble handle;   (* a set of write handles being sent *)
-}.
-(* etamessage just enumerates the fields of the record, as provided
-* by https://github.com/tchajed/coq-record-update *)
-(* When a new field is added to a record, be sure to add it here as well *)
-Instance etamessage : Settable _ := settable! Message<bytes; rhs; whs>.
-
-(* 
-messages model the messages in the oak impl. found in
-oak/oak_io/src/lib.rs. Note that unlike in the implementation,
-this model separates read and write handles into two different types
-*)
-
-Record channel := Chan {
-    ms: list message;    (* list of pending messages in channel *)
-}.
-Instance etachannel : Settable _ := settable! Chan<ms>.
-
-
-(* ABI Calls *)
-Inductive call: Type :=
-    | WriteChannel (h: handle)(m: message): call
-        (* write a message m,
-        * a set of read handles rhs, and 
-        * a set of write handles whs
-        * into the channel pointed to by h unless this would
-        * cause an IFC violation *)
-    | ReadChannel (h: handle): call
-        (* read the top message and all the handles from the
-        * channel into the caller, unless this would cause an IFC violation *)
-    | CreateChannel (lbl: level): call
-        (* create a new channel with label lbl, unless IFC violation *)
-    | CreateNode (lbl: level)(h: handle): call
-        (* create a new node with label lbl, unless IFC violation *)
-    | Internal: call. (* this is any action done by the node other than some
-                         ABI call, it is "internal" to the node because it does
-                         not affect the rest of the system*)
-(* TODO wait_on_channels, channel_close *)
-
-Record node := Node {
-    read_handles: Ensemble handle;
-    write_handles: Ensemble handle;
-    ncall: call
-}.
-Instance etanode: Settable _ :=
-    settable! Node<read_handles; write_handles; ncall>.
-
-Instance Knid: KeyT := {
-    t := node_id; 
-    eq_dec := dec_eq_nid;
-}.
-Instance Khandle: KeyT := {
-    t := handle;
-    eq_dec := dec_eq_h;
-}.
-
-Record labeled {A: Type} := Labeled {
-    obj: option A;
-    lbl: level;
-}.
-
-Definition node_l := @labeled node.
-Definition channel_l := @labeled channel.
-
-Instance etalabeled_chan : Settable _ := settable! (Labeled channel)<obj; lbl >.
-Instance etalabeled_node : Settable _ := settable! (Labeled node)<obj ; lbl >.
-
-Definition node_state := tg_map Knid (@labeled node).
-Definition chan_state := tg_map Khandle (@labeled channel).
-Record state := State {
-    nodes: node_state;
-    chans: chan_state;
-}.
-
-Instance etastate: Settable _ :=
-    settable! State<nodes; chans>.
-
-(*============================================================================
-* Utils
-============================================================================*)
-Definition chan_append (c: channel)(m: message): channel :=
-    c <|ms := c.(ms) ++ [m]|>.
-
-(* this is used in channel read where there is a premise
-* that checks that the channel is not empty *)
-Definition chan_pop (c: channel): channel :=
-    c <| ms := match c.(ms) with
-            | nil => nil
-            | m :: ms' => ms'
-        end |>.
-
-Definition msg_is_head (ch: channel)(m: message): Prop :=
-    match ch.(ms) with
-        | [] => False
-        | m' :: ms' => m' = m
-    end. 
-
-Definition node_get_hans (n: node)(m: message): node :=
-    n <| read_handles := (Union n.(read_handles) m.(rhs)) |>
-      <| write_handles := (Union n.(write_handles) m.(whs)) |>.
-
-Definition state_upd_node (nid: node_id)(n: node)(s: state): state :=
-    (* n_l is a (labeled node) with the same label as the old one,
-    but the contents updated to n *)
-    let n_l := s.(nodes).[? nid] <| obj  := Some n |> in
-    s <| nodes := s.(nodes) .[ nid <- n_l ] |>.
-
-Definition state_upd_node_labeled (nid: node_id )(n_l: node_l)(s: state): state :=
-    s<| nodes := s.(nodes).[nid <- n_l] |>.
-
-Definition state_upd_chan (h: handle)(ch: channel)(s: state): state :=
-    let ch_l := s.(chans).[? h] <| obj := Some ch |> in
-    s <| chans := s.(chans) .[ h <- ch_l ] |>.
-
-Definition state_upd_chan_labeled (h: handle)(ch_l: channel_l)(s: state): state :=
-    s <| chans := s.(chans) .[ h <- ch_l ] |>.
-
-(* 
-    A node is allowed to write to a handle with a higher label than the node.
-    As a result, the node may not be allowed to tell whether the handle
-    maps to a real channel or not. To hide the state of the channel,
-    a message is appended when the handle maps to a real channel, but if
-    there is no channel with the given handle, the update does nothing.
-*)
-Definition chan_append_labeled (h: handle)(m: message)(s: state)  :=
-    let old_chl := s.(chans).[? h] in
-    match old_chl.(obj) with
-        |  None => old_chl
-        |  Some ch => old_chl <| obj := Some (chan_append ch m) |>
-    end.
-
-(* I suspect it may be easier to do proofs of things like the unwinding
-theorem about this function from states to states rather than
-trying to reason about chan_append_labeled (which is state-dependent)
-separately from the place where the state update happens
-
-If it does not turn out to be easier, perhaps this improves
-readability anyway.
-*)
-Definition state_chan_append_labeled (h: handle)(m: message)(s: state) :=
-    state_upd_chan_labeled h (chan_append_labeled h m s) s.
-
-Definition node_add_rhan (h: handle)(n: node): node:=
-    n <| read_handles := Ensembles.Add n.(read_handles) h |>.
-
-Definition node_add_whan (h: handle)(n: node): node :=
-    n <| write_handles := Ensembles.Add n.(write_handles) h |>.
-
-Definition node_del_rhan (h: handle)(n: node): node :=
-    n <| read_handles := Ensembles.Subtract n.(read_handles) h |>.
-
-Definition node_del_rhans (hs: Ensemble handle)(n: node): node :=
-    n <| read_handles := Ensembles.Setminus n.(read_handles) hs |>.
-
-Definition new_chan := Some {| ms := [] |}.
-
-Definition fresh_han s h := s.(chans).[?h] = Labeled channel None top.
-
-Definition fresh_nid s id := s.(nodes).[?id] = Labeled node None top.
-
-Definition s_set_call s id c :=
-    match (s.(nodes).[?id]).(obj) with
-        | None => s
-        | Some n => state_upd_node id (n <|ncall := c|>) s
-    end.
+Arguments Ensembles.Setminus {U}.
+Arguments Ensembles.Included {U}.
 
 (*============================================================================
 * Single Call Semantics

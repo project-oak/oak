@@ -183,6 +183,7 @@ Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
         (step_system_ev_multi t2_init t2n) /\
         (trace_low_eq ell t1n t2n)).
 
+(* TODO move this and next 2 theorems to NIUtilTheorems *)
 Theorem state_low_eq_parts: forall ell s1 s2,
     node_state_low_eq ell s1.(nodes) s2.(nodes) -> 
     chan_state_low_eq ell s1.(chans) s2.(chans) ->
