@@ -564,17 +564,9 @@ impl Runtime {
         // depending on the work that the Node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
         let node_stoppers = self.take_node_stoppers();
-        for (node_id, node_stopper_opt) in node_stoppers {
+        for node_stopper_opt in node_stoppers {
             if let Some(node_stopper) = node_stopper_opt {
-                let node_name = {
-                    let node_infos = self.node_infos.read().unwrap();
-                    // Clone the node_name so we don't block the node_infos RwLock
-                    &node_infos
-                        .get(&node_id)
-                        .expect("Invalid node_id")
-                        .name
-                        .clone()
-                };
+                let node_name = node_stopper.node_name.clone();
                 info!("stopping node {:?} ...", node_name);
                 if let Err(err) = node_stopper.stop_node() {
                     error!("could not stop node {:?}: {:?}", node_name, err);
@@ -585,14 +577,14 @@ impl Runtime {
     }
 
     /// Move all of the [`NodeStopper`] objects out of the `node_infos` tracker and return them.
-    fn take_node_stoppers(&self) -> Vec<(NodeId, Option<NodeStopper>)> {
+    fn take_node_stoppers(&self) -> Vec<Option<NodeStopper>> {
         let mut node_infos = self
             .node_infos
             .write()
             .expect("could not acquire lock on node_infos");
         node_infos
             .iter_mut()
-            .map(|(id, info)| (*id, info.node_stopper.take()))
+            .map(|(_, info)| info.node_stopper.take())
             .collect()
     }
 
