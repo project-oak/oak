@@ -9,3 +9,7 @@ Definition trace_semanticsT {TraceEltT: Type} :=
 
 Definition trace_low_eqT {TraceEltT: Type} :=
     level -> (@trace TraceEltT) -> (@trace TraceEltT) -> Prop.
+
+Definition low_proj_t {A: Type}: Type := level -> A -> A.
+
+Definition low_eq_t {A: Type}: Type := level -> A -> A -> Prop.

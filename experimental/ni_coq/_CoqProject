@@ -9,6 +9,7 @@ vfiles/RuntimeModel.v
 vfiles/Events.v
 vfiles/EvAugSemantics.v
 vfiles/LowEquivalences.v
+vfiles/TraceLowEq.v
 vfiles/Tactics.v
 vfiles/TraceTheorems.v
 vfiles/NIUtilTheorems.v

@@ -511,11 +511,11 @@ Proof.
 Qed.
 
 Theorem possibilistic_ni_unwind_t: forall ell t1 t2 t1',
-(trace_low_eq ell t1 t2) ->
+(trace_low_eq_pni ell t1 t2) ->
 (step_system_ev_t t1 t1') ->
 (exists t2',
     (step_system_ev_t t2 t2') /\
-    (trace_low_eq ell t1' t2')).
+    (trace_low_eq_pni ell t1' t2')).
 Proof.
     intros. 
     inversion H; crush.
