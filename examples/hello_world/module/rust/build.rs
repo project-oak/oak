@@ -15,8 +15,12 @@
 //
 
 fn main() {
-    oak_utils::compile_protos(
+    oak_utils::compile_protos_with_options(
         &["../../proto/hello_world.proto"],
         &["../../proto", "../../../../third_party"],
+        oak_utils::ProtoOptions {
+            experimental_async: true,
+            ..Default::default()
+        },
     );
 }

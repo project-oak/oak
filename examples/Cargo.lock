@@ -618,11 +618,13 @@ dependencies = [
  "assert_matches",
  "either",
  "env_logger",
+ "futures",
  "hello_world_grpc",
  "log",
  "maplit",
  "oak",
  "oak_abi",
+ "oak_async",
  "oak_io",
  "oak_runtime",
  "oak_tests",
@@ -1163,6 +1165,18 @@ dependencies = [
  "prost-build",
  "prost-types",
  "serde",
+]
+
+[[package]]
+name = "oak_async"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "futures-core",
+ "log",
+ "oak",
+ "oak_abi",
+ "prost",
 ]
 
 [[package]]

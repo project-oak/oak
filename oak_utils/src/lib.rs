@@ -231,7 +231,7 @@ fn generate_service_enum(enum_name: &Ident, service: &prost_build::Service) -> T
         let input_type = type_ident(&method.input_type);
         let output_type = type_ident(&method.output_type);
         let input_type = if method.client_streaming {
-            quote!(::oak_async::ChannelReadStream<#input_type>)
+            quote!(::oak_async::grpc::GrpcRequestStream<#input_type>)
         } else {
             quote!(#input_type)
         };

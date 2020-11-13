@@ -39,6 +39,7 @@ members = [
 # Oak.
 oak = { path = "../sdk/rust/oak" }
 oak_abi = { path = "../oak_abi" }
+oak_async = { path = "../experimental/oak_async" }
 oak_client = { path = "../oak_client" }
 oak_derive = { path = "../oak_derive" }
 oak_io = { path = "../oak_io" }

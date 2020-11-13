@@ -117,14 +117,14 @@ impl ChannelResponseWriter {
 
     /// Close out the gRPC method invocation with the given final result.
     pub fn close(&self, result: Result<()>) -> std::result::Result<(), OakError> {
-        // Build a final GrpcResponse message wrapper and serialize it into the
-        // channel.
-        let mut grpc_rsp = GrpcResponse::default();
-        grpc_rsp.last = true;
         if let Err(status) = result {
+            // Build a final GrpcResponse message wrapper and serialize it into the
+            // channel.
+            let mut grpc_rsp = GrpcResponse::default();
+            grpc_rsp.last = true;
             grpc_rsp.status = Some(status);
+            self.sender.send(&grpc_rsp)?;
         }
-        self.sender.send(&grpc_rsp)?;
         self.sender.close()?;
         Ok(())
     }
