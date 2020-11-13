@@ -1,11 +1,10 @@
 From OakIFC Require Import
     Lattice
     Parameters
-    RuntimeModel.
+    State.
 Require Import Coq.Lists.List.
 Import ListNotations.
 
-(* This file contains  *)
 
 Inductive event: Type :=
     | InEv (m: message): event
@@ -13,5 +12,12 @@ Inductive event: Type :=
     | NCreateEv: event.
 (* note that messages include the bytes and handles sent via channels *)
 (* eventually, downgrades will also be represented by events *)
+
+Declare Scope ev_notation.
+Local Open Scope ev_notation.
+Notation "ell '--->' msg":= (Labeled event (Some (OutEv msg)) ell) (at level 10) : ev_notation.
+Notation "ell '<---' msg":= (Labeled event (Some (InEv msg)) ell) (at level 10): ev_notation.
+Notation "ell '---'":= (Labeled event None ell) (at level 10) : ev_notation.
+Notation "'--' ell '--'" := (Labeled event (Some NCreateEv) ell) (at level 10) : ev_notation.
 
 Definition event_l := @labeled event.

@@ -2,6 +2,9 @@
 vfiles/Lattice.v 
 vfiles/Parameters.v 
 vfiles/GenericMap.v
+vfiles/State.v
+vfiles/ModelSemUtils.v
+vfiles/ModelTypes.v
 vfiles/RuntimeModel.v
 vfiles/Events.v
 vfiles/EvAugSemantics.v
@@ -10,4 +13,5 @@ vfiles/Tactics.v
 vfiles/TraceTheorems.v
 vfiles/NIUtilTheorems.v
 vfiles/Unwind.v
+vfiles/PossibilisticNI_def.v
 vfiles/PossibilisticNI.v

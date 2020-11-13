@@ -1,8 +1,11 @@
-From OakIFC Require Import State.
+Require Import List.
+From OakIFC Require Import
+    Parameters
+    Lattice.
 
-Definition trace {TraceEltT} := list @TraceEltT.
+Definition trace {TraceEltT: Type} := @list TraceEltT.
 Definition trace_semanticsT {TraceEltT: Type} :=
-    trace -> trace -> Prop.
+    (@trace TraceEltT) -> (@trace TraceEltT) -> Prop.
 
 Definition trace_low_eqT {TraceEltT: Type} :=
-    level -> trace -> trace -> Prop.
+    level -> (@trace TraceEltT) -> (@trace TraceEltT) -> Prop.

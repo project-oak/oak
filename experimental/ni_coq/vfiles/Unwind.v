@@ -4,12 +4,12 @@ From OakIFC Require Import
     Lattice
     Parameters
     GenericMap
-    RuntimeModel
-    EvAugSemantics
+    State
     Events
+    ModelSemUtils
     LowEquivalences
-    Tactics
-    NIUtilTheorems.
+    NIUtilTheorems
+    Tactics.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 Local Open Scope map_scope.
@@ -39,11 +39,11 @@ Proof.
     destruct s1, s2; intros *.
     inversion 1; subst.
     cbv [state_upd_node state_low_eq state_low_proj set] in *.
-    cbn [RuntimeModel.nodes RuntimeModel.chans] in *.
+    cbn [State.nodes State.chans] in *.
     split; try congruence; intros.
     destruct (dec_eq_nid id nid).
     - rewrite e in *. specialize (H0 nid).
-    cbv [node_state_low_proj low_proj fnd RuntimeModel.lbl RuntimeModel.obj] in *.
+    cbv [node_state_low_proj low_proj fnd State.lbl State.obj] in *.
     simpl in *. erewrite upd_eq. erewrite upd_eq.
     destruct (nodes nid), (nodes0 nid).
     pose proof (top_is_top ell).
@@ -55,8 +55,8 @@ Proof.
     pose proof (ord_anti ell top ltac:(eauto) ltac:(eauto));
     congruence.
     - specialize (H0 nid).
-    cbv [node_state_low_proj low_proj fnd RuntimeModel.lbl 
-        RuntimeModel.obj] in *.
+    cbv [node_state_low_proj low_proj fnd State.lbl 
+        State.obj] in *.
     simpl in *. erewrite upd_neq; auto. erewrite upd_neq; auto.
 Qed.
 
