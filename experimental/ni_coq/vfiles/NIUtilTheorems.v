@@ -6,6 +6,7 @@ From OakIFC Require Import
         Events
         ModelSemUtils
         LowEquivalences
+        Unfold
         Tactics.
 Require Import Coq.Lists.List.
 Import ListNotations.
@@ -23,9 +24,8 @@ Theorem can_split_node_index: forall s id n ell,
     (obj (nodes s).[? id] = Some n) /\
     (lbl (nodes s).[? id] = ell).
 Proof.
-    intros. split; destruct ((nodes s).[? id]).
-    - unfold State.obj. inversion H. reflexivity.
-    - unfold State.lbl. inversion H. reflexivity.
+    intros; split; destruct ((nodes s).[? id]).
+    all: autounfold with structs; inversion H; reflexivity.
 Qed.
 
 Theorem can_split_chan_index: forall s han ch ell,
@@ -33,9 +33,8 @@ Theorem can_split_chan_index: forall s han ch ell,
     (obj (chans s).[? han] = Some ch) /\
     (lbl (chans s).[? han] = ell).
 Proof.
-  intros. split; destruct ((chans s).[? han]).
-  - unfold State.obj. inversion H. reflexivity.
-  - unfold State.lbl. inversion H. reflexivity.
+  intros; split; destruct ((chans s).[? han]).
+  all: autounfold with structs; inversion H; reflexivity.
 Qed.
 
 End misc.
@@ -83,7 +82,8 @@ Definition low_proj_loweq {A: Type}{a_low_proj: @low_proj_t A}
 Theorem labeled_low_proj_loweq {A: Type}:
     @low_proj_loweq (@labeled A) low_proj low_eq.
 Proof.
-    unfold low_proj_loweq. unfold low_eq. unfold low_proj. intros.
+    unfold low_proj_loweq. 
+    autounfold with loweq. intros.
     destruct x. destruct (lbl <<? ell) eqn:Hflows.
     rewrite Hflows. reflexivity.
     destruct (top <<? ell); reflexivity.
@@ -143,7 +143,6 @@ Proof.
     unfold fnd in *. unfold state_low_proj in *. simpl in *.
     exists (nodes s id); split; eauto.
 Qed.
-
 
 Theorem state_nidx_to_proj_state_idx: forall ell s id n,
     ((nodes s).[? id] = n) ->
@@ -233,8 +232,7 @@ Theorem state_low_eq_parts: forall ell s1 s2,
     chan_state_low_eq ell s1.(chans) s2.(chans) ->
     state_low_eq ell s1 s2.
 Proof.
-    cbv [node_state_low_eq chan_state_low_eq state_low_eq].
-    intros. eauto.
+    autounfold with loweq; intros; eauto.
 Qed.
 
 Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
@@ -253,9 +251,8 @@ Lemma state_low_eq_implies_node_lookup_eq ell s1 s2 :
     (nodes (state_low_proj ell s2)).[? id]
     = (nodes (state_low_proj ell s1)).[? id].
 Proof.
-  cbv [state_low_proj state_low_eq node_state_low_proj fnd].
-  cbn [nodes chans]. intros; logical_simplify.
-  congruence.
+  autounfold with loweq; autounfold with structs; 
+  intros; logical_simplify; congruence.
 Qed.
 
 Lemma state_low_eq_implies_chan_lookup_eq ell s1 s2 :
@@ -264,15 +261,15 @@ Lemma state_low_eq_implies_chan_lookup_eq ell s1 s2 :
     (chans (state_low_proj ell s2)).[? han]
     = (chans (state_low_proj ell s1)).[? han].
 Proof.
-  cbv [state_low_proj state_low_eq chan_state_low_proj fnd].
-  cbn [nodes chans]. intros; logical_simplify.
-  congruence.
+  autounfold with loweq; autounfold with structs; intros;
+  logical_simplify; congruence.
 Qed.
 
 Lemma state_low_eq_projection ell s1 s2 :
   state_low_eq ell s1 s2 ->
   state_low_eq ell (state_low_proj ell s1) (state_low_proj ell s2).
 Proof.
+  (* I couldn't get autounfold to help here. *)
   cbv [state_low_proj state_low_eq node_state_low_proj chan_state_low_proj fnd].
   cbn [nodes chans]. intros; logical_simplify.
   split; intros; congruence.
@@ -360,8 +357,10 @@ Theorem chan_state_fe: forall ell chs1 chs2,
     (forall h, low_eq ell chs1.[?h] chs2.[?h]) ->
     chan_state_low_eq ell chs1 chs2.
 Proof.
-    (* shouldn't be needed after change to state loweq defs *)
-Admitted.
+    intros. unfold chan_state_low_eq, chan_state_low_proj, low_proj.
+    intros. specialize (H han). unfold low_eq in *. 
+    unfold low_proj in *. eauto.
+Qed.
 
 Theorem new_secret_chan_unobs: forall ell ell' s h ,
     ~( ell' <<L ell) ->

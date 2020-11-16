@@ -107,6 +107,19 @@ Proof.
     destruct (s1.(nodes).[? id]) eqn:E1; destruct (s2.(nodes).[? id]) eqn:E2.
 Admitted.
 
+Hint Resolve state_upd_chan_unwind chan_append_unwind chan_low_proj_loweq
+    chan_low_proj_idempotent state_upd_node_unwind set_call_unwind
+    state_upd_chan_unwind state_low_proj_loweq state_upd_chan_labeled_unwind
+    state_upd_node_labeled_unwind state_chan_append_labeled_unwind
+    labeled_low_proj_loweq: unwind.
+Hint Extern 4 (node_low_eq _ _ _) => reflexivity : unwind.
+Hint Extern 4 (chan_low_eq _ _ _) => reflexivity : unwind.
+(* meant to be case where we have (cleq ch (proj ch) ) and want to swap order *)
+Hint Extern 4 (chan_low_eq _ _ (chan_low_proj _ _)) => symmetry : unwind.
+Hint Extern 4 (state_low_eq _ _ (state_low_proj _ _)) => symmetry : unwind.
+Hint Extern 2 (chan_low_proj _ _ = chan_low_proj _ _)
+=> simple eapply chan_low_proj_loweq : unwind.
+
 Hint Resolve state_upd_chan_unwind chan_append_unwind
                 set_call_unwind state_upd_node_unwind
                 state_upd_chan_labeled_unwind

@@ -46,21 +46,7 @@ Admitted.
 
 Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
-(* Hints for [eauto with unwind] *)
-Hint Resolve state_upd_chan_unwind chan_append_unwind chan_low_proj_loweq
-    chan_low_proj_idempotent state_upd_node_unwind set_call_unwind
-    state_upd_chan_unwind state_low_proj_loweq
-    state_upd_chan_labeled_unwind
-    state_chan_append_labeled_unwind: unwind.
-Hint Extern 4 (node_low_eq _ _ _) => reflexivity : unwind.
-Hint Extern 4 (chan_low_eq _ _ _) => reflexivity : unwind.
-(* meant to be case where we have (cleq ch (proj ch) ) and want to swap order *)
-Hint Extern 4 (chan_low_eq _ _ (chan_low_proj _ _)) => symmetry : unwind.
-Hint Extern 4 (state_low_eq _ _ (state_low_proj _ _)) => symmetry : unwind.
-Hint Extern 2 (chan_low_proj _ _ = chan_low_proj _ _)
-=> simple eapply chan_low_proj_loweq : unwind.
-
-(* hits for eauto in event part of the unobservable step proof *)
+(* hints for eauto in event part of the unobservable step proof *)
 Hint Extern 4 (low_proj _ _  = _ ) => erewrite nflows_labeled_proj : unobs_ev.
 Hint Extern 4 (_  = low_proj _ _ ) => erewrite nflows_labeled_proj : unobs_ev.
 Hint Extern 4 (event_low_eq _ _ _) => unfold event_low_eq : unobs_ev.
