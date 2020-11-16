@@ -6,9 +6,9 @@ From OakIFC Require Import
     Parameters
     GenericMap
     Lattice
+    State
     Events
-    RuntimeModel
-    EvAugSemantics.
+    ModelTypes.
 
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
@@ -139,7 +139,7 @@ Definition state_low_eq := fun ell s1 s2 =>
     and discussion in PossibilisticNI.v
 *)
 
-Inductive trace_low_eq: level -> trace -> trace -> Prop :=
+Inductive trace_low_eq: @trace_low_eqT (state * (@labeled event)) :=
     | NilEQ ell: trace_low_eq ell [] []
     | AddBoth ell xs xe ys ye t1 t2:
         trace_low_eq ell t1 t2 ->

@@ -5,132 +5,24 @@ From OakIFC Require Import
     Parameters
     GenericMap
     RuntimeModel
+    ModelSemUtils
     EvAugSemantics
+    State
     Events
     LowEquivalences
     TraceTheorems
     NIUtilTheorems
     Unwind
+    PossibilisticNI_def
     Tactics.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 Local Open Scope map_scope.
-Local Open Scope aug_scope.
+Local Open Scope ev_notation.
 
 (*
-This is the top-level candidate security condition. This is a
-"possibilistic security condition". A possibilistic security condition
-says that two executions look the same from the perspective of an observer
-if all _possible behaviors_ look the same if they begin from initial states
-that look the same to the observer.
-In other words there is some way to reach an execution trace
-that looks the same beginning from the other state.
-
-Trapeze uses a possibilistic definition of security:
-https://pdfs.semanticscholar.org/809b/f2702a765b9e7dba4624a1dbc53af11579db.pdf
-See also:
-https://www.cs.cornell.edu/andru/papers/csfw03.pdf
-
+This is a proof that step_system_ev enforces Possibilistic Noninterference
 *)
-
-(* An alternative way of specifying security for
-   concurrent systems is observational determinism, which says
-   that for any two executions that begin from low-equivalent
-   initial states, all actual observed behaviors 
-   (by contrast to the possibly observed behaviors)
-   _always_ look the same.
-
-    This looks like:
-    forall s1 s2 t1 t2,
-        (s1 =L s2) /\
-        (step_multi s1) => t1 /\
-        (step_multi s2) => t2 ->
-            t1 =L t2.
-
-    An advantage of observational determinism over possibilistic
-    noninterference is that O.D. is preserved by refinement. This does
-    not matter in this context since we are not doing a refinement proof.
-    
-    O.D. also has requirements about data race freedom that are not
-    needed to prove a possibilistic security definition. (It may be
-    worth looking into whether or not the runtime actually satisfies
-    these data race freedom requirements later, though it does not
-    seem high priority).
-
-    ***
-    These two definitions also crucially require different
-    definitions of trace low-equivalence as discussed in Events.v
-    ***
-*)
-
-(* TODO: maybe move to Tactics.v *)
-Local Ltac logical_simplify :=
-  repeat match goal with
-         | H : _ /\ _ |- _ => destruct H
-         | H : exists _, _ |- _ => destruct H
-         | H1 : ?P, H2 : ?P -> _ |- _ =>
-           (* only proceed if P is a Prop; if H1 is a nat, for instance, P
-              would be a Type, and we don't want to specialize foralls. *)
-           match type of P with Prop => idtac end;
-           specialize (H2 H1)
-         | H : ?x = ?x |- _ => clear H
-         end.
-
-Local Ltac step_econstruct :=
-    repeat match goal with
-        | H: _ = ncall _ |- _ => progress rewrite <- H
-    end;
-    lazymatch goal with
-        | |- step_system_ev _ _ _ => econstructor; eauto
-        | |- step_node_ev _ _ _ _ _  => econstructor; eauto
-        | |- step_system _ _ => econstructor; eauto
-        | |- step_node _ _ _ _ => econstructor; eauto
-    end.
-
-(* Single step of [crush] *)
-Local Ltac crush_step :=
-  repeat match goal with
-         | _ => progress intros
-         | _ => progress subst
-         | _ => progress logical_simplify
-         | _ => progress step_econstruct
-         | H : Some _ = Some _ |- _ => invert_clean H
-         | H1 : ?x = Some _, H2 : ?x = Some _ |- _ =>
-           rewrite H2 in H1; invert_clean H1
-         | _ => reflexivity
-         end.
-(* General-purpose tactic that simplifies and solves simple goals for
-   possibilistic NI. *)
-Local Ltac crush := repeat crush_step.
-
-Local Ltac subst_lets :=
-  repeat match goal with x := _ |- _ => subst x end.
-
-Local Ltac split_ands :=
-  repeat match goal with |- _ /\ _ => split end.
-
-Local Ltac apply_all_constructors :=
-  lazymatch goal with
-  | |- step_system_ev _ _ _ =>
-    eapply SystemEvStepNode; apply_all_constructors
-  | |- step_node_ev _ _ _ _ _ =>
-    econstructor; apply_all_constructors
-  | |- step_node _ _ _ _ =>
-    econstructor; apply_all_constructors
-  | _ => idtac (* ignore goals that don't match one of the previous patterns *)
-  end.
-
-Lemma separate_lableled {A} (o : option A) (l : level) (x : labeled) :
-  obj x = o -> lbl x = l -> x = Labeled _ o l.
-Proof. destruct x; cbn; congruence. Qed.
-
-Ltac separate_hyp T :=
-  repeat match goal with
-         | H : ?s = Labeled T ?o ?l |- _ =>
-           assert (obj s = o /\ lbl s = l) by (rewrite H; tauto);
-           clear H; logical_simplify
-         end.
-Ltac separate_goal := apply separate_lableled.
 
 Lemma invert_chans_state_low_proj_flowsto ell lvl s han :
   lvl <<L ell ->
@@ -140,88 +32,48 @@ Proof.
   destruct s.
   repeat match goal with
          | _ => progress cbn [state_low_proj
-                               RuntimeModel.chans RuntimeModel.lbl ]
+                               State.chans State.lbl ]
          | _ => progress cbv [low_proj chan_state_low_proj fnd]
          | _ => destruct_match
          | _ => tauto
          end.
     intros.
+    (*
+    Note: I think this is not true with the low-projection def
+    where labels are partially secret
+    *)
 Admitted.
 
 Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
-(* Hints for [eauto with unwind] *)
-Hint Resolve state_upd_chan_unwind chan_append_unwind chan_low_proj_loweq
-    chan_low_proj_idempotent state_upd_node_unwind set_call_unwind
-    state_upd_chan_unwind state_low_proj_loweq
-    state_upd_chan_labeled_unwind
-    state_chan_append_labeled_unwind: unwind.
-Hint Extern 4 (node_low_eq _ _ _) => reflexivity : unwind.
-Hint Extern 4 (chan_low_eq _ _ _) => reflexivity : unwind.
-(* meant to be case where we have (cleq ch (proj ch) ) and want to swap order *)
-Hint Extern 4 (chan_low_eq _ _ (chan_low_proj _ _)) => symmetry : unwind.
-Hint Extern 4 (state_low_eq _ _ (state_low_proj _ _)) => symmetry : unwind.
-Hint Extern 2 (chan_low_proj _ _ = chan_low_proj _ _)
-=> simple eapply chan_low_proj_loweq : unwind.
-
-(* hits for eauto in event part of the unobservable step proof *)
+(* hints for eauto in event part of the unobservable step proof *)
 Hint Extern 4 (low_proj _ _  = _ ) => erewrite nflows_labeled_proj : unobs_ev.
 Hint Extern 4 (_  = low_proj _ _ ) => erewrite nflows_labeled_proj : unobs_ev.
 Hint Extern 4 (event_low_eq _ _ _) => unfold event_low_eq : unobs_ev.
 Hint Extern 4 (low_eq _ _ _) => unfold low_eq : unobs_ev.
 
-Definition is_init(t: trace) := length t = 1.
-
 Definition empty_event (ell: level) := Labeled event None ell.
 
-Definition conjecture_possibilistic_ni := forall ell t1_init t2_init t1n,
-    (trace_low_eq ell t1_init t2_init) /\
-    (is_init t1_init) /\
-    (is_init t2_init) /\
-    (step_system_ev_multi t1_init t1n) ->
-    (exists t2n,
-        (step_system_ev_multi t2_init t2n) /\
-        (trace_low_eq ell t1n t2n)).
-
-Theorem state_low_eq_parts: forall ell s1 s2,
-    node_state_low_eq ell s1.(nodes) s2.(nodes) -> 
-    chan_state_low_eq ell s1.(chans) s2.(chans) ->
-    state_low_eq ell s1 s2.
+Theorem trace_leq_imples_head_st_leq: forall ell t1 t2 s1 s2,
+    (head_st t1 = Some s1) ->
+    (head_st t2 = Some s2) ->
+    (trace_low_eq ell t1 t2) ->
+    (state_low_eq ell s1 s2).
 Proof.
-    cbv [node_state_low_eq chan_state_low_eq state_low_eq].
-    intros. eauto.
-Qed.
+    inversion 3. 
+    - 
+        exfalso. rewrite <- H3 in H. inversion H.
+    - 
+        assert (xs = s1). {
+            assert (head_st ((xs, xe) :: t0 ) = Some xs) by reflexivity.
+            congruence.
+        }
 
-Theorem chan_state_fe: forall ell chs1 chs2,
-    (forall h, low_eq ell chs1.[?h] chs2.[?h]) ->
-    chan_state_low_eq ell chs1 chs2.
-Proof.
-    (* shouldn't be needed after change to state loweq defs *)
-Admitted.
-
-Theorem new_secret_chan_unobs: forall ell ell' s h ,
-    ~( ell' <<L ell) ->
-    fresh_han s h ->
-    state_low_eq ell s (state_upd_chan_labeled h 
-            {| obj := new_chan; lbl := ell'|} s).
-Proof.
-    cbv [state_low_eq state_low_proj fresh_han new_chan]. intros.
-    eapply state_low_eq_parts; [cbv [state_upd_chan_labeled]; reflexivity | ].
-    eapply chan_state_fe.
-    intros. simpl. cbv [low_eq]. destruct s. cbv [RuntimeModel.chans] in *.
-    unfold low_proj.
-    destruct (dec_eq_h h h0). 
-    - rewrite <- e. rewrite H0.
-    replace 
-        ((chans .[ h <- {| obj := Some {| ms := [] |}; lbl := ell' |}]).[? h])
-        with
-        ({| obj := Some {| ms := [] |}; lbl := ell' |}) by (symmetry; eapply upd_eq).
-    destruct (top <<? ell); destruct (ell' <<? ell); (contradiction || reflexivity).
-    -  replace 
-        ( (chans .[ h <- {| obj := Some {| ms := [] |}; lbl := ell' |}]).[? h0])
-        with
-        (chans.[? h0]).
-        reflexivity. symmetry. apply upd_neq; auto. 
+        assert (ys = s2). {
+            assert (head_st ((ys, ye) :: t3 ) = Some ys) by reflexivity.
+            congruence.
+        }
+    congruence.
 Qed.
 
 Theorem unobservable_node_step: forall ell s s' e id nl n,
@@ -308,7 +160,7 @@ Theorem low_eq_to_unobs {A: Type}: forall ell (x1 x2: @labeled A),
     ~(x1.(lbl) <<L ell) ->
     ~(x2.(lbl) <<L ell).
 Proof.
-    destruct x1, x2. cbv [low_eq low_proj RuntimeModel.lbl].
+    destruct x1, x2. cbv [low_eq low_proj State.lbl].
     intros. destruct (lbl <<? ell); destruct (lbl0 <<? ell);
         try eauto; try contradiction. 
     inversion H. unfold not. intros.
@@ -558,37 +410,6 @@ Proof.
             + (* e1 ={ell} *) assumption.
 Admitted.
 
-Lemma state_low_eq_implies_node_lookup_eq ell s1 s2 :
-  state_low_eq ell s1 s2 ->
-  forall id,
-    (nodes (state_low_proj ell s2)).[? id]
-    = (nodes (state_low_proj ell s1)).[? id].
-Proof.
-  cbv [state_low_proj state_low_eq node_state_low_proj fnd].
-  cbn [nodes chans]. intros; logical_simplify.
-  congruence.
-Qed.
-
-Lemma state_low_eq_implies_chan_lookup_eq ell s1 s2 :
-  state_low_eq ell s1 s2 ->
-  forall han,
-    (chans (state_low_proj ell s2)).[? han]
-    = (chans (state_low_proj ell s1)).[? han].
-Proof.
-  cbv [state_low_proj state_low_eq chan_state_low_proj fnd].
-  cbn [nodes chans]. intros; logical_simplify.
-  congruence.
-Qed.
-
-Lemma state_low_eq_projection ell s1 s2 :
-  state_low_eq ell s1 s2 ->
-  state_low_eq ell (state_low_proj ell s1) (state_low_proj ell s2).
-Proof.
-  cbv [state_low_proj state_low_eq node_state_low_proj chan_state_low_proj fnd].
-  cbn [nodes chans]. intros; logical_simplify.
-  split; intros; congruence.
-Qed.
-
 Lemma step_node_projection ell s1 s2 s3 id c :
   state_low_eq ell s1 s2 ->
   step_node id c (state_low_proj ell s2) s3 ->
@@ -676,11 +497,11 @@ Proof.
 Qed.
 
 Theorem possibilistic_ni_unwind_t: forall ell t1 t2 t1',
-(trace_low_eq ell t1 t2) ->
+(trace_low_eq_pni ell t1 t2) ->
 (step_system_ev_t t1 t1') ->
 (exists t2',
     (step_system_ev_t t2 t2') /\
-    (trace_low_eq ell t1' t2')).
+    (trace_low_eq_pni ell t1' t2')).
 Proof.
     intros. 
     inversion H; crush.
@@ -695,7 +516,7 @@ Proof.
         econstructor; crush; eauto.
 Qed.
 
-Theorem possibilistic_ni: conjecture_possibilistic_ni.
+Theorem possibilistic_ni: (conjecture_possibilistic_ni step_system_ev_multi).
 Proof.
   unfold conjecture_possibilistic_ni. crush.
   let H := match goal with H : step_system_ev_multi _ _ |- _ => H end in

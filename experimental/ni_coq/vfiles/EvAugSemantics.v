@@ -4,7 +4,9 @@ From OakIFC Require Import
     Lattice
     Parameters
     GenericMap
+    ModelSemUtils
     RuntimeModel
+    State
     Events.
 Import ListNotations.
 
@@ -16,6 +18,7 @@ From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 
 Local Open Scope map_scope.
+Local Open Scope ev_notation.
 (*
 The top-level security condition compares traces involving both states (as
 in "state" in RuntimeModel.v) and events. This file augments the semantics 
@@ -48,14 +51,8 @@ so the call is a piece of state that probably does not matter at the moment)
 
 Definition trace := list (state * event_l).
 
-Declare Scope aug_scope.
-Local Open Scope aug_scope.
-Notation "ell '--->' msg":= (Labeled event (Some (OutEv msg)) ell) (at level 10) : aug_scope.
-Notation "ell '<---' msg":= (Labeled event (Some (InEv msg)) ell) (at level 10) : aug_scope.
-Notation "ell '---'":= (Labeled event None ell) (at level 10) : aug_scope.
-Notation "'--' ell '--'" := (Labeled event (Some NCreateEv) ell) (at level 10) : aug_scope.
-
-
+(* This is used for state/event pairs in EvAug. 
+* The type is slightly awkward now post refactor *)
 Definition head_st (t: trace) :=
     match t with 
         | nil => None

@@ -2,10 +2,11 @@ From OakIFC Require Import
         Lattice
         Parameters
         GenericMap
-        RuntimeModel
-        EvAugSemantics
+        State
         Events
+        ModelSemUtils
         LowEquivalences
+        Unfold
         Tactics.
 Require Import Coq.Lists.List.
 Import ListNotations.
@@ -23,9 +24,8 @@ Theorem can_split_node_index: forall s id n ell,
     (obj (nodes s).[? id] = Some n) /\
     (lbl (nodes s).[? id] = ell).
 Proof.
-    intros. split; destruct ((nodes s).[? id]).
-    - unfold RuntimeModel.obj. inversion H. reflexivity.
-    - unfold RuntimeModel.lbl. inversion H. reflexivity.
+    intros; split; destruct ((nodes s).[? id]).
+    all: autounfold with structs; inversion H; reflexivity.
 Qed.
 
 Theorem can_split_chan_index: forall s han ch ell,
@@ -33,9 +33,8 @@ Theorem can_split_chan_index: forall s han ch ell,
     (obj (chans s).[? han] = Some ch) /\
     (lbl (chans s).[? han] = ell).
 Proof.
-  intros. split; destruct ((chans s).[? han]).
-  - unfold RuntimeModel.obj. inversion H. reflexivity.
-  - unfold RuntimeModel.lbl. inversion H. reflexivity.
+  intros; split; destruct ((chans s).[? han]).
+  all: autounfold with structs; inversion H; reflexivity.
 Qed.
 
 End misc.
@@ -83,7 +82,8 @@ Definition low_proj_loweq {A: Type}{a_low_proj: @low_proj_t A}
 Theorem labeled_low_proj_loweq {A: Type}:
     @low_proj_loweq (@labeled A) low_proj low_eq.
 Proof.
-    unfold low_proj_loweq. unfold low_eq. unfold low_proj. intros.
+    unfold low_proj_loweq. 
+    autounfold with loweq. intros.
     destruct x. destruct (lbl <<? ell) eqn:Hflows.
     rewrite Hflows. reflexivity.
     destruct (top <<? ell); reflexivity.
@@ -100,14 +100,14 @@ Admitted.
 
 Theorem proj_labels_increase {A: Type }: forall ell ell' (x: @labeled A),
   ell' <<L x.(lbl) -> ell' <<L (low_proj ell x).(lbl).
-  destruct x. cbv [RuntimeModel.lbl]. unfold low_proj. destruct_match.
+  destruct x. cbv [State.lbl]. unfold low_proj. destruct_match.
   intros. eauto. intros. eapply top_is_top.
 Qed.
 
 Theorem low_proj_preserves_obs {A: Type}: forall ell (x: @labeled A),
   x.(lbl) <<L ell <-> (low_proj ell x).(lbl) <<L ell.
 Proof.
-    destruct x. cbv [RuntimeModel.lbl].
+    destruct x. cbv [State.lbl].
     unfold low_proj. split; destruct_match. 
     (* -> *)
     eauto. contradiction.
@@ -227,12 +227,12 @@ Proof. congruence. Qed.
 Global Instance event_low_eq_sym: forall ell, Symmetric (event_low_eq ell) | 10.
 Proof. congruence. Qed.
 
-Theorem state_loweq_from_substates: forall ell s1 s2,
-    node_state_low_eq ell (nodes s1) (nodes s2) ->
-    chan_state_low_eq ell (chans s1) (chans s2) ->
+Theorem state_low_eq_parts: forall ell s1 s2,
+    node_state_low_eq ell s1.(nodes) s2.(nodes) -> 
+    chan_state_low_eq ell s1.(chans) s2.(chans) ->
     state_low_eq ell s1 s2.
 Proof.
-  intros. unfold state_low_eq. unfold low_eq. unfold state_low_proj. eauto.
+    autounfold with loweq; intros; eauto.
 Qed.
 
 Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
@@ -245,26 +245,34 @@ Proof.
     intros. inversion H0. unfold node_state_low_proj in *. 
 Admitted. 
 
-Theorem trace_leq_imples_head_st_leq: forall ell t1 t2 s1 s2,
-    (head_st t1 = Some s1) ->
-    (head_st t2 = Some s2) ->
-    (trace_low_eq ell t1 t2) ->
-    (state_low_eq ell s1 s2).
+Lemma state_low_eq_implies_node_lookup_eq ell s1 s2 :
+  state_low_eq ell s1 s2 ->
+  forall id,
+    (nodes (state_low_proj ell s2)).[? id]
+    = (nodes (state_low_proj ell s1)).[? id].
 Proof.
-    inversion 3. 
-    - 
-        exfalso. rewrite <- H3 in H. inversion H.
-    - 
-        assert (xs = s1). {
-            assert (head_st ((xs, xe) :: t0 ) = Some xs) by reflexivity.
-            congruence.
-        }
+  autounfold with loweq; autounfold with structs; 
+  intros; logical_simplify; congruence.
+Qed.
 
-        assert (ys = s2). {
-            assert (head_st ((ys, ye) :: t3 ) = Some ys) by reflexivity.
-            congruence.
-        }
-    congruence.
+Lemma state_low_eq_implies_chan_lookup_eq ell s1 s2 :
+  state_low_eq ell s1 s2 ->
+  forall han,
+    (chans (state_low_proj ell s2)).[? han]
+    = (chans (state_low_proj ell s1)).[? han].
+Proof.
+  autounfold with loweq; autounfold with structs; intros;
+  logical_simplify; congruence.
+Qed.
+
+Lemma state_low_eq_projection ell s1 s2 :
+  state_low_eq ell s1 s2 ->
+  state_low_eq ell (state_low_proj ell s1) (state_low_proj ell s2).
+Proof.
+  (* I couldn't get autounfold to help here. *)
+  cbv [state_low_proj state_low_eq node_state_low_proj chan_state_low_proj fnd].
+  cbn [nodes chans]. intros; logical_simplify.
+  split; intros; congruence.
 Qed.
 
 End low_equivalence.
@@ -321,7 +329,7 @@ Proof.
     destruct (dec_eq_h han0 han); subst.
     - (* han0 = han *)
         rewrite upd_eq. unfold chan_append_labeled, fnd.
-        destruct (chans s han); cbv [RuntimeModel.obj RuntimeModel.lbl] in *.
+        destruct (chans s han); cbv [State.obj State.lbl] in *.
         destruct_match. simpl. destruct (lbl <<? ell).
         contradiction. congruence. congruence.
     - (* han0 <> han *)
@@ -343,6 +351,40 @@ Proof.
         destruct (lbl <<? ell); try congruence.
     - (* nid <> id *)
         rewrite upd_neq; auto.
+Qed.
+
+Theorem chan_state_fe: forall ell chs1 chs2,
+    (forall h, low_eq ell chs1.[?h] chs2.[?h]) ->
+    chan_state_low_eq ell chs1 chs2.
+Proof.
+    intros. unfold chan_state_low_eq, chan_state_low_proj, low_proj.
+    intros. specialize (H han). unfold low_eq in *. 
+    unfold low_proj in *. eauto.
+Qed.
+
+Theorem new_secret_chan_unobs: forall ell ell' s h ,
+    ~( ell' <<L ell) ->
+    fresh_han s h ->
+    state_low_eq ell s (state_upd_chan_labeled h 
+            {| obj := new_chan; lbl := ell'|} s).
+Proof.
+    cbv [state_low_eq state_low_proj fresh_han new_chan]. intros.
+    eapply state_low_eq_parts; [cbv [state_upd_chan_labeled]; reflexivity | ].
+    eapply chan_state_fe.
+    intros. simpl. cbv [low_eq]. destruct s. cbv [State.chans] in *.
+    unfold low_proj.
+    destruct (dec_eq_h h h0). 
+    - rewrite <- e. rewrite H0.
+    replace 
+        ((chans .[ h <- {| obj := Some {| ms := [] |}; lbl := ell' |}]).[? h])
+        with
+        ({| obj := Some {| ms := [] |}; lbl := ell' |}) by (symmetry; eapply upd_eq).
+    destruct (top <<? ell); destruct (ell' <<? ell); (contradiction || reflexivity).
+    -  replace 
+        ( (chans .[ h <- {| obj := Some {| ms := [] |}; lbl := ell' |}]).[? h0])
+        with
+        (chans.[? h0]).
+        reflexivity. symmetry. apply upd_neq; auto. 
 Qed.
   
 End unobservable.

@@ -1,3 +1,14 @@
+Require Import Coq.Lists.List.
+Import ListNotations.
+From OakIFC Require Import
+    Lattice
+    Parameters
+    GenericMap
+    State
+    Events
+    RuntimeModel
+    EvAugSemantics.
+
 (** Generically useful tactics **)
 
 (* inner loop of destruct_match *)
@@ -17,6 +28,74 @@ Ltac destruct_match :=
 (* Runs [inversion] and then clears the original hypothesis, and runs
    [subst], in order to prevent cluttering the context.*)
 Ltac invert_clean H := progress (inversion H; clear H); subst.
+
+Ltac logical_simplify :=
+  repeat match goal with
+         | H : _ /\ _ |- _ => destruct H
+         | H : exists _, _ |- _ => destruct H
+         | H1 : ?P, H2 : ?P -> _ |- _ =>
+           (* only proceed if P is a Prop; if H1 is a nat, for instance, P
+              would be a Type, and we don't want to specialize foralls. *)
+           match type of P with Prop => idtac end;
+           specialize (H2 H1)
+         | H : ?x = ?x |- _ => clear H
+         end.
+
+Ltac step_econstruct :=
+    repeat match goal with
+        | H: _ = ncall _ |- _ => progress rewrite <- H
+    end;
+    lazymatch goal with
+        | |- step_system_ev _ _ _ => econstructor; eauto
+        | |- step_node_ev _ _ _ _ _  => econstructor; eauto
+        | |- step_system _ _ => econstructor; eauto
+        | |- step_node _ _ _ _ => econstructor; eauto
+    end.
+
+(* Single step of [crush] *)
+Ltac crush_step :=
+  repeat match goal with
+         | _ => progress intros
+         | _ => progress subst
+         | _ => progress logical_simplify
+         | _ => progress step_econstruct
+         | H : Some _ = Some _ |- _ => invert_clean H
+         | H1 : ?x = Some _, H2 : ?x = Some _ |- _ =>
+           rewrite H2 in H1; invert_clean H1
+         | _ => reflexivity
+         end.
+(* General-purpose tactic that simplifies and solves simple goals for
+   possibilistic NI. *)
+Ltac crush := repeat crush_step.
+
+Ltac subst_lets :=
+  repeat match goal with x := _ |- _ => subst x end.
+
+Ltac split_ands :=
+  repeat match goal with |- _ /\ _ => split end.
+
+Ltac apply_all_constructors :=
+  lazymatch goal with
+  | |- step_system_ev _ _ _ =>
+    eapply SystemEvStepNode; apply_all_constructors
+  | |- step_node_ev _ _ _ _ _ =>
+    econstructor; apply_all_constructors
+  | |- step_node _ _ _ _ =>
+    econstructor; apply_all_constructors
+  | _ => idtac (* ignore goals that don't match one of the previous patterns *)
+  end.
+
+Lemma separate_labeled{A} (o : option A) (l : level) (x : labeled) :
+  obj x = o -> lbl x = l -> x = Labeled _ o l.
+Proof. destruct x; cbn; congruence. Qed.
+
+Ltac separate_hyp T :=
+  repeat match goal with
+         | H : ?s = Labeled T ?o ?l |- _ =>
+           assert (obj s = o /\ lbl s = l) by (rewrite H; tauto);
+           clear H; logical_simplify
+         end.
+Ltac separate_goal := apply separate_labeled.
 
 (* Tests for [destruct match] *)
 Section DestructMatchTests.
