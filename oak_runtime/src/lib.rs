@@ -639,6 +639,15 @@ impl Runtime {
         node_info.privilege.clone()
     }
 
+    fn get_node_name(&self, node_id: NodeId) -> String {
+        let node_infos = self.node_infos.read().unwrap();
+        node_infos
+            .get(&node_id)
+            .expect("Invalid node_id")
+            .name
+            .clone()
+    }
+
     /// Returns a clone of the [`Label`] associated with the provided reader `channel_half`.
     ///
     /// Returns an error if `channel_half` is not a valid read half.
@@ -729,15 +738,7 @@ impl Runtime {
         // the Channel Label).
         let downgraded_source_label = self.get_node_downgraded_label(node_id, source_label);
         let target_label = self.get_node_label(node_id);
-        let node_name = {
-            let node_infos = self.node_infos.read().unwrap();
-            // Clone the node_name so we don't block the node_infos RwLock
-            &node_infos
-                .get(&node_id)
-                .expect("Invalid node_id")
-                .name
-                .clone()
-        };
+        let node_name = self.get_node_name(node_id);
         trace!(
             "{:?}: original source label: {:?}?",
             node_name,
@@ -780,15 +781,7 @@ impl Runtime {
         // downgraded is the data inside the Node (protected by the Node Label).
         let source_label = self.get_node_label(node_id);
         let downgraded_source_label = self.get_node_downgraded_label(node_id, &source_label);
-        let node_name = {
-            let node_infos = self.node_infos.read().unwrap();
-            // Clone the node_name so we don't block the node_infos RwLock
-            &node_infos
-                .get(&node_id)
-                .expect("Invalid node_id")
-                .name
-                .clone()
-        };
+        let node_name = self.get_node_name(node_id);
         trace!(
             "{:?}: original source label: {:?}?",
             node_name,
@@ -833,15 +826,7 @@ impl Runtime {
         let channel = Channel::new(channel_id, name, label, Arc::downgrade(&self));
         let write_half = ChannelHalf::new(channel.clone(), ChannelHalfDirection::Write);
         let read_half = ChannelHalf::new(channel, ChannelHalfDirection::Read);
-        let node_name = {
-            let node_infos = self.node_infos.read().unwrap();
-            // Clone the node_name so we don't block the node_infos RwLock
-            &node_infos
-                .get(&node_id)
-                .expect("Invalid node_id")
-                .name
-                .clone()
-        };
+        let node_name = self.get_node_name(node_id);
         trace!(
             "{:?}: allocated channel with halves w={:?},r={:?}",
             node_name,
@@ -917,15 +902,7 @@ impl Runtime {
 
         let thread = thread::current();
 
-        let node_name = {
-            let node_infos = self.node_infos.read().unwrap();
-            // Clone the node_name so we don't block the node_infos RwLock
-            &node_infos
-                .get(&node_id)
-                .expect("Invalid node_id")
-                .name
-                .clone()
-        };
+        let node_name = self.get_node_name(node_id);
 
         while !self.is_terminating() {
             // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the
@@ -1190,15 +1167,11 @@ impl Runtime {
             )
         };
 
-        {
-            let node_infos = self.node_infos.read().unwrap();
-            let node_name = &node_infos.get(&node_id).expect("Invalid node_id").name;
-
-            debug!(
-                "{:?}: remove_node_id() found open handles on exit: {:?}",
-                node_name, remaining_handles
-            );
-        }
+        debug!(
+            "{:?}: remove_node_id() found open handles on exit: {:?}",
+            self.get_node_name(node_id),
+            remaining_handles
+        );
 
         for handle in remaining_handles {
             self.channel_close(node_id, handle)
