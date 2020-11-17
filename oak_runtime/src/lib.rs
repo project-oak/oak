@@ -1315,7 +1315,10 @@ impl Runtime {
 
         info!(
             "{:?}: start node instance {:?} of type {} with privilege {:?}",
-            node_name, new_node_name, node_type, node_privilege
+            self.get_node_name(node_id),
+            new_node_name,
+            node_type,
+            node_privilege
         );
         let node_stopper = self.clone().node_start_instance(
             &new_node_name,
