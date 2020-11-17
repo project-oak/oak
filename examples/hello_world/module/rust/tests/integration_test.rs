@@ -43,6 +43,7 @@ async fn test_say_hello() {
         MAIN_MODULE_NAME,
         MAIN_ENTRYPOINT_NAME,
         ConfigMap::default(),
+        oak_runtime::SignatureTable::default(),
     );
     let runtime = oak_runtime::configure_and_run(runtime_config)
         .expect("Unable to configure runtime with test wasm!");

@@ -10,17 +10,22 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "*"
+base64 = "*"
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
 oak_io = "=0.1.0"
+oak_services = "=0.1.0"
 prost = "*"
 
 [dev-dependencies]
 assert_matches = "*"
 env_logger = "*"
+hex = "*"
 log = "*"
+maplit = "*"
 oak_runtime = "=0.1.0"
+oak_sign = "=0.1.0"
 oak_tests = "=0.1.0"
 private_set_intersection_grpc = "=0.1.0"
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }

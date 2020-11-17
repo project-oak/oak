@@ -54,6 +54,7 @@ async fn setup() -> (
         FRONTEND_MODULE_NAME,
         FRONTEND_ENTRYPOINT_NAME,
         ConfigMap::default(),
+        oak_runtime::SignatureTable::default(),
     );
     let runtime =
         oak_runtime::configure_and_run(config).expect("unable to configure runtime with test wasm");
