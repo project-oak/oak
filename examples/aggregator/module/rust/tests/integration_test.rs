@@ -14,18 +14,25 @@
 // limitations under the License.
 //
 
-use aggregator::{data::SparseVector, SAMPLE_THRESHOLD};
+use aggregator::{data::SparseVector, handler::SAMPLE_THRESHOLD};
 use aggregator_common::Monoid;
 use aggregator_grpc::proto::{aggregator_client::AggregatorClient, Sample, SerializedSparseVector};
 use assert_matches::assert_matches;
 use maplit::hashmap;
-use oak_abi::proto::oak::application::ConfigMap;
+use oak_abi::{
+    label::{confidentiality_label, web_assembly_module_tag},
+    proto::oak::application::ConfigMap,
+};
+use oak_sign::get_sha256;
 use std::{
     collections::HashMap,
     convert::{From, TryFrom},
 };
 
-const MODULE_WASM_FILE_NAME: &str = "aggregator.wasm";
+const WASM_MODULE_FILE_NAME: &str = "aggregator.wasm";
+const WASM_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";
+const MODULE_NAME: &str = "app";
+const ENTRYPOINT_NAME: &str = "oak_main";
 
 async fn submit_sample(
     client: &mut AggregatorClient<tonic::transport::Channel>,
@@ -44,18 +51,36 @@ async fn submit_sample(
 async fn test_aggregator() {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let runtime = oak_tests::run_single_module_with_config(
-        MODULE_WASM_FILE_NAME,
-        "oak_main",
+    let wasm_module = oak_tests::compile_rust_wasm(
+        WASM_MODULE_MANIFEST,
+        WASM_MODULE_FILE_NAME,
+        oak_tests::Profile::Debug,
+    )
+    .expect("Couldn't compile Wasm module");
+    let wasm_module_hash = get_sha256(&wasm_module);
+
+    let module_config = format!(
+        "grpc_server_listen_address = \"[::]:8080\"\n\
+         backend_server_address = \"https://localhost:8888\"\n\
+         aggregator_module_hash = \"{}\"",
+        hex::encode(&wasm_module_hash)
+    );
+    let config = oak_tests::runtime_config_wasm(
+        hashmap! { MODULE_NAME.to_owned() => wasm_module },
+        MODULE_NAME,
+        ENTRYPOINT_NAME,
         ConfigMap {
             items: hashmap! {
-                "config".to_string() => br#"grpc_server_listen_address = "[::]:8080""#.iter().cloned().collect()
+                "config".to_string() => module_config.as_bytes().to_vec()
             },
         },
-    )
-    .expect("Unable to configure runtime with test wasm!");
+    );
 
-    let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
+    let runtime =
+        oak_runtime::configure_and_run(config).expect("Unable to configure runtime with test wasm");
+
+    let hash_label = confidentiality_label(web_assembly_module_tag(&wasm_module_hash));
+    let (channel, interceptor) = oak_tests::channel_and_interceptor(&hash_label).await;
     let mut client = AggregatorClient::with_interceptor(channel, interceptor);
 
     for i in 0..SAMPLE_THRESHOLD as u32 {
