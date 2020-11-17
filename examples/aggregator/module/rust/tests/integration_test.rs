@@ -74,6 +74,7 @@ async fn test_aggregator() {
                 "config".to_string() => module_config.as_bytes().to_vec()
             },
         },
+        oak_runtime::SignatureTable::default(),
     );
 
     let runtime =
