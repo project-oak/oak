@@ -53,6 +53,8 @@ use crate::node::Node;
 pub struct RuntimeProxy {
     pub runtime: Arc<Runtime>,
     pub node_id: NodeId,
+    // The node_name is stored as a on-off copy for debug calls.
+    // TODO(#1737): Move debug calls to the Runtime.
     pub node_name: String,
 }
 
