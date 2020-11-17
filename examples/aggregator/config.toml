@@ -1,3 +1,3 @@
 grpc_server_listen_address = "[::]:8080"
 backend_server_address = "https://localhost:8888"
-aggregator_module_hash = "e9f2453f98e2085b070f534cfa3b190672ee1afd348178c4d099c460d80013ab"
+aggregator_module_hash = "a282624fbc01a7218eca27941e86583e13135fde7e122752edcc3003c77ac6b0"

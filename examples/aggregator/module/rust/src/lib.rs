@@ -98,12 +98,9 @@ impl Main {
         let aggregator_hash_label = confidentiality_label(web_assembly_module_tag(
             &hex::decode(aggregator_module_hash).context("Couldn't decode SHA-256 hex value")?,
         ));
-        let handler_init_sender = oak::io::entrypoint_node_create::<Handler>(
-            "handler",
-            &aggregator_hash_label,
-            "app",
-        )
-        .context("Couldn't create handler node")?;
+        let handler_init_sender =
+            oak::io::entrypoint_node_create::<Handler>("handler", &aggregator_hash_label, "app")
+                .context("Couldn't create handler node")?;
 
         // Send the initialization message to Handler Node containing a gRPC server invocation
         // receiver and a gRPC client invocation sender.
