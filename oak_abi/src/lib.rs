@@ -139,6 +139,22 @@ extern "C" {
         handle_count: u32,
     ) -> u32;
 
+    /// Write a message to a channel using the current node's privilege.
+    ///
+    /// Write `size` bytes of data from `buf`, together with `handle_count` handles from
+    /// the space at `handle_buf`, to the channel identified by `handle`.
+    ///
+    /// Returns the status of the operation, as an [`OakStatus`] value.
+    ///
+    /// [`OakStatus`]: crate::OakStatus
+    pub fn channel_write_with_privilege(
+        handle: u64,
+        buf: *const u8,
+        size: usize,
+        handle_buf: *const u8,
+        handle_count: u32,
+    ) -> u32;
+
     /// Create a new unidirectional Channel.
     ///
     /// Returns handles for the the write and read halves of the Channel in the spaces given by

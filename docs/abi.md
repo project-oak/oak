@@ -179,6 +179,22 @@ If writing to the specified channel would violate
 - `param[4]: u32`: Source handle array count
 - `result[0]: u32`: Status of operation
 
+### `channel_write_with_privilege`
+
+Writes a single message to the specified channel, together with any associated
+handles, using the current node's label-downgrading privilege.
+
+If writing to the specified channel would violate
+[information flow control](/docs/concepts.md#labels), returns
+`ERR_PERMISSION_DENIED`.
+
+- `param[0]: u64`: Handle to channel send half
+- `param[1]: usize`: Source buffer address holding message
+- `param[2]: usize`: Source buffer size in bytes
+- `param[3]: usize`: Source handle array (of little-endian u64 values)
+- `param[4]: u32`: Source handle array count
+- `result[0]: u32`: Status of operation
+
 ### `channel_create`
 
 Creates a new unidirectional Channel assigning the name specified by `param[2]`

@@ -54,6 +54,10 @@ pub extern "C" fn channel_write() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
+pub extern "C" fn channel_write_with_privilege() {
+    panic!("stub function invoked!");
+}
+#[no_mangle]
 pub extern "C" fn channel_create() {
     panic!("stub function invoked!");
 }

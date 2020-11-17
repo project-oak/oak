@@ -16,10 +16,10 @@
 
 //! Helper types for data structures that can be transmitted over channels.
 
-use crate::RuntimeProxy;
+use crate::{NodeMessage, RuntimeProxy};
 use log::{error, info};
 use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
-use oak_io::{Decodable, Encodable, OakError};
+use oak_io::{handle::ReadHandle, Decodable, Encodable, OakError};
 pub use oak_io::{Receiver, Sender};
 
 /// Extension trait for runtime-specific Receiver functionality.
@@ -30,49 +30,74 @@ pub trait ReceiverExt<T> {
     /// Waits, reads and decodes a message from the [`Receiver::handle`].
     fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakError>;
 
+    /// Waits, reads and decodes a message from the [`Receiver::handle`] using the current Node's
+    /// privilege.
+    fn receive_with_privilege(&self, runtime: &RuntimeProxy) -> Result<T, OakError>;
+
     /// Gets the label associated with this receiver.
     fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError>;
 }
 
 impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
-    /// Close the underlying channel handle.
     fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError> {
         runtime
             .channel_close(self.handle.handle)
             .map_err(|error| error.into())
     }
 
-    /// Waits, reads and decodes a message from the [`Receiver::handle`].
     fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakError> {
-        let read_status = runtime.wait_on_channels(&[self.handle.handle])?;
-
-        match read_status[0] {
-            ChannelReadStatus::ReadReady => runtime
-                .channel_read(self.handle.handle)
-                .and_then(|message| {
-                    message.ok_or_else(|| {
-                        error!("Channel read error {:?}: Empty message", self.handle);
-                        OakStatus::ErrInternal
-                    })
-                })
-                .map_err(|error| error.into())
-                .and_then(|message| T::decode(&message)),
-            ChannelReadStatus::Orphaned => {
-                info!("Channel closed {:?}", self.handle);
-                Err(OakStatus::ErrChannelClosed.into())
-            }
-            status => {
-                error!("Channel read error {:?}: {:?}", self.handle, status);
-                Err(OakStatus::ErrInternal.into())
-            }
-        }
+        receive_with_waiter_and_reader(
+            self.handle,
+            |handle| runtime.wait_on_channels(&[handle]),
+            |handle| runtime.channel_read(handle),
+        )
     }
 
-    /// Gets the label associated with this receiver.
+    fn receive_with_privilege(&self, runtime: &RuntimeProxy) -> Result<T, OakError> {
+        receive_with_waiter_and_reader(
+            self.handle,
+            |handle| runtime.wait_on_channels_with_privilege(&[handle]),
+            |handle| runtime.channel_read_with_privilege(handle),
+        )
+    }
+
     fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError> {
         runtime
             .get_channel_label(self.handle.handle)
             .map_err(|err| err.into())
+    }
+}
+
+/// Waits, reads and decodes a message using the provided waiter and reader.
+fn receive_with_waiter_and_reader<
+    T: Decodable,
+    W: Fn(oak_abi::Handle) -> Result<Vec<ChannelReadStatus>, OakStatus>,
+    R: Fn(oak_abi::Handle) -> Result<Option<NodeMessage>, OakStatus>,
+>(
+    handle: ReadHandle,
+    waiter: W,
+    reader: R,
+) -> Result<T, OakError> {
+    let read_status = waiter(handle.handle)?;
+
+    match read_status[0] {
+        ChannelReadStatus::ReadReady => reader(handle.handle)
+            .and_then(|message| {
+                message.ok_or_else(|| {
+                    error!("Channel read error {:?}: Empty message", handle);
+                    OakStatus::ErrInternal
+                })
+            })
+            .map_err(|error| error.into())
+            .and_then(|message| T::decode(&message)),
+        ChannelReadStatus::Orphaned => {
+            info!("Channel closed {:?}", handle);
+            Err(OakStatus::ErrChannelClosed.into())
+        }
+        status => {
+            error!("Channel read error {:?}: {:?}", handle, status);
+            Err(OakStatus::ErrInternal.into())
+        }
     }
 }
 
@@ -84,26 +109,32 @@ pub trait SenderExt<T> {
     /// Encodes and sends a message to the [`Sender::handle`].
     fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError>;
 
+    /// Encodes and sends a message to the [`Sender::handle`] using the current Node's privilege.
+    fn send_with_privilege(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError>;
+
     /// Gets the label associated with this sender.
     fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError>;
 }
 
 impl<T: Encodable> SenderExt<T> for Sender<T> {
-    /// Close the underlying channel handle.
     fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError> {
         runtime
             .channel_close(self.handle.handle)
             .map_err(|error| error.into())
     }
 
-    /// Encodes and sends a message to the [`Sender::handle`].
     fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError> {
         runtime
             .channel_write(self.handle.handle, message.encode()?)
             .map_err(|error| error.into())
     }
 
-    /// Gets the label associated with this sender.
+    fn send_with_privilege(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError> {
+        runtime
+            .channel_write_with_privilege(self.handle.handle, message.encode()?)
+            .map_err(|error| error.into())
+    }
+
     fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError> {
         runtime
             .get_channel_label(self.handle.handle)

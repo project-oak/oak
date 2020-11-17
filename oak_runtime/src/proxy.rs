@@ -19,7 +19,8 @@
 
 use crate::{
     metrics::Metrics, AuxServer, ChannelHalfDirection, LabelReadStatus, NodeId, NodeMessage,
-    NodePrivilege, NodeReadStatus, Runtime, SecureServerConfiguration, SignatureTable,
+    NodePrivilege, NodeReadStatus, OperationPrivilege, Runtime, SecureServerConfiguration,
+    SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -189,6 +190,7 @@ impl RuntimeProxy {
             config,
             label,
             initial_handle,
+            OperationPrivilege::None,
         );
         debug!(
             "{:?}: node_create({:?}, {:?}, {:?}) -> {:?}",
@@ -216,6 +218,7 @@ impl RuntimeProxy {
             node_name,
             label,
             initial_handle,
+            OperationPrivilege::None,
         );
         debug!(
             "{:?}: register_node_instance(node_name: {:?}, label: {:?}) -> {:?}",
@@ -234,7 +237,9 @@ impl RuntimeProxy {
             "{:?}: channel_create({:?}, {:?})",
             self.node_name, name, label
         );
-        let result = self.runtime.channel_create(self.node_id, name, label);
+        let result =
+            self.runtime
+                .channel_create(self.node_id, name, label, OperationPrivilege::None);
         debug!(
             "{:?}: channel_create({:?}, {:?}) -> {:?}",
             self.node_name, name, label, result
@@ -253,7 +258,7 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::wait_on_channels`].
+    /// Calls [`Runtime::wait_on_channels`] without using the Node's privilege.
     pub fn wait_on_channels(
         &self,
         read_handles: &[oak_abi::Handle],
@@ -263,7 +268,9 @@ impl RuntimeProxy {
             self.node_name,
             read_handles.len()
         );
-        let result = self.runtime.wait_on_channels(self.node_id, read_handles);
+        let result =
+            self.runtime
+                .wait_on_channels(self.node_id, read_handles, OperationPrivilege::None);
         debug!(
             "{:?}: wait_on_channels(count={}) -> {:?}",
             self.node_name,
@@ -273,7 +280,31 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::channel_write`].
+    /// Calls [`Runtime::wait_on_channels`] using the Node's privilege.
+    pub fn wait_on_channels_with_privilege(
+        &self,
+        read_handles: &[oak_abi::Handle],
+    ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+        debug!(
+            "{:?}: wait_on_channels_with_privilege(count={})",
+            self.node_id,
+            read_handles.len()
+        );
+        let result = self.runtime.wait_on_channels(
+            self.node_id,
+            read_handles,
+            OperationPrivilege::UsePrivilege,
+        );
+        debug!(
+            "{:?}: wait_on_channels_with_privilege(count={}) -> {:?}",
+            self.node_id,
+            read_handles.len(),
+            result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::channel_write`] without using the Node's privilege.
     pub fn channel_write(
         &self,
         write_handle: oak_abi::Handle,
@@ -283,7 +314,9 @@ impl RuntimeProxy {
             "{:?}: channel_write({}, {:?})",
             self.node_name, write_handle, msg
         );
-        let result = self.runtime.channel_write(self.node_id, write_handle, msg);
+        let result =
+            self.runtime
+                .channel_write(self.node_id, write_handle, msg, OperationPrivilege::None);
         debug!(
             "{:?}: channel_write({}, ...) -> {:?}",
             self.node_name, write_handle, result
@@ -291,16 +324,60 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::channel_read`].
+    /// Calls [`Runtime::channel_write`] using the Node's privilege.
+    pub fn channel_write_with_privilege(
+        &self,
+        write_handle: oak_abi::Handle,
+        msg: NodeMessage,
+    ) -> Result<(), OakStatus> {
+        debug!(
+            "{:?}: channel_write_with_privilege({}, {:?})",
+            self.node_id, write_handle, msg
+        );
+        let result = self.runtime.channel_write(
+            self.node_id,
+            write_handle,
+            msg,
+            OperationPrivilege::UsePrivilege,
+        );
+        debug!(
+            "{:?}: channel_write_with_privilege({}, ...) -> {:?}",
+            self.node_id, write_handle, result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::channel_read`] without using the Node's privilege.
     pub fn channel_read(
         &self,
         read_handle: oak_abi::Handle,
     ) -> Result<Option<NodeMessage>, OakStatus> {
         debug!("{:?}: channel_read({})", self.node_name, read_handle,);
-        let result = self.runtime.channel_read(self.node_id, read_handle);
+        let result = self
+            .runtime
+            .channel_read(self.node_id, read_handle, OperationPrivilege::None);
         debug!(
             "{:?}: channel_read({}) -> {:?}",
             self.node_name, read_handle, result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::channel_read`] using the Node's privilege.
+    pub fn channel_read_with_privilege(
+        &self,
+        read_handle: oak_abi::Handle,
+    ) -> Result<Option<NodeMessage>, OakStatus> {
+        debug!(
+            "{:?}: channel_read_with_privilege({})",
+            self.node_id, read_handle,
+        );
+        let result =
+            self.runtime
+                .channel_read(self.node_id, read_handle, OperationPrivilege::UsePrivilege);
+        debug!(
+            "{:?}: channel_read_with_privilege({}) -> {:?}",
+            self.node_id, read_handle, result
         );
         result
     }
@@ -321,6 +398,7 @@ impl RuntimeProxy {
             read_handle,
             bytes_capacity,
             handles_capacity,
+            OperationPrivilege::None,
         );
         debug!(
             "{:?}: channel_try_read({}, bytes_capacity={}, handles_capacity={}) -> {:?}",

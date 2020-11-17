@@ -681,7 +681,7 @@ impl HttpResponseReceiver {
         let response_receiver = crate::io::Receiver::<HttpResponse>::new(ReadHandle {
             handle: self.response_reader,
         });
-        response_receiver.receive(&self.runtime)
+        response_receiver.receive_with_privilege(&self.runtime)
     }
 
     fn try_into_hyper_response(&self) -> Result<Response<Body>, HttpError> {

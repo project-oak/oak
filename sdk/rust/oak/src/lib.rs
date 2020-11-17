@@ -224,6 +224,25 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Resul
     result_from_status(status as i32, ())
 }
 
+/// Write a message to a channel using the current node's label-downgrading privilege.
+pub fn channel_write_with_privilege(
+    half: WriteHandle,
+    buf: &[u8],
+    handles: &[Handle],
+) -> Result<(), OakStatus> {
+    let handle_buf = crate::handle::pack(handles);
+    let status = unsafe {
+        oak_abi::channel_write_with_privilege(
+            half.handle,
+            buf.as_ptr(),
+            buf.len(),
+            handle_buf.as_ptr(),
+            handles.len() as u32, // Number of handles, not bytes
+        )
+    };
+    result_from_status(status as i32, ())
+}
+
 /// Create a new unidirectional channel.
 ///
 /// The provided label must be equal or more restrictive than the label of the calling node, i.e.

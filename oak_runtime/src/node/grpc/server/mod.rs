@@ -610,7 +610,7 @@ impl Iterator for GrpcResponseIterator {
         }
         match &self.response_reader {
             Some(receiver) => {
-                match receiver.receive(&self.runtime) {
+                match receiver.receive_with_privilege(&self.runtime) {
                     Ok(grpc_rsp) => {
                         self.metrics_recorder
                             .observe_message_with_len(grpc_rsp.rsp_msg.len());

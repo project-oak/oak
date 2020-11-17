@@ -90,7 +90,8 @@ impl ChannelResponseWriter {
                 WriteMode::Close => true,
             },
         };
-        self.sender.send(&grpc_rsp)?;
+        // TODO(#1739): Do not automatically use privilege.
+        self.sender.send_with_privilege(&grpc_rsp)?;
         if mode == WriteMode::Close {
             self.sender.close()?;
         }
@@ -244,7 +245,10 @@ where
     // message channel.
     let req = oak_services::grpc::encap_request(req, method_name)
         .expect("failed to serialize GrpcRequest");
-    req_sender.send(&req).expect("failed to write to channel");
+    // TODO(#1739): Do not use privilege by default.
+    req_sender
+        .send_with_privilege(&req)
+        .expect("failed to write to channel");
     req_sender.close().expect("failed to close channel");
 
     // Create a new channel for responses to arrive on.

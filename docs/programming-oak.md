@@ -599,9 +599,10 @@ channel object, then assigns a new numeric value for the created Node to use to
 refer to the underlying channel.
 
 Once a new Node has started, the existing Node can communicate with the new Node
-by sending messages over the channel via `channel_write`. Of course, the new
-Node only has a handle to the read half of a channel, and so only has a way of
-_receiving_.
+by sending messages over the channel via `channel_write` (or
+`channel_write_with_privilege` if the Node's label-downgrading privilege is
+required). Of course, the new Node only has a handle to the read half of a
+channel, and so only has a way of _receiving_.
 
 To cope with this, it's normal for the inbound messages to be accompanied by a
 handle for the _write_ half of a different channel, which is then used for

@@ -47,13 +47,14 @@ const RANDOM_GET: usize = 1;
 const CHANNEL_CLOSE: usize = 2;
 const CHANNEL_CREATE: usize = 3;
 const CHANNEL_WRITE: usize = 4;
-const CHANNEL_READ: usize = 5;
-const WAIT_ON_CHANNELS: usize = 6;
-const CHANNEL_LABEL_READ: usize = 7;
-const NODE_LABEL_READ: usize = 8;
-const NODE_PRIVILEGE_READ: usize = 9;
+const CHANNEL_WRITE_WITH_PRIVILEGE: usize = 5;
+const CHANNEL_READ: usize = 6;
+const WAIT_ON_CHANNELS: usize = 7;
+const CHANNEL_LABEL_READ: usize = 8;
+const NODE_LABEL_READ: usize = 9;
+const NODE_PRIVILEGE_READ: usize = 10;
 // TODO(#817): remove this; we shouldn't need to have WASI stubs.
-const WASI_STUB: usize = 10;
+const WASI_STUB: usize = 11;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -335,12 +336,50 @@ impl WasmInterface {
             handles_count
         );
 
+        let msg = self.fetch_message(source, source_length, handles, handles_count)?;
+        self.runtime.channel_write(writer_handle, msg)?;
+        Ok(())
+    }
+
+    /// Corresponds to the host ABI function [`channel_write_with_privilege`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_write_with_privilege).
+    fn channel_write_with_privilege(
+        &self,
+        writer_handle: oak_abi::Handle,
+        source: AbiPointer,
+        source_length: AbiPointerOffset,
+        handles: AbiPointer,
+        handles_count: AbiPointerOffset,
+    ) -> Result<(), OakStatus> {
+        trace!(
+            "{}: channel_write_with_privilege({}, {}, {}, {}, {})",
+            self.pretty_name,
+            writer_handle,
+            source,
+            source_length,
+            handles,
+            handles_count
+        );
+
+        let msg = self.fetch_message(source, source_length, handles, handles_count)?;
+        self.runtime
+            .channel_write_with_privilege(writer_handle, msg)?;
+        Ok(())
+    }
+
+    /// Fetches a [`NodeMessage`] containing the source data and handles.
+    fn fetch_message(
+        &self,
+        source: AbiPointer,
+        source_length: AbiPointerOffset,
+        handles: AbiPointer,
+        handles_count: AbiPointerOffset,
+    ) -> Result<NodeMessage, OakStatus> {
         let bytes = self
             .get_memory()
             .get(source, source_length as usize)
             .map_err(|err| {
                 error!(
-                    "{}: channel_write(): Unable to read message data from guest memory: {:?}",
+                    "{}: fetch_message(): Unable to read message data from guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
@@ -351,7 +390,7 @@ impl WasmInterface {
             .get(handles, handles_count as usize * 8)
             .map_err(|err| {
                 error!(
-                    "{}: channel_write(): Unable to read handles from guest memory: {:?}",
+                    "{}: fetch_message(): Unable to read handles from guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
@@ -361,11 +400,8 @@ impl WasmInterface {
             .chunks(8)
             .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
-        let msg = NodeMessage { bytes, handles };
 
-        self.runtime.channel_write(writer_handle, msg)?;
-
-        Ok(())
+        Ok(NodeMessage { bytes, handles })
     }
 
     /// Corresponds to the host ABI function [`channel_read`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_read).
@@ -689,6 +725,13 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(3)?,
                 args.nth_checked(4)?,
             )),
+            CHANNEL_WRITE_WITH_PRIVILEGE => map_host_errors(self.channel_write_with_privilege(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+                args.nth_checked(4)?,
+            )),
             CHANNEL_READ => map_host_errors(self.channel_read(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
@@ -791,6 +834,19 @@ fn oak_resolve_func(
         ),
         "channel_write" => (
             CHANNEL_WRITE,
+            wasmi::Signature::new(
+                &[
+                    ValueType::I64, // handle
+                    ABI_USIZE,      // buf
+                    ABI_USIZE,      // size
+                    ABI_USIZE,      // handle_buf
+                    ValueType::I32, // handle_count
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_write_with_privilege" => (
+            CHANNEL_WRITE_WITH_PRIVILEGE,
             wasmi::Signature::new(
                 &[
                     ValueType::I64, // handle

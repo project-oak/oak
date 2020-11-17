@@ -348,7 +348,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_privilege_o
 
             {
                 // Reading from a more confidential Channel is allowed because of the privilege.
-                let result = runtime.channel_read(read_handle);
+                let result = runtime.channel_read_with_privilege(read_handle);
                 assert_eq!(Ok(Some(message)), result);
             }
 
@@ -393,7 +393,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_top_privile
 
             {
                 // Reading from a more confidential Channel is allowed because of the privilege.
-                let result = runtime.channel_read(read_handle);
+                let result = runtime.channel_read_with_privilege(read_handle);
                 assert_eq!(Ok(Some(message)), result);
             }
 
