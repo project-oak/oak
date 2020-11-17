@@ -44,9 +44,10 @@ impl oak::CommandHandler for Router {
         match (&command.receiver, &command.sender) {
             (Some(receiver), Some(sender)) => {
                 let label = receiver.label()?;
-                let grpc_response_writer = oak::grpc::ChannelResponseWriter::new(sender.clone());
                 // Check if request label is valid in the context of Aggregator application.
                 if !label.flows_to(&self.aggregator_hash_label) {
+                    let grpc_response_writer =
+                        oak::grpc::ChannelResponseWriter::new(sender.clone());
                     grpc_response_writer
                         .close(Err(oak::grpc::build_status(
                             rpc::Code::InvalidArgument,

@@ -55,7 +55,7 @@ JNIEXPORT void JNICALL Java_com_google_oak_aggregator_MainActivity_createChannel
   // The particular value corresponds to the hash on the `aggregator.wasm` line in
   // https://github.com/project-oak/oak/blob/hashes/reproducibility_index.
   oak::label::Label label = oak::WebAssemblyModuleHashLabel(
-      absl::HexStringToBytes("a282624fbc01a7218eca27941e86583e13135fde7e122752edcc3003c77ac6b0"));
+      absl::HexStringToBytes("6e27c5bfbd59adb7a00872501ebc04660e232f93f0280d81d78df1ae2ad77dc9"));
   kChannel = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
   JNI_LOG("gRPC channel has been created");
