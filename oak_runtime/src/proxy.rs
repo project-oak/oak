@@ -53,6 +53,7 @@ use crate::node::Node;
 pub struct RuntimeProxy {
     pub runtime: Arc<Runtime>,
     pub node_id: NodeId,
+    pub node_name: String,
 }
 
 // Methods on `RuntimeProxy` for managing the core `Runtime` instance.
@@ -77,11 +78,13 @@ impl RuntimeProxy {
                 signature_table: signature_table.clone(),
             },
         });
-        let proxy = runtime.proxy_for_new_node();
+        let proxy = runtime.proxy_for_new_node("implicit.initial");
+        let new_node_id = proxy.node_id;
+        let new_node_name = proxy.node_name.clone();
         proxy.runtime.node_configure_instance(
-            proxy.node_id,
+            new_node_id,
             "implicit",
-            "implicit.initial",
+            new_node_name,
             &Label::public_untrusted(),
             &NodePrivilege::default(),
         );

@@ -1298,14 +1298,14 @@ impl Runtime {
 
         let reader = self.abi_to_read_half(node_id, initial_handle)?;
 
-        let new_node_proxy = self.clone().proxy_for_new_node();
+        let new_node_proxy = self.clone().proxy_for_new_node(node_name);
         let new_node_id = new_node_proxy.node_id;
-        let new_node_name = format!("{}({})", node_name, new_node_id.0);
+        let new_node_name = new_node_proxy.node_name.clone();
 
         self.node_configure_instance(
             new_node_id,
             node_type,
-            &new_node_name,
+            new_node_name.clone(),
             label,
             &node_privilege,
         );
@@ -1375,7 +1375,7 @@ impl Runtime {
         &self,
         node_id: NodeId,
         node_type: &'static str,
-        node_name: &str,
+        node_name: String,
         label: &Label,
         privilege: &NodePrivilege,
     ) {
@@ -1384,14 +1384,14 @@ impl Runtime {
         // node.
         self.introspection_event(EventDetails::NodeCreated(NodeCreated {
             node_id: node_id.0,
-            name: node_name.to_string(),
+            name: node_name.clone(),
             label: Some(label.clone()),
         }));
 
         self.add_node_info(
             node_id,
             NodeInfo {
-                name: node_name.to_string(),
+                name: node_name,
                 node_type,
                 label: label.clone(),
                 privilege: privilege.clone(),
@@ -1403,10 +1403,12 @@ impl Runtime {
 
     /// Create a [`RuntimeProxy`] instance for a new Node, creating the new [`NodeId`]
     /// value along the way.
-    fn proxy_for_new_node(self: Arc<Self>) -> RuntimeProxy {
+    fn proxy_for_new_node(self: Arc<Self>, node_name: &str) -> RuntimeProxy {
+        let node_id = self.new_node_id();
         RuntimeProxy {
-            runtime: self.clone(),
-            node_id: self.new_node_id(),
+            runtime: self,
+            node_id,
+            node_name: format!("{}({})", node_name, node_id.0),
         }
     }
 
