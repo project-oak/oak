@@ -2,4 +2,8 @@ name = "private_set_intersection"
 
 [modules]
 # TODO(865): Use locally built module once reproducibility is fixed.
+<<<<<<< HEAD
 app = { external = { url = "https://storage.googleapis.com/oak-modules/private_set_intersection/89f22e622068a6391f4123780449d2d09fb56f0c6245a7eb641e9fe9af216163", sha256 = "89f22e622068a6391f4123780449d2d09fb56f0c6245a7eb641e9fe9af216163" } }
+=======
+app = { external = { url = "https://storage.googleapis.com/oak-modules/private_set_intersection/be13c78ff2de7c1ce27b6f489c2f05a86206f0bf6205dfab6216b6c183a90d94", sha256 = "be13c78ff2de7c1ce27b6f489c2f05a86206f0bf6205dfab6216b6c183a90d94" } }
+>>>>>>> 4083de3a (Add forward_invocation function)
