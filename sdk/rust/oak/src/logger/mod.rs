@@ -23,10 +23,11 @@
 
 use crate::io::{Sender, SenderExt};
 use log::{Level, Log, Metadata, Record, SetLoggerError};
-use oak_abi::label::Label;
+use oak_abi::{label::Label, OakStatus};
+use oak_services::proto::oak::log::LogMessage;
 
 struct OakChannelLogger {
-    channel: Sender<oak_services::proto::oak::log::LogMessage>,
+    log_sender: Sender<LogMessage>,
 }
 
 impl Log for OakChannelLogger {
@@ -43,7 +44,7 @@ impl Log for OakChannelLogger {
             level: map_level(record.level()) as i32,
             message: format!("{}", record.args()),
         };
-        match self.channel.send(&log_msg) {
+        match self.log_sender.send(&log_msg) {
             Ok(()) => (),
             Err(crate::OakError::OakStatus(crate::OakStatus::ErrTerminated)) => (),
             Err(e) => panic!("could not send log message over log channel: {}", e),
@@ -62,18 +63,6 @@ fn map_level(level: Level) -> oak_services::proto::oak::log::Level {
     }
 }
 
-/// Initialize Node-wide default logging.
-///
-/// Uses the default level (`Debug`) and the default pre-defined name
-/// (`"log"`) identifying logging Node configuration.
-///
-/// # Panics
-///
-/// Panics if a logger has already been set.
-pub fn init_default() {
-    init(Level::Debug).unwrap();
-}
-
 /// Initialize Node-wide logging via a channel to a logging pseudo-Node.
 ///
 /// Initialize logging at the given level, creating a logging pseudo-Node
@@ -82,15 +71,16 @@ pub fn init_default() {
 /// # Errors
 ///
 /// An error is returned if a logger has already been set.
-pub fn init(level: Level) -> Result<(), SetLoggerError> {
-    let sender = crate::io::node_create(
+pub fn init(log_sender: Sender<LogMessage>, level: Level) -> Result<(), SetLoggerError> {
+    log::set_boxed_logger(Box::new(OakChannelLogger { log_sender }))?;
+    log::set_max_level(level.to_level_filter());
+    Ok(())
+}
+
+pub fn create() -> Result<Sender<LogMessage>, OakStatus> {
+    crate::io::node_create(
         "log",
         &Label::public_untrusted(),
         &crate::node_config::log(),
     )
-    .expect("could not create log node");
-
-    log::set_boxed_logger(Box::new(OakChannelLogger { channel: sender }))?;
-    log::set_max_level(level.to_level_filter());
-    Ok(())
 }

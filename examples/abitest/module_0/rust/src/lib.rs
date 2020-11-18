@@ -114,7 +114,8 @@ impl FrontendNode {
             http_channel.close().unwrap();
         }
 
-        oak::logger::init(log::Level::Debug).expect("could not initialize logging node");
+        let log_sender = oak::logger::create().unwrap();
+        oak::logger::init(log_sender, log::Level::Debug).unwrap();
 
         // Create backend node instances.
         let mut backend_out = Vec::with_capacity(BACKEND_COUNT);
@@ -2721,7 +2722,8 @@ pub extern "C" fn channel_loser(_handle: u64) {
 // Entrypoint for a Node instance that handles HTTP requests.
 #[no_mangle]
 pub extern "C" fn http_oak_main(http_channel: u64) {
-    oak::logger::init_default();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
     let handler = http_server::StaticHttpHandler;
     oak::run_command_loop(
         handler,

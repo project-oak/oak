@@ -608,7 +608,6 @@ macro_rules! entrypoint_command_handler {
     ($name:ident => $handler:ty) => {
         ::oak::entrypoint!($name < _ > => |receiver: ::oak::io::Receiver<_>| {
             use ::oak::io::ReceiverExt;
-            ::oak::logger::init_default();
             let instance = <$handler>::default();
             ::oak::run_command_loop(instance, receiver.iter());
         });
@@ -628,7 +627,6 @@ macro_rules! entrypoint_command_handler_init {
         ::oak::entrypoint!($name < _ > => |receiver: ::oak::io::Receiver<::oak_io::InitWrapper<_, _>>| {
             use ::oak::io::ReceiverExt;
             use ::oak::WithInit;
-            ::oak::logger::init_default();
             let init_wrapper = receiver.receive().expect("could not receive init");
             let instance = <$handler>::create(init_wrapper.init);
             ::oak::run_command_loop(instance, init_wrapper.command_receiver.iter());

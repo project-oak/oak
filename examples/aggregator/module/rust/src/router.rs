@@ -73,6 +73,7 @@ impl oak::WithInit for Router {
     type Init = RouterInit;
 
     fn create(init: Self::Init) -> Self {
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
         let handler_invocation_sender = init
             .handler_invocation_sender
             .expect("Couldn't receive gRPC invocation sender")

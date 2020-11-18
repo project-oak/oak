@@ -15,15 +15,24 @@
 //
 
 pub mod proto {
-    include!(concat!(env!("OUT_DIR"), "/oak.examples.hello_world.rs"));
+    pub mod oak {
+        pub use oak::proto::oak::invocation;
+        pub use oak_services::proto::oak::log;
+        pub mod examples {
+            pub mod hello_world {
+                include!(concat!(env!("OUT_DIR"), "/oak.examples.hello_world.rs"));
+            }
+        }
+    }
 }
 
-use either::Either;
 use log::info;
 use oak::grpc;
 use oak_abi::{label::Label, proto::oak::application::ConfigMap};
-use oak_io::Sender;
-use proto::{HelloRequest, HelloResponse, HelloWorld, HelloWorldDispatcher};
+use oak_services::proto::oak::log::LogInit;
+use proto::oak::examples::hello_world::{
+    HelloRequest, HelloResponse, HelloWorld, HelloWorldDispatcher, Init,
+};
 
 #[derive(Default)]
 struct Main;
@@ -34,52 +43,63 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, _command: Self::Command) -> anyhow::Result<()> {
-        let translator_sender_result = oak::io::node_create::<grpc::Invocation>(
-            "translator",
+        let log_sender = oak::logger::create()?;
+        oak::logger::init(log_sender.clone(), log::Level::Debug)?;
+        let translator_sender_option =
+            oak::io::entrypoint_node_create::<translator_common::TranslatorEntrypoint, _, _>(
+                "translator",
+                &Label::public_untrusted(),
+                "translator",
+                LogInit {
+                    log_sender: Some(log_sender.clone()),
+                },
+            )
+            .ok();
+        if translator_sender_option == None {
+            log::warn!("could not create translator node");
+        }
+        let handler_sender = oak::io::entrypoint_node_create::<Handler, _, _>(
+            "handler",
             &Label::public_untrusted(),
-            &oak::node_config::wasm("translator", "handler"),
-        );
-        let handler_init_sender =
-            oak::io::entrypoint_node_create::<Node>("handler", &Label::public_untrusted(), "app")?;
-        let handler_command_sender = oak::io::send_init(
-            handler_init_sender,
-            translator_sender_result
-                .map(Either::Right)
-                .unwrap_or(Either::Left(())),
-            &Label::public_untrusted(),
+            "app",
+            Init {
+                log_sender: Some(log_sender),
+                translator_sender: translator_sender_option,
+            },
         )?;
-        oak::grpc::server::init_with_sender("[::]:8080", handler_command_sender)?;
+        oak::grpc::server::init_with_sender("[::]:8080", handler_sender)?;
         Ok(())
     }
 }
 
-struct Node {
+struct Handler {
     translator: Option<translator_common::TranslatorClient>,
 }
 
-impl oak::WithInit for Node {
-    // Since `Option<T>` is not directly `Encodable` and `Decodable`, we emulate it via a
-    // `Either<(), T>`, which is isomorphic to it.
-    type Init = Either<(), Sender<grpc::Invocation>>;
+impl oak::WithInit for Handler {
+    type Init = Init;
 
     fn create(init: Self::Init) -> Self {
-        Node {
-            translator: init.right().map(translator_common::TranslatorClient),
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
+        Self {
+            translator: init
+                .translator_sender
+                .map(translator_common::TranslatorClient),
         }
     }
 }
 
-oak::entrypoint_command_handler_init!(node => Node);
-oak::impl_dispatcher!(impl Node : HelloWorldDispatcher);
+oak::entrypoint_command_handler_init!(handler => Handler);
+oak::impl_dispatcher!(impl Handler : HelloWorldDispatcher);
 
-impl Node {
+impl Handler {
     fn translate(&self, text: &str, from_lang: &str, to_lang: &str) -> Option<String> {
         let client = self.translator.as_ref()?;
         translator_common::translate(client, text, from_lang, to_lang)
     }
 }
 
-impl HelloWorld for Node {
+impl HelloWorld for Handler {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
         info!("Say hello to {}", req.greeting);
         let mut res = HelloResponse::default();

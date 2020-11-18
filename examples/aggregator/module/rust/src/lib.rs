@@ -26,6 +26,7 @@
 pub mod proto {
     pub mod oak {
         pub use oak::proto::oak::invocation;
+        pub use oak_services::proto::oak::log;
         pub mod examples {
             pub mod aggregator {
                 include!(concat!(env!("OUT_DIR"), "/oak.examples.aggregator.rs"));
@@ -45,12 +46,13 @@ use crate::{
     router::Router,
 };
 use anyhow::Context;
-use log::{debug, info};
+use log::info;
 use oak::{
     io::Sender,
     proto::oak::{application::ConfigMap, invocation::GrpcInvocationSender},
 };
 use oak_abi::label::{confidentiality_label, web_assembly_module_tag, Label};
+use oak_services::proto::oak::log::LogMessage;
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -70,48 +72,55 @@ impl Main {
     fn create_router(
         grpc_server_listen_address: &str,
         aggregator_module_hash: &str,
+        log_sender: Sender<LogMessage>,
         handler_invocation_sender: Sender<oak::grpc::Invocation>,
     ) -> anyhow::Result<()> {
         // TODO(#1731): Split Aggregator into two Wasm modules and hardcode its SHA256 sum in the
         // first module.
-        let command = RouterInit {
+        let init = RouterInit {
+            log_sender: Some(log_sender),
             handler_invocation_sender: Some(GrpcInvocationSender {
                 sender: Some(handler_invocation_sender),
             }),
             aggregator_module_hash: aggregator_module_hash.to_string(),
         };
-        let router_init_sender =
-            oak::io::entrypoint_node_create::<Router>("router", &Label::public_untrusted(), "app")
-                .context("Couldn't create router node")?;
-        let router_command_sender =
-            oak::io::send_init(router_init_sender, command, &Label::public_untrusted())?;
-        oak::grpc::server::init_with_sender(grpc_server_listen_address, router_command_sender)
+        let router_sender = oak::io::entrypoint_node_create::<Router, _, _>(
+            "router",
+            &Label::public_untrusted(),
+            "app",
+            init,
+        )
+        .context("Couldn't create router node")?;
+        oak::grpc::server::init_with_sender(grpc_server_listen_address, router_sender)
             .context("Couldn't create gRPC server pseudo-Node")?;
         Ok(())
     }
 
     fn create_handler(
         aggregator_module_hash: &str,
+        log_sender: Sender<LogMessage>,
         grpc_client_invocation_sender: Sender<oak::grpc::Invocation>,
     ) -> anyhow::Result<Sender<oak::grpc::Invocation>> {
         // Create an Handler Node.
         let aggregator_hash_label = confidentiality_label(web_assembly_module_tag(
             &hex::decode(aggregator_module_hash).context("Couldn't decode SHA-256 hex value")?,
         ));
-        let handler_init_sender =
-            oak::io::entrypoint_node_create::<Handler>("handler", &aggregator_hash_label, "app")
-                .context("Couldn't create handler node")?;
 
         // Send the initialization message to Handler Node containing a gRPC server invocation
         // receiver and a gRPC client invocation sender.
-        debug!("Sending the initialization message to handler Node");
         let init_message = HandlerInit {
+            log_sender: Some(log_sender),
             grpc_client_invocation_sender: Some(GrpcInvocationSender {
                 sender: Some(grpc_client_invocation_sender),
             }),
         };
-        oak::io::send_init(handler_init_sender, init_message, &aggregator_hash_label)
-            .context("Couldn't send the initialization message to Handler Node")
+        oak::io::entrypoint_node_create::<Handler, _, _>(
+            "handler",
+            &aggregator_hash_label,
+            "app",
+            init_message,
+        )
+        .map_err(|err| err.into())
     }
 }
 
@@ -119,6 +128,8 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, command: ConfigMap) -> anyhow::Result<()> {
+        let log_sender = oak::logger::create()?;
+        oak::logger::init(log_sender.clone(), log::Level::Debug)?;
         let config: Config =
             toml::from_slice(&command.items.get("config").expect("Couldn't find config"))
                 .context("Couldn't parse TOML config file")?;
@@ -129,11 +140,13 @@ impl oak::CommandHandler for Main {
             .context("Couldn't create gRPC client")?;
         let handler_invocation_sender = Self::create_handler(
             &config.aggregator_module_hash,
+            log_sender.clone(),
             grpc_client_invocation_sender,
         )?;
         Self::create_router(
             &config.grpc_server_listen_address,
             &config.aggregator_module_hash,
+            log_sender,
             handler_invocation_sender,
         )
     }

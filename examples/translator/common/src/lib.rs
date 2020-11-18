@@ -19,6 +19,7 @@ pub mod proto {
 }
 
 use log::{info, warn};
+use oak_services::proto::oak::log::LogInit;
 use proto::TranslateRequest;
 pub use proto::TranslatorClient;
 
@@ -50,4 +51,14 @@ pub fn translate(
             None
         }
     }
+}
+
+/// Stub with a manual implementation of [`oak::WasmEntrypoint`], to be used by other nodes that
+/// want to instantiate a translator node. The manual implementation must be kept in sync with the
+/// auto-generated implementation from the translator module.
+pub struct TranslatorEntrypoint;
+
+impl oak::WasmEntrypoint for TranslatorEntrypoint {
+    const ENTRYPOINT_NAME: &'static str = "handler";
+    type Message = oak_io::InitWrapper<LogInit, oak::grpc::Invocation>;
 }

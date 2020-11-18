@@ -139,7 +139,8 @@ pub fn distance(first: Location, second: Location) -> f32 {
 }
 
 oak::entrypoint!(handler_oak_main<TrustedDatabaseCommand> => |command_receiver: Receiver<TrustedDatabaseCommand>| {
-    oak::logger::init_default();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
 
     // Receive command.
     let command: TrustedDatabaseCommand =

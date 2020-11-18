@@ -19,6 +19,7 @@ use crate::proto::{
     PrivateSetIntersectionDispatcher, SubmitSetRequest,
 };
 use oak::grpc;
+use oak_services::proto::oak::log::LogInit;
 use std::collections::{HashMap, HashSet};
 
 /// Maximum number of contributed private sets.
@@ -36,12 +37,21 @@ struct SetIntersection {
 
 oak::impl_dispatcher!(impl Handler : PrivateSetIntersectionDispatcher);
 
-oak::entrypoint_command_handler!(handler => Handler);
+oak::entrypoint_command_handler_init!(handler => Handler);
 
 #[derive(Default)]
 pub struct Handler {
     /// Map from set ID to `SetIntersection`.
     sets: HashMap<String, SetIntersection>,
+}
+
+impl oak::WithInit for Handler {
+    type Init = LogInit;
+
+    fn create(init: Self::Init) -> Self {
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
+        Self::default()
+    }
 }
 
 impl PrivateSetIntersection for Handler {
