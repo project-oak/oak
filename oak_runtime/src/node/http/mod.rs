@@ -429,7 +429,7 @@ impl Pipe {
         // that allows removing integrity tags, this will fail if the label has a non-empty
         // integrity component.
         let (request_writer, request_reader) = runtime
-            .channel_create("HTTP request", request_label)
+            .channel_create_with_privilege("HTTP request", request_label)
             .map_err(|err| {
                 HttpError::ChannelOperation(format!(
                     "could not create HTTP request channel: {:?}",
@@ -438,7 +438,7 @@ impl Pipe {
             })?;
 
         let (response_writer, response_reader) = runtime
-            .channel_create("HTTP response", user_identity_label)
+            .channel_create_with_privilege("HTTP response", user_identity_label)
             .map_err(|err| {
                 HttpError::ChannelOperation(format!(
                     "could not create HTTP response channel: {:?}",
@@ -464,7 +464,7 @@ impl Pipe {
         let sender = crate::io::Sender::new(WriteHandle {
             handle: self.request_writer,
         });
-        sender.send(request, runtime).map_err(|err| {
+        sender.send_with_privilege(request, runtime).map_err(|err| {
             HttpError::ChannelOperation(format!(
                 "Couldn't write the request to the HTTP request channel: {:?}",
                 err
@@ -491,7 +491,7 @@ impl Pipe {
             handle: invocation_channel,
         });
         invocation_sender
-            .send(invocation, runtime)
+            .send_with_privilege(invocation, runtime)
             .map_err(|error| {
                 HttpError::ChannelOperation(format!(
                     "Couldn't write the invocation message: {:?}",
@@ -681,7 +681,7 @@ impl HttpResponseReceiver {
         let response_receiver = crate::io::Receiver::<HttpResponse>::new(ReadHandle {
             handle: self.response_reader,
         });
-        response_receiver.receive_with_privilege(&self.runtime)
+        response_receiver.receive(&self.runtime)
     }
 
     fn try_into_hyper_response(&self) -> Result<Response<Body>, HttpError> {

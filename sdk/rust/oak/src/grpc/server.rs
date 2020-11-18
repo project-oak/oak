@@ -52,18 +52,18 @@ pub fn init_with_sender(
     invocation_sender: Sender<Invocation>,
 ) -> Result<(), OakStatus> {
     let config = crate::node_config::grpc_server(address);
+    // TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to
+    // the top of the `user` sub-lattice.
+    let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
     // Create a channel and pass the read half to a new gRPC server pseudo-Node.
-    let init_sender = match crate::io::node_create::<GrpcInvocationSender>(
-        "grpc_server",
-        &Label::public_untrusted(),
-        &config,
-    ) {
-        Ok(s) => s,
-        Err(e) => {
-            let _ = invocation_sender.close();
-            return Err(e);
-        }
-    };
+    let init_sender =
+        match crate::io::node_create::<GrpcInvocationSender>("grpc_server", &top_label, &config) {
+            Ok(s) => s,
+            Err(e) => {
+                let _ = invocation_sender.close();
+                return Err(e);
+            }
+        };
 
     let grpc_server_init = GrpcInvocationSender {
         sender: Some(invocation_sender),

@@ -435,13 +435,13 @@ impl GrpcInvocationHandler {
         // This will fail if the label has a non-empty integrity component.
         let (request_writer, request_reader) = self
             .runtime
-            .channel_create("gRPC request", &label)
+            .channel_create_with_privilege("gRPC request", &label)
             .map_err(|err| {
                 warn!("could not create gRPC request channel: {:?}", err);
             })?;
         let (response_writer, response_reader) = self
             .runtime
-            .channel_create("gRPC response", &Label::public_untrusted())
+            .channel_create_with_privilege("gRPC response", &Label::public_untrusted())
             .map_err(|err| {
                 warn!("could not create gRPC response channel: {:?}", err);
             })?;
@@ -459,7 +459,7 @@ impl GrpcInvocationHandler {
         Sender::<GrpcRequest>::new(WriteHandle {
             handle: request_writer,
         })
-        .send(request, &self.runtime)
+        .send_with_privilege(request, &self.runtime)
         .map_err(|error| {
             error!(
                 "Couldn't write message to the gRPC request channel: {:?}",
@@ -469,7 +469,7 @@ impl GrpcInvocationHandler {
 
         // Send an invocation message (with attached handles) to the Oak Node.
         self.invocation_channel
-            .send(invocation, &self.runtime)
+            .send_with_privilege(invocation, &self.runtime)
             .map_err(|error| {
                 error!("Couldn't write gRPC invocation message: {:?}", error);
             })?;
@@ -610,7 +610,7 @@ impl Iterator for GrpcResponseIterator {
         }
         match &self.response_reader {
             Some(receiver) => {
-                match receiver.receive_with_privilege(&self.runtime) {
+                match receiver.receive(&self.runtime) {
                     Ok(grpc_rsp) => {
                         self.metrics_recorder
                             .observe_message_with_len(grpc_rsp.rsp_msg.len());

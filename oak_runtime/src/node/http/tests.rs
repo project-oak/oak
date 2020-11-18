@@ -377,13 +377,12 @@ fn create_server_node(runtime: &RuntimeProxy, port: u32) -> oak_abi::Handle {
         })),
     };
 
+    // TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to
+    // the top of the `user` sub-lattice.
+    let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
+
     runtime
-        .node_create(
-            "test_server",
-            &server_config,
-            &Label::public_untrusted(),
-            init_receiver,
-        )
+        .node_create("test_server", &server_config, &top_label, init_receiver)
         .expect("Could not create HTTP server node!");
 
     invocation_receiver

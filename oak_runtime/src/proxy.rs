@@ -227,7 +227,7 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::channel_create`].
+    /// Calls [`Runtime::channel_create`] without using the Node's privilege.
     pub fn channel_create(
         &self,
         name: &str,
@@ -247,6 +247,29 @@ impl RuntimeProxy {
         result
     }
 
+    /// Calls [`Runtime::channel_create`] using the Node's privilege.
+    pub fn channel_create_with_privilege(
+        &self,
+        name: &str,
+        label: &Label,
+    ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
+        debug!(
+            "{:?}: channel_create_with_privilege({:?}, {:?})",
+            self.node_id, name, label
+        );
+        let result = self.runtime.channel_create(
+            self.node_id,
+            name,
+            label,
+            OperationPrivilege::UsePrivilege,
+        );
+        debug!(
+            "{:?}: channel_create_with_privilege({:?}, {:?}) -> {:?}",
+            self.node_id, name, label, result
+        );
+        result
+    }
+
     /// See [`Runtime::channel_close`].
     pub fn channel_close(&self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         debug!("{:?}: channel_close({})", self.node_name, handle);
@@ -258,7 +281,7 @@ impl RuntimeProxy {
         result
     }
 
-    /// Calls [`Runtime::wait_on_channels`] without using the Node's privilege.
+    /// See [`Runtime::wait_on_channels`].
     pub fn wait_on_channels(
         &self,
         read_handles: &[oak_abi::Handle],
@@ -274,30 +297,6 @@ impl RuntimeProxy {
         debug!(
             "{:?}: wait_on_channels(count={}) -> {:?}",
             self.node_name,
-            read_handles.len(),
-            result
-        );
-        result
-    }
-
-    /// Calls [`Runtime::wait_on_channels`] using the Node's privilege.
-    pub fn wait_on_channels_with_privilege(
-        &self,
-        read_handles: &[oak_abi::Handle],
-    ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-        debug!(
-            "{:?}: wait_on_channels_with_privilege(count={})",
-            self.node_id,
-            read_handles.len()
-        );
-        let result = self.runtime.wait_on_channels(
-            self.node_id,
-            read_handles,
-            OperationPrivilege::UsePrivilege,
-        );
-        debug!(
-            "{:?}: wait_on_channels_with_privilege(count={}) -> {:?}",
-            self.node_id,
             read_handles.len(),
             result
         );
