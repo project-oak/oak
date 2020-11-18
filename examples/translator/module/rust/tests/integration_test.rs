@@ -24,7 +24,7 @@ const MODULE_WASM_FILE_NAME: &str = "translator.wasm";
 async fn test_translate() {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "oak_main")
+    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;

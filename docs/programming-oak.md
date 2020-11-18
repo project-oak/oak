@@ -660,24 +660,28 @@ crate allows Node gRPC service methods to be tested with the [Oak SDK](sdk.md)
 framework via the Oak Runtime:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/running_average/module/rust/tests/integration_test.rs Rust /#\[tokio/ /^}$/)
+[embedmd]:# (../examples/translator/module/rust/tests/integration_test.rs Rust /#\[tokio/ /^}$/)
 ```Rust
 #[tokio::test(core_threads = 2)]
-async fn test_running_average() {
+async fn test_translate() {
     let _ = env_logger::builder().is_test(true).try_init();
 
     let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
-    let mut client = RunningAverageClient::with_interceptor(channel, interceptor);
+    let mut client = TranslatorClient::with_interceptor(channel, interceptor);
 
-    submit_sample(&mut client, 100).await;
-    submit_sample(&mut client, 200).await;
+    let req = TranslateRequest {
+        text: "WORLDS".into(),
+        from_lang: "en".into(),
+        to_lang: "it".into(),
+    };
+    info!("Sending request: {:?}", req);
 
-    let result = client.get_average(()).await;
+    let result = client.translate(req).await;
     assert_matches!(result, Ok(_));
-    assert_eq!(150, result.unwrap().into_inner().average);
+    assert_eq!("MONDI", result.unwrap().into_inner().translated_text);
 
     runtime.stop();
 }
