@@ -17,7 +17,7 @@
 use crate::proto::oak::examples::trusted_database::{
     GetPointOfInterestRequest, GetPointOfInterestResponse, ListPointsOfInterestRequest,
     ListPointsOfInterestResponse, Location, PointOfInterestMap, TrustedDatabase,
-    TrustedDatabaseInit, TrustedDatabaseDispatcher,
+    TrustedDatabaseDispatcher, TrustedDatabaseInit,
 };
 use log::{debug, error, warn};
 use oak::grpc;
@@ -28,6 +28,7 @@ const ID_NOT_FOUND_ERROR: &str = "ID not found";
 const EMPTY_DATABASE_ERROR: &str = "Empty database";
 
 /// Oak Handler Node that contains a copy of the database.
+#[derive(Default)]
 pub struct Handler {
     points_of_interest: PointOfInterestMap,
 }
@@ -37,9 +38,7 @@ impl oak::WithInit for Handler {
 
     fn create(init: Self::Init) -> Self {
         oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
-        let points_of_interest = init
-            .points_of_interest
-            .expect("Couldn't receive database");
+        let points_of_interest = init.points_of_interest.expect("Couldn't receive database");
         Self { points_of_interest }
     }
 }
@@ -72,7 +71,7 @@ impl TrustedDatabase for Handler {
         &mut self,
         request: ListPointsOfInterestRequest,
     ) -> grpc::Result<ListPointsOfInterestResponse> {
-        debug!("Received request: {:?}", request);
+        error!("Received request: {:?}", request);
         let request_location = request.location.ok_or_else(|| {
             let err = grpc::build_status(grpc::Code::InvalidArgument, &NO_LOCATION_ERROR);
             warn!("{:?}", err);

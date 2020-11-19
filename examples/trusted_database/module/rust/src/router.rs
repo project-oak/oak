@@ -39,10 +39,11 @@ impl oak::WithInit for Router {
     fn create(init: Self::Init) -> Self {
         let log_sender = init.log_sender.unwrap();
         oak::logger::init(log_sender.clone(), log::Level::Debug).unwrap();
-        let points_of_interest = init
-            .points_of_interest
-            .expect("Couldn't receive database");
-        Self { log_sender, points_of_interest }
+        let points_of_interest = init.points_of_interest.expect("Couldn't receive database");
+        Self {
+            log_sender,
+            points_of_interest,
+        }
     }
 }
 
@@ -50,7 +51,8 @@ impl CommandHandler for Router {
     type Command = grpc::Invocation;
 
     fn handle_command(&mut self, invocation: Self::Command) -> anyhow::Result<()> {
-        let label = invocation.receiver
+        let label = invocation
+            .receiver
             .context("Couldn't get receiver")?
             .label()
             .context("Couldn't get label")?;

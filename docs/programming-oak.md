@@ -407,13 +407,17 @@ associated type to
 or manually reading from the initial `Receiver`:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/trusted_database/module/rust/src/lib.rs Rust /oak::entrypoint/ /.*let config_map =.*/)
+[embedmd]:# (../examples/aggregator/module/rust/src/lib.rs Rust /impl oak::CommandHandler/ /.*context.*/)
 ```Rust
-oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
-    let log_sender = oak::logger::create().unwrap();
-    oak::logger::init(log_sender, log::Level::Debug).unwrap();
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
 
-    let config_map = receiver.receive().expect("Couldn't read config map");
+    fn handle_command(&mut self, command: ConfigMap) -> anyhow::Result<()> {
+        let log_sender = oak::logger::create()?;
+        oak::logger::init(log_sender.clone(), log::Level::Debug)?;
+        let config: Config =
+            toml::from_slice(&command.items.get("config").expect("Couldn't find config"))
+                .context("Couldn't parse TOML config file")?;
 ```
 <!-- prettier-ignore-end -->
 

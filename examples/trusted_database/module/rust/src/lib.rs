@@ -57,10 +57,7 @@ mod router;
 #[cfg(test)]
 mod tests;
 
-use crate::{
-    proto::oak::examples::trusted_database::TrustedDatabaseInit,
-    router::Router,
-};
+use crate::{proto::oak::examples::trusted_database::TrustedDatabaseInit, router::Router};
 use anyhow::Context;
 use database::load_database;
 use oak::proto::oak::application::ConfigMap;
