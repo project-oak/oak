@@ -53,6 +53,9 @@ use crate::node::Node;
 pub struct RuntimeProxy {
     pub runtime: Arc<Runtime>,
     pub node_id: NodeId,
+    // The node_name is stored as a one-off copy for debug calls.
+    // TODO(#1737): Move debug calls to the Runtime.
+    pub node_name: String,
 }
 
 // Methods on `RuntimeProxy` for managing the core `Runtime` instance.
@@ -77,11 +80,13 @@ impl RuntimeProxy {
                 signature_table: signature_table.clone(),
             },
         });
-        let proxy = runtime.proxy_for_new_node();
+        let proxy = runtime.proxy_for_new_node("implicit.initial");
+        let new_node_id = proxy.node_id;
+        let new_node_name = proxy.node_name.clone();
         proxy.runtime.node_configure_instance(
-            proxy.node_id,
+            new_node_id,
             "implicit",
-            "implicit.initial",
+            new_node_name,
             &Label::public_untrusted(),
             &NodePrivilege::default(),
         );
@@ -145,7 +150,7 @@ impl RuntimeProxy {
             self.channel_create("Initial", &Label::public_untrusted())?;
         debug!(
             "{:?}: created initial channel ({}, {})",
-            self.node_id, write_handle, read_handle,
+            self.node_name, write_handle, read_handle,
         );
 
         self.node_create(
@@ -176,7 +181,7 @@ impl RuntimeProxy {
     ) -> Result<(), OakStatus> {
         debug!(
             "{:?}: node_create({:?}, {:?}, {:?})",
-            self.node_id, name, config, label
+            self.node_name, name, config, label
         );
         let result = self.runtime.clone().node_create_and_register(
             self.node_id,
@@ -187,7 +192,7 @@ impl RuntimeProxy {
         );
         debug!(
             "{:?}: node_create({:?}, {:?}, {:?}) -> {:?}",
-            self.node_id, name, config, label, result
+            self.node_name, name, config, label, result
         );
         result
     }
@@ -203,7 +208,7 @@ impl RuntimeProxy {
     ) -> Result<(), OakStatus> {
         debug!(
             "{:?}: register_node_instance(node_name: {:?}, label: {:?})",
-            self.node_id, node_name, label
+            self.node_name, node_name, label
         );
         let result = self.runtime.clone().node_register(
             self.node_id,
@@ -214,7 +219,7 @@ impl RuntimeProxy {
         );
         debug!(
             "{:?}: register_node_instance(node_name: {:?}, label: {:?}) -> {:?}",
-            self.node_id, node_name, label, result
+            self.node_name, node_name, label, result
         );
         result
     }
@@ -227,23 +232,23 @@ impl RuntimeProxy {
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
         debug!(
             "{:?}: channel_create({:?}, {:?})",
-            self.node_id, name, label
+            self.node_name, name, label
         );
         let result = self.runtime.channel_create(self.node_id, name, label);
         debug!(
             "{:?}: channel_create({:?}, {:?}) -> {:?}",
-            self.node_id, name, label, result
+            self.node_name, name, label, result
         );
         result
     }
 
     /// See [`Runtime::channel_close`].
     pub fn channel_close(&self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
-        debug!("{:?}: channel_close({})", self.node_id, handle);
+        debug!("{:?}: channel_close({})", self.node_name, handle);
         let result = self.runtime.channel_close(self.node_id, handle);
         debug!(
             "{:?}: channel_close({}) -> {:?}",
-            self.node_id, handle, result
+            self.node_name, handle, result
         );
         result
     }
@@ -255,13 +260,13 @@ impl RuntimeProxy {
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
         debug!(
             "{:?}: wait_on_channels(count={})",
-            self.node_id,
+            self.node_name,
             read_handles.len()
         );
         let result = self.runtime.wait_on_channels(self.node_id, read_handles);
         debug!(
             "{:?}: wait_on_channels(count={}) -> {:?}",
-            self.node_id,
+            self.node_name,
             read_handles.len(),
             result
         );
@@ -276,12 +281,12 @@ impl RuntimeProxy {
     ) -> Result<(), OakStatus> {
         debug!(
             "{:?}: channel_write({}, {:?})",
-            self.node_id, write_handle, msg
+            self.node_name, write_handle, msg
         );
         let result = self.runtime.channel_write(self.node_id, write_handle, msg);
         debug!(
             "{:?}: channel_write({}, ...) -> {:?}",
-            self.node_id, write_handle, result
+            self.node_name, write_handle, result
         );
         result
     }
@@ -291,11 +296,11 @@ impl RuntimeProxy {
         &self,
         read_handle: oak_abi::Handle,
     ) -> Result<Option<NodeMessage>, OakStatus> {
-        debug!("{:?}: channel_read({})", self.node_id, read_handle,);
+        debug!("{:?}: channel_read({})", self.node_name, read_handle,);
         let result = self.runtime.channel_read(self.node_id, read_handle);
         debug!(
             "{:?}: channel_read({}) -> {:?}",
-            self.node_id, read_handle, result
+            self.node_name, read_handle, result
         );
         result
     }
@@ -309,7 +314,7 @@ impl RuntimeProxy {
     ) -> Result<Option<NodeReadStatus>, OakStatus> {
         debug!(
             "{:?}: channel_try_read({}, bytes_capacity={}, handles_capacity={})",
-            self.node_id, read_handle, bytes_capacity, handles_capacity
+            self.node_name, read_handle, bytes_capacity, handles_capacity
         );
         let result = self.runtime.channel_try_read_message(
             self.node_id,
@@ -319,7 +324,7 @@ impl RuntimeProxy {
         );
         debug!(
             "{:?}: channel_try_read({}, bytes_capacity={}, handles_capacity={}) -> {:?}",
-            self.node_id, read_handle, bytes_capacity, handles_capacity, result
+            self.node_name, read_handle, bytes_capacity, handles_capacity, result
         );
         result
     }
@@ -332,14 +337,14 @@ impl RuntimeProxy {
     ) -> Result<LabelReadStatus, OakStatus> {
         debug!(
             "{:?}: get_serialized_channel_label({}, capacity={})",
-            self.node_id, handle, capacity
+            self.node_name, handle, capacity
         );
         let result = self
             .runtime
             .get_serialized_channel_label(self.node_id, handle, capacity);
         debug!(
             "{:?}: get_serialized_channel_label({}, capacity={}) -> {:?}",
-            self.node_id, handle, capacity, result
+            self.node_name, handle, capacity, result
         );
         result
     }
@@ -348,14 +353,14 @@ impl RuntimeProxy {
     pub fn get_serialized_node_label(&self, capacity: usize) -> Result<LabelReadStatus, OakStatus> {
         debug!(
             "{:?}: get_serialized_node_label(capacity={})",
-            self.node_id, capacity
+            self.node_name, capacity
         );
         let result = self
             .runtime
             .get_serialized_node_label(self.node_id, capacity);
         debug!(
             "{:?}: get_serialized_node_label(capacity={}) -> {:?}",
-            self.node_id, capacity, result
+            self.node_name, capacity, result
         );
         result
     }
@@ -367,25 +372,25 @@ impl RuntimeProxy {
     ) -> Result<LabelReadStatus, OakStatus> {
         debug!(
             "{:?}: get_serialized_node_privilege(capacity={})",
-            self.node_id, capacity
+            self.node_name, capacity
         );
         let result = self
             .runtime
             .get_serialized_node_privilege(self.node_id, capacity);
         debug!(
             "{:?}: get_serialized_node_privilege(capacity={}) -> {:?}",
-            self.node_id, capacity, result
+            self.node_name, capacity, result
         );
         result
     }
 
     /// See [`Runtime::get_channel_label`].
     pub fn get_channel_label(&self, handle: oak_abi::Handle) -> Result<Label, OakStatus> {
-        debug!("{:?}: get_channel_label({})", self.node_id, handle);
+        debug!("{:?}: get_channel_label({})", self.node_name, handle);
         let result = self.runtime.get_channel_label(self.node_id, handle);
         debug!(
             "{:?}: get_channel_label({}) -> {:?}",
-            self.node_id, handle, result
+            self.node_name, handle, result
         );
         result
     }
