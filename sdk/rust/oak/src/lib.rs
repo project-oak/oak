@@ -224,15 +224,16 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Resul
     result_from_status(status as i32, ())
 }
 
-/// Write a message to a channel using the current node's label-downgrading privilege.
-pub fn channel_write_with_privilege(
+/// The same as [`channel_write`](#method.channel_write), but also applies the current Node's
+/// downgrade privilege when checking IFC restrictions.
+pub fn channel_write_with_downgrade(
     half: WriteHandle,
     buf: &[u8],
     handles: &[Handle],
 ) -> Result<(), OakStatus> {
     let handle_buf = crate::handle::pack(handles);
     let status = unsafe {
-        oak_abi::channel_write_with_privilege(
+        oak_abi::channel_write_with_downgrade(
             half.handle,
             buf.as_ptr(),
             buf.len(),
@@ -272,14 +273,9 @@ pub fn channel_create(name: &str, label: &Label) -> Result<(WriteHandle, ReadHan
     result_from_status(status as i32, (write, read))
 }
 
-/// Create a new unidirectional channel using the current node's label-downgrading privilege.
-///
-/// The provided label must be equal or more restrictive than the label of the calling node, i.e.
-/// the label of the calling node must "flow to" the provided label.
-///
-/// On success, returns [`WriteHandle`] and a [`ReadHandle`] values for the
-/// write and read halves (respectively).
-pub fn channel_create_with_privilege(
+/// The same as [`channel_create`](#method.channel_create), but also applies the current Node's
+/// downgrade privilege when checking IFC restrictions.
+pub fn channel_create_with_downgrade(
     name: &str,
     label: &Label,
 ) -> Result<(WriteHandle, ReadHandle), OakStatus> {
@@ -292,7 +288,7 @@ pub fn channel_create_with_privilege(
     let label_bytes = label.serialize();
     let name_bytes = name.as_bytes();
     let status = unsafe {
-        oak_abi::channel_create_with_privilege(
+        oak_abi::channel_create_with_downgrade(
             &mut write.handle as *mut u64,
             &mut read.handle as *mut u64,
             name_bytes.as_ptr(),
@@ -345,16 +341,9 @@ pub fn node_create(
     result_from_status(status as i32, ())
 }
 
-/// Uses the calling node's label-downgrading privilege to creates a new Node running the
-/// configuration identified by `config_name`, running the entrypoint identified by
-/// `entrypoint_name` (for a Web Assembly Node; this parameter is ignored when creating a
-/// pseudo-Node), with the provided `label`, and passing it the given handle.
-///
-/// The provided label must be equal or more restrictive than the downgraded label of the calling
-/// node, i.e. the label of the calling node must "flow to" the provided label.
-///
-/// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
-pub fn node_create_with_privilege(
+/// The same as [`node_create`](#method.node_create), but also applies the current Node's downgrade
+/// privilege when checking IFC restrictions.
+pub fn node_create_with_downgrade(
     name: &str,
     config: &NodeConfiguration,
     label: &Label,
@@ -368,7 +357,7 @@ pub fn node_create_with_privilege(
         OakStatus::ErrInvalidArgs
     })?;
     let status = unsafe {
-        oak_abi::node_create_with_privilege(
+        oak_abi::node_create_with_downgrade(
             name_bytes.as_ptr(),
             name_bytes.len(),
             config_bytes.as_ptr(),

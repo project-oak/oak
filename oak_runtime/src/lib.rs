@@ -340,11 +340,12 @@ pub enum LabelReadStatus {
     NeedsCapacity(usize),
 }
 
-/// Indicator whether an operation is executed using the Node's privilege or without it.
+/// Indicator whether an operation is executed using the Node's label-downgrading privilege or
+/// without it.
 #[derive(Clone, Copy, Debug)]
-enum OperationPrivilege {
-    None,
-    UsePrivilege,
+enum Downgrading {
+    No,
+    Yes,
 }
 
 /// Information for managing an associated server.
@@ -636,6 +637,20 @@ impl Runtime {
         node_privilege.downgrade_label(initial_label)
     }
 
+    /// Returns the effective label for `initial_label` in the context of the Node, taking into
+    /// acount whether the downgrade privilege should be applied.
+    fn get_node_effective_label(
+        &self,
+        node_id: NodeId,
+        initial_label: &Label,
+        downgrade: Downgrading,
+    ) -> Label {
+        match downgrade {
+            Downgrading::Yes => self.get_node_downgraded_label(node_id, initial_label),
+            Downgrading::No => initial_label.to_owned(),
+        }
+    }
+
     /// Returns a clone of the [`NodePrivilege`] of the provided Node.
     fn get_node_privilege(&self, node_id: NodeId) -> NodePrivilege {
         let node_infos = self
@@ -728,10 +743,10 @@ impl Runtime {
         &self,
         node_id: NodeId,
         channel_half: &ChannelHalf,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<(), OakStatus> {
         let channel_label = self.get_reader_channel_label(&channel_half)?;
-        self.validate_can_read_from_label(node_id, &channel_label, use_privilege)
+        self.validate_can_read_from_label(node_id, &channel_label, downgrade)
     }
 
     /// Returns whether the given Node is allowed to read from an entity with the provided
@@ -741,7 +756,7 @@ impl Runtime {
         &self,
         node_id: NodeId,
         source_label: &Label,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<(), OakStatus> {
         let target_label = self.get_node_label(node_id);
         let node_name = self.get_node_name(node_id);
@@ -751,24 +766,10 @@ impl Runtime {
             source_label
         );
 
-        let final_source_label = match use_privilege {
-            OperationPrivilege::UsePrivilege => {
-                // When reading from a Channel and using privilege, we downgrade the Label of the
-                // Channel from which the Node is reading: the thing being downgraded is the
-                // data being read into the Node (protected by the Channel Label).
-                let downgraded_source_label = self.get_node_downgraded_label(node_id, source_label);
-
-                trace!(
-                    "{:?}: downgraded source label: {:?}?",
-                    node_name,
-                    downgraded_source_label
-                );
-                downgraded_source_label
-            }
-            OperationPrivilege::None => source_label.to_owned(),
-        };
+        let effective_label = self.get_node_effective_label(node_id, source_label, downgrade);
+        trace!("{:?}: effective label: {:?}?", node_name, effective_label);
         trace!("{:?}: target label: {:?}?", node_name, target_label);
-        if final_source_label.flows_to(&target_label) {
+        if effective_label.flows_to(&target_label) {
             trace!("{:?}: can read from {:?}", node_name, source_label);
             Ok(())
         } else {
@@ -783,10 +784,10 @@ impl Runtime {
         &self,
         node_id: NodeId,
         channel_half: &ChannelHalf,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<(), OakStatus> {
         let channel_label = self.get_writer_channel_label(&channel_half)?;
-        self.validate_can_write_to_label(node_id, &channel_label, use_privilege)
+        self.validate_can_write_to_label(node_id, &channel_label, downgrade)
     }
 
     /// Returns whether the given Node is allowed to write to an entity with the provided [`Label`],
@@ -795,7 +796,7 @@ impl Runtime {
         &self,
         node_id: NodeId,
         target_label: &Label,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<(), OakStatus> {
         let original_label = self.get_node_label(node_id);
         let node_name = self.get_node_name(node_id);
@@ -804,23 +805,10 @@ impl Runtime {
             node_name,
             &original_label
         );
-        let source_label = match use_privilege {
-            OperationPrivilege::UsePrivilege => {
-                // When writing to a Channel and using privilege, we downgrade the Label of the Node
-                // itself: the thing being downgraded is the data inside the Node (protected
-                // by the Node Label).
-                let downgraded_label = self.get_node_downgraded_label(node_id, &original_label);
-                trace!(
-                    "{:?}: downgraded source label: {:?}?",
-                    node_name,
-                    downgraded_label
-                );
-                downgraded_label
-            }
-            OperationPrivilege::None => original_label,
-        };
+        let effective_label = self.get_node_effective_label(node_id, &original_label, downgrade);
+        trace!("{:?}: effective label: {:?}?", node_name, effective_label);
         trace!("{:?}: target label: {:?}?", node_name, target_label);
-        if source_label.flows_to(&target_label) {
+        if effective_label.flows_to(&target_label) {
             trace!("{:?}: can write to {:?}", node_name, target_label);
             Ok(())
         } else {
@@ -835,7 +823,7 @@ impl Runtime {
         node_id: NodeId,
         name: &str,
         label: &Label,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
@@ -844,10 +832,10 @@ impl Runtime {
         // The label (and mere presence) of the newly created Channel is effectively public, so we
         // must ensure that the label of the calling Node flows to both "public untrusted" and to
         // the label of the Channel to be created.
-        self.validate_can_write_to_label(node_id, &Label::public_untrusted(), use_privilege)?;
+        self.validate_can_write_to_label(node_id, &Label::public_untrusted(), downgrade)?;
         // We also additionally make sure that the label of the newly created Channel can be written
         // to by the current Node, since in general this may be lower than "public untrusted".
-        self.validate_can_write_to_label(node_id, label, use_privilege)?;
+        self.validate_can_write_to_label(node_id, label, downgrade)?;
 
         // First get a pair of `ChannelHalf` objects.
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
@@ -889,12 +877,12 @@ impl Runtime {
         &self,
         node_id: NodeId,
         readers: &[ChannelHalf],
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Vec<ChannelReadStatus> {
         readers
             .iter()
             .map(|half| {
-                self.channel_status(node_id, half, use_privilege)
+                self.channel_status(node_id, half, downgrade)
                     .unwrap_or(ChannelReadStatus::InvalidChannel)
             })
             .collect()
@@ -921,7 +909,7 @@ impl Runtime {
         &self,
         node_id: NodeId,
         read_handles: &[oak_abi::Handle],
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
         // Accumulate both the valid channels and their original position.
         let mut all_statuses = vec![ChannelReadStatus::InvalidChannel; read_handles.len()];
@@ -957,7 +945,7 @@ impl Runtime {
                     Ok(())
                 })?;
             }
-            let statuses = self.readers_statuses(node_id, &readers, use_privilege);
+            let statuses = self.readers_statuses(node_id, &readers, downgrade);
             // Transcribe the status for valid channels back to the original position
             // in the list of all statuses.
             for i in 0..readers.len() {
@@ -994,10 +982,10 @@ impl Runtime {
         node_id: NodeId,
         write_handle: oak_abi::Handle,
         node_msg: NodeMessage,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<(), OakStatus> {
         let half = self.abi_to_write_half(node_id, write_handle)?;
-        self.validate_can_write_to_channel(node_id, &half, use_privilege)?;
+        self.validate_can_write_to_channel(node_id, &half, downgrade)?;
 
         let event_details = MessageEnqueued {
             node_id: node_id.0,
@@ -1040,10 +1028,10 @@ impl Runtime {
         &self,
         node_id: NodeId,
         read_handle: oak_abi::Handle,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<Option<NodeMessage>, OakStatus> {
         let half = self.abi_to_read_half(node_id, read_handle)?;
-        self.validate_can_read_from_channel(node_id, &half, use_privilege)?;
+        self.validate_can_read_from_channel(node_id, &half, downgrade)?;
         match with_reader_channel(&half, |channel| {
             match channel.messages.write().unwrap().pop_front() {
                 Some(m) => Ok(Some(m)),
@@ -1084,10 +1072,10 @@ impl Runtime {
         &self,
         node_id: NodeId,
         half: &ChannelHalf,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<ChannelReadStatus, OakStatus> {
         if let Err(OakStatus::ErrPermissionDenied) =
-            self.validate_can_read_from_channel(node_id, half, use_privilege)
+            self.validate_can_read_from_channel(node_id, half, downgrade)
         {
             return Ok(ChannelReadStatus::PermissionDenied);
         };
@@ -1115,10 +1103,10 @@ impl Runtime {
         handle: oak_abi::Handle,
         bytes_capacity: usize,
         handles_capacity: usize,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<Option<NodeReadStatus>, OakStatus> {
         let half = self.abi_to_read_half(node_id, handle)?;
-        self.validate_can_read_from_channel(node_id, &half, use_privilege)?;
+        self.validate_can_read_from_channel(node_id, &half, downgrade)?;
         let result = with_reader_channel(&half, |channel| {
             let mut messages = channel.messages.write().unwrap();
             match messages.front() {
@@ -1271,7 +1259,7 @@ impl Runtime {
         config: &NodeConfiguration,
         label: &Label,
         initial_handle: oak_abi::Handle,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<(), OakStatus> {
         // This only creates a Node instance, but does not start it.
         let instance = self.node_factory.create_node(name, config).map_err(|err| {
@@ -1280,18 +1268,14 @@ impl Runtime {
         })?;
 
         // Register the instance within the `Runtime`.
-        self.node_register(
-            node_id,
-            instance,
-            name,
-            label,
-            initial_handle,
-            use_privilege,
-        )
+        self.node_register(node_id, instance, name, label, initial_handle, downgrade)
     }
 
     /// Registers the given [`Node`] instance within the [`Runtime`]. The registration fails if the
     /// labels violate the IFC rules.
+    ///
+    /// If `downgrade` is set to [`Downgrading::Yes`], the calling Node's downgrading privilege is
+    /// taken into account when checking IFC restrictions.
     fn node_register(
         self: Arc<Self>,
         node_id: NodeId,
@@ -1299,7 +1283,7 @@ impl Runtime {
         node_name: &str,
         label: &Label,
         initial_handle: oak_abi::Handle,
-        use_privilege: OperationPrivilege,
+        downgrade: Downgrading,
     ) -> Result<(), OakStatus> {
         if self.is_terminating() {
             return Err(OakStatus::ErrTerminated);
@@ -1308,10 +1292,10 @@ impl Runtime {
         // The label (and mere presence) of the newly created Node is effectively public, so we must
         // ensure that the label of the calling Node flows to both "public untrusted" and to the
         // label of the Node to be created.
-        self.validate_can_write_to_label(node_id, &Label::public_untrusted(), use_privilege)?;
+        self.validate_can_write_to_label(node_id, &Label::public_untrusted(), downgrade)?;
         // We also additionally make sure that the label of the newly created Node can be written to
         // by the current Node, since in general this may be lower than "public untrusted".
-        self.validate_can_write_to_label(node_id, label, use_privilege)?;
+        self.validate_can_write_to_label(node_id, label, downgrade)?;
 
         let node_type = instance.node_type();
         let node_privilege = instance.get_privilege();

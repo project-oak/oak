@@ -225,7 +225,7 @@ impl Node for HttpServerNode {
         // This node needs to have `top` privilege to be able to declassify data tagged with any
         // arbitrary user identities.
         // TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to
-        // the top of the `user` sub-lattice.
+        // the top of the identity sub-lattice.
         NodePrivilege::top_privilege()
     }
 
@@ -429,7 +429,7 @@ impl Pipe {
         // that allows removing integrity tags, this will fail if the label has a non-empty
         // integrity component.
         let (request_writer, request_reader) = runtime
-            .channel_create_with_privilege("HTTP request", request_label)
+            .channel_create_with_downgrade("HTTP request", request_label)
             .map_err(|err| {
                 HttpError::ChannelOperation(format!(
                     "could not create HTTP request channel: {:?}",
@@ -438,7 +438,7 @@ impl Pipe {
             })?;
 
         let (response_writer, response_reader) = runtime
-            .channel_create_with_privilege("HTTP response", user_identity_label)
+            .channel_create_with_downgrade("HTTP response", user_identity_label)
             .map_err(|err| {
                 HttpError::ChannelOperation(format!(
                     "could not create HTTP response channel: {:?}",
@@ -464,7 +464,7 @@ impl Pipe {
         let sender = crate::io::Sender::new(WriteHandle {
             handle: self.request_writer,
         });
-        sender.send_with_privilege(request, runtime).map_err(|err| {
+        sender.send_with_downgrade(request, runtime).map_err(|err| {
             HttpError::ChannelOperation(format!(
                 "Couldn't write the request to the HTTP request channel: {:?}",
                 err
@@ -491,7 +491,7 @@ impl Pipe {
             handle: invocation_channel,
         });
         invocation_sender
-            .send_with_privilege(invocation, runtime)
+            .send_with_downgrade(invocation, runtime)
             .map_err(|error| {
                 HttpError::ChannelOperation(format!(
                     "Couldn't write the invocation message: {:?}",

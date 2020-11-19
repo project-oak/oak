@@ -42,13 +42,13 @@ mod tests;
 /// Wasm host function index numbers for `wasmi` to map import names with.  This numbering is not
 /// exposed to the Wasm client.  See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
 const NODE_CREATE: usize = 0;
-const NODE_CREATE_WITH_PRIVILEGE: usize = 1;
+const NODE_CREATE_WITH_DOWNGRADE: usize = 1;
 const RANDOM_GET: usize = 2;
 const CHANNEL_CLOSE: usize = 3;
 const CHANNEL_CREATE: usize = 4;
-const CHANNEL_CREATE_WITH_PRIVILEGE: usize = 5;
+const CHANNEL_CREATE_WITH_DOWNGRADE: usize = 5;
 const CHANNEL_WRITE: usize = 6;
-const CHANNEL_WRITE_WITH_PRIVILEGE: usize = 7;
+const CHANNEL_WRITE_WITH_DOWNGRADE: usize = 7;
 const CHANNEL_READ: usize = 8;
 const WAIT_ON_CHANNELS: usize = 9;
 const CHANNEL_LABEL_READ: usize = 10;
@@ -151,9 +151,9 @@ impl WasmInterface {
         )
     }
 
-    /// Corresponds to the host ABI function [`node_create_with_privilege`](https://github.com/project-oak/oak/blob/main/docs/abi.md#node_create_with_privilege).
+    /// Corresponds to the host ABI function [`node_create_with_downgrade`](https://github.com/project-oak/oak/blob/main/docs/abi.md#node_create_with_downgrade).
     #[allow(clippy::too_many_arguments)]
-    fn node_create_with_privilege(
+    fn node_create_with_downgrade(
         &self,
         name_ptr: AbiPointer,
         name_length: AbiPointerOffset,
@@ -164,7 +164,7 @@ impl WasmInterface {
         initial_handle: oak_abi::Handle,
     ) -> Result<(), OakStatus> {
         trace!(
-            "{}: node_create_with_privilege({}, {}, {}, {}, {}, {}, {})",
+            "{}: node_create_with_downgrade({}, {}, {}, {}, {}, {}, {})",
             self.pretty_name,
             name_ptr,
             name_length,
@@ -183,7 +183,7 @@ impl WasmInterface {
             label_ptr,
             label_length,
             initial_handle,
-            RuntimeProxy::node_create_with_privilege,
+            RuntimeProxy::node_create_with_downgrade,
         )
     }
 
@@ -274,8 +274,8 @@ impl WasmInterface {
         )
     }
 
-    /// Corresponds to the host ABI function [`channel_create_with_privilege`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_create_with_privilege).
-    fn channel_create_with_privilege(
+    /// Corresponds to the host ABI function [`channel_create_with_downgrade`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_create_with_downgrade).
+    fn channel_create_with_downgrade(
         &mut self,
         write_addr: AbiPointer,
         read_addr: AbiPointer,
@@ -285,7 +285,7 @@ impl WasmInterface {
         label_length: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
         trace!(
-            "{}: channel_create_with_privilege({}, {}, {}, {}, {}, {})",
+            "{}: channel_create_with_downgrade({}, {}, {}, {}, {}, {})",
             self.pretty_name,
             write_addr,
             read_addr,
@@ -302,7 +302,7 @@ impl WasmInterface {
             name_length,
             label_ptr,
             label_length,
-            RuntimeProxy::channel_create_with_privilege,
+            RuntimeProxy::channel_create_with_downgrade,
         )
     }
 
@@ -376,8 +376,8 @@ impl WasmInterface {
         Ok(())
     }
 
-    /// Corresponds to the host ABI function [`channel_write_with_privilege`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_write_with_privilege).
-    fn channel_write_with_privilege(
+    /// Corresponds to the host ABI function [`channel_write_with_downgrade`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_write_with_downgrade).
+    fn channel_write_with_downgrade(
         &self,
         writer_handle: oak_abi::Handle,
         source: AbiPointer,
@@ -386,7 +386,7 @@ impl WasmInterface {
         handles_count: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
         trace!(
-            "{}: channel_write_with_privilege({}, {}, {}, {}, {})",
+            "{}: channel_write_with_downgrade({}, {}, {}, {}, {})",
             self.pretty_name,
             writer_handle,
             source,
@@ -397,7 +397,7 @@ impl WasmInterface {
 
         let msg = self.fetch_message(source, source_length, handles, handles_count)?;
         self.runtime
-            .channel_write_with_privilege(writer_handle, msg)?;
+            .channel_write_with_downgrade(writer_handle, msg)?;
         Ok(())
     }
 
@@ -728,24 +728,30 @@ impl WasmInterface {
         handles_count: AbiPointerOffset,
     ) -> Result<NodeMessage, OakStatus> {
         let bytes = self.fetch_bytes(source, source_length)?;
+        let handles = self.fetch_handles(handles, handles_count)?;
+        Ok(NodeMessage { bytes, handles })
+    }
 
+    fn fetch_handles(
+        &self,
+        handles: AbiPointer,
+        handles_count: AbiPointerOffset,
+    ) -> Result<Vec<u64>, OakStatus> {
         let raw_handles = self
             .get_memory()
             .get(handles, handles_count as usize * 8)
             .map_err(|err| {
                 error!(
-                    "{}: fetch_message(): Unable to read handles from guest memory: {:?}",
+                    "{}: fetch_handles(): Unable to read handles from guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
             })?;
 
-        let handles: Vec<u64> = raw_handles
+        Ok(raw_handles
             .chunks(8)
             .map(|bytes| LittleEndian::read_u64(bytes))
-            .collect();
-
-        Ok(NodeMessage { bytes, handles })
+            .collect())
     }
 }
 
@@ -783,7 +789,7 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(5)?,
                 args.nth_checked(6)?,
             )),
-            NODE_CREATE_WITH_PRIVILEGE => map_host_errors(self.node_create_with_privilege(
+            NODE_CREATE_WITH_DOWNGRADE => map_host_errors(self.node_create_with_downgrade(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
                 args.nth_checked(2)?,
@@ -804,7 +810,7 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(4)?,
                 args.nth_checked(5)?,
             )),
-            CHANNEL_CREATE_WITH_PRIVILEGE => map_host_errors(self.channel_create_with_privilege(
+            CHANNEL_CREATE_WITH_DOWNGRADE => map_host_errors(self.channel_create_with_downgrade(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
                 args.nth_checked(2)?,
@@ -819,7 +825,7 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(3)?,
                 args.nth_checked(4)?,
             )),
-            CHANNEL_WRITE_WITH_PRIVILEGE => map_host_errors(self.channel_write_with_privilege(
+            CHANNEL_WRITE_WITH_DOWNGRADE => map_host_errors(self.channel_write_with_downgrade(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
                 args.nth_checked(2)?,
@@ -893,8 +899,8 @@ fn oak_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
-        "node_create_with_privilege" => (
-            NODE_CREATE_WITH_PRIVILEGE,
+        "node_create_with_downgrade" => (
+            NODE_CREATE_WITH_DOWNGRADE,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE,      // name_buf
@@ -941,8 +947,8 @@ fn oak_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
-        "channel_create_with_privilege" => (
-            CHANNEL_CREATE_WITH_PRIVILEGE,
+        "channel_create_with_downgrade" => (
+            CHANNEL_CREATE_WITH_DOWNGRADE,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // write handle (out)
@@ -968,8 +974,8 @@ fn oak_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
-        "channel_write_with_privilege" => (
-            CHANNEL_WRITE_WITH_PRIVILEGE,
+        "channel_write_with_downgrade" => (
+            CHANNEL_WRITE_WITH_DOWNGRADE,
             wasmi::Signature::new(
                 &[
                     ValueType::I64, // handle

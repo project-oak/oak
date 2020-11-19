@@ -38,11 +38,11 @@ pub fn channel_create<T: Encodable + Decodable>(
 
 /// Uses the current node's label-downgrading privilege to create a new channel for transmission of
 /// [`Encodable`] and [`Decodable`] types.
-pub fn channel_create_with_privilege<T: Encodable + Decodable>(
+pub fn channel_create_with_downgrade<T: Encodable + Decodable>(
     name: &str,
     label: &Label,
 ) -> Result<(Sender<T>, Receiver<T>), OakStatus> {
-    let (wh, rh) = crate::channel_create_with_privilege(name, label)?;
+    let (wh, rh) = crate::channel_create_with_downgrade(name, label)?;
     Ok((Sender::<T>::new(wh), Receiver::<T>::new(rh)))
 }
 
@@ -68,13 +68,13 @@ pub fn node_create<T: Encodable + Decodable>(
 
 /// Uses the current node's label-downgrading privilege to create a node and corresponding inbound
 /// channel of the same type, and returns a [`Sender`] for the channel.
-pub fn node_create_with_privilege<T: Encodable + Decodable>(
+pub fn node_create_with_downgrade<T: Encodable + Decodable>(
     name: &str,
     label: &Label,
     node_config: &crate::NodeConfiguration,
 ) -> Result<Sender<T>, OakStatus> {
-    let (sender, receiver) = channel_create_with_privilege(&format!("{}-in", name), label)?;
-    match crate::node_create_with_privilege(name, node_config, label, receiver.handle) {
+    let (sender, receiver) = channel_create_with_downgrade(&format!("{}-in", name), label)?;
+    match crate::node_create_with_downgrade(name, node_config, label, receiver.handle) {
         Ok(_) => {}
         Err(e) => {
             let _ = sender.close();

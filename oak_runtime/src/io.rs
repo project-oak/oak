@@ -82,7 +82,7 @@ pub trait SenderExt<T> {
     fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError>;
 
     /// Encodes and sends a message to the [`Sender::handle`] using the current Node's privilege.
-    fn send_with_privilege(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError>;
+    fn send_with_downgrade(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError>;
 
     /// Gets the label associated with this sender.
     fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError>;
@@ -101,9 +101,9 @@ impl<T: Encodable> SenderExt<T> for Sender<T> {
             .map_err(|error| error.into())
     }
 
-    fn send_with_privilege(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError> {
+    fn send_with_downgrade(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError> {
         runtime
-            .channel_write_with_privilege(self.handle.handle, message.encode()?)
+            .channel_write_with_downgrade(self.handle.handle, message.encode()?)
             .map_err(|error| error.into())
     }
 

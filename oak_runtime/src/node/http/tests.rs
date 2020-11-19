@@ -378,7 +378,7 @@ fn create_server_node(runtime: &RuntimeProxy, port: u32) -> oak_abi::Handle {
     };
 
     // TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to
-    // the top of the `user` sub-lattice.
+    // the top of the identity sub-lattice.
     let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
 
     runtime

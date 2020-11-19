@@ -91,7 +91,7 @@ impl ChannelResponseWriter {
             },
         };
         // TODO(#1739): Do not automatically use privilege.
-        self.sender.send_with_privilege(&grpc_rsp)?;
+        self.sender.send_with_downgrade(&grpc_rsp)?;
         if mode == WriteMode::Close {
             self.sender.close()?;
         }
@@ -110,7 +110,7 @@ impl ChannelResponseWriter {
             },
         };
         // TODO(#1739): Do not automatically use privilege.
-        self.sender.send_with_privilege(&grpc_rsp)?;
+        self.sender.send_with_downgrade(&grpc_rsp)?;
         if mode == WriteMode::Close {
             self.sender.close()?;
         }
@@ -127,7 +127,7 @@ impl ChannelResponseWriter {
             grpc_rsp.status = Some(status);
         }
         // TODO(#1739): Do not automatically use privilege.
-        self.sender.send_with_privilege(&grpc_rsp)?;
+        self.sender.send_with_downgrade(&grpc_rsp)?;
         self.sender.close()?;
         Ok(())
     }
@@ -240,7 +240,7 @@ where
 {
     // Create a new channel for request message delivery.
     // TODO(#1739): Don't use privilege automatically.
-    let (req_sender, req_receiver) = crate::io::channel_create_with_privilege::<GrpcRequest>(
+    let (req_sender, req_receiver) = crate::io::channel_create_with_downgrade::<GrpcRequest>(
         "gRPC request",
         &Label::public_untrusted(),
     )
@@ -252,13 +252,13 @@ where
         .expect("failed to serialize GrpcRequest");
     // TODO(#1739): Don't use privilege automatically.
     req_sender
-        .send_with_privilege(&req)
+        .send_with_downgrade(&req)
         .expect("failed to write to channel");
     req_sender.close().expect("failed to close channel");
 
     // Create a new channel for responses to arrive on.
     // TODO(#1739): Don't use privilege automatically.
-    let (rsp_sender, rsp_receiver) = crate::io::channel_create_with_privilege::<GrpcResponse>(
+    let (rsp_sender, rsp_receiver) = crate::io::channel_create_with_downgrade::<GrpcResponse>(
         "gRPC response",
         &Label::public_untrusted(),
     )
@@ -273,7 +273,7 @@ where
 
     // TODO(#1739): Don't use privilege automatically.
     invocation_channel
-        .send_with_privilege(&invocation)
+        .send_with_downgrade(&invocation)
         .expect("failed to write invocation to channel");
     req_receiver.close().expect("failed to close channel");
     rsp_sender.close().expect("failed to close channel");

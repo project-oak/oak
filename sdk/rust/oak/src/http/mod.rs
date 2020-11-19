@@ -99,7 +99,7 @@ pub fn init_with_sender(
 ) -> Result<(), OakStatus> {
     let config = crate::node_config::http_server(address);
     // TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to
-    // the top of the `user` sub-lattice.
+    // the top of the identity sub-lattice.
     let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
     // Create a channel and pass the read half to a new HTTP server pseudo-Node.
     let init_sender =

@@ -27,8 +27,9 @@ pub trait SenderExt<T> {
     /// Attempts to send a value on the sender.
     fn send(&self, t: &T) -> Result<(), OakError>;
 
-    /// Attempts to send a value on the sender using the current node's label-downgrading privilege.
-    fn send_with_privilege(&self, t: &T) -> Result<(), OakError>;
+    /// The same as [`send`](#method.send), but also applies the current Node's downgrade privilege
+    /// when checking IFC restrictions.
+    fn send_with_downgrade(&self, t: &T) -> Result<(), OakError>;
 
     /// Retrieves the label associated with the underlying channel.
     fn label(&self) -> Result<Label, OakError>;
@@ -45,9 +46,9 @@ impl<T: Encodable> SenderExt<T> for Sender<T> {
         Ok(())
     }
 
-    fn send_with_privilege(&self, t: &T) -> Result<(), OakError> {
+    fn send_with_downgrade(&self, t: &T) -> Result<(), OakError> {
         let message = t.encode()?;
-        crate::channel_write_with_privilege(self.handle, &message.bytes, &message.handles)?;
+        crate::channel_write_with_downgrade(self.handle, &message.bytes, &message.handles)?;
         Ok(())
     }
 
