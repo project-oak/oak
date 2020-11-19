@@ -35,6 +35,7 @@
 pub mod proto {
     pub mod oak {
         pub use oak::proto::oak::invocation;
+        pub use oak_services::proto::oak::log;
         pub mod examples {
             pub mod trusted_database {
                 include!(concat!(
@@ -43,7 +44,7 @@ pub mod proto {
                 ));
                 include!(concat!(
                     env!("OUT_DIR"),
-                    "/oak.examples.trusted_database_command.rs"
+                    "/oak.examples.trusted_database_init.rs"
                 ));
             }
         }
@@ -52,82 +53,48 @@ pub mod proto {
 
 mod database;
 mod handler;
+mod router;
 #[cfg(test)]
 mod tests;
 
+use crate::{
+    proto::oak::examples::trusted_database::TrustedDatabaseInit,
+    router::Router,
+};
 use anyhow::Context;
 use database::load_database;
-use log::debug;
-use oak::{
-    grpc,
-    io::{Receiver, ReceiverExt, SenderExt},
-    proto::oak::invocation::GrpcInvocationReceiver,
-    CommandHandler,
-};
-use oak_abi::{label::Label, proto::oak::application::ConfigMap};
-use proto::oak::examples::trusted_database::{PointOfInterestMap, TrustedDatabaseCommand};
+use oak::proto::oak::application::ConfigMap;
+use oak_abi::label::Label;
 
-/// Oak Node that contains an in-memory database.
-pub struct TrustedDatabaseNode {
-    points_of_interest: PointOfInterestMap,
-}
+/// Main entrypoint of the Trusted Database application.
+///
+/// This node is in charge of creating the other top-level nodes, but does not process any request.
+#[derive(Default)]
+struct Main;
 
-impl CommandHandler for TrustedDatabaseNode {
-    type Command = grpc::Invocation;
+impl oak::CommandHandler for Main {
+    type Command = ConfigMap;
 
-    fn handle_command(&mut self, invocation: grpc::Invocation) -> anyhow::Result<()> {
-        // Create a client request handler Node.
-        debug!("Creating handler Node");
-        // TODO(#1406): Use client assigned label for creating a new handler Node.
-        let sender = oak::io::node_create(
-            "handler",
-            &Label::public_untrusted(),
-            &oak::node_config::wasm("app", "handler_oak_main"),
-        )
-        .context("Couldn't create handler Node")?;
+    fn handle_command(&mut self, config_map: Self::Command) -> anyhow::Result<()> {
+        let log_sender = oak::logger::create()?;
+        oak::logger::init(log_sender.clone(), log::Level::Debug)?;
+        let points_of_interest = load_database(config_map).expect("Couldn't load database");
 
-        // Create a gRPC invocation channel for forwarding requests to the
-        // `TrustedDatabaseHandlerNode`.
-        let (invocation_sender, invocation_receiver) = oak::io::channel_create::<grpc::Invocation>(
-            "gRPC invocation",
-            &Label::public_untrusted(),
-        )
-        .context("Couldn't create gRPC invocation channel")?;
-
-        // Create a command message that contains a copy of the database.
-        let command = TrustedDatabaseCommand {
-            invocation_receiver: Some(GrpcInvocationReceiver {
-                receiver: Some(invocation_receiver),
-            }),
-            points_of_interest: Some(self.points_of_interest.clone()),
+        let init = TrustedDatabaseInit {
+            log_sender: Some(log_sender),
+            points_of_interest: Some(points_of_interest),
         };
-
-        // Send the command massage to create a `TrustedDatabaseHandlerNode`
-        debug!("Sending command message to handler Node");
-        sender
-            .send(&command)
-            .context("Couldn't send command to handler Node")?;
-        oak::channel_close(sender.handle.handle).context("Couldn't close sender channel")?;
-
-        // Send the original gRPC invocation to the `TrustedDatabaseHandlerNode`
-        debug!("Sending gRPC invocation to handler Node");
-        invocation_sender
-            .send(&invocation)
-            .context("Couldn't send gRPC invocation to handler Node")?;
-        oak::channel_close(invocation_sender.handle.handle)
-            .context("Couldn't close sender channel")?;
-
+        let router_sender = oak::io::entrypoint_node_create::<Router, _, _>(
+            "router",
+            &Label::public_untrusted(),
+            "app",
+            init,
+        )
+        .context("Couldn't create router node")?;
+        oak::grpc::server::init_with_sender("[::]:8080", router_sender)
+            .context("Couldn't create gRPC server pseudo-Node")?;
         Ok(())
     }
 }
 
-oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
-    let log_sender = oak::logger::create().unwrap();
-    oak::logger::init(log_sender, log::Level::Debug).unwrap();
-
-    let config_map = receiver.receive().expect("Couldn't read config map");
-    let points_of_interest = load_database(config_map).expect("Couldn't load database");
-    let grpc_channel =
-        oak::grpc::server::init("[::]:8080").expect("Couldn't create gRPC server pseudo-Node");
-    oak::run_command_loop(TrustedDatabaseNode { points_of_interest }, grpc_channel.iter());
-});
+oak::entrypoint_command_handler!(oak_main => Main);
