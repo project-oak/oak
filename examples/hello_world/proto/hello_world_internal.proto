@@ -1,5 +1,5 @@
 //
-// Copyright 2020 The Project Oak Authors
+// Copyright 2019 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +14,17 @@
 // limitations under the License.
 //
 
-fn main() {
-    oak_utils::compile_protos(
-        &["../../proto/injection.proto"],
-        &["../../proto", "../../../.."],
-    );
+syntax = "proto3";
+
+import "oak_services/proto/grpc_invocation.proto";
+import "oak_services/proto/log.proto";
+import "proto/handle.proto";
+
+package oak.examples.hello_world;
+
+// Init message for the handler Node, used only internally.
+message Init {
+  oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
+  oak.handle.Sender translator_sender = 2
+      [(oak.handle.message_type) = ".oak.invocation.GrpcInvocation"];
 }

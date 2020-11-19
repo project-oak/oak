@@ -22,7 +22,10 @@ use oak::{
     Label,
 };
 use oak_abi::proto::oak::application::ConfigMap;
-use oak_services::proto::google::rpc;
+use oak_services::proto::{
+    google::rpc,
+    oak::log::{LogInit, LogMessage},
+};
 use proto::{Chat, ChatDispatcher, Message, SendMessageRequest, SubscribeRequest};
 use std::collections::HashMap;
 
@@ -42,10 +45,15 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
-        let router_sender = oak::io::node_create::<oak::grpc::Invocation>(
+        let log_sender = oak::logger::create()?;
+        oak::logger::init(log_sender.clone(), log::Level::Debug)?;
+        let router_sender = oak::io::entrypoint_node_create::<Router, _, _>(
             "router",
             &Label::public_untrusted(),
-            &oak::node_config::wasm("app", "router"),
+            "app",
+            LogInit {
+                log_sender: Some(log_sender),
+            },
         )
         .expect("could not create router node");
         oak::grpc::server::init_with_sender("[::]:8080", router_sender)
@@ -60,14 +68,27 @@ impl oak::CommandHandler for Main {
 /// This node never looks at the contents of the invocation messages, only at the labels of its
 /// channels, and therefore keeps a public confidentiality label, which also allows it to create
 /// further nodes and channels, with more specific labels.
-#[derive(Default)]
 struct Router {
     /// Maps each label to a channel to a dedicated worker node for that label, corresponding to
     /// the `room` entrypoint of this module.
     rooms: HashMap<Label, Sender<oak::grpc::Invocation>>,
+    log_sender: Option<Sender<LogMessage>>,
 }
 
-oak::entrypoint_command_handler!(router => Router);
+impl oak::WithInit for Router {
+    type Init = LogInit;
+
+    fn create(init: Self::Init) -> Self {
+        let log_sender = init.log_sender.unwrap();
+        oak::logger::init(log_sender.clone(), log::Level::Debug).unwrap();
+        Self {
+            rooms: HashMap::new(),
+            log_sender: Some(log_sender),
+        }
+    }
+}
+
+oak::entrypoint_command_handler_init!(router => Router);
 
 /// Returns whether the provided label is valid in the context of this chat application.
 ///
@@ -112,9 +133,15 @@ impl oak::CommandHandler for Router {
                 }
                 // Check if there is a channel to a room with the desired label already, or create
                 // it if not.
+                let log_sender = self.log_sender.clone();
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
-                    oak::io::entrypoint_node_create::<Room>("room", &label, "app")
-                        .expect("could not create node")
+                    oak::io::entrypoint_node_create::<Room, _, _>(
+                        "room",
+                        &label,
+                        "app",
+                        LogInit { log_sender },
+                    )
+                    .expect("could not create room node")
                 });
                 // Send the invocation to the dedicated worker node.
                 channel.send(&command)?;
@@ -127,8 +154,17 @@ impl oak::CommandHandler for Router {
     }
 }
 
-oak::entrypoint_command_handler!(room => Room);
+oak::entrypoint_command_handler_init!(room => Room);
 oak::impl_dispatcher!(impl Room : ChatDispatcher);
+
+impl oak::WithInit for Room {
+    type Init = LogInit;
+
+    fn create(init: Self::Init) -> Self {
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
+        Self::default()
+    }
+}
 
 /// A worker node implementation for an individual label, corresponding to a chat room between the
 /// set of user that share the key to that chat room.

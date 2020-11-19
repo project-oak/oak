@@ -19,6 +19,7 @@
 use log::{info, warn};
 use oak::{http::Invocation, CommandHandler, Label, OakError, OakStatus};
 use oak_abi::proto::oak::application::ConfigMap;
+use oak_services::proto::oak::log::LogInit;
 
 oak::entrypoint_command_handler!(oak_main => Main);
 
@@ -29,10 +30,15 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
-        let http_handler_sender = oak::io::entrypoint_node_create::<StaticHttpHandler>(
+        let log_sender = oak::logger::create()?;
+        oak::logger::init(log_sender.clone(), log::Level::Debug)?;
+        let http_handler_sender = oak::io::entrypoint_node_create::<StaticHttpHandler, _, _>(
             "handler",
             &Label::public_untrusted(),
             "app",
+            LogInit {
+                log_sender: Some(log_sender),
+            },
         )
         .expect("could not create handler node");
         oak::http::init_with_sender("[::]:8080", http_handler_sender)
@@ -41,13 +47,22 @@ impl oak::CommandHandler for Main {
     }
 }
 
-oak::entrypoint_command_handler!(http_handler => StaticHttpHandler);
+oak::entrypoint_command_handler_init!(http_handler => StaticHttpHandler);
 
 /// A simple HTTP handler that responds with `OK` (200) to every request sent to `/`, and with
 /// `NOT_FOUND` (400) to any other request. It is used in the `abitest`. So its functionality
 /// should be modified with care!
 #[derive(Default)]
 pub struct StaticHttpHandler;
+
+impl oak::WithInit for StaticHttpHandler {
+    type Init = LogInit;
+
+    fn create(init: Self::Init) -> Self {
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
+        StaticHttpHandler::default()
+    }
+}
 
 impl CommandHandler for StaticHttpHandler {
     type Command = Invocation;

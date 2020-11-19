@@ -122,7 +122,9 @@ impl CommandHandler for TrustedDatabaseNode {
 }
 
 oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
-    oak::logger::init_default();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
+
     let config_map = receiver.receive().expect("Couldn't read config map");
     let points_of_interest = load_database(config_map).expect("Couldn't load database");
     let grpc_channel =

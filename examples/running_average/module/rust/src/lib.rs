@@ -29,6 +29,7 @@ pub mod proto {
 use anyhow::Context;
 use oak::{grpc, Label};
 use oak_abi::proto::oak::application::ConfigMap;
+use oak_services::proto::oak::log::LogInit;
 use proto::{GetAverageResponse, RunningAverage, RunningAverageDispatcher, SubmitSampleRequest};
 
 #[derive(Default)]
@@ -40,10 +41,15 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
-        let handler_sender = oak::io::entrypoint_node_create::<Handler>(
+        let log_sender = oak::logger::create()?;
+        oak::logger::init(log_sender.clone(), log::Level::Debug)?;
+        let handler_sender = oak::io::entrypoint_node_create::<Handler, _, _>(
             "handler",
             &Label::public_untrusted(),
             "app",
+            LogInit {
+                log_sender: Some(log_sender),
+            },
         )
         .context("could not create handler node")?;
         oak::grpc::server::init_with_sender("[::]:8080", handler_sender)
@@ -58,8 +64,17 @@ struct Handler {
     count: u64,
 }
 
-oak::entrypoint_command_handler!(handler => Handler);
+oak::entrypoint_command_handler_init!(handler => Handler);
 oak::impl_dispatcher!(impl Handler : RunningAverageDispatcher);
+
+impl oak::WithInit for Handler {
+    type Init = LogInit;
+
+    fn create(init: Self::Init) -> Self {
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
+        Self::default()
+    }
+}
 
 impl RunningAverage for Handler {
     fn submit_sample(&mut self, req: SubmitSampleRequest) -> grpc::Result<()> {

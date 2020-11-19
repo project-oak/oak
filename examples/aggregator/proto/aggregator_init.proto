@@ -20,20 +20,24 @@ package oak.examples.aggregator_init;
 
 import "aggregator.proto";
 import "oak_services/proto/grpc_invocation.proto";
+import "oak_services/proto/log.proto";
+import "proto/handle.proto";
 
 // Initialization message that should be sent to Router Oak Node.
 message RouterInit {
+  oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
   // Channel for sending invocations to Handler Oak Node.
-  oak.invocation.GrpcInvocationSender handler_invocation_sender = 1;
+  oak.invocation.GrpcInvocationSender handler_invocation_sender = 2;
   // SHA256 sum of the Aggregator Wasm module.
   // TODO(#1731): Split Aggregator into two Wasm modules and hardcode its SHA256 sum in the first
   // module.
-  string aggregator_module_hash = 2;
+  string aggregator_module_hash = 3;
 }
 
 // Initialization message that should be sent to Handler Oak Node.
 message HandlerInit {
+  oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
   // Channel for sending invocations to gRPC client that is connected to an external service, which
   // expects aggregated data from Oak.
-  oak.invocation.GrpcInvocationSender grpc_client_invocation_sender = 1;
+  oak.invocation.GrpcInvocationSender grpc_client_invocation_sender = 2;
 }

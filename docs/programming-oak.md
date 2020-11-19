@@ -87,9 +87,9 @@ In order to implement it:
   trait.
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /oak::entrypoint_command_handler!\(handler/ /^}/)
+[embedmd]:# (../examples/translator/module/rust/src/lib.rs Rust /oak::entrypoint_command_handler_init!\(handler/ /^}/)
 ```Rust
-oak::entrypoint_command_handler!(handler => Handler);
+oak::entrypoint_command_handler_init!(handler => Handler);
 oak::impl_dispatcher!(impl Handler : TranslatorDispatcher);
 
 #[derive(Default)]
@@ -186,10 +186,14 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
-        let handler_sender = oak::io::entrypoint_node_create::<Handler>(
+        let log_sender = oak::logger::create()?;
+        let handler_sender = oak::io::entrypoint_node_create::<Handler, _, _>(
             "handler",
             &Label::public_untrusted(),
             "app",
+            LogInit {
+                log_sender: Some(log_sender),
+            },
         )
         .context("could not create handler node")?;
         oak::grpc::server::init_with_sender("[::]:8080", handler_sender)
@@ -406,7 +410,9 @@ or manually reading from the initial `Receiver`:
 [embedmd]:# (../examples/trusted_database/module/rust/src/lib.rs Rust /oak::entrypoint/ /.*let config_map =.*/)
 ```Rust
 oak::entrypoint!(oak_main<ConfigMap> => |receiver: Receiver<ConfigMap>| {
-    oak::logger::init_default();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
+
     let config_map = receiver.receive().expect("Couldn't read config map");
 ```
 <!-- prettier-ignore-end -->
@@ -568,8 +574,13 @@ to the room:
 [embedmd]:# (../examples/chat/module/rust/src/lib.rs Rust /.*self\.rooms\.entry\(/ /\}\);$/)
 ```Rust
                 let channel = self.rooms.entry(label.clone()).or_insert_with(|| {
-                    oak::io::entrypoint_node_create::<Room>("room", &label, "app")
-                        .expect("could not create node")
+                    oak::io::entrypoint_node_create::<Room, _, _>(
+                        "room",
+                        &label,
+                        "app",
+                        LogInit { log_sender },
+                    )
+                    .expect("could not create room node")
                 });
 ```
 <!-- prettier-ignore-end-->

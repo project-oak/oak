@@ -50,7 +50,7 @@ use oak_abi::{
     label::{confidentiality_label, web_assembly_module_signature_tag},
     proto::oak::application::ConfigMap,
 };
-use oak_services::proto::google::rpc;
+use oak_services::proto::{google::rpc, oak::log::LogInit};
 
 // Base64 encoded Ed25519 public key corresponding to Wasm module signature.
 // Originated from `examples/keys/ed25519/test.pub`.
@@ -65,9 +65,17 @@ impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
-        let router_command_sender =
-            oak::io::entrypoint_node_create::<Router>("router", &Label::public_untrusted(), "app")
-                .context("Couldn't create router node")?;
+        let log_sender = oak::logger::create()?;
+        oak::logger::init(log_sender.clone(), log::Level::Debug)?;
+        let router_command_sender = oak::io::entrypoint_node_create::<Router, _, _>(
+            "router",
+            &Label::public_untrusted(),
+            "app",
+            LogInit {
+                log_sender: Some(log_sender),
+            },
+        )
+        .context("Couldn't create router node")?;
 
         oak::grpc::server::init_with_sender("[::]:8080", router_command_sender)
             .context("Couldn't create gRPC server pseudo-Node")?;
@@ -75,7 +83,7 @@ impl oak::CommandHandler for Main {
     }
 }
 
-oak::entrypoint_command_handler!(router => Router);
+oak::entrypoint_command_handler_init!(router => Router);
 
 struct Router {
     /// Invocation sender channel half for Handler Node.
@@ -84,15 +92,25 @@ struct Router {
     public_key_label: Label,
 }
 
-impl Default for Router {
-    fn default() -> Self {
+impl oak::WithInit for Router {
+    type Init = LogInit;
+
+    fn create(init: Self::Init) -> Self {
+        let log_sender = init.log_sender.unwrap();
+        oak::logger::init(log_sender.clone(), log::Level::Debug).unwrap();
         let public_key_label = confidentiality_label(web_assembly_module_signature_tag(
             &base64::decode(PUBLIC_KEY_BASE64.as_bytes())
                 .expect("Couldn't decode Base64 public key"),
         ));
-        let handler_command_sender =
-            oak::io::entrypoint_node_create::<Handler>("handler", &public_key_label, "app")
-                .expect("Couldn't create handler node");
+        let handler_command_sender = oak::io::entrypoint_node_create::<Handler, _, _>(
+            "handler",
+            &public_key_label,
+            "app",
+            LogInit {
+                log_sender: Some(log_sender),
+            },
+        )
+        .expect("Couldn't create handler node");
 
         Self {
             handler_command_sender,

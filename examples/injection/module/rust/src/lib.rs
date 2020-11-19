@@ -78,7 +78,9 @@ use proto::{
 };
 
 oak::entrypoint!(grpc_fe<ConfigMap> => |_receiver| {
-    oak::logger::init_default();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
+
     let (to_provider_write_handle, to_provider_read_handle) = oak::channel_create("To-provider", &Label::public_untrusted()).unwrap();
     let (from_provider_write_handle, from_provider_read_handle) = oak::channel_create("From-provider", &Label::public_untrusted()).unwrap();
 
@@ -101,7 +103,9 @@ oak::entrypoint!(grpc_fe<ConfigMap> => |_receiver| {
 });
 
 oak::entrypoint!(provider<BlobStoreRequest> => |receiver: Receiver<BlobStoreRequest>| {
-    oak::logger::init_default();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
+
     // This node expects the first received message to be of a different type than subsequent ones,
     // therefore we create a temporary alternative Receiver reading from the same underlying channel
     // but decoding to a different type.
@@ -115,7 +119,9 @@ oak::entrypoint!(provider<BlobStoreRequest> => |receiver: Receiver<BlobStoreRequ
 });
 
 oak::entrypoint!(store<BlobRequest> => |receiver: Receiver<BlobRequest>| {
-    oak::logger::init_default();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
+
     // This node expects the first received message to be of a different type than subsequent ones,
     // therefore we create a temporary alternative Receiver reading from the same underlying channel
     // but decoding to a different type.

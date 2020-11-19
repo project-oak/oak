@@ -56,15 +56,22 @@ pub fn node_create<T: Encodable + Decodable>(
     Ok(sender)
 }
 
-/// Creates a node and corresponding inbound channel of the same type, for nodes that are
-/// instantiated via the [`crate::entrypoint_command_handler`] macro.
-pub fn entrypoint_node_create<T: crate::WasmEntrypoint>(
+/// Creates a node and corresponding inbound channel of the same type, sends an init message to it,
+/// and returns a [`Sender`] of command messages; for nodes that are instantiated via the
+/// [`crate::entrypoint_command_handler_init`] macro.
+pub fn entrypoint_node_create<
+    T: crate::WasmEntrypoint<Message = oak_io::InitWrapper<Init, Command>>,
+    Init: Encodable + Decodable,
+    Command: Encodable + Decodable,
+>(
     name: &str,
     label: &Label,
     wasm_module_name: &str,
-) -> Result<Sender<T::Message>, OakStatus> {
+    init: Init,
+) -> Result<Sender<Command>, oak_io::OakError> {
     let node_config = &crate::node_config::wasm(wasm_module_name, T::ENTRYPOINT_NAME);
-    node_create(name, label, node_config)
+    let init_sender = node_create(name, label, node_config)?;
+    send_init(init_sender, init, label)
 }
 
 /// Sends an init message over the provided [`Sender`], which is consumed by this method, and
@@ -72,7 +79,7 @@ pub fn entrypoint_node_create<T: crate::WasmEntrypoint>(
 ///
 /// Useful for sending initial data to nodes instantiated via the
 /// [`crate::entrypoint_command_handler_init`] macro.
-pub fn send_init<Init: Encodable + Decodable, Command: Encodable + Decodable>(
+fn send_init<Init: Encodable + Decodable, Command: Encodable + Decodable>(
     sender: Sender<oak_io::InitWrapper<Init, Command>>,
     init: Init,
     command_channel_label: &Label,

@@ -130,6 +130,7 @@ impl oak::WithInit for Handler {
     type Init = HandlerInit;
 
     fn create(init: Self::Init) -> Self {
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
         let grpc_client_invocation_sender = init
             .grpc_client_invocation_sender
             .expect("Couldn't receive gRPC invocation sender")

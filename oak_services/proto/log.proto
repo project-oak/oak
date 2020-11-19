@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "proto/handle.proto";
+
 package oak.log;
 
 // This message defines the data that is passed as a log message to a logging pseudo-node. It
@@ -44,4 +46,10 @@ enum Level {
   INFO = 3;
   DEBUGGING = 4;
   TRACE = 5;
+}
+
+// A convenience message that may be used as init message by nodes that only expect to receive a
+// single handle to a log node at startup.
+message LogInit {
+  oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
 }

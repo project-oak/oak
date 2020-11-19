@@ -159,7 +159,8 @@ struct Config {
 }
 
 oak::entrypoint!(oak_main<grpc::Invocation> => |receiver: Receiver<grpc::Invocation>| {
-    oak::logger::init_default();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
     let node = Node {
         training_set_size: 1000,
         test_set_size: 1000,
@@ -170,7 +171,8 @@ oak::entrypoint!(oak_main<grpc::Invocation> => |receiver: Receiver<grpc::Invocat
 });
 
 oak::entrypoint!(grpc_oak_main<ConfigMap> => |_receiver| {
-    oak::logger::init_default();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
     let node = Node {
         training_set_size: 1000,
         test_set_size: 1000,

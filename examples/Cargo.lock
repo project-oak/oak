@@ -629,6 +629,7 @@ dependencies = [
  "oak_abi",
  "oak_io",
  "oak_runtime",
+ "oak_services",
  "oak_tests",
  "oak_utils",
  "prost",
@@ -709,6 +710,7 @@ dependencies = [
  "log",
  "oak",
  "oak_abi",
+ "oak_io",
  "oak_services",
 ]
 
@@ -1871,6 +1873,7 @@ dependencies = [
  "oak_abi",
  "oak_io",
  "oak_runtime",
+ "oak_services",
  "oak_tests",
  "oak_utils",
  "prost",
@@ -2525,6 +2528,7 @@ dependencies = [
  "oak_abi",
  "oak_io",
  "oak_runtime",
+ "oak_services",
  "oak_tests",
  "prost",
  "tokio",
@@ -2539,6 +2543,7 @@ dependencies = [
  "log",
  "oak",
  "oak_io",
+ "oak_services",
  "oak_utils",
  "prost",
 ]
