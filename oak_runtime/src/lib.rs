@@ -639,6 +639,7 @@ impl Runtime {
         node_info.privilege.clone()
     }
 
+    /// Returns a clone of the name associated with the provided `node_id`.
     fn get_node_name(&self, node_id: NodeId) -> String {
         let node_infos = self.node_infos.read().unwrap();
         node_infos
