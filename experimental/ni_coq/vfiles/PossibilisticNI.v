@@ -37,12 +37,11 @@ Proof.
          | _ => destruct_match
          | _ => tauto
          end.
-    intros.
     (*
     Note: I think this is not true with the low-projection def
     where labels are partially secret
     *)
-Admitted.
+Qed.
 
 Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
@@ -86,13 +85,14 @@ Proof.
     intros. inversion H1; (split; [ inversion H5 | ] ); subst_lets; crush; 
         eauto with unobs_ev. (* handles all event-low-eq cases: *) 
         all: separate_hyp node; separate_hyp channel.
-        all: assert (~ nlbl0 <<L ell) by congruence.
     - (* WriteChannel *)
+        assert (~ nlbl0 <<L ell) by congruence.
         assert ( ~ (lbl (chans s).[? han] <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
         eapply state_upd_node_unobs; eauto.
         eapply state_chan_append_labeled_unobs; eauto.
     - (* ReadChannel; *)
+        assert (~ nlbl0 <<L ell) by congruence.
         assert ( ~ (clbl <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
         eapply (state_upd_node_unobs _ _ _  
@@ -100,60 +100,24 @@ Proof.
         eapply (state_upd_chan_unobs _ _ _ (chan_pop ch)
             ltac:(eauto)).
     - (* CreateChannel *)
-        assert ( ~ (clbl <<L ell) ) by eauto using ord_trans.
-        eapply state_low_eq_trans.
-        eapply (new_secret_chan_unobs _ clbl); eauto.
-        eapply (state_low_eq_trans _ _ 
-            (state_upd_node id (node_add_rhan h n0)
-            (state_upd_chan_labeled h {| obj := new_chan; lbl := clbl |} s))).
-        eapply state_upd_node_unobs; eauto.
-        eapply state_upd_node_unobs; eauto. simpl. 
-        (* wishing for erewrite upd_eq; eauto to work here.*)
-        (* I also tried making upd_eq_rev to try to get rid of the
-        need for symmetry, but that didn't seem to help *)
-        replace
-            ((nodes s .[ id <- (nodes s).[? id] <| obj ::=
-            (fun _ : option node => Some (node_add_rhan h n0)) |>]).[? id])
-            with
-            (
-                (nodes s).[? id] <| obj ::= (fun _ : option node => Some (node_add_rhan h n0)) |>
-            ).
-        eauto.
-        symmetry. eapply upd_eq.
+        (* there are no unobservable channel creations, these only happen
+        from public *)
+        pose proof (bot_is_bot ell).
+        rewrite H4 in H2.
+        contradiction.
     - (* CreateNode *)
-        admit.
+        (* there are no unobservable node creations, these only happen
+        from public*)
+        pose proof (bot_is_bot ell).
+        rewrite H4 in H2.
+        contradiction.
+    (* I get this situation where:
+        doing - gives me a 'no more goals error'
+        QED gives me a "you still have goals" error
+    I think this means coq's unsound type system has got me into
+    trouble with bad existential variables. Or is this something else?
+    *)
 Admitted.
-(*
-    - (* CreateNode; states loweq *)
-        assert ( ~ (lbl <<L ell) ) by eauto using ord_trans.
-        eapply state_low_eq_trans.
-        pose proof new_secret_node_unobs.
-        eapply (new_secret_node_unobs _ _ new_id
-            ( {|
-                nlbl := lbl;
-                read_handles := Ensembles.Singleton h;
-                write_handles := Ensembles.Empty_set;
-                ncall := Internal
-              |}
-            ) ltac:(eauto) ltac:(eauto)).
-        eapply state_upd_node_unobs; eauto.
-        replace ((nodes
-        (state_upd_node new_id
-           {|
-           nlbl := lbl;
-           read_handles := Ensembles.Singleton h;
-           write_handles := Ensembles.Empty_set;
-           ncall := Internal |} s)).[? id]) with ((nodes s).[? id]).
-        eauto. symmetry. eapply upd_neq. 
-        destruct (dec_eq_nid new_id id).
-            + unfold nid_fresh in *. exfalso. congruence.
-            + eauto.
-    - (* Internal; events loweq *)
-    erewrite <- (nflows_event_proj _ (-- n --) ltac:(eauto)).
-    unfold event_low_eq. unfold low_eq.
-    erewrite event_low_proj_idempotent. reflexivity.
-Qed.
-*)
 
 Theorem low_eq_to_unobs {A: Type}: forall ell (x1 x2: @labeled A),
     low_eq ell x1 x2 ->
@@ -163,11 +127,7 @@ Proof.
     destruct x1, x2. cbv [low_eq low_proj State.lbl].
     intros. destruct (lbl <<? ell); destruct (lbl0 <<? ell);
         try eauto; try contradiction. 
-    inversion H. unfold not. intros.
-    pose proof top_is_top ell. 
-    pose proof (ord_anti ell top ltac:(eauto) ltac:(eauto)).
-    rewrite H5 in n.
-    pose proof top_is_top lbl. contradiction.
+    inversion H. unfold not. intros. congruence.
 Qed.
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
@@ -398,6 +358,7 @@ Proof.
                 specialize (state_loweq_to_deref_node ell s s1' id n'
                     Hidx_n' H_leq_s_s1') as [ns1' [Hidx_s1' H_leq_n'_n2]].
                 eapply set_call_unobs.
+
                 admit.
                 (*
                 eassumption.

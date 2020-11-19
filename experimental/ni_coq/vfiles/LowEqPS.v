@@ -6,9 +6,8 @@ From OakIFC Require Import
     Parameters
     GenericMap
     Lattice
-    State
     Events
-    ModelTypes.
+    State.
 
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
@@ -30,6 +29,7 @@ able to see channels labeled "Bob", so _any_ pair of channels with this label
 are related even if their contents differ.
 *)
 
+Definition trace := list (state * event_l).
 
 (*============================================================================
 * Low Projections
@@ -40,7 +40,7 @@ Definition low_proj {A: Type} ell ( labeled_thing: @labeled A) :=
     match labeled_thing with
         | Labeled _ o ell' => if( ell' <<? ell ) 
             then labeled_thing
-            else Labeled A None ell' 
+            else Labeled A None top
     end.
     (* 
     Importantly, the label of the secret thing is NOT ell'
@@ -139,7 +139,7 @@ Definition state_low_eq := fun ell s1 s2 =>
     and discussion in PossibilisticNI.v
 *)
 
-Inductive trace_low_eq: @trace_low_eqT (state * (@labeled event)) :=
+Inductive trace_low_eq: level -> trace -> trace -> Prop :=
     | NilEQ ell: trace_low_eq ell [] []
     | AddBoth ell xs xe ys ye t1 t2:
         trace_low_eq ell t1 t2 ->

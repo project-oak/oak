@@ -8,7 +8,9 @@ From OakIFC Require Import
     State
     ModelSemUtils.
 
-(* This file is the top-level model of the Oak runtime *)
+(* This file is the top-level model of the Oak runtime 
+* where labels are considered partially secret 
+*)
 
 (* RecordUpdate is a conveninece feature that provides functional updates for
 * records with notation: https://github.com/tchajed/coq-record-update *)
@@ -92,8 +94,7 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             (* caller is a real node with label nlbl *)
         fresh_han s h ->
             (* the target handle is not in use *)
-        nlbl = bot ->
-            (* only public/trusted nodes can create channels, for now *)
+        nlbl <<L clbl ->
             let s0 := (state_upd_chan_labeled h {|
                 obj := new_chan; lbl := clbl;
             |} s) in
@@ -105,8 +106,7 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             (* caller is a real node with label nlbl *)
         fresh_nid s id ->
             (* target nid is not in use *)
-        nlbl = bot ->
-            (* only public/trusted nodes can create nodes for now *)
+        nlbl <<L new_lbl ->
             (* create new node with read handle *)
         let s0 := (state_upd_node_labeled new_id {|
                 obj := Some {|
