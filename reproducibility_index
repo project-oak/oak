@@ -5,9 +5,7 @@ b47cf444cd66414951b0980c4e72d76517f96d55dc39afb4c00d46125702c810  ./examples/tar
 5db36bc82ae1b3beff4511ad706ddc2123fd710bc40345a89e5cab4bcb778e5a  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
 bcf15b369b523b68bafd180566f78fb796a408518758413119a9b68f0d6245ab  ./examples/target/wasm32-unknown-unknown/release/http_server.wasm
 94946adccecf7f4618927f8c4f0c2c5e312513d1ef635bc7407c9b56eb78aee5  ./examples/target/wasm32-unknown-unknown/release/injection.wasm
-4378c46223898859ab7edd68f1ea9c125763dd14f9cf1978e4985aa431bdcb66  ./examples/target/wasm32-unknown-unknown/release/machine_learning.wasm
 fb4641291601a1a730b2ce6d923fab8b2ba1269cad4911c5705f3d9d9a6685c6  ./examples/target/wasm32-unknown-unknown/release/private_set_intersection.wasm
-d9733a78137271b09771f4a767c136a7b6be5cdb15668a432fa6189135cd35c8  ./examples/target/wasm32-unknown-unknown/release/running_average.wasm
 e73af37562001e1699d5c0c606a9b56953881315e3b7c455d8ff91f9a770ae49  ./examples/target/wasm32-unknown-unknown/release/translator.wasm
 73e64c8955c11fa5a63434855ee031e2021255e6743bff15e48ccf3777fc0d6a  ./examples/target/wasm32-unknown-unknown/release/trusted_database.wasm
 87a1a0f3d41305d9a20f4de5e5c6ef81e08d2f3bfacc622dafa60a1ed8fd9f32  ./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader
