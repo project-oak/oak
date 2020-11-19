@@ -7,7 +7,15 @@ manifest = "examples/running_average/oak_app_manifest.toml"
 out = "examples/running_average/bin/running_average.oak"
 
 [applications.rust.modules]
-module = { Cargo = { cargo_manifest = "examples/running_average/module/rust/Cargo.toml" } }
+module_0 = { Cargo = { cargo_manifest = "examples/running_average/module_0/rust/Cargo.toml" } }
+module_1 = { Cargo = { cargo_manifest = "examples/running_average/module_1/rust/Cargo.toml" } }
+
+[server]
+additional_args = [
+  "--signatures-manifest=examples/running_average/signatures.toml"
+]
 
 [clients]
-cpp = { Bazel = { bazel_target = "//examples/running_average/client/cpp:client" } }
+cpp = { Bazel = { bazel_target = "//examples/running_average/client/cpp:client" }, additional_args = [
+  "--public_key=../../../../../../../../../examples/keys/ed25519/test.pub",
+] }

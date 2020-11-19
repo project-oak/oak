@@ -25,6 +25,7 @@
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, public_key, "", "Path to the PEM-encoded public key used as a data label");
 
 using ::oak::examples::running_average::GetAverageResponse;
 using ::oak::examples::running_average::RunningAverage;
@@ -67,7 +68,8 @@ int main(int argc, char** argv) {
 
   // TODO(#1066): Use a more restrictive Label, based on a bearer token shared between the two
   // clients.
-  oak::label::Label label = oak::PublicUntrustedLabel();
+  std::string public_key = oak::ApplicationClient::LoadPublicKey(absl::GetFlag(FLAGS_public_key));
+  oak::label::Label label = oak::WebAssemblyModuleSignatureLabel(public_key);
 
   auto stub_0 = RunningAverage::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));

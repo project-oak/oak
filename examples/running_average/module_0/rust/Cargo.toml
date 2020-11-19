@@ -1,7 +1,10 @@
 [package]
 name = "running_average"
 version = "0.1.0"
-authors = ["Tiziano Santoro <tzn@google.com>"]
+authors = [
+  "Tiziano Santoro <tzn@google.com>",
+  "Ivan Petrov <ivanpetrov@google.com>"
+]
 edition = "2018"
 license = "Apache-2.0"
 
@@ -10,19 +13,24 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "*"
+base64 = "*"
 log = "*"
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
 oak_io = "=0.1.0"
 oak_services = "=0.1.0"
 prost = "*"
+running_average_handler = "=0.1.0"
 
 [dev-dependencies]
 assert_matches = "*"
 env_logger = "*"
+hex = "*"
 log = "*"
+maplit = "*"
 oak_abi = "=0.1.0"
 oak_runtime = "=0.1.0"
+oak_sign = "0.1.0"
 oak_tests = "=0.1.0"
 running_average_grpc = "=0.1.0"
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }

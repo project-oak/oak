@@ -1,0 +1,3 @@
+signatures = [
+  { path = "examples/running_average/running_average_handler.sign" },
+]

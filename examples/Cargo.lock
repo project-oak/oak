@@ -1867,17 +1867,22 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
+ "base64",
  "env_logger",
+ "hex",
  "log",
+ "maplit",
  "oak",
  "oak_abi",
  "oak_io",
  "oak_runtime",
  "oak_services",
+ "oak_sign",
  "oak_tests",
  "oak_utils",
  "prost",
  "running_average_grpc",
+ "running_average_handler",
  "tokio",
  "tonic",
 ]
@@ -1889,6 +1894,18 @@ dependencies = [
  "oak_utils",
  "prost",
  "tonic",
+]
+
+[[package]]
+name = "running_average_handler"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak",
+ "oak_abi",
+ "oak_io",
+ "oak_utils",
+ "prost",
 ]
 
 [[package]]

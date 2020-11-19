@@ -1,0 +1,22 @@
+[package]
+name = "running_average_handler"
+version = "0.1.0"
+authors = [
+  "Tiziano Santoro <tzn@google.com>",
+  "Ivan Petrov <ivanpetrov@google.com>"
+]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+log = "*"
+oak = "=0.1.0"
+oak_abi = "=0.1.0"
+oak_io = "=0.1.0"
+prost = "*"
+
+[build-dependencies]
+oak_utils = "*"

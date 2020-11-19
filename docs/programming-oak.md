@@ -660,14 +660,29 @@ crate allows Node gRPC service methods to be tested with the [Oak SDK](sdk.md)
 framework via the Oak Runtime:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/running_average/module/rust/tests/integration_test.rs Rust /#\[tokio/ /^}$/)
+[embedmd]:# (../examples/running_average/module_0/rust/tests/integration_test.rs Rust /#\[tokio/ /^}$/)
 ```Rust
 #[tokio::test(core_threads = 2)]
 async fn test_running_average() {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
-        .expect("Unable to configure runtime with test wasm!");
+    let wasm_modules = build_wasm().expect("Couldn't compile Wasm modules");
+    let signature = sign(
+        &wasm_modules.get(HANDLER_MODULE_NAME).unwrap()
+    ).expect("Couldn't sign Wasm module");
+    let config = oak_tests::runtime_config_wasm(
+        wasm_modules,
+        MAIN_MODULE_NAME,
+        ENTRYPOINT_NAME,
+        ConfigMap::default(),
+        oak_runtime::SignatureTable {
+            values: hashmap! {
+                hex::encode(&signature.hash) => vec![signature.clone()]
+            },
+        },
+    );
+    let runtime =
+        oak_runtime::configure_and_run(config).expect("Unable to configure runtime with test wasm");
 
     let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
     let mut client = RunningAverageClient::with_interceptor(channel, interceptor);
