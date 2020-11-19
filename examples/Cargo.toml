@@ -17,14 +17,11 @@ members = [
   "http_server/module",
   "http_server/client/rust",
   "injection/module/rust",
-  "machine_learning/module/rust",
   "trusted_database/client/rust",
   "trusted_database/module/rust",
   "private_set_intersection/grpc",
   "private_set_intersection/client/rust",
   "private_set_intersection/module/rust",
-  "running_average/grpc",
-  "running_average/module/rust",
   "translator/grpc",
   "translator/common",
   "translator/module/rust",
@@ -54,7 +51,6 @@ chat_grpc = { path = "chat/grpc" }
 hello_world_client = { path = "hello_world/client/rust" }
 hello_world_grpc = { path = "hello_world/grpc" }
 private_set_intersection_grpc = { path = "private_set_intersection/grpc" }
-running_average_grpc = { path = "running_average/grpc" }
 translator_common = { path = "translator/common" }
 translator_grpc = { path = "translator/grpc" }
 trusted_database_client = { path = "trusted_database/client/rust" }
