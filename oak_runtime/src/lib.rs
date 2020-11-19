@@ -154,18 +154,18 @@ struct NodeStopper {
 
 impl NodeStopper {
     /// Sends a notification to the Node and joins its thread.
-    fn stop_node(self) -> thread::Result<()> {
-        let node_name = &self.node_name;
+    fn stop_node(self, node_id: NodeId) -> thread::Result<()> {
+        let node_debug_id = NodeInfo::construct_debug_id(&self.node_name, node_id);
         self.notify_sender
             .send(())
             // Notification errors are discarded since not all of the Nodes save
             // and use the [`oneshot::Receiver`].
             .unwrap_or_else(|()| {
-                debug!("{} already dropped `notify_receiver`.", node_name);
+                debug!("{} already dropped `notify_receiver`.", node_debug_id);
             });
-        debug!("join thread for node {}...", self.node_name);
+        debug!("join thread for node {}...", node_debug_id);
         let result = self.join_handle.join();
-        debug!("join thread for node {}...done", self.node_name);
+        debug!("join thread for node {}...done", node_debug_id);
         result
     }
 }
@@ -181,7 +181,10 @@ impl std::fmt::Debug for NodeStopper {
 }
 
 struct NodeInfo {
-    /// Name for the Node in debugging output.
+    /// The name for the node.
+    ///
+    /// The name does not have to be unique and can be empty. In logs it is
+    /// combined with the id to form a unique debug_ig to identify nodes.
     name: String,
 
     /// Name for the type of this Node, for metrics output.
@@ -204,6 +207,19 @@ struct NodeInfo {
     /// small exception, when the Runtime is in the process of closing down and
     /// the [`NodeStopper`] is held by the shutdown processing code).
     node_stopper: Option<NodeStopper>,
+}
+
+impl NodeInfo {
+    /// Returns a unique debug_id used to identify the node in the debug output,
+    /// consisting out of the provided [`NodeId`], and the node's name.
+    fn get_debug_id(&self, node_id: NodeId) -> String {
+        NodeInfo::construct_debug_id(&self.name, node_id)
+    }
+
+    /// Returns a unique debug_id consisting out of the provided name and [`NodeId`].
+    fn construct_debug_id(name: &str, node_id: NodeId) -> String {
+        format!("{}({})", name, node_id.0)
+    }
 }
 
 /// The downgrading (declassification + endorsement) privilege associated with a Node instance.
@@ -431,7 +447,9 @@ impl Runtime {
             if node_info.abi_handles.get(&candidate).is_none() {
                 debug!(
                     "{:?}: new ABI handle {} maps to {:?}",
-                    node_info.name, candidate, half
+                    self.get_node_debug_id(node_id),
+                    candidate,
+                    half
                 );
 
                 let event_details = HandleCreated {
@@ -488,7 +506,7 @@ impl Runtime {
             .ok_or(OakStatus::ErrBadHandle)?;
         trace!(
             "{:?}: map ABI handle {} to {:?}",
-            node_info.name,
+            self.get_node_debug_id(node_id),
             handle,
             half
         );
@@ -564,27 +582,27 @@ impl Runtime {
         // depending on the work that the Node thread has to perform, but at least we know that the
         // it will not be able to enter again in a blocking state.
         let node_stoppers = self.take_node_stoppers();
-        for node_stopper_opt in node_stoppers {
+        for (node_id, node_stopper_opt) in node_stoppers {
             if let Some(node_stopper) = node_stopper_opt {
-                let node_name = node_stopper.node_name.clone();
-                info!("stopping node {:?} ...", node_name);
-                if let Err(err) = node_stopper.stop_node() {
-                    error!("could not stop node {:?}: {:?}", node_name, err);
+                let node_debug_id = NodeInfo::construct_debug_id(&node_stopper.node_name, node_id);
+                info!("stopping node {:?} ...", node_debug_id);
+                if let Err(err) = node_stopper.stop_node(node_id) {
+                    error!("could not stop node {:?}: {:?}", node_debug_id, err);
                 }
-                info!("stopping node {:?}...done", node_name);
+                info!("stopping node {:?}...done", node_debug_id);
             }
         }
     }
 
     /// Move all of the [`NodeStopper`] objects out of the `node_infos` tracker and return them.
-    fn take_node_stoppers(&self) -> Vec<Option<NodeStopper>> {
+    fn take_node_stoppers(&self) -> Vec<(NodeId, Option<NodeStopper>)> {
         let mut node_infos = self
             .node_infos
             .write()
             .expect("could not acquire lock on node_infos");
         node_infos
             .iter_mut()
-            .map(|(_, info)| info.node_stopper.take())
+            .map(|(id, info)| (*id, info.node_stopper.take()))
             .collect()
     }
 
@@ -639,14 +657,14 @@ impl Runtime {
         node_info.privilege.clone()
     }
 
-    /// Returns a clone of the name associated with the provided `node_id`.
-    fn get_node_name(&self, node_id: NodeId) -> String {
+    /// Returns a unique debug_id used to identify the node in the debug output,
+    /// consisting out of the provided [`NodeId`], and the node's name.
+    fn get_node_debug_id(&self, node_id: NodeId) -> String {
         let node_infos = self.node_infos.read().unwrap();
         node_infos
             .get(&node_id)
             .expect("Invalid node_id")
-            .name
-            .clone()
+            .get_debug_id(node_id)
     }
 
     /// Returns a clone of the [`Label`] associated with the provided reader `channel_half`.
@@ -739,7 +757,7 @@ impl Runtime {
         // the Channel Label).
         let downgraded_source_label = self.get_node_downgraded_label(node_id, source_label);
         let target_label = self.get_node_label(node_id);
-        let node_name = self.get_node_name(node_id);
+        let node_name = self.get_node_debug_id(node_id);
         trace!(
             "{:?}: original source label: {:?}?",
             node_name,
@@ -782,7 +800,7 @@ impl Runtime {
         // downgraded is the data inside the Node (protected by the Node Label).
         let source_label = self.get_node_label(node_id);
         let downgraded_source_label = self.get_node_downgraded_label(node_id, &source_label);
-        let node_name = self.get_node_name(node_id);
+        let node_name = self.get_node_debug_id(node_id);
         trace!(
             "{:?}: original source label: {:?}?",
             node_name,
@@ -827,7 +845,7 @@ impl Runtime {
         let channel = Channel::new(channel_id, name, label, Arc::downgrade(&self));
         let write_half = ChannelHalf::new(channel.clone(), ChannelHalfDirection::Write);
         let read_half = ChannelHalf::new(channel, ChannelHalfDirection::Read);
-        let node_name = self.get_node_name(node_id);
+        let node_name = self.get_node_debug_id(node_id);
         trace!(
             "{:?}: allocated channel with halves w={:?},r={:?}",
             node_name,
@@ -903,7 +921,7 @@ impl Runtime {
 
         let thread = thread::current();
 
-        let node_name = self.get_node_name(node_id);
+        let node_name = self.get_node_debug_id(node_id);
 
         while !self.is_terminating() {
             // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the
@@ -1170,7 +1188,7 @@ impl Runtime {
 
         debug!(
             "{:?}: remove_node_id() found open handles on exit: {:?}",
-            self.get_node_name(node_id),
+            self.get_node_debug_id(node_id),
             remaining_handles
         );
 
@@ -1301,28 +1319,21 @@ impl Runtime {
 
         let new_node_proxy = self.clone().proxy_for_new_node(node_name);
         let new_node_id = new_node_proxy.node_id;
-        let new_node_name = new_node_proxy.node_name.clone();
 
-        self.node_configure_instance(
-            new_node_id,
-            node_type,
-            new_node_name.clone(),
-            label,
-            &node_privilege,
-        );
+        self.node_configure_instance(new_node_id, node_type, node_name, label, &node_privilege);
         let initial_handle = new_node_proxy
             .runtime
             .new_abi_handle(new_node_proxy.node_id, reader);
 
         info!(
             "{:?}: start node instance {:?} of type {} with privilege {:?}",
-            self.get_node_name(node_id),
-            new_node_name,
+            self.get_node_debug_id(node_id),
+            NodeInfo::construct_debug_id(node_name, new_node_id),
             node_type,
             node_privilege
         );
         let node_stopper = self.clone().node_start_instance(
-            &new_node_name,
+            &node_name,
             instance,
             new_node_proxy,
             initial_handle,
@@ -1379,7 +1390,7 @@ impl Runtime {
         &self,
         node_id: NodeId,
         node_type: &'static str,
-        node_name: String,
+        node_name: &str,
         label: &Label,
         privilege: &NodePrivilege,
     ) {
@@ -1388,14 +1399,14 @@ impl Runtime {
         // node.
         self.introspection_event(EventDetails::NodeCreated(NodeCreated {
             node_id: node_id.0,
-            name: node_name.clone(),
+            name: node_name.to_string(),
             label: Some(label.clone()),
         }));
 
         self.add_node_info(
             node_id,
             NodeInfo {
-                name: node_name,
+                name: node_name.to_string(),
                 node_type,
                 label: label.clone(),
                 privilege: privilege.clone(),
@@ -1412,7 +1423,7 @@ impl Runtime {
         RuntimeProxy {
             runtime: self,
             node_id,
-            node_name: format!("{}({})", node_name, node_id.0),
+            node_name: node_name.to_string(),
         }
     }
 
