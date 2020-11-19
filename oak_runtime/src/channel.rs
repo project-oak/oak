@@ -76,12 +76,20 @@ pub struct Channel {
 
     /// The name for the channel.
     ///
-    /// The name does not have to be unique and can be empty. It is used in logs to help with
-    /// identifying channels during debugging.
-    pub name: String,
+    /// The name does not have to be unique and can be empty. In logs it is
+    /// combined with the id to form a unique debug_ig to identify channels.
+    name: String,
 
     /// Weak reference to the Runtime used for sending introspection events.
     runtime_weak: Weak<Runtime>,
+}
+
+impl Channel {
+    /// Returns a unique debug_id used to identify the node in the debug output,
+    /// consisting out of the provided [`ChannelId`], and the node's name.
+    fn get_debug_id(&self, channel_id: ChannelId) -> String {
+        format!("{}({})", &self.name, channel_id)
+    }
 }
 
 impl std::fmt::Debug for Channel {
@@ -121,10 +129,9 @@ impl ChannelHalf {
         self.channel.id
     }
 
-    /// Get the ID of the underlying channel.  For debugging/introspection
-    /// purposes.
-    pub fn get_channel_name(&self) -> &str {
-        &self.channel.name
+    /// Returns a unique debug_id used to identify the channel in debug output.
+    pub fn get_channel_debug_id(&self) -> String {
+        self.channel.get_debug_id(self.channel.id)
     }
 
     /// Get read-only access to the channel's messages.  For debugging/introspection
@@ -295,7 +302,7 @@ impl Channel {
             reader_count: AtomicU64::new(0),
             waiting_threads: Mutex::new(HashMap::new()),
             label: label.clone(),
-            name: format!("{}({})", name, id),
+            name: name.to_string(),
             runtime_weak,
         })
     }

@@ -131,7 +131,7 @@ impl Runtime {
                             &mut s,
                             r###"    {} [label="{}"]"###,
                             half.dot_id(),
-                            half.get_channel_name(),
+                            half.get_channel_debug_id(),
                         )
                         .unwrap();
                     }
