@@ -31,7 +31,6 @@ use oak_abi::{
     OakStatus,
 };
 use oak_sign::get_sha256_hex;
-use prost::Message as _;
 use rand::RngCore;
 use std::{string::String, sync::Arc};
 use tokio::sync::oneshot;
@@ -43,18 +42,20 @@ mod tests;
 /// Wasm host function index numbers for `wasmi` to map import names with.  This numbering is not
 /// exposed to the Wasm client.  See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
 const NODE_CREATE: usize = 0;
-const RANDOM_GET: usize = 1;
-const CHANNEL_CLOSE: usize = 2;
-const CHANNEL_CREATE: usize = 3;
-const CHANNEL_WRITE: usize = 4;
-const CHANNEL_WRITE_WITH_PRIVILEGE: usize = 5;
-const CHANNEL_READ: usize = 6;
-const WAIT_ON_CHANNELS: usize = 7;
-const CHANNEL_LABEL_READ: usize = 8;
-const NODE_LABEL_READ: usize = 9;
-const NODE_PRIVILEGE_READ: usize = 10;
+const NODE_CREATE_WITH_PRIVILEGE: usize = 1;
+const RANDOM_GET: usize = 2;
+const CHANNEL_CLOSE: usize = 3;
+const CHANNEL_CREATE: usize = 4;
+const CHANNEL_CREATE_WITH_PRIVILEGE: usize = 5;
+const CHANNEL_WRITE: usize = 6;
+const CHANNEL_WRITE_WITH_PRIVILEGE: usize = 7;
+const CHANNEL_READ: usize = 8;
+const WAIT_ON_CHANNELS: usize = 9;
+const CHANNEL_LABEL_READ: usize = 10;
+const NODE_LABEL_READ: usize = 11;
+const NODE_PRIVILEGE_READ: usize = 12;
 // TODO(#817): remove this; we shouldn't need to have WASI stubs.
-const WASI_STUB: usize = 11;
+const WASI_STUB: usize = 13;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -63,6 +64,12 @@ type AbiPointerOffset = u32;
 /// Wasm type identifier for position/offset values in linear memory.  Any future 64-bit version of
 /// Wasm would use a different value.
 const ABI_USIZE: ValueType = ValueType::I32;
+
+// Type aliases for creator functions.
+type NodeCreator =
+    fn(&RuntimeProxy, &str, &NodeConfiguration, &Label, oak_abi::Handle) -> Result<(), OakStatus>;
+type ChannelCreator =
+    fn(&RuntimeProxy, &str, &Label) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus>;
 
 /// `WasmInterface` holds runtime values for a particular execution instance of Wasm, running a
 /// single Oak Wasm Node.  The methods here that correspond to the Oak ABI host functions are
@@ -132,76 +139,83 @@ impl WasmInterface {
             initial_handle
         );
 
+        self.node_create_using_creator(
+            name_ptr,
+            name_length,
+            config_ptr,
+            config_length,
+            label_ptr,
+            label_length,
+            initial_handle,
+            RuntimeProxy::node_create,
+        )
+    }
+
+    /// Corresponds to the host ABI function [`node_create_with_privilege`](https://github.com/project-oak/oak/blob/main/docs/abi.md#node_create_with_privilege).
+    #[allow(clippy::too_many_arguments)]
+    fn node_create_with_privilege(
+        &self,
+        name_ptr: AbiPointer,
+        name_length: AbiPointerOffset,
+        config_ptr: AbiPointer,
+        config_length: AbiPointerOffset,
+        label_ptr: AbiPointer,
+        label_length: AbiPointerOffset,
+        initial_handle: oak_abi::Handle,
+    ) -> Result<(), OakStatus> {
+        trace!(
+            "{}: node_create_with_privilege({}, {}, {}, {}, {}, {}, {})",
+            self.pretty_name,
+            name_ptr,
+            name_length,
+            config_ptr,
+            config_length,
+            label_ptr,
+            label_length,
+            initial_handle
+        );
+
+        self.node_create_using_creator(
+            name_ptr,
+            name_length,
+            config_ptr,
+            config_length,
+            label_ptr,
+            label_length,
+            initial_handle,
+            RuntimeProxy::node_create_with_privilege,
+        )
+    }
+
+    /// Helper function to create a channel using the provided node creation function.
+    #[allow(clippy::too_many_arguments)]
+    fn node_create_using_creator(
+        &self,
+        name_ptr: AbiPointer,
+        name_length: AbiPointerOffset,
+        config_ptr: AbiPointer,
+        config_length: AbiPointerOffset,
+        label_ptr: AbiPointer,
+        label_length: AbiPointerOffset,
+        initial_handle: oak_abi::Handle,
+        creator: NodeCreator,
+    ) -> Result<(), OakStatus> {
         if self.runtime.is_terminating() {
             debug!("{}: node_create() returning terminated", self.pretty_name);
             return Err(OakStatus::ErrTerminated);
         }
 
-        let name_bytes = self
-            .get_memory()
-            .get(name_ptr, name_length as usize)
-            .map_err(|err| {
-                error!(
-                    "{}: node_create(): Unable to read name from guest memory: {:?}",
-                    self.pretty_name, err
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
+        let name = self.fetch_string(name_ptr, name_length)?;
+        let config: NodeConfiguration = self.fetch_proto(config_ptr, config_length)?;
+        let label: Label = self.fetch_proto(label_ptr, label_length)?;
 
-        let name = String::from_utf8(name_bytes).map_err(|err| {
+        creator(&self.runtime, &name, &config, &label, initial_handle).map_err(|err| {
             error!(
-                "{}: node_create(): Unable to decode name as a string: {:?}",
+                "{}: node_create_using_creator(): Could not create node: {:?}",
                 self.pretty_name, err
             );
-            OakStatus::ErrInvalidArgs
-        })?;
-
-        let config_bytes = self
-            .get_memory()
-            .get(config_ptr, config_length as usize)
-            .map_err(|err| {
-                error!(
-                    "{}: node_create(): Unable to read config from guest memory: {:?}",
-                    self.pretty_name, err
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-
-        let config = NodeConfiguration::decode(config_bytes.as_ref()).map_err(|err| {
-            warn!(
-                "{}: node_create(): Could not parse node configuration: {:?}",
-                self.pretty_name, err
-            );
-            OakStatus::ErrInvalidArgs
-        })?;
-
-        let label_bytes = self
-            .get_memory()
-            .get(label_ptr, label_length as usize)
-            .map_err(|err| {
-                error!(
-                    "{}: node_create(): Unable to read label from guest memory: {:?}",
-                    self.pretty_name, err
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-        let label = Label::deserialize(&label_bytes).ok_or_else(|| {
-            error!(
-                "{}: node_create: could not deserialize label",
-                self.pretty_name
-            );
-            OakStatus::ErrInvalidArgs
-        })?;
-
-        self.runtime
-            .node_create(&name, &config, &label, initial_handle)
-            .map_err(|err| {
-                error!(
-                    "{}: node_create(): Could not create node: {:?}",
-                    self.pretty_name, err
-                );
-                err
-            })
+            err
+        })
     }
 
     /// Corresponds to the host ABI function [`random_get`](https://github.com/project-oak/oak/blob/main/docs/abi.md#random_get).
@@ -249,6 +263,61 @@ impl WasmInterface {
             label_length
         );
 
+        self.channel_create_using_creator(
+            write_addr,
+            read_addr,
+            name_ptr,
+            name_length,
+            label_ptr,
+            label_length,
+            RuntimeProxy::channel_create,
+        )
+    }
+
+    /// Corresponds to the host ABI function [`channel_create_with_privilege`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_create_with_privilege).
+    fn channel_create_with_privilege(
+        &mut self,
+        write_addr: AbiPointer,
+        read_addr: AbiPointer,
+        name_ptr: AbiPointer,
+        name_length: AbiPointerOffset,
+        label_ptr: AbiPointer,
+        label_length: AbiPointerOffset,
+    ) -> Result<(), OakStatus> {
+        trace!(
+            "{}: channel_create_with_privilege({}, {}, {}, {}, {}, {})",
+            self.pretty_name,
+            write_addr,
+            read_addr,
+            name_ptr,
+            name_length,
+            label_ptr,
+            label_length
+        );
+
+        self.channel_create_using_creator(
+            write_addr,
+            read_addr,
+            name_ptr,
+            name_length,
+            label_ptr,
+            label_length,
+            RuntimeProxy::channel_create_with_privilege,
+        )
+    }
+
+    /// Helper function to create a channel using the provided channel creation function.
+    #[allow(clippy::too_many_arguments)]
+    fn channel_create_using_creator(
+        &mut self,
+        write_addr: AbiPointer,
+        read_addr: AbiPointer,
+        name_ptr: AbiPointer,
+        name_length: AbiPointerOffset,
+        label_ptr: AbiPointer,
+        label_length: AbiPointerOffset,
+        creator: ChannelCreator,
+    ) -> Result<(), OakStatus> {
         if self.runtime.is_terminating() {
             debug!("{} returning terminated", self.pretty_name);
             return Err(OakStatus::ErrTerminated);
@@ -257,50 +326,16 @@ impl WasmInterface {
         self.validate_ptr(write_addr, 8)?;
         self.validate_ptr(read_addr, 8)?;
 
-        let name_bytes = self
-            .get_memory()
-            .get(name_ptr, name_length as usize)
-            .map_err(|err| {
-                error!(
-                    "{}: channel_create(): Unable to read name from guest memory: {:?}",
-                    self.pretty_name, err
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
+        let name = self.fetch_string(name_ptr, name_length)?;
+        let label: Label = self.fetch_proto(label_ptr, label_length)?;
 
-        let name = String::from_utf8(name_bytes).map_err(|err| {
-            error!(
-                "{}: channel_create(): Unable to decode name as a string: {:?}",
-                self.pretty_name, err
-            );
-            OakStatus::ErrInvalidArgs
-        })?;
-
-        let label_bytes = self
-            .get_memory()
-            .get(label_ptr, label_length as usize)
-            .map_err(|err| {
-                error!(
-                    "{}: channel_create(): Unable to read label from guest memory: {:?}",
-                    self.pretty_name, err
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-        let label = Label::deserialize(&label_bytes).ok_or_else(|| {
-            error!(
-                "{}: channel_create(): could not deserialize label",
-                self.pretty_name
-            );
-            OakStatus::ErrInvalidArgs
-        })?;
-
-        let (write_handle, read_handle) = self.runtime.channel_create(&name, &label)?;
+        let (write_handle, read_handle) = creator(&self.runtime, &name, &label)?;
 
         self.get_memory()
             .set_value(write_addr, write_handle as i64)
             .map_err(|err| {
                 error!(
-                    "{}: channel_create(): Unable to write writer handle into guest memory: {:?}",
+                    "{}: channel_create_using_creator(): Unable to write writer handle into guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
@@ -310,7 +345,7 @@ impl WasmInterface {
             .set_value(read_addr, read_handle as i64)
             .map_err(|err| {
                 error!(
-                    "{}: channel_create(): Unable to write reader handle into guest memory: {:?}",
+                    "{}: channel_create_using_creator(): Unable to write reader handle into guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
@@ -364,44 +399,6 @@ impl WasmInterface {
         self.runtime
             .channel_write_with_privilege(writer_handle, msg)?;
         Ok(())
-    }
-
-    /// Fetches a [`NodeMessage`] containing the source data and handles.
-    fn fetch_message(
-        &self,
-        source: AbiPointer,
-        source_length: AbiPointerOffset,
-        handles: AbiPointer,
-        handles_count: AbiPointerOffset,
-    ) -> Result<NodeMessage, OakStatus> {
-        let bytes = self
-            .get_memory()
-            .get(source, source_length as usize)
-            .map_err(|err| {
-                error!(
-                    "{}: fetch_message(): Unable to read message data from guest memory: {:?}",
-                    self.pretty_name, err
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-
-        let raw_handles = self
-            .get_memory()
-            .get(handles, handles_count as usize * 8)
-            .map_err(|err| {
-                error!(
-                    "{}: fetch_message(): Unable to read handles from guest memory: {:?}",
-                    self.pretty_name, err
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-
-        let handles: Vec<u64> = raw_handles
-            .chunks(8)
-            .map(|bytes| LittleEndian::read_u64(bytes))
-            .collect();
-
-        Ok(NodeMessage { bytes, handles })
     }
 
     /// Corresponds to the host ABI function [`channel_read`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_read).
@@ -670,6 +667,86 @@ impl WasmInterface {
             LabelReadStatus::NeedsCapacity(_) => Err(OakStatus::ErrBufferTooSmall),
         }
     }
+
+    /// Helper function to fetch a sequence of bytes from linear memory.
+    fn fetch_bytes(
+        &self,
+        bytes_ptr: AbiPointer,
+        bytes_length: AbiPointerOffset,
+    ) -> Result<Vec<u8>, OakStatus> {
+        self.get_memory()
+            .get(bytes_ptr, bytes_length as usize)
+            .map_err(|err| {
+                error!(
+                    "{}: fetch_bytes(): Unable to read name from guest memory: {:?}",
+                    self.pretty_name, err
+                );
+                OakStatus::ErrInvalidArgs
+            })
+    }
+
+    /// Helper function to fetch a [`String`] from linear memory.
+    fn fetch_string(
+        &self,
+        string_ptr: AbiPointer,
+        string_length: AbiPointerOffset,
+    ) -> Result<String, OakStatus> {
+        let bytes = self.fetch_bytes(string_ptr, string_length)?;
+
+        String::from_utf8(bytes).map_err(|err| {
+            error!(
+                "{}: fetch_string(): Unable to decode name as a string: {:?}",
+                self.pretty_name, err
+            );
+            OakStatus::ErrInvalidArgs
+        })
+    }
+
+    /// Helper function to fetch a proto from linear memory.
+    fn fetch_proto<T: prost::Message + Default>(
+        &self,
+        data_ptr: AbiPointer,
+        data_length: AbiPointerOffset,
+    ) -> Result<T, OakStatus> {
+        let bytes = self.fetch_bytes(data_ptr, data_length)?;
+
+        T::decode(bytes.as_slice()).map_err(|err| {
+            warn!(
+                "{}: fetch_data(): Could not parse node configuration: {:?}",
+                self.pretty_name, err
+            );
+            OakStatus::ErrInvalidArgs
+        })
+    }
+
+    /// Helper function to fetch bytes and handles from linear memory as a [`NodeMessage`].
+    fn fetch_message(
+        &self,
+        source: AbiPointer,
+        source_length: AbiPointerOffset,
+        handles: AbiPointer,
+        handles_count: AbiPointerOffset,
+    ) -> Result<NodeMessage, OakStatus> {
+        let bytes = self.fetch_bytes(source, source_length)?;
+
+        let raw_handles = self
+            .get_memory()
+            .get(handles, handles_count as usize * 8)
+            .map_err(|err| {
+                error!(
+                    "{}: fetch_message(): Unable to read handles from guest memory: {:?}",
+                    self.pretty_name, err
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+
+        let handles: Vec<u64> = raw_handles
+            .chunks(8)
+            .map(|bytes| LittleEndian::read_u64(bytes))
+            .collect();
+
+        Ok(NodeMessage { bytes, handles })
+    }
 }
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
@@ -706,11 +783,28 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(5)?,
                 args.nth_checked(6)?,
             )),
+            NODE_CREATE_WITH_PRIVILEGE => map_host_errors(self.node_create_with_privilege(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+                args.nth_checked(4)?,
+                args.nth_checked(5)?,
+                args.nth_checked(6)?,
+            )),
             RANDOM_GET => {
                 map_host_errors(self.random_get(args.nth_checked(0)?, args.nth_checked(1)?))
             }
             CHANNEL_CLOSE => map_host_errors(self.channel_close(args.nth_checked(0)?)),
             CHANNEL_CREATE => map_host_errors(self.channel_create(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+                args.nth_checked(4)?,
+                args.nth_checked(5)?,
+            )),
+            CHANNEL_CREATE_WITH_PRIVILEGE => map_host_errors(self.channel_create_with_privilege(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
                 args.nth_checked(2)?,
@@ -799,6 +893,21 @@ fn oak_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
+        "node_create_with_privilege" => (
+            NODE_CREATE_WITH_PRIVILEGE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE,      // name_buf
+                    ABI_USIZE,      // name_len
+                    ABI_USIZE,      // config_buf
+                    ABI_USIZE,      // config_len
+                    ABI_USIZE,      // label_buf
+                    ABI_USIZE,      // label_len
+                    ValueType::I64, // handle
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
         "random_get" => (
             RANDOM_GET,
             wasmi::Signature::new(
@@ -820,6 +929,20 @@ fn oak_resolve_func(
         ),
         "channel_create" => (
             CHANNEL_CREATE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // write handle (out)
+                    ABI_USIZE, // read handle (out)
+                    ABI_USIZE, // name_buf
+                    ABI_USIZE, // name_len
+                    ABI_USIZE, // label_buf
+                    ABI_USIZE, // label_len
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_create_with_privilege" => (
+            CHANNEL_CREATE_WITH_PRIVILEGE,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // write handle (out)

@@ -272,6 +272,38 @@ pub fn channel_create(name: &str, label: &Label) -> Result<(WriteHandle, ReadHan
     result_from_status(status as i32, (write, read))
 }
 
+/// Create a new unidirectional channel using the current node's label-downgrading privilege.
+///
+/// The provided label must be equal or more restrictive than the label of the calling node, i.e.
+/// the label of the calling node must "flow to" the provided label.
+///
+/// On success, returns [`WriteHandle`] and a [`ReadHandle`] values for the
+/// write and read halves (respectively).
+pub fn channel_create_with_privilege(
+    name: &str,
+    label: &Label,
+) -> Result<(WriteHandle, ReadHandle), OakStatus> {
+    let mut write = WriteHandle {
+        handle: crate::handle::invalid(),
+    };
+    let mut read = ReadHandle {
+        handle: crate::handle::invalid(),
+    };
+    let label_bytes = label.serialize();
+    let name_bytes = name.as_bytes();
+    let status = unsafe {
+        oak_abi::channel_create_with_privilege(
+            &mut write.handle as *mut u64,
+            &mut read.handle as *mut u64,
+            name_bytes.as_ptr(),
+            name_bytes.len(),
+            label_bytes.as_ptr(),
+            label_bytes.len(),
+        )
+    };
+    result_from_status(status as i32, (write, read))
+}
+
 /// Close the specified channel [`Handle`].
 pub fn channel_close(handle: Handle) -> Result<(), OakStatus> {
     let status = unsafe { oak_abi::channel_close(handle) };
@@ -301,6 +333,42 @@ pub fn node_create(
     })?;
     let status = unsafe {
         oak_abi::node_create(
+            name_bytes.as_ptr(),
+            name_bytes.len(),
+            config_bytes.as_ptr(),
+            config_bytes.len(),
+            label_bytes.as_ptr(),
+            label_bytes.len(),
+            half.handle,
+        )
+    };
+    result_from_status(status as i32, ())
+}
+
+/// Uses the calling node's label-downgrading privilege to creates a new Node running the
+/// configuration identified by `config_name`, running the entrypoint identified by
+/// `entrypoint_name` (for a Web Assembly Node; this parameter is ignored when creating a
+/// pseudo-Node), with the provided `label`, and passing it the given handle.
+///
+/// The provided label must be equal or more restrictive than the downgraded label of the calling
+/// node, i.e. the label of the calling node must "flow to" the provided label.
+///
+/// See https://github.com/project-oak/oak/blob/main/docs/concepts.md#labels
+pub fn node_create_with_privilege(
+    name: &str,
+    config: &NodeConfiguration,
+    label: &Label,
+    half: ReadHandle,
+) -> Result<(), OakStatus> {
+    let name_bytes = name.as_bytes();
+    let label_bytes = label.serialize();
+    let mut config_bytes = Vec::new();
+    config.encode(&mut config_bytes).map_err(|err| {
+        warn!("Could not encode node configuration: {:?}", err);
+        OakStatus::ErrInvalidArgs
+    })?;
+    let status = unsafe {
+        oak_abi::node_create_with_privilege(
             name_bytes.as_ptr(),
             name_bytes.len(),
             config_bytes.as_ptr(),

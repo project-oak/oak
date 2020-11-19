@@ -178,6 +178,29 @@ extern "C" {
         label_len: usize,
     ) -> u32;
 
+    /// Create a new unidirectional Channel using the current node's label-downgrading privilege.
+    ///
+    /// Returns handles for the the write and read halves of the Channel in the spaces given by
+    /// `write` and `read`.
+    ///
+    /// The name to assign to the newly created Channel is provided in the memory area given by
+    /// `name_buf` and `name_len` as a UTF-8 encoded string.
+    ///
+    /// The label to assign to the newly created Channel is provided in the memory area given by
+    /// `label_buf` and `label_len`.
+    ///
+    /// Returns the status of the operation, as an [`OakStatus`] value.
+    ///
+    /// [`OakStatus`]: crate::OakStatus
+    pub fn channel_create_with_privilege(
+        write: *mut u64,
+        read: *mut u64,
+        name_buf: *const u8,
+        name_len: usize,
+        label_buf: *const u8,
+        label_len: usize,
+    ) -> u32;
+
     /// Closes the channel identified by `handle`.
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.
@@ -253,6 +276,33 @@ extern "C" {
     /// [`OakStatus`]: crate::OakStatus
     /// [`NodeConfiguration`]: crate::proto::oak::application::NodeConfiguration
     pub fn node_create(
+        name_buf: *const u8,
+        name_len: usize,
+        config_buf: *const u8,
+        config_len: usize,
+        label_buf: *const u8,
+        label_len: usize,
+        handle: u64,
+    ) -> u32;
+
+    /// Creates a new Node instance running code identified by a serialized [`NodeConfiguration`]
+    /// using the current node's privilege.
+    ///
+    /// The name of the new node is provided in the memory area given by `name_buf` and `name_len`.
+    /// The name does not have to be unique and can be empty. It is used in logs to help identify
+    /// nodes for debugging purposes.
+    ///
+    /// The serialized configuration object is provided in the memory area given by `config_buf` and
+    /// `config_len`.
+    ///
+    /// The label to assign to the newly created Node is provided in the memory area given by
+    /// `label_buf` and `label_len`.
+    ///
+    /// Returns the status of the operation, as an [`OakStatus`] value.
+    ///
+    /// [`OakStatus`]: crate::OakStatus
+    /// [`NodeConfiguration`]: crate::proto::oak::application::NodeConfiguration
+    pub fn node_create_with_privilege(
         name_buf: *const u8,
         name_len: usize,
         config_buf: *const u8,

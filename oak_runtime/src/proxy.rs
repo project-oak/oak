@@ -172,7 +172,7 @@ impl RuntimeProxy {
         self.runtime.is_terminating()
     }
 
-    /// See [`Runtime::node_create_and_register`].
+    /// Calls [`Runtime::node_create_and_register`] without using the Node's privilege.
     pub fn node_create(
         &self,
         name: &str,
@@ -195,6 +195,33 @@ impl RuntimeProxy {
         debug!(
             "{:?}: node_create({:?}, {:?}, {:?}) -> {:?}",
             self.node_name, name, config, label, result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::node_create_and_register`] using the Node's privilege.
+    pub fn node_create_with_privilege(
+        &self,
+        name: &str,
+        config: &NodeConfiguration,
+        label: &Label,
+        initial_handle: oak_abi::Handle,
+    ) -> Result<(), OakStatus> {
+        debug!(
+            "{:?}: node_create_with_privilege({:?}, {:?}, {:?})",
+            self.node_id, name, config, label
+        );
+        let result = self.runtime.clone().node_create_and_register(
+            self.node_id,
+            name,
+            config,
+            label,
+            initial_handle,
+            OperationPrivilege::UsePrivilege,
+        );
+        debug!(
+            "{:?}: node_create_with_privilege({:?}, {:?}, {:?}) -> {:?}",
+            self.node_id, name, config, label, result
         );
         result
     }
