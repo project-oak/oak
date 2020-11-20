@@ -44,9 +44,13 @@ impl Log for OakChannelLogger {
             level: map_level(record.level()) as i32,
             message: format!("{}", record.args()),
         };
-        match self.log_sender.send_with_downgrade(&log_msg) {
+        match self.log_sender.send(&log_msg) {
             Ok(()) => (),
             Err(crate::OakError::OakStatus(crate::OakStatus::ErrTerminated)) => (),
+            // If the current node does not have permissions to log we should not panic. It is
+            // expected that nodes could try to log even when IFC would block the message, and this
+            // should not terminate the node.
+            Err(crate::OakError::OakStatus(crate::OakStatus::ErrPermissionDenied)) => (),
             Err(e) => panic!("could not send log message over log channel: {}", e),
         }
     }
