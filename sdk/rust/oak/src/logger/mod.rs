@@ -23,7 +23,10 @@
 
 use crate::io::{Sender, SenderExt};
 use log::{Level, Log, Metadata, Record, SetLoggerError};
-use oak_abi::{label::Label, OakStatus};
+use oak_abi::{
+    label::{confidentiality_label, top, Label},
+    OakStatus,
+};
 use oak_services::proto::oak::log::LogMessage;
 
 struct OakChannelLogger {
@@ -82,9 +85,20 @@ pub fn init(log_sender: Sender<LogMessage>, level: Level) -> Result<(), SetLogge
 }
 
 pub fn create() -> Result<Sender<LogMessage>, OakStatus> {
-    crate::io::node_create(
+    match crate::io::node_create(
         "log",
-        &Label::public_untrusted(),
+        &confidentiality_label(top()),
         &crate::node_config::log(),
-    )
+    ) {
+        Ok(log_node) => Ok(log_node),
+        // If the logger Node cannot be created with top secret confidentiality it means that the
+        // Runtime was not built with the `oak_debug` feature, so we create it as a public
+        // Node.
+        Err(crate::OakStatus::ErrPermissionDenied) => crate::io::node_create(
+            "log",
+            &Label::public_untrusted(),
+            &crate::node_config::log(),
+        ),
+        Err(e) => Err(e),
+    }
 }

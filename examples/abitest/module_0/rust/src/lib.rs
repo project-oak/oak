@@ -2636,7 +2636,8 @@ impl FrontendNode {
     }
 
     fn test_logger_pseudo_node_privilege(&mut self) -> TestResult {
-        // Logger pseudo node cannot be created with a non-public label.
+        // Logger pseudo node can be created with a non-public label when the `oak_debug` feature is
+        // enabled.
         let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
             GRPC_CLIENT_ADDRESS
                 .parse::<Uri>()
@@ -2647,10 +2648,7 @@ impl FrontendNode {
         ));
         let config = oak::node_config::log();
         let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
-        expect_eq!(
-            Err(OakStatus::ErrPermissionDenied),
-            oak::node_create("logger", &config, &label, rh)
-        );
+        expect_eq!(Ok(()), oak::node_create("logger", &config, &label, rh));
         expect_eq!(Ok(()), oak::channel_close(rh.handle));
         expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())

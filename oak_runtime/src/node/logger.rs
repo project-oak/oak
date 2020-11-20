@@ -18,7 +18,7 @@
 
 use crate::{
     io::{Receiver, ReceiverExt},
-    RuntimeProxy,
+    NodePrivilege, RuntimeProxy,
 };
 use log::{error, info, warn};
 use oak_abi::OakStatus;
@@ -44,6 +44,12 @@ impl LogNode {
 impl super::Node for LogNode {
     fn node_type(&self) -> &'static str {
         "logger"
+    }
+
+    #[cfg(feature = "oak_debug")]
+    fn get_privilege(&self) -> NodePrivilege {
+        // Allow the logger Node to declassify log messages in debug builds only.
+        NodePrivilege::top_privilege()
     }
 
     /// Main execution loop for the logging pseudo-Node just waits for incoming
