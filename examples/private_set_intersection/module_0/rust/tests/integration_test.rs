@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use anyhow::Context;
 use assert_matches::assert_matches;
 use maplit::hashmap;
 use oak_abi::{
@@ -33,12 +34,24 @@ use std::{
 // Base64 encoded Ed25519 private key corresponding to Wasm module signature.
 const PRIVATE_KEY_FILE: &str = "../../../keys/ed25519/test.key";
 
-const WASM_MODULE_FILE_NAME: &str = "private_set_intersection.wasm";
-const WASM_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";
-const MODULE_NAME: &str = "app";
+const MAIN_MODULE_FILE_NAME: &str = "private_set_intersection.wasm";
+const HANDLER_MODULE_FILE_NAME: &str = "private_set_intersection_handler.wasm";
+
+const MAIN_MODULE_MANIFEST: &str = "../../module_0/rust/Cargo.toml";
+const HANDLER_MODULE_MANIFEST: &str = "../../module_1/rust/Cargo.toml";
+
+const MAIN_MODULE_NAME: &str = "app";
+const HANDLER_MODULE_NAME: &str = "handler";
 const ENTRYPOINT_NAME: &str = "oak_main";
 
 const TEST_SET_ID: &str = "test";
+
+fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
+    Ok(hashmap! {
+        MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_FILE_NAME, oak_tests::Profile::Debug).context("Couldn't compile main module")?,
+        HANDLER_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(HANDLER_MODULE_MANIFEST, HANDLER_MODULE_FILE_NAME, oak_tests::Profile::Debug).context("Couldn't compile handler module")?,
+    })
+}
 
 fn sign(input: &[u8]) -> anyhow::Result<SignatureBundle> {
     let key_file = read_pem_file(PRIVATE_KEY_FILE)?;
@@ -50,20 +63,14 @@ fn sign(input: &[u8]) -> anyhow::Result<SignatureBundle> {
 async fn test_set_intersection() {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let wasm_module = oak_tests::compile_rust_wasm(
-        WASM_MODULE_MANIFEST,
-        WASM_MODULE_FILE_NAME,
-        oak_tests::Profile::Debug,
-    )
-    .expect("Couldn't compile Wasm module");
-    let signature = sign(&wasm_module).expect("Couldn't sign Wasm module");
+    let wasm_modules = build_wasm().expect("Couldn't compile Wasm modules");
+    let signature =
+        sign(&wasm_modules.get(HANDLER_MODULE_NAME).unwrap()).expect("Couldn't sign Wasm module");
     let config = oak_tests::runtime_config_wasm(
-        hashmap! { MODULE_NAME.to_owned() => wasm_module },
-        MODULE_NAME,
+        wasm_modules,
+        MAIN_MODULE_NAME,
         ENTRYPOINT_NAME,
-        ConfigMap {
-            items: HashMap::new(),
-        },
+        ConfigMap::default(),
         oak_runtime::SignatureTable {
             values: hashmap! {
                 hex::encode(&signature.hash) => vec![signature.clone()]

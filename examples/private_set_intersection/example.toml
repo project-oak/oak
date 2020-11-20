@@ -7,7 +7,8 @@ manifest = "examples/private_set_intersection/oak_app_manifest.toml"
 out = "examples/private_set_intersection/bin/private_set_intersection.oak"
 
 [applications.rust.modules]
-module = { Cargo = { cargo_manifest = "examples/private_set_intersection/module/rust/Cargo.toml" } }
+module_0 = { Cargo = { cargo_manifest = "examples/private_set_intersection/module_0/rust/Cargo.toml" } }
+module_1 = { Cargo = { cargo_manifest = "examples/private_set_intersection/module_1/rust/Cargo.toml" } }
 
 [server]
 additional_args = [

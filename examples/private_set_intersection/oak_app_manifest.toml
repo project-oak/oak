@@ -1,5 +1,6 @@
 name = "private_set_intersection"
 
 [modules]
+app = { path = "examples/private_set_intersection/bin/private_set_intersection.wasm" }
 # TODO(865): Use locally built module once reproducibility is fixed.
-app = { external = { url = "https://storage.googleapis.com/oak-modules/private_set_intersection/9906d053540910e02d6c9d2de2d438ae8aa22a36e684bedfc01ad03e67318edb", sha256 = "9906d053540910e02d6c9d2de2d438ae8aa22a36e684bedfc01ad03e67318edb" } }
+handler = { external = { url = "https://storage.googleapis.com/oak-modules/private_set_intersection_handler/c42215ab79d31acf78e73696727553174d841f216373dc890a4afa9b65feb8ed", sha256 = "c42215ab79d31acf78e73696727553174d841f216373dc890a4afa9b65feb8ed" } }
