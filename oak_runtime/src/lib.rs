@@ -174,7 +174,7 @@ impl NodeStopper {
     /// Returns a unique debug_id used in the debug output, consisting out of
     /// the provided [`NodeId`], and the node's name.
     fn get_debug_id(&self, node_id: NodeId) -> String {
-        NodeInfo::construct_debug_id(&self.node_name, node_id)
+        construct_debug_id(&self.node_name, node_id)
     }
 }
 
@@ -217,16 +217,16 @@ struct NodeInfo {
     node_stopper: Option<NodeStopper>,
 }
 
+/// Returns a unique debug_id consisting out of the provided name and [`NodeId`].
+pub fn construct_debug_id(name: &str, node_id: NodeId) -> String {
+    format!("{}({})", name, node_id.0)
+}
+
 impl NodeInfo {
     /// Returns a unique debug_id used to identify the node in the debug output,
     /// consisting out of the provided [`NodeId`], and the node's name.
     fn get_debug_id(&self, node_id: NodeId) -> String {
-        NodeInfo::construct_debug_id(&self.name, node_id)
-    }
-
-    /// Returns a unique debug_id consisting out of the provided name and [`NodeId`].
-    fn construct_debug_id(name: &str, node_id: NodeId) -> String {
-        format!("{}({})", name, node_id.0)
+        construct_debug_id(&self.name, node_id)
     }
 }
 

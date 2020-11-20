@@ -18,9 +18,9 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    metrics::Metrics, AuxServer, ChannelHalfDirection, Downgrading, LabelReadStatus, NodeId,
-    NodeInfo, NodeMessage, NodePrivilege, NodeReadStatus, Runtime, SecureServerConfiguration,
-    SignatureTable,
+    construct_debug_id, metrics::Metrics, AuxServer, ChannelHalfDirection, Downgrading,
+    LabelReadStatus, NodeId, NodeMessage, NodePrivilege, NodeReadStatus, Runtime,
+    SecureServerConfiguration, SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -541,7 +541,7 @@ impl RuntimeProxy {
     }
 
     fn get_debug_id(&self) -> String {
-        NodeInfo::construct_debug_id(&self.node_name, self.node_id)
+        construct_debug_id(&self.node_name, self.node_id)
     }
 
     /// Return the direction of an ABI handle.
