@@ -639,7 +639,7 @@ impl Runtime {
 
     /// Returns the effective label for `initial_label` in the context of the Node, taking into
     /// acount whether the downgrade privilege should be applied.
-    fn get_node_effective_label(
+    fn get_effective_label(
         &self,
         node_id: NodeId,
         initial_label: &Label,
@@ -766,7 +766,7 @@ impl Runtime {
             source_label
         );
 
-        let effective_label = self.get_node_effective_label(node_id, source_label, downgrade);
+        let effective_label = self.get_effective_label(node_id, source_label, downgrade);
         trace!("{:?}: effective label: {:?}?", node_name, effective_label);
         trace!("{:?}: target label: {:?}?", node_name, target_label);
         if effective_label.flows_to(&target_label) {
@@ -805,7 +805,7 @@ impl Runtime {
             node_name,
             &original_label
         );
-        let effective_label = self.get_node_effective_label(node_id, &original_label, downgrade);
+        let effective_label = self.get_effective_label(node_id, &original_label, downgrade);
         trace!("{:?}: effective label: {:?}?", node_name, effective_label);
         trace!("{:?}: target label: {:?}?", node_name, target_label);
         if effective_label.flows_to(&target_label) {
