@@ -12,7 +12,7 @@ This enforcement happens via the
 [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
 of
 `sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'`.
-It prevents calling servers or navigating to other pages.
+It prevents network calls, initiating navigation other pages.
 
 Depending on whether a given website complies with this CSP or not, the
 extension will show either a red or green icon.
@@ -30,8 +30,8 @@ will show a green icon would be
 [https://csp-locked-client-side-base64.web.app](https://csp-locked-client-side-base64.web.app).
 It performs all operations on the device of the user.
 
-In the future, this extension can be extended allow users to apply this CSP to
-any website (potentially breaking it in the process), or permit communication
+In the future, this extension can be extended to allow users to apply this CSP
+to any website (potentially breaking it in the process), or permit communication
 with trusted Oak servers.
 
 ## Installation
