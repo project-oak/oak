@@ -16,7 +16,11 @@
 
 use anyhow::Context;
 use log::info;
-use oak::{grpc, Label};
+use oak::{
+    grpc,
+    io::{ReceiverExt, SenderExt},
+    CommandHandler, Label,
+};
 use oak_abi::proto::oak::application::ConfigMap;
 use oak_services::proto::oak::log::LogInit;
 use translator_common::proto::{
@@ -33,18 +37,58 @@ impl oak::CommandHandler for Main {
 
     fn handle_command(&mut self, _command: ConfigMap) -> anyhow::Result<()> {
         let log_sender = oak::logger::create()?;
-        let handler_sender = oak::io::entrypoint_node_create::<Handler, _, _>(
-            "handler",
+        let router_sender = oak::io::entrypoint_node_create::<Router, _, _>(
+            "router",
             &Label::public_untrusted(),
             "app",
             LogInit {
                 log_sender: Some(log_sender),
             },
         )
-        .context("could not create handler node")?;
-        oak::grpc::server::init_with_sender("[::]:8080", handler_sender)
-            .context("could not create gRPC server pseudo-Node")?;
+        .context("Couldn't create handler node")?;
+        oak::grpc::server::init_with_sender("[::]:8080", router_sender)
+            .context("Couldn't create gRPC server pseudo-Node")?;
         Ok(())
+    }
+}
+
+oak::entrypoint_command_handler_init!(router => Router);
+
+#[derive(Default)]
+pub struct Router {
+    /// Saved init message to be sent to Handler Node.
+    init: LogInit,
+}
+
+impl oak::WithInit for Router {
+    type Init = LogInit;
+
+    fn create(init: Self::Init) -> Self {
+        Self { init }
+    }
+}
+
+/// Creates individual Handler Nodes for each client request and assigns client labels to them.
+impl CommandHandler for Router {
+    type Command = grpc::Invocation;
+
+    fn handle_command(&mut self, invocation: Self::Command) -> anyhow::Result<()> {
+        let label = invocation
+            .receiver
+            .as_ref()
+            .context("Couldn't get receiver")?
+            .label()
+            .context("Couldn't get label")?;
+        let handler_invocation_sender = oak::io::entrypoint_node_create::<Handler, _, _>(
+            "handler",
+            &label,
+            "app",
+            self.init.clone(),
+        )
+        .context("Couldn't create handler node")?;
+        handler_invocation_sender
+            .send(&invocation)
+            .context("Couldn't send invocation to handler node")
     }
 }
 
@@ -59,7 +103,7 @@ struct Handler;
 impl Translator for Handler {
     fn translate(&mut self, req: TranslateRequest) -> grpc::Result<TranslateResponse> {
         info!(
-            "attempt to translate '{}' from {} to {}",
+            "Attempt to translate '{}' from {} to {}",
             req.text, req.from_lang, req.to_lang
         );
         let mut rsp = TranslateResponse::default();
@@ -69,7 +113,7 @@ impl Translator for Handler {
                     "fr" => "MONDES".to_string(),
                     "it" => "MONDI".to_string(),
                     _ => {
-                        info!("output language {} not found", req.to_lang);
+                        info!("Output language {} not found", req.to_lang);
                         return Err(grpc::build_status(
                             grpc::Code::NotFound,
                             "Output language not found",
@@ -78,7 +122,7 @@ impl Translator for Handler {
                 },
                 _ => {
                     info!(
-                        "input text '{}' in {} not recognized",
+                        "Input text '{}' in {} not recognized",
                         req.text, req.from_lang
                     );
                     return Err(grpc::build_status(
@@ -88,14 +132,14 @@ impl Translator for Handler {
                 }
             },
             _ => {
-                info!("input language '{}' not recognized", req.from_lang);
+                info!("Input language '{}' not recognized", req.from_lang);
                 return Err(grpc::build_status(
                     grpc::Code::NotFound,
                     "Input language unrecognized",
                 ));
             }
         };
-        info!("translation '{}'", rsp.translated_text);
+        info!("Translation '{}'", rsp.translated_text);
         Ok(rsp)
     }
 }
