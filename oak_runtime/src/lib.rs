@@ -32,6 +32,7 @@ use crate::{
         event::EventDetails, ChannelCreated, Direction, Event, HandleCreated, HandleDestroyed,
         MessageDequeued, MessageEnqueued, NodeCreated, NodeDestroyed,
     },
+    tls::Certificate,
 };
 use auth::oidc_utils::ClientInfo;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
@@ -56,7 +57,7 @@ use std::{
     thread::JoinHandle,
 };
 use tokio::sync::oneshot;
-use tonic::transport::{Certificate, Identity};
+use tonic::transport::Identity;
 
 pub use channel::{ChannelHalf, ChannelHalfDirection};
 pub use config::configure_and_run;
@@ -111,7 +112,7 @@ pub struct GrpcConfiguration {
     /// OpenID Connect Authentication client information.
     pub oidc_client_info: Option<ClientInfo>,
 
-    /// Root TLS certificate to use for all gRPC Client Nodes.
+    /// PEM formatted root TLS certificate to use for all gRPC Client Nodes.
     pub grpc_client_root_tls_certificate: Option<Certificate>,
 }
 
@@ -129,9 +130,8 @@ pub struct SignatureTable {
 pub struct HttpConfiguration {
     /// TLS identity to use for all HTTP Server Nodes.
     pub tls_config: crate::tls::TlsConfig,
-    /// A non-empty vector containing the root TLS certificate, in the PEM format, to use for all
-    /// HTTP Client Nodes.
-    pub http_client_root_tls_certificate: Vec<u8>,
+    /// PEM formatted root TLS certificate to use for all HTTP Client Nodes.
+    pub http_client_root_tls_certificate: Option<Certificate>,
 }
 
 /// Configuration options for secure HTTP and gRPC pseudo-Nodes.

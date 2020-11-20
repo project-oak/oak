@@ -152,19 +152,17 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                 &self.signature_table,
             )?)),
             Some(ConfigType::GrpcClientConfig(config)) => {
-                let grpc_configuration = self
+                let grpc_client_root_tls_certificate = self
                     .secure_server_configuration
                     .clone()
                     .grpc_config
-                    .expect("no gRPC identity provided to Oak Runtime");
+                    .expect("no gRPC identity provided to Oak Runtime")
+                    .grpc_client_root_tls_certificate
+                    .expect("no root TLS certificate provided to Oak Runtime");
                 Ok(Box::new(grpc::client::GrpcClientNode::new(
                     node_name,
                     config.clone(),
-                    grpc_configuration
-                        .grpc_client_root_tls_certificate
-                        .as_ref()
-                        .expect("no gRPC client root TLS certificate provided to Oak Runtime")
-                        .clone(),
+                    grpc_client_root_tls_certificate,
                 )?))
             }
             Some(ConfigType::RoughtimeClientConfig(config)) => Ok(Box::new(
@@ -192,7 +190,8 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                     .http_config
                     .clone()
                     .expect("no HTTP configuration provided to Oak Runtime")
-                    .http_client_root_tls_certificate;
+                    .http_client_root_tls_certificate
+                    .expect("no root TLS certificate provided to Oak Runtime");
                 Ok(Box::new(http::client::HttpClientNode::new(
                     node_name,
                     config.clone(),

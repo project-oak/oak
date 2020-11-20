@@ -23,7 +23,7 @@ use log::debug;
 use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 use oak_runtime::{
     auth::oidc_utils::{parse_client_info_json, ClientInfo},
-    config::load_certificate,
+    tls::Certificate,
     SignatureTable,
 };
 use oak_sign::SignatureBundle;
@@ -218,7 +218,7 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
         Some(path) => read_to_string(path).context("Couldn't read gRPC TLS certificate")?,
         None => return Err(anyhow!("No gRPC TLS certificate file provided.")),
     };
-    let root_tls_certificate = get_root_tls_certificate_or_default(&opt)?;
+    let root_tls_certificate = get_root_tls_certificate_or_default(&opt).ok();
     let oidc_client_info = get_oidc_client_info(&opt)?;
 
     let grpc_config = oak_runtime::GrpcConfiguration {
@@ -226,10 +226,7 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
             &grpc_tls_certificate,
             &grpc_tls_private_key,
         )),
-        grpc_client_root_tls_certificate: Some(
-            load_certificate(&root_tls_certificate)
-                .map_err(|()| anyhow!("Couldn't parse TLS certificate"))?,
-        ),
+        grpc_client_root_tls_certificate: root_tls_certificate,
         oidc_client_info,
     };
 
@@ -303,8 +300,7 @@ fn create_http_config(opt: &Opt) -> anyhow::Result<oak_runtime::HttpConfiguratio
 
     match oak_runtime::tls::TlsConfig::new(http_tls_certificate_path, http_tls_private_key_path) {
         Some(tls_config) => {
-            let root_tls_certificate =
-                get_root_tls_certificate_or_default(&opt).map(|s| s.as_bytes().to_vec())?;
+            let root_tls_certificate = get_root_tls_certificate_or_default(&opt).ok();
             Ok(oak_runtime::HttpConfiguration {
                 tls_config,
                 http_client_root_tls_certificate: root_tls_certificate,
@@ -316,10 +312,12 @@ fn create_http_config(opt: &Opt) -> anyhow::Result<oak_runtime::HttpConfiguratio
     }
 }
 
-/// If `oak_debug` is enabled, read root TLS certificate from the specified file. Otherwise, return
-/// the default root TLS certificate from the embedded byte array.
-fn get_root_tls_certificate_or_default(opt: &Opt) -> anyhow::Result<String> {
-    match &opt.root_tls_certificate {
+/// If `oak_debug` is enabled, reads root TLS certificate from the specified file into a byte array.
+/// Otherwise, loads the default root TLS certificate from the embedded byte array.
+/// Parses the byte array into a [`Certificate`], or returns an error if the byte array does not
+/// represent a valid PEM formatted certificate.
+fn get_root_tls_certificate_or_default(opt: &Opt) -> anyhow::Result<Certificate> {
+    let certificate_bytes = match &opt.root_tls_certificate {
         Some(certificate_path) => {
             if !cfg!(feature = "oak_debug") {
                 // Unreachable: it should not be possible to specify the flag without `oak_debug`.
@@ -327,10 +325,12 @@ fn get_root_tls_certificate_or_default(opt: &Opt) -> anyhow::Result<String> {
                     "Specifying `root-tls-certificate` requires the `oak_debug` feature."
                 );
             };
-            read_to_string(certificate_path).context("could not read root TLS certificate")
+            read(certificate_path).context("could not read root TLS certificate")?
         }
         None => get_default_root_tls_certs(),
-    }
+    };
+
+    Certificate::parse(certificate_bytes)
 }
 
 /// Parse OpenID Connect client configuration file into a [`ClientInfo`] .
@@ -348,11 +348,8 @@ fn get_oidc_client_info(opt: &Opt) -> anyhow::Result<Option<ClientInfo>> {
 }
 
 /// Gets the default root TLS certificates from the embedded byte array.
-fn get_default_root_tls_certs() -> anyhow::Result<String> {
-    let result = std::str::from_utf8(include_bytes!("certs/roots.pem"))
-        .context("could not read embedded PEM-encoded root TLS certificates as a UTF8 string")?
-        .to_owned();
-    Ok(result)
+fn get_default_root_tls_certs() -> Vec<u8> {
+    include_bytes!("certs/roots.pem").to_vec()
 }
 
 /// Parse application configuration into an instance of [`ApplicationConfiguration`]

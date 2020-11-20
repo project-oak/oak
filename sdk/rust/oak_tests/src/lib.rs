@@ -172,10 +172,10 @@ pub fn runtime_config_wasm(
                     include_str!("../certs/local.pem"),
                     include_str!("../certs/local.key"),
                 )),
-                grpc_client_root_tls_certificate: Some(
-                    oak_runtime::config::load_certificate(&include_str!("../certs/ca.pem"))
-                        .unwrap(),
-                ),
+                grpc_client_root_tls_certificate: oak_runtime::tls::Certificate::parse(
+                    include_bytes!("../certs/ca.pem").to_vec(),
+                )
+                .ok(),
                 oidc_client_info: None,
             }),
             http_config: create_http_config(),
@@ -203,7 +203,10 @@ fn create_http_config() -> Option<oak_runtime::HttpConfiguration> {
     )?;
     Some(oak_runtime::HttpConfiguration {
         tls_config,
-        http_client_root_tls_certificate: include_bytes!("../certs/ca.pem").to_vec(),
+        http_client_root_tls_certificate: oak_runtime::tls::Certificate::parse(
+            include_bytes!("../certs/ca.pem").to_vec(),
+        )
+        .ok(),
     })
 }
 

@@ -974,6 +974,7 @@ dependencies = [
  "oak_runtime",
  "prost",
  "rand",
+ "rustls",
  "tonic",
 ]
 
