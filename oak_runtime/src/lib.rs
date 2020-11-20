@@ -155,7 +155,7 @@ struct NodeStopper {
 impl NodeStopper {
     /// Sends a notification to the Node and joins its thread.
     fn stop_node(self, node_id: NodeId) -> thread::Result<()> {
-        let node_debug_id = NodeInfo::construct_debug_id(&self.node_name, node_id);
+        let node_debug_id = self.get_debug_id(node_id);
         self.notify_sender
             .send(())
             // Notification errors are discarded since not all of the Nodes save
@@ -167,6 +167,12 @@ impl NodeStopper {
         let result = self.join_handle.join();
         debug!("join thread for node {}...done", node_debug_id);
         result
+    }
+
+    /// Returns a unique debug_id used in the debug output, consisting out of
+    /// the provided [`NodeId`], and the node's name.
+    fn get_debug_id(&self, node_id: NodeId) -> String {
+        NodeInfo::construct_debug_id(&self.node_name, node_id)
     }
 }
 
@@ -584,7 +590,7 @@ impl Runtime {
         let node_stoppers = self.take_node_stoppers();
         for (node_id, node_stopper_opt) in node_stoppers {
             if let Some(node_stopper) = node_stopper_opt {
-                let node_debug_id = NodeInfo::construct_debug_id(&node_stopper.node_name, node_id);
+                let node_debug_id = node_stopper.get_debug_id(node_id)
                 info!("stopping node {:?} ...", node_debug_id);
                 if let Err(err) = node_stopper.stop_node(node_id) {
                     error!("could not stop node {:?}: {:?}", node_debug_id, err);
