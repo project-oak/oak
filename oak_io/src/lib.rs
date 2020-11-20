@@ -22,7 +22,7 @@ mod error;
 pub mod handle;
 mod receiver;
 mod sender;
-pub mod serde;
+mod serde;
 
 pub use decodable::Decodable;
 use either::Either;
