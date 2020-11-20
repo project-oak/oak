@@ -2,4 +2,4 @@ name = "private_set_intersection"
 
 [modules]
 # TODO(865): Use locally built module once reproducibility is fixed.
-app = { external = { url = "https://storage.googleapis.com/oak-modules/private_set_intersection/89f22e622068a6391f4123780449d2d09fb56f0c6245a7eb641e9fe9af216163", sha256 = "89f22e622068a6391f4123780449d2d09fb56f0c6245a7eb641e9fe9af216163" } }
+app = { external = { url = "https://storage.googleapis.com/oak-modules/private_set_intersection/9906d053540910e02d6c9d2de2d438ae8aa22a36e684bedfc01ad03e67318edb", sha256 = "9906d053540910e02d6c9d2de2d438ae8aa22a36e684bedfc01ad03e67318edb" } }

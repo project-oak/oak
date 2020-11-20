@@ -43,14 +43,14 @@ pub mod handler;
 use crate::handler::Handler;
 use anyhow::Context;
 use oak::{
-    io::{ReceiverExt, Sender, SenderExt},
+    io::{forward_invocation, Sender},
     Label,
 };
 use oak_abi::{
     label::{confidentiality_label, web_assembly_module_signature_tag},
     proto::oak::application::ConfigMap,
 };
-use oak_services::proto::{google::rpc, oak::log::LogInit};
+use oak_services::proto::oak::log::LogInit;
 
 // Base64 encoded Ed25519 public key corresponding to Wasm module signature.
 // Originated from `examples/keys/ed25519/test.pub`.
@@ -88,8 +88,6 @@ oak::entrypoint_command_handler_init!(router => Router);
 struct Router {
     /// Invocation sender channel half for Handler Node.
     handler_command_sender: Sender<oak::grpc::Invocation>,
-    /// Confidentiality label corresponding to WebAssembly signature public key.
-    public_key_label: Label,
 }
 
 impl oak::WithInit for Router {
@@ -114,7 +112,6 @@ impl oak::WithInit for Router {
 
         Self {
             handler_command_sender,
-            public_key_label,
         }
     }
 }
@@ -122,32 +119,7 @@ impl oak::WithInit for Router {
 impl oak::CommandHandler for Router {
     type Command = oak::grpc::Invocation;
 
-    fn handle_command(&mut self, command: oak::grpc::Invocation) -> anyhow::Result<()> {
-        match (&command.receiver, &command.sender) {
-            (Some(receiver), Some(sender)) => {
-                let label = receiver.label()?;
-                // Check if request label is valid in the context of Private Set Intersection
-                // application.
-                if !label.flows_to(&self.public_key_label) {
-                    let grpc_response_writer =
-                        oak::grpc::ChannelResponseWriter::new(sender.clone());
-                    grpc_response_writer
-                        .close(Err(oak::grpc::build_status(
-                            rpc::Code::InvalidArgument,
-                            "Invalid request label",
-                        )))
-                        .context("Couldn't send error response back")?;
-                    anyhow::bail!("Invalid request label: {:?}", label);
-                }
-
-                // Route gRPC invocations to Handler Node.
-                self.handler_command_sender
-                    .send(&command)
-                    .context("Couldn't send invocation to worker node")
-            }
-            _ => {
-                anyhow::bail!("Received malformed gRPC invocation");
-            }
-        }
+    fn handle_command(&mut self, command: Self::Command) -> anyhow::Result<()> {
+        forward_invocation(command, &self.handler_command_sender)
     }
 }
