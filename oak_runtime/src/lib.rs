@@ -757,23 +757,23 @@ impl Runtime {
         // the Channel Label).
         let downgraded_source_label = self.get_node_downgraded_label(node_id, source_label);
         let target_label = self.get_node_label(node_id);
-        let node_name = self.get_node_debug_id(node_id);
+        let node_debug_id = self.get_node_debug_id(node_id);
         trace!(
             "{:?}: original source label: {:?}?",
-            node_name,
+            node_debug_id,
             source_label
         );
         trace!(
             "{:?}: downgraded source label: {:?}?",
-            node_name,
+            node_debug_id,
             downgraded_source_label
         );
-        trace!("{:?}: target label: {:?}?", node_name, target_label);
+        trace!("{:?}: target label: {:?}?", node_debug_id, target_label);
         if downgraded_source_label.flows_to(&target_label) {
-            trace!("{:?}: can read from {:?}", node_name, source_label);
+            trace!("{:?}: can read from {:?}", node_debug_id, source_label);
             Ok(())
         } else {
-            debug!("{:?}: cannot read from {:?}", node_name, source_label);
+            debug!("{:?}: cannot read from {:?}", node_debug_id, source_label);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
@@ -800,23 +800,23 @@ impl Runtime {
         // downgraded is the data inside the Node (protected by the Node Label).
         let source_label = self.get_node_label(node_id);
         let downgraded_source_label = self.get_node_downgraded_label(node_id, &source_label);
-        let node_name = self.get_node_debug_id(node_id);
+        let node_debug_id = self.get_node_debug_id(node_id);
         trace!(
             "{:?}: original source label: {:?}?",
-            node_name,
+            node_debug_id,
             source_label
         );
         trace!(
             "{:?}: downgraded source label: {:?}?",
-            node_name,
+            node_debug_id,
             downgraded_source_label
         );
-        trace!("{:?}: target label: {:?}?", node_name, target_label);
+        trace!("{:?}: target label: {:?}?", node_debug_id, target_label);
         if downgraded_source_label.flows_to(&target_label) {
-            trace!("{:?}: can write to {:?}", node_name, target_label);
+            trace!("{:?}: can write to {:?}", node_debug_id, target_label);
             Ok(())
         } else {
-            warn!("{:?}: cannot write to {:?}", node_name, target_label);
+            warn!("{:?}: cannot write to {:?}", node_debug_id, target_label);
             Err(OakStatus::ErrPermissionDenied)
         }
     }
@@ -845,10 +845,10 @@ impl Runtime {
         let channel = Channel::new(channel_id, name, label, Arc::downgrade(&self));
         let write_half = ChannelHalf::new(channel.clone(), ChannelHalfDirection::Write);
         let read_half = ChannelHalf::new(channel, ChannelHalfDirection::Read);
-        let node_name = self.get_node_debug_id(node_id);
+        let node_debug_id = self.get_node_debug_id(node_id);
         trace!(
             "{:?}: allocated channel with halves w={:?},r={:?}",
-            node_name,
+            node_debug_id,
             write_half,
             read_half,
         );
@@ -867,7 +867,7 @@ impl Runtime {
         let read_handle = self.new_abi_handle(node_id, read_half);
         trace!(
             "{:?}: allocated handles w={}, r={} for channel",
-            node_name,
+            node_debug_id,
             write_handle,
             read_handle,
         );
@@ -921,7 +921,7 @@ impl Runtime {
 
         let thread = thread::current();
 
-        let node_name = self.get_node_debug_id(node_id);
+        let node_debug_id = self.get_node_debug_id(node_id);
 
         while !self.is_terminating() {
             // Create a new Arc each iteration to be dropped after `thread::park` e.g. when the
@@ -957,7 +957,7 @@ impl Runtime {
 
             debug!(
                 "{:?}: wait_on_channels: channels not ready, parking thread {:?}",
-                node_name,
+                node_debug_id,
                 thread::current()
             );
 
@@ -965,7 +965,7 @@ impl Runtime {
 
             debug!(
                 "{:?}: wait_on_channels: thread {:?} re-woken",
-                node_name,
+                node_debug_id,
                 thread::current()
             );
         }
