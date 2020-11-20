@@ -590,7 +590,7 @@ impl Runtime {
         let node_stoppers = self.take_node_stoppers();
         for (node_id, node_stopper_opt) in node_stoppers {
             if let Some(node_stopper) = node_stopper_opt {
-                let node_debug_id = node_stopper.get_debug_id(node_id)
+                let node_debug_id = node_stopper.get_debug_id(node_id);
                 info!("stopping node {:?} ...", node_debug_id);
                 if let Err(err) = node_stopper.stop_node(node_id) {
                     error!("could not stop node {:?}: {:?}", node_debug_id, err);
