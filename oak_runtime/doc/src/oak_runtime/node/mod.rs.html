@@ -204,6 +204,20 @@
 <span id="201">201</span>
 <span id="202">202</span>
 <span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -232,6 +246,7 @@
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">grpc</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">http</span>;
+<span class="kw">mod</span> <span class="ident">invocation</span>;
 <span class="kw">mod</span> <span class="ident">logger</span>;
 <span class="kw">mod</span> <span class="ident">roughtime</span>;
 <span class="kw">mod</span> <span class="ident">storage</span>;
@@ -386,10 +401,23 @@
                     .<span class="ident">clone</span>()
                     .<span class="ident">expect</span>(<span class="string">&quot;no TLS configuration for HTTP servers provided to Oak Runtime&quot;</span>)
                     .<span class="ident">tls_config</span>;
-                <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">http</span>::<span class="ident">HttpServerNode</span>::<span class="ident">new</span>(
+                <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">http</span>::<span class="ident">server</span>::<span class="ident">HttpServerNode</span>::<span class="ident">new</span>(
                     <span class="ident">node_name</span>,
                     <span class="ident">config</span>.<span class="ident">clone</span>(),
                     <span class="ident">tls_config</span>,
+                )<span class="question-mark">?</span>))
+            }
+            <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">HttpClientConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">http_client_root_tls_certificate</span> <span class="op">=</span> <span class="self">self</span>
+                    .<span class="ident">secure_server_configuration</span>
+                    .<span class="ident">http_config</span>
+                    .<span class="ident">clone</span>()
+                    .<span class="ident">expect</span>(<span class="string">&quot;no HTTP configuration provided to Oak Runtime&quot;</span>)
+                    .<span class="ident">http_client_root_tls_certificate</span>;
+                <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">http</span>::<span class="ident">client</span>::<span class="ident">HttpClientNode</span>::<span class="ident">new</span>(
+                    <span class="ident">node_name</span>,
+                    <span class="ident">config</span>.<span class="ident">clone</span>(),
+                    <span class="ident">http_client_root_tls_certificate</span>,
                 )<span class="question-mark">?</span>))
             }
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ConfigurationError</span>::<span class="ident">InvalidNodeConfiguration</span>),

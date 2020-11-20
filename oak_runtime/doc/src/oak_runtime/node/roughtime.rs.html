@@ -181,6 +181,8 @@
 <span id="178">178</span>
 <span id="179">179</span>
 <span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -202,13 +204,15 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">io</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>},
-    <span class="ident">node</span>::<span class="ident">grpc</span>::<span class="ident">invocation</span>::<span class="ident">Invocation</span>,
+    <span class="ident">node</span>::<span class="ident">invocation</span>::<span class="ident">InvocationExt</span>,
+    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">invocation</span>::<span class="ident">GrpcInvocation</span> <span class="kw">as</span> <span class="ident">Invocation</span>,
     <span class="ident">time</span>::{
         <span class="ident">get_default_servers</span>, <span class="ident">RoughtimeClient</span>, <span class="ident">RoughtimeServer</span>, <span class="ident">DEFAULT_MAX_RADIUS_MICROSECONDS</span>,
         <span class="ident">DEFAULT_MIN_OVERLAPPING_INTERVALS</span>, <span class="ident">DEFAULT_SERVER_RETRIES</span>, <span class="ident">DEFAULT_TIMEOUT_SECONDS</span>,
     },
     <span class="ident">RuntimeProxy</span>,
 };
+
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">RoughtimeClientConfiguration</span>, <span class="ident">OakStatus</span>};
 <span class="kw">use</span> <span class="ident">oak_io</span>::{<span class="ident">handle</span>::<span class="ident">ReadHandle</span>, <span class="ident">OakError</span>};

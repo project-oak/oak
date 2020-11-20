@@ -1478,6 +1478,8 @@
 <span id="1475">1475</span>
 <span id="1476">1476</span>
 <span id="1477">1477</span>
+<span id="1478">1478</span>
+<span id="1479">1479</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1593,7 +1595,6 @@
     <span class="kw">pub</span> <span class="ident">oidc_client_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ClientInfo</span><span class="op">&gt;</span>,
 
     <span class="doccomment">/// Root TLS certificate to use for all gRPC Client Nodes.</span>
-    <span class="comment">// TODO(#999): Remove user-configurable root CA.</span>
     <span class="kw">pub</span> <span class="ident">grpc_client_root_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Certificate</span><span class="op">&gt;</span>,
 }
 
@@ -1611,6 +1612,9 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HttpConfiguration</span> {
     <span class="doccomment">/// TLS identity to use for all HTTP Server Nodes.</span>
     <span class="kw">pub</span> <span class="ident">tls_config</span>: <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">TlsConfig</span>,
+    <span class="doccomment">/// A non-empty vector containing the root TLS certificate, in the PEM format, to use for all</span>
+    <span class="doccomment">/// HTTP Client Nodes.</span>
+    <span class="kw">pub</span> <span class="ident">http_client_root_tls_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Configuration options for secure HTTP and gRPC pseudo-Nodes.</span>

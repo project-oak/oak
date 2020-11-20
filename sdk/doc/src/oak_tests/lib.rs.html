@@ -265,6 +265,9 @@
 <span id="262">262</span>
 <span id="263">263</span>
 <span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -469,7 +472,10 @@
         <span class="string">&quot;../../../certs/local/local.pem&quot;</span>,
         <span class="string">&quot;../../../certs/local/local.key&quot;</span>,
     )<span class="question-mark">?</span>;
-    <span class="prelude-val">Some</span>(<span class="ident">oak_runtime</span>::<span class="ident">HttpConfiguration</span> { <span class="ident">tls_config</span> })
+    <span class="prelude-val">Some</span>(<span class="ident">oak_runtime</span>::<span class="ident">HttpConfiguration</span> {
+        <span class="ident">tls_config</span>,
+        <span class="ident">http_client_root_tls_certificate</span>: <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../certs/ca.pem&quot;</span>).<span class="ident">to_vec</span>(),
+    })
 }
 
 <span class="doccomment">/// Build a labeled channel and interceptor suitable for building a client that</span>
