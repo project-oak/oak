@@ -1328,7 +1328,7 @@ impl Runtime {
         info!(
             "{:?}: start node instance {:?} of type {} with privilege {:?}",
             self.get_node_debug_id(node_id),
-            NodeInfo::construct_debug_id(node_name, new_node_id),
+            self.get_node_debug_id(new_node_id),
             node_type,
             node_privilege
         );
