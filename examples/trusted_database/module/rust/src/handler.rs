@@ -27,7 +27,7 @@ const NO_LOCATION_ERROR: &str = "Location is not specified";
 const ID_NOT_FOUND_ERROR: &str = "ID not found";
 const EMPTY_DATABASE_ERROR: &str = "Empty database";
 
-/// Oak Handler Node that contains a copy of the database.
+/// Oak Handler Node that contains a copy of the database and handles client requests.
 #[derive(Default)]
 pub struct Handler {
     points_of_interest: PointOfInterestMap,

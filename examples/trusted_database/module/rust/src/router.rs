@@ -21,7 +21,7 @@ use crate::{
 use anyhow::Context;
 use oak::{
     grpc,
-    io::{ReceiverExt, Sender},
+    io::{ReceiverExt, Sender, SenderExt},
     CommandHandler,
 };
 use oak_services::proto::oak::log::LogMessage;
@@ -53,6 +53,7 @@ impl CommandHandler for Router {
     fn handle_command(&mut self, invocation: Self::Command) -> anyhow::Result<()> {
         let label = invocation
             .receiver
+            .clone()
             .context("Couldn't get receiver")?
             .label()
             .context("Couldn't get label")?;
@@ -60,9 +61,12 @@ impl CommandHandler for Router {
             log_sender: Some(self.log_sender.clone()),
             points_of_interest: Some(self.points_of_interest.clone()),
         };
-        oak::io::entrypoint_node_create::<Handler, _, _>("handler", &label, "app", init)
-            .context("Couldn't create handler node")?;
-        Ok(())
+        let handler_invocation_sender =
+            oak::io::entrypoint_node_create::<Handler, _, _>("handler", &label, "app", init)
+                .context("Couldn't create handler node")?;
+        handler_invocation_sender
+            .send(&invocation)
+            .context("Couldn't send invocation to handler node")
     }
 }
 
