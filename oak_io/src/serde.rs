@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-//! Implementations of `serde`'s `Deserialize` and `Serialize` traits for
-//! [`Sender`](../struct.Sender.html) and [`Receiver`](../struct.Receiver.html).
+//! Implementations of `serde`'s `Deserialize` and `Serialize` traits for [`Sender`] and
+//! [`Receiver`].
 //!
 //! Both types serialize to the unit struct `()`. Combine `serde` serialization with the
-//! [`HandleVisit`](../handle/trait.HandleVisit.html) trait to serialize data containing handles.
+//! [`HandleVisit`] trait to serialize data containing handles.
 
 use crate::{handle::HandleVisit, Decodable, Encodable, Receiver, Sender};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
