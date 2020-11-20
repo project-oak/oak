@@ -21,8 +21,8 @@ members = [
   "trusted_database/module/rust",
   "private_set_intersection/grpc",
   "private_set_intersection/client/rust",
-  "private_set_intersection/module_0/rust",
-  "private_set_intersection/module_1/rust",
+  "private_set_intersection/main_module/rust",
+  "private_set_intersection/handler_module/rust",
   "translator/grpc",
   "translator/common",
   "translator/module/rust",
@@ -52,7 +52,7 @@ chat_grpc = { path = "chat/grpc" }
 hello_world_client = { path = "hello_world/client/rust" }
 hello_world_grpc = { path = "hello_world/grpc" }
 private_set_intersection_grpc = { path = "private_set_intersection/grpc" }
-private_set_intersection_handler = { path = "private_set_intersection/module_1/rust" }
+private_set_intersection_handler = { path = "private_set_intersection/handler_module/rust" }
 translator_common = { path = "translator/common" }
 translator_grpc = { path = "translator/grpc" }
 trusted_database_client = { path = "trusted_database/client/rust" }

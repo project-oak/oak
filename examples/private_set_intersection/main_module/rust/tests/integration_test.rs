@@ -37,8 +37,8 @@ const PRIVATE_KEY_FILE: &str = "../../../keys/ed25519/test.key";
 const MAIN_MODULE_FILE_NAME: &str = "private_set_intersection.wasm";
 const HANDLER_MODULE_FILE_NAME: &str = "private_set_intersection_handler.wasm";
 
-const MAIN_MODULE_MANIFEST: &str = "../../module_0/rust/Cargo.toml";
-const HANDLER_MODULE_MANIFEST: &str = "../../module_1/rust/Cargo.toml";
+const MAIN_MODULE_MANIFEST: &str = "../../main_module/rust/Cargo.toml";
+const HANDLER_MODULE_MANIFEST: &str = "../../handler_module/rust/Cargo.toml";
 
 const MAIN_MODULE_NAME: &str = "app";
 const HANDLER_MODULE_NAME: &str = "handler";
