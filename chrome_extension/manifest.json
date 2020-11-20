@@ -5,19 +5,15 @@
   "permissions": [
     "activeTab",
     "webRequest",
-    "webRequestBlocking",
-    "https://*/*",
-    "http://*/*",
-    "ws://*/*",
-    "wss://*/*"
-  ],
-  "content_scripts": [
-    {
-      "matches": ["https://*/*"],
-      "js": ["content.js"]
-    }
+    "<all_urls>"
   ],
   "background": {
     "scripts": ["background.js"]
+  },
+  "icons": {
+    "128": "icon-green.png"
+  },
+  "browser_action": {
+    "default_icon": "icon-red.png"
   }
 }
