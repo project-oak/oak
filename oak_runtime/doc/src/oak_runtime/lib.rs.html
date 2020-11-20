@@ -1448,6 +1448,36 @@
 <span id="1445">1445</span>
 <span id="1446">1446</span>
 <span id="1447">1447</span>
+<span id="1448">1448</span>
+<span id="1449">1449</span>
+<span id="1450">1450</span>
+<span id="1451">1451</span>
+<span id="1452">1452</span>
+<span id="1453">1453</span>
+<span id="1454">1454</span>
+<span id="1455">1455</span>
+<span id="1456">1456</span>
+<span id="1457">1457</span>
+<span id="1458">1458</span>
+<span id="1459">1459</span>
+<span id="1460">1460</span>
+<span id="1461">1461</span>
+<span id="1462">1462</span>
+<span id="1463">1463</span>
+<span id="1464">1464</span>
+<span id="1465">1465</span>
+<span id="1466">1466</span>
+<span id="1467">1467</span>
+<span id="1468">1468</span>
+<span id="1469">1469</span>
+<span id="1470">1470</span>
+<span id="1471">1471</span>
+<span id="1472">1472</span>
+<span id="1473">1473</span>
+<span id="1474">1474</span>
+<span id="1475">1475</span>
+<span id="1476">1476</span>
+<span id="1477">1477</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1791,6 +1821,14 @@
     <span class="ident">NeedsCapacity</span>(<span class="ident">usize</span>),
 }
 
+<span class="doccomment">/// Indicator whether an operation is executed using the Node&#39;s label-downgrading privilege or</span>
+<span class="doccomment">/// without it.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">enum</span> <span class="ident">Downgrading</span> {
+    <span class="ident">No</span>,
+    <span class="ident">Yes</span>,
+}
+
 <span class="doccomment">/// Information for managing an associated server.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AuxServer</span> {
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
@@ -2051,7 +2089,7 @@
             <span class="kw">for</span> (<span class="ident">handle</span>, <span class="ident">half</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">node_info</span>.<span class="ident">abi_handles</span> {
                 <span class="macro">debug</span><span class="macro">!</span>(
                     <span class="string">&quot;waking waiters on {:?} handle {} =&gt; {:?}&quot;</span>,
-                    <span class="ident">node_id</span>, <span class="ident">handle</span>, <span class="ident">half</span>
+                    <span class="ident">node_info</span>.<span class="ident">name</span>, <span class="ident">handle</span>, <span class="ident">half</span>
                 );
                 <span class="ident">half</span>.<span class="ident">wake_waiters</span>();
             }
@@ -2078,6 +2116,20 @@
         <span class="comment">// Retrieve the set of tags that the node may downgrade.</span>
         <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_privilege</span>(<span class="ident">node_id</span>);
         <span class="ident">node_privilege</span>.<span class="ident">downgrade_label</span>(<span class="ident">initial_label</span>)
+    }
+
+    <span class="doccomment">/// Returns the effective label for `initial_label` in the context of the Node, taking into</span>
+    <span class="doccomment">/// acount whether the downgrade privilege should be applied.</span>
+    <span class="kw">fn</span> <span class="ident">get_effective_label</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
+        <span class="ident">initial_label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Label</span> {
+        <span class="kw">match</span> <span class="ident">downgrade</span> {
+            <span class="ident">Downgrading</span>::<span class="ident">Yes</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">get_node_downgraded_label</span>(<span class="ident">node_id</span>, <span class="ident">initial_label</span>),
+            <span class="ident">Downgrading</span>::<span class="ident">No</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">initial_label</span>.<span class="ident">to_owned</span>(),
+        }
     }
 
     <span class="doccomment">/// Returns a clone of the [`NodePrivilege`] of the provided Node.</span>
@@ -2172,9 +2224,10 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_reader_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">channel_half</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_read_from_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">channel_label</span>)
+        <span class="self">self</span>.<span class="ident">validate_can_read_from_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">channel_label</span>, <span class="ident">downgrade</span>)
     }
 
     <span class="doccomment">/// Returns whether the given Node is allowed to read from an entity with the provided</span>
@@ -2184,11 +2237,8 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">source_label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="comment">// When reading from a Channel, we downgrade the Label of the Channel from which the Node is</span>
-        <span class="comment">// reading: the thing being downgraded is the data being read into the Node (protected by</span>
-        <span class="comment">// the Channel Label).</span>
-        <span class="kw">let</span> <span class="ident">downgraded_source_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_downgraded_label</span>(<span class="ident">node_id</span>, <span class="ident">source_label</span>);
         <span class="kw">let</span> <span class="ident">target_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
         <span class="kw">let</span> <span class="ident">node_name</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_name</span>(<span class="ident">node_id</span>);
         <span class="macro">trace</span><span class="macro">!</span>(
@@ -2196,13 +2246,11 @@
             <span class="ident">node_name</span>,
             <span class="ident">source_label</span>
         );
-        <span class="macro">trace</span><span class="macro">!</span>(
-            <span class="string">&quot;{:?}: downgraded source label: {:?}?&quot;</span>,
-            <span class="ident">node_name</span>,
-            <span class="ident">downgraded_source_label</span>
-        );
+
+        <span class="kw">let</span> <span class="ident">effective_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_effective_label</span>(<span class="ident">node_id</span>, <span class="ident">source_label</span>, <span class="ident">downgrade</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: effective label: {:?}?&quot;</span>, <span class="ident">node_name</span>, <span class="ident">effective_label</span>);
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: target label: {:?}?&quot;</span>, <span class="ident">node_name</span>, <span class="ident">target_label</span>);
-        <span class="kw">if</span> <span class="ident">downgraded_source_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">target_label</span>) {
+        <span class="kw">if</span> <span class="ident">effective_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">target_label</span>) {
             <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can read from {:?}&quot;</span>, <span class="ident">node_name</span>, <span class="ident">source_label</span>);
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
@@ -2217,9 +2265,10 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">channel_half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">channel_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_writer_channel_label</span>(<span class="kw-2">&amp;</span><span class="ident">channel_half</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">channel_label</span>)
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">channel_label</span>, <span class="ident">downgrade</span>)
     }
 
     <span class="doccomment">/// Returns whether the given Node is allowed to write to an entity with the provided [`Label`],</span>
@@ -2228,24 +2277,19 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">target_label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="comment">// When writing to a Channel, we downgrade the Label of the Node itself: the thing being</span>
-        <span class="comment">// downgraded is the data inside the Node (protected by the Node Label).</span>
-        <span class="kw">let</span> <span class="ident">source_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
-        <span class="kw">let</span> <span class="ident">downgraded_source_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_downgraded_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">source_label</span>);
+        <span class="kw">let</span> <span class="ident">original_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_label</span>(<span class="ident">node_id</span>);
         <span class="kw">let</span> <span class="ident">node_name</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_node_name</span>(<span class="ident">node_id</span>);
         <span class="macro">trace</span><span class="macro">!</span>(
             <span class="string">&quot;{:?}: original source label: {:?}?&quot;</span>,
             <span class="ident">node_name</span>,
-            <span class="ident">source_label</span>
+            <span class="kw-2">&amp;</span><span class="ident">original_label</span>
         );
-        <span class="macro">trace</span><span class="macro">!</span>(
-            <span class="string">&quot;{:?}: downgraded source label: {:?}?&quot;</span>,
-            <span class="ident">node_name</span>,
-            <span class="ident">downgraded_source_label</span>
-        );
+        <span class="kw">let</span> <span class="ident">effective_label</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_effective_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">original_label</span>, <span class="ident">downgrade</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: effective label: {:?}?&quot;</span>, <span class="ident">node_name</span>, <span class="ident">effective_label</span>);
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: target label: {:?}?&quot;</span>, <span class="ident">node_name</span>, <span class="ident">target_label</span>);
-        <span class="kw">if</span> <span class="ident">downgraded_source_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">target_label</span>) {
+        <span class="kw">if</span> <span class="ident">effective_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">target_label</span>) {
             <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{:?}: can write to {:?}&quot;</span>, <span class="ident">node_name</span>, <span class="ident">target_label</span>);
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
@@ -2260,6 +2304,7 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">oak_abi</span>::<span class="ident">Handle</span>, <span class="ident">oak_abi</span>::<span class="ident">Handle</span>), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_terminating</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>);
@@ -2268,10 +2313,10 @@
         <span class="comment">// The label (and mere presence) of the newly created Channel is effectively public, so we</span>
         <span class="comment">// must ensure that the label of the calling Node flows to both &quot;public untrusted&quot; and to</span>
         <span class="comment">// the label of the Channel to be created.</span>
-        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>(), <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
         <span class="comment">// We also additionally make sure that the label of the newly created Channel can be written</span>
         <span class="comment">// to by the current Node, since in general this may be lower than &quot;public untrusted&quot;.</span>
-        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="ident">label</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="ident">label</span>, <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// First get a pair of `ChannelHalf` objects.</span>
         <span class="kw">let</span> <span class="ident">channel_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">next_channel_id</span>.<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">SeqCst</span>);
@@ -2309,11 +2354,16 @@
     }
 
     <span class="doccomment">/// Reads the readable statuses for a slice of `ChannelHalf`s.</span>
-    <span class="kw">fn</span> <span class="ident">readers_statuses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="ident">ChannelHalf</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">readers_statuses</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
+        <span class="ident">readers</span>: <span class="kw-2">&amp;</span>[<span class="ident">ChannelHalf</span>],
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span> {
         <span class="ident">readers</span>
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">half</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">channel_status</span>(<span class="ident">node_id</span>, <span class="ident">half</span>)
+                <span class="self">self</span>.<span class="ident">channel_status</span>(<span class="ident">node_id</span>, <span class="ident">half</span>, <span class="ident">downgrade</span>)
                     .<span class="ident">unwrap_or</span>(<span class="ident">ChannelReadStatus</span>::<span class="ident">InvalidChannel</span>)
             })
             .<span class="ident">collect</span>()
@@ -2340,6 +2390,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">read_handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">oak_abi</span>::<span class="ident">Handle</span>],
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// Accumulate both the valid channels and their original position.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">all_statuses</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ChannelReadStatus</span>::<span class="ident">InvalidChannel</span>; <span class="ident">read_handles</span>.<span class="ident">len</span>()];
@@ -2375,7 +2426,7 @@
                     <span class="prelude-val">Ok</span>(())
                 })<span class="question-mark">?</span>;
             }
-            <span class="kw">let</span> <span class="ident">statuses</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">readers_statuses</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">readers</span>);
+            <span class="kw">let</span> <span class="ident">statuses</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">readers_statuses</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">readers</span>, <span class="ident">downgrade</span>);
             <span class="comment">// Transcribe the status for valid channels back to the original position</span>
             <span class="comment">// in the list of all statuses.</span>
             <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">readers</span>.<span class="ident">len</span>() {
@@ -2412,9 +2463,10 @@
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">write_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
         <span class="ident">node_msg</span>: <span class="ident">NodeMessage</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_write_half</span>(<span class="ident">node_id</span>, <span class="ident">write_handle</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_write_to_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">event_details</span> <span class="op">=</span> <span class="ident">MessageEnqueued</span> {
             <span class="ident">node_id</span>: <span class="ident">node_id</span>.<span class="number">0</span>,
@@ -2457,9 +2509,10 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">read_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeMessage</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="ident">read_handle</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
         <span class="kw">match</span> <span class="ident">with_reader_channel</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
             <span class="kw">match</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">pop_front</span>() {
                 <span class="prelude-val">Some</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">m</span>)),
@@ -2500,9 +2553,10 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
         <span class="ident">half</span>: <span class="kw-2">&amp;</span><span class="ident">ChannelHalf</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrPermissionDenied</span>) <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">half</span>)
+            <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="ident">half</span>, <span class="ident">downgrade</span>)
         {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ChannelReadStatus</span>::<span class="ident">PermissionDenied</span>);
         };
@@ -2530,9 +2584,10 @@
         <span class="ident">handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
         <span class="ident">bytes_capacity</span>: <span class="ident">usize</span>,
         <span class="ident">handles_capacity</span>: <span class="ident">usize</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">half</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">abi_to_read_half</span>(<span class="ident">node_id</span>, <span class="ident">handle</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_read_from_channel</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">with_reader_channel</span>(<span class="kw-2">&amp;</span><span class="ident">half</span>, <span class="op">|</span><span class="ident">channel</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">messages</span> <span class="op">=</span> <span class="ident">channel</span>.<span class="ident">messages</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
             <span class="kw">match</span> <span class="ident">messages</span>.<span class="ident">front</span>() {
@@ -2685,6 +2740,7 @@
         <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfiguration</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="comment">// This only creates a Node instance, but does not start it.</span>
         <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_factory</span>.<span class="ident">create_node</span>(<span class="ident">name</span>, <span class="ident">config</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
@@ -2693,11 +2749,14 @@
         })<span class="question-mark">?</span>;
 
         <span class="comment">// Register the instance within the `Runtime`.</span>
-        <span class="self">self</span>.<span class="ident">node_register</span>(<span class="ident">node_id</span>, <span class="ident">instance</span>, <span class="ident">name</span>, <span class="ident">label</span>, <span class="ident">initial_handle</span>)
+        <span class="self">self</span>.<span class="ident">node_register</span>(<span class="ident">node_id</span>, <span class="ident">instance</span>, <span class="ident">name</span>, <span class="ident">label</span>, <span class="ident">initial_handle</span>, <span class="ident">downgrade</span>)
     }
 
     <span class="doccomment">/// Registers the given [`Node`] instance within the [`Runtime`]. The registration fails if the</span>
     <span class="doccomment">/// labels violate the IFC rules.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If `downgrade` is set to [`Downgrading::Yes`], the calling Node&#39;s downgrading privilege is</span>
+    <span class="doccomment">/// taken into account when checking IFC restrictions.</span>
     <span class="kw">fn</span> <span class="ident">node_register</span>(
         <span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
@@ -2705,6 +2764,7 @@
         <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+        <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_terminating</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>);
@@ -2713,10 +2773,10 @@
         <span class="comment">// The label (and mere presence) of the newly created Node is effectively public, so we must</span>
         <span class="comment">// ensure that the label of the calling Node flows to both &quot;public untrusted&quot; and to the</span>
         <span class="comment">// label of the Node to be created.</span>
-        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>())<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>(), <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
         <span class="comment">// We also additionally make sure that the label of the newly created Node can be written to</span>
         <span class="comment">// by the current Node, since in general this may be lower than &quot;public untrusted&quot;.</span>
-        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="ident">label</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="ident">label</span>, <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">node_type</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">node_type</span>();
         <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">get_privilege</span>();

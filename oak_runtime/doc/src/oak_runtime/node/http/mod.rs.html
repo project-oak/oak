@@ -973,7 +973,7 @@
         <span class="comment">// This node needs to have `top` privilege to be able to declassify data tagged with any</span>
         <span class="comment">// arbitrary user identities.</span>
         <span class="comment">// TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to</span>
-        <span class="comment">// the top of the `user` sub-lattice.</span>
+        <span class="comment">// the top of the identity sub-lattice.</span>
         <span class="ident">NodePrivilege</span>::<span class="ident">top_privilege</span>()
     }
 
@@ -1177,7 +1177,7 @@
         <span class="comment">// that allows removing integrity tags, this will fail if the label has a non-empty</span>
         <span class="comment">// integrity component.</span>
         <span class="kw">let</span> (<span class="ident">request_writer</span>, <span class="ident">request_reader</span>) <span class="op">=</span> <span class="ident">runtime</span>
-            .<span class="ident">channel_create</span>(<span class="string">&quot;HTTP request&quot;</span>, <span class="ident">request_label</span>)
+            .<span class="ident">channel_create_with_downgrade</span>(<span class="string">&quot;HTTP request&quot;</span>, <span class="ident">request_label</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                 <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(
                     <span class="string">&quot;could not create HTTP request channel: {:?}&quot;</span>,
@@ -1186,7 +1186,7 @@
             })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> (<span class="ident">response_writer</span>, <span class="ident">response_reader</span>) <span class="op">=</span> <span class="ident">runtime</span>
-            .<span class="ident">channel_create</span>(<span class="string">&quot;HTTP response&quot;</span>, <span class="ident">user_identity_label</span>)
+            .<span class="ident">channel_create_with_downgrade</span>(<span class="string">&quot;HTTP response&quot;</span>, <span class="ident">user_identity_label</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                 <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(
                     <span class="string">&quot;could not create HTTP response channel: {:?}&quot;</span>,
@@ -1212,7 +1212,7 @@
         <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Sender</span>::<span class="ident">new</span>(<span class="ident">WriteHandle</span> {
             <span class="ident">handle</span>: <span class="self">self</span>.<span class="ident">request_writer</span>,
         });
-        <span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">request</span>, <span class="ident">runtime</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+        <span class="ident">sender</span>.<span class="ident">send_with_downgrade</span>(<span class="ident">request</span>, <span class="ident">runtime</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(
                 <span class="string">&quot;Couldn&#39;t write the request to the HTTP request channel: {:?}&quot;</span>,
                 <span class="ident">err</span>
@@ -1239,7 +1239,7 @@
             <span class="ident">handle</span>: <span class="ident">invocation_channel</span>,
         });
         <span class="ident">invocation_sender</span>
-            .<span class="ident">send</span>(<span class="ident">invocation</span>, <span class="ident">runtime</span>)
+            .<span class="ident">send_with_downgrade</span>(<span class="ident">invocation</span>, <span class="ident">runtime</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(
                     <span class="string">&quot;Couldn&#39;t write the invocation message: {:?}&quot;</span>,
