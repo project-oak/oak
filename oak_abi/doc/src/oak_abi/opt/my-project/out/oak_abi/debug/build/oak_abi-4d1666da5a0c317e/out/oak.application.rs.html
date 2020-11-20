@@ -321,8 +321,8 @@
     <span class="doccomment">/// The authority supported by this client. The authority must match the label of the HTTP Client</span>
     <span class="doccomment">/// pseudo-Node. If the authority is non-empty, only HTTPS requests with the same authority</span>
     <span class="doccomment">/// component in their URIs can be handled. If the authority is empty, the client must be public</span>
-    <span class="doccomment">/// and it may handle arbitrary requests to any HTTP or HTTPS services. The authority is also used to</span>
-    <span class="doccomment">/// set the privilege of the node.</span>
+    <span class="doccomment">/// and it may handle arbitrary requests to any HTTP or HTTPS services. The authority is also used</span>
+    <span class="doccomment">/// to set the privilege of the node.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">authority</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
