@@ -123,7 +123,7 @@ impl ChannelHalf {
 
     /// Returns a unique debug_id used to identify the channel in debug output.
     pub fn get_channel_debug_id(&self) -> String {
-        self.channel.get_debug_id(self.channel.id)
+        self.channel.get_debug_id()
     }
 
     /// Get read-only access to the channel's messages.  For debugging/introspection
@@ -301,8 +301,8 @@ impl Channel {
 
     /// Returns a unique debug_id used to identify the node in the debug output,
     /// consisting out of the provided [`ChannelId`], and the node's name.
-    fn get_debug_id(&self, channel_id: ChannelId) -> String {
-        format!("{}({})", &self.name, channel_id)
+    fn get_debug_id(&self) -> String {
+        format!("{}({})", &self.name, self.id)
     }
 
     /// Determine whether there are any readers of the channel.
