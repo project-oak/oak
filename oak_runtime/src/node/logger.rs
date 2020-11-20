@@ -52,6 +52,12 @@ impl super::Node for LogNode {
         NodePrivilege::top_privilege()
     }
 
+    #[cfg(not(feature = "oak_debug"))]
+    fn get_privilege(&self) -> NodePrivilege {
+        // The logger must not have any declassification privilege in non-debug builds.
+        NodePrivilege::default()
+    }
+
     /// Main execution loop for the logging pseudo-Node just waits for incoming
     /// `LogMessage`s and outputs them.
     fn run(
