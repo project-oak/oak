@@ -172,7 +172,7 @@ impl NodeStopper {
     }
 
     /// Returns a unique debug_id used in the debug output, consisting out of
-    /// the provided [`NodeId`], and the node's name.
+    /// the provided [`NodeId`], and the Node name.
     fn get_debug_id(&self, node_id: NodeId) -> String {
         construct_debug_id(&self.node_name, node_id)
     }
@@ -189,10 +189,10 @@ impl std::fmt::Debug for NodeStopper {
 }
 
 struct NodeInfo {
-    /// The name for the node.
+    /// The name for the Node.
     ///
     /// The name does not have to be unique and can be empty. In logs it is
-    /// combined with the id to form a unique debug_ig to identify nodes.
+    /// combined with the id to form a unique debug_id.
     name: String,
 
     /// Name for the type of this Node, for metrics output.
@@ -687,8 +687,8 @@ impl Runtime {
         node_info.privilege.clone()
     }
 
-    /// Returns a unique debug_id used to identify the node in the debug output,
-    /// consisting out of the provided [`NodeId`], and the node's name.
+    /// Returns a unique debug_id used to identify the Node in the debug output,
+    /// consisting out of the provided [`NodeId`], and the Node name.
     fn get_node_debug_id(&self, node_id: NodeId) -> String {
         let node_infos = self.node_infos.read().unwrap();
         node_infos

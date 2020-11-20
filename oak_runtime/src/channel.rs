@@ -299,8 +299,8 @@ impl Channel {
         })
     }
 
-    /// Returns a unique debug_id used to identify the node in the debug output,
-    /// consisting out of the provided [`ChannelId`], and the node's name.
+    /// Returns a unique debug_id used to identify the channel in the debug
+    /// output, consisting of the provided [`ChannelId`], and the channel name.
     fn get_debug_id(&self) -> String {
         format!("{}({})", &self.name, self.id)
     }
