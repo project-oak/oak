@@ -158,6 +158,52 @@
 <span id="155">155</span>
 <span id="156">156</span>
 <span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -178,7 +224,9 @@
 <span class="doccomment">//! Wrappers for Oak SDK types to allow their use with [`std::io`].</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">OakStatus</span>;
+<span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>;
+<span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
 
 <span class="kw">mod</span> <span class="ident">receiver</span>;
@@ -283,6 +331,50 @@
     };
     <span class="ident">sender</span>.<span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="ident">init_wrapper</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="ident">command_sender</span>)
+}
+
+<span class="doccomment">/// Sends [`crate::grpc::Invocation`] (containing [`oak_io::Receiver`] and [`oak_io::Sender`])</span>
+<span class="doccomment">/// through invocation sender if [`oak_io::Receiver`] label flows to invocation sender&#39;s label.</span>
+<span class="doccomment">/// If failed - sends error back through [`oak_io::Sender`].</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Useful for sending invocations from router nodes and checking label correctness without actually</span>
+<span class="doccomment">/// reading the contents of invocation.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">forward_invocation</span>(
+    <span class="ident">invocation</span>: <span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">Invocation</span>,
+    <span class="ident">invocation_sender</span>: <span class="kw-2">&amp;</span><span class="ident">Sender</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">Invocation</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">match</span> (<span class="kw-2">&amp;</span><span class="ident">invocation</span>.<span class="ident">receiver</span>, <span class="kw-2">&amp;</span><span class="ident">invocation</span>.<span class="ident">sender</span>) {
+        (<span class="prelude-val">Some</span>(<span class="ident">request_receiver</span>), <span class="prelude-val">Some</span>(<span class="ident">response_sender</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">request_label</span> <span class="op">=</span> <span class="ident">request_receiver</span>
+                .<span class="ident">label</span>()
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read request label&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">sender_label</span> <span class="op">=</span> <span class="ident">invocation_sender</span>
+                .<span class="ident">label</span>()
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read invocation sender label&quot;</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Check if request label is valid in the context of invocation sender.</span>
+            <span class="kw">if</span> <span class="ident">request_label</span>.<span class="ident">flows_to</span>(<span class="kw-2">&amp;</span><span class="ident">sender_label</span>) {
+                <span class="comment">// Forward invocation through invocation sender.</span>
+                <span class="ident">invocation_sender</span>
+                    .<span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="ident">invocation</span>)
+                    .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t forward invocation&quot;</span>)
+            } <span class="kw">else</span> {
+                <span class="comment">// Return an error through `response_sender`.</span>
+                <span class="kw">let</span> <span class="ident">grpc_response_writer</span> <span class="op">=</span>
+                    <span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">ChannelResponseWriter</span>::<span class="ident">new</span>(<span class="ident">response_sender</span>.<span class="ident">clone</span>());
+                <span class="ident">grpc_response_writer</span>
+                    .<span class="ident">close</span>(<span class="prelude-val">Err</span>(<span class="kw">crate</span>::<span class="ident">grpc</span>::<span class="ident">build_status</span>(
+                        <span class="ident">rpc</span>::<span class="ident">Code</span>::<span class="ident">InvalidArgument</span>,
+                        <span class="string">&quot;Invalid request label&quot;</span>,
+                    )))
+                    .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t send error response back&quot;</span>)<span class="question-mark">?</span>;
+                <span class="prelude-val">Err</span>(<span class="ident">anyhow</span>::<span class="macro">anyhow</span><span class="macro">!</span>(
+                    <span class="string">&quot;Invalid request label: {:?}&quot;</span>,
+                    <span class="ident">request_label</span>
+                ))
+            }
+        }
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">anyhow</span>::<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;Received malformed invocation&quot;</span>)),
+    }
 }
 
 <span class="doccomment">/// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].</span>
