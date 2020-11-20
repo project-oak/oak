@@ -20,16 +20,8 @@ ignore = [
 
 # Deny multiple versions unless explicitly skipped.
 [bans]
-multiple-versions = "deny"
+multiple-versions = "allow"
 wildcards = "allow"
-
-[[bans.skip]]
-name = "pin-project"
-version = "=0.4.27"
-
-[[bans.skip]]
-name = "pin-project-internal"
-version = "=0.4.27"
 
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.

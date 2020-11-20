@@ -17,28 +17,8 @@ ignore = [
 
 # Deny multiple versions unless explicitly skipped.
 [bans]
-multiple-versions = "deny"
+multiple-versions = "allow"
 wildcards = "allow"
-
-[[bans.skip]]
-name = "webpki-roots"
-version = "=0.19.0"
-
-[[bans.skip]]
-name = "pin-project"
-version = "=0.4.23"
-
-[[bans.skip]]
-name = "pin-project-internal"
-version = "=0.4.23"
-
-[[bans.skip]]
-name = "cfg-if"
-version = "=0.1.10"
-
-[[bans.skip]]
-name = "webpki-roots"
-version = "=0.19.0"
 
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
