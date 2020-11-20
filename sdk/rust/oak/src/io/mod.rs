@@ -17,7 +17,9 @@
 //! Wrappers for Oak SDK types to allow their use with [`std::io`].
 
 use crate::OakStatus;
+use anyhow::Context;
 use oak_abi::label::Label;
+use oak_services::proto::google::rpc;
 use std::io;
 
 mod receiver;
@@ -36,6 +38,16 @@ pub fn channel_create<T: Encodable + Decodable>(
     Ok((Sender::<T>::new(wh), Receiver::<T>::new(rh)))
 }
 
+/// Uses the current node's label-downgrading privilege to create a new channel for transmission of
+/// [`Encodable`] and [`Decodable`] types.
+pub fn channel_create_with_downgrade<T: Encodable + Decodable>(
+    name: &str,
+    label: &Label,
+) -> Result<(Sender<T>, Receiver<T>), OakStatus> {
+    let (wh, rh) = crate::channel_create_with_downgrade(name, label)?;
+    Ok((Sender::<T>::new(wh), Receiver::<T>::new(rh)))
+}
+
 /// Creates a node and corresponding inbound channel of the same type, and returns [`Sender`] for
 /// such channel.
 pub fn node_create<T: Encodable + Decodable>(
@@ -45,6 +57,26 @@ pub fn node_create<T: Encodable + Decodable>(
 ) -> Result<Sender<T>, OakStatus> {
     let (sender, receiver) = channel_create(&format!("{}-in", name), label)?;
     match crate::node_create(name, node_config, label, receiver.handle) {
+        Ok(_) => {}
+        Err(e) => {
+            let _ = sender.close();
+            let _ = receiver.close();
+            return Err(e);
+        }
+    };
+    receiver.close()?;
+    Ok(sender)
+}
+
+/// Uses the current node's label-downgrading privilege to create a node and corresponding inbound
+/// channel of the same type, and returns a [`Sender`] for the channel.
+pub fn node_create_with_downgrade<T: Encodable + Decodable>(
+    name: &str,
+    label: &Label,
+    node_config: &crate::NodeConfiguration,
+) -> Result<Sender<T>, OakStatus> {
+    let (sender, receiver) = channel_create_with_downgrade(&format!("{}-in", name), label)?;
+    match crate::node_create_with_downgrade(name, node_config, label, receiver.handle) {
         Ok(_) => {}
         Err(e) => {
             let _ = sender.close();
@@ -92,6 +124,50 @@ fn send_init<Init: Encodable + Decodable, Command: Encodable + Decodable>(
     };
     sender.send(&init_wrapper)?;
     Ok(command_sender)
+}
+
+/// Sends [`crate::grpc::Invocation`] (containing [`oak_io::Receiver`] and [`oak_io::Sender`])
+/// through invocation sender if [`oak_io::Receiver`] label flows to invocation sender's label.
+/// If failed - sends error back through [`oak_io::Sender`].
+///
+/// Useful for sending invocations from router nodes and checking label correctness without actually
+/// reading the contents of invocation.
+pub fn forward_invocation(
+    invocation: crate::grpc::Invocation,
+    invocation_sender: &Sender<crate::grpc::Invocation>,
+) -> anyhow::Result<()> {
+    match (&invocation.receiver, &invocation.sender) {
+        (Some(request_receiver), Some(response_sender)) => {
+            let request_label = request_receiver
+                .label()
+                .context("Couldn't read request label")?;
+            let sender_label = invocation_sender
+                .label()
+                .context("Couldn't read invocation sender label")?;
+            // Check if request label is valid in the context of invocation sender.
+            if request_label.flows_to(&sender_label) {
+                // Forward invocation through invocation sender.
+                invocation_sender
+                    .send(&invocation)
+                    .context("Couldn't forward invocation")
+            } else {
+                // Return an error through `response_sender`.
+                let grpc_response_writer =
+                    crate::grpc::ChannelResponseWriter::new(response_sender.clone());
+                grpc_response_writer
+                    .close(Err(crate::grpc::build_status(
+                        rpc::Code::InvalidArgument,
+                        "Invalid request label",
+                    )))
+                    .context("Couldn't send error response back")?;
+                Err(anyhow::anyhow!(
+                    "Invalid request label: {:?}",
+                    request_label
+                ))
+            }
+        }
+        _ => Err(anyhow::anyhow!("Received malformed invocation")),
+    }
 }
 
 /// Map a non-OK [`OakStatus`] value to the nearest available [`std::io::Error`].

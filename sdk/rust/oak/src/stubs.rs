@@ -54,7 +54,15 @@ pub extern "C" fn channel_write() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
+pub extern "C" fn channel_write_with_downgrade() {
+    panic!("stub function invoked!");
+}
+#[no_mangle]
 pub extern "C" fn channel_create() {
+    panic!("stub function invoked!");
+}
+#[no_mangle]
+pub extern "C" fn channel_create_with_downgrade() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
@@ -63,6 +71,10 @@ pub extern "C" fn channel_close() {
 }
 #[no_mangle]
 pub extern "C" fn node_create() {
+    panic!("stub function invoked!");
+}
+#[no_mangle]
+pub extern "C" fn node_create_with_downgrade() {
     panic!("stub function invoked!");
 }
 #[no_mangle]

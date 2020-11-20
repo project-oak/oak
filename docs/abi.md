@@ -10,7 +10,7 @@ specific entrypoints which form the **Oak ABI**:
   [host functions](#host-functions), available as WebAssembly imports.
 
 These host functions provided by the Oak TCB revolve around the creation of
-other Nodes, and the use of [channels](concepts.md#channels) for inter-node
+other Nodes, and the use of [channels](concepts.md#channels) for inter-Node
 communication. This communication is further constrained by **flows-to** checks
 based on the [labels](concepts.md#information-flow-control) associated with the
 Nodes and channels.
@@ -179,6 +179,11 @@ If writing to the specified channel would violate
 - `param[4]: u32`: Source handle array count
 - `result[0]: u32`: Status of operation
 
+### `channel_write_with_downgrade`
+
+The same as [`channel_write`](#channel_write), except that it uses the current
+Node's label-downgrading privilege while writing the message.
+
 ### `channel_create`
 
 Creates a new unidirectional Channel assigning the name specified by `param[2]`
@@ -209,6 +214,11 @@ If creating the specified Channel would violate
 - `param[4]: usize`: Source buffer holding serialized `Label`
 - `param[5]: usize`: Label size in bytes
 - `result[0]: u32`: Status of operation
+
+### `channel_create_with_downgrade`
+
+The same as [`channel_create`](#channel_create), except that it uses the current
+Node's label-downgrading privilege while creating the channel.
 
 ### `channel_close`
 
@@ -249,6 +259,11 @@ If creating the specified Node would violate
 - `param[5]: usize`: Label size in bytes
 - `param[6]: usize`: Handle to channel
 - `result[0]: u32`: Status of operation
+
+### `node_create_with_downgrade`
+
+The same as [`node_create`](#node_create), except that it uses the current
+Node's label-downgrading privilege while creating the new Node.
 
 ### `node_label_read`
 

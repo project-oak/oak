@@ -139,6 +139,16 @@ extern "C" {
         handle_count: u32,
     ) -> u32;
 
+    /// The same as [`channel_write`](#method.channel_write), but also applies the current Node's
+    /// downgrade privilege when checking IFC restrictions.
+    pub fn channel_write_with_downgrade(
+        handle: u64,
+        buf: *const u8,
+        size: usize,
+        handle_buf: *const u8,
+        handle_count: u32,
+    ) -> u32;
+
     /// Create a new unidirectional Channel.
     ///
     /// Returns handles for the the write and read halves of the Channel in the spaces given by
@@ -154,6 +164,17 @@ extern "C" {
     ///
     /// [`OakStatus`]: crate::OakStatus
     pub fn channel_create(
+        write: *mut u64,
+        read: *mut u64,
+        name_buf: *const u8,
+        name_len: usize,
+        label_buf: *const u8,
+        label_len: usize,
+    ) -> u32;
+
+    /// The same as [`channel_create`](#method.channel_create), but also applies the current Node's
+    /// downgrade privilege when checking IFC restrictions.
+    pub fn channel_create_with_downgrade(
         write: *mut u64,
         read: *mut u64,
         name_buf: *const u8,
@@ -189,7 +210,7 @@ extern "C" {
         actual_size: *mut u32,
     ) -> u32;
 
-    /// Returns the label of the current calling node.
+    /// Returns the label of the current calling Node.
     ///
     /// The label is stored into `label_buf` as a serialized [`Label`] protobuf message. The actual
     /// size of the serialized message is indicated by `actual_size`.
@@ -204,7 +225,7 @@ extern "C" {
     /// [`Label`]: crate::label::Label
     pub fn node_label_read(label_buf: *mut u8, label_size: usize, actual_size: *mut u32) -> u32;
 
-    /// Returns a label indicating the downgrade privilege of the current calling node.
+    /// Returns a label indicating the downgrade privilege of the current calling Node.
     ///
     /// The label is stored into `label_buf` as a serialized [`Label`] protobuf message. The actual
     /// size of the serialized message is indicated by `actual_size`.
@@ -222,7 +243,7 @@ extern "C" {
 
     /// Creates a new Node instance running code identified by a serialized [`NodeConfiguration`].
     ///
-    /// The name of the new node is provided in the memory area given by `name_buf` and `name_len`.
+    /// The name of the new Node is provided in the memory area given by `name_buf` and `name_len`.
     /// The name does not have to be unique and can be empty. It is used in logs to help identify
     /// nodes for debugging purposes.
     ///
@@ -237,6 +258,18 @@ extern "C" {
     /// [`OakStatus`]: crate::OakStatus
     /// [`NodeConfiguration`]: crate::proto::oak::application::NodeConfiguration
     pub fn node_create(
+        name_buf: *const u8,
+        name_len: usize,
+        config_buf: *const u8,
+        config_len: usize,
+        label_buf: *const u8,
+        label_len: usize,
+        handle: u64,
+    ) -> u32;
+
+    /// The same as [`node_create`](#method.node_create), but also applies the current Node's
+    /// downgrade privilege when checking IFC restrictions.
+    pub fn node_create_with_downgrade(
         name_buf: *const u8,
         name_len: usize,
         config_buf: *const u8,

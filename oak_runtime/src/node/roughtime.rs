@@ -18,13 +18,15 @@
 
 use crate::{
     io::{Receiver, ReceiverExt},
-    node::grpc::invocation::Invocation,
+    node::invocation::InvocationExt,
+    proto::oak::invocation::GrpcInvocation as Invocation,
     time::{
         get_default_servers, RoughtimeClient, RoughtimeServer, DEFAULT_MAX_RADIUS_MICROSECONDS,
         DEFAULT_MIN_OVERLAPPING_INTERVALS, DEFAULT_SERVER_RETRIES, DEFAULT_TIMEOUT_SECONDS,
     },
     RuntimeProxy,
 };
+
 use log::{debug, error, info};
 use oak_abi::{proto::oak::application::RoughtimeClientConfiguration, OakStatus};
 use oak_io::{handle::ReadHandle, OakError};

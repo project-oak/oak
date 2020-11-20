@@ -302,7 +302,14 @@ fn create_http_config(opt: &Opt) -> anyhow::Result<oak_runtime::HttpConfiguratio
     };
 
     match oak_runtime::tls::TlsConfig::new(http_tls_certificate_path, http_tls_private_key_path) {
-        Some(tls_config) => Ok(oak_runtime::HttpConfiguration { tls_config }),
+        Some(tls_config) => {
+            let root_tls_certificate =
+                get_root_tls_certificate_or_default(&opt).map(|s| s.as_bytes().to_vec())?;
+            Ok(oak_runtime::HttpConfiguration {
+                tls_config,
+                http_client_root_tls_certificate: root_tls_certificate,
+            })
+        }
         None => Err(anyhow!(
             "Could not create TLS identity for HTTP server nodes."
         )),

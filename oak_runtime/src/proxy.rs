@@ -18,8 +18,9 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    metrics::Metrics, AuxServer, ChannelHalfDirection, LabelReadStatus, NodeId, NodeInfo,
-    NodeMessage, NodePrivilege, NodeReadStatus, Runtime, SecureServerConfiguration, SignatureTable,
+    metrics::Metrics, AuxServer, ChannelHalfDirection, Downgrading, LabelReadStatus, NodeId,
+    NodeInfo, NodeMessage, NodePrivilege, NodeReadStatus, Runtime, SecureServerConfiguration,
+    SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -173,7 +174,7 @@ impl RuntimeProxy {
         self.runtime.is_terminating()
     }
 
-    /// See [`Runtime::node_create_and_register`].
+    /// Calls [`Runtime::node_create_and_register`] without using the Node's privilege.
     pub fn node_create(
         &self,
         name: &str,
@@ -194,6 +195,7 @@ impl RuntimeProxy {
             config,
             label,
             initial_handle,
+            Downgrading::No,
         );
         debug!(
             "{:?}: node_create({:?}, {:?}, {:?}) -> {:?}",
@@ -202,6 +204,33 @@ impl RuntimeProxy {
             config,
             label,
             result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::node_create_and_register`] using the Node's privilege.
+    pub fn node_create_with_downgrade(
+        &self,
+        name: &str,
+        config: &NodeConfiguration,
+        label: &Label,
+        initial_handle: oak_abi::Handle,
+    ) -> Result<(), OakStatus> {
+        debug!(
+            "{:?}: node_create_with_downgrade({:?}, {:?}, {:?})",
+            self.node_id, name, config, label
+        );
+        let result = self.runtime.clone().node_create_and_register(
+            self.node_id,
+            name,
+            config,
+            label,
+            initial_handle,
+            Downgrading::Yes,
+        );
+        debug!(
+            "{:?}: node_create_with_downgrade({:?}, {:?}, {:?}) -> {:?}",
+            self.node_id, name, config, label, result
         );
         result
     }
@@ -227,6 +256,7 @@ impl RuntimeProxy {
             node_name,
             label,
             initial_handle,
+            Downgrading::No,
         );
         debug!(
             "{:?}: register_node_instance(node_name: {:?}, label: {:?}) -> {:?}",
@@ -238,7 +268,7 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::channel_create`].
+    /// Calls [`Runtime::channel_create`] without using the Node's privilege.
     pub fn channel_create(
         &self,
         name: &str,
@@ -250,13 +280,35 @@ impl RuntimeProxy {
             name,
             label
         );
-        let result = self.runtime.channel_create(self.node_id, name, label);
+        let result = self
+            .runtime
+            .channel_create(self.node_id, name, label, Downgrading::No);
         debug!(
             "{:?}: channel_create({:?}, {:?}) -> {:?}",
             self.get_debug_id(),
             name,
             label,
             result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::channel_create`] using the Node's privilege.
+    pub fn channel_create_with_downgrade(
+        &self,
+        name: &str,
+        label: &Label,
+    ) -> Result<(oak_abi::Handle, oak_abi::Handle), OakStatus> {
+        debug!(
+            "{:?}: channel_create_with_downgrade({:?}, {:?})",
+            self.node_id, name, label
+        );
+        let result = self
+            .runtime
+            .channel_create(self.node_id, name, label, Downgrading::Yes);
+        debug!(
+            "{:?}: channel_create_with_downgrade({:?}, {:?}) -> {:?}",
+            self.node_id, name, label, result
         );
         result
     }
@@ -284,7 +336,9 @@ impl RuntimeProxy {
             self.get_debug_id(),
             read_handles.len()
         );
-        let result = self.runtime.wait_on_channels(self.node_id, read_handles);
+        let result = self
+            .runtime
+            .wait_on_channels(self.node_id, read_handles, Downgrading::No);
         debug!(
             "{:?}: wait_on_channels(count={}) -> {:?}",
             self.get_debug_id(),
@@ -294,7 +348,7 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::channel_write`].
+    /// Calls [`Runtime::channel_write`] without using the Node's privilege.
     pub fn channel_write(
         &self,
         write_handle: oak_abi::Handle,
@@ -306,7 +360,9 @@ impl RuntimeProxy {
             write_handle,
             msg
         );
-        let result = self.runtime.channel_write(self.node_id, write_handle, msg);
+        let result = self
+            .runtime
+            .channel_write(self.node_id, write_handle, msg, Downgrading::No);
         debug!(
             "{:?}: channel_write({}, ...) -> {:?}",
             self.get_debug_id(),
@@ -316,18 +372,59 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::channel_read`].
+    /// Calls [`Runtime::channel_write`] using the Node's privilege.
+    pub fn channel_write_with_downgrade(
+        &self,
+        write_handle: oak_abi::Handle,
+        msg: NodeMessage,
+    ) -> Result<(), OakStatus> {
+        debug!(
+            "{:?}: channel_write_with_downgrade({}, {:?})",
+            self.node_id, write_handle, msg
+        );
+        let result = self
+            .runtime
+            .channel_write(self.node_id, write_handle, msg, Downgrading::Yes);
+        debug!(
+            "{:?}: channel_write_with_downgrade({}, ...) -> {:?}",
+            self.node_id, write_handle, result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::channel_read`] without using the Node's privilege.
     pub fn channel_read(
         &self,
         read_handle: oak_abi::Handle,
     ) -> Result<Option<NodeMessage>, OakStatus> {
         debug!("{:?}: channel_read({})", self.get_debug_id(), read_handle,);
-        let result = self.runtime.channel_read(self.node_id, read_handle);
+        let result = self
+            .runtime
+            .channel_read(self.node_id, read_handle, Downgrading::No);
         debug!(
             "{:?}: channel_read({}) -> {:?}",
             self.get_debug_id(),
             read_handle,
             result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::channel_read`] using the Node's privilege.
+    pub fn channel_read_with_downgrade(
+        &self,
+        read_handle: oak_abi::Handle,
+    ) -> Result<Option<NodeMessage>, OakStatus> {
+        debug!(
+            "{:?}: channel_read_with_downgrade({})",
+            self.node_id, read_handle,
+        );
+        let result = self
+            .runtime
+            .channel_read(self.node_id, read_handle, Downgrading::Yes);
+        debug!(
+            "{:?}: channel_read_with_downgrade({}) -> {:?}",
+            self.node_id, read_handle, result
         );
         result
     }
@@ -351,6 +448,7 @@ impl RuntimeProxy {
             read_handle,
             bytes_capacity,
             handles_capacity,
+            Downgrading::No,
         );
         debug!(
             "{:?}: channel_try_read({}, bytes_capacity={}, handles_capacity={}) -> {:?}",
