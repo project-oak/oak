@@ -186,6 +186,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8aebca1129a03dc6dc2b127edd729435bbc4a37e1d5f4d7513165089ceb02634"
 
 [[package]]
+name = "ct-logs"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c8e13110a84b6315df212c045be706af261fd364791cad863285439ebba672e"
+dependencies = [
+ "sct",
+]
+
+[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -463,6 +472,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37743cc83e8ee85eacfce90f2f4102030d9ff0a95244098d781e9bee4a90abb6"
 dependencies = [
  "bytes",
+ "ct-logs",
  "futures-util",
  "hyper",
  "log",
@@ -470,6 +480,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "webpki",
+ "webpki-roots 0.20.0",
 ]
 
 [[package]]
@@ -790,6 +801,7 @@ dependencies = [
 name = "oak_runtime"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "base64",
  "byteorder",
  "bytes",
@@ -799,6 +811,7 @@ dependencies = [
  "hex",
  "http",
  "hyper",
+ "hyper-rustls",
  "itertools",
  "jsonwebtoken",
  "lazy_static",
@@ -1226,7 +1239,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots",
+ "webpki-roots 0.19.0",
  "winreg",
 ]
 
@@ -2071,6 +2084,15 @@ name = "webpki-roots"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8eff4b7516a57307f9349c64bf34caa34b940b66fed4b2fb3136cb7386e5739"
+dependencies = [
+ "webpki",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f20dea7535251981a9670857150d571846545088359b28e4951d350bdaf179f"
 dependencies = [
  "webpki",
 ]

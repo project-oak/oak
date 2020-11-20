@@ -19,7 +19,6 @@
 use oak_services::proto::google::rpc;
 pub mod client;
 mod codec;
-pub mod invocation;
 pub mod server;
 
 /// Converts [`rpc::Status`] to [`tonic::Status`].

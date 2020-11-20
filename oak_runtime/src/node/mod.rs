@@ -25,6 +25,7 @@ use tokio::sync::oneshot;
 
 pub mod grpc;
 pub mod http;
+mod invocation;
 mod logger;
 mod roughtime;
 mod storage;
@@ -179,10 +180,23 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                     .clone()
                     .expect("no TLS configuration for HTTP servers provided to Oak Runtime")
                     .tls_config;
-                Ok(Box::new(http::HttpServerNode::new(
+                Ok(Box::new(http::server::HttpServerNode::new(
                     node_name,
                     config.clone(),
                     tls_config,
+                )?))
+            }
+            Some(ConfigType::HttpClientConfig(config)) => {
+                let http_client_root_tls_certificate = self
+                    .secure_server_configuration
+                    .http_config
+                    .clone()
+                    .expect("no HTTP configuration provided to Oak Runtime")
+                    .http_client_root_tls_certificate;
+                Ok(Box::new(http::client::HttpClientNode::new(
+                    node_name,
+                    config.clone(),
+                    http_client_root_tls_certificate,
                 )?))
             }
             None => Err(ConfigurationError::InvalidNodeConfiguration),

@@ -112,7 +112,6 @@ pub struct GrpcConfiguration {
     pub oidc_client_info: Option<ClientInfo>,
 
     /// Root TLS certificate to use for all gRPC Client Nodes.
-    // TODO(#999): Remove user-configurable root CA.
     pub grpc_client_root_tls_certificate: Option<Certificate>,
 }
 
@@ -130,6 +129,9 @@ pub struct SignatureTable {
 pub struct HttpConfiguration {
     /// TLS identity to use for all HTTP Server Nodes.
     pub tls_config: crate::tls::TlsConfig,
+    /// A non-empty vector containing the root TLS certificate, in the PEM format, to use for all
+    /// HTTP Client Nodes.
+    pub http_client_root_tls_certificate: Vec<u8>,
 }
 
 /// Configuration options for secure HTTP and gRPC pseudo-Nodes.
