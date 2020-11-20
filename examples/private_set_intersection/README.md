@@ -12,6 +12,6 @@
    ```bash
    ./scripts/oak_sign sign \
      --private-key=examples/keys/ed25519/test.key \
-     --input-file=examples/private_set_intersection/bin/private_set_intersection.wasm \
-     --signature-file=examples/private_set_intersection/private_set_intersection.sign
+     --input-file=examples/private_set_intersection/bin/private_set_intersection_handler.wasm \
+     --signature-file=examples/private_set_intersection/private_set_intersection_handler.sign
    ```

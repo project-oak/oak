@@ -16,9 +16,11 @@ oak = "=0.1.0"
 oak_abi = "=0.1.0"
 oak_io = "=0.1.0"
 oak_services = "=0.1.0"
+private_set_intersection_handler = "*"
 prost = "*"
 
 [dev-dependencies]
+anyhow = "*"
 assert_matches = "*"
 env_logger = "*"
 hex = "*"

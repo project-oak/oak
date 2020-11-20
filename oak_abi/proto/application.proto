@@ -137,8 +137,8 @@ message HttpClientConfiguration {
   // The authority supported by this client. The authority must match the label of the HTTP Client
   // pseudo-Node. If the authority is non-empty, only HTTPS requests with the same authority
   // component in their URIs can be handled. If the authority is empty, the client must be public
-  // and it may handle arbitrary requests to any HTTP or HTTPS services. The authority is also used to
-  // set the privilege of the node.
+  // and it may handle arbitrary requests to any HTTP or HTTPS services. The authority is also used
+  // to set the privilege of the node.
   string authority = 1;
 }
 

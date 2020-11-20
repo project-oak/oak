@@ -14,6 +14,30 @@
 // limitations under the License.
 //
 
+//! Private Set Intersection example for Project Oak.
+//!
+//! Clients invoke the module by providing their own private set, and the module keeps track of the
+//! intersection of all the provided sets from all the clients that have interacted with it.
+//! The number of contributed private sets is limited and defined by `SET_THRESHOLD`.
+//!
+//! The (common) intersection can then be retrieved by each client by a separate invocation.
+//! After the first client retrieves the intersection it becomes locked, and new contributions are
+//! discarded.
+//!
+//! Each client request should be provided with a set ID. This is necessary for allowing multiple
+//! sets of clients to compute their own intersections.
+//!
+//! It's important to note that in the current implementation of the application labels, specifying
+//! a different set ID does not provide guarantees that data from different clients is kept
+//! separate.
+
+pub mod proto {
+    include!(concat!(
+        env!("OUT_DIR"),
+        "/oak.examples.private_set_intersection.rs"
+    ));
+}
+
 use crate::proto::{
     GetIntersectionRequest, GetIntersectionResponse, PrivateSetIntersection,
     PrivateSetIntersectionDispatcher, SubmitSetRequest,
