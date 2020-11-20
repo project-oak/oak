@@ -16,12 +16,16 @@
 
 syntax = "proto3";
 
-package oak.examples.trusted_database_command;
+package oak.examples.trusted_database_init;
 
 import "trusted_database.proto";
 import "oak_services/proto/grpc_invocation.proto";
+import "oak_services/proto/log.proto";
+import "proto/handle.proto";
 
-message TrustedDatabaseCommand {
-  oak.invocation.GrpcInvocationReceiver invocation_receiver = 1;
+// Initialization message that should be sent to Router Oak Node and Handler Oak Node.
+message TrustedDatabaseInit {
+  oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
+  // Copy of the database.
   oak.examples.trusted_database.PointOfInterestMap points_of_interest = 2;
 }

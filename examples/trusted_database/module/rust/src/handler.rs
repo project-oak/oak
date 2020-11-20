@@ -14,39 +14,37 @@
 // limitations under the License.
 //
 
-//! Trusted Database Handler Node.
-//!
-//! In the current implementation clients send their location coordinates (latitude and longitude)
-//! and the Handler Node returns the location of the closest Point Of Interest.
-//!
-//! The Handler Node searches for the closest Point Of Interest in the database received from the
-//! Main Node.
-
 use crate::proto::oak::examples::trusted_database::{
     GetPointOfInterestRequest, GetPointOfInterestResponse, ListPointsOfInterestRequest,
     ListPointsOfInterestResponse, Location, PointOfInterestMap, TrustedDatabase,
-    TrustedDatabaseCommand, TrustedDatabaseDispatcher,
+    TrustedDatabaseDispatcher, TrustedDatabaseInit,
 };
 use log::{debug, error, warn};
-use oak::{
-    grpc,
-    io::{Receiver, ReceiverExt},
-};
+use oak::grpc;
 
 // Error messages.
 const NO_LOCATION_ERROR: &str = "Location is not specified";
 const ID_NOT_FOUND_ERROR: &str = "ID not found";
 const EMPTY_DATABASE_ERROR: &str = "Empty database";
 
-/// Oak Node that contains a copy of the database.
-pub struct TrustedDatabaseHandlerNode {
+/// Oak Handler Node that contains a copy of the database and handles client requests.
+#[derive(Default)]
+pub struct Handler {
     points_of_interest: PointOfInterestMap,
 }
 
-oak::impl_dispatcher!(impl TrustedDatabaseHandlerNode : TrustedDatabaseDispatcher);
+impl oak::WithInit for Handler {
+    type Init = TrustedDatabaseInit;
+
+    fn create(init: Self::Init) -> Self {
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
+        let points_of_interest = init.points_of_interest.expect("Couldn't receive database");
+        Self { points_of_interest }
+    }
+}
 
 /// A gRPC service implementation for the Private Information Retrieval example.
-impl TrustedDatabase for TrustedDatabaseHandlerNode {
+impl TrustedDatabase for Handler {
     // Find Point Of Interest based on id.
     fn get_point_of_interest(
         &mut self,
@@ -73,7 +71,7 @@ impl TrustedDatabase for TrustedDatabaseHandlerNode {
         &mut self,
         request: ListPointsOfInterestRequest,
     ) -> grpc::Result<ListPointsOfInterestResponse> {
-        debug!("Received request: {:?}", request);
+        error!("Received request: {:?}", request);
         let request_location = request.location.ok_or_else(|| {
             let err = grpc::build_status(grpc::Code::InvalidArgument, &NO_LOCATION_ERROR);
             warn!("{:?}", err);
@@ -138,18 +136,6 @@ pub fn distance(first: Location, second: Location) -> f32 {
     EARTH_RADIUS * central_angle
 }
 
-oak::entrypoint!(handler_oak_main<TrustedDatabaseCommand> => |command_receiver: Receiver<TrustedDatabaseCommand>| {
-    let log_sender = oak::logger::create().unwrap();
-    oak::logger::init(log_sender, log::Level::Debug).unwrap();
+oak::entrypoint_command_handler_init!(handler => Handler);
 
-    // Receive command.
-    let command: TrustedDatabaseCommand =
-        command_receiver.receive().expect("Couldn't receive command");
-    let receiver = command.invocation_receiver.expect("Couldn't receive gRPC invocation receiver");
-
-    // Run event loop and handle incoming invocations.
-    let node = TrustedDatabaseHandlerNode { points_of_interest: command.points_of_interest.expect("No database entries") };
-    let invocation_receiver = receiver.receiver.expect("Empty gRPC invocation receiver");
-    // The event loop only runs once because the `Main` Node sends a single invocation.
-    oak::run_command_loop(node, invocation_receiver.iter());
-});
+oak::impl_dispatcher!(impl Handler : TrustedDatabaseDispatcher);
