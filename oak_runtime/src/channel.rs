@@ -84,14 +84,6 @@ pub struct Channel {
     runtime_weak: Weak<Runtime>,
 }
 
-impl Channel {
-    /// Returns a unique debug_id used to identify the node in the debug output,
-    /// consisting out of the provided [`ChannelId`], and the node's name.
-    fn get_debug_id(&self, channel_id: ChannelId) -> String {
-        format!("{}({})", &self.name, channel_id)
-    }
-}
-
 impl std::fmt::Debug for Channel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -305,6 +297,12 @@ impl Channel {
             name: name.to_string(),
             runtime_weak,
         })
+    }
+
+    /// Returns a unique debug_id used to identify the node in the debug output,
+    /// consisting out of the provided [`ChannelId`], and the node's name.
+    fn get_debug_id(&self, channel_id: ChannelId) -> String {
+        format!("{}({})", &self.name, channel_id)
     }
 
     /// Determine whether there are any readers of the channel.
