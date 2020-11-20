@@ -14,56 +14,48 @@
 // limitations under the License.
 //
 
-use crate::{
-    handler::Handler,
-    proto::oak::examples::trusted_database::{PointOfInterestMap, TrustedDatabaseInit},
-};
+use crate::{handler::Handler, proto::oak::examples::trusted_database::TrustedDatabaseInit};
 use anyhow::Context;
 use oak::{
     grpc,
-    io::{ReceiverExt, Sender, SenderExt},
+    io::{ReceiverExt, SenderExt},
     CommandHandler,
 };
-use oak_services::proto::oak::log::LogMessage;
 
-/// Oak Router Node that contains an in-memory database.
+/// Oak Router Node that contains an in-memory database (saved in the `init`).
 #[derive(Default)]
 pub struct Router {
-    log_sender: Sender<LogMessage>,
-    points_of_interest: PointOfInterestMap,
+    /// Init message to be sent to every newly created Handler Node.
+    init: TrustedDatabaseInit,
 }
 
 impl oak::WithInit for Router {
     type Init = TrustedDatabaseInit;
 
     fn create(init: Self::Init) -> Self {
-        let log_sender = init.log_sender.unwrap();
-        oak::logger::init(log_sender.clone(), log::Level::Debug).unwrap();
-        let points_of_interest = init.points_of_interest.expect("Couldn't receive database");
-        Self {
-            log_sender,
-            points_of_interest,
-        }
+        Self { init }
     }
 }
 
+/// Processes client requests and creates individual Handler Nodes.
+/// Each newly created Handler Node receives a copy of the database stored in [`Router::init`].
 impl CommandHandler for Router {
     type Command = grpc::Invocation;
 
     fn handle_command(&mut self, invocation: Self::Command) -> anyhow::Result<()> {
         let label = invocation
             .receiver
-            .clone()
+            .as_ref()
             .context("Couldn't get receiver")?
             .label()
             .context("Couldn't get label")?;
-        let init = TrustedDatabaseInit {
-            log_sender: Some(self.log_sender.clone()),
-            points_of_interest: Some(self.points_of_interest.clone()),
-        };
-        let handler_invocation_sender =
-            oak::io::entrypoint_node_create::<Handler, _, _>("handler", &label, "app", init)
-                .context("Couldn't create handler node")?;
+        let handler_invocation_sender = oak::io::entrypoint_node_create::<Handler, _, _>(
+            "handler",
+            &label,
+            "app",
+            self.init.clone(),
+        )
+        .context("Couldn't create handler node")?;
         handler_invocation_sender
             .send(&invocation)
             .context("Couldn't send invocation to handler node")

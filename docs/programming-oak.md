@@ -403,8 +403,7 @@ from the implicit incoming channel, usually by implementing the
 trait setting the
 [`Command`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html#associatedtype.Command)
 associated type to
-[`ConfigMap`](https://project-oak.github.io/oak/sdk/doc/oak/proto/oak/application/struct.ConfigMap.html),
-or manually reading from the initial `Receiver`:
+[`ConfigMap`](https://project-oak.github.io/oak/sdk/doc/oak/proto/oak/application/struct.ConfigMap.html):
 
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/aggregator/module/rust/src/lib.rs Rust /impl oak::CommandHandler/ /.*context.*/)
