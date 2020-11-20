@@ -90,7 +90,8 @@ impl ChannelResponseWriter {
                 WriteMode::Close => true,
             },
         };
-        self.sender.send(&grpc_rsp)?;
+        // TODO(#1739): Do not automatically use privilege.
+        self.sender.send_with_downgrade(&grpc_rsp)?;
         if mode == WriteMode::Close {
             self.sender.close()?;
         }
@@ -108,7 +109,8 @@ impl ChannelResponseWriter {
                 WriteMode::Close => true,
             },
         };
-        self.sender.send(&grpc_rsp)?;
+        // TODO(#1739): Do not automatically use privilege.
+        self.sender.send_with_downgrade(&grpc_rsp)?;
         if mode == WriteMode::Close {
             self.sender.close()?;
         }
@@ -124,7 +126,8 @@ impl ChannelResponseWriter {
         if let Err(status) = result {
             grpc_rsp.status = Some(status);
         }
-        self.sender.send(&grpc_rsp)?;
+        // TODO(#1739): Do not automatically use privilege.
+        self.sender.send_with_downgrade(&grpc_rsp)?;
         self.sender.close()?;
         Ok(())
     }
@@ -236,21 +239,30 @@ where
     R: prost::Message,
 {
     // Create a new channel for request message delivery.
-    let (req_sender, req_receiver) =
-        crate::io::channel_create::<GrpcRequest>("gRPC request", &Label::public_untrusted())
-            .expect("failed to create channel");
+    // TODO(#1739): Don't use privilege automatically.
+    let (req_sender, req_receiver) = crate::io::channel_create_with_downgrade::<GrpcRequest>(
+        "gRPC request",
+        &Label::public_untrusted(),
+    )
+    .expect("failed to create channel");
 
     // Put the request in a GrpcRequest wrapper and send it into the request
     // message channel.
     let req = oak_services::grpc::encap_request(req, method_name)
         .expect("failed to serialize GrpcRequest");
-    req_sender.send(&req).expect("failed to write to channel");
+    // TODO(#1739): Don't use privilege automatically.
+    req_sender
+        .send_with_downgrade(&req)
+        .expect("failed to write to channel");
     req_sender.close().expect("failed to close channel");
 
     // Create a new channel for responses to arrive on.
-    let (rsp_sender, rsp_receiver) =
-        crate::io::channel_create::<GrpcResponse>("gRPC response", &Label::public_untrusted())
-            .expect("failed to create channel");
+    // TODO(#1739): Don't use privilege automatically.
+    let (rsp_sender, rsp_receiver) = crate::io::channel_create_with_downgrade::<GrpcResponse>(
+        "gRPC response",
+        &Label::public_untrusted(),
+    )
+    .expect("failed to create channel");
 
     // Build an Invocation holding the two channels and send it down the
     // specified channel.
@@ -258,8 +270,10 @@ where
         receiver: Some(req_receiver.clone()),
         sender: Some(rsp_sender.clone()),
     };
+
+    // TODO(#1739): Don't use privilege automatically.
     invocation_channel
-        .send(&invocation)
+        .send_with_downgrade(&invocation)
         .expect("failed to write invocation to channel");
     req_receiver.close().expect("failed to close channel");
     rsp_sender.close().expect("failed to close channel");

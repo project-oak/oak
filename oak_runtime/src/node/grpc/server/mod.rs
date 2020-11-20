@@ -130,7 +130,7 @@ impl Node for GrpcServerNode {
         // This node needs to have `top` privilege to be able to declassify data tagged with any
         // arbitrary user identities.
         // TODO(#1631): When we have a separate top for each sub-lattice, this should be changed to
-        // the top of the `user` sub-lattice.
+        // the top of the identity sub-lattice.
         NodePrivilege::top_privilege()
     }
 
@@ -435,13 +435,13 @@ impl GrpcInvocationHandler {
         // This will fail if the label has a non-empty integrity component.
         let (request_writer, request_reader) = self
             .runtime
-            .channel_create("gRPC request", &label)
+            .channel_create_with_downgrade("gRPC request", &label)
             .map_err(|err| {
                 warn!("could not create gRPC request channel: {:?}", err);
             })?;
         let (response_writer, response_reader) = self
             .runtime
-            .channel_create("gRPC response", &Label::public_untrusted())
+            .channel_create_with_downgrade("gRPC response", &Label::public_untrusted())
             .map_err(|err| {
                 warn!("could not create gRPC response channel: {:?}", err);
             })?;
@@ -459,7 +459,7 @@ impl GrpcInvocationHandler {
         Sender::<GrpcRequest>::new(WriteHandle {
             handle: request_writer,
         })
-        .send(request, &self.runtime)
+        .send_with_downgrade(request, &self.runtime)
         .map_err(|error| {
             error!(
                 "Couldn't write message to the gRPC request channel: {:?}",
@@ -469,7 +469,7 @@ impl GrpcInvocationHandler {
 
         // Send an invocation message (with attached handles) to the Oak Node.
         self.invocation_channel
-            .send(invocation, &self.runtime)
+            .send_with_downgrade(invocation, &self.runtime)
             .map_err(|error| {
                 error!("Couldn't write gRPC invocation message: {:?}", error);
             })?;

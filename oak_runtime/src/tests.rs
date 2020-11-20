@@ -316,7 +316,7 @@ fn create_channel_with_more_confidential_label_from_public_untrusted_node_ok() {
 /// - reads from the newly created channel and succeeds (different from previous test case, thanks
 ///   to the newly added privilege)
 #[test]
-fn create_channel_with_more_confidential_label_from_public_node_with_privilege_ok() {
+fn create_channel_with_more_confidential_label_from_public_node_with_downgrade_ok() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let initial_label = Label::public_untrusted();
     let more_confidential_label = Label {
@@ -348,7 +348,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_privilege_o
 
             {
                 // Reading from a more confidential Channel is allowed because of the privilege.
-                let result = runtime.channel_read(read_handle);
+                let result = runtime.channel_read_with_downgrade(read_handle);
                 assert_eq!(Ok(Some(message)), result);
             }
 
@@ -393,7 +393,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_top_privile
 
             {
                 // Reading from a more confidential Channel is allowed because of the privilege.
-                let result = runtime.channel_read(read_handle);
+                let result = runtime.channel_read_with_downgrade(read_handle);
                 assert_eq!(Ok(Some(message)), result);
             }
 
@@ -403,7 +403,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_top_privile
 }
 
 #[test]
-fn create_channel_with_more_confidential_label_from_non_public_node_with_privilege_err() {
+fn create_channel_with_more_confidential_label_from_non_public_node_with_downgrade_err() {
     let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
     let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
     let initial_label = Label {

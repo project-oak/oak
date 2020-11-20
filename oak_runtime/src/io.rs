@@ -35,14 +35,12 @@ pub trait ReceiverExt<T> {
 }
 
 impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
-    /// Close the underlying channel handle.
     fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError> {
         runtime
             .channel_close(self.handle.handle)
             .map_err(|error| error.into())
     }
 
-    /// Waits, reads and decodes a message from the [`Receiver::handle`].
     fn receive(&self, runtime: &RuntimeProxy) -> Result<T, OakError> {
         let read_status = runtime.wait_on_channels(&[self.handle.handle])?;
 
@@ -68,7 +66,6 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
         }
     }
 
-    /// Gets the label associated with this receiver.
     fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError> {
         runtime
             .get_channel_label(self.handle.handle)
@@ -84,26 +81,32 @@ pub trait SenderExt<T> {
     /// Encodes and sends a message to the [`Sender::handle`].
     fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError>;
 
+    /// Encodes and sends a message to the [`Sender::handle`] using the current Node's privilege.
+    fn send_with_downgrade(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError>;
+
     /// Gets the label associated with this sender.
     fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError>;
 }
 
 impl<T: Encodable> SenderExt<T> for Sender<T> {
-    /// Close the underlying channel handle.
     fn close(self, runtime: &RuntimeProxy) -> Result<(), OakError> {
         runtime
             .channel_close(self.handle.handle)
             .map_err(|error| error.into())
     }
 
-    /// Encodes and sends a message to the [`Sender::handle`].
     fn send(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError> {
         runtime
             .channel_write(self.handle.handle, message.encode()?)
             .map_err(|error| error.into())
     }
 
-    /// Gets the label associated with this sender.
+    fn send_with_downgrade(&self, message: T, runtime: &RuntimeProxy) -> Result<(), OakError> {
+        runtime
+            .channel_write_with_downgrade(self.handle.handle, message.encode()?)
+            .map_err(|error| error.into())
+    }
+
     fn label(&self, runtime: &RuntimeProxy) -> Result<Label, OakError> {
         runtime
             .get_channel_label(self.handle.handle)

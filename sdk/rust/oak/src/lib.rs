@@ -224,6 +224,26 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Resul
     result_from_status(status as i32, ())
 }
 
+/// The same as [`channel_write`](#method.channel_write), but also applies the current Node's
+/// downgrade privilege when checking IFC restrictions.
+pub fn channel_write_with_downgrade(
+    half: WriteHandle,
+    buf: &[u8],
+    handles: &[Handle],
+) -> Result<(), OakStatus> {
+    let handle_buf = crate::handle::pack(handles);
+    let status = unsafe {
+        oak_abi::channel_write_with_downgrade(
+            half.handle,
+            buf.as_ptr(),
+            buf.len(),
+            handle_buf.as_ptr(),
+            handles.len() as u32, // Number of handles, not bytes
+        )
+    };
+    result_from_status(status as i32, ())
+}
+
 /// Create a new unidirectional channel.
 ///
 /// The provided label must be equal or more restrictive than the label of the calling node, i.e.
@@ -242,6 +262,33 @@ pub fn channel_create(name: &str, label: &Label) -> Result<(WriteHandle, ReadHan
     let name_bytes = name.as_bytes();
     let status = unsafe {
         oak_abi::channel_create(
+            &mut write.handle as *mut u64,
+            &mut read.handle as *mut u64,
+            name_bytes.as_ptr(),
+            name_bytes.len(),
+            label_bytes.as_ptr(),
+            label_bytes.len(),
+        )
+    };
+    result_from_status(status as i32, (write, read))
+}
+
+/// The same as [`channel_create`](#method.channel_create), but also applies the current Node's
+/// downgrade privilege when checking IFC restrictions.
+pub fn channel_create_with_downgrade(
+    name: &str,
+    label: &Label,
+) -> Result<(WriteHandle, ReadHandle), OakStatus> {
+    let mut write = WriteHandle {
+        handle: crate::handle::invalid(),
+    };
+    let mut read = ReadHandle {
+        handle: crate::handle::invalid(),
+    };
+    let label_bytes = label.serialize();
+    let name_bytes = name.as_bytes();
+    let status = unsafe {
+        oak_abi::channel_create_with_downgrade(
             &mut write.handle as *mut u64,
             &mut read.handle as *mut u64,
             name_bytes.as_ptr(),
@@ -282,6 +329,35 @@ pub fn node_create(
     })?;
     let status = unsafe {
         oak_abi::node_create(
+            name_bytes.as_ptr(),
+            name_bytes.len(),
+            config_bytes.as_ptr(),
+            config_bytes.len(),
+            label_bytes.as_ptr(),
+            label_bytes.len(),
+            half.handle,
+        )
+    };
+    result_from_status(status as i32, ())
+}
+
+/// The same as [`node_create`](#method.node_create), but also applies the current Node's downgrade
+/// privilege when checking IFC restrictions.
+pub fn node_create_with_downgrade(
+    name: &str,
+    config: &NodeConfiguration,
+    label: &Label,
+    half: ReadHandle,
+) -> Result<(), OakStatus> {
+    let name_bytes = name.as_bytes();
+    let label_bytes = label.serialize();
+    let mut config_bytes = Vec::new();
+    config.encode(&mut config_bytes).map_err(|err| {
+        warn!("Could not encode node configuration: {:?}", err);
+        OakStatus::ErrInvalidArgs
+    })?;
+    let status = unsafe {
+        oak_abi::node_create_with_downgrade(
             name_bytes.as_ptr(),
             name_bytes.len(),
             config_bytes.as_ptr(),
