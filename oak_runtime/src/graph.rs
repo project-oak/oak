@@ -79,7 +79,7 @@ impl Runtime {
                     &mut s,
                     r###"    {} [label="{}" URL="{}"]"###,
                     node_id.dot_id(),
-                    node_info.name,
+                    node_info.get_debug_id(*node_id),
                     node_id.html_path(),
                 )
                 .unwrap();
@@ -131,7 +131,7 @@ impl Runtime {
                             &mut s,
                             r###"    {} [label="{}"]"###,
                             half.dot_id(),
-                            half.get_channel_name(),
+                            half.get_channel_debug_id(),
                         )
                         .unwrap();
                     }
@@ -286,7 +286,7 @@ impl Runtime {
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos.get(&node_id)?;
         let mut s = String::new();
-        write!(&mut s, "<h2>{}</h2>", node_info.name).unwrap();
+        write!(&mut s, "<h2>{}</h2>", node_info.get_debug_id(node_id)).unwrap();
         if let Some(node_stopper) = &node_info.node_stopper {
             write!(
                 &mut s,
@@ -323,7 +323,7 @@ impl Runtime {
             &mut s,
             r###"<h2><a href="{}">Node {}</a> Handle {}</h2>"###,
             node_id.html_path(),
-            node_info.name,
+            node_info.get_debug_id(node_id),
             handle,
         )
         .unwrap();
