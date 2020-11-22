@@ -16,50 +16,45 @@
 
 'use strict';
 
-// TODO(#1492): Generate an ECDSA key pair, and use the private key for authentication and the
-// public key as Oak label.
-//
-// See https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/sign
+const GREEN_ICON_PATH = './icon-green.png';
+const RED_ICON_PATH = './icon-red.png';
 
-// Ids of tabs that have entered Oak mode.
-const enabledTabs = new Set();
+const isUsingDesiredCspPerTab = new Map();
 
-// Intercept outgoing requests, and block them if they are coming from a tab that has entered Oak
-// mode.
-//
-// TODO(#1492): This only intercepts new WebSocket connections, but not individual messages on
-// previously established connections. e.g. https://www.websocket.org/echo.html.
-//
-// TODO(#1492): This does not catch cases in which a tab opens another tab via JavaScript, e.g.
-// `window.open('https://google.com/?q=123');`.
-chrome.webRequest.onBeforeRequest.addListener(
-  (details) => {
-    const tabId = details.tabId;
-    const oakMode = enabledTabs.has(tabId);
-    console.log(
-      'request from tab ' + tabId + ': ' + (oakMode ? 'blocked' : 'allowed')
-    );
-    // For now, we just cancel all outgoing requests once a tab has entered Oak mode, which is not
-    // particularly meaningful (and in fact quite annoying, since it is irreversible). But this serves
-    // as a proof of concepts that we can intercept requests and block them with arbitrary logic.
-    //
-    // TODO(#1492): Instead of just cancelling all requests, we should allow Oak requests through,
-    // and attach authentication credentials and labels to them. For this, we need to determine
-    // which ones are legitimate Oak requests though.
-    return { cancel: oakMode };
+function setIconForTab(tabId) {
+  const isUsingDesiredCsp = isUsingDesiredCspPerTab.get(tabId);
+
+  chrome.browserAction.setIcon({
+    path: isUsingDesiredCsp ? GREEN_ICON_PATH : RED_ICON_PATH,
+    tabId,
+  });
+}
+
+chrome.tabs.onUpdated.addListener(setIconForTab);
+chrome.tabs.onRemoved.addListener(isUsingDesiredCspPerTab.delete);
+
+function requestProcessor({ responseHeaders, tabId }) {
+  const cspHeader = responseHeaders.find(
+    (header) => header.name.toLowerCase() === 'content-security-policy'
+  );
+
+  // TODO(#1492): Parse the CSP to check whether it is as strict or stricter
+  // than the minimum CSP, instead of just checking if the string matches.
+  const isUsingDesiredCsp =
+    cspHeader !== undefined &&
+    cspHeader.value ===
+      "default-src 'none'; sandbox allow-scripts; script-src 'unsafe-inline'; style-src 'unsafe-inline';";
+
+  isUsingDesiredCspPerTab.set(tabId, isUsingDesiredCsp);
+
+  setIconForTab(tabId);
+}
+
+chrome.webRequest.onHeadersReceived.addListener(
+  requestProcessor,
+  {
+    urls: ['<all_urls>'],
+    types: ['main_frame'],
   },
-  // filters
-  { urls: ['<all_urls>'] },
-  // extraInfoSpec
-  ['blocking']
+  ['responseHeaders']
 );
-
-// Listen for messages from `content.js` that signal whether to enable Oak mode for a specific tab.
-chrome.runtime.onMessage.addListener((message, sender) => {
-  console.log('message received', message, sender);
-  if (message == 'oak_enter') {
-    const tabId = sender.tab.id;
-    console.log('entering Oak mode for tab ' + tabId);
-    enabledTabs.add(tabId);
-  }
-});

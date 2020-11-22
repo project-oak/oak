@@ -3,32 +3,36 @@
 The Oak Chrome Extension is a proof of concept to show how Oak may be used as
 part of web applications.
 
-A regular web page may at any point enter Oak private mode, which means that
-from that point onwards it will be able to communicate exclusively with an Oak
-application that can enforce that any data it receives is kept private for the
-current session. This is similar to "incognito mode" but for the server-side
-parts of an application.
+At its current state, the extension detects a website can leak information
+entered into it to outside servers. For example it can ensure that a website
+performing base64 encoding does so locally only, and does not leak the entered
+information.
 
-A web page enters Oak private mode by invoking the following Javascript code:
+This enforcement happens via the
+[Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
+of
+`sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'`.
+It prevents network calls, initiating navigation other pages.
 
-```javascript
-window.postMessage('oak_enter');
-```
+Depending on whether a given website complies with this CSP or not, the
+extension will show either a red or green icon.
 
-This is an irreversible process: at this point, the Oak extension takes full
-control of all the communication initiated by that particular tab, blocks any
-non-Oak requests (including any static assets, which the application should take
-care to load before entering Oak mode), attaches an appropriate label to any Oak
-requests, and authenticates against a remote Oak application.
+<img src="icon-red.png" alt="drawing" width="32" height="32"/>
 
-Note that there is no way of getting out of Oak mode for a tab; if there were,
-it may be used to leak potentially confidential data from the current tab. The
-only way out of Oak mode is to manually close the tab, and then create a new
-one. Again, this is similar to how it is not possible to take a Chrome incognito
-tab and turn it back into a regular tab.
+An example of page that does not impose this CSP and will show a red icon would
+be [https://www.base64encode.org](https://www.base64encode.org/). In fact, it
+sends the data that is entered to an external server.
 
-Note: for now, it seems that closing a tab and then re-opening the last closed
-tab actually re-creates a tab with the same URL but outside of Oak mode.
+<img src="icon-green.png" alt="drawing" width="32" height="32"/>
+
+An example of page that does impose this CSP, is considered safe, and therefore
+will show a green icon would be
+[https://csp-locked-client-side-base64.web.app](https://csp-locked-client-side-base64.web.app).
+It performs all operations on the device of the user.
+
+In the future, this extension can be extended to allow users to apply this CSP
+to any website (potentially breaking it in the process), or permit communication
+with trusted Oak servers.
 
 ## Installation
 
