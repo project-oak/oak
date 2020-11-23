@@ -80,13 +80,6 @@ Definition node_low_proj_idempotent := @labeled_low_proj_idempotent node.
 Definition chan_low_proj_idempotent := @labeled_low_proj_idempotent channel.
 Definition event_low_proj_idempotent := @labeled_low_proj_idempotent event.
 
-(*
-Theorem state_low_proj_idempotent: forall ell, idempotent (state_low_proj ell).
-Proof.
-    (* this one is not used and looks like it needs FE to me *)
-Admitted.
-*)
-
 (* 
 Note that this theorem is not true for the definition where labels are
 partially secret
@@ -379,31 +372,4 @@ Proof.
     unfold low_proj in *. eauto.
 Qed.
 
-(*
-Theorem new_secret_chan_unobs: forall ell ell' s h ,
-    ~( ell' <<L ell) ->
-    fresh_han s h ->
-    state_low_eq ell s (state_upd_chan_labeled h 
-            {| obj := new_chan; lbl := ell'|} s).
-Proof.
-    cbv [state_low_eq state_low_proj fresh_han new_chan]. intros.
-    eapply state_low_eq_parts; [cbv [state_upd_chan_labeled]; reflexivity | ].
-    eapply chan_state_fe.
-    intros. simpl. cbv [low_eq]. destruct s. cbv [State.chans] in *.
-    unfold low_proj.
-    destruct (dec_eq_h h h0). 
-    - rewrite <- e. rewrite H0.
-    replace 
-        ((chans .[ h <- {| obj := Some {| ms := [] |}; lbl := ell' |}]).[? h])
-        with
-        ({| obj := Some {| ms := [] |}; lbl := ell' |}) by (symmetry; eapply upd_eq).
-    destruct (top <<? ell); destruct (ell' <<? ell); (contradiction || reflexivity).
-    -  replace 
-        ( (chans .[ h <- {| obj := Some {| ms := [] |}; lbl := ell' |}]).[? h0])
-        with
-        (chans.[? h0]).
-        reflexivity. symmetry. apply upd_neq; auto. 
-Qed.
-*)
-  
 End unobservable.

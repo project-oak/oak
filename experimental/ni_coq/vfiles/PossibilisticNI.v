@@ -99,6 +99,7 @@ Proof.
             (node_get_hans n0 msg0) ltac:(eauto)).
         eapply (state_upd_chan_unobs _ _ _ (chan_pop ch)
             ltac:(eauto)).
+        Unshelve. subst. eauto.
     - (* CreateChannel *)
         (* there are no unobservable channel creations, these only happen
         from public *)
@@ -111,13 +112,7 @@ Proof.
         pose proof (bot_is_bot ell).
         rewrite H4 in H2.
         contradiction.
-    (* I get this situation where:
-        doing - gives me a 'no more goals error'
-        QED gives me a "you still have goals" error
-    I think this means coq's unsound type system has got me into
-    trouble with bad existential variables. Or is this something else?
-    *)
-Admitted.
+Qed.
 
 Theorem low_eq_to_unobs {A: Type}: forall ell (x1 x2: @labeled A),
     low_eq ell x1 x2 ->
