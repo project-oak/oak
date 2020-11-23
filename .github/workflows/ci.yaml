@@ -1,0 +1,52 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  runner:
+    runs-on: ubuntu-latest
+    # We use the same job template, but parametrize the actual command to be passed to the runner
+    # binary using the matrix strategy, so that we get the commands running in parallel.
+    strategy:
+      fail-fast: false
+      matrix:
+        cmd:
+          - check-format
+          - run-cargo-deny
+          - run-cargo-udeps
+          - build-server --server-variant=base
+          - build-server --server-variant=logless
+          - run-tests
+          - run-tests-tsan
+          - run-examples --application-variant=rust
+          - run-examples --application-variant=cpp
+          - run-examples --application-variant=rust --example-name=hello_world
+            --build-docker
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v2
+
+      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
+      - name: Free disk space
+        run: |
+          df --human-readable
+          sudo swapoff --all
+          sudo rm --force /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls --all --quiet)
+          df --human-readable
+
+      # Build Docker image, caching from the latest version from the remote repository.
+      - name: Docker build
+        timeout-minutes: 30
+        run: |
+          docker pull gcr.io/oak-ci/oak:latest
+          docker build --pull --cache-from=gcr.io/oak-ci/oak:latest --tag=gcr.io/oak-ci/oak:latest .
+
+      - name: Run command
+        run: ./scripts/docker_run ./scripts/runner ${{ matrix.cmd }}
