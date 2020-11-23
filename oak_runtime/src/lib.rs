@@ -1268,11 +1268,18 @@ impl Runtime {
             .node_infos
             .write()
             .expect("could not acquire lock on node_infos");
-        let mut node_info = node_infos
-            .get_mut(&node_id)
-            .expect("node ID not in node_infos");
-        assert!(node_info.node_stopper.is_none());
-        node_info.node_stopper = Some(node_stopper);
+        match node_infos.get_mut(&node_id) {
+            Some(node_info) => {
+                assert!(node_info.node_stopper.is_none());
+                node_info.node_stopper = Some(node_stopper);
+            }
+            None => {
+                // If the node thread terminated before this method is invoked, its NodeInfo entry
+                // may have already been deleted, in which case we just log a warning and continue.
+                // See https://github.com/project-oak/oak/issues/1762.
+                warn!("No NodeInfo found for node {:?}", node_id);
+            }
+        }
     }
 
     /// Create a Node within the [`Runtime`] with the specified name and based on the provided
