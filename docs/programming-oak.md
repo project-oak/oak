@@ -656,6 +656,11 @@ TODO: describe use of storage
 TODO: describe use of gRPC client pseudo-Node to connect to external gRPC
 services.
 
+## Using External HTTP Services
+
+TODO: describe use of HTTP client pseudo-Node to connect to external HTTP
+services.
+
 ## Testing
 
 > "Beware of bugs in the above code; I have only proved it correct, not tried

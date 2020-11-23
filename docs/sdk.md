@@ -103,12 +103,13 @@ method for each request.
 
 The [`oak::http`](https://project-oak.github.io/oak/sdk/doc/oak/http/index.html)
 module holds functionality that is helpful for interacting with the outside
-world over HTTP, via an explicitly created
-[HTTP server pseudo-Node](concepts.md#pseudo-nodes).
+world over HTTP/HTTPS, via an explicitly created
+[HTTP server pseudo-Node](concepts.md#pseudo-nodes), or via an explicitly
+created HTTP client pseudo-Node.
 
 An Oak Node that acts as an HTTP server is used with the
 [`oak::run_command_loop()`](https://project-oak.github.io/oak/sdk/doc/oak/fn.run_command_loop.html)
-function to services HTTP requests in a loop, calling the
+function to serve HTTP requests in a loop, calling the
 [`CommandHandler::handle_command()`](https://project-oak.github.io/oak/sdk/doc/oak/trait.CommandHandler.html#tymethod.handle_command)
 method for each request.
 

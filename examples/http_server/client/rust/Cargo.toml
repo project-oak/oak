@@ -9,6 +9,7 @@ license = "Apache-2.0"
 anyhow = "*"
 base64 = "*"
 env_logger = "*"
+http = "*"
 hyper = "*"
 hyper-rustls = { version = "*", default-features = false, features = [
   "webpki-tokio"

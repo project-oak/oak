@@ -61,6 +61,7 @@ const ADDITIONAL_TEST_FAIL_SERVER_ADDR: &str = "[::]:8085";
 
 const GRPC_CLIENT_ADDRESS: &str = "https://localhost:7878";
 const STORAGE_PROXY_ADDRESS: &str = "https://localhost:7867";
+const HTTP_CLIENT_ADDRESS: &str = "https://localhost:7856";
 
 struct FrontendNode {
     backend_out: Vec<oak::WriteHandle>,
@@ -100,8 +101,8 @@ impl FrontendNode {
         {
             // Create a new node to handle HTTP requests
             info!("Starting HTTP server pseudo-node on port {}.", HTTP_ADDR);
-            let http_channel =
-                oak::http::init(HTTP_ADDR).expect("could not create HTTP server pseudo-Node!");
+            let http_channel = oak::http::server::init(HTTP_ADDR)
+                .expect("could not create HTTP server pseudo-Node!");
             oak::node_create(
                 "http_oak_main",
                 &oak::node_config::wasm(FRONTEND_MODULE_NAME, "http_oak_main"),
@@ -427,6 +428,13 @@ impl OakAbiTestService for FrontendNode {
             "GrpcClientPseudoNodePrivilege",
             (
                 Self::test_grpc_client_pseudo_node_privilege,
+                Count::Unchanged,
+            ),
+        );
+        tests.insert(
+            "HttpClientPseudoNodePrivilege",
+            (
+                Self::test_http_client_pseudo_node_privilege,
                 Count::Unchanged,
             ),
         );
@@ -2388,7 +2396,7 @@ impl FrontendNode {
 
     fn test_http_server_create(&mut self) -> TestResult {
         // Create an HTTP server pseudo-Node.
-        let result = oak::http::init(ADDITIONAL_TEST_HTTP_SERVER_ADDR);
+        let result = oak::http::server::init(ADDITIONAL_TEST_HTTP_SERVER_ADDR);
         expect_matches!(result, Ok(_));
         let invocation_receiver = result.unwrap();
         // Close the only read-handle for the invocation handle, which should
@@ -2402,7 +2410,7 @@ impl FrontendNode {
         // Attempt to create an HTTP server with an invalid local port.
         expect_eq!(
             Some(OakStatus::ErrInvalidArgs),
-            oak::http::init("[::]:1001").err()
+            oak::http::server::init("[::]:1001").err()
         );
         Ok(())
     }
@@ -2411,14 +2419,14 @@ impl FrontendNode {
         // Attempt to create an HTTP server with an invalid local address.
         expect_eq!(
             Some(OakStatus::ErrInvalidArgs),
-            oak::http::init("Platform 9 3/4").err()
+            oak::http::server::init("Platform 9 3/4").err()
         );
         Ok(())
     }
 
-    // Under the covers, the oak::http::init() helper performs several steps. Test various failure
-    // conditions for each of those steps. We can't really check any failures, but hopefully nothing
-    // crashes...
+    // Under the covers, the oak::http::server::init() helper performs several steps. Test various
+    // failure conditions for each of those steps. We can't really check any failures, but
+    // hopefully nothing crashes...
     fn test_http_server_fail_no_handle(&mut self) -> TestResult {
         let config = oak::node_config::http_server(ADDITIONAL_TEST_FAIL_SERVER_ADDR);
 
@@ -2576,6 +2584,50 @@ impl FrontendNode {
             expect_eq!(
                 Err(OakStatus::ErrPermissionDenied),
                 oak::node_create("grpc_client", &config, &label, rh)
+            );
+            expect_eq!(Ok(()), oak::channel_close(rh.handle));
+            expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        }
+        Ok(())
+    }
+
+    fn test_http_client_pseudo_node_privilege(&mut self) -> TestResult {
+        // Public HTTP client pseudo node can be created with empty authority, and a public label.
+        {
+            let label = Label::public_untrusted();
+            let config = oak::node_config::http_client("");
+            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            expect_eq!(Ok(()), oak::node_create("http_client", &config, &label, rh));
+            expect_eq!(Ok(()), oak::channel_close(rh.handle));
+            expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        }
+
+        let uri = HTTP_CLIENT_ADDRESS.parse::<Uri>().unwrap();
+        let authority = uri.authority().unwrap().as_str();
+
+        // HTTP client pseudo node can be created with TLS endpoint confidentiality tag matching its
+        // URI authority.
+        {
+            let label =
+                oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(authority));
+            let config = oak::node_config::http_client(authority);
+            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            expect_eq!(Ok(()), oak::node_create("http_client", &config, &label, rh));
+            expect_eq!(Ok(()), oak::channel_close(rh.handle));
+            expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        }
+
+        // HTTP client pseudo node can not be created with non-matching TLS endpoint
+        // confidentiality tag.
+        {
+            let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
+                "google.com",
+            ));
+            let config = oak::node_config::http_client(authority);
+            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            expect_eq!(
+                Err(OakStatus::ErrPermissionDenied),
+                oak::node_create("http_client", &config, &label, rh)
             );
             expect_eq!(Ok(()), oak::channel_close(rh.handle));
             expect_eq!(Ok(()), oak::channel_close(wh.handle));

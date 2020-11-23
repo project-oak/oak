@@ -15,7 +15,7 @@
 //
 
 use crate::proto::oak::encap::{HeaderMap, HeaderValue, HttpRequest, HttpResponse};
-use http::{Request, Response};
+use http::{Request, Response, StatusCode};
 use log::warn;
 use maplit::hashmap;
 use oak_abi::OakStatus;
@@ -27,6 +27,27 @@ impl From<&Response<Vec<u8>>> for HttpResponse {
             status: response.status().as_u16() as i32,
             headers: Some(HeaderMap::from(response.headers().to_owned())),
         }
+    }
+}
+
+impl std::convert::TryFrom<HttpResponse> for Response<Vec<u8>> {
+    type Error = OakStatus;
+    fn try_from(response: HttpResponse) -> Result<Self, Self::Error> {
+        let mut builder = Response::builder().status(
+            StatusCode::from_u16(response.status as u16).map_err(|err| {
+                warn!("Could not map status code: {}", err);
+                OakStatus::ErrInternal
+            })?,
+        );
+        if let Some(headers) = response.headers {
+            for (header_name, header_value) in headers.into_iter() {
+                builder = builder.header(header_name, header_value);
+            }
+        }
+        builder.body(response.body).map_err(|err| {
+            warn!("Could not create the response: {}", err);
+            OakStatus::ErrInternal
+        })
     }
 }
 
@@ -45,6 +66,22 @@ impl std::convert::TryFrom<HttpRequest> for Request<Vec<u8>> {
             warn!("Could not create request: {}", err);
             OakStatus::ErrInternal
         })
+    }
+}
+
+impl From<Request<Vec<u8>>> for HttpRequest {
+    fn from(req: Request<Vec<u8>>) -> HttpRequest {
+        let uri = req.uri().to_string();
+        let method = req.method().as_str().to_string();
+        let headers = Some(HeaderMap::from(req.headers().to_owned()));
+        let body = req.into_body();
+
+        HttpRequest {
+            uri,
+            method,
+            body,
+            headers,
+        }
     }
 }
 
