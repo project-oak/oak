@@ -322,6 +322,28 @@ represented by a message containing two Channels handles:
     connection itself; this represents the actual authority of the caller.
   - an empty integrity component.
 
+### HTTP and user labels
+
+Similar to gRPC requests, each incoming HTTP request must have a label
+specifying the confidentiality guarantees that the caller wants to impose on the
+request message. The label is either provided as a JSON formatted header named
+`oak-label` or a [protobuf message](/oak_abi/proto/label.proto) in a header
+named `oak-label-bin`. JSON formatted labels must conform to the
+[canonical encoding of Proto3 to JSON](https://developers.google.com/protocol-buffers/docs/proto3#json).
+
+Internally, each incoming HTTP invocation is represented by a message containing
+two Channel handles:
+
+- a "request receiver" read handle to a Channel whose label has a
+  confidentiality component explicitly set to the confidentiality component of
+  the label provided as a header (i.e., `oak-label` or `oak-label-bin`) in the
+  HTTP request. This represents the confidentiality guarantees that the caller
+  wants to impose on the request message.
+
+- a "response sender" write handle to a Channel. To avoid any accidental data
+  leaks, the label of the Channel is set to have a confidentiality component set
+  based on the identity of the user, and an empty integrity component.
+
 ### Signature labels
 
 Oak Wasm modules can be signed using [Ed25519](https://ed25519.cr.yp.to/)
