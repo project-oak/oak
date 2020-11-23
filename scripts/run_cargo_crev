@@ -14,6 +14,10 @@ readonly CREV_REPOSITORIES=(
   https://github.com/oherrala/crev-proofs
 )
 
+# For now use the primary crev ID from https://github.com/conradgrobler/crev-proofs as the root ID
+# for the trust hierachy.
+readonly ROOT_ID='wsciW9LusJ8gwJSJmopR7SSuCOHupklIy-64ABXXysU'
+
 for repository in "${CREV_REPOSITORIES[@]}"; do
   cargo crev repo fetch url "${repository}"
 done
@@ -24,5 +28,5 @@ cargo crev repo fetch all
 (
   cd ./oak_loader
   # Ignore status code from the verify command.
-  cargo crev crate verify --show-all || true
+  cargo crev crate verify --show-all --for-id "${ROOT_ID}" || true
 )
