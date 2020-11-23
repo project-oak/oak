@@ -125,6 +125,8 @@ Proof.
     inversion H. unfold not. intros. congruence.
 Qed.
 
+
+
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
     (exists s2' e2,
@@ -237,6 +239,26 @@ Proof.
             congruence.
 Qed.
 
+Theorem flows_uncons_chan_state_proj: forall ell s han ch,
+    lbl (chans (state_low_proj ell s)).[? han] <<L ell ->
+    obj (chans (state_low_proj ell s)).[? han] = Some ch ->
+    obj (chans s).[? han] = Some ch.
+Proof.
+    autounfold with loweq. autounfold with structs. simpl.
+    intros. destruct_match. destruct (lbl <<? ell);
+    (eauto || contradiction).
+Qed.
+
+Theorem state_proj_preserves_chan_lbl: forall ell s han,
+    lbl (chans (state_low_proj ell s)).[? han] =
+    lbl (chans s).[? han].
+Proof.
+    destruct s. autounfold with loweq. 
+    simpl. autounfold with structs.
+    intros. destruct_match. 
+    destruct (lbl <<? ell); reflexivity.
+Qed.
+
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
     (step_system_ev (state_low_proj ell s) s1' e1) ->
     (exists s2' e2,
@@ -274,21 +296,26 @@ Proof.
                   eauto using invert_chans_state_low_proj_flowsto. }
                 { crush; subst_lets; eauto with unwind. }
                 { crush. congruence. }
-            + (* ReadChannel *) admit.
+            + (* ReadChannle *)
+                remember (s_set_call (state_upd_chan han (chan_pop ch)
+                   (state_upd_node id (node_get_hans n0 msg0) s)) id c') as s2''.
+                eexists s2'', (lbl _ <--- msg).
+                split; [ | split].
+                subst_lets.
+                {
+                    crush; try separate_goal; try congruence.
+                    all: rewrite <- Hproj_n' in *.
+                    all: pose proof (ord_anti _ _ ltac:(eauto) ltac:(eauto)).
+                    auto. eapply flows_uncons_chan_state_proj; eauto. congruence.
+                    erewrite state_proj_preserves_chan_lbl in *.
+                    congruence.
+                }
+                { crush; subst_lets; eauto with unwind. }
+                { crush. congruence. }
             + (* CreateChannel *) admit.
             + (* CreateNode *) admit. 
             + (* Internal *) admit.
           (*
-           + (* WriteChannel *)
-                pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
-                    as [ch2 [H_ch'_idx H_ch2_proj]].
-                remember (s_set_call (state_upd_chan han (chan_append ch2 msg)
-                    (state_upd_node id n'0 s)) id c') as s2''.
-                exists s2'', (n ---> msg); repeat split.
-                crush.
-                rewrite chan_projection_preserves_lbl in *; eauto.
-                (* s1'' =L s2'' *)
-                unfold s1'', ch', n'0. subst. eauto with unwind.
             + (* ReadChannel *)
                 pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
                     as [ch2 [H_ch'_idx H_ch2_proj]].
