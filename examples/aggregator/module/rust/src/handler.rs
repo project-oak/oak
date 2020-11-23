@@ -20,7 +20,7 @@ use crate::{
         Aggregator, AggregatorClient, AggregatorDispatcher, HandlerInit, Sample,
     },
 };
-use aggregator_common::ThresholdAggregator;
+use aggregator_common::{AggregatorResult, ThresholdAggregator};
 use log::{debug, error};
 use oak::{grpc, io::Sender};
 use std::{collections::HashMap, convert::TryFrom};
@@ -35,7 +35,7 @@ pub const SAMPLE_THRESHOLD: u64 = 5;
 /// requests corresponding to its bucket are discarded.
 pub struct Handler {
     backend_client: AggregatorClient,
-    aggregators: HashMap<String, Option<ThresholdAggregator<SparseVector>>>,
+    aggregators: HashMap<String, ThresholdAggregator<SparseVector>>,
 }
 
 impl Handler {
@@ -51,27 +51,22 @@ impl Handler {
     /// server and replace the Aggregator with `None`, so all subsequent client requests
     /// corresponding to the `bucket` will be discarded.
     fn submit(&mut self, bucket: String, svec: &SparseVector) -> Result<(), String> {
-        match self.aggregators.get_mut(&bucket) {
-            Some(entry) => match *entry {
-                Some(ref mut aggregator) => {
-                    aggregator.submit(svec);
-                    if let Some(aggregated_data) = aggregator.take() {
-                        *entry = None;
-                        if let Err(err) = self.report(bucket, aggregated_data) {
-                            // Backend report errors are not returned to the clients.
-                            error!("Backend report error: {:?}", err);
-                        }
-                    }
+        let aggregator = self
+            .aggregators
+            .entry(bucket.clone())
+            .or_insert_with(|| ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD));
+        match aggregator.submit(svec) {
+            AggregatorResult::BelowThreshold => Ok(()),
+            AggregatorResult::Exhausted => Err(format!("Exhausted bucket: {}", bucket)),
+            AggregatorResult::AggregatedValue(aggregated_data) => {
+                let aggregated_data = aggregated_data.clone();
+                if let Err(err) = self.report(bucket, aggregated_data) {
+                    // Backend report errors are not returned to the clients.
+                    error!("Backend report error: {:?}", err);
                 }
-                None => return Err(format!("Outdated bucket: {}", bucket)),
-            },
-            None => {
-                let mut aggregator = ThresholdAggregator::<SparseVector>::new(SAMPLE_THRESHOLD);
-                aggregator.submit(svec);
-                self.aggregators.insert(bucket, Some(aggregator));
+                Ok(())
             }
         }
-        Ok(())
     }
 
     /// Try to report the aggregated value to the backend server via gRPC.

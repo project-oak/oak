@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use std::mem::replace;
+#[cfg(test)]
+mod tests;
 
 /// Represents a data structure with a single associative binary operation (`combine`)
 /// and an `identity` element.
@@ -25,16 +26,28 @@ pub trait Monoid {
 }
 
 /// Generic data structure that combines data values and counts the number of provided data samples.
-/// It can also reveal an aggregated value only when there are enough data samples
-/// (more or equal to `sample_threshold`).
+/// It can also reveal an aggregated value only when there are enough data samples (equal to
+/// `sample_threshold`).
 pub struct ThresholdAggregator<T: Monoid> {
     /// Current aggregated value.
     current_value: T,
     /// Number of contributed data samples.
     sample_count: u64,
-    /// The minimal number of samples (inclusive) that must be collected before revealing the
-    /// aggregation.
+    /// The exact number of samples that must be collected before revealing the aggregation.
     sample_threshold: u64,
+    /// Whether the aggregated value has already been extracted from this instance.
+    exhausted: bool,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum AggregatorResult<T> {
+    /// The aggregator has not reached the specified sample threshold yet.
+    BelowThreshold,
+    /// The aggregator has already output an aggregated value.
+    Exhausted,
+    /// The aggregated value computed by combining the current number of samples,  equal to the
+    /// specified sample threshold.
+    AggregatedValue(T),
 }
 
 impl<T: Monoid> ThresholdAggregator<T> {
@@ -43,34 +56,31 @@ impl<T: Monoid> ThresholdAggregator<T> {
             current_value: Monoid::identity(),
             sample_count: 0,
             sample_threshold: threshold,
+            exhausted: false,
         }
     }
 
     /// Combines a new sample with the current aggregated value.
-    pub fn submit(&mut self, sample: &T) {
-        self.current_value = self.current_value.combine(sample);
-        self.sample_count += 1;
-    }
-
-    /// Returns the current aggregated value if the number of collected samples is at least
-    /// `sample_threshold`.
-    pub fn get(&self) -> Option<&T> {
-        if self.sample_count >= self.sample_threshold {
-            Some(&self.current_value)
+    ///
+    /// If the number of current samples (including the current one) is exactly `sample_threshold`,
+    /// then returns the current aggregated value and sets the status of the aggregator to
+    /// exhausted.
+    ///
+    /// If the aggregator was already exhausted, the new sample is discarded.
+    pub fn submit(&mut self, sample: &T) -> AggregatorResult<&T> {
+        if self.exhausted {
+            AggregatorResult::Exhausted
         } else {
-            None
-        }
-    }
-
-    /// If the number of current samples is at least `sample_threshold`, then returns the current
-    /// aggregated value and resets it; otherwise, returns `None` and leaves the internal state
-    /// unchanged.
-    pub fn take(&mut self) -> Option<T> {
-        if self.sample_count >= self.sample_threshold {
-            self.sample_count = 0;
-            Some(replace(&mut self.current_value, Monoid::identity()))
-        } else {
-            None
+            self.current_value = self.current_value.combine(sample);
+            self.sample_count += 1;
+            if self.sample_count >= self.sample_threshold {
+                // We set the exhausted flag, so that future calls to this method will not return
+                // additional values, since that would reveal the actual value of new samples.
+                self.exhausted = true;
+                AggregatorResult::AggregatedValue(&self.current_value)
+            } else {
+                AggregatorResult::BelowThreshold
+            }
         }
     }
 }
