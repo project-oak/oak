@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["TlsConfig","Represents TLS identity to use for HTTP server pseudo-nodes."]]});
+initSidebarItems({"struct":[["Certificate","Represents a PEM formatted certificate."],["TlsConfig","Represents TLS identity to use for HTTP server pseudo-nodes."]]});

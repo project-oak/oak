@@ -1547,6 +1547,7 @@
         <span class="ident">event</span>::<span class="ident">EventDetails</span>, <span class="ident">ChannelCreated</span>, <span class="ident">Direction</span>, <span class="ident">Event</span>, <span class="ident">HandleCreated</span>, <span class="ident">HandleDestroyed</span>,
         <span class="ident">MessageDequeued</span>, <span class="ident">MessageEnqueued</span>, <span class="ident">NodeCreated</span>, <span class="ident">NodeDestroyed</span>,
     },
+    <span class="ident">tls</span>::<span class="ident">Certificate</span>,
 };
 <span class="kw">use</span> <span class="ident">auth</span>::<span class="ident">oidc_utils</span>::<span class="ident">ClientInfo</span>;
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>::<span class="ident">SeqCst</span>};
@@ -1571,7 +1572,7 @@
     <span class="ident">thread</span>::<span class="ident">JoinHandle</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
-<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Identity</span>};
+<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Identity</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">channel</span>::{<span class="ident">ChannelHalf</span>, <span class="ident">ChannelHalfDirection</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::<span class="ident">configure_and_run</span>;
@@ -1626,7 +1627,7 @@
     <span class="doccomment">/// OpenID Connect Authentication client information.</span>
     <span class="kw">pub</span> <span class="ident">oidc_client_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ClientInfo</span><span class="op">&gt;</span>,
 
-    <span class="doccomment">/// Root TLS certificate to use for all gRPC Client Nodes.</span>
+    <span class="doccomment">/// PEM formatted root TLS certificate to use for all gRPC Client Nodes.</span>
     <span class="kw">pub</span> <span class="ident">grpc_client_root_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Certificate</span><span class="op">&gt;</span>,
 }
 
@@ -1644,9 +1645,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HttpConfiguration</span> {
     <span class="doccomment">/// TLS identity to use for all HTTP Server Nodes.</span>
     <span class="kw">pub</span> <span class="ident">tls_config</span>: <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">TlsConfig</span>,
-    <span class="doccomment">/// A non-empty vector containing the root TLS certificate, in the PEM format, to use for all</span>
-    <span class="doccomment">/// HTTP Client Nodes.</span>
-    <span class="kw">pub</span> <span class="ident">http_client_root_tls_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// PEM formatted root TLS certificate to use for all HTTP Client Nodes.</span>
+    <span class="kw">pub</span> <span class="ident">http_client_root_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Certificate</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Configuration options for secure HTTP and gRPC pseudo-Nodes.</span>

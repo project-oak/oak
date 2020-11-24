@@ -217,7 +217,6 @@
 <span id="214">214</span>
 <span id="215">215</span>
 <span id="216">216</span>
-<span id="217">217</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -373,19 +372,17 @@
                 <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signature_table</span>,
             )<span class="question-mark">?</span>)),
             <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">GrpcClientConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">grpc_configuration</span> <span class="op">=</span> <span class="self">self</span>
+                <span class="kw">let</span> <span class="ident">grpc_client_root_tls_certificate</span> <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">secure_server_configuration</span>
                     .<span class="ident">clone</span>()
                     .<span class="ident">grpc_config</span>
-                    .<span class="ident">expect</span>(<span class="string">&quot;no gRPC identity provided to Oak Runtime&quot;</span>);
+                    .<span class="ident">expect</span>(<span class="string">&quot;no gRPC identity provided to Oak Runtime&quot;</span>)
+                    .<span class="ident">grpc_client_root_tls_certificate</span>
+                    .<span class="ident">expect</span>(<span class="string">&quot;no root TLS certificate provided to Oak Runtime&quot;</span>);
                 <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">grpc</span>::<span class="ident">client</span>::<span class="ident">GrpcClientNode</span>::<span class="ident">new</span>(
                     <span class="ident">node_name</span>,
                     <span class="ident">config</span>.<span class="ident">clone</span>(),
-                    <span class="ident">grpc_configuration</span>
-                        .<span class="ident">grpc_client_root_tls_certificate</span>
-                        .<span class="ident">as_ref</span>()
-                        .<span class="ident">expect</span>(<span class="string">&quot;no gRPC client root TLS certificate provided to Oak Runtime&quot;</span>)
-                        .<span class="ident">clone</span>(),
+                    <span class="ident">grpc_client_root_tls_certificate</span>,
                 )<span class="question-mark">?</span>))
             }
             <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">RoughtimeClientConfig</span>(<span class="ident">config</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(
@@ -413,7 +410,8 @@
                     .<span class="ident">http_config</span>
                     .<span class="ident">clone</span>()
                     .<span class="ident">expect</span>(<span class="string">&quot;no HTTP configuration provided to Oak Runtime&quot;</span>)
-                    .<span class="ident">http_client_root_tls_certificate</span>;
+                    .<span class="ident">http_client_root_tls_certificate</span>
+                    .<span class="ident">expect</span>(<span class="string">&quot;no root TLS certificate provided to Oak Runtime&quot;</span>);
                 <span class="prelude-val">Ok</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">http</span>::<span class="ident">client</span>::<span class="ident">HttpClientNode</span>::<span class="ident">new</span>(
                     <span class="ident">node_name</span>,
                     <span class="ident">config</span>.<span class="ident">clone</span>(),
