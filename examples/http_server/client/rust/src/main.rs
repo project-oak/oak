@@ -72,7 +72,7 @@ async fn main() -> Result<()> {
         .uri("https://localhost:8080")
         .header(oak_abi::OAK_LABEL_HTTP_JSON_KEY, label_bytes)
         .header(
-            oak_abi::OAK_SIGNED_CHALLENGE_JSON_KEY,
+            oak_abi::OAK_SIGNED_CHALLENGE_HTTP_JSON_KEY,
             serde_json::to_string(&signature).unwrap(),
         )
         .body(hyper::Body::empty())

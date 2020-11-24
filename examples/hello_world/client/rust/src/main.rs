@@ -23,7 +23,7 @@ use anyhow::Context;
 use hello_world_grpc::proto::{hello_world_client::HelloWorldClient, HelloRequest};
 use log::info;
 use oak_abi::label::Label;
-use oak_client::{create_tls_channel, Interceptor};
+use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
 use structopt::StructOpt;
 use tonic::Request;
 #[derive(StructOpt, Clone)]
@@ -57,7 +57,8 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Couldn't create TLS channel")?;
     let label = Label::public_untrusted();
-    let interceptor = Interceptor::create(&label).context("Couldn't create gRPC interceptor")?;
+    let interceptor =
+        LabelInterceptor::create(&label).context("Couldn't create gRPC interceptor")?;
     let client = HelloWorldClient::with_interceptor(channel, interceptor);
 
     let worlds = vec!["WORLD", "MONDO", "世界", "MONDE"];

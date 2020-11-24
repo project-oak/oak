@@ -18,13 +18,9 @@
 
 use anyhow::Context;
 use http::uri::Uri;
-use oak_abi::label::Label;
-use prost::Message;
-use tonic::{
-    metadata::MetadataValue,
-    transport::{Certificate, Channel, ClientTlsConfig},
-    Request,
-};
+use tonic::transport::{Certificate, Channel, ClientTlsConfig};
+
+pub mod interceptors;
 
 /// Creates a TLS channel for connecting to Oak.
 pub async fn create_tls_channel(uri: &Uri, root_tls_certificate: &[u8]) -> anyhow::Result<Channel> {
@@ -36,39 +32,4 @@ pub async fn create_tls_channel(uri: &Uri, root_tls_certificate: &[u8]) -> anyho
         .connect()
         .await
         .context("Couldn't connect to Oak Application")
-}
-
-/// Intercepts gRPC requests and adds the same `label` as a gRPC metadata.
-// TODO(#1357): Add logic for authenticating Oak clients.
-pub struct Interceptor {
-    /// Label that is being added to all gRPC requests.
-    ///
-    /// Is stored as a `Vec<u8>` because encoding a label may fail and `Into<Interceptor>` cannot
-    /// return an error.
-    label: Vec<u8>,
-}
-
-impl Interceptor {
-    pub fn create(label: &Label) -> anyhow::Result<Self> {
-        let mut encoded_label = Vec::new();
-        label
-            .encode(&mut encoded_label)
-            .context("Error encoding label")?;
-        Ok(Self {
-            label: encoded_label,
-        })
-    }
-}
-
-impl Into<tonic::Interceptor> for Interceptor {
-    fn into(self) -> tonic::Interceptor {
-        let interceptor = move |mut request: Request<()>| {
-            request.metadata_mut().insert_bin(
-                oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
-                MetadataValue::from_bytes(self.label.as_ref()),
-            );
-            Ok(request)
-        };
-        tonic::Interceptor::new(interceptor)
-    }
 }

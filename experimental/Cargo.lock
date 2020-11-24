@@ -860,6 +860,7 @@ dependencies = [
  "hyper",
  "log",
  "oak_abi",
+ "oak_sign",
  "prost",
  "tonic",
 ]

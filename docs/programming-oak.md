@@ -458,7 +458,11 @@ async fn create_client(
         .await
         .context("Couldn't create TLS channel")?;
     let label = confidentiality_label(web_assembly_module_signature_tag(public_key));
-    let interceptor = Interceptor::create(&label).context("Couldn't create gRPC interceptor")?;
+    let key_pair = oak_sign::KeyPair::generate()?;
+    let interceptor = oak_client::interceptors::combine(
+        AuthInterceptor::create(key_pair),
+        LabelInterceptor::create(&label).context("Couldn't create gRPC interceptor")?,
+    );
     Ok(PrivateSetIntersectionClient::with_interceptor(
         channel,
         interceptor,

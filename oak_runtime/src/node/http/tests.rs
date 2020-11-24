@@ -503,7 +503,7 @@ async fn send_request(
             .uri(uri)
             .header(oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY, label_bytes.clone())
             .header(
-                oak_abi::OAK_SIGNED_CHALLENGE_PROTOBUF_KEY,
+                oak_abi::OAK_SIGNED_CHALLENGE_HTTP_PROTOBUF_KEY,
                 sig_bytes.clone(),
             )
             .body(hyper::Body::empty())
