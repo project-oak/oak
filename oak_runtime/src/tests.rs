@@ -52,12 +52,10 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
                     include_str!("../../examples/certs/local/local.pem"),
                     include_str!("../../examples/certs/local/local.key"),
                 )),
-                grpc_client_root_tls_certificate: Some(
-                    crate::config::load_certificate(&include_str!(
-                        "../../examples/certs/local/ca.pem"
-                    ))
-                    .unwrap(),
-                ),
+                grpc_client_root_tls_certificate: crate::tls::Certificate::parse(
+                    include_bytes!("../../examples/certs/local/ca.pem").to_vec(),
+                )
+                .ok(),
                 oidc_client_info: None,
             }),
             http_config: None,

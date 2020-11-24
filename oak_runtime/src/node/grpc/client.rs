@@ -75,7 +75,7 @@ impl GrpcClientNode {
     pub fn new(
         node_name: &str,
         config: GrpcClientConfiguration,
-        root_tls_certificate: Certificate,
+        root_tls_certificate_bytes: crate::tls::Certificate,
     ) -> Result<Self, ConfigurationError> {
         let uri = config.uri.parse().map_err(|error| {
             error!("Error parsing URI {}: {:?}", config.uri, error);
@@ -85,6 +85,7 @@ impl GrpcClientNode {
         // We compute the node privilege once and for all at start and just store it, since it does
         // not change throughout the node execution.
         let node_privilege = grpc_client_node_privilege(&uri);
+        let root_tls_certificate = root_tls_certificate_bytes.into();
         Ok(Self {
             node_name: node_name.to_string(),
             uri,

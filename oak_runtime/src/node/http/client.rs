@@ -96,17 +96,6 @@ fn get_privilege(authority: String) -> NodePrivilege {
     }
 }
 
-/// Checks that a non-empty TLS root certificate is provided. Returns an error if `root_ca` is
-/// empty.
-fn validate_certificate(root_ca: &[u8]) -> Result<(), ConfigurationError> {
-    if root_ca.is_empty() {
-        error!("A non-empty root TLS certificate must be provided.");
-        Err(ConfigurationError::InvalidNodeConfiguration)
-    } else {
-        Ok(())
-    }
-}
-
 #[derive(Debug)]
 enum ProcessingError {
     InvalidUri,
@@ -125,13 +114,11 @@ impl HttpClientNode {
     /// is being created. If the authority provided in the config is empty, then the node must
     /// be labelled public. In this case, the node can handle any arbitrary requests to any HTTP
     /// or HTTPS services.
-    /// In addition, a non-empty `root_ca` is always required.
     pub fn new(
         node_name: &str,
         config: HttpClientConfiguration,
-        root_ca: Vec<u8>,
+        root_ca: crate::tls::Certificate,
     ) -> Result<Self, ConfigurationError> {
-        validate_certificate(&root_ca)?;
         let http_client = create_client(root_ca);
         let node_privilege = get_privilege(config.authority.clone());
         Ok(HttpClientNode {
@@ -317,7 +304,7 @@ fn create_async_runtime() -> tokio::runtime::Runtime {
 }
 
 /// Creates a client that allows `Uri`s with either the `HTTP` or the `HTTPS` scheme.
-fn create_client(root_ca: Vec<u8>) -> HyperClient {
+fn create_client(root_ca: crate::tls::Certificate) -> HyperClient {
     // Build an HTTP connector which supports HTTPS too.
     let mut http = hyper::client::HttpConnector::new();
     // Allow the client to handle both HTTP and HTTPS requests.

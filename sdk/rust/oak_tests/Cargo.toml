@@ -15,4 +15,5 @@ oak_abi = "=0.1.0"
 oak_runtime = "=0.1.0"
 prost = "*"
 rand = { version = "*" }
+rustls = "*"
 tonic = { version = "*", features = ["tls"] }

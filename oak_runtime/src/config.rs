@@ -20,7 +20,6 @@ use crate::{io::SenderExt, Runtime, RuntimeConfiguration, RuntimeProxy};
 use log::{error, info};
 use oak_io::{handle::WriteHandle, OakError};
 use std::sync::Arc;
-use tonic::transport::Certificate;
 
 /// Configures a [`Runtime`] from the given [`RuntimeConfiguration`] and begins execution.
 ///
@@ -48,14 +47,4 @@ pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, O
     // Now that the implicit initial Node has been used to inject the
     // Application's `ConfigMap`, drop all reference to it.
     Ok(proxy.runtime)
-}
-
-/// Load a PEM encoded TLS certificate, performing (minimal) validation.
-pub fn load_certificate(certificate: &str) -> Result<Certificate, ()> {
-    let mut cursor = std::io::Cursor::new(certificate);
-    // `rustls` doesn't specify certificate parsing errors:
-    // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
-    rustls::internal::pemfile::certs(&mut cursor)?;
-
-    Ok(Certificate::from_pem(certificate))
 }

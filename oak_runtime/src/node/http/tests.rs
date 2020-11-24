@@ -377,10 +377,10 @@ fn create_runtime() -> RuntimeProxy {
         grpc_config: None,
         http_config: Some(crate::HttpConfiguration {
             tls_config,
-            http_client_root_tls_certificate: include_bytes!(
-                "../../../../examples/certs/local/ca.pem"
+            http_client_root_tls_certificate: crate::tls::Certificate::parse(
+                include_bytes!("../../../../examples/certs/local/ca.pem").to_vec(),
             )
-            .to_vec(),
+            .ok(),
         }),
     };
     let signature_table = crate::SignatureTable::default();

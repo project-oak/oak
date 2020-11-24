@@ -14,21 +14,55 @@
 // limitations under the License.
 //
 
+use rustls::{
+    internal::pemfile::{certs, rsa_private_keys},
+    NoClientAuth, ServerConfig,
+};
 use std::{
     fs::File,
     io::{self, BufReader},
     sync::Arc,
 };
-use tokio_rustls::rustls::{
-    internal::pemfile::{certs, rsa_private_keys},
-    Certificate, NoClientAuth, PrivateKey, ServerConfig,
-};
+
+/// Represents a PEM formatted certificate.
+#[derive(Clone)]
+pub struct Certificate {
+    pem: Vec<u8>,
+}
+
+impl Certificate {
+    /// Checks that the input byte vector represents a valid PEM formatted certificate. If so,
+    /// creates and returns a certificate from the bytes. Otherwise, returns an error.
+    pub fn parse(bytes: Vec<u8>) -> anyhow::Result<Certificate> {
+        let mut cursor = std::io::Cursor::new(bytes.clone());
+
+        // `rustls` doesn't specify certificate parsing errors:
+        // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
+        rustls::internal::pemfile::certs(&mut cursor).map_err(|()| {
+            anyhow::Error::msg("The certificate is not a valid PEM formatted certificate")
+        })?;
+
+        Ok(Certificate { pem: bytes })
+    }
+}
+
+impl AsRef<[u8]> for Certificate {
+    fn as_ref(&self) -> &[u8] {
+        self.pem.as_ref()
+    }
+}
+
+impl From<Certificate> for tonic::transport::Certificate {
+    fn from(certificate: Certificate) -> Self {
+        tonic::transport::Certificate::from_pem(certificate)
+    }
+}
 
 /// Represents TLS identity to use for HTTP server pseudo-nodes.
 #[derive(Default, Clone)]
 pub struct TlsConfig {
-    certs: Vec<Certificate>,
-    keys: Vec<PrivateKey>,
+    certs: Vec<rustls::Certificate>,
+    keys: Vec<rustls::PrivateKey>,
 }
 
 impl TlsConfig {
@@ -58,12 +92,12 @@ pub(crate) fn to_server_config(tls_config: TlsConfig) -> Arc<ServerConfig> {
     Arc::new(cfg)
 }
 
-fn load_certs(path: &str) -> io::Result<Vec<Certificate>> {
+fn load_certs(path: &str) -> io::Result<Vec<rustls::Certificate>> {
     certs(&mut BufReader::new(File::open(path)?))
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
 }
 
-fn load_keys(path: &str) -> io::Result<Vec<PrivateKey>> {
+fn load_keys(path: &str) -> io::Result<Vec<rustls::PrivateKey>> {
     rsa_private_keys(&mut BufReader::new(File::open(path)?))
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
 }
