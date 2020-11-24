@@ -27,7 +27,7 @@ jobs:
           git config --global user.name "GitHub Actions"
 
       # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
-      - name: free disk space
+      - name: Free disk space
         run: |
           df --human-readable
           sudo swapoff --all

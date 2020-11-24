@@ -47,6 +47,8 @@ pub enum Command {
     CheckFormat,
     RunTests,
     RunTestsTsan,
+    RunCargoDeny,
+    RunCargoUdeps,
     RunCi,
     #[structopt(about = "generate bash completion script to stdout")]
     Completion,

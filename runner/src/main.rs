@@ -91,6 +91,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::CheckFormat => check_format(),
             Command::RunCi => run_ci(),
             Command::Completion => panic!("should have been handled above"),
+            Command::RunCargoDeny => run_cargo_deny(),
+            Command::RunCargoUdeps => run_cargo_udeps(),
         };
         // TODO(#396): Add support for running individual commands via command line flags.
         let remaining_steps = steps.len();
