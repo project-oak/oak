@@ -29,7 +29,7 @@ use async_trait::async_trait;
 use futures_util::FutureExt;
 use log::{debug, info, warn};
 use oak_abi::label::Label;
-use oak_client::Interceptor;
+use oak_client::interceptors::label::LabelInterceptor;
 use tokio::sync::oneshot;
 use tonic::{
     transport::{Channel, Server},
@@ -126,7 +126,8 @@ impl NativeApplication {
             .await
             .expect("Couldn't connect to Oak Application");
         let label = Label::public_untrusted();
-        let interceptor = Interceptor::create(&label).expect("Couldn't create gRPC interceptor");
+        let interceptor =
+            LabelInterceptor::create(&label).expect("Couldn't create gRPC interceptor");
 
         TrustedDatabaseClient::with_interceptor(channel, interceptor)
     }

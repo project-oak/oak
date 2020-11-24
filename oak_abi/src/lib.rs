@@ -30,7 +30,7 @@ impl std::fmt::Display for OakStatus {
 
 impl std::error::Error for OakStatus {}
 
-/// The key used for encoded Labels in gRPC metadata.
+/// The key used for protobuf encoded [Label](crate::label::Label) in gRPC metadata.
 ///
 /// The `-bin` suffix allows sending binary data for this metadata key, see:
 ///  https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
@@ -38,17 +38,26 @@ impl std::error::Error for OakStatus {}
 /// Keep in sync with /oak/common/label.cc.
 pub const OAK_LABEL_GRPC_METADATA_KEY: &str = "x-oak-label-bin";
 
-/// The header key used for JSON formatted Labels in HTTP requests.
+/// The key used for protobuf encoded [signed authentication
+/// challenge](crate::proto::oak::identity::SignedChallenge) in gRPC metadata.
+///
+/// The `-bin` suffix allows sending binary data for this metadata key, see:
+///  https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
+pub const OAK_SIGNED_CHALLENGE_GRPC_METADATA_KEY: &str = "x-oak-signed-auth-challenge-bin";
+
+/// The HTTP header key used for JSON encoded [Label](crate::label::Label) in HTTP requests.
 pub const OAK_LABEL_HTTP_JSON_KEY: &str = "oak-label";
 
-/// The header key used for protobuf encoded Labels in HTTP requests.
+/// The HTTP header key used for protobuf encoded [Label](crate::label::Label) in HTTP requests.
 pub const OAK_LABEL_HTTP_PROTOBUF_KEY: &str = "oak-label-bin";
 
-/// The header key used for JSON formatted signed authentication challenge.
-pub const OAK_SIGNED_CHALLENGE_JSON_KEY: &str = "oak-signed-auth-challenge";
+/// The HTTP header key used for JSON encoded [signed authentication
+/// challenge](crate::proto::oak::identity::SignedChallenge).
+pub const OAK_SIGNED_CHALLENGE_HTTP_JSON_KEY: &str = "oak-signed-auth-challenge";
 
-/// The header key used for protobuf formatted signed authentication challenge.
-pub const OAK_SIGNED_CHALLENGE_PROTOBUF_KEY: &str = "oak-signed-auth-challenge-bin";
+/// The HTTP header key used for protobuf encoded [signed authentication
+/// challenge](crate::proto::oak::identity::SignedChallenge).
+pub const OAK_SIGNED_CHALLENGE_HTTP_PROTOBUF_KEY: &str = "oak-signed-auth-challenge-bin";
 
 // TODO(#1357): Remove, or move to tests, when we have a per-connection challenge string.
 pub const OAK_CHALLENGE: &str = "oak-challenge";

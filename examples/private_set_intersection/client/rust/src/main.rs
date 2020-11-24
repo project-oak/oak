@@ -21,7 +21,10 @@ use http::uri::Uri;
 use log::info;
 use maplit::hashset;
 use oak_abi::label::{confidentiality_label, web_assembly_module_signature_tag};
-use oak_client::{create_tls_channel, Interceptor};
+use oak_client::{
+    create_tls_channel,
+    interceptors::{auth::AuthInterceptor, label::LabelInterceptor},
+};
 use private_set_intersection_client::proto::{
     private_set_intersection_client::PrivateSetIntersectionClient, GetIntersectionRequest,
     SubmitSetRequest,
@@ -61,7 +64,11 @@ async fn create_client(
         .await
         .context("Couldn't create TLS channel")?;
     let label = confidentiality_label(web_assembly_module_signature_tag(public_key));
-    let interceptor = Interceptor::create(&label).context("Couldn't create gRPC interceptor")?;
+    let key_pair = oak_sign::KeyPair::generate()?;
+    let interceptor = oak_client::interceptors::combine(
+        AuthInterceptor::create(key_pair),
+        LabelInterceptor::create(&label).context("Couldn't create gRPC interceptor")?,
+    );
     Ok(PrivateSetIntersectionClient::with_interceptor(
         channel,
         interceptor,

@@ -439,12 +439,12 @@ fn get_user_identity(req: &HttpRequest) -> Result<Vec<u8>, HttpError> {
     let headers = (
         req.headers.as_ref().and_then(|map| {
             map.headers
-                .get(oak_abi::OAK_SIGNED_CHALLENGE_JSON_KEY)
+                .get(oak_abi::OAK_SIGNED_CHALLENGE_HTTP_JSON_KEY)
                 .map(|m| m.values.as_slice())
         }),
         req.headers.as_ref().and_then(|map| {
             map.headers
-                .get(oak_abi::OAK_SIGNED_CHALLENGE_PROTOBUF_KEY)
+                .get(oak_abi::OAK_SIGNED_CHALLENGE_HTTP_PROTOBUF_KEY)
                 .map(|m| m.values.as_slice())
         }),
     );
@@ -455,8 +455,8 @@ fn get_user_identity(req: &HttpRequest) -> Result<Vec<u8>, HttpError> {
         (None, None) => Ok(vec![]),
         _ => Err(HttpError::IdentityVerification(format!(
             "At most one signed-challenge must be provided via an {} or an {} header.",
-            oak_abi::OAK_SIGNED_CHALLENGE_JSON_KEY,
-            oak_abi::OAK_SIGNED_CHALLENGE_PROTOBUF_KEY
+            oak_abi::OAK_SIGNED_CHALLENGE_HTTP_JSON_KEY,
+            oak_abi::OAK_SIGNED_CHALLENGE_HTTP_PROTOBUF_KEY
         ))),
     }
 }

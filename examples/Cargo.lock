@@ -1128,6 +1128,7 @@ dependencies = [
  "hyper",
  "log",
  "oak_abi",
+ "oak_sign",
  "prost",
  "tonic",
 ]
@@ -1456,6 +1457,7 @@ dependencies = [
  "maplit",
  "oak_abi",
  "oak_client",
+ "oak_sign",
  "oak_utils",
  "pem",
  "prost",

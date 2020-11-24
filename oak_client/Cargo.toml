@@ -13,6 +13,7 @@ http = "*"
 hyper = "*"
 log = "*"
 oak_abi = { path = "../oak_abi" }
+oak_sign = { path = "../oak_sign" }
 prost = "*"
 tonic = { version = "*", features = ["tls"] }
 
