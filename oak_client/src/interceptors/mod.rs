@@ -28,11 +28,15 @@ pub trait Interceptor: Send + Sync + 'static {
     fn process(&self, request: Request<()>) -> Result<Request<()>, Status>;
 }
 
+/// This struct is created by the [`combine`] method. See its documentation for more.
 pub struct CombinedInterceptor<A: Interceptor, B: Interceptor> {
     interceptor_a: A,
     interceptor_b: B,
 }
 
+/// Combines the two provided interceptor, executing the first one, and if that succeeds then also
+/// the second one, sequentially. If the first one returns an Error response, the second one is
+/// never executed.
 pub fn combine<A: Interceptor, B: Interceptor>(
     interceptor_a: A,
     interceptor_b: B,

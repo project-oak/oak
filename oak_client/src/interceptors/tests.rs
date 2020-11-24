@@ -36,10 +36,10 @@ impl Interceptor for TestInterceptor {
 fn test_combine_different_keys() {
     let combined = super::combine(
         TestInterceptor {
-            metadata_to_append: ("foo_0", "bar_0"),
+            metadata_to_append: ("key_0", "value_0"),
         },
         TestInterceptor {
-            metadata_to_append: ("foo_1", "bar_1"),
+            metadata_to_append: ("key_1", "value_1"),
         },
     );
     let initial = tonic::Request::new(());
@@ -47,12 +47,12 @@ fn test_combine_different_keys() {
     let metadata = processed.metadata();
     assert_eq!(2, metadata.len());
     assert_eq!(
-        vec!["bar_0"],
-        metadata.get_all("foo_0").iter().collect::<Vec<_>>()
+        vec!["value_0"],
+        metadata.get_all("key_0").iter().collect::<Vec<_>>()
     );
     assert_eq!(
-        vec!["bar_1"],
-        metadata.get_all("foo_1").iter().collect::<Vec<_>>()
+        vec!["value_1"],
+        metadata.get_all("key_1").iter().collect::<Vec<_>>()
     );
 }
 
@@ -60,10 +60,10 @@ fn test_combine_different_keys() {
 fn test_combine_same_key() {
     let combined = super::combine(
         TestInterceptor {
-            metadata_to_append: ("foo", "bar_0"),
+            metadata_to_append: ("key", "value_0"),
         },
         TestInterceptor {
-            metadata_to_append: ("foo", "bar_1"),
+            metadata_to_append: ("key", "value_1"),
         },
     );
     let initial = tonic::Request::new(());
@@ -71,7 +71,7 @@ fn test_combine_same_key() {
     let metadata = processed.metadata();
     assert_eq!(2, metadata.len());
     assert_eq!(
-        vec!["bar_0", "bar_1"],
-        metadata.get_all("foo").iter().collect::<Vec<_>>()
+        vec!["value_0", "value_1"],
+        metadata.get_all("key").iter().collect::<Vec<_>>()
     );
 }
