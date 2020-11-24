@@ -1405,6 +1405,8 @@
 <span id="1402">1402</span>
 <span id="1403">1403</span>
 <span id="1404">1404</span>
+<span id="1405">1405</span>
+<span id="1406">1406</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1499,6 +1501,8 @@
             <span class="ident">Command</span>::<span class="ident">CheckFormat</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">check_format</span>(),
             <span class="ident">Command</span>::<span class="ident">RunCi</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_ci</span>(),
             <span class="ident">Command</span>::<span class="ident">Completion</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;should have been handled above&quot;</span>),
+            <span class="ident">Command</span>::<span class="ident">RunCargoDeny</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_cargo_deny</span>(),
+            <span class="ident">Command</span>::<span class="ident">RunCargoUdeps</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_cargo_udeps</span>(),
         };
         <span class="comment">// TODO(#396): Add support for running individual commands via command line flags.</span>
         <span class="kw">let</span> <span class="ident">remaining_steps</span> <span class="op">=</span> <span class="ident">steps</span>.<span class="ident">len</span>();
