@@ -193,13 +193,13 @@ Proof.
 Admitted.
 
 Theorem proj_preserves_fresh_han: forall ell s h,
-    fresh_han s h ->
+    fresh_han s h <-> 
     fresh_han (state_low_proj ell s) h.
 Proof.
 Admitted.
 
 Theorem proj_preserves_fresh_nid: forall ell s id,
-    fresh_nid s id ->
+    fresh_nid s id <->
     fresh_nid (state_low_proj ell s) id.
 Proof.
 Admitted.
