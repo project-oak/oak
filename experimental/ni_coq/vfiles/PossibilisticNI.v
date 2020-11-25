@@ -382,6 +382,26 @@ Proof.
             + (* e1 ={ell} *) assumption.
 Qed.
 
+Lemma state_low_equiv_to_proj_chan_fresh ell s1 s2 h :
+    state_low_eq ell s1 s2 ->
+    fresh_han (state_low_proj ell s2) h ->
+    fresh_han (state_low_proj ell s1) h.
+Proof.
+    unfold fresh_han, fnd, state_low_eq.
+    intros. logical_simplify. specialize (H1 h).
+    congruence.
+Qed.
+
+Lemma state_low_equiv_to_proj_node_fresh ell s1 s2 id :
+    state_low_eq ell s1 s2 ->
+    fresh_nid (state_low_proj ell s2) id ->
+    fresh_nid (state_low_proj ell s1) id.
+Proof.
+    unfold fresh_nid, fnd, state_low_eq.
+    intros. logical_simplify. specialize (H id).
+    congruence.
+Qed. 
+
 Lemma step_node_projection ell s1 s2 s3 id c :
   state_low_eq ell s1 s2 ->
   step_node id c (state_low_proj ell s2) s3 ->
@@ -395,11 +415,13 @@ Proof.
   all:eexists; split.
   all:try lazymatch goal with
       | |- step_node _ _ _ _ =>
-        econstructor; solve [eauto]
+        econstructor; solve [eauto using 
+            state_low_equiv_to_proj_chan_fresh,
+            state_low_equiv_to_proj_node_fresh]
       | _ => subst_lets
       end.
   all:eauto using state_low_eq_projection with unwind.
-Admitted.
+Qed.
 
 Lemma step_node_ev_projection ell s1 s2 s3 id c e :
   state_low_eq ell s1 s2 ->
