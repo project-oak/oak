@@ -783,6 +783,10 @@
 <span id="780">780</span>
 <span id="781">781</span>
 <span id="782">782</span>
+<span id="783">783</span>
+<span id="784">784</span>
+<span id="785">785</span>
+<span id="786">786</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1369,10 +1373,12 @@
                 .<span class="ident">spawn</span>()
                 .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;could not spawn command: {:?}: {}&quot;</span>, <span class="ident">cmd</span>, <span class="ident">err</span>));
 
-            <span class="kw">crate</span>::<span class="ident">PROCESSES</span>
-                .<span class="ident">lock</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;could not acquire processes lock&quot;</span>)
-                .<span class="ident">push</span>(<span class="ident">child</span>.<span class="ident">id</span>() <span class="kw">as</span> <span class="ident">i32</span>);
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pid</span>) <span class="op">=</span> <span class="ident">child</span>.<span class="ident">id</span>() {
+                <span class="kw">crate</span>::<span class="ident">PROCESSES</span>
+                    .<span class="ident">lock</span>()
+                    .<span class="ident">expect</span>(<span class="string">&quot;could not acquire processes lock&quot;</span>)
+                    .<span class="ident">push</span>(<span class="ident">pid</span> <span class="kw">as</span> <span class="ident">i32</span>);
+            }
 
             <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">RunningCmd</span> { <span class="ident">child</span> })
         }
@@ -1416,7 +1422,9 @@
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">Running</span> <span class="kw">for</span> <span class="ident">RunningCmd</span> {
     <span class="kw">fn</span> <span class="ident">kill</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="ident">kill_process</span>(<span class="self">self</span>.<span class="ident">child</span>.<span class="ident">id</span>() <span class="kw">as</span> <span class="ident">i32</span>);
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pid</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">child</span>.<span class="ident">id</span>() {
+            <span class="ident">kill_process</span>(<span class="ident">pid</span> <span class="kw">as</span> <span class="ident">i32</span>);
+        }
     }
 
     <span class="kw">fn</span> <span class="ident">stdout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span><span class="op">&gt;</span> {
