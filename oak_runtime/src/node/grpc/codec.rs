@@ -46,7 +46,7 @@ impl Encoder for VecEncoder {
     type Error = tonic::Status;
 
     fn encode(&mut self, item: Self::Item, dst: &mut EncodeBuf<'_>) -> Result<(), Self::Error> {
-        use bytes::BufMut;
+        use prost::bytes::BufMut;
 
         dst.put(item.as_ref());
         Ok(())
@@ -62,7 +62,7 @@ impl Decoder for VecDecoder {
     type Error = tonic::Status;
 
     fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
-        use bytes::buf::BufExt;
+        use prost::bytes::buf::BufExt;
 
         let mut item = vec![];
         copy(&mut src.reader(), &mut item).expect("Couldn't copy from buffer");

@@ -9,7 +9,8 @@ license = "Apache-2.0"
 futures-core = "*"
 futures-util = "*"
 prost = "*"
-tokio = { version = "*", features = ["fs", "macros", "sync", "stream"] }
+# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
+tokio = { version = "0.2", features = ["fs", "macros", "sync", "stream"] }
 tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]

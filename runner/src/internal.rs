@@ -583,10 +583,12 @@ impl Runnable for Cmd {
                 .spawn()
                 .unwrap_or_else(|err| panic!("could not spawn command: {:?}: {}", cmd, err));
 
-            crate::PROCESSES
-                .lock()
-                .expect("could not acquire processes lock")
-                .push(child.id() as i32);
+            if let Some(pid) = child.id() {
+                crate::PROCESSES
+                    .lock()
+                    .expect("could not acquire processes lock")
+                    .push(pid as i32);
+            }
 
             Box::new(RunningCmd { child })
         }
@@ -630,7 +632,9 @@ struct RunningCmd {
 #[async_trait]
 impl Running for RunningCmd {
     fn kill(&mut self) {
-        kill_process(self.child.id() as i32);
+        if let Some(pid) = self.child.id() {
+            kill_process(pid as i32);
+        }
     }
 
     fn stdout(&mut self) -> Box<dyn AsyncRead + Send + Unpin> {

@@ -33,8 +33,7 @@ async fn main() -> io::Result<()> {
 }
 
 async fn proxy(mut listener: TcpListener) -> io::Result<()> {
-    let mut incoming = listener.incoming();
-    while let Some(connection_in) = incoming.next().await {
+    while let Some(connection_in) = listener.next().await {
         match connection_in {
             Err(e) => error!("Accept incoming failed: {:?}", e),
             Ok(stream_in) => {
