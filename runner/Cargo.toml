@@ -21,10 +21,13 @@ serde = { version = "*", features = ["derive"] }
 structopt = "*"
 tokio = { version = "*", features = [
   "fs",
+  "io-util",
   "macros",
   "process",
+  "rt-multi-thread",
+  "signal",
+  "stream",
   "sync",
-  "stream"
 ] }
 toml = "*"
 walkdir = "*"

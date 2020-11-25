@@ -16,5 +16,6 @@ reqwest = "*"
 serde = "*"
 sha2 = "*"
 structopt = "*"
-tokio = { version = "*", features = ["macros"] }
+# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
+tokio = { version = "0.2", features = ["macros"] }
 toml = "*"
