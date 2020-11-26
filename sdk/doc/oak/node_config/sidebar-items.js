@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["grpc_client",""],["grpc_server",""],["http_server",""],["log",""],["wasm",""]]});
+initSidebarItems({"fn":[["grpc_client",""],["grpc_server",""],["http_client",""],["http_server",""],["log",""],["wasm",""]]});
