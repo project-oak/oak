@@ -18,7 +18,7 @@ use crate::{
     io::{ReceiverExt, Sender, SenderExt},
     node::Node,
     proto::oak::invocation::{HttpInvocation, HttpInvocationSender},
-    RuntimeProxy,
+    NodePrivilege, RuntimeProxy,
 };
 use log::{error, info};
 use oak_io::{
@@ -32,6 +32,7 @@ use tokio::sync::oneshot;
 use crate::node::NodeIsolation;
 use std::sync::mpsc;
 
+use crate::node::http::util::Pipe;
 use maplit::hashmap;
 use oak_abi::{
     label::{confidentiality_label, public_key_identity_tag, tls_endpoint_tag, Label},
@@ -539,7 +540,8 @@ fn test_https_client_can_handle_https_requests_to_an_external_service() {
     // channel. A handle to the read half of the channel is returned. The Oak node will use it
     // to fetch the write handle to an invocation channel for sending the invocations to the
     // HTTP client pseudo-node.
-    let oak_node_init_receiver = create_client_node(&runtime, "www.google.com".to_string());
+    let authority = "www.google.com";
+    let oak_node_init_receiver = create_client_node(&runtime, authority.to_string());
 
     // Create a sync_channel to be notified when the Oak Node is completed.
     let (result_sender, result_receiver) = mpsc::sync_channel(1);
@@ -548,6 +550,7 @@ fn test_https_client_can_handle_https_requests_to_an_external_service() {
     let client_test_node = ClientTesterNode {
         uri: "https://www.google.com/".to_string(),
         result_sender,
+        authority: authority.to_string(),
     };
 
     // Register the test Oak node in the runtime.
@@ -555,7 +558,7 @@ fn test_https_client_can_handle_https_requests_to_an_external_service() {
         .node_register(
             Box::new(client_test_node),
             "client_test_node",
-            &Label::public_untrusted(),
+            &confidentiality_label(tls_endpoint_tag(&authority)),
             oak_node_init_receiver,
         )
         .unwrap();
@@ -591,6 +594,7 @@ fn test_https_client_can_handle_http_requests_to_an_external_service() {
     let client_test_node = ClientTesterNode {
         uri: "http://www.google.com".to_string(),
         result_sender,
+        authority: "".to_string(),
     };
 
     // Register the test Oak node in the runtime.
@@ -614,6 +618,11 @@ fn test_https_client_can_handle_http_requests_to_an_external_service() {
 
 /// Creates an HTTP client pseudo-node in the given Runtime.
 fn create_client_node(runtime: &RuntimeProxy, authority: String) -> oak_abi::Handle {
+    let label = if authority.is_empty() {
+        Label::public_untrusted()
+    } else {
+        confidentiality_label(tls_endpoint_tag(&authority))
+    };
     let (init_receiver, invocation_receiver) = create_http_client_communication_channel(runtime);
     let client_config = NodeConfiguration {
         config_type: Some(ConfigType::HttpClientConfig(HttpClientConfiguration {
@@ -625,7 +634,7 @@ fn create_client_node(runtime: &RuntimeProxy, authority: String) -> oak_abi::Han
         .node_create(
             "test_http_client",
             &client_config,
-            &Label::public_untrusted(),
+            &label,
             invocation_receiver,
         )
         .expect("Could not create HTTP client node!");
@@ -675,9 +684,13 @@ fn create_http_client_communication_channel(
     (init_receiver, invocation_receiver)
 }
 
+/// Struct representing an Oak node that sends requests to an external server via an HTTP client
+/// pseudo-node, collects the response and sends it back to the test method using a `SyncSender`.
 struct ClientTesterNode {
     uri: String,
+    /// SyncSender to send the response from the external service back to the test method.
     result_sender: mpsc::SyncSender<Result<HttpResponse, OakError>>,
+    authority: String,
 }
 
 impl Node for ClientTesterNode {
@@ -688,6 +701,12 @@ impl Node for ClientTesterNode {
         // Even though this node is not actually sandboxed, we are simulating a Wasm node during
         // testing.
         NodeIsolation::Sandboxed
+    }
+    fn get_privilege(&self) -> NodePrivilege {
+        // The node requires this privilege to be able to create a [`Pipe`] for interaction with the
+        // HTTP client pseudo-node. In a more realistic scenario, such a node should not have a
+        // privilege like this, and the [`Pipe`] has to be created by the planner node.
+        super::client::get_privilege(self.authority.clone())
     }
     fn run(
         self: Box<Self>,
@@ -721,13 +740,13 @@ impl Node for ClientTesterNode {
             body: vec![],
             headers: None,
         };
+        let label = if self.authority.is_empty() {
+            Label::public_untrusted()
+        } else {
+            confidentiality_label(tls_endpoint_tag(&self.authority))
+        };
         // create channel
-        let pipe = crate::node::http::util::Pipe::new(
-            &runtime,
-            &Label::public_untrusted(),
-            &Label::public_untrusted(),
-        )
-        .expect("Could not create the Pipe");
+        let pipe = Pipe::new(&runtime, &label, &label).expect("Could not create the Pipe");
 
         // send the request on invocation_sender
         pipe.insert_message(&runtime, request)
@@ -742,6 +761,8 @@ impl Node for ClientTesterNode {
             handle: pipe.response_reader,
         });
         let response = response_receiver.receive(&runtime);
+
+        pipe.close(&runtime);
 
         // notify the test
         self.result_sender
