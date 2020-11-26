@@ -20,7 +20,7 @@ is in vfiles/RuntimeModel.v. Both are evolving.
 
 The following are dependencies of this project:
 
-- coq (8.11.0)
+- coq (8.12.0)
 - coq-record-update (0.2.0)
 
 All of the above may be installed with [opam](https://opam.ocaml.org/), and the

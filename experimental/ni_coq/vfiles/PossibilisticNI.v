@@ -91,7 +91,7 @@ Proof.
         eapply state_low_eq_trans.
         eapply state_upd_node_unobs; eauto.
         eapply state_chan_append_labeled_unobs; eauto.
-    - (* ReadChannel; *)
+    - (* ReadChannel *)
         assert (~ nlbl0 <<L ell) by congruence.
         assert ( ~ (clbl <<L ell) ) by eauto using ord_trans.
         eapply state_low_eq_trans.
@@ -124,8 +124,6 @@ Proof.
         try eauto; try contradiction. 
     inversion H. unfold not. intros. congruence.
 Qed.
-
-
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
@@ -296,7 +294,7 @@ Proof.
                   eauto using invert_chans_state_low_proj_flowsto. }
                 { crush; subst_lets; eauto with unwind. }
                 { crush. congruence. }
-            + (* ReadChannle *)
+            + (* ReadChannel *)
                 remember (s_set_call (state_upd_chan han (chan_pop ch)
                    (state_upd_node id (node_get_hans n0 msg0) s)) id c') as s2''.
                 eexists s2'', (lbl _ <--- msg).
