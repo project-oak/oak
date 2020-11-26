@@ -16,8 +16,9 @@
 
 //! Simple example starting an Oak Application serving a static page over HTTP.
 
-use log::{info, warn};
-use oak::{http::Invocation, CommandHandler, Label, OakError, OakStatus};
+use anyhow::Context;
+use log::info;
+use oak::{http::Invocation, CommandHandler, Label};
 use oak_abi::proto::oak::application::ConfigMap;
 use oak_services::proto::oak::log::LogInit;
 
@@ -41,7 +42,7 @@ impl oak::CommandHandler for Main {
             },
         )
         .expect("could not create handler node");
-        oak::http::init_with_sender("[::]:8080", http_handler_sender)
+        oak::http::server::init_with_sender("[::]:8080", http_handler_sender)
             .expect("could not create HTTP server pseudo-Node");
         Ok(())
     }
@@ -49,7 +50,8 @@ impl oak::CommandHandler for Main {
 
 oak::entrypoint_command_handler_init!(http_handler => StaticHttpHandler);
 
-/// A simple HTTP handler that responds with `OK` (200) to every request sent to `/`, and with
+/// A simple HTTP handler that responds with `OK` (200) to every request sent to `/`; with a
+/// response from `http://www.google.com` for every request sent to `/test_google`; and with
 /// `NOT_FOUND` (400) to any other request. It is used in the `abitest`. So its functionality
 /// should be modified with care!
 #[derive(Default)]
@@ -76,15 +78,26 @@ impl CommandHandler for StaticHttpHandler {
             "/" => http::response::Builder::new()
                 .status(http::StatusCode::OK)
                 .header(http::header::CONTENT_TYPE, "text/html; charset=UTF-8")
-                .body(include_bytes!("../static/index.html").to_vec()),
+                .body(include_bytes!("../static/index.html").to_vec())
+                .context("Could not build response"),
+            "/test_google" => {
+                // create a public HTTP client pseudo-node
+                let http_client = oak::http::client::init("")
+                    .context("Could not create HttpClient pseudo-node")?;
+                let request = http::Request::builder()
+                    .method(http::Method::GET)
+                    .uri("http://www.google.com")
+                    .body(vec![])
+                    .context("Could not build request")?;
+                http_client
+                    .send_request(request, &Label::public_untrusted())
+                    .context("Could not get response")
+            }
             _ => http::response::Builder::new()
                 .status(http::StatusCode::NOT_FOUND)
-                .body("not found".to_string().into_bytes()),
-        };
-        let response = response.map_err(|err| {
-            warn!("Could not build response: {}", err);
-            OakError::OakStatus(OakStatus::ErrInternal)
-        })?;
+                .body("not found".to_string().into_bytes())
+                .context("Could not build response"),
+        }?;
 
         let res = invocation.send(&response);
         invocation.close_channels();

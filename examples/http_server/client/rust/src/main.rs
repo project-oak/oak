@@ -67,14 +67,39 @@ async fn main() -> Result<()> {
     let client: hyper::client::Client<_, hyper::Body> =
         hyper::client::Client::builder().build(https);
 
+    check_endpoint(
+        &client,
+        "https://localhost:8080",
+        &label_bytes,
+        serde_json::to_string(&signature).unwrap(),
+    )
+    .await;
+
+    check_endpoint(
+        &client,
+        "https://localhost:8080/test_google",
+        &label_bytes,
+        serde_json::to_string(&signature).unwrap(),
+    )
+    .await;
+
+    Ok(())
+}
+
+async fn check_endpoint(
+    client: &hyper::client::Client<
+        hyper_rustls::HttpsConnector<hyper::client::HttpConnector>,
+        hyper::Body,
+    >,
+    uri: &str,
+    label_bytes: &[u8],
+    signature: String,
+) {
     let request = hyper::Request::builder()
-        .method("get")
-        .uri("https://localhost:8080")
+        .method(http::Method::GET)
+        .uri(uri)
         .header(oak_abi::OAK_LABEL_HTTP_JSON_KEY, label_bytes)
-        .header(
-            oak_abi::OAK_SIGNED_CHALLENGE_HTTP_JSON_KEY,
-            serde_json::to_string(&signature).unwrap(),
-        )
+        .header(oak_abi::OAK_SIGNED_CHALLENGE_HTTP_JSON_KEY, signature)
         .body(hyper::Body::empty())
         .unwrap();
 
@@ -83,6 +108,8 @@ async fn main() -> Result<()> {
         .await
         .expect("Error while awaiting response");
 
+    assert_eq!(resp.status(), http::StatusCode::OK);
+
     log::info!("response: {:?}", resp);
     log::info!(
         "response body: {:?}",
@@ -90,5 +117,4 @@ async fn main() -> Result<()> {
             .await
             .expect("could not read response body")
     );
-    Ok(())
 }

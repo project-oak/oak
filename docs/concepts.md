@@ -453,6 +453,18 @@ The available pseudo-Nodes are:
   - A handle for the read half of a channel holding the outbound request.
   - A handle for the write half of a channel that the corresponding response
     message(s) should be written to.
+- **HTTP client pseudo-Node**: Provides a mechanism for Oak Nodes to make use of
+  an external (non-Oak) HTTP or HTTPS services. Similar to the `gRPC client`,
+  invocations to an `HTTP client` must have two attached handles (in the
+  following order):
+
+  - A handle for the read half of a channel holding the outbound request.
+  - A handle for the write half of a channel that the corresponding response
+    message(s) should be written to.
+
+  This logic is currently encapsulated in the SDK in
+  `oak::http::client::HttpClient`.
+
 - **Storage pseudo-Node**: Provides a proxy mechanism for access to a persistent
   storage mechanism. Nodes that require storage functionality write storage
   requests to a channel that reaches the storage pseudo-Node, then read the

@@ -753,6 +753,7 @@ dependencies = [
  "anyhow",
  "base64 0.13.0",
  "env_logger",
+ "http",
  "hyper",
  "hyper-rustls",
  "log",
