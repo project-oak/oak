@@ -1,6 +1,6 @@
 # Project Oak
 
-[![Build Status](https://img.shields.io/badge/build-status-blue?style=for-the-badge)](https://pantheon.corp.google.com/cloud-build/dashboard?project=oak-ci)
+[![Build Status](https://img.shields.io/github/workflow/status/project-oak/oak/Continuous%20Integration/main?style=for-the-badge)](https://github.com/project-oak/oak/actions?query=workflow%3A%22Continuous+Integration%22+branch%3Amain)
 [![codecov](https://img.shields.io/codecov/c/github/project-oak/oak?style=for-the-badge)](https://codecov.io/gh/project-oak/oak)
 [![Docs](https://img.shields.io/badge/docs-rust-brightgreen?style=for-the-badge)](https://project-oak.github.io/oak)
 [![Slack](https://img.shields.io/badge/slack-project--oak-purple?logo=slack&style=for-the-badge)](https://join.slack.com/t/project-oak/shared_invite/zt-5hiliinq-f0fYZGwlzfH3kMrJuu3qlw)
