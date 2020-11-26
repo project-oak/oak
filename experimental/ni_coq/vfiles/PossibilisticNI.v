@@ -125,6 +125,8 @@ Proof.
     inversion H. unfold not. intros. congruence.
 Qed.
 
+
+
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->
     (exists s2' e2,
@@ -194,7 +196,7 @@ Proof.
                 pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
                 logical_simplify.
                 apply_all_constructors; eauto. congruence.
-                eapply proj_preserves_fresh_han; eauto.
+                erewrite <- proj_preserves_fresh_han; eauto.
                 (* state loweq *)
                 subst_lets. eauto 7 with unwind.
             + (* CreateNode *)
@@ -203,7 +205,7 @@ Proof.
                 pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
                 logical_simplify.
                 apply_all_constructors; eauto. congruence.
-                eapply proj_preserves_fresh_nid; eauto.
+                erewrite <- proj_preserves_fresh_nid; eauto.
                 eauto with unwind.
             +  (* Internal *)
                 do 2 eexists; split_ands; [ | | reflexivity ].
@@ -235,6 +237,26 @@ Proof.
             symmetry. transitivity s1; congruence.
             (* events leq *)
             congruence.
+Qed.
+
+Theorem flows_uncons_chan_state_proj: forall ell s han ch,
+    lbl (chans (state_low_proj ell s)).[? han] <<L ell ->
+    obj (chans (state_low_proj ell s)).[? han] = Some ch ->
+    obj (chans s).[? han] = Some ch.
+Proof.
+    autounfold with loweq. autounfold with structs. simpl.
+    intros. destruct_match. destruct (lbl <<? ell);
+    (eauto || contradiction).
+Qed.
+
+Theorem state_proj_preserves_chan_lbl: forall ell s han,
+    lbl (chans (state_low_proj ell s)).[? han] =
+    lbl (chans s).[? han].
+Proof.
+    destruct s. autounfold with loweq. 
+    simpl. autounfold with structs.
+    intros. destruct_match. 
+    destruct (lbl <<? ell); reflexivity.
 Qed.
 
 Theorem low_proj_steps_implies_leq_step: forall ell s s1' e1,
@@ -274,60 +296,60 @@ Proof.
                   eauto using invert_chans_state_low_proj_flowsto. }
                 { crush; subst_lets; eauto with unwind. }
                 { crush. congruence. }
-            + (* ReadChannel *) admit.
-            + (* CreateChannel *) admit.
-            + (* CreateNode *) admit. 
-            + (* Internal *) admit.
-          (*
-           + (* WriteChannel *)
-                pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
-                    as [ch2 [H_ch'_idx H_ch2_proj]].
-                remember (s_set_call (state_upd_chan han (chan_append ch2 msg)
-                    (state_upd_node id n'0 s)) id c') as s2''.
-                exists s2'', (n ---> msg); repeat split.
-                crush.
-                rewrite chan_projection_preserves_lbl in *; eauto.
-                (* s1'' =L s2'' *)
-                unfold s1'', ch', n'0. subst. eauto with unwind.
-            + (* ReadChannel *)
-                pose proof (uncons_proj_chan_s _ _ _ _ ltac:(eauto))
-                    as [ch2 [H_ch'_idx H_ch2_proj]].
-                remember (s_set_call (state_upd_chan han ch'
-                   (state_upd_node id (node_get_hans n msg0)
-                    s)) id c') as s2'.
-                exists s2'; eexists; repeat split; crush.
-                rewrite chan_projection_preserves_lbl in *.
-                rewrite flows_chan_proj in *; eauto using ord_trans.
-                unfold n'0, s1'' in *.
-                eauto with unwind.
+            + (* ReadChannle *)
+                remember (s_set_call (state_upd_chan han (chan_pop ch)
+                   (state_upd_node id (node_get_hans n0 msg0) s)) id c') as s2''.
+                eexists s2'', (lbl _ <--- msg).
+                split; [ | split].
+                subst_lets.
+                {
+                    crush; try separate_goal; try congruence.
+                    all: rewrite <- Hproj_n' in *.
+                    all: pose proof (ord_anti _ _ ltac:(eauto) ltac:(eauto)).
+                    auto. eapply flows_uncons_chan_state_proj; eauto. congruence.
+                    erewrite state_proj_preserves_chan_lbl in *.
+                    congruence.
+                }
+                { crush; subst_lets; eauto with unwind. }
+                { crush. congruence. }
             + (* CreateChannel *)
-                remember (s_set_call (state_upd_node id (node_add_whan h n)
-                    (state_upd_node id (node_add_rhan h n)
-                     (state_upd_chan h (new_chan lbl) 
-                     s ))) id c') as s2'. 
-                exists s2'; eexists; repeat split; crush.
-                erewrite <- proj_pres_handle_fresh; eauto.
-                unfold s1'', s'0, s3, s2.
-                eauto with unwind.
+                subst_lets. rewrite <- Hproj_n' in *.
+                remember (s_set_call (state_upd_node id (node_add_whan h n0)
+                    (state_upd_node id (node_add_rhan h n0) 
+                    (state_upd_chan_labeled h 
+                        {| obj := new_chan; lbl := clbl |} s)
+                    )) id c') as s2''.
+                eexists s2'', (lbl _ ---); split; [| split].
+                {
+                    crush. separate_goal; eauto. 
+                    erewrite proj_preserves_fresh_han; eauto.
+                }
+                { crush. eauto with unwind. }
+                { crush. }
             + (* CreateNode *)
+                subst_lets. rewrite <- Hproj_n' in *.
                 remember (s_set_call
-                   (state_upd_node id (node_add_rhan h n)
-                   (state_upd_node new_id
-                      {|
-                        nlbl := lbl;
-                        read_handles := Ensembles.Singleton h;
-                        write_handles := Ensembles.Empty_set;
-                        ncall := Internal
-                      |} s)) id c' ) as s2'.
-                exists s2'; eexists; repeat split; crush.
-                erewrite <- proj_pres_nid_fresh; eauto.
-                unfold s1'', s'0, s4 in *.
-                eauto with unwind.
+                    (state_upd_node id (node_add_rhan h n0)
+                    (state_upd_node_labeled new_id
+                      {| obj := Some
+                        {|
+                            read_handles := Ensembles.Singleton h;
+                            write_handles := Ensembles.Empty_set;
+                            ncall := Internal
+                        |};
+                      lbl := new_lbl 
+                      |} s)) id c') as s2''.
+                eexists s2'', (-- lbl _ --); split; [| split].
+                {
+                    crush. separate_goal; eauto.
+                    erewrite proj_preserves_fresh_nid; eauto.
+                }
+                { crush; eauto with unwind. }
+                { crush. }
             + (* Internal *)
-                unfold s1''.
-                exists (s_set_call s id c'); eexists; repeat split; crush.
-                eauto with unwind.
-        *)
+                subst_lets. rewrite <- Hproj_n' in *.
+                eexists (s_set_call s id c'); eexists; split; [| split].
+                crush. eauto with unwind. crush.
         (* by cases on the command by n in s *)
         * (* not flowsTo case *)
             pose proof (unobservable_node_step _ _ _ _ _ nl _ 
@@ -353,18 +375,32 @@ Proof.
                 specialize (state_loweq_to_deref_node ell s s1' id n'
                     Hidx_n' H_leq_s_s1') as [ns1' [Hidx_s1' H_leq_n'_n2]].
                 eapply set_call_unobs.
-
-                admit.
-                (*
-                eassumption.
-                replace (lbl ns1') with (lbl n')
-                    by (eapply node_low_eq_to_lbl_eq; eassumption).
-                replace (lbl n') with (lbl nl). eauto.
-                rewrite <- Hproj_n'.
-                eapply low_projection_preserves_lbl.
-                *)
+                rewrite <- Hproj_n' in n0.
+                rewrite low_projection_preserves_lbl in n0.
+                pose proof (low_eq_to_unobs _ _ _ ltac:(eauto) ltac:(eauto)).
+                congruence.
             + (* e1 ={ell} *) assumption.
-Admitted.
+Qed.
+
+Lemma state_low_equiv_to_proj_chan_fresh ell s1 s2 h :
+    state_low_eq ell s1 s2 ->
+    fresh_han (state_low_proj ell s2) h ->
+    fresh_han (state_low_proj ell s1) h.
+Proof.
+    unfold fresh_han, fnd, state_low_eq.
+    intros. logical_simplify. specialize (H1 h).
+    congruence.
+Qed.
+
+Lemma state_low_equiv_to_proj_node_fresh ell s1 s2 id :
+    state_low_eq ell s1 s2 ->
+    fresh_nid (state_low_proj ell s2) id ->
+    fresh_nid (state_low_proj ell s1) id.
+Proof.
+    unfold fresh_nid, fnd, state_low_eq.
+    intros. logical_simplify. specialize (H id).
+    congruence.
+Qed. 
 
 Lemma step_node_projection ell s1 s2 s3 id c :
   state_low_eq ell s1 s2 ->
@@ -379,11 +415,13 @@ Proof.
   all:eexists; split.
   all:try lazymatch goal with
       | |- step_node _ _ _ _ =>
-        econstructor; solve [eauto]
+        econstructor; solve [eauto using 
+            state_low_equiv_to_proj_chan_fresh,
+            state_low_equiv_to_proj_node_fresh]
       | _ => subst_lets
       end.
   all:eauto using state_low_eq_projection with unwind.
-Admitted.
+Qed.
 
 Lemma step_node_ev_projection ell s1 s2 s3 id c e :
   state_low_eq ell s1 s2 ->
