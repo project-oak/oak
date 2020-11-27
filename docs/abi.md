@@ -1,6 +1,6 @@
 # Oak WebAssembly ABI
 
-Oak [Nodes](concepts.md#oak-node) are implemented as WebAssembly modules, and so
+Oak [Nodes](concepts.md#nodes) are implemented as WebAssembly modules, and so
 can only interact with things outside of the WebAssembly environment through
 specific entrypoints which form the **Oak ABI**:
 
@@ -12,8 +12,8 @@ specific entrypoints which form the **Oak ABI**:
 These host functions provided by the Oak TCB revolve around the creation of
 other Nodes, and the use of [channels](concepts.md#channels) for inter-Node
 communication. This communication is further constrained by **flows-to** checks
-based on the [labels](concepts.md#information-flow-control) associated with the
-Nodes and channels.
+based on the [labels](concepts.md#labels) associated with the Nodes and
+channels.
 
 To communicate with the outside world beyond the Oak system, a Node may also
 create and communicate with [pseudo-Nodes](concepts.md#pseudo-nodes). The

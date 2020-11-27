@@ -7,6 +7,11 @@
   - [Orphaned Channels](#orphaned-channels)
   - [Invocations](#invocations)
 - [Labels](#labels)
+  - [Overview](#overview)
+  - [Details](#details)
+  - [gRPC and User Labels](#grpc-and-user-labels)
+  - [HTTP and User Labels](#http-and-user-labels)
+  - [Signature Labels](#signature-labels)
 - [Pseudo-Nodes](#pseudo-nodes)
 - [Oak Application](#oak-application)
 - [Remote Attestation](#remote-attestation)
@@ -301,7 +306,7 @@ references:
 - [Integrity Considerations for Secure Computer Systems](http://seclab.cs.ucdavis.edu/projects/history/papers/biba75.pdf)
 - [Protecting Privacy using the Decentralized Label Model](https://www.cs.cornell.edu/andru/papers/iflow-tosem.pdf)
 
-### gRPC and user labels
+### gRPC and User Labels
 
 As [described below](#pseudo-nodes), each incoming gRPC invocation is
 represented by a message containing two Channels handles:
@@ -322,7 +327,7 @@ represented by a message containing two Channels handles:
     connection itself; this represents the actual authority of the caller.
   - an empty integrity component.
 
-### HTTP and user labels
+### HTTP and User Labels
 
 Similar to gRPC requests, each incoming HTTP request must have a label
 specifying the confidentiality guarantees that the caller wants to impose on the
@@ -344,7 +349,7 @@ two Channel handles:
   leaks, the label of the Channel is set to have a confidentiality component set
   based on the identity of the user, and an empty integrity component.
 
-### Signature labels
+### Signature Labels
 
 Oak Wasm modules can be signed using [Ed25519](https://ed25519.cr.yp.to/)
 scheme. Such signatures may be created by an Oak module reviewer who then
@@ -369,7 +374,7 @@ the client library assigns these public keys to outgoing requests correctly.
 In order to more clearly show how Oak module signatures are used, here is a
 possible life cycle of an Oak application: from development to usage.
 
-#### Oak signature life cycle
+#### Oak Signature Life Cycle
 
 The parties involved in the signature life cycle are:
 
