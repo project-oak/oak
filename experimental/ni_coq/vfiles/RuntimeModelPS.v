@@ -92,7 +92,7 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
     | SCreateChan s n nlbl h clbl:
         (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
             (* caller is a real node with label nlbl *)
-        fresh_han s h ->
+        fresh_han_top s h ->
             (* the target handle is not in use *)
         nlbl <<L clbl ->
             let s0 := (state_upd_chan_labeled h {|
@@ -104,7 +104,7 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
     | SCreateNode s n nlbl new_id new_lbl h:
         (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
             (* caller is a real node with label nlbl *)
-        fresh_nid s id ->
+        fresh_nid_top s id ->
             (* target nid is not in use *)
         nlbl <<L new_lbl ->
             (* create new node with read handle *)

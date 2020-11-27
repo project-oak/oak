@@ -255,11 +255,11 @@ Qed.
 
 Theorem new_secret_chan_unobs: forall ell ell' s h ,
     ~( ell' <<L ell) ->
-    fresh_han s h ->
+    fresh_han_top s h ->
     state_low_eq ell s (state_upd_chan_labeled h 
             {| obj := new_chan; lbl := ell'|} s).
 Proof.
-    cbv [state_low_eq state_low_proj fresh_han new_chan]. intros.
+    cbv [state_low_eq state_low_proj fresh_han_top new_chan]. intros.
     eapply state_low_eq_parts; [cbv [state_upd_chan_labeled]; reflexivity | ].
     eapply chan_state_fe.
     intros. simpl. cbv [low_eq]. destruct s. cbv [State.chans] in *.

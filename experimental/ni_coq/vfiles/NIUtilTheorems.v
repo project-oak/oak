@@ -115,7 +115,16 @@ Definition event_low_proj_loweq := @labeled_low_proj_loweq event.
 Theorem state_low_proj_loweq: 
     @low_proj_loweq state state_low_proj state_low_eq.
 Proof.
-Admitted.
+    unfold low_proj_loweq.
+    autounfold with loweq; autounfold with structs; unfold fnd.
+    destruct x. simpl. split. 
+    (* node_state *)
+    - intros; destruct (nodes nid); destruct (lbl <<? ell) eqn:E;
+        (rewrite E; reflexivity).
+    (* chan_state *)
+    - intros; destruct (chans han); destruct (lbl <<? ell) eqn:E;
+        (rewrite E; reflexivity).
+Qed.
 
 Theorem proj_labels_increase {A: Type }: forall ell ell' (x: @labeled A),
   ell' <<L x.(lbl) -> ell' <<L (low_proj ell x).(lbl).
@@ -136,6 +145,13 @@ Proof.
         replace ell with top by (apply ord_anti; auto);  (* partially secret defs *)
         apply top_is_top).
 Qed.
+
+Theorem uncons_proj_chan_s': forall ell s han,
+    (chans (state_low_proj ell s)).[? han] = 
+    (low_proj ell (chans s).[? han]).
+Proof.
+    autounfold with loweq. unfold fnd. auto.
+Qed.
     
 Theorem uncons_proj_chan_s: forall ell s han ch,
     (chans (state_low_proj ell s)).[? han] = ch ->
@@ -143,14 +159,14 @@ Theorem uncons_proj_chan_s: forall ell s han ch,
         (chans s).[? han] = ch' /\
         low_proj ell ch' = ch.
 Proof.
-Admitted.
+    eauto using uncons_proj_chan_s'.
+Qed. 
 
 Theorem uncons_proj_node_s': forall ell s id,
     (nodes (state_low_proj ell s)).[? id] = 
     (low_proj ell (nodes s).[? id]).
 Proof.
-    unfold state_low_proj. unfold fnd. unfold node_state_low_proj. simpl. intros.
-    destruct (lbl (nodes s id) <<? ell); try reflexivity.
+    autounfold with loweq. unfold fnd. auto.
 Qed.
 
 Theorem uncons_proj_node_s: forall ell s id n,
@@ -164,45 +180,60 @@ Proof.
     exists (nodes s id); split; eauto.
 Qed.
 
+Theorem state_nidx_to_proj_state_idx': forall ell s id,
+    ((nodes (state_low_proj ell s)).[? id] =
+        (low_proj ell (nodes s).[? id])).
+Proof.
+    autounfold with loweq. autounfold with structs. unfold fnd. auto.
+Qed.
+
 Theorem state_nidx_to_proj_state_idx: forall ell s id n,
     ((nodes s).[? id] = n) ->
     ((nodes (state_low_proj ell s)).[? id] = (low_proj ell n)).
 Proof.
-Admitted.
+    intros. rewrite <- H. eapply state_nidx_to_proj_state_idx'.
+Qed.
 
 Theorem state_hidx_to_proj_state_hidx': forall ell s h,
     (chans (state_low_proj ell s)).[? h] = (low_proj ell (chans s).[?h ]).
 Proof.
-Admitted.
+    autounfold with loweq.  reflexivity.
+Qed.
 
 Theorem state_hidx_to_proj_state_hidx: forall ell s h ch,
     ((chans s).[? h] = ch) ->
     ((chans (state_low_proj ell s)).[? h] = (low_proj ell ch)).
 Proof.
-Admitted.
-
-(* TODO give better name *)
-Theorem proj_node_state_to_proj_n: forall ell s id nl n,
-    ((nodes (state_low_proj ell s)).[? id] = nl) ->
-    nl.(obj) = Some n ->
-    exists nl' n',
-        (nodes s).[? id] = nl' /\
-        (low_proj ell nl') = nl /\
-        nl'.(obj) = Some n'.
-Proof.
-Admitted.
+    intros. rewrite <- H. eapply state_hidx_to_proj_state_hidx'.
+Qed.
 
 Theorem proj_preserves_fresh_han: forall ell s h,
     fresh_han s h <-> 
     fresh_han (state_low_proj ell s) h.
 Proof.
-Admitted.
+    unfold fresh_han. autounfold with loweq. unfold fnd. 
+    destruct s. simpl. intros. destruct (chans h).
+    split.
+    - (* -> *)
+        intros. inversion H. destruct (bot <<? ell); reflexivity.
+    - (* <- *)
+        intros. pose proof (bot_is_bot ell).
+        destruct (lbl <<? ell); inversion H; (auto || congruence).
+Qed.
 
 Theorem proj_preserves_fresh_nid: forall ell s id,
     fresh_nid s id <->
     fresh_nid (state_low_proj ell s) id.
 Proof.
-Admitted.
+    unfold fresh_nid. autounfold with loweq. unfold fnd.
+    destruct s. simpl. intros. destruct (nodes id).
+    split.
+    - (* -> *)
+        intros. inversion H. destruct (bot <<? ell); reflexivity.
+    -
+        intros. pose proof (bot_is_bot ell).
+        destruct (lbl <<? ell); inversion H; (auto || congruence).
+Qed.
 
 End low_projection.
 
@@ -245,16 +276,6 @@ Proof. congruence. Qed.
 Global Instance event_low_eq_sym: forall ell, Symmetric (event_low_eq ell) | 10.
 Proof. congruence. Qed.
 
-Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
-    (nodes s1).[? id] = n1 ->
-    (state_low_eq ell s1 s2) ->
-    exists n2,
-        (nodes s2).[? id] = n2 /\
-        (node_low_eq ell n1 n2).
-Proof.
-    intros. inversion H0. unfold node_state_low_proj in *. 
-Admitted. 
-
 Lemma state_low_eq_implies_node_lookup_eq ell s1 s2 :
   state_low_eq ell s1 s2 ->
   forall id,
@@ -273,6 +294,20 @@ Lemma state_low_eq_implies_chan_lookup_eq ell s1 s2 :
 Proof.
   autounfold with loweq; autounfold with structs; intros;
   logical_simplify; congruence.
+Qed.
+
+Theorem state_loweq_to_deref_node: forall ell s1 s2 id n1,
+    (nodes s1).[? id] = n1 ->
+    (state_low_eq ell s1 s2) ->
+    exists n2,
+        (nodes s2).[? id] = n2 /\
+        (node_low_eq ell n1 n2).
+Proof.
+    unfold state_low_eq, node_low_eq. intros. logical_simplify.
+    specialize (H0 id). eexists. split.
+    eauto using state_low_eq_implies_node_lookup_eq.
+    unfold low_eq. rewrite <- H.
+    eauto using state_nidx_to_proj_state_idx'.
 Qed.
 
 Lemma state_low_eq_projection ell s1 s2 :

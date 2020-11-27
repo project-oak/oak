@@ -109,9 +109,15 @@ Definition node_del_rhans (hs: Ensemble handle)(n: node): node :=
 
 Definition new_chan := Some {| ms := [] |}.
 
-Definition fresh_han s h := s.(chans).[?h] = Labeled channel None top.
+Definition fresh_han s h := s.(chans).[?h] = Labeled channel None bot.
 
-Definition fresh_nid s id := s.(nodes).[?id] = Labeled node None top.
+Definition fresh_nid s id := s.(nodes).[?id] = Labeled node None bot.
+
+(* unoccupied handles / IDs are secret for the model + security-def where 
+labels are partially secret *)
+Definition fresh_han_top s h := s.(chans).[?h] = Labeled channel None top.
+
+Definition fresh_nid_top s id := s.(nodes).[?id] = Labeled node None top.
 
 Definition s_set_call s id c :=
     match (s.(nodes).[?id]).(obj) with
