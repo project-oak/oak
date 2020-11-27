@@ -14,18 +14,14 @@
 // limitations under the License.
 //
 
-//! `serde` based serialization formats for inter-node communication.
+//! `serde` based serialization for inter-node communication.
 //!
-//! If your type is serializable using `serde` and implements `HandleVisit`, these formats can be
+//! If your type is serializable using `serde` and implements `HandleVisit`, these functions can be
 //! used to send those types to other Oak nodes, including any handles they might contain.
 //!
 //! ```
-//! use oak::{
-//!     handle::HandleVisit,
-//!     io::{Decodable, Encodable, Receiver},
-//! };
+//! use oak::{handle::HandleVisit, io::Receiver};
 //! use serde::{Deserialize, Serialize};
-//! use serde_encoding::Bincoded;
 //!
 //! #[derive(Clone, Serialize, Deserialize, HandleVisit, Debug, PartialEq)]
 //! struct Test {
@@ -37,50 +33,57 @@
 //!     a: "Hello, world!".to_string(),
 //!     b: Receiver::new(oak::ReadHandle { handle: 42 }),
 //! };
-//! let bincoded = Bincoded(test);
-//! let msg = bincoded.encode().unwrap();
+//! let msg = serde_encoding::encode(&test, bincode::serialize).unwrap();
 //!
 //! // Send `msg` to another node
 //!
 //! // On the recipient:
-//! let decoded: Bincoded<Test> = Bincoded::decode(&msg).unwrap();
+//! let decoded: Test = serde_encoding::decode(&msg, bincode::deserialize).unwrap();
 //!
 //! // Field values and handles are preserved
-//! assert_eq!(decoded.0, bincoded.0);
+//! assert_eq!(test, decoded);
 //! ```
 
-use oak::{
-    handle::HandleVisit,
-    io::{Decodable, Encodable, Message},
-    OakError,
-};
-use serde::{Deserialize, Serialize};
+use oak::{handle::HandleVisit, io::Message};
 
-/// [`bincode`](https://crates.io/crates/bincode) format.
-pub struct Bincoded<T>(pub T);
-
-impl<T: Clone + Serialize + HandleVisit> Encodable for Bincoded<T> {
-    fn encode(&self) -> Result<Message, OakError> {
-        Ok(Message {
-            bytes: bincode::serialize(&self.0).map_err(|_| OakError::ProtobufEncodeError(None))?,
-            handles: oak::handle::extract_handles(&mut self.0.clone()),
-        })
-    }
+/// Encodes `value` in a [`Message`] using the given serialization function, preserving
+/// any handles contained in `value`.
+pub fn encode<T, B, E, F>(value: &T, serialize_fn: F) -> Result<Message, E>
+where
+    T: Clone + HandleVisit,
+    B: Into<Vec<u8>>,
+    F: FnOnce(&T) -> Result<B, E>,
+{
+    let mut value = value.clone();
+    let handles = oak::handle::extract_handles(&mut value);
+    let bytes = serialize_fn(&value)?.into();
+    Ok(Message { bytes, handles })
 }
 
-impl<T: for<'de> Deserialize<'de> + HandleVisit> Decodable for Bincoded<T> {
-    fn decode(message: &Message) -> Result<Self, OakError> {
-        let mut decoded = bincode::deserialize(message.bytes.as_slice())
-            .map_err(|_| OakError::ProtobufDecodeError(None))?;
-        oak::handle::inject_handles(&mut decoded, &message.handles)?;
-        Ok(Bincoded(decoded))
-    }
+/// Decodes `message` using the given deserialization function, injecting any handles in `message`
+/// into the returned type.
+pub fn decode<'a, T, E, F>(message: &'a Message, deserialize_fn: F) -> Result<T, DecodeError<E>>
+where
+    T: HandleVisit,
+    F: FnOnce(&'a [u8]) -> Result<T, E>,
+{
+    let mut decoded = deserialize_fn(&message.bytes).map_err(DecodeError::Deserialize)?;
+    oak::handle::inject_handles(&mut decoded, &message.handles).map_err(DecodeError::Inject)?;
+    Ok(decoded)
+}
+
+/// Message decoding error.
+#[derive(Debug)]
+pub enum DecodeError<E> {
+    Deserialize(E),
+    Inject(oak::OakError),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use oak::io::{Encodable, Receiver, Sender};
+    use oak::io::{Receiver, Sender};
+    use serde::{Deserialize, Serialize};
 
     #[derive(Clone, Serialize, Deserialize, HandleVisit, Debug, PartialEq)]
     struct ComplexInnerType {
@@ -116,10 +119,9 @@ mod tests {
             ],
         };
 
-        let bincoded = Bincoded(complex);
-        let msg = bincoded.encode().unwrap();
-        let decoded: Bincoded<ComplexType> = Bincoded::decode(&msg).unwrap();
+        let msg = super::encode(&complex, bincode::serialize).unwrap();
+        let decoded: ComplexType = super::decode(&msg, bincode::deserialize).unwrap();
 
-        assert_eq!(decoded.0, bincoded.0);
+        assert_eq!(complex, decoded);
     }
 }
