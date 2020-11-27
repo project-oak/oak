@@ -29,7 +29,6 @@ pub type Invocation = crate::proto::oak::invocation::HttpInvocation;
 
 pub mod client;
 pub mod server;
-mod util;
 
 /// This implementation provides an interface for sending requests and receiving responses, using
 /// the idiomatic http types. Internally, these types are converted into protobuf encoded requests

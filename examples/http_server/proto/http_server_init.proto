@@ -1,0 +1,43 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.examples.http_server_init;
+
+import "oak_services/proto/http_invocation.proto";
+import "oak_services/proto/log.proto";
+import "proto/handle.proto";
+
+// Initialization message that should be sent to RedirectHelper Oak Node.
+message RedirectInvocation {
+  // Channel for receiving an HttpRequest
+  oak.handle.Receiver request_receiver = 1 [(oak.handle.message_type) = ".oak.encap.HttpRequest"];
+  // HTTP invocation source for sending the HttpRequest to the HTTP client pseudo-Node and receiving
+  // the response from it
+  oak.invocation.HttpInvocationSource http_invocation_source = 2;
+}
+
+// Initialization message that should be sent to RedirectHandler Oak Node.
+message RedirectHandlerInit {
+  oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
+  // Sender for sending a RedirectInvocation to a RedirectHelper node.
+  oak.handle.Sender helper_invocation_sender = 2
+      [(oak.handle.message_type) = ".oak.examples.http_server_init.RedirectInvocation"];
+  // Sender for sending an HttpInvocation to an HTTP client pseudo-node.
+  oak.handle.Sender client_invocation_sender = 3
+      [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
+}
