@@ -2,7 +2,7 @@
 eb60deacb56d49403b661b905937248d993893993c0eb04b805ec51d4b59eb39  ./examples/target/wasm32-unknown-unknown/release/abitest_1_backend.wasm
 fad14d04075122555566b57ee0846e90efa8aeeb611651414b4bc4c6c78d8e88  ./examples/target/wasm32-unknown-unknown/release/aggregator.wasm
 f9340bf02d505f2a1b92ae246587909003eec5beabd87aaafebb21b453b17d62  ./examples/target/wasm32-unknown-unknown/release/chat.wasm
-9bb883267153ebed6c63b6fb15316804d8f3595d611251069445713f50626f6d  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
+bbce67d953407af7c70a82a9528b13e1d2fd56a9a88f96882482e1e3a24b72b7  ./examples/target/wasm32-unknown-unknown/release/hello_world.wasm
 87c3edf77de66fb1717634da7f4ae6c006dc0e808ea26b82d3ee2da2453653a0  ./examples/target/wasm32-unknown-unknown/release/http_server.wasm
 1d890852653b51f7053ec4e6275668411fd87c75994407457002410408ede810  ./examples/target/wasm32-unknown-unknown/release/injection.wasm
 26381f8a309b1fa5d531ac2beeeed827257a876455e5dfef3ccbd9c86ca83bb0  ./examples/target/wasm32-unknown-unknown/release/private_set_intersection.wasm
