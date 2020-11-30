@@ -642,6 +642,31 @@ fn wait_on_channels_immediately_returns_if_the_input_list_is_empty() {
 }
 
 #[test]
+fn handle_clone_cloned_handle_is_distinct() {
+    let label = Label::public_untrusted();
+    let label_clone = label.clone();
+    run_node_body(
+        &label,
+        &NodePrivilege::default(),
+        Box::new(move |runtime| {
+            let (_write_handle, read_handle) = runtime.channel_create("", &label_clone)?;
+            let cloned_read_handle = runtime.handle_clone(read_handle)?;
+            let close1_result = runtime.channel_close(read_handle);
+            // Sanity check to make sure closing the same handle twice results in an error
+            let close1_again_result = runtime.channel_close(read_handle);
+
+            let close2_result = runtime.channel_close(cloned_read_handle);
+
+            assert_eq!(Ok(()), close1_result);
+            assert_eq!(Err(OakStatus::ErrBadHandle), close1_again_result);
+            assert_eq!(Ok(()), close2_result);
+
+            Ok(())
+        }),
+    );
+}
+
+#[test]
 fn downgrade_multiple_labels_using_top_privilege() {
     init_logging();
     let top_privilege = NodePrivilege::top_privilege();

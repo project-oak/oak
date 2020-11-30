@@ -227,6 +227,14 @@ Closes the channel identified by `param[0]`.
 - `param[0]: u64`: Handle to channel
 - `result[0]: u32`: Status of operation
 
+### `handle_clone`
+
+Creates a new distinct handle to the same channel as `param[0]`.
+
+- `param[0]: u64`: Handle to channel
+- `param[1]: usize`: Address of an 8-byte location that will receive the cloned
+  handle (as a little-endian u64).
+
 ### `node_create`
 
 Creates a new Node running the Node configuration identified by `param[0]` and

@@ -229,6 +229,10 @@ impl OakAbiTestService for FrontendNode {
         );
         tests.insert("ChannelClose", (Self::test_channel_close, Count::Unchanged));
         tests.insert(
+            "HandleCloneRaw",
+            (Self::test_handle_clone_raw, Count::Unchanged),
+        );
+        tests.insert(
             "ChannelReadRaw",
             (Self::test_channel_read_raw, Count::Unchanged),
         );
@@ -750,6 +754,72 @@ impl FrontendNode {
         let (w, r) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         expect_eq!(Ok(()), oak::channel_close(r.handle));
         expect_eq!(Ok(()), oak::channel_close(w.handle));
+        Ok(())
+    }
+
+    fn test_handle_clone_raw(&mut self) -> TestResult {
+        let (w, r, _) = channel_create_raw();
+
+        // Clone both handles
+        let mut w2 = 0u64;
+        let mut r2 = 0u64;
+        unsafe {
+            expect_eq!(
+                OakStatus::Ok as u32,
+                oak_abi::handle_clone(w, &mut w2 as *mut u64)
+            );
+            expect_eq!(
+                OakStatus::Ok as u32,
+                oak_abi::handle_clone(r, &mut r2 as *mut u64)
+            );
+        }
+
+        // Handles should be distinct values
+        expect!(w != w2);
+        expect!(r != r2);
+
+        // Close the original handles
+        expect_eq!(Ok(()), oak::channel_close(w));
+        expect_eq!(Ok(()), oak::channel_close(r));
+
+        // Check that we can close the cloned handles (and thus the channel remained open after
+        // closing the original handles)
+        expect_eq!(Ok(()), oak::channel_close(w2));
+        expect_eq!(Ok(()), oak::channel_close(r2));
+
+        // Check that an invalid handle cannot be cloned
+        let bogus_handle = 99999;
+        let mut cloned_bogus_handle = 0u64;
+        unsafe {
+            expect_eq!(
+                OakStatus::ErrBadHandle as u32,
+                oak_abi::handle_clone(bogus_handle, &mut cloned_bogus_handle as *mut u64)
+            );
+        }
+
+        // A handle to a closed channel cannot be cloned
+        let (w, r, _) = channel_create_raw();
+        expect_eq!(Ok(()), oak::channel_close(w));
+        expect_eq!(Ok(()), oak::channel_close(r));
+        let closed_handle = r;
+        let mut cloned_closed_handle = 0u64;
+        unsafe {
+            expect_eq!(
+                OakStatus::ErrBadHandle as u32,
+                oak_abi::handle_clone(closed_handle, &mut cloned_closed_handle as *mut u64)
+            );
+        }
+
+        // Invalid handle_out parameter returns error
+        let (w, r, _) = channel_create_raw();
+        unsafe {
+            expect_eq!(
+                OakStatus::ErrInvalidArgs as u32,
+                oak_abi::handle_clone(r, invalid_raw_offset())
+            );
+        }
+        expect_eq!(Ok(()), oak::channel_close(w));
+        expect_eq!(Ok(()), oak::channel_close(r));
         Ok(())
     }
 
