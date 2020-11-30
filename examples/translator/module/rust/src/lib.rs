@@ -45,7 +45,7 @@ impl oak::CommandHandler for Main {
                 log_sender: Some(log_sender),
             },
         )
-        .context("Couldn't create handler node")?;
+        .context("Couldn't create router node")?;
         oak::grpc::server::init_with_sender("[::]:8080", router_sender)
             .context("Couldn't create gRPC server pseudo-Node")?;
         Ok(())
