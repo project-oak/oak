@@ -186,7 +186,7 @@ For instance, let us assume the following manifests:
   }
   ```
 
-- `https://apple.com/oak/manifests/count_people_from_pixels.json`:
+- `https://other-company.com/oak/manifests/count_people_from_pixels.json`:
 
   ```json
   {
@@ -206,7 +206,7 @@ For instance, let us assume the following manifests:
 When an Oak Node with hash `1111111111111111111111111111111111111111` is
 instantiated, it receives the declassification privilege of
 "manifest:https://google.com/oak/manifests/count_people_from_pixels.json ∧
-manifest:https://apple.com/oak/manifests/count_people_from_pixels.json ∧
+manifest:https://other-company.com/oak/manifests/count_people_from_pixels.json ∧
 wasm_hash:1111111111111111111111111111111111111111".
 
 Note that in this case it receives both privileges (or rather, the conjunction
