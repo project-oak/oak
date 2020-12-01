@@ -26,13 +26,14 @@ use oak_abi::{
     },
 };
 use prost::Message;
-use std::{collections::HashMap, path::PathBuf, process::Command, sync::Arc};
+use std::{collections::HashMap, process::Command, sync::Arc};
 use tonic::{
     metadata::MetadataValue,
     transport::{Certificate, Channel, ClientTlsConfig, Identity},
     Request,
 };
 
+#[derive(PartialEq)]
 pub enum Profile {
     Release,
     Debug,
@@ -46,42 +47,35 @@ pub fn compile_rust_wasm(
     module_wasm_file_name: &str,
     profile: Profile,
 ) -> anyhow::Result<Vec<u8>> {
-    // Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it
+    // Use a separate output dir for Wasm build artifacts. The precise name is not relevant, but it
     // should end with `target` so that it gets automatically ignored by our `.gitignore`.
-    let target_dir = PathBuf::from("oak_tests/target");
+    let out_dir = "oak_tests/target";
 
     let mut args = vec![
+        // `--out-dir` is unstable and requires `-Zunstable-options`.
+        "-Zunstable-options".to_string(),
         "build".to_string(),
-        format!(
-            "--target-dir={}",
-            target_dir.to_str().expect("invalid target dir")
-        ),
         "--target=wasm32-unknown-unknown".to_string(),
         format!("--manifest-path={}", manifest_path),
+        format!("--out-dir={}", out_dir),
     ];
-    let profile_str = match profile {
-        Profile::Release => {
-            args.push("--release".to_string());
-            "release".to_string()
-        }
-        Profile::Debug => "debug".to_string(),
-    };
+    if profile == Profile::Release {
+        args.push("--release".to_string());
+    }
 
     Command::new("cargo")
         .args(args)
         .env_remove("RUSTFLAGS")
         .spawn()
-        .context("could not spawn cargo build")?
+        .context("Couldn't spawn cargo build")?
         .wait()
-        .context("could not wait for cargo build to finish")?;
+        .context("Couldn't wait for cargo build to finish")?;
 
-    let mut module_path = target_dir;
-    module_path.push(format!("wasm32-unknown-unknown/{}", profile_str));
-    module_path.push(module_wasm_file_name);
+    let module_path = format!("{}/{}", out_dir, module_wasm_file_name);
 
-    info!("compiled Wasm module path: {:?}", module_path);
+    info!("Compiled Wasm module path: {:?}", module_path);
 
-    std::fs::read(module_path).context("could not read compiled module")
+    std::fs::read(module_path).context("Couldn't read compiled module")
 }
 
 /// Default module name for the module under test.
