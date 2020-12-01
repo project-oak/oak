@@ -142,9 +142,9 @@ some point in the future) repurposing the manifest identified by
 `https://google.com/oak/manifests/count_people_from_pixels.json` to publish
 hashes of nodes that count the number of cats instead of the number of people.
 The only understanding of what the list of hashes published in a manifest "mean"
-is outside of the manifest system itself. It may include formal or informal
-guarantees about functionality or policies that the objects are subject to, but
-those need to be published separately.
+is outside of the manifest system itself. The publisher may make formal or
+informal guarantees about functionality or policies related to the trusted
+objects, but those need to be published separately.
 
 For instance, Google may have a separate web page in which expectations of what
 is published in each manifest are detailed, with links to each manifest, and if
