@@ -61,7 +61,7 @@ are trustworthy.
 The owner of s_0 signs w_0 and w_1 with s_0, while the owner of s_1 signs w_1
 and w_2 with s_1:
 
-```
+```text
     ┌ w_0
 s_0 │
     └ w_1 ┐
