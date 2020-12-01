@@ -63,11 +63,11 @@ Qed.
 
 Ltac label_cases :=
     match goal with
-        | l1: level, l2: level, ell: level |- _ =>
-            (* l1 not found in environment here ?? *)
-            (* (if l1 <<? ell then _ else _) = 
-            (if l2 <<? ell then _ else _) => *)
-            destruct (l1 <<? ell), (l2 <<? ell)
+        | l: level, ell: level |- _ =>
+            lazymatch goal with
+                | |- context [l <<? ell] =>
+                    destruct (l <<? ell)
+            end
     end.
 
 Ltac unwind_crush_step2 :=
@@ -79,8 +79,9 @@ Ltac unwind_crush_step2 :=
 
 Ltac unwind_crush :=
     repeat match goal with
-        (* | _ => progress label_cases *) (* this causes coq to get stuck *)
+        | _ => progress label_cases
         | _ => progress unwind_crush_step2
+        | _ => progress try congruence
     end.
 
 Theorem chan_append_unwind: forall ell ch1 ch2 ch1obj ch2obj msg,
@@ -94,9 +95,7 @@ Proof.
     autounfold with loweq; autounfold with semutils; 
     autounfold with structs. simpl. intros.
     destruct ch1, ch2. 
-    destruct (lbl <<? ell); destruct (lbl0 <<? ell).
-    all: unwind_crush.
-    all: congruence.
+    unwind_crush.
 Qed.
 
 Theorem chan_state_proj_index_assoc: forall ell cs han,
@@ -118,9 +117,8 @@ Proof.
         *  (* = *)
         subst. do 2 erewrite upd_eq. eauto.
         specialize (H0 han). autounfold with loweq in *.
-        destruct (chans han), (chans0 han). simpl in *. 
-        destruct (lbl <<? ell), (lbl0 <<? ell).
-        all: unwind_crush; congruence.
+        destruct (chans han), (chans0 han). simpl in *.
+        unwind_crush.
         * (* <> *)
         subst. erewrite upd_neq. erewrite upd_neq.
         all: eauto. 
@@ -146,7 +144,7 @@ Proof.
         * (* = *)
             subst. do 2 erewrite upd_eq. eauto. 
         * (* <> *)
-            erewrite upd_neq. erewrite upd_neq. all: eauto.
+            erewrite !upd_neq. all: eauto.
             apply H0.
 Qed.
 
@@ -163,7 +161,7 @@ Proof.
         * (* = *)
         subst. do 2 erewrite upd_eq. eauto.
         * (* <> *)
-        erewrite upd_neq. erewrite upd_neq. all: eauto.
+        erewrite !upd_neq. all: eauto.
         apply H1.
 Qed.
 
@@ -179,19 +177,18 @@ Proof.
     - auto.
     -  cbv [RecordSet.set] in *. destruct s1, s2. cbv [State.chans] in *.
     simpl. intros. do 2 rewrite chan_state_proj_index_assoc. simpl in *.
-    destruct (dec_eq_h han0 han). 
+    destruct (dec_eq_h han0 han); 
+        [ | (* <> *) subst; erewrite !upd_neq by eauto; eauto ].
         *  (* = *)
         subst. do 2 erewrite upd_eq. eauto.
         specialize (H0 han). autounfold with loweq in *.
-        destruct (chans han), (chans0 han). simpl in *. 
+        destruct (chans han), (chans0 han). simpl in *.
+        (* just using unwind_crush here doesn't work *)
         destruct (lbl <<? ell), (lbl0 <<? ell) eqn:E.
         all: unwind_crush. 
         all: try congruence.
         (* not sure what happened here ...*)
         destruct obj; destruct obj0; (rewrite E; auto).
-    * (* <> *)
-    subst. erewrite upd_neq. erewrite upd_neq.
-    all: eauto. 
 Qed.
 
 Theorem set_call_unwind: forall ell id c s1 s2,
