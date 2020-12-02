@@ -190,6 +190,16 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                     "--release",
                     "--target=wasm32-unknown-unknown",
                     &format!("--manifest-path={}", cargo_manifest),
+                    // Use a fixed target directory, because `--target-dir` influences SHA256 hash
+                    // of Wasm module. This directory should also be synchronized with
+                    // `--target-dir` used in [`oak_tests::compile_rust_wasm`] in order to have
+                    // same SHA256 hashes.
+                    &format!("--target-dir={}", {
+                        let mut target_dir = PathBuf::from(cargo_manifest);
+                        target_dir.pop();
+                        target_dir.push("target");
+                        target_dir.to_str().expect("Invalid target dir").to_string()
+                    }),
                     &format!("--out-dir=examples/{}/bin", example_name),
                 ],
             ),

@@ -26,14 +26,13 @@ use oak_abi::{
     },
 };
 use prost::Message;
-use std::{collections::HashMap, process::Command, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, process::Command, sync::Arc};
 use tonic::{
     metadata::MetadataValue,
     transport::{Certificate, Channel, ClientTlsConfig, Identity},
     Request,
 };
 
-#[derive(PartialEq)]
 pub enum Profile {
     Release,
     Debug,
@@ -47,21 +46,28 @@ pub fn compile_rust_wasm(
     module_wasm_file_name: &str,
     profile: Profile,
 ) -> anyhow::Result<Vec<u8>> {
-    // Use a separate output dir for Wasm build artifacts. The precise name is not relevant, but it
-    // should end with `target` so that it gets automatically ignored by our `.gitignore`.
-    let out_dir = "oak_tests/target";
+    // Use a fixed target directory, because `--target-dir` influences SHA256 hash of Wasm module.
+    // Directory should end with `target` so that it gets automatically ignored by our `.gitignore`.
+    let mut target_dir = PathBuf::from(manifest_path);
+    target_dir.pop();
+    target_dir.push("target");
 
     let mut args = vec![
-        // `--out-dir` is unstable and requires `-Zunstable-options`.
-        "-Zunstable-options".to_string(),
         "build".to_string(),
+        format!(
+            "--target-dir={}",
+            target_dir.to_str().expect("Invalid target dir")
+        ),
         "--target=wasm32-unknown-unknown".to_string(),
         format!("--manifest-path={}", manifest_path),
-        format!("--out-dir={}", out_dir),
     ];
-    if profile == Profile::Release {
-        args.push("--release".to_string());
-    }
+    let profile_str = match profile {
+        Profile::Release => {
+            args.push("--release".to_string());
+            "release".to_string()
+        }
+        Profile::Debug => "debug".to_string(),
+    };
 
     Command::new("cargo")
         .args(args)
@@ -71,7 +77,9 @@ pub fn compile_rust_wasm(
         .wait()
         .context("Couldn't wait for cargo build to finish")?;
 
-    let module_path = format!("{}/{}", out_dir, module_wasm_file_name);
+    let mut module_path = target_dir;
+    module_path.push(format!("wasm32-unknown-unknown/{}", profile_str));
+    module_path.push(module_wasm_file_name);
 
     info!("Compiled Wasm module path: {:?}", module_path);
 
@@ -121,6 +129,7 @@ pub fn run_single_module_with_config(
 
 /// Build the configuration needed to launch a test Runtime instance that runs a single-Node
 /// application with the given Wasm module file name and entrypoint.
+/// Wasm module compiled with [`Profile::Release`] in order to keep its SHA256 hash.
 pub fn runtime_config(
     module_wasm_file_name: &str,
     entrypoint_name: &str,
@@ -131,7 +140,7 @@ pub fn runtime_config(
         compile_rust_wasm(
             DEFAULT_MODULE_MANIFEST,
             module_wasm_file_name,
-            Profile::Debug,
+            Profile::Release,
         )
         .expect("failed to build wasm module"),
     )]
