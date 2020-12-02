@@ -1,4 +1,5 @@
 name = "aggregator"
 
 [modules]
-app = { external = { url = "https://storage.googleapis.com/oak-modules/aggregator/643e33dc07c06b4127f28ef81a37002dc4a4852f714cc7295a513245075c7a7a", sha256 = "643e33dc07c06b4127f28ef81a37002dc4a4852f714cc7295a513245075c7a7a" } }
+app = { path = "examples/aggregator/bin/aggregator.wasm" }
+# app = { external = { url = "https://storage.googleapis.com/oak-modules/aggregator/643e33dc07c06b4127f28ef81a37002dc4a4852f714cc7295a513245075c7a7a", sha256 = "643e33dc07c06b4127f28ef81a37002dc4a4852f714cc7295a513245075c7a7a" } }

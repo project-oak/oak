@@ -48,8 +48,8 @@ const TEST_SET_ID: &str = "test";
 
 fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
     Ok(hashmap! {
-        MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_FILE_NAME, oak_tests::Profile::Debug).context("Couldn't compile main module")?,
-        HANDLER_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(HANDLER_MODULE_MANIFEST, HANDLER_MODULE_FILE_NAME, oak_tests::Profile::Debug).context("Couldn't compile handler module")?,
+        MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_FILE_NAME, oak_tests::Profile::Release).context("Couldn't compile main module")?,
+        HANDLER_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(HANDLER_MODULE_MANIFEST, HANDLER_MODULE_FILE_NAME, oak_tests::Profile::Release).context("Couldn't compile handler module")?,
     })
 }
 
