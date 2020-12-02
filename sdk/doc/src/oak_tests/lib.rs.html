@@ -271,6 +271,9 @@
 <span id="268">268</span>
 <span id="269">269</span>
 <span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -320,15 +323,17 @@
     <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">profile</span>: <span class="ident">Profile</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="comment">// Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it</span>
-    <span class="comment">// should end with `target` so that it gets automatically ignored by our `.gitignore`.</span>
-    <span class="kw">let</span> <span class="ident">target_dir</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;oak_tests/target&quot;</span>);
+    <span class="comment">// Use a fixed target directory, because `--target-dir` influences SHA256 hash of Wasm module.</span>
+    <span class="comment">// Directory should end with `target` so that it gets automatically ignored by our `.gitignore`.</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">target_dir</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">manifest_path</span>);
+    <span class="ident">target_dir</span>.<span class="ident">pop</span>();
+    <span class="ident">target_dir</span>.<span class="ident">push</span>(<span class="string">&quot;target&quot;</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">args</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
         <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
         <span class="macro">format</span><span class="macro">!</span>(
             <span class="string">&quot;--target-dir={}&quot;</span>,
-            <span class="ident">target_dir</span>.<span class="ident">to_str</span>().<span class="ident">expect</span>(<span class="string">&quot;invalid target dir&quot;</span>)
+            <span class="ident">target_dir</span>.<span class="ident">to_str</span>().<span class="ident">expect</span>(<span class="string">&quot;Invalid target dir&quot;</span>)
         ),
         <span class="string">&quot;--target=wasm32-unknown-unknown&quot;</span>.<span class="ident">to_string</span>(),
         <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">manifest_path</span>),
@@ -345,17 +350,17 @@
         .<span class="ident">args</span>(<span class="ident">args</span>)
         .<span class="ident">env_remove</span>(<span class="string">&quot;RUSTFLAGS&quot;</span>)
         .<span class="ident">spawn</span>()
-        .<span class="ident">context</span>(<span class="string">&quot;could not spawn cargo build&quot;</span>)<span class="question-mark">?</span>
+        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t spawn cargo build&quot;</span>)<span class="question-mark">?</span>
         .<span class="ident">wait</span>()
-        .<span class="ident">context</span>(<span class="string">&quot;could not wait for cargo build to finish&quot;</span>)<span class="question-mark">?</span>;
+        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t wait for cargo build to finish&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">module_path</span> <span class="op">=</span> <span class="ident">target_dir</span>;
     <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;wasm32-unknown-unknown/{}&quot;</span>, <span class="ident">profile_str</span>));
     <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="ident">module_wasm_file_name</span>);
 
-    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;compiled Wasm module path: {:?}&quot;</span>, <span class="ident">module_path</span>);
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Compiled Wasm module path: {:?}&quot;</span>, <span class="ident">module_path</span>);
 
-    <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="ident">module_path</span>).<span class="ident">context</span>(<span class="string">&quot;could not read compiled module&quot;</span>)
+    <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="ident">module_path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read compiled module&quot;</span>)
 }
 
 <span class="doccomment">/// Default module name for the module under test.</span>
@@ -401,6 +406,7 @@
 
 <span class="doccomment">/// Build the configuration needed to launch a test Runtime instance that runs a single-Node</span>
 <span class="doccomment">/// application with the given Wasm module file name and entrypoint.</span>
+<span class="doccomment">/// Wasm module compiled with [`Profile::Release`] in order to keep its SHA256 hash.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">runtime_config</span>(
     <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
@@ -411,7 +417,7 @@
         <span class="ident">compile_rust_wasm</span>(
             <span class="ident">DEFAULT_MODULE_MANIFEST</span>,
             <span class="ident">module_wasm_file_name</span>,
-            <span class="ident">Profile</span>::<span class="ident">Debug</span>,
+            <span class="ident">Profile</span>::<span class="ident">Release</span>,
         )
         .<span class="ident">expect</span>(<span class="string">&quot;failed to build wasm module&quot;</span>),
     )]
