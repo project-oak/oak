@@ -23,8 +23,8 @@ mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
 
 docker_run_flags=(
-  '--interactive'
   '--rm'
+  '--tty'
   '--env=BAZEL_REMOTE_CACHE_ENABLED'
   '--env=BAZEL_GOOGLE_CREDENTIALS'
   "--volume=$PWD/bazel-cache:/.cache/bazel"
@@ -38,9 +38,9 @@ docker_run_flags=(
   "--group-add=$HOST_DOCKER_GID"
 )
 
-# Some CI systems (GitHub actions) do not run with a real TTY attached.
+# Some CI systems (GitHub actions) do not run with an interactive TTY attached.
 if [[ -z "${CI:-}" ]]; then
-  docker_run_flags+=('--tty')
+  docker_run_flags+=('--interactive')
 fi
 
 if [[ "$1" == '--detach' ]]; then
