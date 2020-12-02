@@ -46,15 +46,17 @@ pub fn compile_rust_wasm(
     module_wasm_file_name: &str,
     profile: Profile,
 ) -> anyhow::Result<Vec<u8>> {
-    // Use a separate target dir for Wasm build artifacts. The precise name is not relevant, but it
-    // should end with `target` so that it gets automatically ignored by our `.gitignore`.
-    let target_dir = PathBuf::from("oak_tests/target");
+    // Use a fixed target directory, because `--target-dir` influences SHA256 hash of Wasm module.
+    // Directory should end with `target` so that it gets automatically ignored by our `.gitignore`.
+    let mut target_dir = PathBuf::from(manifest_path);
+    target_dir.pop();
+    target_dir.push("target");
 
     let mut args = vec![
         "build".to_string(),
         format!(
             "--target-dir={}",
-            target_dir.to_str().expect("invalid target dir")
+            target_dir.to_str().expect("Invalid target dir")
         ),
         "--target=wasm32-unknown-unknown".to_string(),
         format!("--manifest-path={}", manifest_path),
@@ -71,17 +73,17 @@ pub fn compile_rust_wasm(
         .args(args)
         .env_remove("RUSTFLAGS")
         .spawn()
-        .context("could not spawn cargo build")?
+        .context("Couldn't spawn cargo build")?
         .wait()
-        .context("could not wait for cargo build to finish")?;
+        .context("Couldn't wait for cargo build to finish")?;
 
     let mut module_path = target_dir;
     module_path.push(format!("wasm32-unknown-unknown/{}", profile_str));
     module_path.push(module_wasm_file_name);
 
-    info!("compiled Wasm module path: {:?}", module_path);
+    info!("Compiled Wasm module path: {:?}", module_path);
 
-    std::fs::read(module_path).context("could not read compiled module")
+    std::fs::read(module_path).context("Couldn't read compiled module")
 }
 
 /// Default module name for the module under test.
@@ -127,6 +129,7 @@ pub fn run_single_module_with_config(
 
 /// Build the configuration needed to launch a test Runtime instance that runs a single-Node
 /// application with the given Wasm module file name and entrypoint.
+/// Wasm module compiled with [`Profile::Release`] in order to keep its SHA256 hash.
 pub fn runtime_config(
     module_wasm_file_name: &str,
     entrypoint_name: &str,
@@ -137,7 +140,7 @@ pub fn runtime_config(
         compile_rust_wasm(
             DEFAULT_MODULE_MANIFEST,
             module_wasm_file_name,
-            Profile::Debug,
+            Profile::Release,
         )
         .expect("failed to build wasm module"),
     )]

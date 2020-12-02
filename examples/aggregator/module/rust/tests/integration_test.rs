@@ -54,7 +54,7 @@ async fn test_aggregator() {
     let wasm_module = oak_tests::compile_rust_wasm(
         WASM_MODULE_MANIFEST,
         WASM_MODULE_FILE_NAME,
-        oak_tests::Profile::Debug,
+        oak_tests::Profile::Release,
     )
     .expect("Couldn't compile Wasm module");
     let wasm_module_hash = get_sha256(&wasm_module);
