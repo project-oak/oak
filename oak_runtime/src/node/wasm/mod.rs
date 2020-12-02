@@ -1242,7 +1242,7 @@ fn wasm_node_privilege(
     signature_table: &SignatureTable,
 ) -> NodePrivilege {
     let module_hash = get_sha256_hex(&wasm_module_bytes);
-    error!("Wasm module SHA-256 hash: {:?}", module_hash);
+    debug!("Wasm module SHA-256 hash: {:?}", module_hash);
 
     // Create hash tags.
     let module_hash_bytes = hex::decode(&module_hash).expect("Couldn't decode SHA-256 hex value");
