@@ -191,9 +191,14 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                     "--target=wasm32-unknown-unknown",
                     &format!("--manifest-path={}", cargo_manifest),
                     // Use a fixed target directory, because `--target-dir` influences SHA256 hash
-                    // of Wasm module. This directory should also be synchronized with
+                    // of Wasm module.  Target directory should also be synchronized with
                     // `--target-dir` used in [`oak_tests::compile_rust_wasm`] in order to have
                     // same SHA256 hashes.
+                    //
+                    // This directory is separate from `examples/target` because it is used by
+                    // `cargo test`, which also executes [`oak_tests::compile_rust_wasm`] and thus
+                    // runs `cargo build` inside it. It may lead to errors, since dependencies may
+                    // be recompiled by `cargo build` and `cargo test` will fail to continue.
                     &format!("--target-dir={}", {
                         let mut target_dir = PathBuf::from(cargo_manifest);
                         target_dir.pop();
