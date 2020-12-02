@@ -438,7 +438,7 @@ associated type to
 [`ConfigMap`](https://project-oak.github.io/oak/sdk/doc/oak/proto/oak/application/struct.ConfigMap.html):
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/aggregator/module/rust/src/lib.rs Rust /impl oak::CommandHandler/ /.*context.*/)
+[embedmd]:# (../examples/aggregator/main_module/src/lib.rs Rust /impl oak::CommandHandler/ /.*context.*/)
 ```Rust
 impl oak::CommandHandler for Main {
     type Command = ConfigMap;
@@ -689,7 +689,7 @@ To allow Oak applications connect to external gRPC services, the Oak SDK
 provides a convenient API for creating gRPC Client pseudo nodes:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/aggregator/module/rust/src/lib.rs Rust /.*let grpc_client_invocation_sender.*/ /gRPC client.*/)
+[embedmd]:# (../examples/aggregator/main_module/src/lib.rs Rust /.*let grpc_client_invocation_sender.*/ /gRPC client.*/)
 ```Rust
         let grpc_client_invocation_sender = oak::grpc::client::init(&config.backend_server_address)
             .context("Couldn't create gRPC client")?;
@@ -702,7 +702,7 @@ can be used for sending invocations to the client pseudo node. With this handle
 gRPC client stub can be created, as in the `Aggregator` example:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/aggregator/module/rust/src/handler.rs Rust /.*oak::WithInit/ /^}$/)
+[embedmd]:# (../examples/aggregator/handler_module/src/lib.rs Rust /.*oak::WithInit/ /^}$/)
 ```Rust
 impl oak::WithInit for Handler {
     type Init = HandlerInit;
@@ -725,7 +725,7 @@ The call to `Self::new` above creates an instance of `AggregatorClient`
 initialized with the write-half of the channel to the gRPC client pseudo node:
 
 <!-- prettier-ignore-start -->
-[embedmd]:# (../examples/aggregator/module/rust/src/handler.rs Rust /.*fn new/ /^    }$/)
+[embedmd]:# (../examples/aggregator/handler_module/src/lib.rs Rust /.*fn new/ /^    }$/)
 ```Rust
     fn new(invocation_sender: Sender<grpc::Invocation>) -> Self {
         Self {

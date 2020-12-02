@@ -14,6 +14,21 @@
 // limitations under the License.
 //
 
+pub mod proto {
+    pub mod oak {
+        pub use oak::proto::oak::invocation;
+        pub use oak_services::proto::oak::log;
+        pub mod examples {
+            pub mod aggregator {
+                include!(concat!(env!("OUT_DIR"), "/oak.examples.aggregator.rs"));
+                include!(concat!(env!("OUT_DIR"), "/oak.examples.aggregator_init.rs"));
+            }
+        }
+    }
+}
+
+pub mod data;
+
 use crate::{
     data::SparseVector,
     proto::oak::examples::aggregator::{

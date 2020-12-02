@@ -23,27 +23,12 @@
 //! Clients invoke the module by providing data samples that contain a bucket ID
 //! and a Sparse Vector - a dictionary with integer keys.
 
-pub mod proto {
-    pub mod oak {
-        pub use oak::proto::oak::invocation;
-        pub use oak_services::proto::oak::log;
-        pub mod examples {
-            pub mod aggregator {
-                include!(concat!(env!("OUT_DIR"), "/oak.examples.aggregator.rs"));
-                include!(concat!(env!("OUT_DIR"), "/oak.examples.aggregator_init.rs"));
-            }
-        }
-    }
-}
-
-pub mod data;
-pub mod handler;
 pub mod router;
 
-use crate::{
-    handler::Handler,
+use crate::router::Router;
+use aggregator_handler::{
     proto::oak::examples::aggregator::{HandlerInit, RouterInit},
-    router::Router,
+    Handler,
 };
 use anyhow::Context;
 use log::info;
@@ -59,8 +44,12 @@ use oak_services::proto::oak::log::LogMessage;
 pub struct Config {
     pub grpc_server_listen_address: String,
     pub backend_server_address: String,
-    pub aggregator_module_hash: String,
 }
+
+// SHA-256 hash of Handler module.
+// Used to assign a confidentiality label to Handler Node, and to check client request labels.
+const HANDLER_SHA256_HASH: &str =
+    "e809f4274d336e96c93c0c20486f89b5894a63ec2e5461c9534696516570942c";
 
 /// Main entrypoint of the Aggregator application.
 ///
@@ -71,18 +60,14 @@ struct Main;
 impl Main {
     fn create_router(
         grpc_server_listen_address: &str,
-        aggregator_module_hash: &str,
         log_sender: Sender<LogMessage>,
         handler_invocation_sender: Sender<oak::grpc::Invocation>,
     ) -> anyhow::Result<()> {
-        // TODO(#1731): Split Aggregator into two Wasm modules and hardcode its SHA256 sum in the
-        // first module.
         let init = RouterInit {
             log_sender: Some(log_sender),
             handler_invocation_sender: Some(GrpcInvocationSender {
                 sender: Some(handler_invocation_sender),
             }),
-            aggregator_module_hash: aggregator_module_hash.to_string(),
         };
         let router_sender = oak::io::entrypoint_node_create::<Router, _, _>(
             "router",
@@ -97,13 +82,12 @@ impl Main {
     }
 
     fn create_handler(
-        aggregator_module_hash: &str,
         log_sender: Sender<LogMessage>,
         grpc_client_invocation_sender: Sender<oak::grpc::Invocation>,
     ) -> anyhow::Result<Sender<oak::grpc::Invocation>> {
         // Create an Handler Node.
         let aggregator_hash_label = confidentiality_label(web_assembly_module_tag(
-            &hex::decode(aggregator_module_hash).context("Couldn't decode SHA-256 hex value")?,
+            &hex::decode(HANDLER_SHA256_HASH).context("Couldn't decode SHA-256 hex value")?,
         ));
 
         // Send the initialization message to Handler Node containing a gRPC server invocation
@@ -117,7 +101,7 @@ impl Main {
         oak::io::entrypoint_node_create::<Handler, _, _>(
             "handler",
             &aggregator_hash_label,
-            "app",
+            "handler",
             init_message,
         )
         .map_err(|err| err.into())
@@ -138,14 +122,10 @@ impl oak::CommandHandler for Main {
         // Create Oak Nodes.
         let grpc_client_invocation_sender = oak::grpc::client::init(&config.backend_server_address)
             .context("Couldn't create gRPC client")?;
-        let handler_invocation_sender = Self::create_handler(
-            &config.aggregator_module_hash,
-            log_sender.clone(),
-            grpc_client_invocation_sender,
-        )?;
+        let handler_invocation_sender =
+            Self::create_handler(log_sender.clone(), grpc_client_invocation_sender)?;
         Self::create_router(
             &config.grpc_server_listen_address,
-            &config.aggregator_module_hash,
             log_sender,
             handler_invocation_sender,
         )

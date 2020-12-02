@@ -181,6 +181,7 @@ version = "0.1.0"
 dependencies = [
  "aggregator_common",
  "aggregator_grpc",
+ "aggregator_handler",
  "anyhow",
  "assert_matches",
  "either",
@@ -232,6 +233,20 @@ dependencies = [
  "oak_utils",
  "prost",
  "tonic",
+]
+
+[[package]]
+name = "aggregator_handler"
+version = "0.1.0"
+dependencies = [
+ "aggregator_common",
+ "log",
+ "oak",
+ "oak_abi",
+ "oak_io",
+ "oak_services",
+ "oak_utils",
+ "prost",
 ]
 
 [[package]]

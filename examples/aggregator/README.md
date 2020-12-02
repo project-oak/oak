@@ -153,6 +153,6 @@ gcloud monitoring dashboards list
 1. Get module SHA256 hash via `sha256sum examples/bin/aggregator.wasm`
 1. Fix module hash in the following files:
 
-   - [`/examples/aggregator/config.toml`](/examples/aggregator/config.toml)
    - [`/examples/aggregator/client/cpp/aggregator.cc`](/examples/aggregator/client/cpp/aggregator.cc)
    - [`/examples/aggregator/client/android/cpp/client.cc`](/examples/aggregator/client/android/cpp/client.cc)
+   - [`examples/aggregator/main_module/src/lib.rs`](/examples/aggregator/main_module/src/lib.rs)

@@ -28,10 +28,6 @@ message RouterInit {
   oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
   // Channel for sending invocations to Handler Oak Node.
   oak.invocation.GrpcInvocationSender handler_invocation_sender = 2;
-  // SHA256 sum of the Aggregator Wasm module.
-  // TODO(#1731): Split Aggregator into two Wasm modules and hardcode its SHA256 sum in the first
-  // module.
-  string aggregator_module_hash = 3;
 }
 
 // Initialization message that should be sent to Handler Oak Node.

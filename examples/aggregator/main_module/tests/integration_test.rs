@@ -14,9 +14,10 @@
 // limitations under the License.
 //
 
-use aggregator::{data::SparseVector, handler::SAMPLE_THRESHOLD};
 use aggregator_common::Monoid;
 use aggregator_grpc::proto::{aggregator_client::AggregatorClient, Sample, SerializedSparseVector};
+use aggregator_handler::{data::SparseVector, SAMPLE_THRESHOLD};
+use anyhow::Context;
 use assert_matches::assert_matches;
 use maplit::hashmap;
 use oak_abi::{
@@ -29,10 +30,20 @@ use std::{
     convert::{From, TryFrom},
 };
 
-const WASM_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";
-const MODULE_NAME: &str = "app";
+const MAIN_MODULE_MANIFEST: &str = "../main_module/Cargo.toml";
+const HANDLER_MODULE_MANIFEST: &str = "../handler_module/Cargo.toml";
+
+const MAIN_MODULE_NAME: &str = "app";
+const HANDLER_MODULE_NAME: &str = "handler";
 const ENTRYPOINT_NAME: &str = "oak_main";
 const BACKEND_SERVER_URI: &str = "localhost:8888";
+
+fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
+    Ok(hashmap! {
+        MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, oak_tests::Profile::Release).context("Couldn't compile main module")?,
+        HANDLER_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(HANDLER_MODULE_MANIFEST, oak_tests::Profile::Release).context("Couldn't compile handler module")?,
+    })
+}
 
 async fn submit_sample(
     client: &mut AggregatorClient<tonic::transport::Channel>,
@@ -51,17 +62,13 @@ async fn submit_sample(
 async fn test_aggregator() {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let wasm_module =
-        oak_tests::compile_rust_wasm(WASM_MODULE_MANIFEST, oak_tests::Profile::Release)
-            .expect("Couldn't compile Wasm module");
-    let wasm_module_hash = get_sha256(&wasm_module);
+    let wasm_modules = build_wasm().expect("Couldn't compile Wasm modules");
+    let wasm_module_hash = get_sha256(&wasm_modules.get(HANDLER_MODULE_NAME).unwrap());
 
     let module_config = format!(
         "grpc_server_listen_address = \"[::]:8080\"\n\
-         backend_server_address = \"https://{}\"\n\
-         aggregator_module_hash = \"{}\"",
+         backend_server_address = \"https://{}\"",
         BACKEND_SERVER_URI,
-        hex::encode(&wasm_module_hash)
     );
     let permissions = oak_runtime::permissions::PermissionsConfiguration {
         allow_grpc_server_nodes: true,
@@ -71,8 +78,8 @@ async fn test_aggregator() {
     };
 
     let config = oak_tests::runtime_config_wasm(
-        hashmap! { MODULE_NAME.to_owned() => wasm_module },
-        MODULE_NAME,
+        wasm_modules,
+        MAIN_MODULE_NAME,
         ENTRYPOINT_NAME,
         ConfigMap {
             items: hashmap! {
@@ -82,9 +89,26 @@ async fn test_aggregator() {
         permissions,
         oak_runtime::SignatureTable::default(),
     );
-
     let runtime =
         oak_runtime::configure_and_run(config).expect("Unable to configure runtime with test wasm");
+
+    let incorrect_hash = hex::decode("").unwrap();
+    let incorrect_hash_label = confidentiality_label(web_assembly_module_tag(&incorrect_hash));
+    let (incorrect_channel, incorrect_interceptor) =
+        oak_tests::channel_and_interceptor(&incorrect_hash_label).await;
+    let mut incorrect_client =
+        AggregatorClient::with_interceptor(incorrect_channel, incorrect_interceptor);
+
+    assert_matches!(
+        submit_sample(
+            &mut incorrect_client,
+            "test",
+            vec![1, 2, 3],
+            vec![10.0, 20.0, 30.0]
+        )
+        .await,
+        Err(_)
+    );
 
     let hash_label = confidentiality_label(web_assembly_module_tag(&wasm_module_hash));
     let (channel, interceptor) = oak_tests::channel_and_interceptor(&hash_label).await;
@@ -153,7 +177,7 @@ fn test_combine() {
 fn test_serialize() {
     // Use the module-internal version of the protobuf-derived struct.
     // TODO(#1093): unify the two versions
-    use aggregator::proto::oak::examples::aggregator::SerializedSparseVector;
+    use aggregator_handler::proto::oak::examples::aggregator::SerializedSparseVector;
     assert_eq!(
         SerializedSparseVector::from(SparseVector::new(hashmap! {1 => 10.0})),
         SerializedSparseVector {

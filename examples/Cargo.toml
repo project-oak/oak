@@ -8,7 +8,8 @@ members = [
   "aggregator/backend",
   "aggregator/grpc",
   "aggregator/common",
-  "aggregator/module/rust",
+  "aggregator/main_module",
+  "aggregator/handler_module",
   "authentication/client",
   "chat/module/rust",
   "chat/grpc",
@@ -51,7 +52,9 @@ oak_tests = { path = "../sdk/rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }
 # Examples.
 abitest_grpc = { path = "abitest/grpc" }
+aggregator_common = { path = "aggregator/common" }
 aggregator_grpc = { path = "aggregator/grpc" }
+aggregator_handler = { path = "aggregator/handler_module" }
 chat_grpc = { path = "chat/grpc" }
 hello_world_client = { path = "hello_world/client/rust" }
 hello_world_grpc = { path = "hello_world/grpc" }

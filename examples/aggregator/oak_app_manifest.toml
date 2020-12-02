@@ -2,3 +2,4 @@ name = "aggregator"
 
 [modules]
 app = { path = "examples/bin/aggregator.wasm" }
+handler = { path = "examples/bin/aggregator_handler.wasm" }

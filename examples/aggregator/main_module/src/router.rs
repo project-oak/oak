@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::examples::aggregator::RouterInit;
+use aggregator_handler::proto::oak::examples::aggregator::RouterInit;
 use oak::io::{forward_invocation, Sender};
 
 /// A node that routes each incoming gRPC invocation to a Handler Node that can handle requests with
