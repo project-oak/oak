@@ -78,3 +78,7 @@ Makefile.conf
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
+
+# Secrets (e.g. tokens, credentials)
+
+*.secret
