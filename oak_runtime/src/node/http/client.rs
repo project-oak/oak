@@ -85,7 +85,7 @@ impl Node for HttpClientNode {
     }
 }
 
-fn get_privilege(authority: String) -> NodePrivilege {
+pub(crate) fn get_privilege(authority: String) -> NodePrivilege {
     if authority.is_empty() {
         NodePrivilege::default()
     } else {
