@@ -413,7 +413,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="ident">authority</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="ident">authority</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
     <span class="kw">if</span> <span class="ident">authority</span>.<span class="ident">is_empty</span>() {
         <span class="ident">NodePrivilege</span>::<span class="ident">default</span>()
     } <span class="kw">else</span> {
