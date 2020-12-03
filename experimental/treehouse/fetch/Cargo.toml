@@ -1,0 +1,17 @@
+[workspace]
+
+[package]
+name = "fetch"
+version = "0.1.0"
+authors = ["Tiziano Santoro <tiziano88@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+oauth2 = "*"
+failure = "*"
+url = { version = "2.1", features = ["serde"] }
+reqwest = { version = "0.10", features = ["blocking", "json"] }
+serde = "*"
+serde_json = "*"
+http = "*"
