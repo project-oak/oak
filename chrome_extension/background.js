@@ -19,10 +19,18 @@
 const GREEN_ICON_PATH = './icon-green.png';
 const RED_ICON_PATH = './icon-red.png';
 
-const isUsingDesiredCspPerTab = new Map();
+// Map of tabs that are applying the desired CSP. The key is the `tabId`, the
+// value is the specific `url` that applies them. Keeping track of the URL is
+// necessary since administrators can block access to the `chrome.webRequest`
+// API used to check CSP on a per page basis. Without checking that the URL
+// matches, a user could navigate from a secure page to a potentially
+// insecure page whose CSP cannot be checked, and the tab would still be
+// considered secure.
+const tabsUsingDesiredCsp = new Map();
 
-function setIconForTab(tabId) {
-  const isUsingDesiredCsp = isUsingDesiredCspPerTab.get(tabId);
+function setIconForTab(tabId, url) {
+  const isUsingDesiredCsp =
+    tabsUsingDesiredCsp.has(tabId) && tabsUsingDesiredCsp.get(tabId) === url;
 
   chrome.browserAction.setIcon({
     path: isUsingDesiredCsp ? GREEN_ICON_PATH : RED_ICON_PATH,
@@ -30,10 +38,12 @@ function setIconForTab(tabId) {
   });
 }
 
-chrome.tabs.onUpdated.addListener(setIconForTab);
-chrome.tabs.onRemoved.addListener(isUsingDesiredCspPerTab.delete);
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  setIconForTab(tabId, tab.url);
+});
+chrome.tabs.onRemoved.addListener(tabsUsingDesiredCsp.delete);
 
-function requestProcessor({ responseHeaders, tabId }) {
+function requestProcessor({ responseHeaders, tabId, url }) {
   const cspHeader = responseHeaders.find(
     (header) => header.name.toLowerCase() === 'content-security-policy'
   );
@@ -45,9 +55,13 @@ function requestProcessor({ responseHeaders, tabId }) {
     cspHeader.value ===
       "default-src 'none'; sandbox allow-scripts; script-src 'unsafe-inline'; style-src 'unsafe-inline';";
 
-  isUsingDesiredCspPerTab.set(tabId, isUsingDesiredCsp);
+  if (isUsingDesiredCsp) {
+    tabsUsingDesiredCsp.set(tabId, url);
+  } else {
+    tabsUsingDesiredCsp.delete(tabId);
+  }
 
-  setIconForTab(tabId);
+  setIconForTab(tabId, url);
 }
 
 chrome.webRequest.onHeadersReceived.addListener(
