@@ -115,6 +115,156 @@ struct CalendarTime {
     time_zone: String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct MediaItems {
+    #[serde(default)]
+    media_items: Vec<MediaItem>,
+    #[serde(default)]
+    next_page_token: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct MediaItem {
+    #[serde(default)]
+    id: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    product_url: String,
+    #[serde(default)]
+    base_url: String,
+    #[serde(default)]
+    mime_type: String,
+    #[serde(default)]
+    media_metadata: Option<MediaMetadata>,
+    #[serde(default)]
+    contributor_info: Option<ContributorInfo>,
+    #[serde(default)]
+    filename: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct MediaMetadata {
+    #[serde(default)]
+    creation_time: String,
+    #[serde(default)]
+    width: String,
+    #[serde(default)]
+    height: String,
+    #[serde(default)]
+    photo: Option<Photo>,
+    #[serde(default)]
+    video: Option<Video>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct ContributorInfo {
+    #[serde(default)]
+    profile_picture_base_url: String,
+    #[serde(default)]
+    display_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct Photo {
+    #[serde(default)]
+    camera_make: String,
+    #[serde(default)]
+    camera_model: String,
+    #[serde(default)]
+    focal_length: f32,
+    #[serde(default)]
+    aperture_f_number: f32,
+    #[serde(default)]
+    iso_equivalent: u32,
+    #[serde(default)]
+    exposure_time: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+struct Video {
+    #[serde(default)]
+    camera_make: String,
+    #[serde(default)]
+    camera_model: String,
+    #[serde(default)]
+    fps: u32,
+    #[serde(default)]
+    status: VideoProcessingStatus,
+}
+#[derive(Serialize, Deserialize, Debug)]
+enum VideoProcessingStatus {
+    UNSPECIFIED,
+    PROCESSING,
+    READY,
+    FAILED,
+}
+
+impl Default for VideoProcessingStatus {
+    fn default() -> Self {
+        VideoProcessingStatus::UNSPECIFIED
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+struct MediaItemSearch {
+    #[serde(default)]
+    album_id: String,
+    #[serde(default)]
+    page_size: i32,
+    #[serde(default)]
+    page_token: String,
+    #[serde(default)]
+    filters: Option<Filters>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct Filters {
+    #[serde(default)]
+    date_filter: Option<DateFilter>,
+    #[serde(default)]
+    include_archived_media: bool,
+    #[serde(default)]
+    exclude_non_app_created_data: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct DateFilter {
+    #[serde(default)]
+    dates: Vec<Date>,
+    #[serde(default)]
+    ranges: Vec<DateRange>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct Date {
+    #[serde(default)]
+    year: u16,
+    #[serde(default)]
+    month: u16,
+    #[serde(default)]
+    day: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct DateRange {
+    #[serde(default)]
+    start_date: Option<Date>,
+    #[serde(default)]
+    end_date: Option<Date>,
+}
+
 fn get_token() -> String {
     if let Ok(mut f) = std::fs::File::open(OAUTH_TOKEN_FILE) {
         let mut token = String::new();
@@ -163,6 +313,9 @@ fn get_token() -> String {
         ))
         .add_scope(Scope::new(
             "https://www.googleapis.com/auth/plus.me".to_string(),
+        ))
+        .add_scope(Scope::new(
+            "https://www.googleapis.com/auth/photoslibrary.readonly".to_string(),
         ))
         .set_pkce_challenge(pkce_code_challenge)
         .url();
@@ -263,11 +416,50 @@ fn relevant_people(events: &CalendarEvents) -> String {
         .join("\n")
 }
 
+fn search_photos(token: String, date_range: DateRange) {
+    let search_req_body = MediaItemSearch {
+        filters: Some(Filters {
+            date_filter: Some(DateFilter {
+                dates: vec![],
+                ranges: vec![date_range],
+            }),
+            include_archived_media: true,
+            exclude_non_app_created_data: false,
+        }),
+        ..Default::default()
+    };
+    let search_req_body_str = serde_json::to_string(&search_req_body).unwrap();
+
+    let client = reqwest::blocking::Client::new();
+    let req = client
+        .post("https://photoslibrary.googleapis.com/v1/mediaItems:search")
+        .bearer_auth(token.clone())
+        .body(search_req_body_str)
+        .query(&[("alt", "json")]);
+    let rsp = req.send().unwrap();
+    if rsp.status().is_success() {
+        let media_items = rsp.json::<MediaItems>().unwrap();
+        println!("Number of items found: {:?}", media_items.media_items.len());
+
+        // Get the first photo
+        if let Some(item) = media_items.media_items.get(0) {
+            let photo_url = item.product_url.clone();
+            println!("The photo URL is {}", photo_url);
+            let req = client.get(&photo_url).bearer_auth(token);
+            let rsp = req.send().unwrap();
+            println!("Response: {:?}", rsp);
+        }
+    } else {
+        println!("error: {}", rsp.status());
+        println!("error: {}", rsp.text().unwrap());
+    }
+}
+
 fn main() {
     let token = get_token();
     let client = reqwest::blocking::Client::new();
     let req = client.get("https://www.googleapis.com/calendar/v3/calendars/primary/events");
-    let req = req.bearer_auth(token);
+    let req = req.bearer_auth(token.clone());
 
     // See https://developers.google.com/calendar/v3/reference/events/list.
     let req = req.query(&[("timeMin", "2020-11-01T00:00:00Z"), ("maxResults", "2000")]);
@@ -281,4 +473,19 @@ fn main() {
         println!("error: {}", res.status());
         println!("error: {}", res.text().unwrap());
     }
+
+    println!("Searching for media items added during November...");
+    let date_range = DateRange {
+        start_date: Some(Date {
+            year: 2020,
+            month: 11,
+            day: 1,
+        }),
+        end_date: Some(Date {
+            year: 2020,
+            month: 12,
+            day: 1,
+        }),
+    };
+    search_photos(token, date_range);
 }
