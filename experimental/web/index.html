@@ -11,6 +11,7 @@
       import Vue from 'https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.esm.browser.js';
 
       function init() {
+        const HANDLE_SIZE_BYTES = 1;
         var app = new Vue({
           el: '#app',
           data: {
@@ -20,6 +21,8 @@
             imports: [],
             // Oak ABI calls trace.
             trace: [],
+            // Created channels.
+            channels: [],
             // Loaded module.
             module: null,
             // Loaded module instance.
@@ -72,10 +75,12 @@
                 oak: {
                   wait_on_channels: (buf, count) => {
                     const status = OakStatus.values.OK;
+                    const bytes = this.readMemory(buf, HANDLE_SIZE_BYTES * count);
                     const entry = `${new Date().toISOString()}: wait_on_channels(${[
                       buf,
                       count,
-                    ].join(', ')}) -> ${status}`;
+                    ].join(', ')}) -> ${status}
+      bytes: [${bytes}]`;
                     this.trace.push(entry);
                     return status;
                   },
@@ -105,7 +110,7 @@
                       handleBuf,
                       handleCount,
                       actualHandleCount,
-                    ].join(', ')} -> ${status}`;
+                    ].join(', ')}) -> ${status}`;
                     this.trace.push(entry);
                     return status;
                   },
@@ -282,15 +287,20 @@
             // Invoke an exported function from the module.
             invoke: function (exportName) {
               console.log('invoking export: ' + exportName);
+              const initChannelHandle = this.createChannel("init");
               // Oak entrypoints expect the handle of a channel from which to read
               // messages as a parameter, so we just pass a zero value here.
-              const result = this.instance.exports[exportName](BigInt(0));
+              const result = this.instance.exports[exportName](BigInt(initChannelHandle));
               console.log('invocation result: ' + result);
             },
             createNode: function (config) {
               // TODO(#1067): Create mock nodes that replicate the functionality from the Oak
               // Runtime.
               console.log('creating node', config);
+            },
+            createChannel: function(name) {
+              const channelHandle = this.channels.push({name: name, messages: []}) - 1;
+              return channelHandle;
             },
             // Reset the current Wasm instance and trace, but keep the module loaded, so
             // that we can perform another invocation from scratch.
@@ -342,6 +352,12 @@
             >
               invoke
             </button>
+          </li>
+        </ul>
+        <p>Channels:</p>
+        <ul>
+          <li v-for="(c, handle) in channels">
+            <code>[{{handle}}] {{ c }}</code>
           </li>
         </ul>
         <p>Oak ABI call trace:</p>
