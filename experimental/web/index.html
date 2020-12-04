@@ -27,6 +27,8 @@
             module: null,
             // Loaded module instance.
             instance: null,
+            // Protobuf definitions.
+            protobuf: null,
           },
           methods: {
             // Read the specified file and load it as a Wasm module.
@@ -55,18 +57,22 @@
               // via a web server first.
               // This means that if protobuf definitions are modified locally, this script will not
               // be able to use the updated definitions.
-              const root = await protobuf.load([
+              this.protobuf = await protobuf.load([
                 'https://raw.githubusercontent.com/project-oak/oak/main/oak_abi/proto/application.proto',
                 'https://raw.githubusercontent.com/project-oak/oak/main/oak_abi/proto/label.proto',
                 'https://raw.githubusercontent.com/project-oak/oak/main/oak_abi/proto/oak_abi.proto',
+                // 'https://raw.githubusercontent.com/project-oak/oak/main/proto/handle.proto',
+                // 'https://raw.githubusercontent.com/project-oak/oak/main/oak_services/proto/grpc_invocation.proto',
+                // 'https://raw.githubusercontent.com/project-oak/oak/main/oak_services/proto/log.proto',
+                // 'https://raw.githubusercontent.com/project-oak/oak/main/examples/hello_world/proto/hello_world_internal.proto',
               ]);
 
               // Lookup the types that we will use later on.
-              const NodeConfiguration = root.lookupType(
+              const NodeConfiguration = this.protobuf.lookupType(
                 'oak.application.NodeConfiguration'
               );
-              const Label = root.lookupType('oak.label.Label');
-              const OakStatus = root.lookupEnum('oak_abi.OakStatus');
+              const Label = this.protobuf.lookupType('oak.label.Label');
+              const OakStatus = this.protobuf.lookupEnum('oak_abi.OakStatus');
 
               // Provide a mock implementation of some of the Oak ABI functions.
               // Mostly these just log their argument to the trace, and return a
@@ -75,7 +81,10 @@
                 oak: {
                   wait_on_channels: (buf, count) => {
                     const status = OakStatus.values.OK;
-                    const bytes = this.readMemory(buf, HANDLE_SIZE_BYTES * count);
+                    const bytes = this.readMemory(
+                      buf,
+                      HANDLE_SIZE_BYTES * count
+                    );
                     const entry = `${new Date().toISOString()}: wait_on_channels(${[
                       buf,
                       count,
@@ -112,6 +121,25 @@
                       actualHandleCount,
                     ].join(', ')}) -> ${status}`;
                     this.trace.push(entry);
+                    const channel = this.channels[handle];
+                    console.log(`${handle} -> ${channel.name}`);
+                    const messages = channel.messages;
+                    console.log(`${messages.length} messages available`);
+                    const message = messages.shift();
+
+                    console.log(`channel_read() -> ${JSON.stringify(message)}`);
+
+                    const bytes = message.bytes;
+                    const handles = message.handles;
+                    this.writeMemory(buf, bytes);
+                    this.writeMemory(actualSize, [bytes.length, 0, 0, 0]);
+                    this.writeMemory(handleBuf, handles);
+                    this.writeMemory(actualHandleCount, [
+                      handles.length,
+                      0,
+                      0,
+                      0,
+                    ]);
                     return status;
                   },
                   channel_write: (
@@ -284,13 +312,37 @@
                 len
               );
             },
+            writeMemory: function (offset, data) {
+              console.log(`writing ${data.length} bytes to offset ${offset}`);
+              const a = new Uint8Array(
+                this.instance.exports.memory.buffer,
+                offset,
+                data.length
+              );
+              data.forEach((v, i) => (a[i] = v));
+            },
             // Invoke an exported function from the module.
             invoke: function (exportName) {
               console.log('invoking export: ' + exportName);
-              const initChannelHandle = this.createChannel("init");
+              const logChannelHandle = this.createChannel('log');
+              const grpcInvocationReceiverHandle = this.createChannel(
+                'grpc-invocations'
+              );
+              const initChannelHandle = this.createChannel('init');
+              // const helloWorldInit = this.protobuf.lookupType("oak.examples.hello_world.Init");
+              this.channels[initChannelHandle].messages.push({
+                bytes: [],
+                handles: [
+                  logChannelHandle,
+                  -1 /* translator */,
+                  grpcInvocationReceiverHandle,
+                ],
+              });
               // Oak entrypoints expect the handle of a channel from which to read
               // messages as a parameter, so we just pass a zero value here.
-              const result = this.instance.exports[exportName](BigInt(initChannelHandle));
+              const result = this.instance.exports[exportName](
+                BigInt(initChannelHandle)
+              );
               console.log('invocation result: ' + result);
             },
             createNode: function (config) {
@@ -298,8 +350,9 @@
               // Runtime.
               console.log('creating node', config);
             },
-            createChannel: function(name) {
-              const channelHandle = this.channels.push({name: name, messages: []}) - 1;
+            createChannel: function (name) {
+              const channelHandle =
+                this.channels.push({ name: name, messages: [] }) - 1;
               return channelHandle;
             },
             // Reset the current Wasm instance and trace, but keep the module loaded, so
@@ -332,7 +385,12 @@
         for the relevant entrypoint (a module may have more than one entrypoint
         available)
       </p>
-      <input type="file" accept=".wasm" id="file-input" v-on:change="readFile" />
+      <input
+        type="file"
+        accept=".wasm"
+        id="file-input"
+        v-on:change="readFile"
+      />
       <div v-if="module">
         <p>Module loaded.</p>
         <p>Imports:</p>
