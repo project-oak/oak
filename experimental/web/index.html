@@ -11,7 +11,7 @@
       import Vue from 'https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.esm.browser.js';
 
       function init() {
-        const HANDLE_SIZE_BYTES = 1;
+        const HANDLE_SIZE_BYTES = 8;
         var app = new Vue({
           el: '#app',
           data: {
@@ -73,6 +73,9 @@
               );
               const Label = this.protobuf.lookupType('oak.label.Label');
               const OakStatus = this.protobuf.lookupEnum('oak_abi.OakStatus');
+              const ChannelReadStatus = this.protobuf.lookupEnum(
+                'oak_abi.ChannelReadStatus'
+              );
 
               // Provide a mock implementation of some of the Oak ABI functions.
               // Mostly these just log their argument to the trace, and return a
@@ -83,7 +86,7 @@
                     const status = OakStatus.values.OK;
                     const bytes = this.readMemory(
                       buf,
-                      HANDLE_SIZE_BYTES * count
+                      (HANDLE_SIZE_BYTES + 1) * count
                     );
                     const entry = `${new Date().toISOString()}: wait_on_channels(${[
                       buf,
@@ -91,12 +94,30 @@
                     ].join(', ')}) -> ${status}
       bytes: [${bytes}]`;
                     this.trace.push(entry);
+                    this.writeMemory(buf + 8, [
+                      ChannelReadStatus.values.READ_READY,
+                    ]);
+                    console.log(
+                      'after',
+                      this.readMemory(buf, (HANDLE_SIZE_BYTES + 1) * count)
+                    );
                     return status;
                   },
                   channel_close: (handle) => {
                     const status = OakStatus.values.OK;
                     const entry = `${new Date().toISOString()}: channel_close(${[
                       handle,
+                    ].join(', ')}) -> ${status}`;
+                    this.trace.push(entry);
+                    return status;
+                  },
+                  channel_label_read: (handle, buf, size, actualSize) => {
+                    const status = OakStatus.values.OK;
+                    const entry = `${new Date().toISOString()}: channel_label_read(${[
+                      handle,
+                      buf,
+                      size,
+                      actualSize,
                     ].join(', ')}) -> ${status}`;
                     this.trace.push(entry);
                     return status;
@@ -131,7 +152,9 @@
 
                     const bytes = message.bytes;
                     const handles = message.handles;
+                    console.log('before', this.readMemory(buf, bytes.length));
                     this.writeMemory(buf, bytes);
+                    console.log('after', this.readMemory(buf, bytes.length));
                     this.writeMemory(actualSize, [bytes.length, 0, 0, 0]);
                     this.writeMemory(handleBuf, handles);
                     this.writeMemory(actualHandleCount, [
@@ -324,19 +347,33 @@
             // Invoke an exported function from the module.
             invoke: function (exportName) {
               console.log('invoking export: ' + exportName);
+              this.createChannel('dummy');
               const logChannelHandle = this.createChannel('log');
               const grpcInvocationReceiverHandle = this.createChannel(
                 'grpc-invocations'
               );
               const initChannelHandle = this.createChannel('init');
-              // const helloWorldInit = this.protobuf.lookupType("oak.examples.hello_world.Init");
+              // https://github.com/project-oak/oak/blob/main/proto/handle.proto
+              const HandleWrapper = new protobuf.Type('HandleWrapper').add(
+                new protobuf.Field('handle', 1, 'fixed64')
+              );
+              this.protobuf.add(HandleWrapper);
+              // https://github.com/project-oak/oak/blob/main/examples/hello_world/proto/hello_world_internal.proto
+              const HelloWorldInit = new protobuf.Type('Init').add(
+                new protobuf.Field('logSender', 1, 'HandleWrapper'),
+                new protobuf.Field('translatorSender', 2, 'HandleWrapper')
+              );
+              this.protobuf.add(HelloWorldInit);
+              const init = HelloWorldInit.fromObject({
+                logSender: {
+                  handle: logChannelHandle,
+                },
+              });
+              const bytes = Array.from(HelloWorldInit.encode(init).finish());
+              console.log(`message bytes: ${bytes}`);
               this.channels[initChannelHandle].messages.push({
-                bytes: [],
-                handles: [
-                  logChannelHandle,
-                  -1 /* translator */,
-                  grpcInvocationReceiverHandle,
-                ],
+                bytes: bytes,
+                handles: [grpcInvocationReceiverHandle, logChannelHandle],
               });
               // Oak entrypoints expect the handle of a channel from which to read
               // messages as a parameter, so we just pass a zero value here.
