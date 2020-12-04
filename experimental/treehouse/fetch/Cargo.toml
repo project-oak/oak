@@ -10,6 +10,7 @@ edition = "2018"
 [dependencies]
 oauth2 = "*"
 failure = "*"
+image = "*"
 url = { version = "2.1", features = ["serde"] }
 reqwest = { version = "0.10", features = ["blocking", "json"] }
 serde = "*"

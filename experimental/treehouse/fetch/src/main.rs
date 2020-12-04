@@ -443,11 +443,21 @@ fn search_photos(token: String, date_range: DateRange) {
 
         // Get the first photo
         if let Some(item) = media_items.media_items.get(0) {
-            let photo_url = item.product_url.clone();
+            let photo_url = format!("{}=d", item.base_url.clone());
             println!("The photo URL is {}", photo_url);
-            let req = client.get(&photo_url).bearer_auth(token);
-            let rsp = req.send().unwrap();
-            println!("Response: {:?}", rsp);
+            let req = client.get(&photo_url);
+            let mut rsp = req.send().unwrap();
+            let mut img_bytes: Vec<u8> = vec![];
+            rsp.copy_to(&mut img_bytes).unwrap();
+            println!("Image size: {}", img_bytes.len());
+
+            // TODO: return the buffer (and the format) instead of saving to file.
+            // Save the image into file
+            let mut reader = image::io::Reader::new(std::io::Cursor::new(img_bytes));
+            // The correct format should be extracted from the response.
+            reader.set_format(image::ImageFormat::Jpeg);
+            let img = reader.decode().expect("Could not decode image");
+            img.save("photo.jpeg").expect("Could not save image file");
         }
     } else {
         println!("error: {}", rsp.status());
