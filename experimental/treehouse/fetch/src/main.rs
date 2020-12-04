@@ -474,7 +474,7 @@ fn main() {
         println!("error: {}", res.text().unwrap());
     }
 
-    println!("Searching for media items added during November...");
+    println!("Searching for media items added recently...");
     let date_range = DateRange {
         start_date: Some(Date {
             year: 2020,
@@ -482,8 +482,8 @@ fn main() {
             day: 1,
         }),
         end_date: Some(Date {
-            year: 2020,
-            month: 12,
+            year: 2021,
+            month: 1,
             day: 1,
         }),
     };
