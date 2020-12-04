@@ -137,6 +137,34 @@
                     this.trace.push(entry);
                     return status;
                   },
+                  channel_write_with_downgrade: (
+                    handle,
+                    buf,
+                    size,
+                    handleBuf,
+                    handleCount
+                  ) => {
+                    const status = OakStatus.values.OK;
+                    const bytes = this.readMemory(buf, size);
+                    const bytesString = new TextDecoder().decode(bytes);
+                    const handles = new Uint8Array(
+                      this.instance.exports.memory.buffer,
+                      handleBuf,
+                      handleCount
+                    );
+                    const entry = `${new Date().toISOString()}: channel_write_with_downgrade(${[
+                      handle,
+                      buf,
+                      size,
+                      handleBuf,
+                      handleCount,
+                    ].join(', ')}) -> ${status}
+      bytes: [${bytes}]
+      bytes(string): "${bytesString}"
+      handles: [${handles}]`;
+                    this.trace.push(entry);
+                    return status;
+                  },
                   channel_create: (
                     writeHandle,
                     readHandle,
@@ -153,6 +181,34 @@
                       this.readMemory(labelBuf, labelSize)
                     );
                     const entry = `${new Date().toISOString()}: channel_create(${[
+                      writeHandle,
+                      readHandle,
+                      nameBuf,
+                      nameSize,
+                      labelBuf,
+                      labelSize,
+                    ].join(', ')}) -> ${status}
+      name: ${JSON.stringify(name)}
+      label: ${JSON.stringify(label)}`;
+                    this.trace.push(entry);
+                    return status;
+                  },
+                  channel_create_with_downgrade: (
+                    writeHandle,
+                    readHandle,
+                    nameBuf,
+                    nameSize,
+                    labelBuf,
+                    labelSize
+                  ) => {
+                    const status = OakStatus.values.OK;
+                    const name = new TextDecoder().decode(
+                      this.readMemory(nameBuf, nameSize)
+                    );
+                    const label = Label.decode(
+                      this.readMemory(labelBuf, labelSize)
+                    );
+                    const entry = `${new Date().toISOString()}: channel_create_with_downgrade(${[
                       writeHandle,
                       readHandle,
                       nameBuf,
@@ -266,7 +322,7 @@
         for the relevant entrypoint (a module may have more than one entrypoint
         available)
       </p>
-      <input type="file" id="file-input" v-on:change="readFile" />
+      <input type="file" accept=".wasm" id="file-input" v-on:change="readFile" />
       <div v-if="module">
         <p>Module loaded.</p>
         <p>Imports:</p>
