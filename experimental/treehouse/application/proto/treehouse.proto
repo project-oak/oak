@@ -20,13 +20,9 @@ package oak.examples.treehouse;
 
 import "google/protobuf/empty.proto";
 
-message TreehouseRequest {
+message TreehouseRequest {}
 
-}
-
-message TreehouseResponse {
-
-}
+message TreehouseResponse {}
 
 service Treehouse {
   rpc GetData(TreehouseRequest) returns (TreehouseResponse);

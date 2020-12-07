@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-
 use anyhow::{ensure, Context};
 use fetch::get_token;
 use log::info;
@@ -23,7 +22,7 @@ use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
 use structopt::StructOpt;
 use tonic::Request;
 use treehouse_client::proto::{
-    treehouse_client::TreehouseClient, TreehouseResponse, TreehouseRequest,
+    treehouse_client::TreehouseClient, TreehouseRequest, TreehouseResponse,
 };
 
 #[derive(StructOpt, Clone)]
