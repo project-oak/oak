@@ -338,12 +338,35 @@ function init() {
         const grpcInvocationReceiverHandle = this.createChannel(
           'grpc-invocations'
         );
-        const initChannelHandle = this.createChannel('init');
         // https://github.com/project-oak/oak/blob/main/proto/handle.proto
         const HandleWrapper = new protobuf.Type('HandleWrapper').add(
           new protobuf.Field('handle', 1, 'fixed64')
         );
         this.protobuf.add(HandleWrapper);
+        // https://github.com/project-oak/oak/blob/main/oak_services/proto/grpc_invocation.proto.
+        const Invocation = new protobuf.Type('Invocation').add(
+          new protobuf.Field('receiver', 1, 'HandleWrapper'),
+          new protobuf.Field('sender', 2, 'HandleWrapper')
+        );
+        this.protobuf.add(Invocation);
+        const requestChannel = this.createChannel('request');
+        const responseChannel = this.createChannel('response');
+        const invocation = Invocation.fromObject({
+          receiver: {
+            handle: requestChannel,
+          },
+          sender: {
+            handle: responseChannel,
+          },
+        });
+        const invocationBytes = Array.from(
+          Invocation.encode(invocation).finish()
+        );
+        this.channels[grpcInvocationReceiverHandle].messages.push({
+          bytes: invocationBytes,
+          handles: [requestChannel, responseChannel],
+        });
+        const initChannelHandle = this.createChannel('init');
         // https://github.com/project-oak/oak/blob/main/examples/hello_world/proto/hello_world_internal.proto
         const HelloWorldInit = new protobuf.Type('Init').add(
           new protobuf.Field('logSender', 1, 'HandleWrapper'),
