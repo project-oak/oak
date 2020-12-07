@@ -320,7 +320,7 @@ function init() {
         data.forEach((v, i) => (a[i] = v));
       },
       // Invoke an exported function from the module.
-      invoke: function (exportName) {
+      invoke: function (exportName: string) {
         console.log('invoking export: ' + exportName);
 
         this.createChannel('dummy');
@@ -383,12 +383,14 @@ function init() {
         );
         console.log('invocation result: ' + result);
       },
-      createNode: function (config) {
+      createNode: function (
+        config: oakApplicationProto.NodeConfiguration.AsObject
+      ) {
         // TODO(#1067): Create mock nodes that replicate the functionality from the Oak
         // Runtime.
         console.log('creating node', config);
       },
-      createChannel: function (name) {
+      createChannel: function (name: string) {
         const channelHandle =
           this.channels.push({ name: name, messages: [] }) - 1;
         return channelHandle;
