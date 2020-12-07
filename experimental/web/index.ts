@@ -392,7 +392,10 @@ function init() {
           grpcInvocation.setSender(sender);
         }
 
-        const httpInvocationChannel = this.createChannel('http-invocations');
+        const httpInvocationChannel = this.createChannel(
+          'http-invocations',
+          this.httpInvocationCallback
+        );
 
         const grpcInvocationBytes = Array.from(
           grpcInvocation.serializeBinary()
@@ -448,6 +451,10 @@ function init() {
 
       logCallback: function (m: Message) {
         console.log('LOG', m);
+      },
+
+      httpInvocationCallback: function (m: Message) {
+        console.log('HTTP invocation', m);
       },
 
       // Reset the current Wasm instance and trace, but keep the module loaded, so
