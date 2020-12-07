@@ -5,6 +5,9 @@ import labelProto from './protoc_out/oak_abi/proto/label_pb';
 import handleProto from './protoc_out/proto/handle_pb';
 import grpcInvocationProto from './protoc_out/oak_services/proto/grpc_invocation_pb';
 import grpcEncapProto from './protoc_out/oak_services/proto/grpc_encap_pb';
+import httpInvocationProto from './protoc_out/oak_services/proto/http_invocation_pb';
+import httpEncapProto from './protoc_out/oak_services/proto/http_encap_pb';
+import logProto from './protoc_out/oak_services/proto/log_pb';
 import treehouseProto from './protoc_out/experimental/treehouse/application/proto/treehouse_pb';
 import treehouseInternalProto from './protoc_out/experimental/treehouse/application/proto/treehouse_init_pb';
 
@@ -376,7 +379,7 @@ function init() {
           grpcRequest.setLast(true);
         }
         const requestBytes = Array.from(grpcRequest.serializeBinary());
-        this.channels[grpcRequestChannel].messages.push({
+        (<Channel>this.channels[grpcRequestChannel]).messages.push({
           bytes: requestBytes,
           handles: [],
         });
@@ -450,11 +453,28 @@ function init() {
       },
 
       logCallback: function (m: Message) {
-        console.log('LOG', m);
+        const decoded = logProto.LogMessage.deserializeBinary(
+          new Uint8Array(m.bytes)
+        );
+        console.log('LOG', decoded.toString());
       },
 
       httpInvocationCallback: function (m: Message) {
-        console.log('HTTP invocation', m);
+        const decoded = httpInvocationProto.HttpInvocation.deserializeBinary(
+          new Uint8Array(m.bytes)
+        );
+        const httpRequestChannel = m.handles[0];
+        (<Channel>(
+          this.channels[httpRequestChannel]
+        )).callback = this.httpRequestCallback;
+        console.log('HTTP invocation', decoded);
+      },
+
+      httpRequestCallback: function (m: Message) {
+        const decoded = httpEncapProto.HttpRequest.deserializeBinary(
+          new Uint8Array(m.bytes)
+        );
+        console.log('HTTP request', decoded);
       },
 
       // Reset the current Wasm instance and trace, but keep the module loaded, so
