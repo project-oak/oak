@@ -1,7 +1,12 @@
 import Vue from 'vue';
 import oakAbiProto from './protoc_out/oak_abi/proto/oak_abi_pb';
-
-declare const protobuf: any;
+import oakApplicationProto from './protoc_out/oak_abi/proto/application_pb';
+import labelProto from './protoc_out/oak_abi/proto/label_pb';
+import handleProto from './protoc_out/proto/handle_pb';
+import helloWorldProto from './protoc_out/examples/hello_world/proto/hello_world_pb';
+import helloWorldInternalProto from './protoc_out/examples/hello_world/proto/hello_world_internal_pb';
+import grpcInvocationProto from './protoc_out/oak_services/proto/grpc_invocation_pb';
+import grpcEncapProto from './protoc_out/oak_services/proto/grpc_encap_pb';
 
 function init() {
   const HANDLE_SIZE_BYTES = 8;
@@ -46,29 +51,10 @@ function init() {
         await this.instantiate();
       },
       instantiate: async function () {
-        // Load proto files from GitHub. We cannot refer to local files unless they are served
-        // via a web server first.
-        // This means that if protobuf definitions are modified locally, this script will not
-        // be able to use the updated definitions.
-        this.protobuf = await protobuf.load([
-          'https://raw.githubusercontent.com/project-oak/oak/main/oak_abi/proto/application.proto',
-          'https://raw.githubusercontent.com/project-oak/oak/main/oak_abi/proto/label.proto',
-          'https://raw.githubusercontent.com/project-oak/oak/main/oak_abi/proto/oak_abi.proto',
-          // 'https://raw.githubusercontent.com/project-oak/oak/main/proto/handle.proto',
-          // 'https://raw.githubusercontent.com/project-oak/oak/main/oak_services/proto/grpc_invocation.proto',
-          // 'https://raw.githubusercontent.com/project-oak/oak/main/oak_services/proto/log.proto',
-          // 'https://raw.githubusercontent.com/project-oak/oak/main/examples/hello_world/proto/hello_world_internal.proto',
-        ]);
-
         // Lookup the types that we will use later on.
-        const NodeConfiguration = this.protobuf.lookupType(
-          'oak.application.NodeConfiguration'
-        );
-        const Label = this.protobuf.lookupType('oak.label.Label');
-        const { OakStatus } = oakAbiProto;
-        const ChannelReadStatus = this.protobuf.lookupEnum(
-          'oak_abi.ChannelReadStatus'
-        );
+        const { NodeConfiguration } = oakApplicationProto;
+        const { Label } = labelProto;
+        const { OakStatus, ChannelReadStatus } = oakAbiProto;
 
         // Provide a mock implementation of some of the Oak ABI functions.
         // Mostly these just log their argument to the trace, and return a
@@ -87,7 +73,7 @@ function init() {
               ].join(', ')}) -> ${status}
       bytes: [${bytes}]`;
               this.trace.push(entry);
-              this.writeMemory(buf + 8, [ChannelReadStatus.values.READ_READY]);
+              this.writeMemory(buf + 8, [ChannelReadStatus.READ_READY]);
               return status;
             },
             channel_close: (handle) => {
@@ -223,7 +209,9 @@ function init() {
               const name = new TextDecoder().decode(
                 this.readMemory(nameBuf, nameSize)
               );
-              const label = Label.decode(this.readMemory(labelBuf, labelSize));
+              const label = Label.deserializeBinary(
+                this.readMemory(labelBuf, labelSize)
+              ).toObject();
               const entry = `${new Date().toISOString()}: channel_create(${[
                 writeHandle,
                 readHandle,
@@ -249,7 +237,9 @@ function init() {
               const name = new TextDecoder().decode(
                 this.readMemory(nameBuf, nameSize)
               );
-              const label = Label.decode(this.readMemory(labelBuf, labelSize));
+              const label = Label.deserializeBinary(
+                this.readMemory(labelBuf, labelSize)
+              ).toObject();
               const entry = `${new Date().toISOString()}: channel_create_with_downgrade(${[
                 writeHandle,
                 readHandle,
@@ -276,10 +266,12 @@ function init() {
               const name = new TextDecoder().decode(
                 this.readMemory(nameBuf, nameSize)
               );
-              const config = NodeConfiguration.decode(
+              const config = NodeConfiguration.deserializeBinary(
                 this.readMemory(configBuf, configLen)
-              );
-              const label = Label.decode(this.readMemory(labelBuf, labelSize));
+              ).toObject();
+              const label = Label.deserializeBinary(
+                this.readMemory(labelBuf, labelSize)
+              ).toObject();
               const entry = `${new Date().toISOString()}: node_create(${[
                 nameBuf,
                 nameSize,
@@ -330,93 +322,55 @@ function init() {
       invoke: function (exportName) {
         console.log('invoking export: ' + exportName);
 
-        // Manually build protobuf types.
-        // https://github.com/project-oak/oak/blob/main/proto/handle.proto
-        const HandleWrapper = new protobuf.Type('HandleWrapper').add(
-          new protobuf.Field('handle', 1, 'fixed64')
-        );
-        this.protobuf.add(HandleWrapper);
-        // https://github.com/project-oak/oak/blob/main/oak_services/proto/grpc_invocation.proto.
-        const Invocation = new protobuf.Type('Invocation')
-          .add(new protobuf.Field('receiver', 1, 'HandleWrapper'))
-          .add(new protobuf.Field('sender', 2, 'HandleWrapper'));
-        this.protobuf.add(Invocation);
-        // https://github.com/project-oak/oak/blob/main/examples/hello_world/proto/hello_world_internal.proto
-        const HelloWorldInit = new protobuf.Type('Init')
-          .add(new protobuf.Field('logSender', 1, 'HandleWrapper'))
-          .add(new protobuf.Field('translatorSender', 2, 'HandleWrapper'));
-        this.protobuf.add(HelloWorldInit);
-        // https://github.com/project-oak/oak/blob/main/oak_services/proto/grpc_encap.proto
-        const GrpcRequest = new protobuf.Type('GrpcRequest')
-          .add(new protobuf.Field('method_name', 1, 'string'))
-          .add(new protobuf.Field('req_msg', 2, 'bytes'))
-          .add(new protobuf.Field('last', 3, 'bool'));
-        this.protobuf.add(GrpcRequest);
-        const GrpcResponse = new protobuf.Type('GrpcResponse')
-          .add(new protobuf.Field('rsp_msg', 1, 'bytes'))
-          .add(new protobuf.Field('status', 2, 'int64'))
-          .add(new protobuf.Field('last', 3, 'bool'));
-        this.protobuf.add(GrpcResponse);
-        // https://github.com/project-oak/oak/blob/main/examples/hello_world/proto/hello_world.proto
-        const HelloRequest = new protobuf.Type('HelloRequest').add(
-          new protobuf.Field('greeting', 1, 'string')
-        );
-        this.protobuf.add(HelloRequest);
-        const HelloResponse = new protobuf.Type('HelloResponse').add(
-          new protobuf.Field('reply', 1, 'string')
-        );
-        this.protobuf.add(HelloResponse);
-
         this.createChannel('dummy');
         const logChannelHandle = this.createChannel('log');
         const grpcInvocationReceiverHandle = this.createChannel(
           'grpc-invocations'
         );
+
+        const invocation = new grpcInvocationProto.GrpcInvocation();
+        const responseChannel = this.createChannel('response');
         const requestChannel = this.createChannel('request');
-        const requestBytes = Array.from(
-          GrpcRequest.encode(
-            GrpcRequest.create({
-              // https://github.com/project-oak/oak/blob/4a9e9fa62cfb8af5cef67ed5f9bb57ef668e73fd/examples/hello_world/proto/hello_world.proto#L33
-              method_name: '/oak.examples.hello_world.HelloWorld/SayHello',
-              req_msg: Array.from(
-                HelloRequest.encode(
-                  HelloRequest.create({
-                    greeting: 'world',
-                  })
-                ).finish()
-              ),
-              last: true,
-            })
-          ).finish()
-        );
+        const request = new grpcEncapProto.GrpcRequest();
+        {
+          request.setMethodName(
+            '/oak.examples.hello_world.HelloWorld/SayHello'
+          );
+          const helloRequest = new helloWorldProto.HelloRequest();
+          helloRequest.setGreeting('world');
+          request.setReqMsg(helloRequest.serializeBinary());
+        }
+        const requestBytes = Array.from(request.serializeBinary());
         this.channels[requestChannel].messages.push({
           bytes: requestBytes,
           handles: [],
         });
-        const responseChannel = this.createChannel('response');
-        const invocation = Invocation.create({
-          receiver: {
-            handle: requestChannel,
-          },
-          sender: {
-            handle: responseChannel,
-          },
-        });
-        const invocationBytes = Array.from(
-          Invocation.encode(invocation).finish()
-        );
+
+        {
+          const receiver = new handleProto.Receiver();
+          receiver.setId(requestChannel);
+          invocation.setReceiver(receiver);
+        }
+        {
+          const sender = new handleProto.Sender();
+          sender.setId(responseChannel);
+          invocation.setSender(sender);
+        }
+
+        const invocationBytes = Array.from(invocation.serializeBinary());
         console.log('invocation bytes', invocationBytes);
         this.channels[grpcInvocationReceiverHandle].messages.push({
           bytes: invocationBytes,
           handles: [requestChannel, responseChannel],
         });
         const initChannelHandle = this.createChannel('init');
-        const init = HelloWorldInit.create({
-          logSender: {
-            handle: logChannelHandle,
-          },
-        });
-        const bytes = Array.from(HelloWorldInit.encode(init).finish());
+        const init = new helloWorldInternalProto.Init();
+        {
+          const sender = new handleProto.Sender();
+          sender.setId(logChannelHandle);
+          init.setLogSender(sender);
+        }
+        const bytes = Array.from(init.serializeBinary());
         console.log(`message bytes: ${bytes}`);
         this.channels[initChannelHandle].messages.push({
           bytes: bytes,
