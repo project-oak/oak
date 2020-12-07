@@ -152,11 +152,24 @@
 
                     const bytes = message.bytes;
                     const handles = message.handles;
-                    console.log('before', this.readMemory(buf, bytes.length));
+                    console.log('bytes');
                     this.writeMemory(buf, bytes);
-                    console.log('after', this.readMemory(buf, bytes.length));
+                    console.log('size');
                     this.writeMemory(actualSize, [bytes.length, 0, 0, 0]);
-                    this.writeMemory(handleBuf, handles);
+                    console.log('handles');
+                    // Hacky way of converting to 64bit representation. Only works for small values of v.
+                    const packedHandles = handles.flatMap((v) => [
+                      v,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                    ]);
+                    this.writeMemory(handleBuf, packedHandles);
+                    console.log('handle size');
                     this.writeMemory(actualHandleCount, [
                       handles.length,
                       0,
@@ -336,7 +349,9 @@
               );
             },
             writeMemory: function (offset, data) {
-              console.log(`writing ${data.length} bytes to offset ${offset}`);
+              console.log(
+                `writing ${data.length} bytes to offset ${offset}: ${data}`
+              );
               const a = new Uint8Array(
                 this.instance.exports.memory.buffer,
                 offset,
