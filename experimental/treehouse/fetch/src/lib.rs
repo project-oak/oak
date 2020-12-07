@@ -449,7 +449,7 @@ fn search_photos(token: String, date_range: DateRange) {
     let client = reqwest::blocking::Client::new();
     let req = client
         .post("https://photoslibrary.googleapis.com/v1/mediaItems:search")
-        .bearer_auth(token.clone())
+        .bearer_auth(token)
         .body(search_req_body_str)
         .query(&[("alt", "json")]);
     let rsp = req.send().unwrap();
