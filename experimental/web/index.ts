@@ -330,11 +330,8 @@ function init() {
       // Invoke an exported function from the module.
       invoke: function (exportName) {
         console.log('invoking export: ' + exportName);
-        this.createChannel('dummy');
-        const logChannelHandle = this.createChannel('log');
-        const grpcInvocationReceiverHandle = this.createChannel(
-          'grpc-invocations'
-        );
+
+        // Manually build protobuf types.
         // https://github.com/project-oak/oak/blob/main/proto/handle.proto
         const HandleWrapper = new protobuf.Type('HandleWrapper').add(
           new protobuf.Field('handle', 1, 'fixed64')
@@ -346,6 +343,18 @@ function init() {
           new protobuf.Field('sender', 2, 'HandleWrapper')
         );
         this.protobuf.add(Invocation);
+        // https://github.com/project-oak/oak/blob/main/examples/hello_world/proto/hello_world_internal.proto
+        const HelloWorldInit = new protobuf.Type('Init').add(
+          new protobuf.Field('logSender', 1, 'HandleWrapper'),
+          new protobuf.Field('translatorSender', 2, 'HandleWrapper')
+        );
+        this.protobuf.add(HelloWorldInit);
+
+        this.createChannel('dummy');
+        const logChannelHandle = this.createChannel('log');
+        const grpcInvocationReceiverHandle = this.createChannel(
+          'grpc-invocations'
+        );
         const requestChannel = this.createChannel('request');
         const responseChannel = this.createChannel('response');
         const invocation = Invocation.fromObject({
@@ -364,12 +373,6 @@ function init() {
           handles: [requestChannel, responseChannel],
         });
         const initChannelHandle = this.createChannel('init');
-        // https://github.com/project-oak/oak/blob/main/examples/hello_world/proto/hello_world_internal.proto
-        const HelloWorldInit = new protobuf.Type('Init').add(
-          new protobuf.Field('logSender', 1, 'HandleWrapper'),
-          new protobuf.Field('translatorSender', 2, 'HandleWrapper')
-        );
-        this.protobuf.add(HelloWorldInit);
         const init = HelloWorldInit.fromObject({
           logSender: {
             handle: logChannelHandle,
