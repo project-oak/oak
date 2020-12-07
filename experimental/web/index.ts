@@ -135,7 +135,7 @@ function init() {
               console.log('actualSize', actualSizeOut);
               this.writeMemory(actualSize, actualSizeOut);
               // Hacky way of converting to 64bit representation. Only works for small values of v.
-              const handlesOut = message.handles.flatMap((v) => [
+              const handlesOut = message.handles.flatMap((v: number) => [
                 v,
                 0,
                 0,
