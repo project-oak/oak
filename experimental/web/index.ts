@@ -1,8 +1,5 @@
 import Vue from 'vue';
-
-// While protobufjs is included via script tag, we declare it as a const to
-// suppress TypeScript warnings of it being undefined.
-declare const protobuf: any;
+import oakAbiProto from './protoc_out/oak_abi/proto/oak_abi_pb';
 
 function init() {
   const HANDLE_SIZE_BYTES = 8;
@@ -66,7 +63,7 @@ function init() {
           'oak.application.NodeConfiguration'
         );
         const Label = this.protobuf.lookupType('oak.label.Label');
-        const OakStatus = this.protobuf.lookupEnum('oak_abi.OakStatus');
+        const { OakStatus } = oakAbiProto;
         const ChannelReadStatus = this.protobuf.lookupEnum(
           'oak_abi.ChannelReadStatus'
         );
@@ -77,7 +74,7 @@ function init() {
         const importObject = {
           oak: {
             wait_on_channels: (buf, count) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const bytes = this.readMemory(
                 buf,
                 (HANDLE_SIZE_BYTES + 1) * count
@@ -96,7 +93,7 @@ function init() {
               return status;
             },
             channel_close: (handle) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const entry = `${new Date().toISOString()}: channel_close(${[
                 handle,
               ].join(', ')}) -> ${status}`;
@@ -104,7 +101,7 @@ function init() {
               return status;
             },
             channel_label_read: (handle, buf, size, actualSize) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const entry = `${new Date().toISOString()}: channel_label_read(${[
                 handle,
                 buf,
@@ -123,7 +120,7 @@ function init() {
               handleCount,
               actualHandleCount
             ) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const entry = `${new Date().toISOString()}: channel_read(${[
                 handle,
                 buf,
@@ -166,7 +163,7 @@ function init() {
               return status;
             },
             channel_write: (handle, buf, size, handleBuf, handleCount) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const bytes = this.readMemory(buf, size);
               const bytesString = new TextDecoder().decode(bytes);
               const handles = new Uint8Array(
@@ -194,7 +191,7 @@ function init() {
               handleBuf,
               handleCount
             ) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const bytes = this.readMemory(buf, size);
               const bytesString = new TextDecoder().decode(bytes);
               const handles = new Uint8Array(
@@ -223,7 +220,7 @@ function init() {
               labelBuf,
               labelSize
             ) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const name = new TextDecoder().decode(
                 this.readMemory(nameBuf, nameSize)
               );
@@ -249,7 +246,7 @@ function init() {
               labelBuf,
               labelSize
             ) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const name = new TextDecoder().decode(
                 this.readMemory(nameBuf, nameSize)
               );
@@ -276,7 +273,7 @@ function init() {
               labelSize,
               handle
             ) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const name = new TextDecoder().decode(
                 this.readMemory(nameBuf, nameSize)
               );
@@ -301,7 +298,7 @@ function init() {
               return status;
             },
             random_get: (buf, len) => {
-              const status = OakStatus.values.OK;
+              const status = OakStatus.OK;
               const entry = `${new Date().toISOString()}: random_get(${[
                 buf,
                 len,
