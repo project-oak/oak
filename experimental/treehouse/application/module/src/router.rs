@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-use crate::{handler::Handler, proto::oak::examples::treehouse::TreehouseInit};
+use crate::{
+    handler::Handler,
+    proto::oak::examples::treehouse::{TreehouseHandlerInit, TreehouseRouterInit},
+};
 use anyhow::Context;
 use oak::{
     grpc,
@@ -24,11 +27,11 @@ use oak::{
 
 #[derive(Default)]
 pub struct Router {
-    init: TreehouseInit,
+    init: TreehouseRouterInit,
 }
 
 impl oak::WithInit for Router {
-    type Init = TreehouseInit;
+    type Init = TreehouseRouterInit;
 
     fn create(init: Self::Init) -> Self {
         Self { init }
@@ -45,13 +48,18 @@ impl CommandHandler for Router {
             .context("Couldn't get receiver")?
             .label()
             .context("Couldn't get label")?;
-        let handler_invocation_sender = oak::io::entrypoint_node_create::<Handler, _, _>(
-            "handler",
+        let http_invocation_sender = oak::io::node_create::<oak::http::Invocation>(
+            "http_client",
             &label,
-            "app",
-            self.init.clone(),
-        )
-        .context("Couldn't create handler node")?;
+            &oak::node_config::http_client(""),
+        )?;
+        let init = TreehouseHandlerInit {
+            log_sender: self.init.log_sender.clone(),
+            http_invocation_sender: Some(http_invocation_sender),
+        };
+        let handler_invocation_sender =
+            oak::io::entrypoint_node_create::<Handler, _, _>("handler", &label, "app", init)
+                .context("Couldn't create handler node")?;
         handler_invocation_sender
             .send(&invocation)
             .context("Couldn't send invocation to handler node")

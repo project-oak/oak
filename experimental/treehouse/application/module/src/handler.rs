@@ -15,21 +15,27 @@
 //
 
 use crate::proto::oak::examples::treehouse::{
-    Card, GetCardsRequest, GetCardsResponse, Treehouse, TreehouseDispatcher, TreehouseInit,
+    Card, GetCardsRequest, GetCardsResponse, Treehouse, TreehouseDispatcher, TreehouseHandlerInit,
 };
 use log::debug;
 use oak::grpc;
 use oak_abi::label::Label;
 
-#[derive(Default)]
-pub struct Handler {}
+pub struct Handler {
+    http_client: oak::http::client::HttpClient,
+}
 
 impl oak::WithInit for Handler {
-    type Init = TreehouseInit;
+    type Init = TreehouseHandlerInit;
 
     fn create(init: Self::Init) -> Self {
         oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
-        Self::default()
+        Self {
+            http_client: oak::http::client::from_sender(
+                init.http_invocation_sender.unwrap(),
+                "".to_string(),
+            ),
+        }
     }
 }
 
@@ -37,15 +43,12 @@ impl Treehouse for Handler {
     fn get_cards(&mut self, request: GetCardsRequest) -> grpc::Result<GetCardsResponse> {
         debug!("Received request: {:?}", request);
 
-        // create an HTTP client pseudo-Node.
-        let http_client =
-            oak::http::client::init("").expect("Could not create HttpClient pseudo-node");
         let request = http::Request::builder()
             .method(http::Method::GET)
             .uri("http://www.google.com")
             .body(vec![])
             .expect("Could not build request");
-        http_client
+        self.http_client
             .send_request(request, &Label::public_untrusted())
             .expect("Could not get response");
 

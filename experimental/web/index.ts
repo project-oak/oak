@@ -3,11 +3,10 @@ import oakAbiProto from './protoc_out/oak_abi/proto/oak_abi_pb';
 import oakApplicationProto from './protoc_out/oak_abi/proto/application_pb';
 import labelProto from './protoc_out/oak_abi/proto/label_pb';
 import handleProto from './protoc_out/proto/handle_pb';
-import helloWorldProto from './protoc_out/examples/hello_world/proto/hello_world_pb';
-import helloWorldInternalProto from './protoc_out/examples/hello_world/proto/hello_world_internal_pb';
 import grpcInvocationProto from './protoc_out/oak_services/proto/grpc_invocation_pb';
 import grpcEncapProto from './protoc_out/oak_services/proto/grpc_encap_pb';
 import treehouseProto from './protoc_out/experimental/treehouse/application/proto/treehouse_pb';
+import treehouseInternalProto from './protoc_out/experimental/treehouse/application/proto/treehouse_init_pb';
 
 function init() {
   const HANDLE_SIZE_BYTES = 8;
@@ -224,6 +223,9 @@ function init() {
       name: ${JSON.stringify(name)}
       label: ${JSON.stringify(label)}`;
               this.trace.push(entry);
+              const newChannelHandle = this.createChannel(name);
+              this.writeMemory(writeHandle, [newChannelHandle]);
+              this.writeMemory(readHandle, [newChannelHandle]);
               return status;
             },
             channel_create_with_downgrade: (
@@ -305,10 +307,10 @@ function init() {
           importObject
         );
       },
-      readMemory: function (offset, len) {
+      readMemory: function (offset: number, len: number) {
         return new Uint8Array(this.instance.exports.memory.buffer, offset, len);
       },
-      writeMemory: function (offset, data) {
+      writeMemory: function (offset: number, data: number[]) {
         console.log(
           `writing ${data.length} bytes to offset ${offset}: ${data}`
         );
@@ -317,7 +319,7 @@ function init() {
           offset,
           data.length
         );
-        data.forEach((v, i) => (a[i] = v));
+        data.forEach((v: number, i: number) => (a[i] = v));
       },
       // Invoke an exported function from the module.
       invoke: function (exportName: string) {
@@ -329,52 +331,65 @@ function init() {
           'grpc-invocations'
         );
 
-        const invocation = new grpcInvocationProto.GrpcInvocation();
-        const responseChannel = this.createChannel('response');
-        const requestChannel = this.createChannel('request');
-        const request = new grpcEncapProto.GrpcRequest();
+        const grpcInvocation = new grpcInvocationProto.GrpcInvocation();
+        const grpcResponseChannel = this.createChannel('grpc-response');
+        const grpcRequestChannel = this.createChannel('grpc-request');
+        const grpcRequest = new grpcEncapProto.GrpcRequest();
         {
           // https://github.com/project-oak/oak/blob/c2fb4a05f31e639c9f0499ebfd0aae18932f82f2/experimental/treehouse/application/proto/treehouse.proto#L42
-          request.setMethodName('/oak.examples.treehouse.Treehouse/GetCards');
+          grpcRequest.setMethodName(
+            '/oak.examples.treehouse.Treehouse/GetCards'
+          );
           const getCardsRequest = new treehouseProto.GetCardsRequest();
-          request.setReqMsg(getCardsRequest.serializeBinary());
-          request.setLast(true);
+          grpcRequest.setReqMsg(getCardsRequest.serializeBinary());
+          grpcRequest.setLast(true);
         }
-        const requestBytes = Array.from(request.serializeBinary());
-        this.channels[requestChannel].messages.push({
+        const requestBytes = Array.from(grpcRequest.serializeBinary());
+        this.channels[grpcRequestChannel].messages.push({
           bytes: requestBytes,
           handles: [],
         });
 
         {
           const receiver = new handleProto.Receiver();
-          receiver.setId(requestChannel);
-          invocation.setReceiver(receiver);
+          receiver.setId(grpcRequestChannel);
+          grpcInvocation.setReceiver(receiver);
         }
         {
           const sender = new handleProto.Sender();
-          sender.setId(responseChannel);
-          invocation.setSender(sender);
+          sender.setId(grpcResponseChannel);
+          grpcInvocation.setSender(sender);
         }
 
-        const invocationBytes = Array.from(invocation.serializeBinary());
-        console.log('invocation bytes', invocationBytes);
+        const httpInvocationChannel = this.createChannel('http-invocations');
+
+        const grpcInvocationBytes = Array.from(
+          grpcInvocation.serializeBinary()
+        );
+        console.log('gRPC invocation bytes', grpcInvocationBytes);
         this.channels[grpcInvocationReceiverHandle].messages.push({
-          bytes: invocationBytes,
-          handles: [requestChannel, responseChannel],
+          bytes: grpcInvocationBytes,
+          handles: [grpcRequestChannel, grpcResponseChannel],
         });
         const initChannelHandle = this.createChannel('init');
-        const init = new helloWorldInternalProto.Init();
+        const init = new treehouseInternalProto.TreehouseHandlerInit();
         {
-          const sender = new handleProto.Sender();
-          sender.setId(logChannelHandle);
-          init.setLogSender(sender);
+          const logSender = new handleProto.Sender();
+          logSender.setId(logChannelHandle);
+          init.setLogSender(logSender);
+          const httpInvocationSender = new handleProto.Sender();
+          httpInvocationSender.setId(httpInvocationChannel);
+          init.setHttpInvocationSender(httpInvocationSender);
         }
         const bytes = Array.from(init.serializeBinary());
         console.log(`message bytes: ${bytes}`);
         this.channels[initChannelHandle].messages.push({
           bytes: bytes,
-          handles: [grpcInvocationReceiverHandle, logChannelHandle],
+          handles: [
+            grpcInvocationReceiverHandle,
+            logChannelHandle,
+            httpInvocationChannel,
+          ],
         });
         // Oak entrypoints expect the handle of a channel from which to read
         // messages as a parameter, so we just pass a zero value here.

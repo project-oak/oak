@@ -18,11 +18,15 @@ syntax = "proto3";
 
 package oak.examples.treehouse_init;
 
-import "treehouse.proto";
 import "oak_services/proto/grpc_invocation.proto";
 import "oak_services/proto/log.proto";
 import "proto/handle.proto";
 
-message TreehouseInit {
+message TreehouseRouterInit {
   oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
+}
+
+message TreehouseHandlerInit {
+  oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
+  oak.handle.Sender http_invocation_sender = 2 [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
 }

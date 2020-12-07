@@ -30,7 +30,7 @@ pub mod proto {
 mod handler;
 mod router;
 
-use crate::{proto::oak::examples::treehouse::TreehouseInit, router::Router};
+use crate::{proto::oak::examples::treehouse::TreehouseRouterInit, router::Router};
 use anyhow::Context;
 use oak::proto::oak::application::ConfigMap;
 use oak_abi::label::Label;
@@ -45,7 +45,7 @@ impl oak::CommandHandler for Main {
         let log_sender = oak::logger::create()?;
         oak::logger::init(log_sender.clone(), log::Level::Debug)?;
 
-        let init = TreehouseInit {
+        let init = TreehouseRouterInit {
             log_sender: Some(log_sender),
         };
         let router_sender = oak::io::entrypoint_node_create::<Router, _, _>(

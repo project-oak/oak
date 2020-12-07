@@ -44,6 +44,10 @@ pub fn init(authority: &str) -> Result<HttpClient, OakError> {
     })
 }
 
+pub fn from_sender(sender: Sender<Invocation>, authority: String) -> HttpClient {
+    HttpClient { sender, authority }
+}
+
 pub struct HttpClient {
     sender: Sender<Invocation>,
     authority: String,
