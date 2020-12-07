@@ -61,7 +61,7 @@ function init() {
         // successful status without actually doing anything.
         const importObject = {
           oak: {
-            wait_on_channels: (buf, count) => {
+            wait_on_channels: (buf: number, count: number) => {
               const status = OakStatus.OK;
               const bytes = this.readMemory(
                 buf,
@@ -76,7 +76,7 @@ function init() {
               this.writeMemory(buf + 8, [ChannelReadStatus.READ_READY]);
               return status;
             },
-            channel_close: (handle) => {
+            channel_close: (handle: number) => {
               const status = OakStatus.OK;
               const entry = `${new Date().toISOString()}: channel_close(${[
                 handle,
@@ -84,7 +84,12 @@ function init() {
               this.trace.push(entry);
               return status;
             },
-            channel_label_read: (handle, buf, size, actualSize) => {
+            channel_label_read: (
+              handle: number,
+              buf: number,
+              size: number,
+              actualSize: number
+            ) => {
               const status = OakStatus.OK;
               const entry = `${new Date().toISOString()}: channel_label_read(${[
                 handle,
@@ -96,13 +101,13 @@ function init() {
               return status;
             },
             channel_read: (
-              handle,
-              buf,
-              size,
-              actualSize,
-              handleBuf,
-              handleCount,
-              actualHandleCount
+              handle: number,
+              buf: number,
+              size: number,
+              actualSize: number,
+              handleBuf: number,
+              handleCount: number,
+              actualHandleCount: number
             ) => {
               const status = OakStatus.OK;
               const entry = `${new Date().toISOString()}: channel_read(${[
@@ -147,7 +152,13 @@ function init() {
               this.writeMemory(actualHandleCount, handleSizeOut);
               return status;
             },
-            channel_write: (handle, buf, size, handleBuf, handleCount) => {
+            channel_write: (
+              handle: number,
+              buf: number,
+              size: number,
+              handleBuf: number,
+              handleCount: number
+            ) => {
               const status = OakStatus.OK;
               const bytes = this.readMemory(buf, size);
               const bytesString = new TextDecoder().decode(bytes);
@@ -170,11 +181,11 @@ function init() {
               return status;
             },
             channel_write_with_downgrade: (
-              handle,
-              buf,
-              size,
-              handleBuf,
-              handleCount
+              handle: number,
+              buf: number,
+              size: number,
+              handleBuf: number,
+              handleCount: number
             ) => {
               const status = OakStatus.OK;
               const bytes = this.readMemory(buf, size);
@@ -198,12 +209,12 @@ function init() {
               return status;
             },
             channel_create: (
-              writeHandle,
-              readHandle,
-              nameBuf,
-              nameSize,
-              labelBuf,
-              labelSize
+              writeHandle: number,
+              readHandle: number,
+              nameBuf: number,
+              nameSize: number,
+              labelBuf: number,
+              labelSize: number
             ) => {
               const status = OakStatus.OK;
               const name = new TextDecoder().decode(
@@ -229,12 +240,12 @@ function init() {
               return status;
             },
             channel_create_with_downgrade: (
-              writeHandle,
-              readHandle,
-              nameBuf,
-              nameSize,
-              labelBuf,
-              labelSize
+              writeHandle: number,
+              readHandle: number,
+              nameBuf: number,
+              nameSize: number,
+              labelBuf: number,
+              labelSize: number
             ) => {
               const status = OakStatus.OK;
               const name = new TextDecoder().decode(
@@ -257,13 +268,13 @@ function init() {
               return status;
             },
             node_create: (
-              nameBuf,
-              nameSize,
-              configBuf,
-              configLen,
-              labelBuf,
-              labelSize,
-              handle
+              nameBuf: number,
+              nameSize: number,
+              configBuf: number,
+              configLen: number,
+              labelBuf: number,
+              labelSize: number,
+              handle: number
             ) => {
               const status = OakStatus.OK;
               const name = new TextDecoder().decode(
@@ -291,7 +302,7 @@ function init() {
               this.createNode(config);
               return status;
             },
-            random_get: (buf, len) => {
+            random_get: (buf: number, len: number) => {
               const status = OakStatus.OK;
               const entry = `${new Date().toISOString()}: random_get(${[
                 buf,
@@ -307,7 +318,7 @@ function init() {
           importObject
         );
       },
-      readMemory: function (offset: number, len: number) {
+      readMemory: function (offset: number, len: number): Uint8Array {
         return new Uint8Array(this.instance.exports.memory.buffer, offset, len);
       },
       writeMemory: function (offset: number, data: number[]) {
