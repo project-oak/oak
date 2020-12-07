@@ -48,6 +48,7 @@ protoc \
     ../../proto/handle.proto \
     ../../oak_services/proto/grpc_invocation.proto \
     ../../oak_services/proto/grpc_encap.proto \
+    ../../third_party/google/rpc/status.proto \
     ../../oak_services/proto/log.proto \
     ../../examples/hello_world/proto/hello_world.proto \
     ../../examples/hello_world/proto/hello_world_internal.proto
