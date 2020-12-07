@@ -205,13 +205,7 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                         target_dir.push("target");
                         target_dir.to_str().expect("Invalid target dir").to_string()
                     }),
-                    &format!("--out-dir={}", {
-                        let mut target_dir = PathBuf::from(cargo_manifest);
-                        target_dir.pop();
-                        target_dir.pop();
-                        target_dir.push("bin");
-                        target_dir.to_str().expect("Invalid binary dir").to_string()
-                    }),
+                    &format!("--out-dir=examples/{}/bin", example_name),
                 ],
             ),
         },
