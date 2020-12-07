@@ -39,6 +39,9 @@ module.exports = (env) => ({
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
+    alias: {
+      vue$: 'vue/dist/vue.esm.js', // 'vue/dist/vue.common.js' for webpack 1
+    },
   },
   mode: env.NODE_ENV || 'none',
   devServer: {
