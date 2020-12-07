@@ -2,8 +2,14 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta
+      name="google-signin-client_id"
+      content="691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com"
+    />
+
     <title>Oak emulator</title>
-    <script src="https://apis.google.com/js/api.js"></script>
+    <!-- <script src="https://apis.google.com/js/api.js"></script> -->
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
   </head>
 
   <body>
@@ -25,7 +31,7 @@
         available)
       </p>
       <div>
-        <button type="button" v-on:click="login">login</button>
+        <div class="g-signin2" data-onsuccess="onSignIn"></div>
       </div>
       <input
         type="file"
