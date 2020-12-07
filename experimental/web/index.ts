@@ -89,10 +89,6 @@ function init() {
       bytes: [${bytes}]`;
               this.trace.push(entry);
               this.writeMemory(buf + 8, [ChannelReadStatus.values.READ_READY]);
-              console.log(
-                'after',
-                this.readMemory(buf, (HANDLE_SIZE_BYTES + 1) * count)
-              );
               return status;
             },
             channel_close: (handle) => {
@@ -142,15 +138,14 @@ function init() {
 
               console.log(`channel_read() -> ${JSON.stringify(message)}`);
 
-              const bytes = message.bytes;
-              const handles = message.handles;
-              console.log('bytes');
-              this.writeMemory(buf, bytes);
-              console.log('size');
-              this.writeMemory(actualSize, [bytes.length, 0, 0, 0]);
-              console.log('handles');
+              const bytesOut = message.bytes;
+              console.log('bytes', bytesOut);
+              this.writeMemory(buf, bytesOut);
+              const actualSizeOut = [bytesOut.length, 0, 0, 0];
+              console.log('actualSize', actualSizeOut);
+              this.writeMemory(actualSize, actualSizeOut);
               // Hacky way of converting to 64bit representation. Only works for small values of v.
-              const packedHandles = handles.flatMap((v) => [
+              const handlesOut = message.handles.flatMap((v) => [
                 v,
                 0,
                 0,
@@ -160,9 +155,11 @@ function init() {
                 0,
                 0,
               ]);
-              this.writeMemory(handleBuf, packedHandles);
-              console.log('handle size');
-              this.writeMemory(actualHandleCount, [handles.length, 0, 0, 0]);
+              console.log('handles', handlesOut);
+              this.writeMemory(handleBuf, handlesOut);
+              const handleSizeOut = [message.handles.length, 0, 0, 0];
+              console.log('handle size', handleSizeOut);
+              this.writeMemory(actualHandleCount, handleSizeOut);
               return status;
             },
             channel_write: (handle, buf, size, handleBuf, handleCount) => {
