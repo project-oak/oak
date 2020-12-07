@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Oak emulator</title>
+  </head>
+
+  <body>
+    <script src="https://raw.githack.com/protobufjs/protobuf.js/v6.10.1/dist/protobuf.js"></script>
+    <script src="/dist/index.js"></script>
+
+    </script>
+    <div id="app">
+      <p>In order to load an Oak Module, press the button below.</p>
+      <p>
+        This should be a single Wasm file (i.e. not a complete Oak Application).
+      </p>
+      <p>
+        If compiled from Rust, it will usually be under the
+        <code>target/wasm32-unknown-unknown</code> folder or similar (preferably
+        a debug build, in order to enable sourcemap support)
+      </p>
+      <p>
+        Once loaded, open the Chrome dev tools, navigate to the Sources tab, and
+        find the source (Rust) file to debug; set a breakpoint where desired
+        (e.g. near an entrypoint definition) and then press on the Invoke button
+        for the relevant entrypoint (a module may have more than one entrypoint
+        available)
+      </p>
+      <input
+        type="file"
+        accept=".wasm"
+        id="file-input"
+        v-on:change="readFile"
+      />
+      <div v-if="module">
+        <p>Module loaded.</p>
+        <p>Imports:</p>
+        <ul>
+          <li v-for="i in imports">
+            <code>{{ i.module }}.{{ i.name }}</code> [{{ i.kind }}]
+          </li>
+        </ul>
+        <p>Exports:</p>
+        <ul>
+          <li v-for="e in exports">
+            <code>{{ e.name }}</code> [{{ e.kind }}]
+            <button
+              type="button"
+              v-if='e.kind == "function"'
+              v-on:click="invoke(e.name)"
+            >
+              invoke
+            </button>
+          </li>
+        </ul>
+        <p>Channels:</p>
+        <ul>
+          <li v-for="(c, handle) in channels">
+            <code>[{{handle}}] {{ c }}</code>
+          </li>
+        </ul>
+        <p>Oak ABI call trace:</p>
+        <button type="button" v-on:click="reset()">reset</button>
+        <ul>
+          <li v-for="e in trace">
+            <pre>{{ e }}</pre>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>
