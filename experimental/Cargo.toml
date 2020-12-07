@@ -5,6 +5,7 @@ members = [
   "split_grpc/proxy",
   "split_grpc/server",
   "benchmark",
+  "treehouse/application/module",
 ]
 
 [patch.crates-io]
