@@ -20,14 +20,8 @@ pub mod proto {
         pub use oak_services::proto::oak::log;
         pub mod examples {
             pub mod treehouse {
-                include!(concat!(
-                    env!("OUT_DIR"),
-                    "/oak.examples.treehouse.rs"
-                ));
-                include!(concat!(
-                    env!("OUT_DIR"),
-                    "/oak.examples.treehouse_init.rs"
-                ));
+                include!(concat!(env!("OUT_DIR"), "/oak.examples.treehouse.rs"));
+                include!(concat!(env!("OUT_DIR"), "/oak.examples.treehouse_init.rs"));
             }
         }
     }

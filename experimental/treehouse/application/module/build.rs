@@ -16,10 +16,7 @@
 
 fn main() {
     oak_utils::compile_protos(
-        &[
-            "../proto/treehouse.proto",
-            "../proto/treehouse_init.proto",
-        ],
+        &["../proto/treehouse.proto", "../proto/treehouse_init.proto"],
         &["../proto", "../../../../"],
     );
 }

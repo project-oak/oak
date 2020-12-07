@@ -15,15 +15,14 @@
 //
 
 use crate::proto::oak::examples::treehouse::{
-    Treehouse, TreehouseInit, TreehouseResponse, TreehouseRequest, TreehouseDispatcher,
+    Treehouse, TreehouseDispatcher, TreehouseInit, TreehouseRequest, TreehouseResponse,
 };
 use log::debug;
 use oak::grpc;
 use oak_abi::label::Label;
 
 #[derive(Default)]
-pub struct Handler {
-}
+pub struct Handler {}
 
 impl oak::WithInit for Handler {
     type Init = TreehouseInit;
@@ -35,15 +34,12 @@ impl oak::WithInit for Handler {
 }
 
 impl Treehouse for Handler {
-    fn get_data(
-        &mut self,
-        request: TreehouseRequest,
-    ) -> grpc::Result<TreehouseResponse> {
+    fn get_data(&mut self, request: TreehouseRequest) -> grpc::Result<TreehouseResponse> {
         debug!("Received request: {:?}", request);
 
         // create an HTTP client pseudo-Node.
-        let http_client = oak::http::client::init("")
-            .expect("Could not create HttpClient pseudo-node");
+        let http_client =
+            oak::http::client::init("").expect("Could not create HttpClient pseudo-node");
         let request = http::Request::builder()
             .method(http::Method::GET)
             .uri("http://www.google.com")
@@ -52,7 +48,6 @@ impl Treehouse for Handler {
         http_client
             .send_request(request, &Label::public_untrusted())
             .expect("Could not get response");
-
 
         Ok(TreehouseResponse {})
     }
