@@ -18,9 +18,7 @@ syntax = "proto3";
 
 package oak.examples.treehouse;
 
-message GetCardsRequest {
-
-}
+message GetCardsRequest {}
 
 message GetCardsResponse {
   repeated Card cards = 1;

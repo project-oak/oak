@@ -9,7 +9,6 @@ out = "experimental/treehouse/application/bin/treehouse.oak"
 [applications.rust.modules]
 module = { Cargo = { cargo_manifest = "experimental/treehouse/application/module/Cargo.toml" } }
 
-
 [clients]
 rust = { Cargo = { cargo_manifest = "experimental/treehouse/application/client/Cargo.toml" }, additional_args = [
   "--root-tls-certificate=examples/certs/local/ca.pem",

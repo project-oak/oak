@@ -4,14 +4,21 @@
     <meta charset="utf-8" />
     <title>Login using Google</title>
   </head>
-    <form method="GET" action="https://accounts.google.com/o/oauth2/v2/auth">
-      <input type="hidden" name="client_id" value="691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com"/>
-      <input type="hidden" name="redirect_uri" value="http://localhost:8080"/>
-      <input type="hidden" name="response_type" value="token"/>
-      <input type="hidden" name="scope" value="https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.photos.readonly https://www.googleapis.com/auth/plus.me https://www.googleapis.com/auth/photoslibrary.readonly"/>
-      <input type="hidden" name="include_granted_scopes" value="true"/>
-      <input type="submit" value="Authenticate"/>
-    </form>
-  <body>
-  </body> 
+  <form method="GET" action="https://accounts.google.com/o/oauth2/v2/auth">
+    <input
+      type="hidden"
+      name="client_id"
+      value="691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com"
+    />
+    <input type="hidden" name="redirect_uri" value="http://localhost:8080" />
+    <input type="hidden" name="response_type" value="token" />
+    <input
+      type="hidden"
+      name="scope"
+      value="https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.photos.readonly https://www.googleapis.com/auth/plus.me https://www.googleapis.com/auth/photoslibrary.readonly"
+    />
+    <input type="hidden" name="include_granted_scopes" value="true" />
+    <input type="submit" value="Authenticate" />
+  </form>
+  <body></body>
 </html>

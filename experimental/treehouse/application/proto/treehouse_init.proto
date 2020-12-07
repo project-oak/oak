@@ -28,5 +28,6 @@ message TreehouseRouterInit {
 
 message TreehouseHandlerInit {
   oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
-  oak.handle.Sender http_invocation_sender = 2 [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
+  oak.handle.Sender http_invocation_sender = 2
+      [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
 }
