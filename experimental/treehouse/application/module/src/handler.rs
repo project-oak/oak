@@ -15,7 +15,7 @@
 //
 
 use crate::proto::oak::examples::treehouse::{
-    Treehouse, TreehouseDispatcher, TreehouseInit, TreehouseRequest, TreehouseResponse,
+    GetCardsRequest, GetCardsResponse, Treehouse, TreehouseDispatcher, TreehouseInit,
 };
 use log::debug;
 use oak::grpc;
@@ -34,7 +34,7 @@ impl oak::WithInit for Handler {
 }
 
 impl Treehouse for Handler {
-    fn get_data(&mut self, request: TreehouseRequest) -> grpc::Result<TreehouseResponse> {
+    fn get_cards(&mut self, request: GetCardsRequest) -> grpc::Result<GetCardsResponse> {
         debug!("Received request: {:?}", request);
 
         // create an HTTP client pseudo-Node.
@@ -49,7 +49,7 @@ impl Treehouse for Handler {
             .send_request(request, &Label::public_untrusted())
             .expect("Could not get response");
 
-        Ok(TreehouseResponse {})
+        Ok(GetCardsResponse { cards: vec![] })
     }
 }
 
