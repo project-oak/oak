@@ -193,13 +193,19 @@ function init() {
       bytes(string): "${bytesString}"
       handles: [${handles}]`;
               this.trace.push(entry);
-              const message = {
+              const message: Message = {
                 bytes: Array.from(bytes),
                 handles: Array.from(handles),
-              } as Message;
-              const channel = this.channels[handle] as Channel;
+              };
+              const channel: Channel = this.channels[handle];
               if (channel.callback) {
                 channel.callback(message);
+              } else {
+                console.log('no callback registered for channel ' + handle);
+                // Hack to invoke HTTP request callback even if it is not registered yet.
+                if (channel.name == 'HTTP request') {
+                  this.httpRequestCallback(message);
+                }
               }
               return status;
             },
@@ -475,6 +481,11 @@ function init() {
           new Uint8Array(m.bytes)
         );
         console.log('HTTP request', decoded);
+        const req = new XMLHttpRequest();
+        req.open(decoded.getMethod(), decoded.getUri());
+        const token = 'TODO';
+        req.setRequestHeader('Authorization', 'Bearer ' + token);
+        req.send(decoded.getBody());
       },
 
       // Reset the current Wasm instance and trace, but keep the module loaded, so

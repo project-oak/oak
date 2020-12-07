@@ -45,7 +45,7 @@ impl Treehouse for Handler {
 
         let request = http::Request::builder()
             .method(http::Method::GET)
-            .uri("http://www.google.com")
+            .uri("https://www.googleapis.com/calendar/v3/calendars/primary/events")
             .body(vec![])
             .expect("Could not build request");
         self.http_client
