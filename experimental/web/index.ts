@@ -30,8 +30,9 @@ function init() {
     },
     methods: {
       // Read the specified file and load it as a Wasm module.
-      readFile: function (e) {
-        const file = e.target.files[0];
+      readFile: function (e: Event) {
+        const target = e.target as HTMLInputElement;
+        const file = target.files![0];
         if (!file) {
           console.log('no file selected');
           return;
