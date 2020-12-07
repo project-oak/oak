@@ -6,7 +6,7 @@ declare const protobuf: any;
 
 function init() {
   const HANDLE_SIZE_BYTES = 8;
-  var app = new Vue({
+  const app = new Vue({
     el: '#app',
     data: {
       // Exports of the loaded Module.
