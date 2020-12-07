@@ -1,6 +1,8 @@
 import Vue from 'vue';
 import oakAbiProto from './protoc_out/oak_abi/proto/oak_abi_pb';
 
+declare const protobuf: any;
+
 function init() {
   const HANDLE_SIZE_BYTES = 8;
   const app = new Vue({
