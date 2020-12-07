@@ -7,6 +7,7 @@ import helloWorldProto from './protoc_out/examples/hello_world/proto/hello_world
 import helloWorldInternalProto from './protoc_out/examples/hello_world/proto/hello_world_internal_pb';
 import grpcInvocationProto from './protoc_out/oak_services/proto/grpc_invocation_pb';
 import grpcEncapProto from './protoc_out/oak_services/proto/grpc_encap_pb';
+import treehouseProto from './protoc_out/experimental/treehouse/application/proto/treehouse_pb';
 
 function init() {
   const HANDLE_SIZE_BYTES = 8;
@@ -333,12 +334,10 @@ function init() {
         const requestChannel = this.createChannel('request');
         const request = new grpcEncapProto.GrpcRequest();
         {
-          request.setMethodName(
-            '/oak.examples.hello_world.HelloWorld/SayHello'
-          );
-          const helloRequest = new helloWorldProto.HelloRequest();
-          helloRequest.setGreeting('world');
-          request.setReqMsg(helloRequest.serializeBinary());
+          // https://github.com/project-oak/oak/blob/c2fb4a05f31e639c9f0499ebfd0aae18932f82f2/experimental/treehouse/application/proto/treehouse.proto#L42
+          request.setMethodName('/oak.examples.treehouse.Treehouse/GetCards');
+          const getCardsRequest = new treehouseProto.GetCardsRequest();
+          request.setReqMsg(getCardsRequest.serializeBinary());
           request.setLast(true);
         }
         const requestBytes = Array.from(request.serializeBinary());
