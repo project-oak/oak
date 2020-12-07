@@ -16,6 +16,7 @@
 
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
+const ESLintPlugin = require('eslint-webpack-plugin');
 
 module.exports = (env) => ({
   entry: './index.ts',
@@ -24,6 +25,7 @@ module.exports = (env) => ({
     filename: 'index.js',
   },
   plugins: [
+    new ESLintPlugin(),
     new CopyPlugin({
       patterns: [{ from: './static', to: './' }],
     }),
