@@ -17,7 +17,7 @@
 use crate::proto::oak::examples::treehouse::{
     Treehouse, TreehouseInit, TreehouseResponse, TreehouseRequest, TreehouseDispatcher,
 };
-use log::{debug, error, warn};
+use log::debug;
 use oak::grpc;
 
 #[derive(Default)]
