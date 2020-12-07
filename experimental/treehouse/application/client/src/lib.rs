@@ -15,5 +15,5 @@
 //
 
 pub mod proto {
-    tonic::include_proto!("oak.examples.trusted_database");
+    tonic::include_proto!("oak.examples.treehouse");
 }

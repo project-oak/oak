@@ -3,14 +3,14 @@ name = "treehouse"
 [applications]
 
 [applications.rust]
-manifest = "experimental/treehouse/oak_app_manifest.toml"
-out = "experimental/treehouse/bin/treehouse.oak"
+manifest = "experimental/treehouse/application/oak_app_manifest.toml"
+out = "experimental/treehouse/application/bin/treehouse.oak"
 
 [applications.rust.modules]
-module = { Cargo = { cargo_manifest = "experimental/treehouse/module/rust/Cargo.toml" } }
+module = { Cargo = { cargo_manifest = "experimental/treehouse/application/module/Cargo.toml" } }
 
 
 [clients]
-rust = { Cargo = { cargo_manifest = "experimental/treehouse/client/rust/Cargo.toml" }, additional_args = [
+rust = { Cargo = { cargo_manifest = "experimental/treehouse/application/client/Cargo.toml" }, additional_args = [
   "--root-tls-certificate=examples/certs/local/ca.pem",
 ] }
