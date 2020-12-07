@@ -15,7 +15,7 @@
 //
 
 use crate::proto::oak::examples::treehouse::{
-    GetCardsRequest, GetCardsResponse, Treehouse, TreehouseDispatcher, TreehouseInit,
+    Card, GetCardsRequest, GetCardsResponse, Treehouse, TreehouseDispatcher, TreehouseInit,
 };
 use log::debug;
 use oak::grpc;
@@ -49,7 +49,14 @@ impl Treehouse for Handler {
             .send_request(request, &Label::public_untrusted())
             .expect("Could not get response");
 
-        Ok(GetCardsResponse { cards: vec![] })
+        Ok(GetCardsResponse {
+            cards: vec![Card {
+                title: "Example Card #0".to_string(),
+                subtitle: "subtitle".to_string(),
+                description: "".to_string(),
+                media_png: vec![],
+            }],
+        })
     }
 }
 
