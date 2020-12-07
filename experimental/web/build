@@ -28,12 +28,6 @@ if ! cmp --silent "$CURRENT_PACKAGE_LOCK" "$LAST_INSTALLED_PACKAGE_LOCK"; then
   npm ci
 fi
 
-# Lint the source, abort if errors occured
-npm run lint
-if [[ $? -ne 0 ]] ; then
-    exit 1
-fi
-
 if [[ "$1" == 'development' ]]; then
   # Run a webpack dev server
   readonly WEBPACK_TMP_OUT_DIR="./dist_tmp"

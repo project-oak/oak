@@ -25,7 +25,7 @@ module.exports = (env) => ({
     filename: 'index.js',
   },
   plugins: [
-    new ESLintPlugin(),
+    new ESLintPlugin({ extensions: ['js', 'ts'] }),
     new CopyPlugin({
       patterns: [{ from: './static', to: './' }],
     }),
