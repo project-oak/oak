@@ -19,6 +19,7 @@ use crate::proto::oak::examples::treehouse::{
 };
 use log::debug;
 use oak::grpc;
+use oak_abi::label::Label;
 
 #[derive(Default)]
 pub struct Handler {
