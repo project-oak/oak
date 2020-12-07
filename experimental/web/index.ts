@@ -346,6 +346,26 @@ function init() {
           .add(new protobuf.Field('logSender', 1, 'HandleWrapper'))
           .add(new protobuf.Field('translatorSender', 2, 'HandleWrapper'));
         this.protobuf.add(HelloWorldInit);
+        // https://github.com/project-oak/oak/blob/main/oak_services/proto/grpc_encap.proto
+        const GrpcRequest = new protobuf.Type('GrpcRequest')
+          .add(new protobuf.Field('method_name', 1, 'string'))
+          .add(new protobuf.Field('req_msg', 2, 'bytes'))
+          .add(new protobuf.Field('last', 3, 'bool'));
+        this.protobuf.add(GrpcRequest);
+        const GrpcResponse = new protobuf.Type('GrpcResponse')
+          .add(new protobuf.Field('rsp_msg', 1, 'bytes'))
+          .add(new protobuf.Field('status', 2, 'int64'))
+          .add(new protobuf.Field('last', 3, 'bool'));
+        this.protobuf.add(GrpcResponse);
+        // https://github.com/project-oak/oak/blob/main/examples/hello_world/proto/hello_world.proto
+        const HelloRequest = new protobuf.Type('HelloRequest').add(
+          new protobuf.Field('greeting', 1, 'string')
+        );
+        this.protobuf.add(HelloRequest);
+        const HelloResponse = new protobuf.Type('HelloResponse').add(
+          new protobuf.Field('reply', 1, 'string')
+        );
+        this.protobuf.add(HelloResponse);
 
         this.createChannel('dummy');
         const logChannelHandle = this.createChannel('log');
@@ -353,6 +373,26 @@ function init() {
           'grpc-invocations'
         );
         const requestChannel = this.createChannel('request');
+        const requestBytes = Array.from(
+          GrpcRequest.encode(
+            GrpcRequest.create({
+              // https://github.com/project-oak/oak/blob/4a9e9fa62cfb8af5cef67ed5f9bb57ef668e73fd/examples/hello_world/proto/hello_world.proto#L33
+              method_name: '/oak.examples.hello_world.HelloWorld/SayHello',
+              req_msg: Array.from(
+                HelloRequest.encode(
+                  HelloRequest.create({
+                    greeting: 'world',
+                  })
+                ).finish()
+              ),
+              last: true,
+            })
+          ).finish()
+        );
+        this.channels[requestChannel].messages.push({
+          bytes: requestBytes,
+          handles: [],
+        });
         const responseChannel = this.createChannel('response');
         const invocation = Invocation.create({
           receiver: {
