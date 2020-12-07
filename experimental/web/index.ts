@@ -339,6 +339,7 @@ function init() {
           const helloRequest = new helloWorldProto.HelloRequest();
           helloRequest.setGreeting('world');
           request.setReqMsg(helloRequest.serializeBinary());
+          request.setLast(true);
         }
         const requestBytes = Array.from(request.serializeBinary());
         this.channels[requestChannel].messages.push({
