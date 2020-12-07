@@ -281,7 +281,7 @@ struct DateRange {
     end_date: Option<Date>,
 }
 
-fn get_token() -> String {
+pub fn get_token() -> String {
     if let Ok(mut f) = std::fs::File::open(OAUTH_TOKEN_FILE) {
         let mut token = String::new();
         f.read_to_string(&mut token).unwrap();

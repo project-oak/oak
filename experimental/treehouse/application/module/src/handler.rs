@@ -39,6 +39,20 @@ impl Treehouse for Handler {
         request: TreehouseRequest,
     ) -> grpc::Result<TreehouseResponse> {
         debug!("Received request: {:?}", request);
+
+        // create an HTTP client pseudo-Node.
+        let http_client = oak::http::client::init("")
+            .expect("Could not create HttpClient pseudo-node");
+        let request = http::Request::builder()
+            .method(http::Method::GET)
+            .uri("http://www.google.com")
+            .body(vec![])
+            .expect("Could not build request");
+        http_client
+            .send_request(request, &Label::public_untrusted())
+            .expect("Could not get response");
+
+
         Ok(TreehouseResponse {})
     }
 }
