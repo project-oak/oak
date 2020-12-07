@@ -43,8 +43,8 @@ function init() {
       },
       // Parse the provided ArrayBuffer as a Wasm module and load it as an Oak module,
       // providing the necessary imports.
-      loadModule: async function (e) {
-        const contents = e.target.result;
+      loadModule: async function (e: Event) {
+        const contents = (<FileReader>e.target).result as ArrayBuffer;
         console.log('file loaded');
         this.module = await WebAssembly.compile(contents);
         this.exports = WebAssembly.Module.exports(this.module);
