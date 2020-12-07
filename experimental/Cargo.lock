@@ -2126,6 +2126,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "treehouse"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "oak",
+ "oak_abi",
+ "oak_io",
+ "oak_services",
+ "oak_utils",
+ "prost",
+]
+
+[[package]]
 name = "trusted_database_benchmark"
 version = "0.1.0"
 dependencies = [
