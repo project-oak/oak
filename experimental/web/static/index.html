@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <title>Oak emulator</title>
+    <script src="https://apis.google.com/js/api.js"></script>
   </head>
 
   <body>
-    </script>
     <div id="app">
       <p>In order to load an Oak Module, press the button below.</p>
       <p>
@@ -24,6 +24,9 @@
         for the relevant entrypoint (a module may have more than one entrypoint
         available)
       </p>
+      <div>
+        <button type="button" v-on:click="login">login</button>
+      </div>
       <input
         type="file"
         accept=".wasm"

@@ -11,6 +11,8 @@
   },
   "devDependencies": {
     "@types/google-protobuf": "^3.7.4",
+    "@types/gapi": "^0.0.39",
+    "@types/gapi.auth2": "^0.0.52",
     "@typescript-eslint/eslint-plugin": "^4.9.0",
     "@typescript-eslint/parser": "^4.9.0",
     "cache-loader": "^4.1.0",
@@ -28,6 +30,8 @@
   },
   "dependencies": {
     "google-protobuf": "^3.14.0",
-    "vue": "^2.6.12"
+    "vue": "^2.6.12",
+    "@types/gapi": "^0.0.39",
+    "@types/gapi.auth2": "^0.0.52"
   }
 }

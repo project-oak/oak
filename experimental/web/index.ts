@@ -43,6 +43,9 @@ function init() {
       protobuf: null,
     },
     methods: {
+      login: function (e: Event) {
+        console.log('login');
+      },
       // Read the specified file and load it as a Wasm module.
       readFile: function (e: Event) {
         const target = e.target as HTMLInputElement;
