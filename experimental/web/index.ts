@@ -8,6 +8,17 @@ import grpcEncapProto from './protoc_out/oak_services/proto/grpc_encap_pb';
 import treehouseProto from './protoc_out/experimental/treehouse/application/proto/treehouse_pb';
 import treehouseInternalProto from './protoc_out/experimental/treehouse/application/proto/treehouse_init_pb';
 
+type Message = {
+  bytes: number[];
+  handles: number[];
+};
+
+type Channel = {
+  name: string;
+  messages: Message[];
+  callback?: (m: Message) => void;
+};
+
 function init() {
   const HANDLE_SIZE_BYTES = 8;
   const app = new Vue({
@@ -179,6 +190,14 @@ function init() {
       bytes(string): "${bytesString}"
       handles: [${handles}]`;
               this.trace.push(entry);
+              const message = {
+                bytes: Array.from(bytes),
+                handles: Array.from(handles),
+              } as Message;
+              const channel = this.channels[handle] as Channel;
+              if (channel.callback) {
+                channel.callback(message);
+              }
               return status;
             },
             channel_write_with_downgrade: (
@@ -338,7 +357,7 @@ function init() {
         console.log('invoking export: ' + exportName);
 
         this.createChannel('dummy');
-        const logChannelHandle = this.createChannel('log');
+        const logChannelHandle = this.createChannel('log', this.logCallback);
         const grpcInvocationReceiverHandle = this.createChannel(
           'grpc-invocations'
         );
@@ -417,11 +436,20 @@ function init() {
         // Runtime.
         console.log('creating node', config);
       },
-      createChannel: function (name: string) {
+      createChannel: function (name: string, callback?: (m: Message) => void) {
         const channelHandle =
-          this.channels.push({ name: name, messages: [] }) - 1;
+          this.channels.push({
+            name: name,
+            messages: [],
+            callback: callback,
+          } as Channel) - 1;
         return channelHandle;
       },
+
+      logCallback: function (m: Message) {
+        console.log('LOG', m);
+      },
+
       // Reset the current Wasm instance and trace, but keep the module loaded, so
       // that we can perform another invocation from scratch.
       reset: function () {
