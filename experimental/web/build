@@ -28,6 +28,36 @@ if ! cmp --silent "$CURRENT_PACKAGE_LOCK" "$LAST_INSTALLED_PACKAGE_LOCK"; then
   npm ci
 fi
 
+# Generate JavaScript code from the required proto
+readonly PROTOC_GEN_TS_PATH="./node_modules/.bin/protoc-gen-ts"
+readonly PROTO_TMP_OUT_DIR="./protoc_tmp_out"
+readonly PROTO_OUT_DIR="./protoc_out"
+
+mkdir -p "${PROTO_TMP_OUT_DIR}"
+mkdir -p "${PROTO_OUT_DIR}"
+
+# Initially write the generated code to a temporary directory.
+protoc \
+    --proto_path=../../ \
+    --plugin="protoc-gen-ts=${PROTOC_GEN_TS_PATH}" \
+    --js_out="import_style=commonjs,binary:${PROTO_TMP_OUT_DIR}" \
+    --ts_out="${PROTO_TMP_OUT_DIR}" \
+    ../../oak_abi/proto/application.proto \
+    ../../oak_abi/proto/label.proto \
+    ../../oak_abi/proto/oak_abi.proto \
+    ../../proto/handle.proto \
+    ../../oak_services/proto/grpc_invocation.proto \
+    ../../oak_services/proto/log.proto \
+    ../../examples/hello_world/proto/hello_world_internal.proto
+
+# Copy each generated file into the actual output directory, but do not
+# overwrite identical files. Doing this preserves the last modified date,
+# allowing for caching of webpack build steps down the line.
+copy_directory_nondestructively "${PROTO_TMP_OUT_DIR}" "${PROTO_OUT_DIR}"
+
+# Finally delete the temporary protobuf directory.
+rm -rf "${PROTO_TMP_OUT_DIR}"
+
 if [[ "$1" == 'development' ]]; then
   # Run a webpack dev server
   readonly WEBPACK_TMP_OUT_DIR="./dist_tmp"
