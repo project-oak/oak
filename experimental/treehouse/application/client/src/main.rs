@@ -23,7 +23,7 @@ use std::{fs, io};
 use structopt::StructOpt;
 use tonic::Request;
 use treehouse_client::proto::{
-    treehouse_client::TreehouseClient, TreehouseResponse, TreehouseRequest,
+    treehouse_client::TreehouseClient, TreehouseRequest, TreehouseResponse,
 };
 
 #[derive(StructOpt, Clone)]
@@ -71,7 +71,7 @@ async fn send_request(
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
@@ -91,8 +91,9 @@ async fn main() -> Result<()> {
     };
 
     let path = &opt.ca_cert;
-    let ca_file = fs::File::open(path).unwrap_or_else(|e| panic!("Couldn't open {}: {}", path, e));
-    let mut ca = io::BufReader::new(ca_file);
+    let ca_file =
+        std::fs::File::open(path).unwrap_or_else(|e| panic!("Couldn't open {}: {}", path, e));
+    let mut ca = std::io::BufReader::new(ca_file);
 
     // Build an HTTP connector which supports HTTPS too.
     let mut http = hyper::client::HttpConnector::new();

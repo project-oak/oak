@@ -45,20 +45,20 @@ struct ClientConfigWeb {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct CalendarEvents {
+pub struct CalendarEvents {
     kind: String,
     etag: String,
     summary: String,
     updated: String,
     time_zone: String,
     access_role: String,
-    items: Vec<CalendarEvent>,
+    pub items: Vec<CalendarEvent>,
 }
 
 /// See https://developers.google.com/calendar/v3/reference/events.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct CalendarEvent {
+pub struct CalendarEvent {
     kind: String,
     etag: String,
     id: String,
@@ -72,7 +72,7 @@ struct CalendarEvent {
     #[serde(default)]
     summary: String,
     #[serde(default)]
-    description: String,
+    pub description: String,
     #[serde(default)]
     location: String,
     #[serde(default)]
