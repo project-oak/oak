@@ -41,14 +41,14 @@
         available)
       </p>
       <div>
-        <button id="authorize-button" style="display: none">Authorize</button>
-        <button id="signout-button" style="display: none">Sign Out</button>
+        <button id="authorize-button">Authorize</button>
+        <button id="signout-button">Sign Out</button>
       </div>
       <form v-on:submit.prevent="readFile()">
         <div>
-          <label for="url"
-            >Enter the url of the Oak Modules (compiled as a wasm file)</label
-          >
+          <label for="url">
+            Enter the URL of the Oak Module (compiled as a Wasm file)
+          </label>
         </div>
         <div>
           <input v-model="url" type="url" name="url" id="url" size="70" />
@@ -126,11 +126,11 @@
         authorizeButton.onclick = handleAuthClick;
         signoutButton.onclick = handleSignoutClick;
         if (isSignedIn) {
-          authorizeButton.style.display = 'none';
-          signoutButton.style.display = 'block';
+          authorizeButton.disabled = true;
+          signoutButton.disabled = false;
         } else {
-          authorizeButton.style.display = 'block';
-          signoutButton.style.display = 'none';
+          authorizeButton.disabled = false;
+          signoutButton.disabled = true;
         }
       }
 
