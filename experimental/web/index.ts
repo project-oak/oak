@@ -179,7 +179,6 @@ const app = new Vue({
             handleBuf: number,
             handleCount: number
           ) => {
-            console.log(typeof handle);
             const status = OakStatus.OK;
             const bytes = this.readMemory(buf, size);
             const bytesString = new TextDecoder().decode(bytes);
@@ -495,7 +494,7 @@ const app = new Vue({
         console.log('allowed HTTP request', decoded);
 
         const req = new XMLHttpRequest();
-        req.open(decoded.getMethod(), decoded.getUri());
+        req.open(decoded.getMethod(), decoded.getUri(), /* async */ false);
         // TODO: Find proper way of getting token.
         const GoogleAuth: any = (<any>window).GoogleAuth;
         const token = GoogleAuth.currentUser.get().getAuthResponse()
@@ -505,7 +504,7 @@ const app = new Vue({
 
         const resp = new httpEncapProto.HttpResponse();
         resp.setStatus(req.status);
-        resp.setBody(req.response);
+        resp.setBody(new Uint8Array(req.response));
 
         console.log('writing response to channel ', responseChannel);
         (<Channel>this.channels[responseChannel]).messages.push({
