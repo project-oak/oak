@@ -17,10 +17,98 @@
 use crate::proto::oak::examples::treehouse::{
     Card, GetCardsRequest, GetCardsResponse, Treehouse, TreehouseDispatcher, TreehouseHandlerInit,
 };
-use fetch::CalendarEvents;
 use log::debug;
 use oak::grpc;
 use oak_abi::label::Label;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarEvents {
+    kind: String,
+    etag: String,
+    summary: String,
+    updated: String,
+    time_zone: String,
+    access_role: String,
+    pub items: Vec<CalendarEvent>,
+}
+
+/// See https://developers.google.com/calendar/v3/reference/events.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarEvent {
+    kind: String,
+    etag: String,
+    id: String,
+    status: String,
+    #[serde(default)]
+    html_link: String,
+    #[serde(default)]
+    created: String,
+    #[serde(default)]
+    updated: String,
+    #[serde(default)]
+    summary: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    location: String,
+    #[serde(default)]
+    color_id: String,
+    start: Option<CalendarTime>,
+    end: Option<CalendarTime>,
+    #[serde(default)]
+    attachments: Vec<CalendarAttachment>,
+    #[serde(default)]
+    attendees: Vec<CalendarAttendee>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct CalendarAttachment {
+    file_url: String,
+    title: String,
+    mime_type: String,
+    icon_link: String,
+    file_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct CalendarAttendee {
+    #[serde(default)]
+    id: String,
+    #[serde(default)]
+    email: String,
+    #[serde(default)]
+    display_name: String,
+    #[serde(default)]
+    organizer: bool,
+    #[serde(default)]
+    self_: bool,
+    #[serde(default)]
+    resource: bool,
+    #[serde(default)]
+    optional: bool,
+    #[serde(default)]
+    response_status: String,
+    #[serde(default)]
+    comment: String,
+    #[serde(default)]
+    additional_guests: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct CalendarTime {
+    #[serde(default)]
+    date: String,
+    #[serde(default)]
+    date_time: String,
+    #[serde(default)]
+    time_zone: String,
+}
 
 pub struct Handler {
     http_client: oak::http::client::HttpClient,

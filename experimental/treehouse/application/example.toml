@@ -11,10 +11,11 @@ module = { Cargo = { cargo_manifest = "experimental/treehouse/application/module
 
 [server]
 additional_args = [
-  "--config-files=config=experimental/treehouse/application/config.toml"
+  "--config-files=config=client_secret_691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com.json"
 ]
 
 [clients]
 rust = { Cargo = { cargo_manifest = "experimental/treehouse/application/client/Cargo.toml" }, additional_args = [
   "--root-tls-certificate=examples/certs/local/ca.pem",
+  "--date=2020-11-01"
 ] }
