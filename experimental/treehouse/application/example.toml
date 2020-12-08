@@ -4,7 +4,7 @@ name = "treehouse"
 
 [applications.rust]
 manifest = "experimental/treehouse/application/oak_app_manifest.toml"
-out = "experimental/treehouse/application/bin/treehouse.oak"
+out = "experimental/treehouse/application/module/bin/treehouse.oak"
 
 [applications.rust.modules]
 module = { Cargo = { cargo_manifest = "experimental/treehouse/application/module/Cargo.toml" } }

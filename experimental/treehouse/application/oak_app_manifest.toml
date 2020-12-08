@@ -1,4 +1,4 @@
 name = "treehouse"
 
 [modules]
-app = { path = "experimental/treehouse/application/bin/treehouse.wasm" }
+app = { path = "experimental/treehouse/application/module/bin/treehouse.wasm" }
