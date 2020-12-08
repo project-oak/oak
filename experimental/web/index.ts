@@ -27,23 +27,25 @@ Vue.use(VueMaterial);
 
 const HANDLE_SIZE_BYTES = 8;
 
+interface Data {
+  exports: string[];
+}
+
 const app = new Vue({
   el: '#app',
   data: {
     // Exports of the loaded Module.
-    exports: [],
+    exports: <WebAssembly.ModuleExportDescriptor[]>[],
     // Import of the loaded Module.
-    imports: [],
+    imports: <WebAssembly.ModuleImportDescriptor[]>[],
     // Oak ABI calls trace.
-    trace: [],
+    trace: <string[]>[],
     // Created channels.
-    channels: [],
+    channels: <Channel[]>[],
     // Loaded module.
-    module: null,
+    module: <WebAssembly.Module | null>null,
     // Loaded module instance.
-    instance: null,
-    // Protobuf definitions.
-    protobuf: null,
+    instance: <WebAssembly.Instance | null>null,
   },
   methods: {
     login: function (e: Event) {
@@ -94,7 +96,7 @@ const app = new Vue({
             this.writeMemory(buf + 8, [ChannelReadStatus.READ_READY]);
             return status;
           },
-          channel_close: (handle: number) => {
+          channel_close: (handle: BigInt) => {
             const status = OakStatus.OK;
             const entry = `${new Date().toISOString()}: channel_close(${[
               handle,
@@ -103,7 +105,7 @@ const app = new Vue({
             return status;
           },
           channel_label_read: (
-            handle: number,
+            handle: BigInt,
             buf: number,
             size: number,
             actualSize: number
@@ -119,7 +121,7 @@ const app = new Vue({
             return status;
           },
           channel_read: (
-            handle: number,
+            handle: BigInt,
             buf: number,
             size: number,
             actualSize: number,
@@ -138,11 +140,11 @@ const app = new Vue({
               actualHandleCount,
             ].join(', ')}) -> ${status}`;
             this.trace.push(entry);
-            const channel = this.channels[handle];
+            const channel = this.channels[Number(handle)];
             console.log(`${handle} -> ${channel.name}`);
             const messages = channel.messages;
             console.log(`${messages.length} messages available`);
-            const message = messages.shift();
+            const message = messages.shift()!;
 
             console.log(`channel_read() -> ${JSON.stringify(message)}`);
 
@@ -171,17 +173,18 @@ const app = new Vue({
             return status;
           },
           channel_write: (
-            handle: number,
+            handle: BigInt,
             buf: number,
             size: number,
             handleBuf: number,
             handleCount: number
           ) => {
+            console.log(typeof handle);
             const status = OakStatus.OK;
             const bytes = this.readMemory(buf, size);
             const bytesString = new TextDecoder().decode(bytes);
             const handles = new Uint8Array(
-              this.instance.exports.memory.buffer,
+              (<WebAssembly.Memory>this.instance!.exports.memory).buffer,
               handleBuf,
               handleCount
             );
@@ -200,7 +203,7 @@ const app = new Vue({
               bytes: Array.from(bytes),
               handles: Array.from(handles),
             };
-            const channel: Channel = this.channels[handle];
+            const channel: Channel = this.channels[Number(handle)];
             if (channel.callback) {
               channel.callback(message);
             } else {
@@ -208,13 +211,13 @@ const app = new Vue({
               // Hack to invoke HTTP request callback even if it is not registered yet.
               if (channel.name == 'HTTP request') {
                 console.log('HTTP request hack');
-                this.httpRequestCallback(BigInt(handle) + BigInt(1))(message);
+                this.httpRequestCallback(Number(handle) + 1)(message);
               }
             }
             return status;
           },
           channel_write_with_downgrade: (
-            handle: number,
+            handle: BigInt,
             buf: number,
             size: number,
             handleBuf: number,
@@ -224,7 +227,7 @@ const app = new Vue({
             const bytes = this.readMemory(buf, size);
             const bytesString = new TextDecoder().decode(bytes);
             const handles = new Uint8Array(
-              this.instance.exports.memory.buffer,
+              (<WebAssembly.Memory>this.instance!.exports.memory).buffer,
               handleBuf,
               handleCount
             );
@@ -307,7 +310,7 @@ const app = new Vue({
             configLen: number,
             labelBuf: number,
             labelSize: number,
-            handle: number
+            handle: BigInt
           ) => {
             const status = OakStatus.OK;
             const name = new TextDecoder().decode(
@@ -346,15 +349,19 @@ const app = new Vue({
           },
         },
       };
-      this.instance = await WebAssembly.instantiate(this.module, importObject);
+      this.instance = await WebAssembly.instantiate(this.module!, importObject);
     },
     readMemory: function (offset: number, len: number): Uint8Array {
-      return new Uint8Array(this.instance.exports.memory.buffer, offset, len);
+      return new Uint8Array(
+        (<WebAssembly.Memory>this.instance!.exports.memory).buffer,
+        offset,
+        len
+      );
     },
     writeMemory: function (offset: number, data: number[]) {
       console.log(`writing ${data.length} bytes to offset ${offset}: ${data}`);
       const a = new Uint8Array(
-        this.instance.exports.memory.buffer,
+        (<WebAssembly.Memory>this.instance!.exports.memory).buffer,
         offset,
         data.length
       );
@@ -431,7 +438,7 @@ const app = new Vue({
       });
       // Oak entrypoints expect the handle of a channel from which to read
       // messages as a parameter, so we just pass a zero value here.
-      const result = this.instance.exports[exportName](
+      const result = (<any>this.instance!.exports[exportName])(
         BigInt(initChannelHandle)
       );
       console.log('invocation result: ' + result);
