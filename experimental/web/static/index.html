@@ -82,6 +82,12 @@
             <code>[{{handle}}] {{ c }}</code>
           </li>
         </ul>
+        <p>Cards:</p>
+        <ul>
+          <li v-for="card in cards">
+            <code>{{ card }}</code>
+          </li>
+        </ul>
         <p>Oak ABI call trace:</p>
         <button type="button" v-on:click="reset()">reset</button>
         <ul>

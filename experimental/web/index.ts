@@ -5,11 +5,16 @@ import oakApplicationProto from './protoc_out/oak_abi/proto/application_pb';
 import labelProto from './protoc_out/oak_abi/proto/label_pb';
 import handleProto from './protoc_out/proto/handle_pb';
 import grpcInvocationProto from './protoc_out/oak_services/proto/grpc_invocation_pb';
-import grpcEncapProto from './protoc_out/oak_services/proto/grpc_encap_pb';
+import grpcEncapProto, {
+  GrpcResponse,
+} from './protoc_out/oak_services/proto/grpc_encap_pb';
 import httpInvocationProto from './protoc_out/oak_services/proto/http_invocation_pb';
 import httpEncapProto from './protoc_out/oak_services/proto/http_encap_pb';
 import logProto from './protoc_out/oak_services/proto/log_pb';
-import treehouseProto from './protoc_out/experimental/treehouse/application/proto/treehouse_pb';
+import treehouseProto, {
+  Card,
+  GetCardsResponse,
+} from './protoc_out/experimental/treehouse/application/proto/treehouse_pb';
 import treehouseInternalProto from './protoc_out/experimental/treehouse/application/proto/treehouse_init_pb';
 
 type Message = {
@@ -48,6 +53,7 @@ const app = new Vue({
     instance: <WebAssembly.Instance | null>null,
     // Default url for Module.
     url: 'https://storage.googleapis.com/treehouse/treehouse.wasm',
+    cards: <Card[]>[],
   },
   methods: {
     login: function (e: Event) {
@@ -241,6 +247,14 @@ const app = new Vue({
       bytes(string): "${bytesString}"
       handles: [${handles}]`;
             this.trace.push(entry);
+            const message: Message = {
+              bytes: Array.from(bytes),
+              handles: Array.from(handles),
+            };
+            const channel: Channel = this.channels[Number(handle)];
+            if (channel.callback) {
+              channel.callback(message);
+            }
             return status;
           },
           channel_create: (
@@ -377,7 +391,10 @@ const app = new Vue({
       );
 
       const grpcInvocation = new grpcInvocationProto.GrpcInvocation();
-      const grpcResponseChannel = this.createChannel('grpc-response');
+      const grpcResponseChannel = this.createChannel(
+        'grpc-response',
+        this.grpcResponseCallback
+      );
       const grpcRequestChannel = this.createChannel('grpc-request');
       const grpcRequest = new grpcEncapProto.GrpcRequest();
       {
@@ -464,6 +481,16 @@ const app = new Vue({
         new Uint8Array(m.bytes)
       );
       console.log('LOG', decoded.toString());
+    },
+
+    grpcResponseCallback: function (m: Message) {
+      const grpcResponse = GrpcResponse.deserializeBinary(
+        new Uint8Array(m.bytes)
+      );
+      const cardResponse = GetCardsResponse.deserializeBinary(
+        grpcResponse.getRspMsg_asU8()
+      );
+      this.cards = cardResponse.getCardsList();
     },
 
     httpInvocationCallback: function (m: Message) {
