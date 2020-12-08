@@ -207,7 +207,8 @@ function init() {
                 console.log('no callback registered for channel ' + handle);
                 // Hack to invoke HTTP request callback even if it is not registered yet.
                 if (channel.name == 'HTTP request') {
-                  this.httpRequestCallback(message);
+                  console.log('HTTP request hack');
+                  this.httpRequestCallback(BigInt(handle) + BigInt(1))(message);
                 }
               }
               return status;
@@ -473,36 +474,49 @@ function init() {
           new Uint8Array(m.bytes)
         );
         const httpRequestChannel = m.handles[0];
+        const httpResponseChannel = m.handles[1];
         (<Channel>(
           this.channels[httpRequestChannel]
-        )).callback = this.httpRequestCallback;
+        )).callback = this.httpRequestCallback(httpResponseChannel);
         console.log('HTTP invocation', decoded);
       },
 
-      httpRequestCallback: function (m: Message) {
-        const decoded = httpEncapProto.HttpRequest.deserializeBinary(
-          new Uint8Array(m.bytes)
-        );
+      httpRequestCallback: function (responseChannel: number) {
+        return (m: Message) => {
+          const decoded = httpEncapProto.HttpRequest.deserializeBinary(
+            new Uint8Array(m.bytes)
+          );
 
-        if (
-          ![
-            'https://www.googleapis.com/calendar/v3/calendars/primary/events',
-          ].includes(decoded.getUri())
-        ) {
-          console.log('forbidden HTTP request', decoded);
-          return;
-        }
+          if (
+            ![
+              'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+            ].includes(decoded.getUri())
+          ) {
+            console.log('forbidden HTTP request', decoded);
+            return;
+          }
 
-        console.log('allowed HTTP request', decoded);
+          console.log('allowed HTTP request', decoded);
 
-        const req = new XMLHttpRequest();
-        req.open(decoded.getMethod(), decoded.getUri());
-        // TODO: Find proper way of getting token.
-        const GoogleAuth: any = (<any>window).GoogleAuth;
-        const token = GoogleAuth.currentUser.get().getAuthResponse()
-          .access_token;
-        req.setRequestHeader('Authorization', 'Bearer ' + token);
-        req.send(decoded.getBody());
+          const req = new XMLHttpRequest();
+          req.open(decoded.getMethod(), decoded.getUri());
+          // TODO: Find proper way of getting token.
+          const GoogleAuth: any = (<any>window).GoogleAuth;
+          const token = GoogleAuth.currentUser.get().getAuthResponse()
+            .access_token;
+          req.setRequestHeader('Authorization', 'Bearer ' + token);
+          req.send(decoded.getBody());
+
+          const resp = new httpEncapProto.HttpResponse();
+          resp.setStatus(req.status);
+          resp.setBody(req.response);
+
+          console.log('writing response to channel ', responseChannel);
+          (<Channel>this.channels[responseChannel]).messages.push({
+            bytes: Array.from(resp.serializeBinary()),
+            handles: [],
+          } as Message);
+        };
       },
 
       // Reset the current Wasm instance and trace, but keep the module loaded, so
