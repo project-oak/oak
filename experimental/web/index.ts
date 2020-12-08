@@ -485,11 +485,9 @@ const app = new Vue({
           new Uint8Array(m.bytes)
         );
 
-        if (
-          ![
-            'https://www.googleapis.com/calendar/v3/calendars/primary/events',
-          ].includes(decoded.getUri())
-        ) {
+        const url = new URL(decoded.getUri());
+
+        if (!['https://www.googleapis.com'].includes(url.origin)) {
           console.log('forbidden HTTP request', decoded);
           return;
         }
