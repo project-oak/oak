@@ -17,6 +17,7 @@
 use crate::proto::oak::examples::treehouse::{
     Card, GetCardsRequest, GetCardsResponse, Treehouse, TreehouseDispatcher, TreehouseHandlerInit,
 };
+use fetch::CalendarEvents;
 use log::debug;
 use oak::grpc;
 use oak_abi::label::Label;
@@ -43,23 +44,47 @@ impl Treehouse for Handler {
     fn get_cards(&mut self, request: GetCardsRequest) -> grpc::Result<GetCardsResponse> {
         debug!("Received request: {:?}", request);
 
+        // Collect all the events that happened on the date given in the request.
+        let date = request.date;
+        let latest_start_time = format!("{}T23:59:59Z", date);
+        let earliest_end_time = format!("{}T00:00:00Z", date);
+
+        let uri = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+        let uri_with_query = format!(
+            "{}?timeMax={}&timeMin={}&maxResults=10",
+            uri, latest_start_time, earliest_end_time
+        );
+
         let request = http::Request::builder()
             .method(http::Method::GET)
-            .uri("https://www.googleapis.com/calendar/v3/calendars/primary/events")
+            .uri(uri_with_query)
             .body(vec![])
             .expect("Could not build request");
-        self.http_client
+        let response = self
+            .http_client
             .send_request(request, &Label::public_untrusted())
             .expect("Could not get response");
 
-        Ok(GetCardsResponse {
-            cards: vec![Card {
-                title: "Example Card #0".to_string(),
-                subtitle: "subtitle".to_string(),
-                description: "".to_string(),
-                media_png: vec![],
-            }],
-        })
+        let events: CalendarEvents = serde_json::from_slice(response.body()).unwrap();
+        if let Some(event) = events.items.get(0) {
+            Ok(GetCardsResponse {
+                cards: vec![Card {
+                    title: "Example Card #0".to_string(),
+                    subtitle: "subtitle".to_string(),
+                    description: event.description.to_string(),
+                    media_png: vec![],
+                }],
+            })
+        } else {
+            Ok(GetCardsResponse {
+                cards: vec![Card {
+                    title: "Example Card #0".to_string(),
+                    subtitle: "subtitle".to_string(),
+                    description: "".to_string(),
+                    media_png: vec![],
+                }],
+            })
+        }
     }
 }
 

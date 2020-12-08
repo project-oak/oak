@@ -3340,6 +3340,7 @@ name = "treehouse"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fetch",
  "http 0.2.1",
  "log",
  "oak",
@@ -3348,6 +3349,7 @@ dependencies = [
  "oak_services",
  "oak_utils",
  "prost",
+ "serde_json",
 ]
 
 [[package]]

@@ -91,8 +91,9 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let path = &opt.ca_cert;
-    let ca_file = fs::File::open(path).unwrap_or_else(|e| panic!("Couldn't open {}: {}", path, e));
-    let mut ca = io::BufReader::new(ca_file);
+    let ca_file =
+        std::fs::File::open(path).unwrap_or_else(|e| panic!("Couldn't open {}: {}", path, e));
+    let mut ca = std::io::BufReader::new(ca_file);
 
     // Build an HTTP connector which supports HTTPS too.
     let mut http = hyper::client::HttpConnector::new();

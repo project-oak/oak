@@ -18,7 +18,10 @@ syntax = "proto3";
 
 package oak.examples.treehouse;
 
-message GetCardsRequest {}
+message GetCardsRequest {
+  // An ISO-8601 formatted date. We use it to search for all the calendar events on this date.
+  string date = 1;
+}
 
 message GetCardsResponse {
   repeated Card cards = 1;
