@@ -20,9 +20,7 @@ use oak_abi::label::Label;
 use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
 use structopt::StructOpt;
 use tonic::Request;
-use treehouse_client::proto::{
-    treehouse_client::TreehouseClient, GetCardsRequest,
-};
+use treehouse_client::proto::{treehouse_client::TreehouseClient, GetCardsRequest};
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Treehouse Client")]

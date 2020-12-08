@@ -35,18 +35,32 @@ use anyhow::Context;
 use oak::proto::oak::application::ConfigMap;
 use oak_abi::label::Label;
 
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Config {
+    pub oauth2_token: String,
+}
+
 #[derive(Default)]
 struct Main;
 
 impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
-    fn handle_command(&mut self, _config_map: Self::Command) -> anyhow::Result<()> {
+    fn handle_command(&mut self, config_map: Self::Command) -> anyhow::Result<()> {
         let log_sender = oak::logger::create()?;
         oak::logger::init(log_sender.clone(), log::Level::Debug)?;
+        let config: Config = toml::from_slice(
+            &config_map
+                .items
+                .get("config")
+                .expect("Couldn't find config"),
+        )
+        .context("Couldn't parse TOML config file")?;
 
         let init = TreehouseRouterInit {
             log_sender: Some(log_sender),
+            oauth2_token: config.oauth2_token,
         };
         let router_sender = oak::io::entrypoint_node_create::<Router, _, _>(
             "router",
