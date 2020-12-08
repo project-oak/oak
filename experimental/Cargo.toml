@@ -7,6 +7,7 @@ members = [
   "benchmark",
   "treehouse/application/client",
   "treehouse/application/module",
+  "treehouse/fetch",
 ]
 
 [patch.crates-io]

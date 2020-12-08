@@ -20,6 +20,7 @@ use fetch::get_token;
 use log::info;
 use oak_abi::label::Label;
 use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
+use std::{fs, io};
 use structopt::StructOpt;
 use tonic::Request;
 use treehouse_client::proto::{

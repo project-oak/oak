@@ -10,18 +10,25 @@ name = "treehouse_client"
 path = "src/lib.rs"
 
 [[bin]]
-name = "treehousee_client_bin"
+name = "treehouse_client_bin"
 path = "src/main.rs"
 
 [dependencies]
 anyhow = "*"
+base64 = "*"
 env_logger = "*"
-fetch = "*"
+fetch = { version = "=0.1.0", path = "../../fetch" }
+http = "*"
+hyper = "*"
+hyper-rustls = { version = "*", default-features = false, features = [
+  "webpki-tokio"
+] }
 log = "*"
 oak_abi = "=0.1.0"
-oak_client = "=0.1.0"
 oak_sign = "=0.1.0"
 prost = "*"
+rustls = "*"
+serde_json = "*"
 structopt = "*"
 # Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
 tokio = { version = "0.2", features = ["fs", "macros", "sync", "stream"] }
