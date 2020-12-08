@@ -32,10 +32,6 @@ Vue.use(VueMaterial);
 
 const HANDLE_SIZE_BYTES = 8;
 
-interface Data {
-  exports: string[];
-}
-
 const app = new Vue({
   el: '#app',
   data: {
