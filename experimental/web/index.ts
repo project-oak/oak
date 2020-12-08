@@ -1,4 +1,5 @@
 import Vue from 'vue';
+import VueMaterial from 'vue-material';
 import oakAbiProto from './protoc_out/oak_abi/proto/oak_abi_pb';
 import oakApplicationProto from './protoc_out/oak_abi/proto/application_pb';
 import labelProto from './protoc_out/oak_abi/proto/label_pb';
@@ -22,7 +23,10 @@ type Channel = {
   callback?: (m: Message) => void;
 };
 
+Vue.use(VueMaterial);
+
 const HANDLE_SIZE_BYTES = 8;
+
 const app = new Vue({
   el: '#app',
   data: {
