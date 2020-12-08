@@ -128,8 +128,8 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
 
     fn try_receive(&self) -> Result<T, OakError> {
         // XXX: Increasing capacity in order to avoid reallocations.
-        let mut bytes = Vec::with_capacity(102400);
-        let mut handles = Vec::with_capacity(16);
+        let mut bytes = Vec::with_capacity(102412);
+        let mut handles = Vec::with_capacity(17);
         crate::channel_read(self.handle, &mut bytes, &mut handles)?;
         // `bytes` and `handles` are moved into `Message`, so there is no extra copy happening here.
         let message = crate::io::Message { bytes, handles };
