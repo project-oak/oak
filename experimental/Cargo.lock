@@ -3359,7 +3359,6 @@ dependencies = [
  "anyhow",
  "base64 0.13.0",
  "env_logger 0.8.2",
- "fetch",
  "http 0.2.1",
  "hyper 0.13.9",
  "hyper-rustls",

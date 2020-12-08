@@ -17,7 +17,6 @@ path = "src/main.rs"
 anyhow = "*"
 base64 = "*"
 env_logger = "*"
-fetch = { version = "=0.1.0", path = "../../fetch" }
 http = "*"
 hyper = "*"
 hyper-rustls = { version = "*", default-features = false, features = [
