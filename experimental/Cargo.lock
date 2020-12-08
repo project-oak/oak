@@ -3349,7 +3349,6 @@ name = "treehouse"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "fetch",
  "http 0.2.1",
  "log",
  "oak",

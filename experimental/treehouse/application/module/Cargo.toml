@@ -10,7 +10,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "*"
-fetch = { version = "=0.1.0", path = "../../fetch" }
 http = "*"
 log = "*"
 oak = "=0.1.0"
