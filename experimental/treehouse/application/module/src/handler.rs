@@ -308,7 +308,7 @@ impl Treehouse for Handler {
             .send_request(request, &Label::public_untrusted())
             .expect("Could not get response");
 
-        if response.status() != http::StatusCode::OK {
+        if !response.status().is_success() {
             log::warn!("Got non-ok response: {}", response.status());
             return Ok(GetCardsResponse { cards: vec![] });
         }
