@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-
 use anyhow::{ensure, Context};
 use fetch::get_token;
 use log::info;
