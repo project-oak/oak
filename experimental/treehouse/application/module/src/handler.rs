@@ -313,11 +313,6 @@ impl Treehouse for Handler {
             return Ok(GetCardsResponse { cards: vec![] });
         }
 
-        log::info!(
-            "calendar response: {}",
-            String::from_utf8(response.body().to_vec()).unwrap()
-        );
-
         let events: CalendarEvents = serde_json::from_slice(response.body()).unwrap();
 
         // Get images

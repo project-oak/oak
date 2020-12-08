@@ -153,7 +153,12 @@ const app = new Vue({
             const bytesOut = message.bytes;
             console.log('bytes', bytesOut);
             this.writeMemory(buf, bytesOut);
-            const actualSizeOut = [bytesOut.length, 0, 0, 0];
+            const actualSizeOut = [
+              bytesOut.length & 0xff,
+              (bytesOut.length >> 8) & 0xff,
+              (bytesOut.length >> 16) & 0xff,
+              (bytesOut.length >> 24) & 0xff,
+            ];
             console.log('actualSize', actualSizeOut);
             this.writeMemory(actualSize, actualSizeOut);
             // Hacky way of converting to 64bit representation. Only works for small values of v.
@@ -510,7 +515,12 @@ const app = new Vue({
 
         const url = new URL(decoded.getUri());
 
-        if (!['https://www.googleapis.com'].includes(url.origin)) {
+        if (
+          ![
+            'https://www.googleapis.com',
+            'https://photoslibrary.googleapis.com',
+          ].includes(url.origin)
+        ) {
           console.log('forbidden HTTP request', decoded);
           return;
         }
@@ -528,7 +538,8 @@ const app = new Vue({
 
         const resp = new httpEncapProto.HttpResponse();
         resp.setStatus(req.status);
-        resp.setBody(new Uint8Array(req.response));
+        const encoder = new TextEncoder();
+        resp.setBody(new Uint8Array(encoder.encode(req.response)));
 
         console.log('writing response to channel ', responseChannel);
         (<Channel>this.channels[responseChannel]).messages.push({
