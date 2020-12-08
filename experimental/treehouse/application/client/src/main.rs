@@ -14,16 +14,16 @@
 // limitations under the License.
 //
 
-use anyhow::{ensure, Context};
+use anyhow::Context;
 use fetch::get_token;
 use log::info;
 use oak_abi::label::Label;
-use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
+// use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
 use std::{fs, io};
 use structopt::StructOpt;
 use tonic::Request;
 use treehouse_client::proto::{
-    treehouse_client::TreehouseClient, TreehouseResponse, TreehouseRequest,
+    treehouse_client::TreehouseClient, GetCardsResponse, GetCardsRequest,
 };
 
 #[derive(StructOpt, Clone)]
@@ -66,12 +66,12 @@ async fn send_request(
         "response body: {:?}",
         hyper::body::to_bytes(resp.into_body())
             .await
-            .expect("could not read response body")
+            .expect("Couldn't read response body")
     );
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
     // Send a request, and wait for the response
     let label = oak_abi::label::Label::public_untrusted();
