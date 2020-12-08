@@ -363,6 +363,10 @@ impl Treehouse for Handler {
 
         let mut cards = vec![];
         for event in events.items {
+            // Not all events have a start or end date.
+            if event.start.is_none() || event.end.is_none() {
+                continue;
+            }
             let start = chrono::DateTime::parse_from_rfc3339(&event.start.unwrap().date_time)
                 .expect("Could not parse event start time");
             let end = chrono::DateTime::parse_from_rfc3339(&event.end.unwrap().date_time)
