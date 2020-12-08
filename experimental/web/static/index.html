@@ -44,12 +44,17 @@
         <button id="authorize-button" style="display: none">Authorize</button>
         <button id="signout-button" style="display: none">Sign Out</button>
       </div>
-      <input
-        type="file"
-        accept=".wasm"
-        id="file-input"
-        v-on:change="readFile"
-      />
+      <form v-on:submit.prevent="readFile()">
+        <div>
+          <label for="url"
+            >Enter the url of the Oak Modules (compiled as a wasm file)</label
+          >
+        </div>
+        <div>
+          <input v-model="url" type="url" name="url" id="url" size="70" />
+          <button type="submit">Load Module</button>
+        </div>
+      </form>
       <div v-if="module">
         <p>Module loaded.</p>
         <p>Imports:</p>

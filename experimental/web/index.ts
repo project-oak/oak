@@ -46,28 +46,28 @@ const app = new Vue({
     module: <WebAssembly.Module | null>null,
     // Loaded module instance.
     instance: <WebAssembly.Instance | null>null,
+    // Default url for Module.
+    url: 'https://storage.googleapis.com/treehouse/treehouse.wasm',
   },
   methods: {
     login: function (e: Event) {
       console.log('login');
     },
     // Read the specified file and load it as a Wasm module.
-    readFile: function (e: Event) {
-      const target = e.target as HTMLInputElement;
-      const file = target.files![0];
-      if (!file) {
-        console.log('no file selected');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = this.loadModule;
-      reader.readAsArrayBuffer(file);
+    readFile: async function () {
+      fetch(this.url)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Unable to fetch file');
+          }
+          return response.arrayBuffer();
+        })
+        .then((data) => this.loadModule(data))
+        .catch((err) => console.error(err));
     },
     // Parse the provided ArrayBuffer as a Wasm module and load it as an Oak module,
     // providing the necessary imports.
-    loadModule: async function (e: Event) {
-      const contents = (<FileReader>e.target).result as ArrayBuffer;
-      console.log('file loaded');
+    loadModule: async function (contents: ArrayBuffer) {
       this.module = await WebAssembly.compile(contents);
       this.exports = WebAssembly.Module.exports(this.module);
       this.imports = WebAssembly.Module.imports(this.module);
