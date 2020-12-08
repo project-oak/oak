@@ -483,10 +483,24 @@ function init() {
         const decoded = httpEncapProto.HttpRequest.deserializeBinary(
           new Uint8Array(m.bytes)
         );
-        console.log('HTTP request', decoded);
+
+        if (
+          ![
+            'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+          ].includes(decoded.getUri())
+        ) {
+          console.log('forbidden HTTP request', decoded);
+          return;
+        }
+
+        console.log('allowed HTTP request', decoded);
+
         const req = new XMLHttpRequest();
         req.open(decoded.getMethod(), decoded.getUri());
-        const token = 'TODO';
+        // TODO: Find proper way of getting token.
+        const GoogleAuth: any = (<any>window).GoogleAuth;
+        const token = GoogleAuth.currentUser.get().getAuthResponse()
+          .access_token;
         req.setRequestHeader('Authorization', 'Bearer ' + token);
         req.send(decoded.getBody());
       },
