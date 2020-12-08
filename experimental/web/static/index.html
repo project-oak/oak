@@ -2,10 +2,6 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="google-signin-client_id"
-      content="691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com"
-    />
 
     <title>Oak emulator</title>
     <link
@@ -24,12 +20,6 @@
       rel="stylesheet"
       href="https://unpkg.com/vue-material/dist/theme/default.css"
     />
-    <script
-      src="https://apis.google.com/js/api.js"
-      async
-      defer
-      onload="handleClientLoad()"
-    ></script>
   </head>
 
   <body>
@@ -51,7 +41,8 @@
         available)
       </p>
       <div>
-        <div class="g-signin2" data-onsuccess="onSignIn"></div>
+        <button id="authorize-button" style="display: none">Authorize</button>
+        <button id="signout-button" style="display: none">Sign Out</button>
       </div>
       <input
         type="file"
@@ -103,19 +94,48 @@
         // Call the initClient function after the modules load.
         gapi.load('client:auth2', initClient);
       }
+
       function initClient() {
         gapi.client
           .init({
-            apiKey: 'YOUR_API_KEY',
             clientId:
               '691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com',
             scope: 'https://www.googleapis.com/auth/calendar.readonly',
           })
           .then(function () {
             GoogleAuth = gapi.auth2.getAuthInstance();
+            GoogleAuth.isSignedIn.listen(updateSigninStatus);
+            updateSigninStatus(GoogleAuth.isSignedIn.get());
           });
       }
-      initClient();
+
+      function updateSigninStatus(isSignedIn) {
+        var authorizeButton = document.getElementById('authorize-button');
+        var signoutButton = document.getElementById('signout-button');
+        authorizeButton.onclick = handleAuthClick;
+        signoutButton.onclick = handleSignoutClick;
+        if (isSignedIn) {
+          authorizeButton.style.display = 'none';
+          signoutButton.style.display = 'block';
+        } else {
+          authorizeButton.style.display = 'block';
+          signoutButton.style.display = 'none';
+        }
+      }
+
+      function handleAuthClick(event) {
+        gapi.auth2.getAuthInstance().signIn();
+      }
+
+      function handleSignoutClick(event) {
+        gapi.auth2.getAuthInstance().signOut();
+      }
     </script>
+    <script
+      src="https://apis.google.com/js/api.js"
+      async
+      defer
+      onload="handleClientLoad()"
+    ></script>
   </body>
 </html>
