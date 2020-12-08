@@ -30,11 +30,10 @@ message GetCardsResponse {
 // See https://material.io/components/cards#anatomy
 message Card {
   string title = 1;
-  string subtitle = 2;
-  string description = 3;
+  string description = 2;
   // PNG-encoded image to display with the card.
   // See https://docs.rs/image/0.23.12/image/codecs/index.html
-  bytes media_png = 4;
+  bytes media_png = 3;
 }
 
 service Treehouse {

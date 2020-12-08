@@ -49,7 +49,7 @@ impl oak::CommandHandler for Main {
                 .items
                 .get("config")
                 .context("Couldn't find config")?
-                .to_vec()
+                .to_vec(),
         )
         .context("Couldn't parse token string")?;
 

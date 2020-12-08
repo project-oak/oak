@@ -17,6 +17,7 @@
 use crate::proto::oak::examples::treehouse::{
     Card, GetCardsRequest, GetCardsResponse, Treehouse, TreehouseDispatcher, TreehouseHandlerInit,
 };
+use chrono::{Datelike, NaiveDate};
 use log::debug;
 use oak::grpc;
 use oak_abi::label::Label;
@@ -24,20 +25,20 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct CalendarEvents {
+struct CalendarEvents {
     kind: String,
     etag: String,
     summary: String,
     updated: String,
     time_zone: String,
     access_role: String,
-    pub items: Vec<CalendarEvent>,
+    items: Vec<CalendarEvent>,
 }
 
 /// See https://developers.google.com/calendar/v3/reference/events.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct CalendarEvent {
+struct CalendarEvent {
     kind: String,
     etag: String,
     id: String,
@@ -51,7 +52,7 @@ pub struct CalendarEvent {
     #[serde(default)]
     summary: String,
     #[serde(default)]
-    pub description: String,
+    description: String,
     #[serde(default)]
     location: String,
     #[serde(default)]
@@ -110,6 +111,156 @@ struct CalendarTime {
     time_zone: String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct MediaItems {
+    #[serde(default)]
+    media_items: Vec<MediaItem>,
+    #[serde(default)]
+    next_page_token: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct MediaItem {
+    #[serde(default)]
+    id: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    product_url: String,
+    #[serde(default)]
+    base_url: String,
+    #[serde(default)]
+    mime_type: String,
+    #[serde(default)]
+    media_metadata: Option<MediaMetadata>,
+    #[serde(default)]
+    contributor_info: Option<ContributorInfo>,
+    #[serde(default)]
+    filename: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct MediaMetadata {
+    #[serde(default)]
+    creation_time: String,
+    #[serde(default)]
+    width: String,
+    #[serde(default)]
+    height: String,
+    #[serde(default)]
+    photo: Option<Photo>,
+    #[serde(default)]
+    video: Option<Video>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct ContributorInfo {
+    #[serde(default)]
+    profile_picture_base_url: String,
+    #[serde(default)]
+    display_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct Photo {
+    #[serde(default)]
+    camera_make: String,
+    #[serde(default)]
+    camera_model: String,
+    #[serde(default)]
+    focal_length: f32,
+    #[serde(default)]
+    aperture_f_number: f32,
+    #[serde(default)]
+    iso_equivalent: u32,
+    #[serde(default)]
+    exposure_time: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+struct Video {
+    #[serde(default)]
+    camera_make: String,
+    #[serde(default)]
+    camera_model: String,
+    #[serde(default)]
+    fps: u32,
+    #[serde(default)]
+    status: VideoProcessingStatus,
+}
+#[derive(Serialize, Deserialize, Debug)]
+enum VideoProcessingStatus {
+    UNSPECIFIED,
+    PROCESSING,
+    READY,
+    FAILED,
+}
+
+impl Default for VideoProcessingStatus {
+    fn default() -> Self {
+        VideoProcessingStatus::UNSPECIFIED
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+struct MediaItemSearch {
+    #[serde(default)]
+    album_id: String,
+    #[serde(default)]
+    page_size: i32,
+    #[serde(default)]
+    page_token: String,
+    #[serde(default)]
+    filters: Option<Filters>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct Filters {
+    #[serde(default)]
+    date_filter: Option<DateFilter>,
+    #[serde(default)]
+    include_archived_media: bool,
+    #[serde(default)]
+    exclude_non_app_created_data: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct DateFilter {
+    #[serde(default)]
+    dates: Vec<Date>,
+    #[serde(default)]
+    ranges: Vec<DateRange>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct Date {
+    #[serde(default)]
+    year: i32,
+    #[serde(default)]
+    month: u32,
+    #[serde(default)]
+    day: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct DateRange {
+    #[serde(default)]
+    start_date: Option<Date>,
+    #[serde(default)]
+    end_date: Option<Date>,
+}
+
 pub struct Handler {
     http_client: oak::http::client::HttpClient,
     oauth2_token: String,
@@ -120,6 +271,10 @@ impl oak::WithInit for Handler {
 
     fn create(init: Self::Init) -> Self {
         oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
+        log::info!(
+            "Creating Handler with oauth2_token: `{}`",
+            init.oauth2_token
+        );
         Self {
             http_client: oak::http::client::from_sender(
                 init.http_invocation_sender.unwrap(),
@@ -139,6 +294,7 @@ impl Treehouse for Handler {
         let latest_start_time = format!("{}T23:59:59Z", date);
         let earliest_end_time = format!("{}T00:00:00Z", date);
 
+        // Get events
         let uri = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
         let uri_with_query = format!(
             "{}?timeMax={}&timeMin={}&maxResults=10",
@@ -157,25 +313,92 @@ impl Treehouse for Handler {
             .expect("Could not get response");
 
         let events: CalendarEvents = serde_json::from_slice(response.body()).unwrap();
-        if let Some(event) = events.items.get(0) {
-            Ok(GetCardsResponse {
-                cards: vec![Card {
-                    title: "Example Card #0".to_string(),
-                    subtitle: "subtitle".to_string(),
-                    description: event.description.to_string(),
-                    media_png: vec![],
-                }],
-            })
-        } else {
-            Ok(GetCardsResponse {
-                cards: vec![Card {
-                    title: "Example Card #0".to_string(),
-                    subtitle: "subtitle".to_string(),
-                    description: "".to_string(),
-                    media_png: vec![],
-                }],
-            })
+
+        // Get images
+        let naive_date =
+            NaiveDate::parse_from_str("2015-09-05", "%Y-%m-%d").expect("could not parse date");
+        let date = Date {
+            year: naive_date.year(),
+            month: naive_date.month(),
+            day: naive_date.day(),
+        };
+        let search_req_body = MediaItemSearch {
+            filters: Some(Filters {
+                date_filter: Some(DateFilter {
+                    dates: vec![date],
+                    ranges: vec![],
+                }),
+                include_archived_media: true,
+                exclude_non_app_created_data: false,
+            }),
+            ..Default::default()
+        };
+        let search_req_body_str = serde_json::to_string(&search_req_body).unwrap();
+
+        let request = http::Request::builder()
+            .method(http::Method::POST)
+            .uri("https://photoslibrary.googleapis.com/v1/mediaItems:search?alt=json")
+            .header("Authorization", format!("Bearer {}", self.oauth2_token))
+            .body(search_req_body_str.as_bytes().to_vec())
+            .expect("Could not build request");
+
+        let response = self
+            .http_client
+            .send_request(request, &Label::public_untrusted())
+            .expect("Could not get response");
+
+        let images: MediaItems = serde_json::from_slice(response.body()).unwrap();
+
+        let mut cards = vec![];
+        for event in events.items {
+            let start = chrono::DateTime::parse_from_rfc3339(&event.start.unwrap().date_time)
+                .expect("Could not parse event start time");
+            let end = chrono::DateTime::parse_from_rfc3339(&event.end.unwrap().date_time)
+                .expect("Could not parse event end time");
+
+            let mut has_images = false;
+
+            // Very inefficient algorithm for loading images.
+            for image in images.media_items.iter() {
+                if let Some(ref metadata) = image.media_metadata {
+                    let creation_time =
+                        chrono::DateTime::parse_from_rfc3339(&metadata.creation_time)
+                            .expect("Could not parse image creation time");
+                    if creation_time >= start && creation_time <= end {
+                        has_images = true;
+                        let photo_url = format!("{}=d", image.base_url.clone());
+                        debug!("The photo URL is {}", photo_url);
+
+                        let request = http::Request::builder()
+                            .method(http::Method::GET)
+                            .uri(photo_url)
+                            .header("Authorization", format!("Bearer {}", self.oauth2_token))
+                            .body(vec![])
+                            .expect("Could not build request for fetching the image");
+
+                        let image_response = self
+                            .http_client
+                            .send_request(request, &Label::public_untrusted())
+                            .expect("Could not get response");
+                        let media_png = image_response.body().to_owned();
+                        cards.push(Card {
+                            title: event.summary.to_string(),
+                            description: event.description.to_string(),
+                            media_png,
+                        })
+                    }
+                }
+
+                if !has_images {
+                    cards.push(Card {
+                        title: event.summary.to_string(),
+                        description: event.description.to_string(),
+                        media_png: vec![],
+                    });
+                }
+            }
         }
+        Ok(GetCardsResponse { cards })
     }
 }
 
