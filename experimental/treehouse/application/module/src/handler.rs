@@ -414,6 +414,15 @@ impl Treehouse for Handler {
                 }
             }
         }
+        if cards.is_empty() {
+            cards.push({
+                Card {
+                    title: "No suggestions".to_string(),
+                    description: "".to_string(),
+                    media_png: vec![],
+                }
+            })
+        }
         Ok(GetCardsResponse { cards })
     }
 }

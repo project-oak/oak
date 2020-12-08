@@ -31,5 +31,6 @@ fi
 readonly EXAMPLE_BIN_DIR="${PWD}/experimental/treehouse/${EXAMPLE}/module/bin"
 for module in "${EXAMPLE_BIN_DIR:?}"/*.wasm; do
   module_name="$(basename "${module}" | cut -f 1 -d '.')"
-  gsutil cp "${module}" "gs://treehouse/${EXAMPLE}.wasm"
+  # prevent caching: https://cloud.google.com/storage/docs/gsutil/addlhelp/WorkingWithObjectMetadata#cache-control
+  gsutil -h 'Cache-Control:no-cache,max-age=0' cp "${module}" "gs://treehouse/${EXAMPLE}.wasm"
 done

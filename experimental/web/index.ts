@@ -57,7 +57,10 @@ const app = new Vue({
     },
     // Read the specified file and load it as a Wasm module.
     readFile: async function () {
-      const response = await fetch(this.url);
+      // See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+      const response = await fetch(this.url, {
+        headers: [['Cache-Control', 'no-store, max-age=0, must-revalidate']],
+      });
       if (!response.ok) {
         throw new Error('Unable to fetch file');
       }
