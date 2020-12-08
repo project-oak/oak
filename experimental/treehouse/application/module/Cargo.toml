@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "*"
+chrono = "*"
 http = "*"
 log = "*"
 oak = "=0.1.0"
