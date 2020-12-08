@@ -312,6 +312,11 @@ impl Treehouse for Handler {
             .send_request(request, &Label::public_untrusted())
             .expect("Could not get response");
 
+        if response.status() != http::StatusCode::OK {
+            log::warn!("Got non-ok response: {}", response.status());
+            return Ok(GetCardsResponse { cards: vec![] });
+        }
+
         let events: CalendarEvents = serde_json::from_slice(response.body()).unwrap();
 
         // Get images
@@ -347,7 +352,18 @@ impl Treehouse for Handler {
             .send_request(request, &Label::public_untrusted())
             .expect("Could not get response");
 
-        let images: MediaItems = serde_json::from_slice(response.body()).unwrap();
+        let images = if response.status() == http::StatusCode::OK {
+            let media_items: MediaItems = serde_json::from_slice(response.body()).unwrap();
+            media_items.media_items
+        } else {
+            vec![]
+        };
+
+        log::info!(
+            "Found {} events, and {} images.",
+            events.items.len(),
+            images.len()
+        );
 
         let mut cards = vec![];
         for event in events.items {
@@ -359,7 +375,7 @@ impl Treehouse for Handler {
             let mut has_images = false;
 
             // Very inefficient algorithm for loading images.
-            for image in images.media_items.iter() {
+            for image in images.iter() {
                 if let Some(ref metadata) = image.media_metadata {
                     let creation_time =
                         chrono::DateTime::parse_from_rfc3339(&metadata.creation_time)

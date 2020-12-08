@@ -497,7 +497,8 @@ fn run_example_server(
             format!("--application={}", application_file),
             ...match opt.server_variant {
                 ServerVariant::Logless => vec![],
-                _ => vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()],
+                // Use valid certificates
+                _ => vec![],
             },
             ...example_server.additional_args.clone(),
             ...server_additional_args,
