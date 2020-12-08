@@ -271,10 +271,6 @@ impl oak::WithInit for Handler {
 
     fn create(init: Self::Init) -> Self {
         oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
-        log::info!(
-            "Creating Handler with oauth2_token: `{}`",
-            init.oauth2_token
-        );
         Self {
             http_client: oak::http::client::from_sender(
                 init.http_invocation_sender.unwrap(),
