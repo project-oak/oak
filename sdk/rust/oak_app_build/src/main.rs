@@ -108,10 +108,12 @@ fn get_module_cache_path(manifest_dir: &Path, module_sha256_sum: &str) -> PathBu
 }
 
 /// Get path for the output application file in [`OUTPUT_DIRECTORY`].
-fn get_output_path(manifest_dir: &Path, app_name: &str) -> PathBuf {
-    manifest_dir
-        .join(OUTPUT_DIRECTORY)
-        .join(format!("{}.oak", app_name))
+/// Create this directory if it doesn't exist.
+fn get_output_path(manifest_dir: &Path, app_name: &str) -> anyhow::Result<PathBuf> {
+    let output_dir = manifest_dir
+        .join(OUTPUT_DIRECTORY);        
+    fs::create_dir_all(&output_dir)?;
+    Ok(output_dir.join(format!("{}.oak", app_name)))
 }
 
 /// Computes SHA256 sum from `data` and returns it as a HEX encoded string.
@@ -244,7 +246,8 @@ async fn main() -> anyhow::Result<()> {
         }),
     };
 
-    let output_file = get_output_path(&manifest_dir, &manifest.name);
+    let output_file = get_output_path(&manifest_dir, &manifest.name)
+        .context("Couldn't create output directory")?;
 
     // Serialize application.
     write_config_to_file(&app_config, &output_file).context("Couldn't write serialized config")?;
