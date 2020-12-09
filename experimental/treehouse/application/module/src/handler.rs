@@ -383,25 +383,10 @@ impl Treehouse for Handler {
                     {
                         has_images = true;
                         let photo_url = format!("{}=d", image.base_url.clone());
-                        debug!("The photo URL is {}", photo_url);
-
-                        let request = http::Request::builder()
-                            .method(http::Method::GET)
-                            .uri(photo_url)
-                            .header("Authorization", format!("Bearer {}", self.oauth2_token))
-                            .body(vec![])
-                            .expect("Could not build request for fetching the image");
-
-                        let image_response = self
-                            .http_client
-                            .send_request(request, &Label::public_untrusted())
-                            .expect("Could not get response");
-                        let media_png = image_response.body().to_owned();
-
                         cards.push(Card {
                             title: event.summary.to_string(),
                             description: event.description.to_string(),
-                            media_png,
+                            photo_url,
                         })
                     }
                 }
@@ -410,7 +395,7 @@ impl Treehouse for Handler {
                 cards.push(Card {
                     title: event.summary.to_string(),
                     description: event.description.to_string(),
-                    media_png: vec![],
+                    photo_url: "".to_string(),
                 });
             }
         }
@@ -420,7 +405,7 @@ impl Treehouse for Handler {
                 Card {
                     title: "No suggestions".to_string(),
                     description: "".to_string(),
-                    media_png: vec![],
+                    photo_url: "".to_string(),
                 }
             })
         } else {
