@@ -510,8 +510,7 @@ const app = new Vue({
       const cardResponse = GetCardsResponse.deserializeBinary(
         grpcResponse.getRspMsg_asU8()
       );
-      const cards = cardResponse.getCardsList();
-      console.log(cards.map((c) => c.toObject()));
+
       this.cards = cardResponse.getCardsList();
     },
 
