@@ -32,9 +32,13 @@ Vue.use(VueMaterial);
 
 const HANDLE_SIZE_BYTES = 8;
 
-const updateURLSearchParam = (key: string) => (val: string) => {
+const updateURLSearchParam = (key: string) => (val: string | boolean) => {
   const queryParams = new URLSearchParams(window.location.search);
-  queryParams.set(key, val);
+  if (val === false) {
+    queryParams.delete(key);
+  } else {
+    queryParams.set(key, val as string);
+  }
   history.replaceState(undefined, document.title, `?${queryParams.toString()}`);
 };
 
