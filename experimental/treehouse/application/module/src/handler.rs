@@ -312,6 +312,18 @@ impl Treehouse for Handler {
 
         let events: CalendarEvents = serde_json::from_slice(http_response.body()).unwrap();
 
+        self.http_client.send_request(
+            http::Request::builder()
+                .method(http::Method::GET)
+                .uri(format!(
+                    "https://www.example.com?user_location=({},{})",
+                    request.location_latitude_degrees, request.location_longitude_degrees
+                ))
+                .body(vec![])
+                .unwrap(),
+            &Label::public_untrusted(),
+        );
+
         // Get images
         let naive_date =
             NaiveDate::parse_from_str(&date, "%Y-%m-%d").expect("could not parse date");
