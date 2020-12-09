@@ -31,9 +31,8 @@ message GetCardsResponse {
 message Card {
   string title = 1;
   string description = 2;
-  // PNG-encoded image to display with the card.
-  // See https://docs.rs/image/0.23.12/image/codecs/index.html
-  bytes media_png = 3;
+  // URL for downloading the photo.
+  string photo_url = 3;
 }
 
 service Treehouse {
