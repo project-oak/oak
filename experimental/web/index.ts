@@ -48,9 +48,16 @@ const app = new Vue({
     // Loaded module instance.
     instance: <WebAssembly.Instance | null>null,
     // Default url for Module.
-    url: 'https://storage.googleapis.com/treehouse/application.wasm',
+    url: '',
     cards: <Card[]>[],
     debug: true,
+  },
+  created: function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    this.debug = Boolean(urlParams.get('debug'));
+    this.url =
+      urlParams.get('url') ??
+      'https://storage.googleapis.com/treehouse/application.wasm';
   },
   methods: {
     login: function (e: Event) {
