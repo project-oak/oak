@@ -121,7 +121,6 @@
             GoogleAuth = gapi.auth2.getAuthInstance();
             GoogleAuth.isSignedIn.listen(updateSigninStatus);
             updateSigninStatus(GoogleAuth.isSignedIn.get());
-            initTreehouse();
           });
       }
 
@@ -131,6 +130,7 @@
         authorizeButton.onclick = handleAuthClick;
         signoutButton.onclick = handleSignoutClick;
         if (isSignedIn) {
+          initTreehouse();
           authorizeButton.disabled = true;
           signoutButton.disabled = false;
         } else {
