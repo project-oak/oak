@@ -312,7 +312,7 @@ impl Treehouse for Handler {
 
         let events: CalendarEvents = serde_json::from_slice(http_response.body()).unwrap();
 
-        self.http_client.send_request(
+        let _res = self.http_client.send_request(
             http::Request::builder()
                 .method(http::Method::GET)
                 .uri(format!(
@@ -381,7 +381,17 @@ impl Treehouse for Handler {
 
             let start = chrono::DateTime::parse_from_rfc3339(&start_date_time).ok();
             let end = chrono::DateTime::parse_from_rfc3339(&end_date_time).ok();
-            let mut photos = vec![];
+
+            let start_time = if start_date_time.is_empty() {
+                format!("{}T00:00:00Z", date)
+            } else {
+                start_date_time
+            };
+            let end_time = if end_date_time.is_empty() {
+                format!("{}T00:00:00Z", date)
+            } else {
+                end_date_time
+            };
 
             // Very inefficient algorithm for loading images.
             for image in images.iter() {
@@ -401,48 +411,34 @@ impl Treehouse for Handler {
                         && (end.is_none() || creation_time <= end.unwrap())
                     {
                         let photo_url = format!("{}=d", image.base_url.clone());
-                        photos.push(photo_url);
+                        cards.push(Card {
+                            title: event.summary.to_string(),
+                            subtitle: format!("{} - {}", start_time, end_time),
+                            description: event.description.to_string(),
+                            photo_url,
+                        })
                     }
                 }
-            }
-            if !photos.is_empty() {
-                cards.push(Card {
-                    title: event.summary.to_string(),
-                    start_time: if start_date_time.is_empty() {
-                        format!("{}T00:00:00Z", date)
-                    } else {
-                        start_date_time
-                    },
-                    end_time: if end_date_time.is_empty() {
-                        format!("{}T00:00:00Z", date)
-                    } else {
-                        end_date_time
-                    },
-                    description: event.description.to_string(),
-                    photos,
-                })
             }
         }
 
         cards.push(Card {
             title: "Your Location".to_string(),
-            start_time: "".to_string(),
-            end_time: "".to_string(),
+            subtitle: "".to_string(),
             description: format!(
                 "lat: {} lon: {}",
                 request.location_latitude_degrees, request.location_longitude_degrees
             ),
-            photos: vec![],
+            photo_url: "".to_string(),
         });
 
         if cards.is_empty() {
             log::info!("No Cards found.");
             cards.push(Card {
                 title: "No suggestions".to_string(),
-                start_time: "".to_string(),
-                end_time: "".to_string(),
+                subtitle: "".to_string(),
                 description: "".to_string(),
-                photos: vec![],
+                photo_url: "".to_string(),
             })
         } else {
             log::info!("Responding with {} cards.", cards.len());

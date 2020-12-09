@@ -32,11 +32,10 @@ message GetCardsResponse {
 // See https://material.io/components/cards#anatomy
 message Card {
   string title = 1;
-  string start_time = 2;
-  string end_time = 3;
-  string description = 4;
-  // URL for downloading the photos.
-  repeated string photos = 5;
+  string subtitle = 2;
+  string description = 3;
+  // URL for downloading the photo.
+  string photo_url = 4;
 }
 
 service Treehouse {

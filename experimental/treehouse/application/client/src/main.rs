@@ -59,7 +59,10 @@ async fn main() -> anyhow::Result<()> {
         LabelInterceptor::create(&label).context("Couldn't create gRPC interceptor")?;
     let mut client = TreehouseClient::with_interceptor(channel, interceptor);
 
-    let request = Request::new(GetCardsRequest { date });
+    let request = Request::new(GetCardsRequest {
+        date,
+        ..Default::default()
+    });
     info!("Sending request: {:?}", request);
 
     let response = client
