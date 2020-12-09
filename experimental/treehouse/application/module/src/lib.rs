@@ -41,21 +41,12 @@ struct Main;
 impl oak::CommandHandler for Main {
     type Command = ConfigMap;
 
-    fn handle_command(&mut self, config_map: Self::Command) -> anyhow::Result<()> {
+    fn handle_command(&mut self, _config_map: Self::Command) -> anyhow::Result<()> {
         let log_sender = oak::logger::create()?;
         oak::logger::init(log_sender.clone(), log::Level::Debug)?;
-        let oauth2_token = String::from_utf8(
-            config_map
-                .items
-                .get("config")
-                .context("Couldn't find config")?
-                .to_vec(),
-        )
-        .context("Couldn't parse token string")?;
 
         let init = TreehouseRouterInit {
             log_sender: Some(log_sender),
-            oauth2_token,
         };
         let router_sender = oak::io::entrypoint_node_create::<Router, _, _>(
             "router",

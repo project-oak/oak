@@ -263,7 +263,6 @@ struct DateRange {
 
 pub struct Handler {
     http_client: oak::http::client::HttpClient,
-    oauth2_token: String,
 }
 
 impl oak::WithInit for Handler {
@@ -276,7 +275,6 @@ impl oak::WithInit for Handler {
                 init.http_invocation_sender.unwrap(),
                 "".to_string(),
             ),
-            oauth2_token: init.oauth2_token,
         }
     }
 }
@@ -300,7 +298,6 @@ impl Treehouse for Handler {
         let request = http::Request::builder()
             .method(http::Method::GET)
             .uri(uri_with_query)
-            .header("Authorization", format!("Bearer {}", self.oauth2_token))
             .body(vec![])
             .expect("Could not build request");
         let response = self
@@ -339,7 +336,6 @@ impl Treehouse for Handler {
         let request = http::Request::builder()
             .method(http::Method::POST)
             .uri("https://photoslibrary.googleapis.com/v1/mediaItems:search?alt=json")
-            .header("Authorization", format!("Bearer {}", self.oauth2_token))
             .body(search_req_body_str.as_bytes().to_vec())
             .expect("Could not build request");
 

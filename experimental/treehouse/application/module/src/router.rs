@@ -56,7 +56,6 @@ impl CommandHandler for Router {
         let init = TreehouseHandlerInit {
             log_sender: self.init.log_sender.clone(),
             http_invocation_sender: Some(http_invocation_sender),
-            oauth2_token: self.init.oauth2_token.to_string(),
         };
         let handler_invocation_sender =
             oak::io::entrypoint_node_create::<Handler, _, _>("handler", &label, "app", init)

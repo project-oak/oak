@@ -24,12 +24,10 @@ import "proto/handle.proto";
 
 message TreehouseRouterInit {
   oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
-  string oauth2_token = 2;
 }
 
 message TreehouseHandlerInit {
   oak.handle.Sender log_sender = 1 [(oak.handle.message_type) = ".oak.log.LogMessage"];
   oak.handle.Sender http_invocation_sender = 2
       [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];
-  string oauth2_token = 3;
 }
