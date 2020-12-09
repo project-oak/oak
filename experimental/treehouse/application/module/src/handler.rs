@@ -397,6 +397,7 @@ impl Treehouse for Handler {
                             .send_request(request, &Label::public_untrusted())
                             .expect("Could not get response");
                         let media_png = image_response.body().to_owned();
+
                         cards.push(Card {
                             title: event.summary.to_string(),
                             description: event.description.to_string(),
@@ -404,17 +405,17 @@ impl Treehouse for Handler {
                         })
                     }
                 }
-
-                if !has_images {
-                    cards.push(Card {
-                        title: event.summary.to_string(),
-                        description: event.description.to_string(),
-                        media_png: vec![],
-                    });
-                }
+            }
+            if !has_images {
+                cards.push(Card {
+                    title: event.summary.to_string(),
+                    description: event.description.to_string(),
+                    media_png: vec![],
+                });
             }
         }
         if cards.is_empty() {
+            log::info!("No Cards found.");
             cards.push({
                 Card {
                     title: "No suggestions".to_string(),
@@ -422,6 +423,8 @@ impl Treehouse for Handler {
                     media_png: vec![],
                 }
             })
+        } else {
+            log::info!("Responding with {} cards.", cards.len());
         }
         Ok(GetCardsResponse { cards })
     }
