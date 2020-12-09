@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use log::info;
+use log::{debug, info};
 use oak_abi::label::Label;
 use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
 use structopt::StructOpt;
@@ -66,7 +66,8 @@ async fn main() -> anyhow::Result<()> {
         .get_cards(request)
         .await
         .context("Couldn't receive response")?;
-    info!("Received response: {:?}", response);
+    info!("Received response.");
+    debug!("The response is: {:?}", response);
 
     Ok(())
 }
