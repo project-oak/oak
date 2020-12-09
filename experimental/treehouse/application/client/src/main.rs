@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use log::{debug, info};
+use log::info;
 use oak_abi::label::Label;
 use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
 use structopt::StructOpt;

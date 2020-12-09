@@ -291,7 +291,7 @@ impl Treehouse for Handler {
         // Get events
         let uri = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
         let uri_with_query = format!(
-            "{}?timeMax={}&timeMin={}&maxResults=10",
+            "{}?timeMax={}&timeMin={}&maxResults=35",
             uri, latest_start_time, earliest_end_time
         );
 
@@ -377,6 +377,14 @@ impl Treehouse for Handler {
                     let creation_time =
                         chrono::DateTime::parse_from_rfc3339(&metadata.creation_time)
                             .expect("Could not parse image creation time");
+
+                    log::info!(
+                        "event: {}, creation time: {}, start: {:?}, end: {:?}",
+                        event.summary.clone(),
+                        creation_time,
+                        start,
+                        end
+                    );
                     if (start.is_none() || creation_time >= start.unwrap())
                         && (end.is_none() || creation_time <= end.unwrap())
                     {

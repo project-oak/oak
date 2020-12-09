@@ -440,7 +440,7 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
             '/oak.examples.treehouse.Treehouse/GetCards'
           );
           const getCardsRequest = new treehouseProto.GetCardsRequest();
-          getCardsRequest.setDate('2020-12-08');
+          getCardsRequest.setDate('2020-12-09');
           grpcRequest.setReqMsg(getCardsRequest.serializeBinary());
           grpcRequest.setLast(true);
         }
