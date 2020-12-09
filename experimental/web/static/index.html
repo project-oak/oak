@@ -1,62 +1,64 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="utf-8" />
 
-<head>
-  <meta charset="utf-8" />
+    <title>Oak emulator</title>
+    <link rel="preload" href="./index.js" />
+    <link rel="preload" href="https://apis.google.com/js/api.js" />
+    <link
+      rel="stylesheet"
+      href="//fonts.googleapis.com/css?family=Roboto:400,500,700,400italic|Material+Icons"
+    />
+    <link rel="stylesheet" href="./vue-material.min.css" />
+    <link rel="stylesheet" href="./vue-material-theme.default-dark.css" />
+    <link rel="stylesheet" href="./vue-material-theme.default-dark.css" />
+    <style>
+      :root {
+        --md-theme-default-background-variant: hsl(0deg 3% 14%);
+        --md-theme-default-background: hsl(0deg 3% 21%);
+      }
 
-  <title>Oak emulator</title>
-  <link rel="preload" href="./index.js" />
-  <link rel="preload" href="https://apis.google.com/js/api.js" />
-  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:400,500,700,400italic|Material+Icons" />
-  <link rel="stylesheet" href="./vue-material.min.css" />
-  <link rel="stylesheet" href="./vue-material-theme.default-dark.css" />
-  <link rel="stylesheet" href="./vue-material-theme.default-dark.css" />
-  <style>
-    :root {
-      --md-theme-default-background-variant: hsl(0deg 3% 14%);
-      --md-theme-default-background: hsl(0deg 3% 21%);
-    }
+      html {
+        transition: initial;
+      }
 
-    html {
-      transition: initial;
-    }
+      #app {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
 
-    #app {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
+      .card-list {
+        list-style-type: none;
+        padding: 0;
+      }
 
-    .card-list {
-      list-style-type: none;
-      padding: 0;
-    }
+      .card-list-item {
+        margin-bottom: 15px;
+      }
 
-    .card-list-item {
-      margin-bottom: 15px;
-    }
+      .md-title {
+        font-size: 22px;
+        font-weight: 500 !important;
+      }
 
-    .md-title {
-      font-size: 22px;
-      font-weight: 500 !important;
-    }
+      .md-card {
+        border-radius: 4px;
+        box-shadow: 0px 4px 2px -2px rgba(0, 0, 0, 0.3),
+          0px 2px 2px 0px rgba(0, 0, 0, 0.15),
+          0px 2px 4px 0px rgba(0, 0, 0, 0.12);
+      }
+    </style>
+  </head>
 
-    .md-card {
-      border-radius: 4px;
-      box-shadow: 0px 4px 2px -2px rgba(0, 0, 0, 0.3),
-        0px 2px 2px 0px rgba(0, 0, 0, 0.15),
-        0px 2px 4px 0px rgba(0, 0, 0, 0.12);
-    }
-  </style>
-</head>
-
-<body>
-  <div>
-    <button id="authorize-button">Authorize</button>
-    <button id="signout-button">Sign Out</button>
-  </div>
-  <div id="app">Please authorize the treehouse application. :)</div>
-  <script type="text/x-template" id="app-template">
+  <body>
+    <div>
+      <button id="authorize-button">Authorize</button>
+      <button id="signout-button">Sign Out</button>
+    </div>
+    <div id="app">Please authorize the treehouse application. :)</div>
+    <script type="text/x-template" id="app-template">
       <div id="app">
         <input type="checkbox" id="debug" v-model="debug" />
         <label for="debug">debug</label>
@@ -134,7 +136,7 @@
                   <md-card-header>
                     <div class="md-title">{{ card.title }}</div>
                   </md-card-header>
-                  <md-card-content> {{ card.start_time }}-{{ card.end_time }} </md-card-content>
+                  <md-card-content v-if="!!card.start_time && !!card.end_time"> {{ card.start_time }}-{{ card.end_time }} </md-card-content>
                   <md-card-content> {{ card.description }} </md-card-content>
                   <li v-for="photoUrl in card.photos">
                     <md-card-media md-ratio="16:9">
@@ -162,51 +164,50 @@
         </div>
       </div>
     </script>
-  <script src="https://apis.google.com/js/api.js"></script>
-  <script>
-    var GoogleAuth;
-    // Load the API's client and auth2 modules.
-    // Call the initClient function after the modules load.
-    gapi.load('client:auth2', initClient);
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script>
+      var GoogleAuth;
+      // Load the API's client and auth2 modules.
+      // Call the initClient function after the modules load.
+      gapi.load('client:auth2', initClient);
 
-    function initClient() {
-      gapi.client
-        .init({
-          clientId:
-            '691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com',
-          scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        })
-        .then(function () {
-          GoogleAuth = gapi.auth2.getAuthInstance();
-          GoogleAuth.isSignedIn.listen(updateSigninStatus);
-          updateSigninStatus(GoogleAuth.isSignedIn.get());
-        });
-    }
-
-    function updateSigninStatus(isSignedIn) {
-      var authorizeButton = document.getElementById('authorize-button');
-      var signoutButton = document.getElementById('signout-button');
-      authorizeButton.onclick = handleAuthClick;
-      signoutButton.onclick = handleSignoutClick;
-      if (isSignedIn) {
-        authorizeButton.disabled = true;
-        signoutButton.disabled = false;
-        initTreehouse();
-      } else {
-        authorizeButton.disabled = false;
-        signoutButton.disabled = true;
+      function initClient() {
+        gapi.client
+          .init({
+            clientId:
+              '691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com',
+            scope: 'https://www.googleapis.com/auth/calendar.readonly',
+          })
+          .then(function () {
+            GoogleAuth = gapi.auth2.getAuthInstance();
+            GoogleAuth.isSignedIn.listen(updateSigninStatus);
+            updateSigninStatus(GoogleAuth.isSignedIn.get());
+          });
       }
-    }
 
-    function handleAuthClick(event) {
-      gapi.auth2.getAuthInstance().signIn();
-    }
+      function updateSigninStatus(isSignedIn) {
+        var authorizeButton = document.getElementById('authorize-button');
+        var signoutButton = document.getElementById('signout-button');
+        authorizeButton.onclick = handleAuthClick;
+        signoutButton.onclick = handleSignoutClick;
+        if (isSignedIn) {
+          authorizeButton.disabled = true;
+          signoutButton.disabled = false;
+          initTreehouse();
+        } else {
+          authorizeButton.disabled = false;
+          signoutButton.disabled = true;
+        }
+      }
 
-    function handleSignoutClick(event) {
-      gapi.auth2.getAuthInstance().signOut();
-    }
-  </script>
-  <script src="/index.js"></script>
-</body>
+      function handleAuthClick(event) {
+        gapi.auth2.getAuthInstance().signIn();
+      }
 
+      function handleSignoutClick(event) {
+        gapi.auth2.getAuthInstance().signOut();
+      }
+    </script>
+    <script src="/index.js"></script>
+  </body>
 </html>
