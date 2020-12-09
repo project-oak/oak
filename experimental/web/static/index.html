@@ -49,6 +49,13 @@
           0px 2px 2px 0px rgba(0, 0, 0, 0.15),
           0px 2px 4px 0px rgba(0, 0, 0, 0.12);
       }
+
+      .debug-wrapper {
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background-color: var(--md-theme-default-background-variant);
+        padding: 16px;
+      }
     </style>
   </head>
 
@@ -60,76 +67,9 @@
     <div id="app">Please authorize the treehouse application. :)</div>
     <script type="text/x-template" id="app-template">
       <div id="app">
-        <input type="checkbox" id="debug" v-model="debug" />
-        <label for="debug">debug</label>
-        <div v-if="debug">
-          <p>In order to load an Oak Module, press the button below.</p>
-          <p>
-            This should be a single Wasm file (i.e. not a complete Oak
-            Application).
-          </p>
-          <p>
-            If compiled from Rust, it will usually be under the
-            <code>target/wasm32-unknown-unknown</code> folder or similar
-            (preferably a debug build, in order to enable sourcemap support)
-          </p>
-          <p>
-            Once loaded, open the Chrome dev tools, navigate to the Sources tab,
-            and find the source (Rust) file to debug; set a breakpoint where
-            desired (e.g. near an entrypoint definition) and then press on the
-            Invoke button for the relevant entrypoint (a module may have more than
-            one entrypoint available)
-          </p>
-          <form v-on:submit.prevent="readFile()">
-            <div>
-              <label for="url">
-                Enter the URL of the Oak Module (compiled as a Wasm file)
-              </label>
-            </div>
-            <div>
-              <input v-model="url" type="url" name="url" id="url" size="70" />
-              <button type="submit">Load Module</button>
-            </div>
-          </form>
-          <div v-if="module">
-            <p>Module loaded.</p>
-            <p>Imports:</p>
-            <ul>
-              <li v-for="i in imports">
-                <code>{{ i.module }}.{{ i.name }}</code> [{{ i.kind }}]
-              </li>
-            </ul>
-            <p>Exports:</p>
-            <ul>
-              <li v-for="e in exports">
-                <code>{{ e.name }}</code> [{{ e.kind }}]
-                <button
-                  type="button"
-                  v-if='e.kind == "function"'
-                  v-on:click="invoke(e.name)"
-                >
-                  invoke
-                </button>
-              </li>
-            </ul>
-            <p>Channels:</p>
-            <ul>
-              <li v-for="(c, handle) in channels">
-                <code>[{{handle}}] {{ c }}</code>
-              </li>
-            </ul>
-            <p>Oak ABI call trace:</p>
-            <button type="button" v-on:click="reset()">reset</button>
-            <ul>
-              <li v-for="e in trace">
-                <pre>{{ e }}</pre>
-              </li>
-            </ul>
-          </div>
-        </div>
         <div>
           <div>
-            <p>Cards:</p>
+            <h2>Cards</h2>
             <ul class="card-list">
               <li class="card-list-item" v-for="card in cards">
                 <md-card>
@@ -158,6 +98,74 @@
               <h2>Denied HTTP requests</h2>
               <ul>
                 <li v-for="url in deniedUrls">{{ url }}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class='debug-wrapper'>
+          <md-switch v-model="debug">Debug Mode</md-switch>
+          <div v-if="debug">
+            <p>In order to load an Oak Module, press the button below.</p>
+            <p>
+              This should be a single Wasm file (i.e. not a complete Oak
+              Application).
+            </p>
+            <p>
+              If compiled from Rust, it will usually be under the
+              <code>target/wasm32-unknown-unknown</code> folder or similar
+              (preferably a debug build, in order to enable sourcemap support)
+            </p>
+            <p>
+              Once loaded, open the Chrome dev tools, navigate to the Sources tab,
+              and find the source (Rust) file to debug; set a breakpoint where
+              desired (e.g. near an entrypoint definition) and then press on the
+              Invoke button for the relevant entrypoint (a module may have more than
+              one entrypoint available)
+            </p>
+            <form v-on:submit.prevent="readFile()">
+              <div>
+                <label for="url">
+                  Enter the URL of the Oak Module (compiled as a Wasm file)
+                </label>
+              </div>
+              <div>
+                <input v-model="url" type="url" name="url" id="url" size="70" />
+                <button type="submit">Load Module</button>
+              </div>
+            </form>
+            <div v-if="module">
+              <p>Module loaded.</p>
+              <p>Imports:</p>
+              <ul>
+                <li v-for="i in imports">
+                  <code>{{ i.module }}.{{ i.name }}</code> [{{ i.kind }}]
+                </li>
+              </ul>
+              <p>Exports:</p>
+              <ul>
+                <li v-for="e in exports">
+                  <code>{{ e.name }}</code> [{{ e.kind }}]
+                  <button
+                    type="button"
+                    v-if='e.kind == "function"'
+                    v-on:click="invoke(e.name)"
+                  >
+                    invoke
+                  </button>
+                </li>
+              </ul>
+              <p>Channels:</p>
+              <ul>
+                <li v-for="(c, handle) in channels">
+                  <code>[{{handle}}] {{ c }}</code>
+                </li>
+              </ul>
+              <p>Oak ABI call trace:</p>
+              <button type="button" v-on:click="reset()">reset</button>
+              <ul>
+                <li v-for="e in trace">
+                  <pre>{{ e }}</pre>
+                </li>
               </ul>
             </div>
           </div>
