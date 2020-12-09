@@ -50,6 +50,7 @@ const app = new Vue({
     // Default url for Module.
     url: 'https://storage.googleapis.com/treehouse/application.wasm',
     cards: <Card[]>[],
+    debug: true,
   },
   methods: {
     login: function (e: Event) {
