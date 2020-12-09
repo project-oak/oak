@@ -84,13 +84,11 @@
                   <md-card-header>
                     <div class="md-title">{{ card.title }}</div>
                   </md-card-header>
-                  <md-card-content v-if="!!card.start_time && !!card.end_time"> {{ card.start_time }}-{{ card.end_time }} </md-card-content>
+                  <md-card-content> {{ card.subtitle }} </md-card-content>
                   <md-card-content> {{ card.description }} </md-card-content>
-                  <li v-for="photoUrl in card.photosList">
-                    <md-card-media md-ratio="16:9">
-                      <img v-bind:src="photoUrl" alt="" />
-                    </md-card-media>
-                  </li>
+                  <md-card-media md-ratio="16:9" v-if="card.photoUrl !== ''">
+                    <img v-bind:src="card.photoUrl" alt="" />
+                  </md-card-media>
                 </md-card>
               </li>
             </ul>
