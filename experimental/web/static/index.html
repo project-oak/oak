@@ -102,7 +102,6 @@
         </div>
       </div>
     </div>
-    <script defer src="/index.js"></script>
     <script>
       var GoogleAuth;
       function handleClientLoad() {
@@ -122,6 +121,7 @@
             GoogleAuth = gapi.auth2.getAuthInstance();
             GoogleAuth.isSignedIn.listen(updateSigninStatus);
             updateSigninStatus(GoogleAuth.isSignedIn.get());
+            initTreehouse();
           });
       }
 
@@ -153,5 +153,6 @@
       defer
       onload="handleClientLoad()"
     ></script>
+    <script defer src="/index.js"></script>
   </body>
 </html>
