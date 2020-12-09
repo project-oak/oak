@@ -92,10 +92,7 @@ pub struct Opt {
         help = "Configuration files to expose to the Oak Application, each in key=filename format."
     )]
     config_files: Vec<ConfigEntry>,
-    #[structopt(
-        long,
-        help = "OAuth2 token file."
-    )]
+    #[structopt(long, help = "OAuth2 token file.")]
     oauth2_token: Option<String>,
 }
 
@@ -205,7 +202,7 @@ fn create_secure_server_config(
     let http_config = create_http_config(&opt)
         .map_err(|e| log::warn!("{}", e))
         .ok();
-    let oauth2_token = if let Some(token_path) =  &opt.oauth2_token {
+    let oauth2_token = if let Some(token_path) = &opt.oauth2_token {
         Some(read_to_string(token_path).context("Couldn't read OAuth2 token file")?)
     } else {
         None

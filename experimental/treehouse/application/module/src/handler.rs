@@ -315,7 +315,7 @@ impl Treehouse for Handler {
         // Get images
         let naive_date =
             NaiveDate::parse_from_str(&date, "%Y-%m-%d").expect("could not parse date");
-        let date = Date {
+        let search_date = Date {
             year: naive_date.year(),
             month: naive_date.month(),
             day: naive_date.day(),
@@ -323,7 +323,7 @@ impl Treehouse for Handler {
         let search_req_body = MediaItemSearch {
             filters: Some(Filters {
                 date_filter: Some(DateFilter {
-                    dates: vec![date],
+                    dates: vec![search_date],
                     ranges: vec![],
                 }),
                 include_archived_media: true,
@@ -364,9 +364,12 @@ impl Treehouse for Handler {
                 continue;
             }
 
-            let start = chrono::DateTime::parse_from_rfc3339(&event.start.unwrap().date_time).ok();
-            let end = chrono::DateTime::parse_from_rfc3339(&event.end.unwrap().date_time).ok();
-            let mut has_images = false;
+            let start_date_time = event.start.unwrap().date_time;
+            let end_date_time = event.end.unwrap().date_time;
+
+            let start = chrono::DateTime::parse_from_rfc3339(&start_date_time).ok();
+            let end = chrono::DateTime::parse_from_rfc3339(&end_date_time).ok();
+            let mut photos = vec![];
 
             // Very inefficient algorithm for loading images.
             for image in images.iter() {
@@ -377,22 +380,27 @@ impl Treehouse for Handler {
                     if (start.is_none() || creation_time >= start.unwrap())
                         && (end.is_none() || creation_time <= end.unwrap())
                     {
-                        has_images = true;
                         let photo_url = format!("{}=d", image.base_url.clone());
-                        cards.push(Card {
-                            title: event.summary.to_string(),
-                            description: event.description.to_string(),
-                            photo_url,
-                        })
+                        photos.push(photo_url);
                     }
                 }
             }
-            if !has_images {
+            if !photos.is_empty() {
                 cards.push(Card {
                     title: event.summary.to_string(),
+                    start_time: if start_date_time.is_empty() {
+                        format!("{}T00:00:00Z", date)
+                    } else {
+                        start_date_time
+                    },
+                    end_time: if end_date_time.is_empty() {
+                        format!("{}T00:00:00Z", date)
+                    } else {
+                        end_date_time
+                    },
                     description: event.description.to_string(),
-                    photo_url: "".to_string(),
-                });
+                    photos,
+                })
             }
         }
         if cards.is_empty() {
@@ -400,8 +408,10 @@ impl Treehouse for Handler {
             cards.push({
                 Card {
                     title: "No suggestions".to_string(),
+                    start_time: "".to_string(),
+                    end_time: "".to_string(),
                     description: "".to_string(),
-                    photo_url: "".to_string(),
+                    photos: vec![],
                 }
             })
         } else {
