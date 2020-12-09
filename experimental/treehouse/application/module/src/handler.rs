@@ -317,7 +317,7 @@ impl Treehouse for Handler {
 
         // Get images
         let naive_date =
-            NaiveDate::parse_from_str("2015-09-05", "%Y-%m-%d").expect("could not parse date");
+            NaiveDate::parse_from_str(&date, "%Y-%m-%d").expect("could not parse date");
         let date = Date {
             year: naive_date.year(),
             month: naive_date.month(),
@@ -367,11 +367,9 @@ impl Treehouse for Handler {
             if event.start.is_none() || event.end.is_none() {
                 continue;
             }
-            let start = chrono::DateTime::parse_from_rfc3339(&event.start.unwrap().date_time)
-                .expect("Could not parse event start time");
-            let end = chrono::DateTime::parse_from_rfc3339(&event.end.unwrap().date_time)
-                .expect("Could not parse event end time");
 
+            let start = chrono::DateTime::parse_from_rfc3339(&event.start.unwrap().date_time).ok();
+            let end = chrono::DateTime::parse_from_rfc3339(&event.end.unwrap().date_time).ok();
             let mut has_images = false;
 
             // Very inefficient algorithm for loading images.
@@ -380,7 +378,9 @@ impl Treehouse for Handler {
                     let creation_time =
                         chrono::DateTime::parse_from_rfc3339(&metadata.creation_time)
                             .expect("Could not parse image creation time");
-                    if creation_time >= start && creation_time <= end {
+                    if (start.is_none() || creation_time >= start.unwrap())
+                        && (end.is_none() || creation_time <= end.unwrap())
+                    {
                         has_images = true;
                         let photo_url = format!("{}=d", image.base_url.clone());
                         debug!("The photo URL is {}", photo_url);
