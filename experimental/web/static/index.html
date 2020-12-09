@@ -40,6 +40,7 @@
       </div>
       <input type="checkbox" id="debug" v-model="debug" />
       <label for="debug">debug</label>
+<<<<<<< HEAD
       <p>Cards:</p>
       <ul class="card-list">
         <li class="card-list-item" v-for="card in cards">
@@ -58,6 +59,39 @@
           </md-card>
         </li>
       </ul>
+||||||| parent of cc4f9998 (Print URLs of HTTP requests)
+      <p>Cards:</p>
+      <ul>
+        <li v-for="card in cards">
+          <code>{{ card }}</code>
+        </li>
+      </ul>
+=======
+      <div>
+        <h1>Cards</h1>
+        <ul>
+          <li v-for="card in cards">
+            <code>{{ card }}</code>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <h2>Allowed HTTP requests</h2>
+        <ul>
+          <li v-for="url in allowedUrls">
+            <code>{{ url }}</code>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <h2>Denied HTTP requests</h2>
+        <ul>
+          <li v-for="url in deniedUrls">
+            <code>{{ url }}</code>
+          </li>
+        </ul>
+      </div>
+>>>>>>> cc4f9998 (Print URLs of HTTP requests)
       <div v-if="debug">
         <p>In order to load an Oak Module, press the button below.</p>
         <p>

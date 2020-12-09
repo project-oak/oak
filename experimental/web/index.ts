@@ -62,6 +62,8 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
       url: '',
       cards: <Card.AsObject[]>[],
       debug: true,
+      allowedUrls: <string[]>[],
+      deniedUrls: <string[]>[],
     },
     created: async function () {
       const urlParams = new URLSearchParams(window.location.search);
@@ -559,9 +561,11 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
               'https://photoslibrary.googleapis.com',
             ].includes(url.origin)
           ) {
+            this.deniedUrls.push(decoded.getUri());
             console.log('forbidden HTTP request', decoded);
             return;
           }
+          this.allowedUrls.push(decoded.getUri());
 
           console.log('allowed HTTP request', decoded);
 
