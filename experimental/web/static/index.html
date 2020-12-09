@@ -67,8 +67,14 @@
     <div id="app">Please authorize the treehouse application.</div>
     <script type="text/x-template" id="app-template">
       <div id="app">
+        <div>
           <div>
-
+            <md-field>
+              <label>Application Module URL (WebAssembly)</label>
+              <md-input v-model="url" type="url" name="url" id="url" size="70" />
+            </md-field>
+            <md-button class="md-raised" type="submit">Load Module</md-button>
+          </div>
           <div>
             <h2>Cards</h2>
             <ul class="card-list">
@@ -128,10 +134,6 @@
                 <label for="url">
                   Enter the URL of the Oak Module (compiled as a Wasm file)
                 </label>
-              </div>
-              <div>
-                <input v-model="url" type="url" name="url" id="url" size="70" />
-                <button type="submit">Load Module</button>
               </div>
             </form>
             <div v-if="module">
