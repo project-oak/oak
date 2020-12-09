@@ -32,6 +32,12 @@ Vue.use(VueMaterial);
 
 const HANDLE_SIZE_BYTES = 8;
 
+const updateURLSearchParam = (key: string) => (val: string) => {
+  const queryParams = new URLSearchParams(window.location.search);
+  queryParams.set(key, val);
+  history.replaceState(undefined, document.title, `?${queryParams.toString()}`);
+};
+
 const app = new Vue({
   el: '#app',
   data: {
@@ -58,6 +64,10 @@ const app = new Vue({
     this.url =
       urlParams.get('url') ??
       'https://storage.googleapis.com/treehouse/application.wasm';
+  },
+  watch: {
+    debug: updateURLSearchParam('debug'),
+    url: updateURLSearchParam('url'),
   },
   methods: {
     login: function (e: Event) {
@@ -500,6 +510,8 @@ const app = new Vue({
       const cardResponse = GetCardsResponse.deserializeBinary(
         grpcResponse.getRspMsg_asU8()
       );
+      const cards = cardResponse.getCardsList();
+      console.log(cards.map((c) => c.toObject()));
       this.cards = cardResponse.getCardsList();
     },
 
