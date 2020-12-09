@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
 
     <title>Oak emulator</title>
+    <link rel="preload" href="./index.js" />
+    <link rel="preload" href="https://apis.google.com/js/api.js" />
     <link
       rel="stylesheet"
       href="//fonts.googleapis.com/css?family=Roboto:400,500,700,400italic|Material+Icons"
@@ -155,13 +157,12 @@
         </div>
       </div>
     </script>
+    <script src="https://apis.google.com/js/api.js"></script>
     <script>
       var GoogleAuth;
-      function handleClientLoad() {
-        // Load the API's client and auth2 modules.
-        // Call the initClient function after the modules load.
-        gapi.load('client:auth2', initClient);
-      }
+      // Load the API's client and auth2 modules.
+      // Call the initClient function after the modules load.
+      gapi.load('client:auth2', initClient);
 
       function initClient() {
         gapi.client
@@ -200,12 +201,6 @@
         gapi.auth2.getAuthInstance().signOut();
       }
     </script>
-    <script
-      src="https://apis.google.com/js/api.js"
-      async
-      defer
-      onload="handleClientLoad()"
-    ></script>
-    <script defer src="/index.js"></script>
+    <script src="/index.js"></script>
   </body>
 </html>
