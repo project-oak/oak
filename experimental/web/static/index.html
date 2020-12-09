@@ -40,58 +40,38 @@
       </div>
       <input type="checkbox" id="debug" v-model="debug" />
       <label for="debug">debug</label>
-<<<<<<< HEAD
-      <p>Cards:</p>
-      <ul class="card-list">
-        <li class="card-list-item" v-for="card in cards">
-          <md-card md-elevation-4>
-            <md-card-media v-if="card.photoUrl !== ''">
-              <img src="{{ card.photoUrl }}" alt=""></img>
-            </md-card-media>
-
-            <md-card-header>
-              <div class="md-title">{{ card.title }}</div>
-            </md-card-header>
-
-            <md-card-content>
-              {{ card.description }}
-            </md-card-content>
-          </md-card>
-        </li>
-      </ul>
-||||||| parent of cc4f9998 (Print URLs of HTTP requests)
-      <p>Cards:</p>
-      <ul>
-        <li v-for="card in cards">
-          <code>{{ card }}</code>
-        </li>
-      </ul>
-=======
       <div>
-        <h1>Cards</h1>
-        <ul>
-          <li v-for="card in cards">
-            <code>{{ card }}</code>
+        <h2>Cards</h2>
+        <ul class="card-list">
+          <li class="card-list-item" v-for="card in cards">
+            <md-card md-elevation-4>
+              <md-card-media v-if="card.photoUrl !== ''">
+                <img src="{{ card.photoUrl }}" alt=""></img>
+              </md-card-media>
+
+              <md-card-header>
+                <div class="md-title">{{ card.title }}</div>
+              </md-card-header>
+
+              <md-card-content>
+                {{ card.description }}
+              </md-card-content>
+            </md-card>
           </li>
         </ul>
       </div>
       <div>
         <h2>Allowed HTTP requests</h2>
         <ul>
-          <li v-for="url in allowedUrls">
-            <code>{{ url }}</code>
-          </li>
+          <li v-for="url in allowedUrls">{{ url }}</li>
         </ul>
       </div>
       <div>
         <h2>Denied HTTP requests</h2>
         <ul>
-          <li v-for="url in deniedUrls">
-            <code>{{ url }}</code>
-          </li>
+          <li v-for="url in deniedUrls">{{ url }}</li>
         </ul>
       </div>
->>>>>>> cc4f9998 (Print URLs of HTTP requests)
       <div v-if="debug">
         <p>In order to load an Oak Module, press the button below.</p>
         <p>
@@ -186,9 +166,9 @@
         authorizeButton.onclick = handleAuthClick;
         signoutButton.onclick = handleSignoutClick;
         if (isSignedIn) {
-          initTreehouse();
           authorizeButton.disabled = true;
           signoutButton.disabled = false;
+          initTreehouse();
         } else {
           authorizeButton.disabled = false;
           signoutButton.disabled = true;
