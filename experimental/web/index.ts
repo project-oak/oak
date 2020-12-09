@@ -133,6 +133,14 @@ function getLocation(): Promise<any> {
               ].join(', ')}) -> ${status}
       bytes: [${bytes}]`;
               this.trace.push(entry);
+              // Assume a single handle with value that fits in a single byte.
+              const handle = bytes[0];
+              const channel = this.channels[Number(handle)];
+              const messages = channel.messages;
+              if (messages.length == 0) {
+                this.writeMemory(buf + 8, [ChannelReadStatus.NOT_READY]);
+                return OakStatus.ERR_TERMINATED;
+              }
               this.writeMemory(buf + 8, [ChannelReadStatus.READ_READY]);
               return status;
             },
@@ -184,6 +192,9 @@ function getLocation(): Promise<any> {
               console.log(`${handle} -> ${channel.name}`);
               const messages = channel.messages;
               console.log(`${messages.length} messages available`);
+              if (messages.length == 0) {
+                return OakStatus.ERR_TERMINATED;
+              }
               const message = messages.shift()!;
 
               console.log(`channel_read() -> ${JSON.stringify(message)}`);
