@@ -42,6 +42,13 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
   history.replaceState(undefined, document.title, `?${queryParams.toString()}`);
 };
 
+// Position does not work as return type.
+function getLocation(): Promise<any> {
+  return new Promise((resolve, reject) =>
+    navigator.geolocation.getCurrentPosition((v) => resolve(v))
+  );
+}
+
 (<any>window).initTreehouse = function () {
   new Vue({
     template: '#app-template',
@@ -418,7 +425,7 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
         data.forEach((v: number, i: number) => (a[i] = v));
       },
       // Invoke an exported function from the module.
-      invoke: function (exportName: string) {
+      invoke: async function (exportName: string) {
         console.log('invoking export: ' + exportName);
 
         this.createChannel('dummy');
@@ -441,6 +448,16 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
           );
           const getCardsRequest = new treehouseProto.GetCardsRequest();
           getCardsRequest.setDate('2020-12-09');
+          {
+            const location = await getLocation();
+            getCardsRequest.setLocationLatitudeDegrees(
+              location.coords.latitude
+            );
+            getCardsRequest.setLocationLongitudeDegrees(
+              location.coords.longitude
+            );
+          }
+          console.log('Treehouse GetCardsRequest', getCardsRequest);
           grpcRequest.setReqMsg(getCardsRequest.serializeBinary());
           grpcRequest.setLast(true);
         }
