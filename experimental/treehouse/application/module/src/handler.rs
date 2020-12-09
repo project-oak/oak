@@ -295,22 +295,22 @@ impl Treehouse for Handler {
             uri, latest_start_time, earliest_end_time
         );
 
-        let request = http::Request::builder()
+        let http_request = http::Request::builder()
             .method(http::Method::GET)
             .uri(uri_with_query)
             .body(vec![])
             .expect("Could not build request");
-        let response = self
+        let http_response = self
             .http_client
-            .send_request(request, &Label::public_untrusted())
+            .send_request(http_request, &Label::public_untrusted())
             .expect("Could not get response");
 
-        if !response.status().is_success() {
-            log::warn!("Got non-ok response: {}", response.status());
+        if !http_response.status().is_success() {
+            log::warn!("Got non-ok response: {}", http_response.status());
             return Ok(GetCardsResponse { cards: vec![] });
         }
 
-        let events: CalendarEvents = serde_json::from_slice(response.body()).unwrap();
+        let events: CalendarEvents = serde_json::from_slice(http_response.body()).unwrap();
 
         // Get images
         let naive_date =
@@ -333,19 +333,19 @@ impl Treehouse for Handler {
         };
         let search_req_body_str = serde_json::to_string(&search_req_body).unwrap();
 
-        let request = http::Request::builder()
+        let http_request = http::Request::builder()
             .method(http::Method::POST)
             .uri("https://photoslibrary.googleapis.com/v1/mediaItems:search?alt=json")
             .body(search_req_body_str.as_bytes().to_vec())
             .expect("Could not build request");
 
-        let response = self
+        let http_response = self
             .http_client
-            .send_request(request, &Label::public_untrusted())
+            .send_request(http_request, &Label::public_untrusted())
             .expect("Could not get response");
 
-        let images = if response.status() == http::StatusCode::OK {
-            let media_items: MediaItems = serde_json::from_slice(response.body()).unwrap();
+        let images = if http_response.status() == http::StatusCode::OK {
+            let media_items: MediaItems = serde_json::from_slice(http_response.body()).unwrap();
             media_items.media_items
         } else {
             vec![]
@@ -411,16 +411,26 @@ impl Treehouse for Handler {
                 })
             }
         }
+
+        cards.push(Card {
+            title: "Your Location".to_string(),
+            start_time: "".to_string(),
+            end_time: "".to_string(),
+            description: format!(
+                "lat: {} lon: {}",
+                request.location_latitude_degrees, request.location_longitude_degrees
+            ),
+            photos: vec![],
+        });
+
         if cards.is_empty() {
             log::info!("No Cards found.");
-            cards.push({
-                Card {
-                    title: "No suggestions".to_string(),
-                    start_time: "".to_string(),
-                    end_time: "".to_string(),
-                    description: "".to_string(),
-                    photos: vec![],
-                }
+            cards.push(Card {
+                title: "No suggestions".to_string(),
+                start_time: "".to_string(),
+                end_time: "".to_string(),
+                description: "".to_string(),
+                photos: vec![],
             })
         } else {
             log::info!("Responding with {} cards.", cards.len());
