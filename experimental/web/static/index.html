@@ -10,15 +10,17 @@
       rel="stylesheet"
       href="//fonts.googleapis.com/css?family=Roboto:400,500,700,400italic|Material+Icons"
     />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/vue-material/dist/vue-material.min.css"
-    />
+    <link rel="stylesheet" href="./vue-material.min.css" />
+    <link rel="stylesheet" href="./vue-material-theme.default-dark.css" />
     <link rel="stylesheet" href="./vue-material-theme.default-dark.css" />
     <style>
       :root {
         --md-theme-default-background-variant: hsl(0deg 3% 14%);
         --md-theme-default-background: hsl(0deg 3% 21%);
+      }
+
+      html {
+        transition: initial;
       }
 
       #app {
