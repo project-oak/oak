@@ -44,6 +44,7 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
 
 (<any>window).initTreehouse = function () {
   new Vue({
+    template: '#app-template',
     el: '#app',
     data: {
       // Exports of the loaded Module.
