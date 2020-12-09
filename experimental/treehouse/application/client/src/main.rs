@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Couldn't receive response")?;
     info!("Received response.");
-    debug!("The response is: {:?}", response);
+    info!("The response is: {:?}", response);
 
     Ok(())
 }

@@ -10,9 +10,7 @@ out = "experimental/treehouse/application/bin/treehouse.oak"
 module = { Cargo = { cargo_manifest = "experimental/treehouse/application/module/Cargo.toml" } }
 
 [server]
-additional_args = [
-  "--oauth2-token=.oauth_token.secret"
-]
+additional_args = ["--oauth2-token=.oauth_token.secret"]
 
 [clients]
 rust = { Cargo = { cargo_manifest = "experimental/treehouse/application/client/Cargo.toml" }, additional_args = [
