@@ -14,9 +14,14 @@
     />
     <link
       rel="stylesheet"
-      href="https://unpkg.com/vue-material/dist/theme/default.css"
+      href="https://unpkg.com/vue-material/dist/theme/default-dark.css"
     />
     <style>
+      :root {
+        --md-theme-default-background-variant: hsl(0deg 3% 14%);
+        --md-theme-default-background: hsl(0deg 3% 21%);
+      }
+
       #app {
         max-width: 800px;
         margin: 0 auto;
@@ -39,9 +44,9 @@
 
       .md-card {
         border-radius: 4px;
-        box-shadow: 0px 2px 1px -1px rgba(0, 0, 0, 0.2),
-          0px 1px 1px 0px rgba(0, 0, 0, 0.14),
-          0px 1px 3px 0px rgba(0, 0, 0, 0.12);
+        box-shadow: 0px 4px 2px -2px rgba(0, 0, 0, 0.3),
+          0px 2px 2px 0px rgba(0, 0, 0, 0.15),
+          0px 2px 4px 0px rgba(0, 0, 0, 0.12);
       }
     </style>
   </head>
@@ -51,7 +56,7 @@
       <button id="authorize-button">Authorize</button>
       <button id="signout-button">Sign Out</button>
     </div>
-    <div id="app"></div>
+    <div id="app">Please authorize the treehouse application. :)</div>
     <script type="text/x-template" id="app-template">
       <div id="app">
         <input type="checkbox" id="debug" v-model="debug" />
