@@ -187,7 +187,10 @@
           .init({
             clientId:
               '691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com',
-            scope: 'https://www.googleapis.com/auth/calendar.readonly',
+            scope: [
+              'https://www.googleapis.com/auth/calendar.readonly',
+              'https://www.googleapis.com/auth/photoslibrary.readonly',
+            ].join(' '),
           })
           .then(function () {
             GoogleAuth = gapi.auth2.getAuthInstance();
