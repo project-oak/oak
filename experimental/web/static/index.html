@@ -10,10 +10,6 @@
     />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic|Material+Icons"
-    />
-    <link
-      rel="stylesheet"
       href="https://unpkg.com/vue-material/dist/vue-material.min.css"
     />
     <link
@@ -21,6 +17,12 @@
       href="https://unpkg.com/vue-material/dist/theme/default.css"
     />
     <style>
+      #app {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
       .card-list {
         list-style-type: none;
         padding: 0;
@@ -28,6 +30,18 @@
 
       .card-list-item {
         margin-bottom: 15px;
+      }
+
+      .md-title {
+        font-size: 22px;
+        font-weight: 500 !important;
+      }
+
+      .md-card {
+        border-radius: 4px;
+        box-shadow: 0px 2px 1px -1px rgba(0, 0, 0, 0.2),
+          0px 1px 1px 0px rgba(0, 0, 0, 0.14),
+          0px 1px 3px 0px rgba(0, 0, 0, 0.12);
       }
     </style>
   </head>
@@ -41,36 +55,34 @@
       <input type="checkbox" id="debug" v-model="debug" />
       <label for="debug">debug</label>
       <div>
-        <h2>Cards</h2>
+        <p>Cards:</p>
         <ul class="card-list">
           <li class="card-list-item" v-for="card in cards">
-            <md-card md-elevation-4>
-              <md-card-media v-if="card.photoUrl !== ''">
-                <img src="{{ card.photoUrl }}" alt=""></img>
+            <md-card>
+              <md-card-media md-ratio="16:9" v-if="card.photoUrl !== ''">
+                <img v-bind:src="card.photoUrl" alt="" />
               </md-card-media>
 
               <md-card-header>
                 <div class="md-title">{{ card.title }}</div>
               </md-card-header>
 
-              <md-card-content>
-                {{ card.description }}
-              </md-card-content>
+              <md-card-content> {{ card.description }} </md-card-content>
             </md-card>
           </li>
         </ul>
-      </div>
-      <div>
-        <h2>Allowed HTTP requests</h2>
-        <ul>
-          <li v-for="url in allowedUrls">{{ url }}</li>
-        </ul>
-      </div>
-      <div>
-        <h2>Denied HTTP requests</h2>
-        <ul>
-          <li v-for="url in deniedUrls">{{ url }}</li>
-        </ul>
+        <div>
+          <h2>Allowed HTTP requests</h2>
+          <ul>
+            <li v-for="url in allowedUrls">{{ url }}</li>
+          </ul>
+        </div>
+        <div>
+          <h2>Denied HTTP requests</h2>
+          <ul>
+            <li v-for="url in deniedUrls">{{ url }}</li>
+          </ul>
+        </div>
       </div>
       <div v-if="debug">
         <p>In order to load an Oak Module, press the button below.</p>

@@ -525,7 +525,16 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
           grpcResponse.getRspMsg_asU8()
         );
 
-        this.cards = cardResponse.getCardsList().map((card) => card.toObject());
+        this.cards = cardResponse.getCardsList().map((card) => {
+          const cardObj = card.toObject();
+          // Remove HTML tags. This is purely for optics, Vue already prevents
+          // script injection.
+          cardObj.description = cardObj.description.replace(
+            /(<([^>]+)>)/gi,
+            ' '
+          );
+          return cardObj;
+        });
       },
 
       logCallback: function (m: Message) {
