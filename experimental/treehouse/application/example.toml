@@ -17,5 +17,5 @@ additional_args = [
 [clients]
 rust = { Cargo = { cargo_manifest = "experimental/treehouse/application/client/Cargo.toml" }, additional_args = [
   "--root-tls-certificate=examples/certs/local/ca.pem",
-  "--date=2020-11-01"
+  "--date=2020-12-09"
 ] }
