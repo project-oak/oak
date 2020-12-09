@@ -60,7 +60,7 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
       instance: <WebAssembly.Instance | null>null,
       // Default url for Module.
       url: '',
-      cards: <Card[]>[],
+      cards: <Card.AsObject[]>[],
       debug: true,
     },
     created: async function () {
@@ -523,7 +523,7 @@ const updateURLSearchParam = (key: string) => (val: string | boolean) => {
           grpcResponse.getRspMsg_asU8()
         );
 
-        this.cards = cardResponse.getCardsList();
+        this.cards = cardResponse.getCardsList().map((card) => card.toObject());
       },
 
       logCallback: function (m: Message) {

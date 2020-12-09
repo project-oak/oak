@@ -20,6 +20,16 @@
       rel="stylesheet"
       href="https://unpkg.com/vue-material/dist/theme/default.css"
     />
+    <style>
+      .card-list {
+        list-style-type: none;
+        padding: 0;
+      }
+
+      .card-list-item {
+        margin-bottom: 15px;
+      }
+    </style>
   </head>
 
   <body>
@@ -31,9 +41,21 @@
       <input type="checkbox" id="debug" v-model="debug" />
       <label for="debug">debug</label>
       <p>Cards:</p>
-      <ul>
-        <li v-for="card in cards">
-          <code>{{ card }}</code>
+      <ul class="card-list">
+        <li class="card-list-item" v-for="card in cards">
+          <md-card md-elevation-4>
+            <md-card-media v-if="card.photoUrl !== ''">
+              <img src="{{ card.photoUrl }}" alt=""></img>
+            </md-card-media>
+
+            <md-card-header>
+              <div class="md-title">{{ card.title }}</div>
+            </md-card-header>
+
+            <md-card-content>
+              {{ card.description }}
+            </md-card-content>
+          </md-card>
         </li>
       </ul>
       <div v-if="debug">
