@@ -382,6 +382,7 @@ fn create_runtime() -> RuntimeProxy {
             )
             .ok(),
         }),
+        ..Default::default()
     };
     let signature_table = crate::SignatureTable::default();
     info!("Create runtime for test");

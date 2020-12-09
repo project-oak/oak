@@ -11,7 +11,7 @@ module = { Cargo = { cargo_manifest = "experimental/treehouse/application/module
 
 [server]
 additional_args = [
-  "--config-files=config=.oauth_token.secret"
+  "--oauth2-token=.oauth_token.secret"
 ]
 
 [clients]

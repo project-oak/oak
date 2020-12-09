@@ -139,6 +139,7 @@ pub struct HttpConfiguration {
 pub struct SecureServerConfiguration {
     pub grpc_config: Option<GrpcConfiguration>,
     pub http_config: Option<HttpConfiguration>,
+    pub oauth2_token: Option<String>,
 }
 
 struct NodeStopper {

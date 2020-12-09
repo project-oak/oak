@@ -59,6 +59,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
                 oidc_client_info: None,
             }),
             http_config: None,
+            ..Default::default()
         },
         &signature_table,
     );

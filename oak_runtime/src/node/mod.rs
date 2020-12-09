@@ -196,6 +196,7 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                     node_name,
                     config.clone(),
                     http_client_root_tls_certificate,
+                    self.secure_server_configuration.oauth2_token.clone(),
                 )?))
             }
             None => Err(ConfigurationError::InvalidNodeConfiguration),

@@ -49,6 +49,7 @@ pub struct HttpClientNode {
     authority: String,
     /// Downgrading privilege of this client.
     node_privilege: NodePrivilege,
+    oauth2_token: Option<String>,
 }
 
 /// Oak Node implementation for the HTTP client pseudo-Node.
@@ -118,6 +119,7 @@ impl HttpClientNode {
         node_name: &str,
         config: HttpClientConfiguration,
         root_ca: crate::tls::Certificate,
+        oauth2_token: Option<String>,
     ) -> Result<Self, ConfigurationError> {
         let http_client = create_client(root_ca);
         let node_privilege = get_privilege(config.authority.clone());
@@ -126,6 +128,7 @@ impl HttpClientNode {
             http_client,
             authority: config.authority,
             node_privilege,
+            oauth2_token,
         })
     }
 
@@ -195,6 +198,12 @@ impl HttpClientNode {
             for (header_name, header_value) in headers.into_iter() {
                 hyper_request_builder = hyper_request_builder.header(header_name, header_value);
             }
+        }
+        if let Some(oauth2_token) = &self.oauth2_token {
+            hyper_request_builder = hyper_request_builder.header(
+                "Authentication",
+                format!("Bearer {}", oauth2_token)
+            );
         }
         let hyper_request = hyper_request_builder
             .body(hyper::Body::from(request.body))

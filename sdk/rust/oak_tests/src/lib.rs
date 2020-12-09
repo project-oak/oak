@@ -182,6 +182,7 @@ pub fn runtime_config_wasm(
                 oidc_client_info: None,
             }),
             http_config: create_http_config(),
+            ..Default::default()
         },
         app_config: ApplicationConfiguration {
             wasm_modules,
