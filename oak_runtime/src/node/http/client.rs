@@ -200,10 +200,8 @@ impl HttpClientNode {
             }
         }
         if let Some(oauth2_token) = &self.oauth2_token {
-            hyper_request_builder = hyper_request_builder.header(
-                "Authentication",
-                format!("Bearer {}", oauth2_token)
-            );
+            hyper_request_builder =
+                hyper_request_builder.header("Authorization", format!("Bearer {}", oauth2_token));
         }
         let hyper_request = hyper_request_builder
             .body(hyper::Body::from(request.body))
