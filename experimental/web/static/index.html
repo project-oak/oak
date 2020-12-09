@@ -62,36 +62,6 @@
       <div id="app">
         <input type="checkbox" id="debug" v-model="debug" />
         <label for="debug">debug</label>
-        <div>
-          <p>Cards:</p>
-          <ul class="card-list">
-            <li class="card-list-item" v-for="card in cards">
-              <md-card>
-                <md-card-media md-ratio="16:9" v-if="card.photoUrl !== ''">
-                  <img v-bind:src="card.photoUrl" alt="" />
-                </md-card-media>
-
-                <md-card-header>
-                  <div class="md-title">{{ card.title }}</div>
-                </md-card-header>
-
-                <md-card-content> {{ card.description }} </md-card-content>
-              </md-card>
-            </li>
-          </ul>
-          <div>
-            <h2>Allowed HTTP requests</h2>
-            <ul>
-              <li v-for="url in allowedUrls">{{ url }}</li>
-            </ul>
-          </div>
-          <div>
-            <h2>Denied HTTP requests</h2>
-            <ul>
-              <li v-for="url in deniedUrls">{{ url }}</li>
-            </ul>
-          </div>
-        </div>
         <div v-if="debug">
           <p>In order to load an Oak Module, press the button below.</p>
           <p>
@@ -155,6 +125,40 @@
                 <pre>{{ e }}</pre>
               </li>
             </ul>
+          </div>
+        </div>
+        <div>
+          <div>
+            <p>Cards:</p>
+            <ul class="card-list">
+              <li class="card-list-item" v-for="card in cards">
+                <md-card>
+                  <md-card-media md-ratio="16:9" v-if="card.photoUrl !== ''">
+                    <img v-bind:src="card.photoUrl" alt="" />
+                  </md-card-media>
+
+                  <md-card-header>
+                    <div class="md-title">{{ card.title }}</div>
+                  </md-card-header>
+
+                  <md-card-content> {{ card.description }} </md-card-content>
+                </md-card>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <div>
+              <h2>Allowed HTTP requests</h2>
+              <ul>
+                <li v-for="url in allowedUrls">{{ url }}</li>
+              </ul>
+            </div>
+            <div>
+              <h2>Denied HTTP requests</h2>
+              <ul>
+                <li v-for="url in deniedUrls">{{ url }}</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
