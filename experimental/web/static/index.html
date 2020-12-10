@@ -23,6 +23,10 @@
         transition: initial;
       }
 
+      section {
+        margin-bottom: 50px;
+      }
+
       #app {
         max-width: 800px;
         margin: 0 auto;
@@ -74,8 +78,8 @@
     <div id="app">Please authorize the treehouse application.</div>
     <script type="text/x-template" id="app-template">
       <div id="app">
-        <span class="md-display-4">Treehouse</span>
-        <div>
+        <section>
+          <span class="md-display-4">Treehouse</span>
           <div>
             <md-field>
               <label>Application Module URL (WebAssembly)</label>
@@ -83,39 +87,39 @@
             </md-field>
             <md-button class="md-raised" type="submit">Load Module</md-button>
           </div>
+        </section>
+        <section>
+          <h2>Cards</h2>
+          <ul class="card-list">
+            <li class="card-list-item" v-for="card in cards">
+              <md-card>
+                <md-card-header>
+                  <div class="md-title">{{ card.title }}</div>
+                </md-card-header>
+                <md-card-content> {{ card.subtitle }} </md-card-content>
+                <md-card-media md-ratio="16:9" v-if="card.photoUrl !== ''">
+                  <img v-bind:src="card.photoUrl" alt="" />
+                </md-card-media>
+                <md-card-content> {{ card.description }} </md-card-content>
+              </md-card>
+            </li>
+          </ul>
+        </section>
+        <section>
           <div>
-            <h2>Cards</h2>
-            <ul class="card-list">
-              <li class="card-list-item" v-for="card in cards">
-                <md-card>
-                  <md-card-header>
-                    <div class="md-title">{{ card.title }}</div>
-                  </md-card-header>
-                  <md-card-content> {{ card.subtitle }} </md-card-content>
-                  <md-card-media md-ratio="16:9" v-if="card.photoUrl !== ''">
-                    <img v-bind:src="card.photoUrl" alt="" />
-                  </md-card-media>
-                  <md-card-content> {{ card.description }} </md-card-content>
-                </md-card>
-              </li>
+            <h2>Allowed HTTP requests</h2>
+            <ul>
+              <li v-for="url in allowedUrls">{{ url }}</li>
             </ul>
           </div>
           <div>
-            <div>
-              <h2>Allowed HTTP requests</h2>
-              <ul>
-                <li v-for="url in allowedUrls">{{ url }}</li>
-              </ul>
-            </div>
-            <div>
-              <h2>Denied HTTP requests</h2>
-              <ul>
-                <li v-for="url in deniedUrls">{{ url }}</li>
-              </ul>
-            </div>
+            <h2>Denied HTTP requests</h2>
+            <ul>
+              <li v-for="url in deniedUrls">{{ url }}</li>
+            </ul>
           </div>
-        </div>
-        <div class='debug-wrapper'>
+        </section>
+        <section class='debug-wrapper'>
           <md-switch v-model="debug">Debug Mode</md-switch>
           <div v-if="debug">
             <p>In order to load an Oak Module, press the button below.</p>
@@ -178,7 +182,7 @@
               </ul>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </script>
     <script src="https://apis.google.com/js/api.js"></script>
