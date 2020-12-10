@@ -16,7 +16,6 @@ import treehouseProto, {
   GetCardsResponse,
 } from './protoc_out/experimental/treehouse/application/proto/treehouse_pb';
 import treehouseInternalProto from './protoc_out/experimental/treehouse/application/proto/treehouse_init_pb';
-import { Any } from 'google-protobuf/google/protobuf/any_pb';
 
 type Message = {
   bytes: number[];
