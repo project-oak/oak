@@ -30,7 +30,7 @@ const char kOakLabelGrpcMetadataKey[] = "x-oak-label-bin";
 // The `-bin` suffix allows sending binary data for this metadata key.
 //
 // See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
-const char kOakAuthorizationBearerTokenGrpcMetadataKey[] = "x-oak-authorization-bearer-token-bin";
+const char kOakPublicKeyIdentityGrpcMetadataKey[] = "x-oak-public-key-identity-bin";
 
 std::string SerializeLabel(const oak::label::Label& label_proto) {
   return label_proto.SerializeAsString();
@@ -41,14 +41,6 @@ oak::label::Label DeserializeLabel(const std::string& label_bytes) {
   // TODO(#488): Check errors.
   label_proto.ParseFromString(label_bytes);
   return label_proto;
-}
-
-oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization_token_hmac) {
-  oak::label::Label label;
-  auto* confidentiality_tag = label.add_confidentiality_tags();
-  confidentiality_tag->mutable_grpc_tag()->set_authorization_bearer_token_hmac(
-      authorization_token_hmac);
-  return label;
 }
 
 oak::label::Label WebAssemblyModuleHashLabel(const std::string& web_assembly_module_hash_sha_256) {
@@ -72,6 +64,13 @@ oak::label::Label TlsEndpointLabel(const std::string& authority) {
   oak::label::Label label;
   auto* confidentiality_tag = label.add_confidentiality_tags();
   confidentiality_tag->mutable_tls_endpoint_tag()->set_authority(authority);
+  return label;
+}
+
+oak::label::Label PublicKeyIdentityLabel(const std::string& public_key_identity) {
+  oak::label::Label label;
+  auto* confidentiality_tag = label.add_confidentiality_tags();
+  confidentiality_tag->mutable_public_key_identity_tag()->set_public_key(public_key_identity);
   return label;
 }
 

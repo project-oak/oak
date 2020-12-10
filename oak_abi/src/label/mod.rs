@@ -87,17 +87,6 @@ pub fn confidentiality_label(tag: Tag) -> crate::proto::oak::label::Label {
     }
 }
 
-/// Creates a [`Tag`] having as principal the provided authorization bearer token.
-///
-/// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto
-pub fn authorization_bearer_token_hmac_tag(authorization_bearer_token_hmac: &[u8]) -> Tag {
-    Tag {
-        tag: Some(tag::Tag::GrpcTag(GrpcTag {
-            authorization_bearer_token_hmac: authorization_bearer_token_hmac.into(),
-        })),
-    }
-}
-
 /// Creates a [`Tag`] having as principal the provided WebAssembly module SHA-256 hash.
 ///
 /// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto
@@ -137,10 +126,10 @@ pub fn tls_endpoint_tag(authority: &str) -> Tag {
 /// Creates a [`Tag`] having as principal the provided identification Ed25519 public key.
 ///
 /// See https://github.com/project-oak/oak/blob/main/oak_abi/proto/label.proto
-pub fn public_key_identity_tag(public_key: Vec<u8>) -> Tag {
+pub fn public_key_identity_tag(public_key: &[u8]) -> Tag {
     Tag {
         tag: Some(tag::Tag::PublicKeyIdentityTag(PublicKeyIdentityTag {
-            public_key,
+            public_key: public_key.into(),
         })),
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Project Oak Authors
+ * Copyright 2020 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "oak/client/authorization_bearer_token_metadata.h"
+#include "oak/client/public_key_identity_metadata.h"
 
 #include <map>
 
@@ -22,16 +22,14 @@
 
 namespace oak {
 
-AuthorizationBearerTokenMetadata::AuthorizationBearerTokenMetadata(
-    const std::string& authorization_bearer_token)
-    : authorization_bearer_token_(authorization_bearer_token) {}
+PublicKeyIdentityMetadata::PublicKeyIdentityMetadata(const std::string& public_key_identity)
+    : public_key_identity_(public_key_identity) {}
 
-grpc::Status AuthorizationBearerTokenMetadata::GetMetadata(
+grpc::Status PublicKeyIdentityMetadata::GetMetadata(
     grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
     const grpc::AuthContext& /*channel_auth_context*/,
     std::multimap<grpc::string, grpc::string>* metadata) {
-  metadata->insert(
-      std::make_pair(kOakAuthorizationBearerTokenGrpcMetadataKey, authorization_bearer_token_));
+  metadata->insert(std::make_pair(kOakPublicKeyIdentityGrpcMetadataKey, public_key_identity_));
   return grpc::Status::OK;
 }
 

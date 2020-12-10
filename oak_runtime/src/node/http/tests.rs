@@ -335,7 +335,7 @@ async fn test_https_server_can_serve_https_requests_with_user_identity_as_reques
 
     let signature = create_signature();
 
-    let label = confidentiality_label(public_key_identity_tag(signature.clone().public_key));
+    let label = confidentiality_label(public_key_identity_tag(&signature.clone().public_key));
 
     // Send an HTTPS request, and check that response has StatusCode::OK
     let resp = send_request(
