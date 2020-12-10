@@ -64,14 +64,16 @@ Inductive step_node_ev (id: node_id): call -> state -> state -> event_l -> Prop 
         (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id (WriteChannel han msg) s s' ->
         step_node_ev id (WriteChannel han msg) s s' (nlbl ---> msg)
+        (* The notations used for events on this last line and others
+        is in Events.v *)
     | SReadChanEv s nlbl han chan msg s':
         (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id (ReadChannel han) s s' ->
         msg_is_head chan msg ->
         step_node_ev id (ReadChannel han) s s' (nlbl <--- msg)
     | SCreateChanEv s nlbl clbl s':
-            (* It seems clear that no event is needed since nodes only observe
-            * contents of channels indirectly via reads *)
+        (* It seems clear that no event is needed since nodes only observe
+        * contents of channels indirectly via reads *)
         (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id (CreateChannel clbl) s s' ->
         step_node_ev id (CreateChannel clbl) s s' (nlbl --- )
@@ -79,6 +81,23 @@ Inductive step_node_ev (id: node_id): call -> state -> state -> event_l -> Prop 
         (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id (CreateNode new_lbl h) s s' ->
         step_node_ev id (CreateNode new_lbl h) s s' ( -- nlbl -- )
+    | SWaitOnChannelsEv s hs nlbl:
+        (s.(nodes) .[?id]).(lbl) = nlbl ->
+        step_node id (WaitOnChannels hs) s s ->
+        step_node_ev id (WaitOnChannels hs) s s (nlbl ---)
+    | SChannelCloseEv s han nlbl s':
+        (s.(nodes) .[?id]).(lbl) = nlbl ->
+        step_node id (ChannelClose han) s s' ->
+        step_node_ev id (ChannelClose han) s s' (nlbl ---)
+    | SNodeLabelReadEv s nlbl s':
+        (s.(nodes) .[?id]).(lbl) = nlbl ->
+        step_node id NodeLabelRead s s' ->
+        step_node_ev id NodeLabelRead s s' (nlbl <--L nlbl)
+    | SChannelLabelReadEv s han nlbl clbl s':
+        (s.(nodes) .[?id]).(lbl) = nlbl ->
+        (s.(chans) .[?han]).(lbl) = clbl ->
+        step_node id (ChannelLabelRead han) s s' ->
+        step_node_ev id (ChannelLabelRead han) s s' (nlbl <--L clbl)
     | SInternalEv s nlbl s':
         (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id Internal s s' ->

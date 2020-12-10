@@ -199,4 +199,4 @@ Inductive stut_trace_low_eq: level -> trace -> trace -> Prop :=
         stut_trace_low_eq ell ((ys, ye)::t1) t2 ->
         event_low_eq ell xe ye ->
         state_low_eq ell xs ys ->
-        stut_trace_low_eq ell ((xs, xe)::t1) ((ys, ye)::t2).
+        stut_trace_low_eq ell ((xs, xe)::(ys, ye)::t1) t2.

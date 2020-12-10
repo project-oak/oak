@@ -173,7 +173,9 @@ Proof.
                 eapply proj_labels_increase.
                 eauto.
                 (* low-equiv *)
-                subst_lets. eauto 7 with unwind.
+                subst_lets. 
+                eapply set_call_unwind; eauto.
+                eauto 7 with unwind.
             + (* ReadChannel *)
                 do 2 eexists; split_ands; [ | | reflexivity ].
                 (* step *)
@@ -519,3 +521,5 @@ Proof.
   all:crush.
   all:eexists; split; crush; [ | eassumption ]; eauto with multi.
 Qed.
+
+Print Assumptions possibilistic_ni.
