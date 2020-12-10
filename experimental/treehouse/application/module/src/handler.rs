@@ -401,9 +401,9 @@ impl Treehouse for Handler {
                         end
                     );
 
-                    // Limit the subtitle to 150 characters.
-                    let mut subtitle = event.description.to_string();
-                    subtitle.truncate(150);
+                    // Limit the description to 80 characters.
+                    let mut description = event.description.to_string();
+                    description.truncate(80);
 
                     if (start.is_none() || creation_time >= start.unwrap())
                         && (end.is_none() || creation_time <= end.unwrap())
@@ -411,10 +411,10 @@ impl Treehouse for Handler {
                         let photo_url = format!("{}=d", image.base_url.clone());
                         cards.push(Card {
                             title: event.summary.to_string(),
-                            subtitle,
+                            subtitle: "Matching photo found!".to_string(),
                             description: format!(
-                                "Matching photo found!\nEvent start time: {}\nEvent end time: {}\nPhoto time: {}",
-                                start.unwrap(), end.unwrap(), creation_time
+                                "Event details: {}\nEvent start time: {}\nEvent end time: {}\nPhoto time: {}",
+                                description, start.unwrap(), end.unwrap(), creation_time
                             ),
                             photo_url,
                         })
