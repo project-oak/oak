@@ -38,6 +38,25 @@
         color: #ffffff !important;
       }
 
+      .load-module-wrapper {
+        display: flex;
+        align-items: stretch;
+      }
+
+      .load-module-url {
+        margin: 0;
+      }
+
+      .load-module-submit {
+        flex-shrink: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+        height: auto;
+        padding: 0 15px;
+        border-radius: 4px;
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+
       .card-list {
         list-style-type: none;
         padding: 0;
@@ -90,12 +109,12 @@
       <div id="app">
         <section>
           <h1 class="md-display-3 app-title">Treehouse</h1>
-          <div>
-            <md-field>
+          <div class="load-module-wrapper">
+            <md-field  class="load-module-url">
               <label>Application Module URL (WebAssembly)</label>
               <md-input v-model="url" type="url" name="url" id="url" size="70" />
             </md-field>
-            <md-button class="md-raised" type="submit">Load Module</md-button>
+            <md-button class="load-module-submit" :md-ripple="false" type="submit">Load Module</md-button>
           </div>
         </section>
         <section>
