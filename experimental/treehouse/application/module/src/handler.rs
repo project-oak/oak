@@ -291,7 +291,7 @@ impl Treehouse for Handler {
         // Get events
         let uri = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
         let uri_with_query = format!(
-            "{}?timeMax={}&timeMin={}&maxResults=35",
+            "{}?timeMax={}&timeMin={}&maxResults=150",
             uri, latest_start_time, earliest_end_time
         );
 
