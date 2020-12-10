@@ -85,10 +85,10 @@
                     <div class="md-title">{{ card.title }}</div>
                   </md-card-header>
                   <md-card-content> {{ card.subtitle }} </md-card-content>
-                  <md-card-content> {{ card.description }} </md-card-content>
                   <md-card-media md-ratio="16:9" v-if="card.photoUrl !== ''">
                     <img v-bind:src="card.photoUrl" alt="" />
                   </md-card-media>
+                  <md-card-content> {{ card.description }} </md-card-content>
                 </md-card>
               </li>
             </ul>
