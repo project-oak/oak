@@ -135,7 +135,8 @@
         <div v-if="isSignedIn">
           <section>
             <h2>Cards</h2>
-            <ul class="card-list">
+            <md-progress-bar v-if="!cards.length" md-mode="indeterminate"></md-progress-bar>
+            <ul class="card-list" v-if="cards.length">
               <li class="card-list-item" v-for="card in cards">
                 <md-card>
                   <md-card-header>
