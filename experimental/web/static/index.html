@@ -127,7 +127,7 @@
               <label>Application Module URL (WebAssembly)</label>
               <md-input v-model="url" type="url" name="url" id="url" size="70" />
             </md-field>
-            <md-button class="load-module-submit" :md-ripple="false" type="submit">Load Module</md-button>
+            <md-button onClick="window.location.reload();" class="load-module-submit" :md-ripple="false" type="submit">Load Module</md-button>
           </div>
           <md-button class="md-raised" :disabled='isSignedIn' v-on:click="handleAuthClick">Authorize</md-button>
           <md-button class="md-raised" :disabled='!isSignedIn' v-on:click="handleSignoutClick">Sign Out</md-button>
