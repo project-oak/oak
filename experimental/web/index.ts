@@ -458,7 +458,7 @@ function getLocation(): Promise<any> {
             '/oak.examples.treehouse.Treehouse/GetCards'
           );
           const getCardsRequest = new treehouseProto.GetCardsRequest();
-          getCardsRequest.setDate('2020-12-09');
+          getCardsRequest.setDate('2020-12-08');
           {
             const location = await getLocation();
             getCardsRequest.setLocationLatitudeDegrees(

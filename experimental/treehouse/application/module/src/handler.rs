@@ -379,19 +379,12 @@ impl Treehouse for Handler {
             let start_date_time = event.start.unwrap().date_time;
             let end_date_time = event.end.unwrap().date_time;
 
+            if start_date_time.is_empty() || end_date_time.is_empty() {
+                continue;
+            }
+
             let start = chrono::DateTime::parse_from_rfc3339(&start_date_time).ok();
             let end = chrono::DateTime::parse_from_rfc3339(&end_date_time).ok();
-
-            let start_time = if start_date_time.is_empty() {
-                format!("{}T00:00:00Z", date)
-            } else {
-                start_date_time
-            };
-            let end_time = if end_date_time.is_empty() {
-                format!("{}T00:00:00Z", date)
-            } else {
-                end_date_time
-            };
 
             // Very inefficient algorithm for loading images.
             for image in images.iter() {
@@ -401,20 +394,28 @@ impl Treehouse for Handler {
                             .expect("Could not parse image creation time");
 
                     log::info!(
-                        "event: {}, creation time: {}, start: {:?}, end: {:?}",
+                        "event: {}, photo creation time: {}, start: {:?}, end: {:?}",
                         event.summary.clone(),
                         creation_time,
                         start,
                         end
                     );
+
+                    // Limit the subtitle to 150 characters.
+                    let mut subtitle = event.description.to_string();
+                    subtitle.truncate(150);
+
                     if (start.is_none() || creation_time >= start.unwrap())
                         && (end.is_none() || creation_time <= end.unwrap())
                     {
                         let photo_url = format!("{}=d", image.base_url.clone());
                         cards.push(Card {
                             title: event.summary.to_string(),
-                            subtitle: format!("{} - {}", start_time, end_time),
-                            description: event.description.to_string(),
+                            subtitle,
+                            description: format!(
+                                "Matching photo found!\nEvent start time: {}\nEvent end time: {}\nPhoto time: {}",
+                                start.unwrap(), end.unwrap(), creation_time
+                            ),
                             photo_url,
                         })
                     }
