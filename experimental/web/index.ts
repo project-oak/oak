@@ -54,7 +54,7 @@ async function loadGapiOAuth() {
     gapi.load('client:auth2', {
       callback: resolve,
       onerror: reject,
-      timeout: 1000, // 5 seconds.
+      timeout: 5000,
       ontimeout: reject,
     });
   });
