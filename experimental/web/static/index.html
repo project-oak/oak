@@ -57,6 +57,7 @@
       .load-module-wrapper {
         display: flex;
         align-items: stretch;
+        margin-bottom: 15px;
       }
 
       .load-module-url {
@@ -116,55 +117,55 @@
   </head>
 
   <body>
-    <div>
-      <button id="authorize-button">Authorize</button>
-      <button id="signout-button">Sign Out</button>
-    </div>
     <div id="app">Please authorize the treehouse application.</div>
     <script type="text/x-template" id="app-template">
       <div id="app">
         <section>
           <h1 class="md-display-3 app-title"><img src="./icon.png" alt=""/>Treehouse</h1>
           <div class="load-module-wrapper">
-            <md-field  class="load-module-url">
+            <md-field class="load-module-url">
               <label>Application Module URL (WebAssembly)</label>
               <md-input v-model="url" type="url" name="url" id="url" size="70" />
             </md-field>
             <md-button class="load-module-submit" :md-ripple="false" type="submit">Load Module</md-button>
           </div>
+          <md-button class="md-raised" :disabled='isSignedIn' v-on:click="handleAuthClick">Authorize</md-button>
+          <md-button class="md-raised" :disabled='!isSignedIn' v-on:click="handleSignoutClick">Sign Out</md-button>
         </section>
-        <section>
-          <h2>Cards</h2>
-          <ul class="card-list">
-            <li class="card-list-item" v-for="card in cards">
-              <md-card>
-                <md-card-header>
-                  <div class="md-title">{{ card.title }}</div>
-                </md-card-header>
-                <md-card-content class="md-card-content"> {{ card.subtitle }} </md-card-content>
-                <md-card-media md-ratio="16:9" v-if="card.photoUrl !== ''">
-                  <img v-bind:src="card.photoUrl" alt="" />
-                </md-card-media>
-                <md-card-content class="md-card-content"> {{ card.description }} </md-card-content>
-              </md-card>
-            </li>
-          </ul>
-        </section>
-        <section>
-          <h2>HTTP Requests</h2>
-          <div>
-            <h3>Allowed requests</h3>
-            <ul>
-              <li v-for="url in allowedUrls">{{ url }}</li>
+        <div v-if="isSignedIn">
+          <section>
+            <h2>Cards</h2>
+            <ul class="card-list">
+              <li class="card-list-item" v-for="card in cards">
+                <md-card>
+                  <md-card-header>
+                    <div class="md-title">{{ card.title }}</div>
+                  </md-card-header>
+                  <md-card-content class="md-card-content"> {{ card.subtitle }} </md-card-content>
+                  <md-card-media md-ratio="16:9" v-if="card.photoUrl !== ''">
+                    <img v-bind:src="card.photoUrl" alt="" />
+                  </md-card-media>
+                  <md-card-content class="md-card-content"> {{ card.description }} </md-card-content>
+                </md-card>
+              </li>
             </ul>
-          </div>
-          <div>
-            <h3>Denied requests</h3>
-            <ul>
-              <li v-for="url in deniedUrls">{{ url }}</li>
-            </ul>
-          </div>
-        </section>
+          </section>
+          <section>
+            <h2>HTTP Requests</h2>
+            <div>
+              <h3>Allowed requests</h3>
+              <ul>
+                <li v-for="url in allowedUrls">{{ url }}</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Denied requests</h3>
+              <ul>
+                <li v-for="url in deniedUrls">{{ url }}</li>
+              </ul>
+            </div>
+          </section>
+        </div>
         <section>
           <h2>Debug Interface</h2>
           <div class='debug-wrapper'>
@@ -234,53 +235,7 @@
         </section>
       </div>
     </script>
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="/index.js"></script>
-    <script>
-      var GoogleAuth;
-      // Load the API's client and auth2 modules.
-      // Call the initClient function after the modules load.
-      gapi.load('client:auth2', initClient);
-
-      function initClient() {
-        gapi.client
-          .init({
-            clientId:
-              '691249393555-anhtgr54cajv9l96apgfi3hv1n3a63e2.apps.googleusercontent.com',
-            scope: [
-              'https://www.googleapis.com/auth/calendar.readonly',
-              'https://www.googleapis.com/auth/photoslibrary.readonly',
-            ].join(' '),
-          })
-          .then(function () {
-            GoogleAuth = gapi.auth2.getAuthInstance();
-            GoogleAuth.isSignedIn.listen(updateSigninStatus);
-            updateSigninStatus(GoogleAuth.isSignedIn.get());
-          });
-      }
-
-      function updateSigninStatus(isSignedIn) {
-        var authorizeButton = document.getElementById('authorize-button');
-        var signoutButton = document.getElementById('signout-button');
-        authorizeButton.onclick = handleAuthClick;
-        signoutButton.onclick = handleSignoutClick;
-        if (isSignedIn) {
-          authorizeButton.disabled = true;
-          signoutButton.disabled = false;
-          initTreehouse();
-        } else {
-          authorizeButton.disabled = false;
-          signoutButton.disabled = true;
-        }
-      }
-
-      function handleAuthClick(event) {
-        gapi.auth2.getAuthInstance().signIn();
-      }
-
-      function handleSignoutClick(event) {
-        gapi.auth2.getAuthInstance().signOut();
-      }
-    </script>
+    <script defer src="https://apis.google.com/js/api.js"></script>
+    <script defer src="/index.js"></script>
   </body>
 </html>
