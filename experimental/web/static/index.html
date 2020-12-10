@@ -56,6 +56,12 @@
         background-color: var(--md-theme-default-background-variant);
         padding: 16px;
       }
+
+      .debug-call-tree {
+        overflow-x: scroll;
+        background-color: var(--md-theme-default-background);
+        border-radius: 4px;
+      }
     </style>
   </head>
 
@@ -164,7 +170,7 @@
               </ul>
               <p>Oak ABI call trace:</p>
               <button type="button" v-on:click="reset()">reset</button>
-              <ul>
+              <ul class="debug-call-tree">
                 <li v-for="e in trace">
                   <pre>{{ e }}</pre>
                 </li>
