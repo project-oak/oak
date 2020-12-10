@@ -5,5 +5,4 @@ signature_manifests = [
 
 [modules]
 app = { path = "examples/private_set_intersection/bin/private_set_intersection.wasm" }
-# TODO(865): Use locally built module once reproducibility is fixed.
-handler = { external = { url = "https://storage.googleapis.com/oak-modules/private_set_intersection_handler/a3e3fce0b23273a5117efd7d94632091990c3637536d80ed1874a2013c8f0f07", sha256 = "a3e3fce0b23273a5117efd7d94632091990c3637536d80ed1874a2013c8f0f07" } }
+handler = { path = "examples/private_set_intersection/bin/private_set_intersection_handler.wasm" }
