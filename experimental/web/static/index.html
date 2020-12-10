@@ -33,6 +33,11 @@
         padding: 20px;
       }
 
+      .app-title {
+        margin: 20px 0;
+        color: #ffffff !important;
+      }
+
       .card-list {
         list-style-type: none;
         padding: 0;
@@ -79,7 +84,7 @@
     <script type="text/x-template" id="app-template">
       <div id="app">
         <section>
-          <span class="md-display-4">Treehouse</span>
+          <h1 class="md-display-3 app-title">Treehouse</h1>
           <div>
             <md-field>
               <label>Application Module URL (WebAssembly)</label>
@@ -106,80 +111,84 @@
           </ul>
         </section>
         <section>
+          <h2>HTTP Requests</h2>
           <div>
-            <h2>Allowed HTTP requests</h2>
+            <h3>Allowed requests</h3>
             <ul>
               <li v-for="url in allowedUrls">{{ url }}</li>
             </ul>
           </div>
           <div>
-            <h2>Denied HTTP requests</h2>
+            <h3>Denied requests</h3>
             <ul>
               <li v-for="url in deniedUrls">{{ url }}</li>
             </ul>
           </div>
         </section>
-        <section class='debug-wrapper'>
-          <md-switch v-model="debug">Debug Mode</md-switch>
-          <div v-if="debug">
-            <p>In order to load an Oak Module, press the button below.</p>
-            <p>
-              This should be a single Wasm file (i.e. not a complete Oak
-              Application).
-            </p>
-            <p>
-              If compiled from Rust, it will usually be under the
-              <code>target/wasm32-unknown-unknown</code> folder or similar
-              (preferably a debug build, in order to enable sourcemap support)
-            </p>
-            <p>
-              Once loaded, open the Chrome dev tools, navigate to the Sources tab,
-              and find the source (Rust) file to debug; set a breakpoint where
-              desired (e.g. near an entrypoint definition) and then press on the
-              Invoke button for the relevant entrypoint (a module may have more than
-              one entrypoint available)
-            </p>
-            <form v-on:submit.prevent="readFile()">
-              <div>
-                <label for="url">
-                  Enter the URL of the Oak Module (compiled as a Wasm file)
-                </label>
+        <section>
+          <h2>Debug Interface</h2>
+          <div class='debug-wrapper'>
+            <md-switch v-model="debug">{{ debug ? "Hide" : "Show" }}</md-switch>
+            <div v-if="debug">
+              <p>In order to load an Oak Module, press the button below.</p>
+              <p>
+                This should be a single Wasm file (i.e. not a complete Oak
+                Application).
+              </p>
+              <p>
+                If compiled from Rust, it will usually be under the
+                <code>target/wasm32-unknown-unknown</code> folder or similar
+                (preferably a debug build, in order to enable sourcemap support)
+              </p>
+              <p>
+                Once loaded, open the Chrome dev tools, navigate to the Sources tab,
+                and find the source (Rust) file to debug; set a breakpoint where
+                desired (e.g. near an entrypoint definition) and then press on the
+                Invoke button for the relevant entrypoint (a module may have more than
+                one entrypoint available)
+              </p>
+              <form v-on:submit.prevent="readFile()">
+                <div>
+                  <label for="url">
+                    Enter the URL of the Oak Module (compiled as a Wasm file)
+                  </label>
+                </div>
+              </form>
+              <div v-if="module">
+                <p>Module loaded.</p>
+                <p>Imports:</p>
+                <ul>
+                  <li v-for="i in imports">
+                    <code>{{ i.module }}.{{ i.name }}</code> [{{ i.kind }}]
+                  </li>
+                </ul>
+                <p>Exports:</p>
+                <ul>
+                  <li v-for="e in exports">
+                    <code>{{ e.name }}</code> [{{ e.kind }}]
+                    <button
+                      type="button"
+                      v-if='e.kind == "function"'
+                      v-on:click="invoke(e.name)"
+                    >
+                      invoke
+                    </button>
+                  </li>
+                </ul>
+                <p>Channels:</p>
+                <ul>
+                  <li v-for="(c, handle) in channels">
+                    <code>[{{handle}}] {{ c }}</code>
+                  </li>
+                </ul>
+                <p>Oak ABI call trace:</p>
+                <button type="button" v-on:click="reset()">reset</button>
+                <ul class="debug-call-tree">
+                  <li v-for="e in trace">
+                    <pre>{{ e }}</pre>
+                  </li>
+                </ul>
               </div>
-            </form>
-            <div v-if="module">
-              <p>Module loaded.</p>
-              <p>Imports:</p>
-              <ul>
-                <li v-for="i in imports">
-                  <code>{{ i.module }}.{{ i.name }}</code> [{{ i.kind }}]
-                </li>
-              </ul>
-              <p>Exports:</p>
-              <ul>
-                <li v-for="e in exports">
-                  <code>{{ e.name }}</code> [{{ e.kind }}]
-                  <button
-                    type="button"
-                    v-if='e.kind == "function"'
-                    v-on:click="invoke(e.name)"
-                  >
-                    invoke
-                  </button>
-                </li>
-              </ul>
-              <p>Channels:</p>
-              <ul>
-                <li v-for="(c, handle) in channels">
-                  <code>[{{handle}}] {{ c }}</code>
-                </li>
-              </ul>
-              <p>Oak ABI call trace:</p>
-              <button type="button" v-on:click="reset()">reset</button>
-              <ul class="debug-call-tree">
-                <li v-for="e in trace">
-                  <pre>{{ e }}</pre>
-                </li>
-              </ul>
             </div>
           </div>
         </section>
