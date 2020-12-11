@@ -17,7 +17,7 @@
 use crate::proto::oak::examples::treehouse::{
     Card, GetCardsRequest, GetCardsResponse, Treehouse, TreehouseDispatcher, TreehouseHandlerInit,
 };
-use chrono::{Datelike, NaiveDate};
+use chrono::{DateTime, TimeZone};
 use log::debug;
 use oak::grpc;
 use oak_abi::label::Label;
@@ -284,11 +284,13 @@ impl Treehouse for Handler {
         debug!("Received request: {:?}", request);
 
         // Collect all the events that happened on the date given in the request.
-        let date = request.date;
-        let latest_start_time = format!("{}T23:59:59Z", date);
-        let earliest_end_time = format!("{}T00:00:00Z", date);
+        let current_time = chrono::Utc.timestamp_millis(request.current_time_millis);
+        let latest_start_time = current_time.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let earliest_end_time = (current_time - chrono::Duration::days(7))
+            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
 
-        // Get events
+        // Get events.
+        // https://developers.google.com/calendar/v3/reference/events/list
         let uri = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
         let uri_with_query = format!(
             "{}?timeMax={}&timeMin={}&maxResults=150",
@@ -325,18 +327,23 @@ impl Treehouse for Handler {
         );
 
         // Get images
-        let naive_date =
-            NaiveDate::parse_from_str(&date, "%Y-%m-%d").expect("could not parse date");
-        let search_date = Date {
-            year: naive_date.year(),
-            month: naive_date.month(),
-            day: naive_date.day(),
-        };
         let search_req_body = MediaItemSearch {
             filters: Some(Filters {
                 date_filter: Some(DateFilter {
-                    dates: vec![search_date],
-                    ranges: vec![],
+                    dates: vec![],
+                    // TODO: user current time.
+                    ranges: vec![DateRange {
+                        start_date: Some(Date {
+                            year: 2020,
+                            month: 12,
+                            day: 1,
+                        }),
+                        end_date: Some(Date {
+                            year: 2021,
+                            month: 1,
+                            day: 1,
+                        }),
+                    }],
                 }),
                 include_archived_media: true,
                 exclude_non_app_created_data: false,
@@ -345,6 +352,7 @@ impl Treehouse for Handler {
         };
         let search_req_body_str = serde_json::to_string(&search_req_body).unwrap();
 
+        // https://developers.google.com/photos/library/reference/rest/v1/mediaItems/search
         let http_request = http::Request::builder()
             .method(http::Method::POST)
             .uri("https://photoslibrary.googleapis.com/v1/mediaItems:search?alt=json")
@@ -380,6 +388,10 @@ impl Treehouse for Handler {
             let end_date_time = event.end.unwrap().date_time;
 
             if start_date_time.is_empty() || end_date_time.is_empty() {
+                continue;
+            }
+
+            if event.status != "confirmed" {
                 continue;
             }
 

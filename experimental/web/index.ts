@@ -485,7 +485,7 @@ new Vue({
         // https://github.com/project-oak/oak/blob/c2fb4a05f31e639c9f0499ebfd0aae18932f82f2/experimental/treehouse/application/proto/treehouse.proto#L42
         grpcRequest.setMethodName('/oak.examples.treehouse.Treehouse/GetCards');
         const getCardsRequest = new treehouseProto.GetCardsRequest();
-        getCardsRequest.setDate('2020-12-08');
+        getCardsRequest.setCurrentTimeMillis(new Date().getTime());
         {
           const location = await getLocation();
           getCardsRequest.setLocationLatitudeDegrees(location.coords.latitude);

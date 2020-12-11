@@ -19,8 +19,8 @@ syntax = "proto3";
 package oak.examples.treehouse;
 
 message GetCardsRequest {
-  // An ISO-8601 formatted date. We use it to search for all the calendar events on this date.
-  string date = 1;
+  // The current time in number of milliseconds since epoch.
+  int64 current_time_millis = 1;
   float location_latitude_degrees = 2;
   float location_longitude_degrees = 3;
 }
