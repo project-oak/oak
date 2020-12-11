@@ -47,8 +47,6 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             check whether or not a channel is allocated to the handle
             to avoid leaks (it can be Some or None) *)
         In n.(write_handles) han ->     (* caller has write handle *)
-        channel_valid s han ->
-            (* the channel being written is not closed *)
         nlbl <<L clbl ->     (* label of caller flowsTo label of ch*)
         Included msg.(rhs) n.(read_handles) ->
             (* caller has read handles it is sending *)
@@ -58,6 +56,10 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             (* remove the read handles from the sender because read
             * handles (but not write handles) are linear *)
         let s0 := state_upd_node id n' s in
+            (* NOTE: throwing an error if the channel is not valid would cause
+            a leak. It might be possible to still prove NI if the write call
+            always proceeds regarldess of validity but only pushes to the 
+            validity, but only append the message if *)
         step_node id (WriteChannel han msg) s 
             (state_chan_append_labeled han msg (state_upd_node id n' s))
     | SReadChan s n nlbl han ch clbl msg:
@@ -74,7 +76,7 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             *)
         (msg_is_head ch msg) ->
         channel_valid s han ->
-            (* the channel being written is not closed *)
+            (* the channel being read is not closed *)
         clbl <<L nlbl ->
             (* label of channel flowsTo label of caller. 
                 checks that reading the message is safe
@@ -146,8 +148,8 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
     | SChannelClose s n ch han nlbl clbl: 
         (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
             (* caller is a real node with label nlbl *)
-        (s.(chans).[?han]) = Labeled channel (Some ch) clbl ->  
-            (* handle points to real channel with label clbl *)
+        (s.(chans).[?han]).(lbl) = clbl ->
+            (* handle has label clbl *)
         nlbl <<L clbl ->
         step_node id (ChannelClose han) s 
             (state_upd_chan han (chan_close ch) s)

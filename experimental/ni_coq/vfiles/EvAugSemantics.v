@@ -81,10 +81,10 @@ Inductive step_node_ev (id: node_id): call -> state -> state -> event_l -> Prop 
         (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id (CreateNode new_lbl h) s s' ->
         step_node_ev id (CreateNode new_lbl h) s s' ( -- nlbl -- )
-    | SWaitOnChannelsEv s hs nlbl:
+    | SWaitOnChannelsEv s hs nlbl s':
         (s.(nodes) .[?id]).(lbl) = nlbl ->
-        step_node id (WaitOnChannels hs) s s ->
-        step_node_ev id (WaitOnChannels hs) s s (nlbl ---)
+        step_node id (WaitOnChannels hs) s s' ->
+        step_node_ev id (WaitOnChannels hs) s s' (nlbl ---)
     | SChannelCloseEv s han nlbl s':
         (s.(nodes) .[?id]).(lbl) = nlbl ->
         step_node id (ChannelClose han) s s' ->
