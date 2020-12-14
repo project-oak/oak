@@ -16,59 +16,36 @@
 
 'use strict';
 
-const GREEN_ICON_PATH = './icon-green.png';
-const RED_ICON_PATH = './icon-red.png';
+const showGreenIconForExtensionPages = {
+  conditions: [
+    new chrome.declarativeContent.PageStateMatcher({
+      pageUrl: {
+        hostEquals: chrome.runtime.id,
+        schemes: ['chrome-extension'],
+        pathEquals: '/index.html',
+      },
+    }),
+  ],
+  actions: [new chrome.declarativeContent.SetIcon({ path: 'icon-green.png' })],
+};
 
-// Map of tabs that are applying the desired CSP. The key is the `tabId`, the
-// value is the specific `url` that applies them. Keeping track of the URL is
-// necessary since administrators can block access to the `chrome.webRequest`
-// API used to check CSP on a per page basis. Without checking that the URL
-// matches, a user could navigate from a secure page to a potentially
-// insecure page whose CSP cannot be checked, and the tab would still be
-// considered secure.
-const tabsUsingDesiredCsp = new Map();
-
-function setIconForTab(tabId, url) {
-  const isUsingDesiredCsp =
-    tabsUsingDesiredCsp.has(tabId) && tabsUsingDesiredCsp.get(tabId) === url;
-
-  chrome.browserAction.setIcon({
-    path: isUsingDesiredCsp ? GREEN_ICON_PATH : RED_ICON_PATH,
-    tabId,
+chrome.runtime.onInstalled.addListener(function () {
+  chrome.declarativeContent.onPageChanged.removeRules(undefined, function () {
+    chrome.declarativeContent.onPageChanged.addRules([
+      showGreenIconForExtensionPages,
+    ]);
   });
-}
-
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  setIconForTab(tabId, tab.url);
 });
-chrome.tabs.onRemoved.addListener(tabsUsingDesiredCsp.delete);
 
-function requestProcessor({ responseHeaders, tabId, url }) {
-  const cspHeader = responseHeaders.find(
-    (header) => header.name.toLowerCase() === 'content-security-policy'
-  );
-
-  // TODO(#1492): Parse the CSP to check whether it is as strict or stricter
-  // than the minimum CSP, instead of just checking if the string matches.
-  const isUsingDesiredCsp =
-    cspHeader !== undefined &&
-    cspHeader.value ===
-      "default-src 'none'; sandbox allow-scripts; script-src 'unsafe-inline'; style-src 'unsafe-inline';";
-
-  if (isUsingDesiredCsp) {
-    tabsUsingDesiredCsp.set(tabId, url);
-  } else {
-    tabsUsingDesiredCsp.delete(tabId);
-  }
-
-  setIconForTab(tabId, url);
+async function loadPageInASecureSandbox({ id: tabId }) {
+  const src = (
+    await new Promise((resolve) =>
+      chrome.tabs.executeScript(tabId, { file: 'getInnerHtml.js' }, resolve)
+    )
+  )?.[0];
+  const searchParams = new URLSearchParams({ src });
+  const url = `index.html?${searchParams.toString()}`;
+  chrome.tabs.update({ url });
 }
 
-chrome.webRequest.onHeadersReceived.addListener(
-  requestProcessor,
-  {
-    urls: ['<all_urls>'],
-    types: ['main_frame'],
-  },
-  ['responseHeaders']
-);
+chrome.browserAction.onClicked.addListener(loadPageInASecureSandbox);
