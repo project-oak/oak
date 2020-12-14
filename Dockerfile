@@ -216,7 +216,8 @@ RUN rustup component add \
   rustfmt
 
 # No binary available on Github, have to use cargo install.
-RUN cargo install cargo-deadlinks
+ARG deadlinks_version=0.7.0
+RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
