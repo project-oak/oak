@@ -24,25 +24,6 @@ Local Open Scope ev_notation.
 This is a proof that step_system_ev enforces Possibilistic Noninterference
 *)
 
-Lemma invert_chans_state_low_proj_flowsto ell lvl s han :
-  lvl <<L ell ->
-  lvl <<L (chans (state_low_proj ell s)).[? han].(lbl) ->
-  lvl <<L (chans s).[? han].(lbl).
-Proof.
-  destruct s.
-  repeat match goal with
-         | _ => progress cbn [state_low_proj
-                               State.chans State.lbl ]
-         | _ => progress cbv [low_proj chan_state_low_proj fnd]
-         | _ => destruct_match
-         | _ => tauto
-         end.
-    (*
-    Note: I think this is not true with the low-projection def
-    where labels are partially secret
-    *)
-Qed.
-
 Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
 (* hints for eauto in event part of the unobservable step proof *)
@@ -119,40 +100,6 @@ Proof.
     - (* ChannelLabelRead *)
         inversion H6. subst. reflexivity.
 Qed.
-
-Theorem low_eq_to_unobs {A: Type}: forall ell (x1 x2: @labeled A),
-    low_eq ell x1 x2 ->
-    ~(x1.(lbl) <<L ell) ->
-    ~(x2.(lbl) <<L ell).
-Proof.
-    destruct x1, x2. cbv [low_eq low_proj State.lbl].
-    intros. destruct (lbl <<? ell); destruct (lbl0 <<? ell);
-        try eauto; try contradiction. 
-    inversion H. unfold not. intros. congruence.
-Qed.
-
-
-Theorem chan_state_proj_index_assoc2: forall ell s han,
-    (chans (state_low_proj ell s)) han = low_proj ell ((chans s) han).
-Proof.
-    autounfold with loweq. auto.
-Qed.
-
-Theorem flows_proj_preserves_channel_valid: forall ell s h,
-    s.(chans).[? h].(lbl) <<L ell ->
-    channel_valid s h <-> channel_valid (state_low_proj ell s) h.
-Proof.
-    unfold channel_valid. autounfold with loweq. unfold fnd. 
-    destruct s. intros. simpl in *. destruct (chans h). simpl in *.
-    split.
-    - (* -> *)
-        destruct 1 as [ms [lvl H0]]. inversion H0.
-        do 2 eexists. destruct (lvl <<? ell). eauto. congruence.
-    - (* <- *)
-        destruct 1 as [ms [lvl H0]]. inversion H0.
-        do 2 eexists. destruct (lbl <<? ell). eauto. congruence.
-Qed.
-
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
     (step_system_ev s1 s1' e1) ->

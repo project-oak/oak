@@ -98,12 +98,6 @@ Proof.
     unwind_crush.
 Qed.
 
-Theorem chan_state_proj_index_assoc: forall ell cs han,
-    (chan_state_low_proj ell cs) han = low_proj ell (cs han).
-Proof.
-    autounfold with loweq. auto.
-Qed.
-
 Theorem state_upd_chan_unwind: forall ell han ch s1 s2,
     state_low_eq ell s1 s2 ->
     state_low_eq ell (state_upd_chan han ch s1) (state_upd_chan han ch s2).
@@ -122,12 +116,6 @@ Proof.
         * (* <> *)
         subst. erewrite upd_neq. erewrite upd_neq.
         all: eauto. 
-Qed.
-
-Theorem node_state_proj_index_assoc: forall ell ns id,
-    (node_state_low_proj ell ns) id = low_proj ell (ns id).
-Proof.
-    autounfold with loweq. auto.
 Qed.
 
 Theorem state_upd_node_labeled_unwind: forall ell id n1 n2 s1 s2,
@@ -196,14 +184,7 @@ Theorem set_call_none_is_nop: forall s id c,
     s_set_call s id c = s.
 Proof.
     autounfold with semutils. unfold fnd. intros.
-    (* why doesn't subst work here? sad/fake_news. *)
     rewrite H. congruence.
-Qed.
-
-Theorem node_state_proj_index_assoc_form2: forall ell s id,
-    nodes (state_low_proj ell s) id = low_proj ell ((nodes s) id).
-Proof.
-    autounfold with loweq. eauto.
 Qed.
 
 Theorem set_call_unwind: forall ell id c s1 s2,
