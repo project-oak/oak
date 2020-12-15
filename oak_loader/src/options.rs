@@ -59,11 +59,6 @@ pub struct Opt {
     root_tls_certificate: Option<String>,
     #[structopt(
         long,
-        help = "Path to a TOML file containing information about Oak modules' signatures."
-    )]
-    signatures_manifest: Option<String>,
-    #[structopt(
-        long,
         help = "Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
         OpenID Connect authentication will not be available if this parameter is not specified."
     )]
@@ -92,21 +87,6 @@ pub struct Opt {
         help = "Configuration files to expose to the Oak Application, each in key=filename format."
     )]
     config_files: Vec<ConfigEntry>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-struct SignatureManifest {
-    signatures: Vec<SignatureLocation>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-enum SignatureLocation {
-    #[serde(rename = "path")]
-    Path(String),
-    #[serde(rename = "url")]
-    Url(String),
 }
 
 /// A specification of a configuration entry as human readable key and a path to a file whose
@@ -147,7 +127,7 @@ pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfigurati
     let secure_server_configuration = create_secure_server_config(&opt)?;
 
     // Create signature table.
-    let sign_table = create_sign_table(&opt)?;
+    let sign_table = create_sign_table(&app_config)?;
 
     // Create Runtime config.
     let runtime_configuration = oak_runtime::RuntimeConfiguration {
@@ -236,41 +216,16 @@ fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguratio
 /// Create a signature table for Oak runtime.
 /// Returns an [`SignatureTable`] that maps each module hash to a vector of [`SignatureBundle`].
 /// Returned signatures are not verified yet, they are supposed to be verified by the `oak_runtime`.
-fn create_sign_table(opt: &Opt) -> anyhow::Result<SignatureTable> {
+fn create_sign_table(app_config: &ApplicationConfiguration) -> anyhow::Result<SignatureTable> {
     let mut sign_table = SignatureTable::default();
-
-    if let Some(signatures_manifest) = &opt.signatures_manifest {
-        let signatures_manifest_file =
-            read_to_string(signatures_manifest).context("Couldn't read signature manifest file")?;
-        let loaded_signatures_manifest: SignatureManifest =
-            toml::from_str(&signatures_manifest_file)
-                .context("Couldn't parse signature manifest file as TOML")?;
-        debug!("Parsed signature manifest file: {:?}", signatures_manifest);
-
-        for signature_location in loaded_signatures_manifest.signatures.iter() {
-            let loaded_signature = match &signature_location {
-                SignatureLocation::Path(path) => {
-                    debug!("Loading signature file {}", &path);
-                    let signature = SignatureBundle::from_pem_file(path)
-                        .with_context(|| format!("Couldn't load signature file {}", &path))?;
-                    signature
-                        .verify()
-                        .context("Signature verification failed")?;
-                    signature
-                }
-                SignatureLocation::Url(_url) => {
-                    // TODO(#1379): Download certificates from Web.
-                    todo!()
-                }
-            };
-            let module_hash = hex::encode(&loaded_signature.hash);
-            match sign_table.values.get_mut(&module_hash) {
-                Some(signatures) => signatures.push(loaded_signature),
-                None => {
-                    sign_table
-                        .values
-                        .insert(module_hash, vec![loaded_signature]);
-                }
+    for signature in app_config.module_signatures.iter() {
+        let bundle: SignatureBundle = signature.to_owned().into();
+        bundle.verify().context("Signature verification failed")?;
+        let module_hash = hex::encode(&bundle.hash);
+        match sign_table.values.get_mut(&module_hash) {
+            Some(signatures) => signatures.push(bundle),
+            None => {
+                sign_table.values.insert(module_hash, vec![bundle]);
             }
         }
     }

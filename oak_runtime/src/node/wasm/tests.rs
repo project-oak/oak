@@ -38,6 +38,7 @@ fn start_node(
     let application_configuration = ApplicationConfiguration {
         wasm_modules: hashmap! { module_name.to_string() => wasm_module },
         initial_node_configuration: None,
+        module_signatures: vec![],
     };
     for signature in signatures.iter() {
         signature.verify().map_err(|error| {

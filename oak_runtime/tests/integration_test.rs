@@ -58,6 +58,7 @@ mod common {
                     wasm_entrypoint_name: "oak_main".to_string(),
                 })),
             }),
+            module_signatures: vec![],
         };
 
         info!("Starting the runtime with one node.");

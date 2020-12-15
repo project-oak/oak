@@ -14,6 +14,7 @@ oak_app_build = { path = "rust/oak_app_build" }
 oak_io = { path = "../oak_io" }
 oak_runtime = { path = "../oak_runtime" }
 oak_services = { path = "../oak_services" }
+oak_sign = { path = "../oak_sign" }
 oak_tests = { path = "rust/oak_tests" }
 oak_utils = { path = "../oak_utils" }
 # Third party.

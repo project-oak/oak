@@ -30,7 +30,6 @@ rustls = "*"
 serde = { version = "*", features = ["derive"] }
 signal-hook = "*"
 structopt = "*"
-toml = "*"
 tonic = { version = "*", features = ["tls"] }
 
 [dev-dependencies]

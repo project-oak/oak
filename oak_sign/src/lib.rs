@@ -15,6 +15,7 @@
 //
 
 use anyhow::Context;
+use oak_abi::proto::oak::application::ModuleSignature;
 use pem::Pem;
 use ring::{
     rand,
@@ -136,11 +137,17 @@ impl SignatureBundle {
         Ok(())
     }
 
-    /// Parses public key, signature and SHA-256 hash encoded using PEM format.
+    /// Parses public key, signature and SHA-256 hash encoded from a file using PEM format.
     /// https://tools.ietf.org/html/rfc1421
     pub fn from_pem_file(filename: &str) -> anyhow::Result<SignatureBundle> {
         let file =
             read(filename).with_context(|| format!("Couldn't read signature file {}", filename))?;
+        Self::from_pem(file.as_slice())
+    }
+
+    /// Parses public key, signature and SHA-256 hash encoded using PEM format.
+    /// https://tools.ietf.org/html/rfc1421
+    pub fn from_pem(file: &[u8]) -> anyhow::Result<SignatureBundle> {
         let file_content: HashMap<String, Vec<u8>> = pem::parse_many(file)
             .iter()
             .map(|entry| (entry.tag.to_string(), entry.contents.to_vec()))
@@ -169,6 +176,32 @@ impl SignatureBundle {
         write(filename, &encoded_signature)
             .with_context(|| format!("Couldn't write signature file {}", filename))?;
         Ok(())
+    }
+}
+
+impl From<ModuleSignature> for SignatureBundle {
+    fn from(module_signature: ModuleSignature) -> Self {
+        let public_key = module_signature.public_key;
+        let signed_hash = module_signature.signed_hash;
+        let hash = module_signature.module_hash;
+        Self {
+            public_key,
+            signed_hash,
+            hash,
+        }
+    }
+}
+
+impl From<SignatureBundle> for ModuleSignature {
+    fn from(signature_bundle: SignatureBundle) -> Self {
+        let public_key = signature_bundle.public_key;
+        let signed_hash = signature_bundle.signed_hash;
+        let module_hash = signature_bundle.hash;
+        Self {
+            public_key,
+            signed_hash,
+            module_hash,
+        }
     }
 }
 
