@@ -17,7 +17,7 @@ This enforcement works by using two mechanisms in conjunction:
   to prevent from leaking data through navigation.
 - It applies the
   [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
-  of `sandbox allow-scripts; default-src 'unsafe-inline';` to prevents network
+  of `sandbox allow-scripts; default-src 'unsafe-inline';` to prevent network
   calls, and stop leaks via cookies/localStorage/postMessage/etc.
 
 To load a website into this secure context, the user clicks the red extension
