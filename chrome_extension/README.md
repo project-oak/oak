@@ -3,36 +3,49 @@
 The Oak Chrome Extension is a proof of concept to show how Oak may be used as
 part of web applications.
 
-At its current state, the extension detects a website can leak information
-entered into it to outside servers. For example it can ensure that a website
-performing base64 encoding does so locally only, and does not leak the entered
-information.
+In its current state, the extension can load a given website into a secure
+sandbox that prevents it from leaking information entered into it. For example
+it can enforce that a website performing base64 encoding does so locally only.
 
-This enforcement happens via the
-[Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
-of
-`sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'`.
-It prevents network calls, initiating navigation other pages.
+This enforcement works by using two mechanisms in conjunction:
 
-Depending on whether a given website complies with this CSP or not, the
-extension will show either a red or green icon.
+- It renders the source code of the website in an iframe, utilizing the
+  `frame-src: 'unsafe-inline'`
+  [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
+  alongside the
+  [sandbox attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#attr-sandbox)
+  to prevent from leaking data through navigation.
+- It applies the
+  [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
+  of `sandbox allow-scripts; default-src 'unsafe-inline';` to prevent network
+  calls, and stop leaks via cookies/localStorage/postMessage/etc.
+
+To load a website into this secure context, the user clicks the red extension
+icon.
 
 <img src="icon-red.png" alt="drawing" width="32" height="32"/>
 
-An example of page that does not impose this CSP and will show a red icon would
-be [https://www.base64encode.org](https://www.base64encode.org/). In fact, it
-sends the data that is entered to an external server.
+When viewing a page in this secure context the extension icon turns green.
 
 <img src="icon-green.png" alt="drawing" width="32" height="32"/>
 
-An example of page that does impose this CSP, is considered safe, and therefore
-will show a green icon would be
-[https://csp-locked-client-side-base64.web.app](https://csp-locked-client-side-base64.web.app).
-It performs all operations on the device of the user.
+Naturally, not all websites will work in this secure sandbox. Some might appear
+broken. To comply with the security restrictions, all assets required for the
+functionality of the page must be inlined into the document. It cannot load
+external assets or rely on computations performed on a server.
 
-In the future, this extension can be extended to allow users to apply this CSP
-to any website (potentially breaking it in the process), or permit communication
-with trusted Oak servers.
+An example of page that does this would be
+[https://csp-locked-client-side-base64.web.app](https://csp-locked-client-side-base64.web.app),
+which performs base64 encoding/decoding on-device.
+
+In the future, once browsers implement the
+[navigate-to](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/navigate-to)
+draft, all enforcement could be done using
+[Content-Security-Policies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
+only.
+
+Addtionally, this extension can be extended to permit communication with trusted
+Oak servers.
 
 ## Installation
 

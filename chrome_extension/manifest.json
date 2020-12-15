@@ -3,17 +3,27 @@
   "name": "Oak",
   "version": "0.0.0",
   "permissions": [
-    "activeTab",
-    "webRequest",
+    "declarativeContent",
+    "declarativeNetRequest",
     "<all_urls>"
   ],
   "background": {
-    "scripts": ["background.js"]
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "sandbox": {
+    "pages": [
+      "index.html"
+    ],
+    "content_security_policy": "sandbox allow-scripts; default-src 'unsafe-inline';"
   },
   "icons": {
     "128": "icon-green.png"
   },
   "browser_action": {
-    "default_icon": "icon-red.png"
-  }
+    "default_icon": "icon-red.png",
+    "default_title": "Load this page in a secure sandbox"
+  },
+  "minimum_chrome_version": "84"
 }
