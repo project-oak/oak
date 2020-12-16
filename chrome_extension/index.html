@@ -21,11 +21,7 @@
     <iframe sandbox="allow-scripts"></iframe>
     <script>
       const src = new URLSearchParams(window.location.search).get('src');
-      if (src === 'undefined') {
-        document.body.prepend('Failed to sandbox this page.');
-      } else {
-        document.querySelector('iframe').setAttribute('srcdoc', src);
-      }
+      document.querySelector('iframe').setAttribute('srcdoc', src);
     </script>
   </body>
 </html>

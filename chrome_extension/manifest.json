@@ -3,6 +3,7 @@
   "name": "Oak",
   "version": "0.0.0",
   "permissions": [
+    "notifications",
     "declarativeContent",
     "declarativeNetRequest",
     "<all_urls>"
