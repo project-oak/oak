@@ -4,8 +4,12 @@ The Oak Chrome Extension is a proof of concept to show how Oak may be used as
 part of web applications.
 
 In its current state, the extension can load a given website into a secure
-sandbox that prevents it from leaking information entered into it. For example
-it can enforce that a website performing base64 encoding does so locally only.
+sandbox that prevents it from exfiltrating information entered into it.
+
+The canonical use-case for this are small utilities
+(QR-code-generation/file-mergering/encoders/etc). These websites may promise
+work client-side, but there is no way for users to be certain that the data they
+enter isn't being exfiltrated
 
 This enforcement works by using two mechanisms in conjunction:
 
@@ -14,11 +18,11 @@ This enforcement works by using two mechanisms in conjunction:
   [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
   alongside the
   [sandbox attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#attr-sandbox)
-  to prevent from leaking data through navigation.
+  to prevent from leaking data through navigation and/or via
+  cookies/localStorage/postMessage/etc.
 - It applies the
   [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
-  of `sandbox allow-scripts; default-src 'unsafe-inline';` to prevent network
-  calls, and stop leaks via cookies/localStorage/postMessage/etc.
+  of `default-src 'unsafe-inline';` to prevent network calls.
 
 To load a website into this secure context, the user clicks the red extension
 icon.
@@ -44,8 +48,9 @@ draft, all enforcement could be done using
 [Content-Security-Policies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
 only.
 
-Addtionally, this extension can be extended to permit communication with trusted
-Oak servers.
+While this extension currently implements simple local-only model, in the future
+it may be extended to support communication to trusted back-ends and more
+sophisticated policies.
 
 ## Installation
 
