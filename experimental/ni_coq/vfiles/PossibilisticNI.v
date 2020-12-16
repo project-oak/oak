@@ -24,25 +24,6 @@ Local Open Scope ev_notation.
 This is a proof that step_system_ev enforces Possibilistic Noninterference
 *)
 
-Lemma invert_chans_state_low_proj_flowsto ell lvl s han :
-  lvl <<L ell ->
-  lvl <<L (chans (state_low_proj ell s)).[? han].(lbl) ->
-  lvl <<L (chans s).[? han].(lbl).
-Proof.
-  destruct s.
-  repeat match goal with
-         | _ => progress cbn [state_low_proj
-                               State.chans State.lbl ]
-         | _ => progress cbv [low_proj chan_state_low_proj fnd]
-         | _ => destruct_match
-         | _ => tauto
-         end.
-    (*
-    Note: I think this is not true with the low-projection def
-    where labels are partially secret
-    *)
-Qed.
-
 Hint Resolve multi_system_ev_refl multi_system_ev_tran : multi.
 
 (* hints for eauto in event part of the unobservable step proof *)
@@ -112,17 +93,12 @@ Proof.
         pose proof (bot_is_bot ell).
         rewrite H4 in H2.
         contradiction.
-Qed.
-
-Theorem low_eq_to_unobs {A: Type}: forall ell (x1 x2: @labeled A),
-    low_eq ell x1 x2 ->
-    ~(x1.(lbl) <<L ell) ->
-    ~(x2.(lbl) <<L ell).
-Proof.
-    destruct x1, x2. cbv [low_eq low_proj State.lbl].
-    intros. destruct (lbl <<? ell); destruct (lbl0 <<? ell);
-        try eauto; try contradiction. 
-    inversion H. unfold not. intros. congruence.
+    - (* ChannelClose *)
+        unfold fnd in *. subst.
+        assert (~(lbl (chans s han)) <<L ell) by eauto using ord_trans.
+        eapply state_upd_chan_unobs; eauto.
+    - (* ChannelLabelRead *)
+        inversion H6. subst. reflexivity.
 Qed.
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
@@ -141,11 +117,13 @@ Proof.
         remember ((nodes s1).[?id]) as nl.
         destruct (nl.(lbl) <<? ell).
         * (* flowsto case *)
-            inversion H_step_s1_s1'; crush; remember ((nodes s1).[?id]) as nl;
+            inversion H_step_s1_s1'; crush; try remember ((nodes s1).[?id]) as nl;
             pose proof (state_nidx_to_proj_state_idx ell _ _ nl
                 ltac:(eauto)) as Hn_idx_s1proj;
-            (erewrite flows_labeled_proj in Hn_idx_s1proj; eauto);
-            inversion H3; crush; subst_lets.
+            (erewrite flows_labeled_proj in Hn_idx_s1proj; eauto).
+            all: lazymatch goal with 
+                | H: step_node _ _ _ _ |- _ => inversion H; crush; subst_lets
+            end.
             all: try replace n0 with n in * by
             (pose proof (can_split_node_index _ _ _ _ ltac:(eauto));
                 logical_simplify; congruence). 
@@ -173,18 +151,25 @@ Proof.
                 eapply proj_labels_increase.
                 eauto.
                 (* low-equiv *)
-                subst_lets. eauto 7 with unwind.
+                subst_lets. 
+                eapply set_call_unwind; eauto.
+                eauto 7 with unwind.
             + (* ReadChannel *)
                 do 2 eexists; split_ands; [ | | reflexivity ].
                 (* step *)
-                rewrite H5 in Hn_idx_s1proj;
-                pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
+                rewrite H5 in Hn_idx_s1proj.
+                pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj).
                 logical_simplify.
-                apply_all_constructors; eauto. congruence.
+                apply_all_constructors; eauto; try congruence.
                 pose proof (state_hidx_to_proj_state_hidx ell _ _ _ ltac:(eauto)).
                 assert (nlbl <<L ell) by congruence.  (* the last eauto needs this *)
-                rewrite flows_labeled_proj in H12; eauto.
+                rewrite flows_labeled_proj in H13; eauto.
                 simpl. eauto using ord_trans.
+                erewrite <- flows_proj_preserves_channel_valid; eauto.
+                separate_hyp node. separate_hyp channel. 
+                    (* is there something else I have to do to make 
+                    <<? / <<L work better with congruence? *)
+                rewrite H16. rewrite H13 in o. eauto using ord_trans.
                 (* state low_eq *)
                 subst_lets. eauto 6 with unwind.
             + (* CreateChannel *)
@@ -204,6 +189,50 @@ Proof.
                 logical_simplify.
                 apply_all_constructors; eauto. congruence.
                 erewrite <- proj_preserves_fresh_nid; eauto.
+                eauto with unwind.
+            + (* WaitOnChannels *)
+                do 2 eexists; split_ands; [ | | reflexivity ].
+                rewrite H4 in Hn_idx_s1proj.
+                pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
+                logical_simplify.
+                (* In this spot apply_all_constructors picks the wrong
+                choice of call, so it's a bit manual here *)
+                eapply SystemEvStepNode; eauto.
+                rewrite <- H1. apply_all_constructors; (eauto; try congruence).
+                unfold fnd in *.
+                erewrite chan_state_proj_index_assoc2.
+                erewrite flows_labeled_proj; eauto.
+                pose proof (can_split_chan_index _ _ _ _ ltac:(eauto)).
+                logical_simplify. 
+                assert (nlbl <<L ell) by congruence.
+                unfold fnd in *. rewrite H11. eauto using ord_trans.
+                eauto with unwind.
+            + (* ChannelClose *)
+                do 2 eexists; split_ands; [ | | reflexivity ].
+                rewrite H4 in Hn_idx_s1proj.
+                pose proof (can_split_node_index _ _ _ _ Hn_idx_s1proj);
+                logical_simplify. 
+                eapply SystemEvStepNode; eauto.
+                rewrite <- H1. apply_all_constructors; (eauto; try congruence).
+                erewrite state_hidx_to_proj_state_hidx'.
+                eapply proj_labels_increase.
+                eauto.
+                eauto with unwind.
+            + (* NodeLabelRead *)
+                do 2 eexists; split_ands; [ | | reflexivity ].
+                eapply SystemEvStepNode; (eauto; try congruence).
+                rewrite Hn_idx_s1proj. eauto.
+                rewrite <- H1. 
+                apply_all_constructors; eauto; congruence.
+                eauto with unwind.
+            +  (* ChannelLabelRead *)
+                do 2 eexists; split_ands; [ | | reflexivity ].
+                eapply SystemEvStepNode; (eauto; try congruence).
+                rewrite Hn_idx_s1proj. eauto.
+                rewrite <- H1. 
+                apply_all_constructors; (eauto; try congruence).
+                unfold fnd. erewrite chan_state_proj_index_assoc2.
+                eapply low_projection_preserves_lbl.
                 eauto with unwind.
             +  (* Internal *)
                 do 2 eexists; split_ands; [ | | reflexivity ].
@@ -307,6 +336,10 @@ Proof.
                     auto. eapply flows_uncons_chan_state_proj; eauto. congruence.
                     erewrite state_proj_preserves_chan_lbl in *.
                     congruence.
+                    erewrite flows_proj_preserves_channel_valid; eauto.
+                    erewrite state_hidx_to_proj_state_hidx' in H14.
+                    erewrite low_projection_preserves_lbl in H14.
+                    eauto using ord_trans.
                 }
                 { crush; subst_lets; eauto with unwind. }
                 { crush. congruence. }
@@ -344,6 +377,44 @@ Proof.
                 }
                 { crush; eauto with unwind. }
                 { crush. }
+            + (* WaitOnChannels *)
+                subst_lets. rewrite <- Hproj_n' in *. 
+                eexists (s_set_call s id c'), _; split_ands.
+                {
+                    crush. separate_goal; eauto.
+                    erewrite state_hidx_to_proj_state_hidx' in *.
+                    erewrite low_projection_preserves_lbl in *.
+                    erewrite flows_labeled_proj in H5.
+                    separate_goal. all: eauto using ord_trans.
+                }
+                { crush; eauto with unwind. }
+                { crush. }
+            + (* ChannelClose *)
+                subst_lets. rewrite <- Hproj_n' in *.
+                remember (s_set_call (state_upd_chan han 
+                    (chan_close ch) s) id c') as s2''.
+                eexists s2'', _; split_ands.
+                {
+                    crush. separate_goal; eauto.
+                    erewrite state_hidx_to_proj_state_hidx' in *.
+                    erewrite low_projection_preserves_lbl in H10.
+                    eauto.
+                }
+                { crush; eauto with unwind. }
+                { crush. }
+            + (* NodeLabelRead *)
+                subst_lets. rewrite <- Hproj_n' in *.
+                eexists (s_set_call s id c'), _; split_ands.
+                all: crush; eauto with unwind.
+           + (* ChannelLabelRead *)
+                subst_lets. rewrite <- Hproj_n' in *. subst.
+                inversion H4; subst.
+                eexists (s_set_call s id c'), _; split_ands.
+                all: crush; eauto with unwind.
+                (* events low-eq: *)
+                erewrite state_hidx_to_proj_state_hidx'.
+                erewrite low_projection_preserves_lbl.
+                reflexivity.
             + (* Internal *)
                 subst_lets. rewrite <- Hproj_n' in *.
                 eexists (s_set_call s id c'); eexists; split; [| split].
@@ -400,6 +471,42 @@ Proof.
     congruence.
 Qed. 
 
+Lemma proj_some_chans_implies_observable: forall ell s han ch ell',
+    (chans (state_low_proj ell s)).[? han] =
+        {| obj := Some ch; lbl := ell' |} ->
+    ell' <<L ell.
+Proof.
+    autounfold with loweq. unfold fnd. destruct s. simpl.
+    intros. destruct (chans han). destruct (lbl <<? ell).
+    all: inversion H; try congruence.
+Qed.
+
+Lemma eq_chan_idx_to_eq_validity: forall s1 s2 han,
+    (chans s1).[? han] = (chans s2).[? han] ->
+    channel_valid s1 han <-> channel_valid s2 han.
+Proof.
+    unfold channel_valid. unfold fnd. destruct s1, s2. simpl.
+    intros. split. 
+    intros. destruct H0 as [ms [lbl H0]].
+    eexists. eexists. rewrite <- H. eauto.
+    intros. destruct H0 as [ms [lbl H0]].
+    eexists. eexists. rewrite H. eauto.
+Qed.
+
+Lemma loweq_state_some_chan_validity: forall ell s1 s2 han ch clbl,
+    state_low_eq ell s1 s2 ->
+    ((chans (state_low_proj ell s1)).[? han] = 
+        {| obj := Some ch; lbl := clbl |}) ->
+    channel_valid (state_low_proj ell s2) han ->
+    channel_valid (state_low_proj ell s1) han.
+Proof.
+  intros.
+  pose proof (state_low_eq_implies_chan_lookup_eq _ _ _ 
+  ltac:(eauto) ltac:(eauto)).
+  pose proof (eq_chan_idx_to_eq_validity _ _ _ ltac:(eauto)).
+  erewrite <-H3. eauto.
+Qed.
+
 Lemma step_node_projection ell s1 s2 s3 id c :
   state_low_eq ell s1 s2 ->
   step_node id c (state_low_proj ell s2) s3 ->
@@ -411,11 +518,13 @@ Proof.
   all:repeat erewrite (state_low_eq_implies_node_lookup_eq ell s1 s2) in * by eauto.
   all:repeat erewrite (state_low_eq_implies_chan_lookup_eq ell s1 s2) in * by eauto.
   all:eexists; split.
+  (* special case for ReadChannel *)
   all:try lazymatch goal with
       | |- step_node _ _ _ _ =>
         econstructor; solve [eauto using 
             state_low_equiv_to_proj_chan_fresh,
-            state_low_equiv_to_proj_node_fresh]
+            state_low_equiv_to_proj_node_fresh,
+            loweq_state_some_chan_validity]
       | _ => subst_lets
       end.
   all:eauto using state_low_eq_projection with unwind.
@@ -519,3 +628,5 @@ Proof.
   all:crush.
   all:eexists; split; crush; [ | eassumption ]; eauto with multi.
 Qed.
+
+Print Assumptions possibilistic_ni.

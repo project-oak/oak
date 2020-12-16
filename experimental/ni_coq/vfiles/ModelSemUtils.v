@@ -33,6 +33,8 @@ Arguments Ensembles.Included{U}.
 * Utils
 ============================================================================*)
 
+Definition chan_close (c: channel) := c <| status := ClosedChannel |>.
+
 Definition chan_append (c: channel)(m: message): channel :=
     c <|ms := c.(ms) ++ [m]|>.
 
@@ -84,14 +86,6 @@ Definition chan_append_labeled (h: handle)(m: message)(s: state)  :=
         |  Some ch => old_chl <| obj := Some (chan_append ch m) |>
     end.
 
-(* I suspect it may be easier to do proofs of things like the unwinding
-theorem about this function from states to states rather than
-trying to reason about chan_append_labeled (which is state-dependent)
-separately from the place where the state update happens
-
-If it does not turn out to be easier, perhaps this improves
-readability anyway.
-*)
 Definition state_chan_append_labeled (h: handle)(m: message)(s: state) :=
     state_upd_chan_labeled h (chan_append_labeled h m s) s.
 
@@ -107,11 +101,14 @@ Definition node_del_rhan (h: handle)(n: node): node :=
 Definition node_del_rhans (hs: Ensemble handle)(n: node): node :=
     n <| read_handles := Ensembles.Setminus n.(read_handles) hs |>.
 
-Definition new_chan := Some {| ms := [] |}.
+Definition new_chan := Some {| status := ValidChannel; ms := [] |}.
 
 Definition fresh_han s h := s.(chans).[?h] = Labeled channel None bot.
 
 Definition fresh_nid s id := s.(nodes).[?id] = Labeled node None bot.
+
+Definition channel_valid s h := exists ms lbl,
+    s.(chans).[? h] = Labeled channel (Some (Chan ValidChannel ms)) lbl.
 
 (* unoccupied handles / IDs are secret for the model + security-def where 
 labels are partially secret *)

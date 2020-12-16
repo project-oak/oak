@@ -253,6 +253,7 @@ Proof.
     unfold low_proj in *. eauto.
 Qed.
 
+(*
 Theorem new_secret_chan_unobs: forall ell ell' s h ,
     ~( ell' <<L ell) ->
     fresh_han_top s h ->
@@ -277,3 +278,4 @@ Proof.
         (chans.[? h0]).
         reflexivity. symmetry. apply upd_neq; auto. 
 Qed.
+*)

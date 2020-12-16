@@ -56,6 +56,10 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             (* remove the read handles from the sender because read
             * handles (but not write handles) are linear *)
         let s0 := state_upd_node id n' s in
+            (* NOTE: throwing an error if the channel is not valid would cause
+            a leak. It might be possible to still prove NI if the write call
+            always proceeds regarldess of validity but only pushes to the 
+            validity, but only append the message if *)
         step_node id (WriteChannel han msg) s 
             (state_chan_append_labeled han msg (state_upd_node id n' s))
     | SReadChan s n nlbl han ch clbl msg:
@@ -71,6 +75,8 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             of the usual one if an error is _not_ thrown.
             *)
         (msg_is_head ch msg) ->
+        channel_valid s han ->
+            (* the channel being read is not closed *)
         clbl <<L nlbl ->
             (* label of channel flowsTo label of caller. 
                 checks that reading the message is safe
@@ -118,6 +124,39 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
             |} s) in
         let s' := state_upd_node id (node_add_rhan h n) s0 in
         step_node id (CreateNode new_lbl h) s s'
+    | SWaitOnChannels s n hs h ms nlbl clbl:
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
+        In hs h->
+            (* there is some handle h in the list of handles s.t. ... *)
+        s.(chans).[?h] = Labeled channel (Some (Chan ValidChannel ms)) clbl ->
+            (* It points to a valid channel s.t. ... *)
+        length ms > 0  -> (* it has some pending message and ... *)
+        clbl <<L nlbl -> (* its label flows to the label of the node *)
+            (* an alternative way to do this would be to check that the
+            the labels of all the channels in the list flowTo the label
+            of the node before blocking. This specification is implied
+            by that other one. *)
+        step_node id (WaitOnChannels hs) s s
+        (*
+            This specification says that we can't step out of a
+            WaitOnChannels until there is a non-empty channel in the list.
+            A better model might be one that:
+                - marks the node as blocked if this is not true
+                - in the global scheduler: only un-blocked nodes get scheduled
+        *)
+    | SChannelClose s n ch han nlbl clbl: 
+        (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
+            (* caller is a real node with label nlbl *)
+        (s.(chans).[?han]).(lbl) = clbl ->
+            (* handle has label clbl *)
+        nlbl <<L clbl ->
+        step_node id (ChannelClose han) s 
+            (state_upd_chan han (chan_close ch) s)
+    | SNodeLabelRead s:
+        step_node id NodeLabelRead s s
+    | SChannelLabelRead s han:
+        step_node id (ChannelLabelRead han) s s
     | SInternal s: 
         step_node id Internal s s.
 

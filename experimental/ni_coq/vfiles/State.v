@@ -32,10 +32,14 @@ oak/oak_io/src/lib.rs. Note that unlike in the implementation,
 this model separates read and write handles into two different types
 *)
 
+Inductive channelStatus: Type := | ValidChannel | ClosedChannel.
+
 Record channel := Chan {
-    ms: list message;    (* list of pending messages in channel *)
+    status: channelStatus;
+    ms: list message; (* list of pending messages in channel *)
 }.
-Instance etachannel : Settable _ := settable! Chan<ms>.
+
+Instance etachannel : Settable _ := settable! Chan<status; ms>.
 
 
 (* ABI Calls *)
@@ -53,6 +57,14 @@ Inductive call: Type :=
         (* create a new channel with label lbl, unless IFC violation *)
     | CreateNode (lbl: level)(h: handle): call
         (* create a new node with label lbl, unless IFC violation *)
+    | WaitOnChannels (hs: Ensemble handle): call
+        (* block until at least one handle in the supplied list is ready *)
+    | ChannelClose (h: handle): call
+        (* closes the channel pointed to by h *)
+    | NodeLabelRead: call
+        (* returns the label of the calling node *)
+    | ChannelLabelRead (h: handle): call
+        (* returns the label of the target handle *)
     | Internal: call. (* this is any action done by the node other than some
                          ABI call, it is "internal" to the node because it does
                          not affect the rest of the system*)

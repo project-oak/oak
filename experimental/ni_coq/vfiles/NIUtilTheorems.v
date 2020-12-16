@@ -45,6 +45,7 @@ Proof.
     autounfold with loweq; intros; eauto.
 Qed.
 
+
 End misc.
 
 Section low_projection.
@@ -235,6 +236,21 @@ Proof.
         destruct (lbl <<? ell); inversion H; (auto || congruence).
 Qed.
 
+Theorem flows_proj_preserves_channel_valid: forall ell s h,
+    s.(chans).[? h].(lbl) <<L ell ->
+    channel_valid s h <-> channel_valid (state_low_proj ell s) h.
+Proof.
+    unfold channel_valid. autounfold with loweq. unfold fnd. 
+    destruct s. intros. simpl in *. destruct (chans h). simpl in *.
+    split.
+    - (* -> *)
+        destruct 1 as [ms [lvl H0]]. inversion H0.
+        do 2 eexists. destruct (lvl <<? ell). eauto. congruence.
+    - (* <- *)
+        destruct 1 as [ms [lvl H0]]. inversion H0.
+        do 2 eexists. destruct (lbl <<? ell). eauto. congruence.
+Qed.
+
 End low_projection.
 
 Section low_equivalence.
@@ -318,6 +334,60 @@ Proof.
   cbv [state_low_proj state_low_eq node_state_low_proj chan_state_low_proj fnd].
   cbn [nodes chans]. intros; logical_simplify.
   split; intros; congruence.
+Qed.
+
+Lemma invert_chans_state_low_proj_flowsto ell lvl s han :
+  lvl <<L ell ->
+  lvl <<L (chans (state_low_proj ell s)).[? han].(lbl) ->
+  lvl <<L (chans s).[? han].(lbl).
+Proof.
+  destruct s.
+  repeat match goal with
+         | _ => progress cbn [state_low_proj
+                               State.chans State.lbl ]
+         | _ => progress cbv [low_proj chan_state_low_proj fnd]
+         | _ => destruct_match
+         | _ => tauto
+         end.
+    (*
+    Note: I think this is not true with the low-projection def
+    where labels are partially secret
+    *)
+Qed.
+
+Theorem low_eq_to_unobs {A: Type}: forall ell (x1 x2: @labeled A),
+    low_eq ell x1 x2 ->
+    ~(x1.(lbl) <<L ell) ->
+    ~(x2.(lbl) <<L ell).
+Proof.
+    destruct x1, x2. cbv [low_eq low_proj State.lbl].
+    intros. destruct (lbl <<? ell); destruct (lbl0 <<? ell);
+        try eauto; try contradiction. 
+    inversion H. unfold not. intros. congruence.
+Qed.
+
+Theorem node_state_proj_index_assoc: forall ell ns id,
+    (node_state_low_proj ell ns) id = low_proj ell (ns id).
+Proof.
+    autounfold with loweq. auto.
+Qed.
+
+Theorem node_state_proj_index_assoc_form2: forall ell s id,
+    nodes (state_low_proj ell s) id = low_proj ell ((nodes s) id).
+Proof.
+    autounfold with loweq. eauto.
+Qed.
+
+Theorem chan_state_proj_index_assoc: forall ell cs han,
+    (chan_state_low_proj ell cs) han = low_proj ell (cs han).
+Proof.
+    autounfold with loweq. auto.
+Qed.
+
+Theorem chan_state_proj_index_assoc2: forall ell s han,
+    (chans (state_low_proj ell s)) han = low_proj ell ((chans s) han).
+Proof.
+    autounfold with loweq. auto.
 Qed.
 
 End low_equivalence.
