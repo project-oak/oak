@@ -59,7 +59,6 @@ async function loadPageInASecureSandbox({ id: tabId }) {
     return;
   }
 
-  console.log('after', src);
   const searchParams = new URLSearchParams({ src });
   const url = `index.html?${searchParams.toString()}`;
   chrome.tabs.update({ url });
