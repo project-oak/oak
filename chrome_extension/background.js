@@ -46,7 +46,7 @@ async function loadPageInASecureSandbox({ id: tabId }) {
 
   // It's possible that the chrome extension cannot read the source code, either
   // because it is served via a non-permitted scheme (eg `chrome-extension://`),
-  // or bc the user/adminstrator has denied this extension acces to the page.
+  // or bc the user/adminstrator has denied this extension access to the page.
   if (!src) {
     chrome.notifications.create(undefined, {
       type: 'basic',
