@@ -9,7 +9,7 @@ sandbox that prevents it from exfiltrating information entered into it.
 The canonical use-case for this are small utilities
 (QR-code-generation/file-mergering/encoders/etc). These websites may promise
 work client-side, but there is no way for users to be certain that the data they
-enter isn't being exfiltrated
+enter stays private.
 
 This enforcement works by using two mechanisms in conjunction:
 
