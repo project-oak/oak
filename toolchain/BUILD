@@ -58,14 +58,29 @@ cc_toolchain_suite(
     },
 )
 
+config_setting(
+    name = "arm_build",
+    values = {"cpu": "arm"},
+)
+
+config_setting(
+    name = "x86_build",
+    values = {
+        "cpu": "x86",
+    },
+)
+
 # Include all the files that we install for clang plus the scrips to call into it.
 filegroup(
     name = "clang_files",
     srcs = [
         "ar.sh",
         "clang.sh",
-        "@clang//:all_files",
-    ],
+    ] + select({
+        ":arm_build": ["@clang_arm//:all_files"],
+        ":x86_build": ["@clang//:all_files"],
+        "//conditions:default": ["@clang//:all_files"],
+    }),
 )
 
 # Include all clang files plus the gcc_arm sysroot and libraries.
@@ -75,9 +90,12 @@ filegroup(
     srcs = [
         "ar.sh",
         "clang.sh",
-        "@clang//:all_files",
         "@gcc_arm//:all_files",
-    ],
+    ] + select({
+        ":arm_build": ["@clang_arm//:all_files"],
+        ":x86_build": ["@clang//:all_files"],
+        "//conditions:default": ["@clang//:all_files"],
+    }),
 )
 
 # Include all the files that we install for emscripten.

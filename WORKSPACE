@@ -355,6 +355,14 @@ http_archive(
     url = "http://releases.llvm.org/8.0.0/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz",
 )
 
+http_archive(
+    name = "clang_arm",
+    build_file = "//toolchain:all_files.BUILD",
+    sha256 = "0f5c314f375ebd5c35b8c1d5e5b161d9efaeff0523bac287f8b4e5b751272f51",
+    strip_prefix = "clang+llvm-8.0.0-armv7a-linux-gnueabihf",
+    url = "http://releases.llvm.org/8.0.0/clang+llvm-8.0.0-armv7a-linux-gnueabihf.tar.xz",
+)
+
 # Gcc compiler for Arm
 # We need the compiler in order to get the sysroot for aarch64_linux to crosscompile + all the
 # needed libraries to link agaisnt.
