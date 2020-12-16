@@ -202,11 +202,11 @@ export default function StateGraph({ applicationState }: StateGraphProps) {
       let dot: Graphviz<any, any, any, any> | undefined;
       // Wrap graphviz in a promise to ensure that the graph is generated
       // prior to applying any transitions.
-      await new Promise((resolve) => {
+      await new Promise<void>((resolve) => {
         dot = graphviz(ref.current).dot(dotGraph, resolve);
       });
       const transiton = transition('ease').duration(300).ease(easeLinear);
-      await new Promise((resolve) => {
+      await new Promise<void>((resolve) => {
         dot!.transition(() => transiton).render(resolve);
       });
       // Get html links and convert them to client side redirects. This
