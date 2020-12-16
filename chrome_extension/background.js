@@ -43,6 +43,23 @@ async function loadPageInASecureSandbox({ id: tabId }) {
       chrome.tabs.executeScript(tabId, { file: 'getInnerHtml.js' }, resolve)
     )
   )?.[0];
+
+  // It's possible that the chrome extension cannot read the source code, either
+  // because it is served via a non-permitted scheme (eg `chrome-extension://`),
+  // or bc the user/adminstrator has denied this extension acces to the page.
+  if (!src) {
+    chrome.notifications.create(undefined, {
+      type: 'basic',
+      title: 'Could not sandbox this page',
+      message: 'The extension does not have permission to modify this page.',
+      iconUrl: 'icon-red.png',
+      isClickable: false,
+      eventTime: Date.now(),
+    });
+    return;
+  }
+
+  console.log('after', src);
   const searchParams = new URLSearchParams({ src });
   const url = `index.html?${searchParams.toString()}`;
   chrome.tabs.update({ url });
