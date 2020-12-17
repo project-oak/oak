@@ -1,0 +1,211 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.crypto;
+
+// Interface exposed by the crypto pseudo-Node.
+service OakCrypto {
+  // Keyset operations.
+
+  // Generate a new keyset with a single fresh key that matches
+  // a specified template.
+  rpc Generate(KeysetGenerateRequest) returns (KeysetResponse) {}
+
+  // Generate a new keyset that just holds public key information
+  // derived from an existing keyset that has private key information.
+  rpc Public(KeysetPublicRequest) returns (KeysetResponse) {}
+
+  // Convert a keyset to an encrypted form using another keyset.
+  rpc Bind(KeysetBindRequest) returns (KeysetBindResponse) {}
+
+  // Retrieve a keyset from an encrypted form using another keyset.
+  rpc Unbind(KeysetUnbindRequest) returns (KeysetResponse) {}
+
+  // Return a keyset that acts as a proxy to key material held in
+  // an external KMS.
+  rpc KMSProxy(KMSProxyRequest) returns (KeysetResponse) {}
+
+  // All primitive operations below take a keyset handle as a primary parameter,
+  // which indicates the key material to use in the operation.  The keyset
+  // identified by the handle must only contain key material that matches
+  // the primitive in use.
+
+  // AEAD encryption and decryption
+  rpc Encrypt(AeadEncryptRequest) returns (AeadEncryptResponse) {}
+  rpc Decrypt(AeadDecryptRequest) returns (AeadDecryptResponse) {}
+
+  // Deterministic AEAD encryption and decryption
+  rpc EncryptDeterministically(DeterministicAeadEncryptRequest)
+    returns (DeterministicAeadEncryptResponse) {}
+  rpc DecryptDeterministically(DeterministicAeadDecryptRequest)
+    returns (DeterministicAeadDecryptResponse) {}
+
+  // Compute and verify MACs
+  rpc ComputeMac(ComputeMacRequest) returns (ComputeMacResponse) {}
+  rpc VerifyMac(VerifyMacRequest) returns (VerifyMacResponse) {}
+
+  // Generate PRFs.
+  rpc ComputePrf(ComputePrfRequest) returns (ComputePrfResponse) {}
+
+  // Sign and verify signatures.
+  rpc Sign(SignatureSignRequest) returns (SignatureSignResponse) {}
+  rpc Verify(SignatureVerifyRequest) returns (SignatureVerifyResponse) {}
+}
+
+// Local copy of Tink key template definition, to prevent needing a full
+// dependency on all of Tink's protos.
+message KeyTemplate {
+  string type_url = 1;  // in format type.googleapis.com/packagename.messagename
+  bytes value = 2;  // contains specific serialized *KeyFormat proto
+  OutputPrefixType output_prefix_type = 3;
+}
+enum OutputPrefixType {
+  UNKNOWN_PREFIX = 0;
+  TINK = 1;
+  LEGACY = 2;
+  RAW = 3;
+  CRUNCHY = 4;
+}
+
+message KeysetGenerateRequest {
+  oneof template_id {
+    bytes template_data = 1;  // serialized KeyTemplate
+    string template_name = 2;
+  }
+}
+
+// Common response type for acquiring keyset handles
+message KeysetResponse {
+  fixed64 keyset_handle = 1;
+}
+
+message KeysetPublicRequest {
+  fixed64 private_keyset_handle = 1;
+}
+
+enum KeysetFormat {
+  UNKNOWN_FORMAT = 0;
+  BINARY = 1;
+  JSON = 2;
+}
+
+message KeysetUnbindRequest {
+  fixed64 keyset_handle = 1;
+  bytes encrypted_keyset = 2;
+  KeysetFormat format = 3;
+}
+
+message KeysetBindRequest {
+  fixed64 keyset_handle = 1;
+  fixed64 inner_keyset_handle = 2;
+  KeysetFormat format = 3;
+}
+
+message KeysetBindResponse {
+  bytes encrypted_keyset = 1;
+}
+
+message KMSProxyRequest {
+  string kms_identifier = 1;
+}
+
+message AeadEncryptRequest {
+  fixed64 keyset_handle = 1;
+  bytes plaintext = 2;
+  bytes associated_data = 3;
+}
+
+message AeadEncryptResponse {
+  bytes ciphertext = 1;
+}
+
+message AeadDecryptRequest {
+  fixed64 keyset_handle = 1;
+  bytes ciphertext = 2;
+  bytes associated_data = 3;
+}
+
+message AeadDecryptResponse {
+  bytes plaintext = 1;
+}
+
+message DeterministicAeadEncryptRequest {
+  fixed64 keyset_handle = 1;
+  bytes plaintext = 2;
+  bytes associated_data = 3;
+}
+
+message DeterministicAeadEncryptResponse {
+  bytes ciphertext = 1;
+}
+
+message DeterministicAeadDecryptRequest {
+  fixed64 keyset_handle = 1;
+  bytes ciphertext = 2;
+  bytes associated_data = 3;
+}
+
+message DeterministicAeadDecryptResponse {
+  bytes plaintext = 1;
+}
+
+message VerifyMacRequest {
+  fixed64 keyset_handle = 1;
+  bytes mac_value = 2;
+  bytes data = 3;
+}
+
+message VerifyMacResponse {
+}
+
+message ComputeMacRequest {
+  fixed64 keyset_handle = 1;
+  bytes data = 2;
+}
+
+message ComputeMacResponse {
+  bytes mac_value = 1;
+}
+
+message ComputePrfRequest {
+  fixed64 keyset_handle = 1;
+  bytes data = 2;
+  fixed64 output_length = 3;
+}
+
+message ComputePrfResponse {
+  bytes prf_value = 1;
+}
+
+message SignatureSignRequest {
+  fixed64 private_keyset_handle = 1;
+  bytes data = 2;
+}
+
+message SignatureSignResponse {
+  bytes signature = 1;
+}
+
+message SignatureVerifyRequest {
+  fixed64 public_keyset_handle = 1;
+  bytes signature = 2;
+  bytes data = 3;
+}
+
+message SignatureVerifyResponse {
+}

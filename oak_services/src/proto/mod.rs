@@ -23,6 +23,10 @@ pub mod google {
 }
 
 pub mod oak {
+    pub mod crypto {
+        include!(concat!(env!("OUT_DIR"), "/oak.crypto.rs"));
+    }
+
     pub mod encap {
         include!(concat!(env!("OUT_DIR"), "/oak.encap.rs"));
     }

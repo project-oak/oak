@@ -18,11 +18,13 @@
 
 use crate::{NodePrivilege, RuntimeProxy, SecureServerConfiguration, SignatureTable};
 use oak_abi::proto::oak::application::{
-    node_configuration::ConfigType, ApplicationConfiguration, LogConfiguration, NodeConfiguration,
+    node_configuration::ConfigType, ApplicationConfiguration, CryptoConfiguration,
+    LogConfiguration, NodeConfiguration,
 };
 use std::net::AddrParseError;
 use tokio::sync::oneshot;
 
+mod crypto;
 pub mod grpc;
 pub mod http;
 mod invocation;
@@ -125,6 +127,9 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
         node_configuration: &NodeConfiguration,
     ) -> Result<Box<dyn Node>, ConfigurationError> {
         match &node_configuration.config_type {
+            Some(ConfigType::CryptoConfig(CryptoConfiguration {})) => {
+                Ok(Box::new(crypto::CryptoNode::new(node_name)))
+            }
             Some(ConfigType::LogConfig(LogConfiguration {})) => {
                 Ok(Box::new(logger::LogNode::new(node_name)))
             }

@@ -50,7 +50,14 @@ roughenough = { path = "../third_party/roughenough" }
 rustls = "*"
 serde = "*"
 serde_json = "*"
-sha2 = "*"
+sha2 = "^0.9.1"
+tink-core = { version = "^0.1", features = ["json"] }
+tink-aead = "^0.1"
+tink-daead = "^0.1"
+tink-mac = "^0.1"
+tink-prf = "^0.1"
+tink-proto = "^0.1"
+tink-signature = "^0.1"
 # Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
 tokio = { version = "0.2", features = [
   "dns",

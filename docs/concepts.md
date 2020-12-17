@@ -478,6 +478,10 @@ The available pseudo-Nodes are:
 - **Roughtime client pseudo-Node**: Provides a mechanism for Oak Nodes to
   retrieve a wall clock time using the
   [Roughtime protocol](https://roughtime.googlesource.com/roughtime).
+- **Cryptographic pseudo-Node**: Provides a collection of cryptographic
+  primitives as a [gRPC service](/oak_services/proto/crypto.proto) for use by
+  Oak Nodes. Key material is kept in the pseudo-Node and referred to by opaque
+  handle.
 
 An Oak Application uses any of these pseudo-Nodes (except the first) by
 including an entry for them in its `ApplicationConfiguration`, and creating them
