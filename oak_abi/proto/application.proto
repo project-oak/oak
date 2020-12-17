@@ -48,6 +48,17 @@ message ApplicationConfiguration {
   // Usually a NodeConfiguration entry that holds a WebAssemblyConfiguration
   // object.
   NodeConfiguration initial_node_configuration = 2;
+
+  // The bundled signatures for validating Wasm module hashes.
+  repeated ModuleSignature module_signatures = 3;
+}
+
+// Bundled signature of the SHA-256 hash of a Wasm module.
+// TODO(#1830): Consider merging this with the `SignedChallenge` proto.
+message ModuleSignature {
+  bytes public_key = 1;
+  bytes signed_hash = 2;
+  bytes module_hash = 3;
 }
 
 // NodeConfiguration indicates the configuration of a created Node.

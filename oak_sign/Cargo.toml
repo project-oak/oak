@@ -21,6 +21,7 @@ assert_matches = "*"
 env_logger = "*"
 hex = "*"
 log = "*"
+oak_abi = { path = "../oak_abi" }
 pem = "*"
 ring = "*"
 structopt = "*"

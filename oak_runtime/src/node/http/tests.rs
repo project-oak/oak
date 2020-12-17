@@ -368,6 +368,7 @@ fn create_runtime() -> RuntimeProxy {
     let configuration = ApplicationConfiguration {
         wasm_modules: hashmap! {},
         initial_node_configuration: None,
+        module_signatures: vec![],
     };
     let tls_config = crate::tls::TlsConfig::new(
         "../examples/certs/local/local.pem",

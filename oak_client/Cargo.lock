@@ -548,6 +548,7 @@ dependencies = [
  "env_logger",
  "hex",
  "log",
+ "oak_abi",
  "pem",
  "ring",
  "sha2",

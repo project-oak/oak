@@ -309,11 +309,20 @@ This command generates a signature file `signature.sign` containing a public
 key, a signature of the Wasm module SHA-256 hash (also encoded with PEM) and a
 Wasm module SHA-256 hash itself.
 
-Wasm module signatures should be passed to `oak_loader` by an Oak operator using
-the `--signatures-manifest=signatures.toml`, where `signatures.toml` file
-contains paths to signature files for each signed Oak Wasm module. Also, since
-each module can be signed by multiple entities, each module may have multiple
-signatures.
+Wasm module signatures are specified as part of the Oak apllication manifest.
+The application manifest can contain locations of signature manifest files. Each
+signature manifest file contains the locations of signature files for signed Oak
+Wasm modules. Also, since each module can be signed by multiple entities, each
+module may have multiple signatures.
+
+Assuming the application manifest file contains the following configuration:
+
+```toml
+signature_manifests = [
+  { path = "examples/private_set_intersection/signatures.toml" },
+]
+
+```
 
 The `signatures.toml` file can look like this:
 

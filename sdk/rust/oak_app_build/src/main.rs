@@ -32,6 +32,7 @@ use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, NodeConfiguration,
     WebAssemblyConfiguration,
 };
+use oak_sign::SignatureBundle;
 use prost::Message;
 use reqwest::Url;
 use sha2::{Digest, Sha256};
@@ -57,6 +58,8 @@ struct Manifest {
     modules: HashMap<String, Module>,
     #[serde(default)]
     initial_node_configuration: InitialNodeConfig,
+    #[serde(default)]
+    signature_manifests: Vec<FileLocation>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -89,6 +92,21 @@ impl Default for InitialNodeConfig {
             wasm_entrypoint_name: "oak_main".to_string(),
         }
     }
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SignatureManifest {
+    signatures: Vec<FileLocation>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+enum FileLocation {
+    #[serde(rename = "path")]
+    Path(String),
+    #[serde(rename = "url")]
+    Url(String),
 }
 
 /// Directory used to save build artifacts.
@@ -193,6 +211,18 @@ async fn load_module(manifest_dir: &Path, module: &Module) -> anyhow::Result<Vec
     }
 }
 
+/// Loads a file from the file path or URL specified in the file location.
+async fn load_file_from_location(location: &FileLocation) -> anyhow::Result<Vec<u8>> {
+    match location {
+        FileLocation::Path(path) => {
+            fs::read(path).with_context(|| format!("Couldn't read file {}", path))
+        }
+        FileLocation::Url(url) => download_file_from_url(url)
+            .await
+            .with_context(|| format!("Couldn't download file {}", url)),
+    }
+}
+
 /// Serializes an application configuration from `app_config` and writes it into `filename`.
 pub fn write_config_to_file(
     app_config: &ApplicationConfiguration,
@@ -233,6 +263,28 @@ async fn main() -> anyhow::Result<()> {
         modules.insert(name.to_string(), loaded_module);
     }
 
+    // Load signatures.
+    let mut signatures = Vec::new();
+    for signature_manifest_location in manifest.signature_manifests.iter() {
+        let file = load_file_from_location(signature_manifest_location)
+            .await
+            .context("Couldn't load file")?;
+        let signature_manifest: SignatureManifest = toml::from_slice(file.as_slice())
+            .context("Couldn't parse signature manifest file as TOML")?;
+        debug!("Parsed signature manifest file: {:?}", signature_manifest);
+        for signature_location in signature_manifest.signatures.iter() {
+            let signature = load_file_from_location(signature_location)
+                .await
+                .context("Couldn't load signature")?;
+            let bundle = SignatureBundle::from_pem(signature.as_slice())
+                .context("Couldn't parse signature file as PEM")?;
+            // Verify the signature as an early warning. The signature will also be verified by the
+            // Oak Loader.
+            bundle.verify().context("Signature verification failed")?;
+            signatures.push(bundle.into());
+        }
+    }
+
     // Create application configuration.
     let app_config = ApplicationConfiguration {
         wasm_modules: modules,
@@ -242,6 +294,7 @@ async fn main() -> anyhow::Result<()> {
                 wasm_entrypoint_name: manifest.initial_node_configuration.wasm_entrypoint_name,
             })),
         }),
+        module_signatures: signatures,
     };
 
     let output_file = get_output_path(&manifest_dir, &manifest.name);

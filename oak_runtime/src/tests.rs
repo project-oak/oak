@@ -41,6 +41,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     let configuration = ApplicationConfiguration {
         wasm_modules: hashmap! {},
         initial_node_configuration: None,
+        module_signatures: vec![],
     };
     let signature_table = SignatureTable::default();
     info!("Create runtime for test");

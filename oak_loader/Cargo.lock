@@ -811,7 +811,6 @@ dependencies = [
  "serde",
  "signal-hook",
  "structopt",
- "toml",
  "tonic",
 ]
 
@@ -882,6 +881,7 @@ dependencies = [
  "env_logger",
  "hex",
  "log",
+ "oak_abi",
  "pem",
  "ring",
  "sha2",
@@ -1644,15 +1644,6 @@ dependencies = [
  "log",
  "pin-project-lite 0.1.11",
  "tokio",
-]
-
-[[package]]
-name = "toml"
-version = "0.5.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75cf45bb0bef80604d001caaec0d09da99611b3c0fd39d3080468875cdb65645"
-dependencies = [
- "serde",
 ]
 
 [[package]]

@@ -191,6 +191,7 @@ pub fn runtime_config_wasm(
                     wasm_entrypoint_name: entrypoint_name.to_string(),
                 })),
             }),
+            module_signatures: vec![],
         },
         config_map,
         sign_table,
