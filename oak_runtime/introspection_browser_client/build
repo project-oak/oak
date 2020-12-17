@@ -57,7 +57,7 @@ if [[ "$1" == 'development' ]]; then
   # Run a webpack dev server
   readonly WEBPACK_TMP_OUT_DIR="./dist_tmp"
 
-  npx webpack-dev-server --env.NODE_ENV=development --env.OUTPUT_PATH="${WEBPACK_TMP_OUT_DIR}"
+  npx webpack serve --env NODE_ENV="development" --env OUTPUT_PATH="${WEBPACK_TMP_OUT_DIR}"
 
   rm -rf "${WEBPACK_TMP_OUT_DIR}"
 else
@@ -68,7 +68,7 @@ else
   mkdir -p "${WEBPACK_TMP_OUT_DIR}"
   mkdir -p "${WEBPACK_OUT_DIR}"
 
-  npx webpack --env.NODE_ENV="production" --env.OUTPUT_PATH="${WEBPACK_TMP_OUT_DIR}"
+  npx webpack --env NODE_ENV="production" --env OUTPUT_PATH="${WEBPACK_TMP_OUT_DIR}"
 
   # Copy each generated file into the actual output directory, but do not
   # overwrite identical files. Preserves the last modified date of unchanged
