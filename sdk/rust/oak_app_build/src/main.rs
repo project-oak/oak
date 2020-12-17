@@ -265,8 +265,8 @@ async fn main() -> anyhow::Result<()> {
 
     // Load signatures.
     let mut signatures = Vec::new();
-    for location in manifest.signature_manifests.iter() {
-        let file = load_file_from_location(location)
+    for signature_manifest_location in manifest.signature_manifests.iter() {
+        let file = load_file_from_location(signature_manifest_location)
             .await
             .context("Couldn't load file")?;
         let signature_manifest: SignatureManifest = toml::from_slice(file.as_slice())
