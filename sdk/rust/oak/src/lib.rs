@@ -35,6 +35,7 @@ pub use oak_io::{
 #[cfg(target_os = "macos")]
 mod stubs;
 
+pub mod crypto;
 pub mod grpc;
 pub mod handle;
 pub mod http;
@@ -51,6 +52,10 @@ pub mod proto {
         // The storage protobuf messages use the label.Label type which is built
         // in the `oak_abi` crate, so make it available here too.
         pub use oak_abi::proto::oak::{application, label};
+
+        pub mod crypto {
+            include!(concat!(env!("OUT_DIR"), "/oak.crypto.rs"));
+        }
         pub mod invocation {
             include!(concat!(env!("OUT_DIR"), "/oak.invocation.rs"));
         }

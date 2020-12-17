@@ -1160,6 +1160,7 @@ dependencies = [
  "prost",
  "prost-types",
  "rand_core",
+ "tink-proto",
 ]
 
 [[package]]
@@ -2159,7 +2160,8 @@ dependencies = [
 [[package]]
 name = "tink-aead"
 version = "0.1.0"
-source = "git+https://github.com/project-oak/tink-rust?branch=main#36e17cd2c5258cebb504f4511eecb55704bb4f4d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4899beee58c7dbf4ffb75f99884360fa76b1852989ec8001943cf4f5d92b171"
 dependencies = [
  "aead",
  "aes-ctr",
@@ -2177,7 +2179,8 @@ dependencies = [
 [[package]]
 name = "tink-core"
 version = "0.1.0"
-source = "git+https://github.com/project-oak/tink-rust?branch=main#36e17cd2c5258cebb504f4511eecb55704bb4f4d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0be66d5ed76e34dd25f6dbdfbb859221d493ab6fbee729c1849fe4226dd4673c"
 dependencies = [
  "digest",
  "hkdf",
@@ -2196,7 +2199,8 @@ dependencies = [
 [[package]]
 name = "tink-daead"
 version = "0.1.0"
-source = "git+https://github.com/project-oak/tink-rust?branch=main#36e17cd2c5258cebb504f4511eecb55704bb4f4d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8d78ada69e7cf6397ae7447de58bef718776876135c0cbf0b77c12d24f7a3ce"
 dependencies = [
  "aead",
  "aes-siv",
@@ -2208,7 +2212,8 @@ dependencies = [
 [[package]]
 name = "tink-mac"
 version = "0.1.0"
-source = "git+https://github.com/project-oak/tink-rust?branch=main#36e17cd2c5258cebb504f4511eecb55704bb4f4d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60a704a1f05d14c4be94b867696f654278a6d5c67c9cb61d3def3fbc4f31ea58"
 dependencies = [
  "prost",
  "tink-core",
@@ -2219,7 +2224,8 @@ dependencies = [
 [[package]]
 name = "tink-prf"
 version = "0.1.0"
-source = "git+https://github.com/project-oak/tink-rust?branch=main#36e17cd2c5258cebb504f4511eecb55704bb4f4d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b504a46790eba94fa3e6fe5603cea4a20f0105a6f775985a3b675c7120d5c31"
 dependencies = [
  "aes",
  "cmac",
@@ -2236,7 +2242,8 @@ dependencies = [
 [[package]]
 name = "tink-proto"
 version = "0.1.0"
-source = "git+https://github.com/project-oak/tink-rust?branch=main#36e17cd2c5258cebb504f4511eecb55704bb4f4d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9350720ad826d3ae5773e176bd4a48bb6bb6679f9f53d18c1e7a6ac8de062251"
 dependencies = [
  "base64 0.12.3",
  "prost",
@@ -2247,7 +2254,8 @@ dependencies = [
 [[package]]
 name = "tink-signature"
 version = "0.1.0"
-source = "git+https://github.com/project-oak/tink-rust?branch=main#36e17cd2c5258cebb504f4511eecb55704bb4f4d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34b2397fdc7e65b664699eda567f2314583f0964b82239eb2ccc1a08eb0bc08c"
 dependencies = [
  "ed25519-dalek",
  "generic-array",
