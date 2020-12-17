@@ -37,16 +37,7 @@ fn env_protoc() -> Option<PathBuf> {
 
 /// Returns the path to the bundled `protoc`, if it is available for the host platform.
 fn bundled_protoc() -> Option<PathBuf> {
-    let protoc_bin_name = match (env::consts::OS, env::consts::ARCH) {
-        ("linux", "x86") => "protoc-linux-x86_32",
-        ("linux", "x86_64") => "protoc-linux-x86_64",
-        ("linux", "aarch64") => "protoc-linux-aarch_64",
-        ("macos", "x86_64") => "protoc-osx-x86_64",
-        ("windows", _) => "protoc-win32.exe",
-        _ => return None,
-    };
-
-    Some(bundle_path().join(protoc_bin_name))
+    None
 }
 
 /// Returns the path to the `protoc` included on the `PATH`, if it exists.
