@@ -105,11 +105,13 @@ impl RoughtimeClientNode {
                         "Could not parse request.",
                         runtime,
                     );
+                    return;
                 }
             }
             Err(error) => {
                 let message = format!("Error reading request: {:?}", error);
                 invocation.send_error(Code::InvalidArgument, &message, runtime);
+                return;
             }
         };
 
@@ -178,5 +180,10 @@ impl super::Node for RoughtimeClientNode {
                 }
             }
         }
+        let _ = runtime.channel_close(handle);
+        info!(
+            "{} Roughtime pseudo-Node execution complete",
+            self.node_name
+        );
     }
 }
