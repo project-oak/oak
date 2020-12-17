@@ -72,6 +72,7 @@ message NodeConfiguration {
     RoughtimeClientConfiguration roughtime_client_config = 6;
     HttpServerConfiguration http_server_config = 7;
     HttpClientConfiguration http_client_config = 8;
+    CryptoConfiguration crypto_config = 9;
   }
 }
 
@@ -151,6 +152,11 @@ message HttpClientConfiguration {
   // and it may handle arbitrary requests to any HTTP or HTTPS services. The authority is also used
   // to set the privilege of the node.
   string authority = 1;
+}
+
+// CryptoConfiguration describes the configuration of a cryptographic
+// pseudo-Node (which is provided by the Oak Runtime).
+message CryptoConfiguration {
 }
 
 // Information to identify a particular Roughtime server.

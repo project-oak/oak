@@ -38,6 +38,7 @@ fn main() {
     );
     oak_utils::compile_protos_with_options(
         &[
+            "../oak_services/proto/crypto.proto",
             "../oak_services/proto/log.proto",
             "../oak_services/proto/roughtime_service.proto",
         ],
