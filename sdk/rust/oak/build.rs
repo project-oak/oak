@@ -19,6 +19,7 @@ fn main() {
         &[
             "../../../oak_services/proto/grpc_invocation.proto",
             "../../../oak_services/proto/http_invocation.proto",
+            "../../../oak_services/proto/crypto.proto",
             "../../../oak_services/proto/storage_service.proto",
             "../../../oak_services/proto/roughtime_service.proto",
         ],

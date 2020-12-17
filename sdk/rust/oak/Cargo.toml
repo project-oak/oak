@@ -7,16 +7,17 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
+byteorder = "*"
+http = "*"
+log = { version = "*", features = ["std"] }
 oak_abi = "=0.1.0"
 oak_derive = { path = "../../../oak_derive" }
 oak_io = "=0.1.0"
 oak_services = "=0.1.0"
 prost = "*"
 prost-types = "*"
-http = "*"
-log = { version = "*", features = ["std"] }
-byteorder = "*"
 rand_core = { version = "*", features = ["std"] }
+tink-proto = "^0.1"
 
 [build-dependencies]
 oak_utils = "*"
