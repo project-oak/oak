@@ -32,8 +32,8 @@ use oak::{
 use oak_abi::{
     label::Label,
     proto::oak::application::{
-        node_configuration::ConfigType, ConfigMap, NodeConfiguration, RoughtimeClientConfiguration,
-        StorageProxyConfiguration,
+        node_configuration::ConfigType, ConfigMap, CryptoConfiguration, NodeConfiguration,
+        RoughtimeClientConfiguration, StorageProxyConfiguration,
     },
 };
 use prost::Message;
@@ -71,6 +71,7 @@ struct FrontendNode {
     storage_name: Vec<u8>,
     roughtime: Option<oak::roughtime::Roughtime>,
     misconfigured_roughtime: Option<oak::roughtime::Roughtime>,
+    crypto: Option<oak::crypto::Crypto>,
 }
 
 impl FrontendNode {
@@ -171,6 +172,7 @@ impl FrontendNode {
                     ..Default::default()
                 },
             ),
+            crypto: oak::crypto::Crypto::new(&CryptoConfiguration {}, &Label::public_untrusted()),
         }
     }
 }
@@ -409,6 +411,39 @@ impl OakAbiTestService for FrontendNode {
         tests.insert(
             "MisconfiguredRoughtimeClient",
             (Self::test_roughtime_client_misconfig, Count::Unsure),
+        );
+        tests.insert("CryptoBind", (Self::test_crypto_bind, Count::Unchanged));
+        tests.insert(
+            "CryptoFailBind",
+            (Self::test_crypto_bind_fail, Count::Unchanged),
+        );
+        tests.insert("CryptoDAEAD", (Self::test_crypto_daead, Count::Unchanged));
+        tests.insert(
+            "CryptoFailDAEAD",
+            (Self::test_crypto_daead_fail, Count::Unchanged),
+        );
+        tests.insert("CryptoAEAD", (Self::test_crypto_aead, Count::Unchanged));
+        tests.insert(
+            "CryptoFailAEAD",
+            (Self::test_crypto_aead_fail, Count::Unchanged),
+        );
+        tests.insert("CryptoMac", (Self::test_crypto_mac, Count::Unchanged));
+        tests.insert(
+            "CryptoFailMac",
+            (Self::test_crypto_mac_fail, Count::Unchanged),
+        );
+        tests.insert("CryptoPRF", (Self::test_crypto_prf, Count::Unchanged));
+        tests.insert(
+            "CryptoFailPRF",
+            (Self::test_crypto_prf_fail, Count::Unchanged),
+        );
+        tests.insert(
+            "CryptoSignature",
+            (Self::test_crypto_sign, Count::Unchanged),
+        );
+        tests.insert(
+            "CryptoFailSignature",
+            (Self::test_crypto_sign_fail, Count::Unchanged),
         );
         tests.insert(
             "GrpcServerPseudoNodePrivilege",
@@ -2519,6 +2554,285 @@ impl FrontendNode {
         // always fail to get the time.
         let result = roughtime.get_roughtime();
         expect_matches!(result, Err(_));
+        Ok(())
+    }
+
+    fn test_crypto_bind(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+        let aead_kh = crypto.generate_named("AES256_GCM").map_err(from_proto)?;
+        let daead_kh = crypto.generate_named("AES256_SIV").map_err(from_proto)?;
+        let ct = crypto
+            .encrypt_deterministically(daead_kh, b"the plaintext", b"aad")
+            .map_err(from_proto)?;
+
+        // Bind the DAEAD keyset with the outer AEAD keyset, then recover it again.
+        let encrypted_keyset = crypto
+            .bind(aead_kh, daead_kh, oak::crypto::KeysetFormat::Json)
+            .map_err(from_proto)?;
+        info!(
+            "Encrypted keyset: {}",
+            String::from_utf8_lossy(&encrypted_keyset)
+        );
+        let recovered_kh = crypto
+            .unbind(aead_kh, &encrypted_keyset, oak::crypto::KeysetFormat::Json)
+            .map_err(from_proto)?;
+
+        // Can decrypt with recovered DAEAD keyset.
+        let pt = crypto
+            .decrypt_deterministically(recovered_kh, &ct, b"aad")
+            .map_err(from_proto)?;
+        expect_eq!(b"the plaintext".to_vec(), pt);
+        Ok(())
+    }
+
+    fn test_crypto_bind_fail(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+        let aead_kh = crypto.generate_named("AES256_GCM").map_err(from_proto)?;
+        let daead_kh = crypto.generate_named("AES256_SIV").map_err(from_proto)?;
+        let encrypted_keyset = crypto
+            .bind(aead_kh, daead_kh, oak::crypto::KeysetFormat::Json)
+            .map_err(from_proto)?;
+
+        let result = crypto.bind(aead_kh, 9999, oak::crypto::KeysetFormat::Json);
+        expect_matches!(result, Err(_));
+        let result = crypto.bind(9999, daead_kh, oak::crypto::KeysetFormat::Json);
+        expect_matches!(result, Err(_));
+
+        let result = crypto.unbind(9999, &encrypted_keyset, oak::crypto::KeysetFormat::Json);
+        expect_matches!(result, Err(_));
+        let result = crypto.unbind(aead_kh, &[1, 2, 3], oak::crypto::KeysetFormat::Json);
+        expect_matches!(result, Err(_));
+
+        Ok(())
+    }
+
+    fn test_crypto_daead(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+        let kh = crypto
+            .generate(tink_proto::KeyTemplate {
+                type_url: "type.googleapis.com/google.crypto.tink.AesSivKey".to_string(),
+                value: vec![],
+                output_prefix_type: tink_proto::OutputPrefixType::Tink as i32,
+            })
+            .map_err(from_proto)?;
+
+        let ct = crypto
+            .encrypt_deterministically(kh, b"the plaintext", b"aad")
+            .map_err(from_proto)?;
+        let pt = crypto
+            .decrypt_deterministically(kh, &ct, b"aad")
+            .map_err(from_proto)?;
+        expect_eq!(b"the plaintext".to_vec(), pt);
+        Ok(())
+    }
+
+    fn test_crypto_daead_fail(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+
+        // Invalid keyset handle.
+        let kh = 999;
+        let result = crypto.encrypt_deterministically(kh, b"the plaintext", b"aad");
+        expect_matches!(result, Err(_));
+        let result = crypto.decrypt_deterministically(kh, b"alleged ciphertext", b"aad");
+        expect_matches!(result, Err(_));
+
+        // Keyset handle for the wrong type of key material.
+        let kh = crypto
+            .generate_named("CHACHA20_POLY1305")
+            .map_err(from_proto)?;
+        let result = crypto.encrypt_deterministically(kh, b"the plaintext", b"aad");
+        expect_matches!(result, Err(_));
+        let result = crypto.decrypt_deterministically(kh, b"alleged ciphertext", b"aad");
+        expect_matches!(result, Err(_));
+
+        Ok(())
+    }
+
+    fn test_crypto_aead(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+        let kh = crypto
+            .generate_named("CHACHA20_POLY1305")
+            .map_err(from_proto)?;
+
+        let ct = crypto
+            .encrypt(kh, b"the plaintext", b"aad")
+            .map_err(from_proto)?;
+        let pt = crypto.decrypt(kh, &ct, b"aad").map_err(from_proto)?;
+        expect_eq!(b"the plaintext".to_vec(), pt);
+        Ok(())
+    }
+
+    fn test_crypto_aead_fail(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+
+        // Invalid keyset handle.
+        let kh = 999;
+        let result = crypto.encrypt(kh, b"the plaintext", b"aad");
+        expect_matches!(result, Err(_));
+        let result = crypto.decrypt(kh, b"alleged ciphertext", b"aad");
+        expect_matches!(result, Err(_));
+
+        // Keyset handle for the wrong type of key material.
+        let kh = crypto.generate_named("AES256_SIV").map_err(from_proto)?;
+        let result = crypto.encrypt(kh, b"the plaintext", b"aad");
+        expect_matches!(result, Err(_));
+        let result = crypto.decrypt(kh, b"alleged ciphertext", b"aad");
+        expect_matches!(result, Err(_));
+
+        Ok(())
+    }
+
+    fn test_crypto_mac(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+        let kh = crypto
+            .generate_named("HMAC_SHA256_256BITTAG")
+            .map_err(from_proto)?;
+
+        let mac = crypto.compute_mac(kh, b"the data").map_err(from_proto)?;
+        crypto
+            .verify_mac(kh, b"the data", &mac)
+            .map_err(from_proto)?;
+        Ok(())
+    }
+
+    fn test_crypto_mac_fail(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+
+        // Invalid keyset handle.
+        let kh = 999;
+        let result = crypto.compute_mac(kh, b"the data");
+        expect_matches!(result, Err(_));
+        let result = crypto.verify_mac(kh, b"fake mac", b"the data");
+        expect_matches!(result, Err(_));
+
+        // Keyset handle for the wrong type of key material.
+        let kh = crypto.generate_named("AES256_SIV").map_err(from_proto)?;
+        let result = crypto.compute_mac(kh, b"the data");
+        expect_matches!(result, Err(_));
+        let result = crypto.verify_mac(kh, b"fake mac", b"the data");
+        expect_matches!(result, Err(_));
+
+        Ok(())
+    }
+
+    fn test_crypto_prf(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+        let kh = crypto
+            .generate_named("HMAC_SHA256_PRF")
+            .map_err(from_proto)?;
+
+        let _prf = crypto
+            .compute_prf(kh, b"the data", 10)
+            .map_err(from_proto)?;
+        Ok(())
+    }
+
+    fn test_crypto_prf_fail(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+
+        // Invalid keyset handle.
+        let kh = 999;
+        let result = crypto.compute_prf(kh, b"the data", 10);
+        expect_matches!(result, Err(_));
+
+        // Keyset handle for the wrong type of key material.
+        let kh = crypto.generate_named("AES256_SIV").map_err(from_proto)?;
+        let result = crypto.compute_prf(kh, b"the data", 10);
+        expect_matches!(result, Err(_));
+
+        Ok(())
+    }
+
+    fn test_crypto_sign(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+        let kh = crypto.generate_named("ECDSA_P256").map_err(from_proto)?;
+
+        let sig = crypto.sign(kh, b"the data").map_err(from_proto)?;
+
+        let pub_kh = crypto.public(kh).map_err(from_proto)?;
+        crypto
+            .verify(pub_kh, b"the data", &sig)
+            .map_err(from_proto)?;
+        Ok(())
+    }
+
+    fn test_crypto_sign_fail(&mut self) -> TestResult {
+        let crypto = self.crypto.as_ref().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "no crypto channel available",
+            ))
+        })?;
+
+        // Invalid keyset handle.
+        let kh = 999;
+        let result = crypto.sign(kh, b"the data");
+        expect_matches!(result, Err(_));
+        let result = crypto.verify(kh, b"the data", b"fake sig");
+        expect_matches!(result, Err(_));
+
+        // Keyset handle for the wrong type of key material.
+        let kh = crypto.generate_named("AES256_SIV").map_err(from_proto)?;
+        let result = crypto.sign(kh, b"the data");
+        expect_matches!(result, Err(_));
+        let result = crypto.verify(kh, b"the data", b"fake sig");
+        expect_matches!(result, Err(_));
+
         Ok(())
     }
 

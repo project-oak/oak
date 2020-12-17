@@ -27,6 +27,7 @@ rand = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
+tink-proto = "^0.1"
 
 [build-dependencies]
 oak_utils = "*"

@@ -1189,6 +1189,7 @@ dependencies = [
  "prost",
  "prost-types",
  "rand_core",
+ "tink-proto",
 ]
 
 [[package]]
