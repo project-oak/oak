@@ -847,7 +847,7 @@ dependencies = [
  "regex",
  "reqwest",
  "roughenough",
- "rustls 0.18.1",
+ "rustls 0.19.0",
  "serde",
  "serde_json",
  "sha2",
@@ -1270,9 +1270,9 @@ dependencies = [
 
 [[package]]
 name = "ring"
-version = "0.16.17"
+version = "0.16.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5911690c9b773bab7e657471afc207f3827b249a657241327e3544d79bcabdd"
+checksum = "024a1e66fea74c66c66624ee5622a7ff0e4b73a13b4f5c326ddb50c708944226"
 dependencies = [
  "cc",
  "libc",
