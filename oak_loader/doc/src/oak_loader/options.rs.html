@@ -317,51 +317,6 @@
 <span id="314">314</span>
 <span id="315">315</span>
 <span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
-<span id="350">350</span>
-<span id="351">351</span>
-<span id="352">352</span>
-<span id="353">353</span>
-<span id="354">354</span>
-<span id="355">355</span>
-<span id="356">356</span>
-<span id="357">357</span>
-<span id="358">358</span>
-<span id="359">359</span>
-<span id="360">360</span>
-<span id="361">361</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -424,11 +379,6 @@
     <span class="ident">root_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Path to a TOML file containing information about Oak modules&#39; signatures.&quot;</span>
-    )]</span>
-    <span class="ident">signatures_manifest</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">structopt</span>(
-        <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
         OpenID Connect authentication will not be available if this parameter is not specified.&quot;</span>
     )]</span>
@@ -457,21 +407,6 @@
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Configuration files to expose to the Oak Application, each in key=filename format.&quot;</span>
     )]</span>
     <span class="ident">config_files</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ConfigEntry</span><span class="op">&gt;</span>,
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">struct</span> <span class="ident">SignatureManifest</span> {
-    <span class="ident">signatures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignatureLocation</span><span class="op">&gt;</span>,
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">enum</span> <span class="ident">SignatureLocation</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;path&quot;</span>)]</span>
-    <span class="ident">Path</span>(<span class="ident">String</span>),
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;url&quot;</span>)]</span>
-    <span class="ident">Url</span>(<span class="ident">String</span>),
 }
 
 <span class="doccomment">/// A specification of a configuration entry as human readable key and a path to a file whose</span>
@@ -512,7 +447,7 @@
     <span class="kw">let</span> <span class="ident">secure_server_configuration</span> <span class="op">=</span> <span class="ident">create_secure_server_config</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Create signature table.</span>
-    <span class="kw">let</span> <span class="ident">sign_table</span> <span class="op">=</span> <span class="ident">create_sign_table</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">sign_table</span> <span class="op">=</span> <span class="ident">create_sign_table</span>(<span class="kw-2">&amp;</span><span class="ident">app_config</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Create Runtime config.</span>
     <span class="kw">let</span> <span class="ident">runtime_configuration</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
@@ -601,41 +536,16 @@
 <span class="doccomment">/// Create a signature table for Oak runtime.</span>
 <span class="doccomment">/// Returns an [`SignatureTable`] that maps each module hash to a vector of [`SignatureBundle`].</span>
 <span class="doccomment">/// Returned signatures are not verified yet, they are supposed to be verified by the `oak_runtime`.</span>
-<span class="kw">fn</span> <span class="ident">create_sign_table</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SignatureTable</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">create_sign_table</span>(<span class="ident">app_config</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationConfiguration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SignatureTable</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sign_table</span> <span class="op">=</span> <span class="ident">SignatureTable</span>::<span class="ident">default</span>();
-
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">signatures_manifest</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">signatures_manifest</span> {
-        <span class="kw">let</span> <span class="ident">signatures_manifest_file</span> <span class="op">=</span>
-            <span class="ident">read_to_string</span>(<span class="ident">signatures_manifest</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read signature manifest file&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">loaded_signatures_manifest</span>: <span class="ident">SignatureManifest</span> <span class="op">=</span>
-            <span class="ident">toml</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">signatures_manifest_file</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse signature manifest file as TOML&quot;</span>)<span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Parsed signature manifest file: {:?}&quot;</span>, <span class="ident">signatures_manifest</span>);
-
-        <span class="kw">for</span> <span class="ident">signature_location</span> <span class="kw">in</span> <span class="ident">loaded_signatures_manifest</span>.<span class="ident">signatures</span>.<span class="ident">iter</span>() {
-            <span class="kw">let</span> <span class="ident">loaded_signature</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">signature_location</span> {
-                <span class="ident">SignatureLocation</span>::<span class="ident">Path</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Loading signature file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>);
-                    <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">SignatureBundle</span>::<span class="ident">from_pem_file</span>(<span class="ident">path</span>)
-                        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t load signature file {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>))<span class="question-mark">?</span>;
-                    <span class="ident">signature</span>
-                        .<span class="ident">verify</span>()
-                        .<span class="ident">context</span>(<span class="string">&quot;Signature verification failed&quot;</span>)<span class="question-mark">?</span>;
-                    <span class="ident">signature</span>
-                }
-                <span class="ident">SignatureLocation</span>::<span class="ident">Url</span>(<span class="ident">_url</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="comment">// TODO(#1379): Download certificates from Web.</span>
-                    <span class="macro">todo</span><span class="macro">!</span>()
-                }
-            };
-            <span class="kw">let</span> <span class="ident">module_hash</span> <span class="op">=</span> <span class="ident">hex</span>::<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="ident">loaded_signature</span>.<span class="ident">hash</span>);
-            <span class="kw">match</span> <span class="ident">sign_table</span>.<span class="ident">values</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">module_hash</span>) {
-                <span class="prelude-val">Some</span>(<span class="ident">signatures</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">signatures</span>.<span class="ident">push</span>(<span class="ident">loaded_signature</span>),
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">sign_table</span>
-                        .<span class="ident">values</span>
-                        .<span class="ident">insert</span>(<span class="ident">module_hash</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">loaded_signature</span>]);
-                }
+    <span class="kw">for</span> <span class="ident">signature</span> <span class="kw">in</span> <span class="ident">app_config</span>.<span class="ident">module_signatures</span>.<span class="ident">iter</span>() {
+        <span class="kw">let</span> <span class="ident">bundle</span>: <span class="ident">SignatureBundle</span> <span class="op">=</span> <span class="ident">signature</span>.<span class="ident">to_owned</span>().<span class="ident">into</span>();
+        <span class="ident">bundle</span>.<span class="ident">verify</span>().<span class="ident">context</span>(<span class="string">&quot;Signature verification failed&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">module_hash</span> <span class="op">=</span> <span class="ident">hex</span>::<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="ident">bundle</span>.<span class="ident">hash</span>);
+        <span class="kw">match</span> <span class="ident">sign_table</span>.<span class="ident">values</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">module_hash</span>) {
+            <span class="prelude-val">Some</span>(<span class="ident">signatures</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">signatures</span>.<span class="ident">push</span>(<span class="ident">bundle</span>),
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">sign_table</span>.<span class="ident">values</span>.<span class="ident">insert</span>(<span class="ident">module_hash</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">bundle</span>]);
             }
         }
     }

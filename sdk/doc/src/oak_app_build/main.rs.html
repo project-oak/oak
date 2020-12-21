@@ -254,6 +254,59 @@
 <span id="251">251</span>
 <span id="252">252</span>
 <span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -289,6 +342,7 @@
     <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">NodeConfiguration</span>,
     <span class="ident">WebAssemblyConfiguration</span>,
 };
+<span class="kw">use</span> <span class="ident">oak_sign</span>::<span class="ident">SignatureBundle</span>;
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">reqwest</span>::<span class="ident">Url</span>;
 <span class="kw">use</span> <span class="ident">sha2</span>::{<span class="ident">Digest</span>, <span class="ident">Sha256</span>};
@@ -314,6 +368,8 @@
     <span class="ident">modules</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Module</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="ident">initial_node_configuration</span>: <span class="ident">InitialNodeConfig</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="ident">signature_manifests</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FileLocation</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
@@ -346,6 +402,21 @@
             <span class="ident">wasm_entrypoint_name</span>: <span class="string">&quot;oak_main&quot;</span>.<span class="ident">to_string</span>(),
         }
     }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
+<span class="kw">struct</span> <span class="ident">SignatureManifest</span> {
+    <span class="ident">signatures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FileLocation</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
+<span class="kw">enum</span> <span class="ident">FileLocation</span> {
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;path&quot;</span>)]</span>
+    <span class="ident">Path</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;url&quot;</span>)]</span>
+    <span class="ident">Url</span>(<span class="ident">String</span>),
 }
 
 <span class="doccomment">/// Directory used to save build artifacts.</span>
@@ -450,6 +521,18 @@
     }
 }
 
+<span class="doccomment">/// Loads a file from the file path or URL specified in the file location.</span>
+<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">load_file_from_location</span>(<span class="ident">location</span>: <span class="kw-2">&amp;</span><span class="ident">FileLocation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">match</span> <span class="ident">location</span> {
+        <span class="ident">FileLocation</span>::<span class="ident">Path</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">fs</span>::<span class="ident">read</span>(<span class="ident">path</span>).<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read file {}&quot;</span>, <span class="ident">path</span>))
+        }
+        <span class="ident">FileLocation</span>::<span class="ident">Url</span>(<span class="ident">url</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">download_file_from_url</span>(<span class="ident">url</span>)
+            .<span class="ident">await</span>
+            .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t download file {}&quot;</span>, <span class="ident">url</span>)),
+    }
+}
+
 <span class="doccomment">/// Serializes an application configuration from `app_config` and writes it into `filename`.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_config_to_file</span>(
     <span class="ident">app_config</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationConfiguration</span>,
@@ -490,6 +573,28 @@
         <span class="ident">modules</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">to_string</span>(), <span class="ident">loaded_module</span>);
     }
 
+    <span class="comment">// Load signatures.</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">signatures</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+    <span class="kw">for</span> <span class="ident">signature_manifest_location</span> <span class="kw">in</span> <span class="ident">manifest</span>.<span class="ident">signature_manifests</span>.<span class="ident">iter</span>() {
+        <span class="kw">let</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">load_file_from_location</span>(<span class="ident">signature_manifest_location</span>)
+            .<span class="ident">await</span>
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t load file&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">signature_manifest</span>: <span class="ident">SignatureManifest</span> <span class="op">=</span> <span class="ident">toml</span>::<span class="ident">from_slice</span>(<span class="ident">file</span>.<span class="ident">as_slice</span>())
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse signature manifest file as TOML&quot;</span>)<span class="question-mark">?</span>;
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Parsed signature manifest file: {:?}&quot;</span>, <span class="ident">signature_manifest</span>);
+        <span class="kw">for</span> <span class="ident">signature_location</span> <span class="kw">in</span> <span class="ident">signature_manifest</span>.<span class="ident">signatures</span>.<span class="ident">iter</span>() {
+            <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">load_file_from_location</span>(<span class="ident">signature_location</span>)
+                .<span class="ident">await</span>
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t load signature&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">bundle</span> <span class="op">=</span> <span class="ident">SignatureBundle</span>::<span class="ident">from_pem</span>(<span class="ident">signature</span>.<span class="ident">as_slice</span>())
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse signature file as PEM&quot;</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Verify the signature as an early warning. The signature will also be verified by the</span>
+            <span class="comment">// Oak Loader.</span>
+            <span class="ident">bundle</span>.<span class="ident">verify</span>().<span class="ident">context</span>(<span class="string">&quot;Signature verification failed&quot;</span>)<span class="question-mark">?</span>;
+            <span class="ident">signatures</span>.<span class="ident">push</span>(<span class="ident">bundle</span>.<span class="ident">into</span>());
+        }
+    }
+
     <span class="comment">// Create application configuration.</span>
     <span class="kw">let</span> <span class="ident">app_config</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span> {
         <span class="ident">wasm_modules</span>: <span class="ident">modules</span>,
@@ -499,6 +604,7 @@
                 <span class="ident">wasm_entrypoint_name</span>: <span class="ident">manifest</span>.<span class="ident">initial_node_configuration</span>.<span class="ident">wasm_entrypoint_name</span>,
             })),
         }),
+        <span class="ident">module_signatures</span>: <span class="ident">signatures</span>,
     };
 
     <span class="kw">let</span> <span class="ident">output_file</span> <span class="op">=</span> <span class="ident">get_output_path</span>(<span class="kw-2">&amp;</span><span class="ident">manifest_dir</span>, <span class="kw-2">&amp;</span><span class="ident">manifest</span>.<span class="ident">name</span>);

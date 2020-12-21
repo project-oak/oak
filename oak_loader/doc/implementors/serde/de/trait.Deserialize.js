@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["oak_loader"] = [{"text":"impl&lt;'de&gt; Deserialize&lt;'de&gt; for SignatureManifest","synthetic":false,"types":[]},{"text":"impl&lt;'de&gt; Deserialize&lt;'de&gt; for SignatureLocation","synthetic":false,"types":[]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
