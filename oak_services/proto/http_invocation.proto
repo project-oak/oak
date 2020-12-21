@@ -29,6 +29,13 @@ message HttpInvocation {
   oak.handle.Sender sender = 2 [(oak.handle.message_type) = ".oak.encap.HttpResponse"];
 }
 
+// Source of an HTTP invocation, consisting of exactly two channels: one to send requests (wrapped
+// in a `Sender`), and one to read the responses (wrapped in a `Receiver`).
+message HttpInvocationSource {
+  oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.encap.HttpRequest"];
+  oak.handle.Receiver receiver = 2 [(oak.handle.message_type) = ".oak.encap.HttpResponse"];
+}
+
 // A wrapper for sending an [`HttpInvocation`] over a channel.
 message HttpInvocationSender {
   oak.handle.Sender sender = 1 [(oak.handle.message_type) = ".oak.invocation.HttpInvocation"];

@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
-use anyhow::{Context, Result};
+use anyhow::Result;
+use oak_abi::label::{confidentiality_label, tls_endpoint_tag, Label};
 use std::{fs, io};
 use structopt::StructOpt;
-
 #[derive(StructOpt, Clone)]
 #[structopt(about = "HTTPS server pseudo-Node Client Example.")]
 pub struct Opt {
@@ -32,11 +32,6 @@ pub struct Opt {
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
-    // Send a request, and wait for the response
-    let label = oak_abi::label::Label::public_untrusted();
-    let label_bytes = serde_json::to_string(&label)
-        .context("Could not serialize public/untrusted label to JSON.")?
-        .into_bytes();
     let opt = Opt::from_args();
 
     let key_pair = oak_sign::KeyPair::generate()?;
@@ -70,15 +65,15 @@ async fn main() -> Result<()> {
     check_endpoint(
         &client,
         "https://localhost:8080",
-        &label_bytes,
+        &Label::public_untrusted(),
         serde_json::to_string(&signature).unwrap(),
     )
     .await;
 
     check_endpoint(
         &client,
-        "https://localhost:8080/test_google",
-        &label_bytes,
+        "https://localhost:8081",
+        &confidentiality_label(tls_endpoint_tag("localhost:8080")),
         serde_json::to_string(&signature).unwrap(),
     )
     .await;
@@ -92,9 +87,13 @@ async fn check_endpoint(
         hyper::Body,
     >,
     uri: &str,
-    label_bytes: &[u8],
+    label: &Label,
     signature: String,
 ) {
+    let label_bytes = serde_json::to_string(label)
+        .expect("Could not serialize public/untrusted label to JSON.")
+        .into_bytes();
+
     let request = hyper::Request::builder()
         .method(http::Method::GET)
         .uri(uri)

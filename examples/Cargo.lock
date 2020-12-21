@@ -732,6 +732,9 @@ dependencies = [
  "oak_abi",
  "oak_io",
  "oak_services",
+ "oak_utils",
+ "prost",
+ "serde_json",
 ]
 
 [[package]]

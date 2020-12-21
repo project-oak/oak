@@ -160,7 +160,7 @@ impl HttpClientNode {
                     &runtime,
                 );
             }
-            debug!("Invocation processing finished");
+            info!("HTTP client: Invocation processing finished");
             invocation.close(&runtime);
         }
     }
@@ -207,6 +207,7 @@ impl HttpClientNode {
             .await
             .map_err(ProcessingError::InterruptedWaitForResponse)?;
 
+        info!("HTTP client: Handling the response...");
         let mut response_handler = ResponseHandler::new(runtime.clone(), resp, invocation);
         response_handler.handle().await
     }
