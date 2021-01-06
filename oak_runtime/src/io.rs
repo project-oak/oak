@@ -113,3 +113,24 @@ impl<T: Encodable> SenderExt<T> for Sender<T> {
             .map_err(|err| err.into())
     }
 }
+
+/// Creates a new channel for transmission of [`Encodable`] and [`Decodable`] types.
+pub fn channel_create<T: Encodable + Decodable>(
+    runtime: &RuntimeProxy,
+    name: &str,
+    label: &Label,
+) -> Result<(Sender<T>, Receiver<T>), OakStatus> {
+    let (wh, rh) = runtime.channel_create(name, label)?;
+    Ok((Sender::<T>::new(wh.into()), Receiver::<T>::new(rh.into())))
+}
+
+/// Uses the current node's label-downgrading privilege to create a new channel for transmission of
+/// [`Encodable`] and [`Decodable`] types.
+pub fn channel_create_with_downgrade<T: Encodable + Decodable>(
+    runtime: &RuntimeProxy,
+    name: &str,
+    label: &Label,
+) -> Result<(Sender<T>, Receiver<T>), OakStatus> {
+    let (wh, rh) = runtime.channel_create_with_downgrade(name, label)?;
+    Ok((Sender::<T>::new(wh.into()), Receiver::<T>::new(rh.into())))
+}

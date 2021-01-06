@@ -18,7 +18,7 @@
 
 use crate::{
     auth::oidc_utils::ClientInfo,
-    io::{ReceiverExt, SenderExt},
+    io::{channel_create_with_downgrade, ReceiverExt, SenderExt},
     metrics::Metrics,
     node::{
         grpc::{codec::VecCodec, to_tonic_status},
@@ -514,41 +514,37 @@ impl GrpcInvocationHandler {
 
         // The channel containing the request is created with the label specified by the caller.
         // This will fail if the label has a non-empty integrity component.
-        let (request_writer, request_reader) = self
-            .runtime
-            .channel_create_with_downgrade("gRPC request", &label)
-            .map_err(|err| {
-                warn!("could not create gRPC request channel: {:?}", err);
-            })?;
+        let (request_sender, request_receiver) =
+            channel_create_with_downgrade::<GrpcRequest>(&self.runtime, "gRPC request", &label)
+                .map_err(|err| {
+                    warn!("Couldn't create gRPC request channel: {:?}", err);
+                })?;
+
         // The channel containing the response is created with the label containing the identity of
         // the user.
-        let (response_writer, response_reader) = self
-            .runtime
-            .channel_create_with_downgrade("gRPC response", identity_label)
-            .map_err(|err| {
-                warn!("could not create gRPC response channel: {:?}", err);
-            })?;
+        let (response_sender, response_receiver) = channel_create_with_downgrade::<GrpcResponse>(
+            &self.runtime,
+            "gRPC response",
+            &identity_label,
+        )
+        .map_err(|err| {
+            warn!("Couldn't create gRPC response channel: {:?}", err);
+        })?;
 
         let invocation = GrpcInvocation {
-            receiver: Some(Receiver::<GrpcRequest>::new(ReadHandle {
-                handle: request_reader,
-            })),
-            sender: Some(Sender::<GrpcResponse>::new(WriteHandle {
-                handle: response_writer,
-            })),
+            receiver: Some(request_receiver.clone()),
+            sender: Some(response_sender.clone()),
         };
 
         // Put the gRPC request message inside the per-invocation request channel.
-        Sender::<GrpcRequest>::new(WriteHandle {
-            handle: request_writer,
-        })
-        .send_with_downgrade(request, &self.runtime)
-        .map_err(|error| {
-            error!(
-                "Couldn't write message to the gRPC request channel: {:?}",
-                error
-            );
-        })?;
+        request_sender
+            .send_with_downgrade(request, &self.runtime)
+            .map_err(|error| {
+                error!(
+                    "Couldn't write message to the gRPC request channel: {:?}",
+                    error
+                );
+            })?;
 
         // Send an invocation message (with attached handles) to the Oak Node.
         self.invocation_channel
@@ -558,19 +554,19 @@ impl GrpcInvocationHandler {
             })?;
 
         // Close all local handles except for the one that allows reading responses.
-        if let Err(err) = self.runtime.channel_close(request_writer) {
+        if let Err(err) = request_sender.close(&self.runtime) {
             error!(
                 "Failed to close request writer channel for invocation: {:?}",
                 err
             );
         }
-        if let Err(err) = self.runtime.channel_close(request_reader) {
+        if let Err(err) = request_receiver.close(&self.runtime) {
             error!(
                 "Failed to close request reader channel for invocation: {:?}",
                 err
             );
         }
-        if let Err(err) = self.runtime.channel_close(response_writer) {
+        if let Err(err) = response_sender.close(&self.runtime) {
             error!(
                 "Failed to close response writer channel for invocation: {:?}",
                 err
@@ -579,9 +575,7 @@ impl GrpcInvocationHandler {
 
         Ok(GrpcResponseIterator::new(
             self.runtime.clone(),
-            ReadHandle {
-                handle: response_reader,
-            },
+            response_receiver.handle,
             self.method_name.clone(),
         ))
     }
