@@ -15,16 +15,13 @@
 //
 
 use crate::{
-    io::{channel_create, ReceiverExt, Sender, SenderExt},
+    io::{channel_create, ReceiverExt, SenderExt},
     node::Node,
     proto::oak::invocation::{HttpInvocation, HttpInvocationSender},
     NodePrivilege, RuntimeProxy,
 };
 use log::{error, info};
-use oak_io::{
-    handle::{ReadHandle, WriteHandle},
-    Receiver,
-};
+use oak_io::{handle::ReadHandle, Receiver};
 use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 use std::io;
 use tokio::sync::oneshot;
@@ -85,18 +82,13 @@ impl Node for RouterNode {
             let echo_node = EchoNode { can_reply };
 
             // Create a public init channel to send the invocation to the `EchoNode`.
-            let (write_handle, read_handle) = runtime
-                .channel_create("echo-init", &Label::public_untrusted())
-                .unwrap();
+            let (echo_sender, echo_receiver) =
+                channel_create(&runtime, "echo-init", &Label::public_untrusted())
+                    .expect("Couldn't create invocation channel");
 
             // Send the newly created invocation to the request channel.
-            let invocation_sender = crate::io::Sender::new(WriteHandle {
-                handle: write_handle,
-            });
-            invocation_sender
-                .send(invocation.clone(), &runtime)
-                .unwrap();
-            if let Err(error) = invocation_sender.close(&runtime) {
+            echo_sender.send(invocation.clone(), &runtime).unwrap();
+            if let Err(error) = echo_sender.close(&runtime) {
                 panic!("Could not close the `invocation_sender` channel: {}", error);
             }
             runtime
@@ -104,7 +96,7 @@ impl Node for RouterNode {
                     Box::new(echo_node),
                     "echo_node",
                     &request_label,
-                    read_handle,
+                    echo_receiver.handle.handle,
                 )
                 .unwrap();
 
@@ -568,7 +560,7 @@ fn test_https_client_can_handle_https_requests_to_an_external_service() {
             Box::new(client_test_node),
             "client_test_node",
             &confidentiality_label(tls_endpoint_tag(&authority)),
-            oak_node_init_receiver,
+            oak_node_init_receiver.handle.handle,
         )
         .unwrap();
 
@@ -612,7 +604,7 @@ fn test_https_client_can_handle_http_requests_to_an_external_service() {
             Box::new(client_test_node),
             "client_test_node",
             &Label::public_untrusted(),
-            oak_node_init_receiver,
+            oak_node_init_receiver.handle.handle,
         )
         .unwrap();
 
@@ -626,7 +618,7 @@ fn test_https_client_can_handle_http_requests_to_an_external_service() {
 }
 
 /// Creates an HTTP client pseudo-node in the given Runtime.
-fn create_client_node(runtime: &RuntimeProxy, authority: String) -> oak_abi::Handle {
+fn create_client_node(runtime: &RuntimeProxy, authority: String) -> Receiver<HttpInvocationSender> {
     let label = if authority.is_empty() {
         Label::public_untrusted()
     } else {
@@ -644,9 +636,9 @@ fn create_client_node(runtime: &RuntimeProxy, authority: String) -> oak_abi::Han
             "test_http_client",
             &client_config,
             &label,
-            invocation_receiver,
+            invocation_receiver.handle.handle,
         )
-        .expect("Could not create HTTP client node!");
+        .expect("Couldn't create HTTP client node!");
 
     init_receiver
 }
@@ -660,34 +652,35 @@ fn create_client_node(runtime: &RuntimeProxy, authority: String) -> oak_abi::Han
 /// to the HTTP client node.
 fn create_http_client_communication_channel(
     runtime: &RuntimeProxy,
-) -> (oak_abi::Handle, oak_abi::Handle) {
-    // create HttpInvocation channel: The receiver end goes to the Oak node. The other end goes to
+) -> (Receiver<HttpInvocationSender>, Receiver<HttpInvocation>) {
+    // Create HttpInvocation channel: The receiver end goes to the Oak node. The other end goes to
     // the HTTP client pseudo-node.
-    let (init_sender, init_receiver) = runtime
-        .channel_create("Oak node init", &Label::public_untrusted())
-        .expect("Could not create channel");
+    let (init_sender, init_receiver) = channel_create::<HttpInvocationSender>(
+        &runtime,
+        "Oak node init",
+        &Label::public_untrusted(),
+    )
+    .expect("Couldn't create channel");
 
-    // create HttpInvocationSender channel: At the start, the Oak Node expects to receive an
+    // Create HttpInvocationSender channel: At the start, the Oak Node expects to receive an
     // invocation channel, with exactly one handle in it.
     //
     // Create a channel for sending invocations to the HTTP client pseudo-Node.
-    let (invocation_sender, invocation_receiver) = runtime
-        .channel_create("HTTP client invocation", &Label::public_untrusted())
-        .expect("Could not create channel");
-    let invocation_sender = HttpInvocationSender {
-        sender: Some(Sender::<HttpInvocation>::new(WriteHandle {
-            handle: invocation_sender,
-        })),
+    let (invocation_sender, invocation_receiver) = channel_create::<HttpInvocation>(
+        &runtime,
+        "HTTP client invocation",
+        &Label::public_untrusted(),
+    )
+    .expect("Couldn't create channel");
+    let http_invocation_sender = HttpInvocationSender {
+        sender: Some(invocation_sender),
     };
-    let init_sender = Sender::<HttpInvocationSender>::new(WriteHandle {
-        handle: init_sender,
-    });
 
-    if let Err(error) = init_sender.send(invocation_sender, runtime) {
-        panic!("Could not write to the `init_sender` channel: {}", error);
+    if let Err(error) = init_sender.send(http_invocation_sender, runtime) {
+        panic!("Couldn't write to the `init_sender` channel: {}", error);
     }
     if let Err(error) = init_sender.close(runtime) {
-        panic!("Could not close the `init_sender` channel: {}", error);
+        panic!("Couldn't close the `init_sender` channel: {}", error);
     }
 
     (init_receiver, invocation_receiver)
