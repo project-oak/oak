@@ -115,6 +115,7 @@ impl<T: Encodable> SenderExt<T> for Sender<T> {
 }
 
 /// Creates a new channel for transmission of [`Encodable`] and [`Decodable`] types.
+#[allow(dead_code)]
 pub fn channel_create<T: Encodable + Decodable>(
     runtime: &RuntimeProxy,
     name: &str,
