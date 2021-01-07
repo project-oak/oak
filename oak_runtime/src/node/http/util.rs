@@ -15,17 +15,14 @@
 //
 
 use crate::{
-    io::{Sender, SenderExt},
+    io::{channel_create_with_downgrade, Receiver, ReceiverExt, Sender, SenderExt},
     proto::oak::invocation::HttpInvocation,
     RuntimeProxy,
 };
 use log::error;
 use oak_abi::label::Label;
-use oak_io::{
-    handle::{ReadHandle, WriteHandle},
-    Receiver,
-};
-use oak_services::proto::oak::encap::HttpRequest;
+use oak_io::handle::WriteHandle;
+use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 
 // TODO(#1693): Use anyhow instead of HttpError.
 #[derive(Debug)]
@@ -39,10 +36,10 @@ pub enum HttpError {
 
 /// A pair of temporary channels to pass the HTTP request to the Oak Node and receive the response.
 pub struct Pipe {
-    pub request_writer: oak_abi::Handle,
-    pub request_reader: oak_abi::Handle,
-    pub response_writer: oak_abi::Handle,
-    pub response_reader: oak_abi::Handle,
+    pub request_sender: Sender<HttpRequest>,
+    pub request_receiver: Receiver<HttpRequest>,
+    pub response_sender: Sender<HttpResponse>,
+    pub response_receiver: Receiver<HttpResponse>,
 }
 
 impl Pipe {
@@ -55,29 +52,30 @@ impl Pipe {
         // the label specified by the caller. Without a `public_fully_trusted` label or a privilege
         // that allows removing integrity tags, this will fail if the label has a non-empty
         // integrity component.
-        let (request_writer, request_reader) = runtime
-            .channel_create_with_downgrade("HTTP request", request_label)
-            .map_err(|err| {
-                HttpError::ChannelOperation(format!(
-                    "could not create HTTP request channel: {:?}",
-                    err
-                ))
-            })?;
+        let (request_sender, request_receiver) = channel_create_with_downgrade(
+            &runtime,
+            "HTTP request",
+            request_label,
+        )
+        .map_err(|err| {
+            HttpError::ChannelOperation(format!("could not create HTTP request channel: {:?}", err))
+        })?;
 
-        let (response_writer, response_reader) = runtime
-            .channel_create_with_downgrade("HTTP response", user_identity_label)
-            .map_err(|err| {
-                HttpError::ChannelOperation(format!(
-                    "could not create HTTP response channel: {:?}",
-                    err
-                ))
-            })?;
+        let (response_sender, response_receiver) =
+            channel_create_with_downgrade(&runtime, "HTTP response", user_identity_label).map_err(
+                |err| {
+                    HttpError::ChannelOperation(format!(
+                        "could not create HTTP response channel: {:?}",
+                        err
+                    ))
+                },
+            )?;
 
         Ok(Pipe {
-            request_writer,
-            request_reader,
-            response_writer,
-            response_reader,
+            request_sender,
+            request_receiver,
+            response_sender,
+            response_receiver,
         })
     }
 
@@ -88,15 +86,14 @@ impl Pipe {
         request: HttpRequest,
     ) -> Result<(), HttpError> {
         // Put the HTTP request message inside the per-invocation request channel.
-        let sender = crate::io::Sender::new(WriteHandle {
-            handle: self.request_writer,
-        });
-        sender.send_with_downgrade(request, runtime).map_err(|err| {
-            HttpError::ChannelOperation(format!(
-                "Couldn't write the request to the HTTP request channel: {:?}",
-                err
-            ))
-        })
+        self.request_sender
+            .send_with_downgrade(request, runtime)
+            .map_err(|err| {
+                HttpError::ChannelOperation(format!(
+                    "Couldn't write the request to the HTTP request channel: {:?}",
+                    err
+                ))
+            })
     }
 
     /// Sends the `HttpInvocation` with request and response channels to the Oak Node.
@@ -107,12 +104,8 @@ impl Pipe {
     ) -> Result<(), HttpError> {
         // Create an invocation containing request-specific channels.
         let invocation = HttpInvocation {
-            receiver: Some(Receiver::new(ReadHandle {
-                handle: self.request_reader,
-            })),
-            sender: Some(Sender::new(WriteHandle {
-                handle: self.response_writer,
-            })),
+            receiver: Some(self.request_receiver.clone()),
+            sender: Some(self.response_sender.clone()),
         };
         let invocation_sender = crate::io::Sender::new(WriteHandle {
             handle: invocation_channel,
@@ -128,22 +121,22 @@ impl Pipe {
     }
 
     /// Close all local handles except for the one that allows reading responses.
-    pub fn close(&self, runtime: &RuntimeProxy) {
-        if let Err(err) = runtime.channel_close(self.request_writer) {
+    pub fn close(self, runtime: &RuntimeProxy) {
+        if let Err(err) = self.request_sender.close(&runtime) {
             error!(
-                "Failed to close request writer channel for invocation: {:?}",
+                "Failed to close request sender channel for invocation: {:?}",
                 err
             );
         }
-        if let Err(err) = runtime.channel_close(self.request_reader) {
+        if let Err(err) = self.request_receiver.close(&runtime) {
             error!(
-                "Failed to close request reader channel for invocation: {:?}",
+                "Failed to close request receiver channel for invocation: {:?}",
                 err
             );
         }
-        if let Err(err) = runtime.channel_close(self.response_writer) {
+        if let Err(err) = self.response_sender.close(&runtime) {
             error!(
-                "Failed to close response writer channel for invocation: {:?}",
+                "Failed to close response sender channel for invocation: {:?}",
                 err
             );
         }

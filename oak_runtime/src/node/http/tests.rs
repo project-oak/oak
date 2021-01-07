@@ -759,10 +759,7 @@ impl Node for ClientTesterNode {
             .expect("Could not send the invocation");
 
         // wait for the response to come
-        let response_receiver = crate::io::Receiver::<HttpResponse>::new(ReadHandle {
-            handle: pipe.response_reader,
-        });
-        let response = response_receiver.receive(&runtime);
+        let response = pipe.response_receiver.receive(&runtime);
 
         pipe.close(&runtime);
 

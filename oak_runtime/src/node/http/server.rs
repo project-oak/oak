@@ -380,6 +380,7 @@ impl HttpRequestHandler {
         // Create a pair of temporary channels to pass the HTTP request to the Oak Node, and
         // receive the response.
         let pipe = Pipe::new(&self.runtime.clone(), &request_label, &user_identity_label)?;
+        let response_receiver = pipe.response_receiver.clone();
 
         // Put the HTTP request message inside the per-invocation request channel.
         pipe.insert_message(&self.runtime, request)?;
@@ -392,7 +393,7 @@ impl HttpRequestHandler {
 
         Ok(HttpResponseReceiver {
             runtime: self.runtime.clone(),
-            response_reader: pipe.response_reader,
+            response_receiver,
         })
     }
 }
@@ -547,21 +548,18 @@ fn verify_signed_challenge(
 
 struct HttpResponseReceiver {
     runtime: RuntimeProxy,
-    response_reader: oak_abi::Handle,
+    response_receiver: Receiver<HttpResponse>,
 }
 
 impl HttpResponseReceiver {
     fn read_response(&self) -> Result<HttpResponse, OakError> {
-        let response_receiver = crate::io::Receiver::<HttpResponse>::new(ReadHandle {
-            handle: self.response_reader,
-        });
-        response_receiver.receive(&self.runtime)
+        self.response_receiver.receive(&self.runtime)
     }
 
     fn try_into_hyper_response(&self) -> Result<Response<Body>, HttpError> {
         info!(
-            "Generating response for runtime {} and reader {:?}.",
-            self.runtime.node_id.0, self.response_reader
+            "Generating response for runtime {} and receiver {:?}.",
+            self.runtime.node_id.0, self.response_receiver
         );
         match self.read_response() {
             Ok(http_response) => to_hyper_response(http_response),
