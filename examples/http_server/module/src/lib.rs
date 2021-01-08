@@ -38,19 +38,15 @@ use crate::proto::oak::examples::http_server::{RedirectHandlerInit, RedirectInvo
 use anyhow::Context;
 use log::info;
 use oak::{
-    http::Invocation,
+    http::{create_http_invocation, HttpInvocation},
     io::{ReceiverExt, Sender, SenderExt},
-    proto::oak::invocation::{HttpInvocation, HttpInvocationSource},
     CommandHandler, Label,
 };
 use oak_abi::{
     label::{confidentiality_label, tls_endpoint_tag},
     proto::oak::application::ConfigMap,
 };
-use oak_services::proto::oak::{
-    encap::HttpResponse,
-    log::{LogInit, LogMessage},
-};
+use oak_services::proto::oak::log::{LogInit, LogMessage};
 
 oak::entrypoint_command_handler!(oak_main => Main);
 
@@ -94,10 +90,10 @@ fn create_static_server(log_sender: Sender<LogMessage>) {
             log_sender: Some(log_sender),
         },
     )
-    .expect("could not create handler node");
+    .expect("Couldn't create handler node");
 
     oak::http::server::init_with_sender("[::]:8080", static_handler_sender)
-        .expect("could not create HTTP server pseudo-Node");
+        .expect("Couldn't create HTTP server pseudo-Node");
 }
 
 /// Creates a public Oak Node and an HTTP server pseudo-Node to serve requests sent to
@@ -121,10 +117,10 @@ fn create_redirect_server(
             client_invocation_sender: Some(client_invocation_sender),
         },
     )
-    .expect("could not create handler node");
+    .expect("Couldn't create handler node");
 
     oak::http::server::init_with_sender("[::]:8081", redirect_handler_sender)
-        .expect("could not create HTTP server pseudo-Node");
+        .expect("Couldn't create HTTP server pseudo-Node");
 }
 
 /// Creates a non-public Oak node that sends requests to "localhost:8080" via a non-public HTTP
@@ -142,7 +138,7 @@ fn create_redirect_helper(
             log_sender: Some(log_sender),
         },
     )
-    .expect("could not create handler node");
+    .expect("Couldn't create handler node");
 
     Ok(redirect_helper_sender)
 }
@@ -163,9 +159,9 @@ impl oak::WithInit for StaticHttpHandler {
 }
 
 impl CommandHandler for StaticHttpHandler {
-    type Command = Invocation;
+    type Command = HttpInvocation;
 
-    fn handle_command(&mut self, invocation: Invocation) -> anyhow::Result<()> {
+    fn handle_command(&mut self, invocation: HttpInvocation) -> anyhow::Result<()> {
         let request = invocation.receive()?;
 
         info!("Handling a request to {}.", request.uri());
@@ -190,7 +186,7 @@ impl CommandHandler for StaticHttpHandler {
                 .context("Could not build response")?,
         };
 
-        info!("Sending the response on the invocation channel!");
+        info!("Sending the response on the invocation channel");
         let res = invocation.send(&response);
         invocation.close_channels();
         res?;
@@ -218,54 +214,39 @@ impl oak::WithInit for RedirectHandler {
 }
 
 impl CommandHandler for RedirectHandler {
-    type Command = Invocation;
+    type Command = HttpInvocation;
 
-    fn handle_command(&mut self, invocation: Invocation) -> anyhow::Result<()> {
-        info!("Redirecting the request.");
+    fn handle_command(&mut self, invocation: HttpInvocation) -> anyhow::Result<()> {
+        info!("Redirecting the request");
 
         let label = confidentiality_label(tls_endpoint_tag("localhost:8080"));
 
-        // Create a channel for passing HTTP requests to the HTTP Client node.
-        let (request_writer, request_reader) = oak::io::channel_create("HTTP request", &label)?;
-        // Create a channel for collecting HTTP responses from the HTTP Client node.
-        let (response_writer, response_reader) = oak::io::channel_create("HTTP response", &label)?;
+        // Create invocations for passing HTTP requests to the HTTP Client node and collecting HTTP
+        // responses from it.
+        let (client_invocation, client_invocation_source) = create_http_invocation(&label)?;
 
         // Send the request-receiver channel, together with the new invocation source for
         // communication with the HTTP client pseudo-Node, to the RedirectHelper node in a
         // RedirectInvocation.
         let helper_invocation = RedirectInvocation {
-            request_receiver: Some(invocation.clone().receiver.unwrap()),
-            http_invocation_source: Some(HttpInvocationSource {
-                sender: Some(request_writer),
-                receiver: Some(response_reader),
-            }),
+            request_receiver: Some(invocation.receiver.clone().unwrap()),
+            http_invocation_source: Some(client_invocation_source),
         };
         self.helper_invocation_sender.send(&helper_invocation)?;
 
-        // Send the other end of the invocation to the HTTP client pseudo-Node
-        let client_invocation = HttpInvocation {
-            sender: Some(response_writer),
-            receiver: Some(request_reader),
-        };
+        // Send the other end of the invocation to the HTTP client pseudo-Node.
         self.client_invocation_sender.send(&client_invocation)?;
 
-        // Response with OK(200)
+        // Response with OK(200).
         let response = http::response::Builder::new()
             .status(http::StatusCode::OK)
             .body("Successfully sent request".to_string().into_bytes())
-            .context("Could not build response")?;
+            .context("Couldn't build response")?;
 
-        // Send a response to the caller
-        let res = invocation
-            .clone()
-            .sender
-            .unwrap()
-            .send(&HttpResponse::from(&response));
-
-        invocation.close_channels();
-
-        res?;
-        Ok(())
+        // Send a response to the caller.
+        invocation
+            .send(&response)
+            .context("Couldn't send HTTP response")
     }
 }
 
@@ -291,35 +272,31 @@ impl CommandHandler for RedirectHelper {
         let client_invocation = invocation.http_invocation_source.unwrap();
         let uri = request.uri.parse::<http::Uri>()?;
 
-        info!("Handling a request to {}.", uri);
+        info!("Handling a request to {}", uri);
 
         // Create redirection request. Nothing from the original request is relevant here
         let label = Label::public_untrusted();
         let label_bytes = serde_json::to_string(&label)
-            .context("Could not serialize public/untrusted label to JSON.")?
+            .context("Could not serialize public/untrusted label to JSON")?
             .into_bytes();
         let request = http::Request::builder()
             .method(http::Method::GET)
             .uri("https://localhost:8080")
             .header(oak_abi::OAK_LABEL_HTTP_JSON_KEY, label_bytes)
             .body(vec![])
-            .context("Could not build request")?;
+            .context("Couldn't build request")?;
 
         // Send the request to the HTTP client pseudo-Node
         client_invocation
-            .sender
-            .unwrap()
-            .send(&request.into())
-            .expect("Could not send the request to the HTTP client");
+            .send(request)
+            .context("Couldn't send the request to the HTTP client")?;
 
         // Collect the response from the HTTP client pseudo-Node
         let response = client_invocation
-            .receiver
-            .unwrap()
             .receive()
-            .expect("Could not receive the response from the HTTP client.");
+            .context("Couldn't receive the response from the HTTP client")?;
 
-        info!("Got a response with status: {}!", response.status);
+        info!("Got a response with status: {}", response.status());
         Ok(())
     }
 }
