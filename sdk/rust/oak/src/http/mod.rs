@@ -31,7 +31,7 @@ pub use crate::proto::oak::invocation::{HttpInvocation, HttpInvocationSource};
 pub mod client;
 pub mod server;
 
-/// This implementation provides an interface for sending responses and receiving requests using
+/// This implementation provides an interface for receiving requests and sending responses, using
 /// the idiomatic http types. Internally, these types are converted into Protobuf encoded requests
 /// and responses that can be used for communication with the Oak nodes.
 impl HttpInvocation {
