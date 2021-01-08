@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{http::Invocation, OakStatus};
+use crate::{http::HttpInvocation, OakStatus};
 use oak_abi::label::{confidentiality_label, tls_endpoint_tag, Label};
 use oak_io::Sender;
 
@@ -22,12 +22,12 @@ use oak_io::Sender;
 /// URIs. If the authority is empty, the node is public and can handle any incoming request.
 /// Otherwise, the node is created with the `authority` as its confidentially tag. In this case, the
 /// client can only serve HTTPS requests to the services indicated by the `authority`.
-pub fn init(authority: &str) -> Result<Sender<Invocation>, OakStatus> {
+pub fn init(authority: &str) -> Result<Sender<HttpInvocation>, OakStatus> {
     let config = crate::node_config::http_client(authority);
     let label = if authority.is_empty() {
         Label::public_untrusted()
     } else {
         confidentiality_label(tls_endpoint_tag(authority))
     };
-    crate::io::node_create::<Invocation>("http_client", &label, &config)
+    crate::io::node_create::<HttpInvocation>("http_client", &label, &config)
 }
