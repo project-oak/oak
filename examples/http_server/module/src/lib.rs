@@ -62,14 +62,14 @@ impl oak::CommandHandler for Main {
 
         // Create a static server on port 8080, involving an Oak node and an HTTP server
         // pseudo-Node.
-        create_static_server(log_sender.clone());
+        create_static_server(log_sender.clone())?;
 
         // Create an Oak node for redirecting requests to an HTTP client node for "localhost:8080".
         let redirect_helper_sender = create_redirect_helper(log_sender.clone())?;
 
         // Create a redirect server on port 8081, involving an Oak node, an HTTP server
         // pseudo-Node, and an HTTP client pseudo-Node.
-        create_redirect_server(log_sender, redirect_helper_sender);
+        create_redirect_server(log_sender, redirect_helper_sender)?;
 
         Ok(())
     }
@@ -81,7 +81,7 @@ oak::entrypoint_command_handler_init!(redirect_helper => RedirectHelper);
 
 /// Creates a public Oak Node and an HTTP server pseudo-Node to serve requests sent to
 /// `localhost:8080`.
-fn create_static_server(log_sender: Sender<LogMessage>) {
+fn create_static_server(log_sender: Sender<LogMessage>) -> anyhow::Result<()> {
     let static_handler_sender = oak::io::entrypoint_node_create::<StaticHttpHandler, _, _>(
         "static-handler",
         &Label::public_untrusted(),
@@ -90,10 +90,11 @@ fn create_static_server(log_sender: Sender<LogMessage>) {
             log_sender: Some(log_sender),
         },
     )
-    .expect("Couldn't create handler node");
+    .context("Couldn't create handler node")?;
 
     oak::http::server::init_with_sender("[::]:8080", static_handler_sender)
-        .expect("Couldn't create HTTP server pseudo-Node");
+        .context("Couldn't create HTTP server pseudo-Node")?;
+    Ok(())
 }
 
 /// Creates a public Oak Node and an HTTP server pseudo-Node to serve requests sent to
@@ -103,7 +104,7 @@ fn create_static_server(log_sender: Sender<LogMessage>) {
 fn create_redirect_server(
     log_sender: Sender<LogMessage>,
     redirect_helper_sender: Sender<RedirectInvocation>,
-) {
+) -> anyhow::Result<()> {
     // create a non-public HTTP client pseudo-node
     let client_invocation_sender = oak::http::client::init("localhost:8080").unwrap();
 
@@ -117,10 +118,11 @@ fn create_redirect_server(
             client_invocation_sender: Some(client_invocation_sender),
         },
     )
-    .expect("Couldn't create handler node");
+    .context("Couldn't create handler node")?;
 
     oak::http::server::init_with_sender("[::]:8081", redirect_handler_sender)
-        .expect("Couldn't create HTTP server pseudo-Node");
+        .context("Couldn't create HTTP server pseudo-Node")?;
+    Ok(())
 }
 
 /// Creates a non-public Oak node that sends requests to "localhost:8080" via a non-public HTTP
@@ -130,7 +132,7 @@ fn create_redirect_helper(
 ) -> anyhow::Result<Sender<RedirectInvocation>> {
     let label = confidentiality_label(tls_endpoint_tag("localhost:8080"));
 
-    let redirect_helper_sender = oak::io::entrypoint_node_create::<RedirectHelper, _, _>(
+    oak::io::entrypoint_node_create::<RedirectHelper, _, _>(
         "redirect-helper",
         &label,
         "app",
@@ -138,9 +140,7 @@ fn create_redirect_helper(
             log_sender: Some(log_sender),
         },
     )
-    .expect("Couldn't create handler node");
-
-    Ok(redirect_helper_sender)
+    .context("Couldn't create handler node")
 }
 
 /// A simple HTTP handler that responds with `OK` (200) to every request sent to `/`, and with
@@ -171,11 +171,11 @@ impl CommandHandler for StaticHttpHandler {
                 .status(http::StatusCode::OK)
                 .header(http::header::CONTENT_TYPE, "text/html; charset=UTF-8")
                 .body(include_bytes!("../static/index.html").to_vec())
-                .context("Could not build response"),
+                .context("Couldn't build response"),
             _ => http::response::Builder::new()
                 .status(http::StatusCode::NOT_FOUND)
                 .body("not found".to_string().into_bytes())
-                .context("Could not build response"),
+                .context("Couldn't build response"),
         };
 
         let response = match response {
@@ -183,14 +183,11 @@ impl CommandHandler for StaticHttpHandler {
             Err(err) => http::response::Builder::new()
                 .status(http::StatusCode::INTERNAL_SERVER_ERROR)
                 .body(err.to_string().into_bytes())
-                .context("Could not build response")?,
+                .context("Couldn't build response")?,
         };
 
         info!("Sending the response on the invocation channel");
-        let res = invocation.send(&response);
-        invocation.close_channels();
-        res?;
-        Ok(())
+        invocation.send(&response).context("Couldn't send response")
     }
 }
 
@@ -252,7 +249,8 @@ impl CommandHandler for RedirectHandler {
 
 /// A helper node that sends request to an HTTP client pseudo-Node, collects the response and logs
 /// the status in the response. To be able to interact with the HTTP client pseudo-Node, this node
-/// expects to receive an [`HttpInvocationSource`] in the invocation it receives for each command.
+/// expects to receive an [`oak::http::HttpInvocationSource`] in the invocation it receives for each
+/// command.
 pub struct RedirectHelper;
 
 impl oak::WithInit for RedirectHelper {
