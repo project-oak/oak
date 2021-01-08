@@ -145,13 +145,6 @@
 <span id="142">142</span>
 <span id="143">143</span>
 <span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -170,17 +163,14 @@
 <span class="comment">//</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">io</span>::{<span class="ident">Sender</span>, <span class="ident">SenderExt</span>},
+    <span class="ident">io</span>::{<span class="ident">channel_create_with_downgrade</span>, <span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>, <span class="ident">Sender</span>, <span class="ident">SenderExt</span>},
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">invocation</span>::<span class="ident">HttpInvocation</span>,
     <span class="ident">RuntimeProxy</span>,
 };
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">error</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>;
-<span class="kw">use</span> <span class="ident">oak_io</span>::{
-    <span class="ident">handle</span>::{<span class="ident">ReadHandle</span>, <span class="ident">WriteHandle</span>},
-    <span class="ident">Receiver</span>,
-};
-<span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::<span class="ident">HttpRequest</span>;
+<span class="kw">use</span> <span class="ident">oak_io</span>::<span class="ident">handle</span>::<span class="ident">WriteHandle</span>;
+<span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">HttpRequest</span>, <span class="ident">HttpResponse</span>};
 
 <span class="comment">// TODO(#1693): Use anyhow instead of HttpError.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
@@ -194,10 +184,10 @@
 
 <span class="doccomment">/// A pair of temporary channels to pass the HTTP request to the Oak Node and receive the response.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Pipe</span> {
-    <span class="kw">pub</span> <span class="ident">request_writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    <span class="kw">pub</span> <span class="ident">request_reader</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    <span class="kw">pub</span> <span class="ident">response_writer</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
-    <span class="kw">pub</span> <span class="ident">response_reader</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
+    <span class="kw">pub</span> <span class="ident">request_sender</span>: <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">HttpRequest</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">request_receiver</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">HttpRequest</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">response_sender</span>: <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">HttpResponse</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">response_receiver</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">HttpResponse</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Pipe</span> {
@@ -210,29 +200,30 @@
         <span class="comment">// the label specified by the caller. Without a `public_fully_trusted` label or a privilege</span>
         <span class="comment">// that allows removing integrity tags, this will fail if the label has a non-empty</span>
         <span class="comment">// integrity component.</span>
-        <span class="kw">let</span> (<span class="ident">request_writer</span>, <span class="ident">request_reader</span>) <span class="op">=</span> <span class="ident">runtime</span>
-            .<span class="ident">channel_create_with_downgrade</span>(<span class="string">&quot;HTTP request&quot;</span>, <span class="ident">request_label</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;could not create HTTP request channel: {:?}&quot;</span>,
-                    <span class="ident">err</span>
-                ))
-            })<span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">request_sender</span>, <span class="ident">request_receiver</span>) <span class="op">=</span> <span class="ident">channel_create_with_downgrade</span>(
+            <span class="kw-2">&amp;</span><span class="ident">runtime</span>,
+            <span class="string">&quot;HTTP request&quot;</span>,
+            <span class="ident">request_label</span>,
+        )
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+            <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;could not create HTTP request channel: {:?}&quot;</span>, <span class="ident">err</span>))
+        })<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> (<span class="ident">response_writer</span>, <span class="ident">response_reader</span>) <span class="op">=</span> <span class="ident">runtime</span>
-            .<span class="ident">channel_create_with_downgrade</span>(<span class="string">&quot;HTTP response&quot;</span>, <span class="ident">user_identity_label</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;could not create HTTP response channel: {:?}&quot;</span>,
-                    <span class="ident">err</span>
-                ))
-            })<span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">response_sender</span>, <span class="ident">response_receiver</span>) <span class="op">=</span>
+            <span class="ident">channel_create_with_downgrade</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>, <span class="string">&quot;HTTP response&quot;</span>, <span class="ident">user_identity_label</span>).<span class="ident">map_err</span>(
+                <span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                    <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(
+                        <span class="string">&quot;could not create HTTP response channel: {:?}&quot;</span>,
+                        <span class="ident">err</span>
+                    ))
+                },
+            )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">Pipe</span> {
-            <span class="ident">request_writer</span>,
-            <span class="ident">request_reader</span>,
-            <span class="ident">response_writer</span>,
-            <span class="ident">response_reader</span>,
+            <span class="ident">request_sender</span>,
+            <span class="ident">request_receiver</span>,
+            <span class="ident">response_sender</span>,
+            <span class="ident">response_receiver</span>,
         })
     }
 
@@ -243,15 +234,14 @@
         <span class="ident">request</span>: <span class="ident">HttpRequest</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">HttpError</span><span class="op">&gt;</span> {
         <span class="comment">// Put the HTTP request message inside the per-invocation request channel.</span>
-        <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Sender</span>::<span class="ident">new</span>(<span class="ident">WriteHandle</span> {
-            <span class="ident">handle</span>: <span class="self">self</span>.<span class="ident">request_writer</span>,
-        });
-        <span class="ident">sender</span>.<span class="ident">send_with_downgrade</span>(<span class="ident">request</span>, <span class="ident">runtime</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;Couldn&#39;t write the request to the HTTP request channel: {:?}&quot;</span>,
-                <span class="ident">err</span>
-            ))
-        })
+        <span class="self">self</span>.<span class="ident">request_sender</span>
+            .<span class="ident">send_with_downgrade</span>(<span class="ident">request</span>, <span class="ident">runtime</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="ident">HttpError</span>::<span class="ident">ChannelOperation</span>(<span class="macro">format</span><span class="macro">!</span>(
+                    <span class="string">&quot;Couldn&#39;t write the request to the HTTP request channel: {:?}&quot;</span>,
+                    <span class="ident">err</span>
+                ))
+            })
     }
 
     <span class="doccomment">/// Sends the `HttpInvocation` with request and response channels to the Oak Node.</span>
@@ -262,12 +252,8 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">HttpError</span><span class="op">&gt;</span> {
         <span class="comment">// Create an invocation containing request-specific channels.</span>
         <span class="kw">let</span> <span class="ident">invocation</span> <span class="op">=</span> <span class="ident">HttpInvocation</span> {
-            <span class="ident">receiver</span>: <span class="prelude-val">Some</span>(<span class="ident">Receiver</span>::<span class="ident">new</span>(<span class="ident">ReadHandle</span> {
-                <span class="ident">handle</span>: <span class="self">self</span>.<span class="ident">request_reader</span>,
-            })),
-            <span class="ident">sender</span>: <span class="prelude-val">Some</span>(<span class="ident">Sender</span>::<span class="ident">new</span>(<span class="ident">WriteHandle</span> {
-                <span class="ident">handle</span>: <span class="self">self</span>.<span class="ident">response_writer</span>,
-            })),
+            <span class="ident">receiver</span>: <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">request_receiver</span>.<span class="ident">clone</span>()),
+            <span class="ident">sender</span>: <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">response_sender</span>.<span class="ident">clone</span>()),
         };
         <span class="kw">let</span> <span class="ident">invocation_sender</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">Sender</span>::<span class="ident">new</span>(<span class="ident">WriteHandle</span> {
             <span class="ident">handle</span>: <span class="ident">invocation_channel</span>,
@@ -283,22 +269,22 @@
     }
 
     <span class="doccomment">/// Close all local handles except for the one that allows reading responses.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">request_writer</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_sender</span>.<span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>) {
             <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;Failed to close request writer channel for invocation: {:?}&quot;</span>,
+                <span class="string">&quot;Failed to close request sender channel for invocation: {:?}&quot;</span>,
                 <span class="ident">err</span>
             );
         }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">request_reader</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_receiver</span>.<span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>) {
             <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;Failed to close request reader channel for invocation: {:?}&quot;</span>,
+                <span class="string">&quot;Failed to close request receiver channel for invocation: {:?}&quot;</span>,
                 <span class="ident">err</span>
             );
         }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="self">self</span>.<span class="ident">response_writer</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">response_sender</span>.<span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>) {
             <span class="macro">error</span><span class="macro">!</span>(
-                <span class="string">&quot;Failed to close response writer channel for invocation: {:?}&quot;</span>,
+                <span class="string">&quot;Failed to close response sender channel for invocation: {:?}&quot;</span>,
                 <span class="ident">err</span>
             );
         }
