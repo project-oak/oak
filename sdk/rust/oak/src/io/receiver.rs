@@ -122,8 +122,35 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
     }
 
     fn receive(&self) -> Result<T, OakError> {
-        self.wait()?;
-        self.try_receive()
+        let status = self.wait()?;
+        match status {
+            ChannelReadStatus::ReadReady => self.try_receive(),
+            ChannelReadStatus::PermissionDenied => {
+                warn!(
+                    "{:?}: received permission denied read status: {:?}",
+                    &self, status
+                );
+                Err(OakError::OakStatus(OakStatus::ErrPermissionDenied))
+            }
+            ChannelReadStatus::Orphaned => {
+                warn!("{:?}: received orphaned read status: {:?}", &self, status);
+                Err(OakError::OakStatus(OakStatus::ErrChannelClosed))
+            }
+            ChannelReadStatus::InvalidChannel => {
+                warn!(
+                    "{:?}: received invalid channel read status: {:?}",
+                    &self, status
+                );
+                Err(OakError::OakStatus(OakStatus::ErrBadHandle))
+            }
+            ChannelReadStatus::NotReady => {
+                error!(
+                    "{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`",
+                    &self
+                );
+                Err(OakError::OakStatus(OakStatus::ErrInternal))
+            }
+        }
     }
 
     fn try_receive(&self) -> Result<T, OakError> {
