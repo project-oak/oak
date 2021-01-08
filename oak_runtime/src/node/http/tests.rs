@@ -15,16 +15,13 @@
 //
 
 use crate::{
-    io::{ReceiverExt, Sender, SenderExt},
+    io::{channel_create, ReceiverExt, SenderExt},
     node::Node,
     proto::oak::invocation::{HttpInvocation, HttpInvocationSender},
     NodePrivilege, RuntimeProxy,
 };
 use log::{error, info};
-use oak_io::{
-    handle::{ReadHandle, WriteHandle},
-    Receiver,
-};
+use oak_io::{handle::ReadHandle, Receiver};
 use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 use std::io;
 use tokio::sync::oneshot;
@@ -85,18 +82,13 @@ impl Node for RouterNode {
             let echo_node = EchoNode { can_reply };
 
             // Create a public init channel to send the invocation to the `EchoNode`.
-            let (write_handle, read_handle) = runtime
-                .channel_create("echo-init", &Label::public_untrusted())
-                .unwrap();
+            let (echo_sender, echo_receiver) =
+                channel_create(&runtime, "echo-init", &Label::public_untrusted())
+                    .expect("Couldn't create invocation channel");
 
             // Send the newly created invocation to the request channel.
-            let invocation_sender = crate::io::Sender::new(WriteHandle {
-                handle: write_handle,
-            });
-            invocation_sender
-                .send(invocation.clone(), &runtime)
-                .unwrap();
-            if let Err(error) = invocation_sender.close(&runtime) {
+            echo_sender.send(invocation.clone(), &runtime).unwrap();
+            if let Err(error) = echo_sender.close(&runtime) {
                 panic!("Could not close the `invocation_sender` channel: {}", error);
             }
             runtime
@@ -104,7 +96,7 @@ impl Node for RouterNode {
                     Box::new(echo_node),
                     "echo_node",
                     &request_label,
-                    read_handle,
+                    echo_receiver.handle.handle,
                 )
                 .unwrap();
 
@@ -190,7 +182,7 @@ impl HttpServerTester {
                 Box::new(RouterNode),
                 "oak_node_for_test",
                 &Label::public_untrusted(),
-                invocation_receiver,
+                invocation_receiver.handle.handle,
             )
             .expect("Could not create Oak node!");
 
@@ -391,7 +383,7 @@ fn create_runtime() -> RuntimeProxy {
     crate::RuntimeProxy::create_runtime(&configuration, &secure_server_config, &signature_table)
 }
 
-fn create_server_node(runtime: &RuntimeProxy, port: u32) -> oak_abi::Handle {
+fn create_server_node(runtime: &RuntimeProxy, port: u32) -> Receiver<HttpInvocation> {
     let (init_receiver, invocation_receiver) = create_communication_channel(runtime);
     let server_config = NodeConfiguration {
         config_type: Some(ConfigType::HttpServerConfig(HttpServerConfiguration {
@@ -404,39 +396,47 @@ fn create_server_node(runtime: &RuntimeProxy, port: u32) -> oak_abi::Handle {
     let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
 
     runtime
-        .node_create("test_server", &server_config, &top_label, init_receiver)
-        .expect("Could not create HTTP server node!");
+        .node_create(
+            "test_server",
+            &server_config,
+            &top_label,
+            init_receiver.handle.handle,
+        )
+        .expect("Couldn't create HTTP server node!");
 
     invocation_receiver
 }
 
-fn create_communication_channel(runtime: &RuntimeProxy) -> (oak_abi::Handle, oak_abi::Handle) {
-    // create channel: one end to server_node::run; the other to the Oak node.
-    let (init_sender, init_receiver) = runtime
-        .channel_create("HTTP server init", &Label::public_untrusted())
-        .expect("Could not create channel");
+fn create_communication_channel(
+    runtime: &RuntimeProxy,
+) -> (Receiver<HttpInvocationSender>, Receiver<HttpInvocation>) {
+    // Create channel: one end to server_node::run; the other to the Oak node.
+    let (init_sender, init_receiver) = channel_create::<HttpInvocationSender>(
+        &runtime,
+        "HTTP server init",
+        &Label::public_untrusted(),
+    )
+    .expect("Couldn't create channel");
 
     // At the start the HTTP server pseudo-Node expects to receive an invocation channel, with
     // exactly one handle in it.
     //
     // Create a channel for receiving invocations to pass to the HTTP server pseudo-Node.
-    let (invocation_sender, invocation_receiver) = runtime
-        .channel_create("HTTP server invocation", &Label::public_untrusted())
-        .expect("Could not create channel");
-    let invocation_sender = HttpInvocationSender {
-        sender: Some(Sender::<HttpInvocation>::new(WriteHandle {
-            handle: invocation_sender,
-        })),
+    let (invocation_sender, invocation_receiver) = channel_create::<HttpInvocation>(
+        &runtime,
+        "HTTP server invocation",
+        &Label::public_untrusted(),
+    )
+    .expect("Couldn't create channel");
+    let http_invocation_sender = HttpInvocationSender {
+        sender: Some(invocation_sender),
     };
-    let init_sender = Sender::<HttpInvocationSender>::new(WriteHandle {
-        handle: init_sender,
-    });
 
-    if let Err(error) = init_sender.send(invocation_sender, runtime) {
-        panic!("Could not write to the `init_sender` channel: {}", error);
+    if let Err(error) = init_sender.send(http_invocation_sender, runtime) {
+        panic!("Couldn't write to the `init_sender` channel: {}", error);
     }
     if let Err(error) = init_sender.close(runtime) {
-        panic!("Could not close the `init_sender` channel: {}", error);
+        panic!("Couldn't close the `init_sender` channel: {}", error);
     }
 
     (init_receiver, invocation_receiver)
@@ -447,7 +447,7 @@ fn create_client(
     ca_path: &str,
 ) -> hyper::client::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>> {
     let ca_file =
-        fs::File::open(ca_path).unwrap_or_else(|e| panic!("failed to open {}: {}", ca_path, e));
+        fs::File::open(ca_path).unwrap_or_else(|e| panic!("Failed to open {}: {}", ca_path, e));
     let mut ca = io::BufReader::new(ca_file);
 
     // Build an HTTP connector which supports HTTPS too.
@@ -457,7 +457,7 @@ fn create_client(
     let mut tls = rustls::ClientConfig::new();
     tls.root_store
         .add_pem_file(&mut ca)
-        .expect("failed to load custom CA store");
+        .expect("Failed to load custom CA store");
     // Join the above part into an HTTPS connector.
     let https = hyper_rustls::HttpsConnector::from((http, tls));
 
@@ -560,7 +560,7 @@ fn test_https_client_can_handle_https_requests_to_an_external_service() {
             Box::new(client_test_node),
             "client_test_node",
             &confidentiality_label(tls_endpoint_tag(&authority)),
-            oak_node_init_receiver,
+            oak_node_init_receiver.handle.handle,
         )
         .unwrap();
 
@@ -604,7 +604,7 @@ fn test_https_client_can_handle_http_requests_to_an_external_service() {
             Box::new(client_test_node),
             "client_test_node",
             &Label::public_untrusted(),
-            oak_node_init_receiver,
+            oak_node_init_receiver.handle.handle,
         )
         .unwrap();
 
@@ -618,7 +618,7 @@ fn test_https_client_can_handle_http_requests_to_an_external_service() {
 }
 
 /// Creates an HTTP client pseudo-node in the given Runtime.
-fn create_client_node(runtime: &RuntimeProxy, authority: String) -> oak_abi::Handle {
+fn create_client_node(runtime: &RuntimeProxy, authority: String) -> Receiver<HttpInvocationSender> {
     let label = if authority.is_empty() {
         Label::public_untrusted()
     } else {
@@ -636,9 +636,9 @@ fn create_client_node(runtime: &RuntimeProxy, authority: String) -> oak_abi::Han
             "test_http_client",
             &client_config,
             &label,
-            invocation_receiver,
+            invocation_receiver.handle.handle,
         )
-        .expect("Could not create HTTP client node!");
+        .expect("Couldn't create HTTP client node!");
 
     init_receiver
 }
@@ -652,34 +652,35 @@ fn create_client_node(runtime: &RuntimeProxy, authority: String) -> oak_abi::Han
 /// to the HTTP client node.
 fn create_http_client_communication_channel(
     runtime: &RuntimeProxy,
-) -> (oak_abi::Handle, oak_abi::Handle) {
-    // create HttpInvocation channel: The receiver end goes to the Oak node. The other end goes to
+) -> (Receiver<HttpInvocationSender>, Receiver<HttpInvocation>) {
+    // Create HttpInvocation channel: The receiver end goes to the Oak node. The other end goes to
     // the HTTP client pseudo-node.
-    let (init_sender, init_receiver) = runtime
-        .channel_create("Oak node init", &Label::public_untrusted())
-        .expect("Could not create channel");
+    let (init_sender, init_receiver) = channel_create::<HttpInvocationSender>(
+        &runtime,
+        "Oak node init",
+        &Label::public_untrusted(),
+    )
+    .expect("Couldn't create channel");
 
-    // create HttpInvocationSender channel: At the start, the Oak Node expects to receive an
+    // Create HttpInvocationSender channel: At the start, the Oak Node expects to receive an
     // invocation channel, with exactly one handle in it.
     //
     // Create a channel for sending invocations to the HTTP client pseudo-Node.
-    let (invocation_sender, invocation_receiver) = runtime
-        .channel_create("HTTP client invocation", &Label::public_untrusted())
-        .expect("Could not create channel");
-    let invocation_sender = HttpInvocationSender {
-        sender: Some(Sender::<HttpInvocation>::new(WriteHandle {
-            handle: invocation_sender,
-        })),
+    let (invocation_sender, invocation_receiver) = channel_create::<HttpInvocation>(
+        &runtime,
+        "HTTP client invocation",
+        &Label::public_untrusted(),
+    )
+    .expect("Couldn't create channel");
+    let http_invocation_sender = HttpInvocationSender {
+        sender: Some(invocation_sender),
     };
-    let init_sender = Sender::<HttpInvocationSender>::new(WriteHandle {
-        handle: init_sender,
-    });
 
-    if let Err(error) = init_sender.send(invocation_sender, runtime) {
-        panic!("Could not write to the `init_sender` channel: {}", error);
+    if let Err(error) = init_sender.send(http_invocation_sender, runtime) {
+        panic!("Couldn't write to the `init_sender` channel: {}", error);
     }
     if let Err(error) = init_sender.close(runtime) {
-        panic!("Could not close the `init_sender` channel: {}", error);
+        panic!("Couldn't close the `init_sender` channel: {}", error);
     }
 
     (init_receiver, invocation_receiver)
@@ -758,10 +759,7 @@ impl Node for ClientTesterNode {
             .expect("Could not send the invocation");
 
         // wait for the response to come
-        let response_receiver = crate::io::Receiver::<HttpResponse>::new(ReadHandle {
-            handle: pipe.response_reader,
-        });
-        let response = response_receiver.receive(&runtime);
+        let response = pipe.response_receiver.receive(&runtime);
 
         pipe.close(&runtime);
 
