@@ -152,10 +152,10 @@ gcloud monitoring dashboards list
 1. Build the example, including the Wasm module
 1. Get module SHA256 hash via
    `sha256sum examples/aggregator/bin/aggregator.wasm`
-1. Push the module to GS via `./scripts/push-example -e aggregator`
+1. Push the module to GS via `./scripts/push_example -e aggregator`
 1. Fix the URL and hash in [`./oak_app_manifest.toml`](./oak_app_manifest.toml)
 1. Fix module hash in the following files:
 
 - `examples/aggregator/config.toml`
 - `examples/aggregator/client/cpp/aggregator.cc`
-- `examples/aggregator/module/android/cpp/client.cc`
+- `examples/aggregator/client/android/cpp/client.cc`

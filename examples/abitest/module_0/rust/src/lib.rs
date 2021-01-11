@@ -30,7 +30,7 @@ use oak::{
     ChannelReadStatus, OakError, OakStatus,
 };
 use oak_abi::{
-    label::Label,
+    label::{confidentiality_label, top, Label},
     proto::oak::application::{
         node_configuration::ConfigType, ConfigMap, CryptoConfiguration, NodeConfiguration,
         RoughtimeClientConfiguration, StorageProxyConfiguration,
@@ -242,6 +242,10 @@ impl OakAbiTestService for FrontendNode {
         tests.insert(
             "ChannelReadOrphan",
             (Self::test_channel_read_orphan, Count::Unchanged),
+        );
+        tests.insert(
+            "ChannelReadWithDowngrade",
+            (Self::test_channel_read_with_downgrade, Count::Unchanged),
         );
         tests.insert(
             "ChannelWriteRaw",
@@ -1072,6 +1076,41 @@ impl FrontendNode {
         );
 
         expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
+        Ok(())
+    }
+
+    fn test_channel_read_with_downgrade(&mut self) -> TestResult {
+        let mut buffer = Vec::<u8>::with_capacity(5);
+        let test_msg = vec![0x01, 0x02, 0x03];
+
+        let (public_out_channel, public_in_channel) =
+            oak::channel_create("Public test channel", &Label::public_untrusted())
+                .expect("could not create channel");
+
+        // Test that [`oak::channel_read_with_downgrade`] is successful.
+        oak::channel_write(public_out_channel, &test_msg, &[]).expect("could not write to channel");
+        expect_eq!(
+            Ok(()),
+            oak::channel_read_with_downgrade(public_in_channel, &mut buffer, &mut vec![])
+        );
+        expect_eq!(Ok(()), oak::channel_close(public_out_channel.handle));
+        expect_eq!(Ok(()), oak::channel_close(public_in_channel.handle));
+
+        let (private_out_channel, private_in_channel) =
+            oak::channel_create("Private test channel", &confidentiality_label(top()))
+                .expect("could not create channel");
+
+        // Test that [`oak::channel_read_with_downgrade`] returns
+        // [`OakStatus::ErrPermissionDenied`].
+        oak::channel_write(private_out_channel, &test_msg, &[])
+            .expect("could not write to channel");
+        expect_eq!(
+            Err(OakStatus::ErrPermissionDenied),
+            oak::channel_read_with_downgrade(private_in_channel, &mut buffer, &mut vec![])
+        );
+        expect_eq!(Ok(()), oak::channel_close(private_out_channel.handle));
+        expect_eq!(Ok(()), oak::channel_close(private_in_channel.handle));
+
         Ok(())
     }
 

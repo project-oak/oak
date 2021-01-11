@@ -28,8 +28,16 @@ pub trait ReceiverExt<T: Decodable> {
     /// Attempts to wait for a value on the receiver, blocking if necessary.
     fn receive(&self) -> Result<T, OakError>;
 
+    /// The same as [`receive`](#method.receive), but also applies the current Node's
+    /// downgrade privilege when checking IFC restrictions.
+    fn receive_with_downgrade(&self) -> Result<T, OakError>;
+
     /// Attempts to read a value from the receiver, without blocking.
     fn try_receive(&self) -> Result<T, OakError>;
+
+    /// The same as [`try_receive`](#method.try_receive), but also applies the current Node's
+    /// downgrade privilege when checking IFC restrictions.
+    fn try_receive_with_downgrade(&self) -> Result<T, OakError>;
 
     /// Retrieves the label associated with the underlying channel.
     fn label(&self) -> Result<Label, OakError>;
@@ -153,10 +161,24 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
         }
     }
 
+    fn receive_with_downgrade(&self) -> Result<T, OakError> {
+        self.wait()?;
+        self.try_receive_with_downgrade()
+    }
+
     fn try_receive(&self) -> Result<T, OakError> {
         let mut bytes = Vec::with_capacity(1024);
         let mut handles = Vec::with_capacity(16);
         crate::channel_read(self.handle, &mut bytes, &mut handles)?;
+        // `bytes` and `handles` are moved into `Message`, so there is no extra copy happening here.
+        let message = crate::io::Message { bytes, handles };
+        T::decode(&message)
+    }
+
+    fn try_receive_with_downgrade(&self) -> Result<T, OakError> {
+        let mut bytes = Vec::with_capacity(1024);
+        let mut handles = Vec::with_capacity(16);
+        crate::channel_read_with_downgrade(self.handle, &mut bytes, &mut handles)?;
         // `bytes` and `handles` are moved into `Message`, so there is no extra copy happening here.
         let message = crate::io::Message { bytes, handles };
         T::decode(&message)

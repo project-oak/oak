@@ -132,6 +132,18 @@ extern "C" {
         actual_handle_count: *mut u32,
     ) -> u32;
 
+    /// The same as [`channel_read`](#method.channel_read), but also applies the current Node's
+    /// downgrade privilege when checking IFC restrictions.
+    pub fn channel_read_with_downgrade(
+        handle: u64,
+        buf: *mut u8,
+        size: usize,
+        actual_size: *mut u32,
+        handle_buf: *mut u8,
+        handle_count: u32,
+        actual_handle_count: *mut u32,
+    ) -> u32;
+
     /// Write a message to a channel.
     ///
     /// Write `size` bytes of data from `buf`, together with `handle_count` handles from

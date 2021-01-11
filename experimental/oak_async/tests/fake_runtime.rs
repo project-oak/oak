@@ -113,6 +113,20 @@ pub extern "C" fn channel_read(
     })
 }
 
+/// Stub function necessary for Oak ABI.
+#[no_mangle]
+pub extern "C" fn channel_read_with_downgrade(
+    _handle: Handle,
+    _buf: *mut u8,
+    _size: usize,
+    _actual_size: *mut u32,
+    _handle_buf: *mut u8,
+    _handle_count: u32,
+    _actual_handle_count: *mut u32,
+) -> u32 {
+    0
+}
+
 type ReadyChannelData = VecDeque<Result<Vec<u8>, OakStatus>>;
 
 std::thread_local! {

@@ -68,6 +68,14 @@ pub mod proto {
     }
 }
 
+/// Indicator whether an operation is executed using the Node's label-downgrading privilege or
+/// without it.
+#[derive(Clone, Copy, Debug)]
+enum Downgrading {
+    No,
+    Yes,
+}
+
 // TODO(#544): re-enable relevant SDK tests
 
 // Build a chunk of memory that is suitable for passing to oak_abi::wait_on_channels,
@@ -132,6 +140,27 @@ pub fn channel_read(
     buf: &mut Vec<u8>,
     handles: &mut Vec<Handle>,
 ) -> Result<(), OakStatus> {
+    channel_read_util(half, buf, handles, Downgrading::No)
+}
+
+/// The same as [`channel_read`](#method.channel_read), but also applies the current Node's
+/// downgrade privilege when checking IFC restrictions.
+pub fn channel_read_with_downgrade(
+    half: ReadHandle,
+    buf: &mut Vec<u8>,
+    handles: &mut Vec<Handle>,
+) -> Result<(), OakStatus> {
+    channel_read_util(half, buf, handles, Downgrading::Yes)
+}
+
+/// Helper function used by [`channel_read`](#method.channel_read) and
+/// [`channel_read_with_downgrade`](#method.channel_read_with_downgrade).
+fn channel_read_util(
+    half: ReadHandle,
+    buf: &mut Vec<u8>,
+    handles: &mut Vec<Handle>,
+    downgrade: Downgrading,
+) -> Result<(), OakStatus> {
     // Try reading from the channel twice: first with provided vectors, making
     // use of their available capacity, then with vectors whose capacity has
     // been extended to meet size requirements.
@@ -143,17 +172,30 @@ pub fn channel_read(
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
         let mut actual_handle_count: u32 = 0;
-        let status = OakStatus::from_i32(unsafe {
-            oak_abi::channel_read(
-                half.handle,
-                buf.as_mut_ptr(),
-                buf.capacity(),
-                &mut actual_size,
-                handles_buf.as_mut_ptr(),
-                handles_buf.capacity() as u32 / 8, // Handle count, not byte count
-                &mut actual_handle_count,
-            ) as i32
-        });
+        let status = match downgrade {
+            Downgrading::Yes => OakStatus::from_i32(unsafe {
+                oak_abi::channel_read_with_downgrade(
+                    half.handle,
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    &mut actual_size,
+                    handles_buf.as_mut_ptr(),
+                    handles_buf.capacity() as u32 / 8, // Handle count, not byte count
+                    &mut actual_handle_count,
+                ) as i32
+            }),
+            Downgrading::No => OakStatus::from_i32(unsafe {
+                oak_abi::channel_read(
+                    half.handle,
+                    buf.as_mut_ptr(),
+                    buf.capacity(),
+                    &mut actual_size,
+                    handles_buf.as_mut_ptr(),
+                    handles_buf.capacity() as u32 / 8, // Handle count, not byte count
+                    &mut actual_handle_count,
+                ) as i32
+            }),
+        };
 
         match status {
             Some(s) => match s {

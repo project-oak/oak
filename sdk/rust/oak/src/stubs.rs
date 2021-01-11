@@ -49,6 +49,9 @@ pub extern "C" fn wait_on_channels() {
 pub extern "C" fn channel_read() {
     panic!("stub function invoked!");
 }
+pub extern "C" fn channel_read_with_downgrade() {
+    panic!("stub function invoked!");
+}
 #[no_mangle]
 pub extern "C" fn channel_write() {
     panic!("stub function invoked!");
