@@ -18,8 +18,8 @@ use super::*;
 use maplit::{hashmap, hashset};
 use oak_abi::{
     label::{
-        authorization_bearer_token_hmac_tag, confidentiality_label, public_key_identity_tag,
-        tls_endpoint_tag, web_assembly_module_signature_tag, web_assembly_module_tag, Label,
+        confidentiality_label, public_key_identity_tag, tls_endpoint_tag,
+        web_assembly_module_signature_tag, web_assembly_module_tag, Label,
     },
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, GrpcServerConfiguration,
@@ -126,9 +126,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
 /// Returns a non-trivial label for testing.
 fn test_label() -> Label {
     Label {
-        confidentiality_tags: vec![oak_abi::label::authorization_bearer_token_hmac_tag(&[
-            1, 1, 1,
-        ])],
+        confidentiality_tags: vec![oak_abi::label::public_key_identity_tag(&[1, 1, 1])],
         integrity_tags: vec![],
     }
 }
@@ -176,8 +174,8 @@ fn create_channel_same_label_err() {
 /// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
 fn create_channel_less_confidential_label_err() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let tag_0 = oak_abi::label::public_key_identity_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::public_key_identity_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0, tag_1.clone()],
         integrity_tags: vec![],
@@ -203,9 +201,9 @@ fn create_channel_less_confidential_label_err() {
 /// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
 fn create_channel_less_confidential_label_declassification_err() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
-    let other_tag = oak_abi::label::authorization_bearer_token_hmac_tag(&[3, 3, 3]);
+    let tag_0 = oak_abi::label::public_key_identity_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::public_key_identity_tag(&[2, 2, 2]);
+    let other_tag = oak_abi::label::public_key_identity_tag(&[3, 3, 3]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone(), tag_1.clone()],
         integrity_tags: vec![],
@@ -236,8 +234,8 @@ fn create_channel_less_confidential_label_declassification_err() {
 /// Only Nodes with a public confidentiality label may create other Nodes and Channels.
 #[test]
 fn create_channel_less_confidential_label_no_privilege_err() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let tag_0 = oak_abi::label::public_key_identity_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::public_key_identity_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone(), tag_1.clone()],
         integrity_tags: vec![],
@@ -271,7 +269,7 @@ fn create_channel_less_confidential_label_no_privilege_err() {
 /// Data is always allowed to flow to more confidential labels.
 #[test]
 fn create_channel_with_more_confidential_label_from_public_untrusted_node_ok() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_0 = oak_abi::label::public_key_identity_tag(&[1, 1, 1]);
     let initial_label = &Label::public_untrusted();
     let more_confidential_label = Label {
         confidentiality_tags: vec![tag_0],
@@ -316,7 +314,7 @@ fn create_channel_with_more_confidential_label_from_public_untrusted_node_ok() {
 ///   to the newly added privilege)
 #[test]
 fn create_channel_with_more_confidential_label_from_public_node_with_downgrade_ok() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_0 = oak_abi::label::public_key_identity_tag(&[1, 1, 1]);
     let initial_label = Label::public_untrusted();
     let more_confidential_label = Label {
         confidentiality_tags: vec![tag_0.clone()],
@@ -364,7 +362,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_downgrade_o
 ///   thanks to the infinite privilege)
 #[test]
 fn create_channel_with_more_confidential_label_from_public_node_with_top_privilege_ok() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_0 = oak_abi::label::public_key_identity_tag(&[1, 1, 1]);
     let initial_label = Label::public_untrusted();
     let more_confidential_label = Label {
         confidentiality_tags: vec![tag_0],
@@ -403,8 +401,8 @@ fn create_channel_with_more_confidential_label_from_public_node_with_top_privile
 
 #[test]
 fn create_channel_with_more_confidential_label_from_non_public_node_with_downgrade_err() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let tag_0 = oak_abi::label::public_key_identity_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::public_key_identity_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone()],
         integrity_tags: vec![],
@@ -472,8 +470,8 @@ fn create_node_invalid_configuration_err() {
 /// of any sort, regardless of label.
 #[test]
 fn create_channel_by_nonpublic_node_err() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let tag_0 = oak_abi::label::public_key_identity_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::public_key_identity_tag(&[2, 2, 2]);
     let initial_label = Label {
         confidentiality_tags: vec![tag_0.clone()],
         integrity_tags: vec![],
@@ -506,8 +504,8 @@ fn create_channel_by_nonpublic_node_err() {
 /// succeeds.
 #[test]
 fn create_node_more_confidential_label_ok() {
-    let tag_0 = oak_abi::label::authorization_bearer_token_hmac_tag(&[1, 1, 1]);
-    let tag_1 = oak_abi::label::authorization_bearer_token_hmac_tag(&[2, 2, 2]);
+    let tag_0 = oak_abi::label::public_key_identity_tag(&[1, 1, 1]);
+    let tag_1 = oak_abi::label::public_key_identity_tag(&[2, 2, 2]);
     let initial_label = Label::public_untrusted();
     let more_confidential_label = Label {
         confidentiality_tags: vec![tag_0.clone()],
@@ -650,20 +648,17 @@ fn downgrade_multiple_labels_using_top_privilege() {
 
     let wasm_tag = web_assembly_module_tag(&[1, 2, 3]);
     let signature_tag = web_assembly_module_signature_tag(&[1, 2, 3]);
-    let bearer_token_tag = authorization_bearer_token_hmac_tag(&[1, 2, 3]);
-    let public_key_identity_tag = public_key_identity_tag(vec![1, 2, 3]);
+    let public_key_identity_tag = public_key_identity_tag(&[1, 2, 3]);
     let tls_endpoint_tag = tls_endpoint_tag("google.com");
 
     let wasm_label = confidentiality_label(wasm_tag.clone());
     let signature_label = confidentiality_label(signature_tag.clone());
-    let bearer_token_label = confidentiality_label(bearer_token_tag.clone());
     let public_key_identity_label = confidentiality_label(public_key_identity_tag.clone());
     let tls_endpoint_label = confidentiality_label(tls_endpoint_tag.clone());
     let mixed_label = Label {
         confidentiality_tags: vec![
             wasm_tag,
             signature_tag,
-            bearer_token_tag,
             public_key_identity_tag,
             tls_endpoint_tag,
         ],
@@ -676,9 +671,6 @@ fn downgrade_multiple_labels_using_top_privilege() {
         .flows_to(&Label::public_untrusted()));
     assert!(top_privilege
         .downgrade_label(&signature_label)
-        .flows_to(&Label::public_untrusted()));
-    assert!(top_privilege
-        .downgrade_label(&bearer_token_label)
         .flows_to(&Label::public_untrusted()));
     assert!(top_privilege
         .downgrade_label(&public_key_identity_label)

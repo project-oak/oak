@@ -26,26 +26,11 @@ namespace oak {
 // effectively treated as the name of a custom HTTP header.
 ABSL_CONST_INIT extern const char kOakLabelGrpcMetadataKey[];
 
-// Metadata key used to refer to per-call authorization tokens.
-//
-// Each call may have multiple tokens under the same metadata key, in which case their authorities
-// get combined.
-//
-// Tokens are similar to OAuth2.0 access tokens, in that they grant the client the ability to access
-// data protected by the corresponding policies, for each token provided.
-//
-// See https://tools.ietf.org/html/rfc6750
-ABSL_CONST_INIT extern const char kOakAuthorizationBearerTokenGrpcMetadataKey[];
-
 // Serialized the provided label so that it can be sent as a binary gRPC metadata value.
 std::string SerializeLabel(const oak::label::Label& label_proto);
 
 // Deserializes the provided binary gRPC metadata value into a label.
 oak::label::Label DeserializeLabel(const std::string& label_bytes);
-
-// Creates a label that only allows declassifying data for gRPC clients that can present the
-// provided authorization bearer token.
-oak::label::Label AuthorizationBearerTokenLabel(const std::string& authorization_token_hmac);
 
 // Creates a label having as principal the provided WebAssembly module SHA-256 hash.
 oak::label::Label WebAssemblyModuleHashLabel(const std::string& web_asesemblymodule_hash_sha_256);
@@ -57,6 +42,9 @@ oak::label::Label WebAssemblyModuleSignatureLabel(
 
 // Creates a label having as principal the provided TLS authority (host:port).
 oak::label::Label TlsEndpointLabel(const std::string& authority);
+
+// Creates a label having as principal the provided public key identity.
+oak::label::Label PublicKeyIdentityLabel(const std::string& public_key_identity);
 
 // Creates a public untrusted label, which is the least confidential and least trusted label and
 // applies no confidentiality restrictions to the data contained in the request.

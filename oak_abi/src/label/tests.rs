@@ -24,27 +24,27 @@ fn serialize_deserialize() {
             integrity_tags: vec![],
         },
         Label {
-            confidentiality_tags: vec![authorization_bearer_token_hmac_tag(&[0, 0, 0])],
-            integrity_tags: vec![authorization_bearer_token_hmac_tag(&[1, 1, 1])],
+            confidentiality_tags: vec![public_key_identity_tag(&[0, 0, 0])],
+            integrity_tags: vec![public_key_identity_tag(&[1, 1, 1])],
         },
         Label {
             confidentiality_tags: vec![
-                authorization_bearer_token_hmac_tag(&[0, 0, 0]),
-                authorization_bearer_token_hmac_tag(&[0, 0, 0]),
+                public_key_identity_tag(&[0, 0, 0]),
+                public_key_identity_tag(&[0, 0, 0]),
             ],
             integrity_tags: vec![
-                authorization_bearer_token_hmac_tag(&[1, 1, 1]),
-                authorization_bearer_token_hmac_tag(&[1, 1, 1]),
+                public_key_identity_tag(&[1, 1, 1]),
+                public_key_identity_tag(&[1, 1, 1]),
             ],
         },
         Label {
             confidentiality_tags: vec![
-                authorization_bearer_token_hmac_tag(&[0, 0, 0]),
-                authorization_bearer_token_hmac_tag(&[1, 1, 1]),
+                public_key_identity_tag(&[0, 0, 0]),
+                public_key_identity_tag(&[1, 1, 1]),
             ],
             integrity_tags: vec![
-                authorization_bearer_token_hmac_tag(&[2, 2, 2]),
-                authorization_bearer_token_hmac_tag(&[3, 3, 3]),
+                public_key_identity_tag(&[2, 2, 2]),
+                public_key_identity_tag(&[3, 3, 3]),
             ],
         },
     ];
@@ -57,8 +57,8 @@ fn serialize_deserialize() {
 
 #[test]
 fn label_flow() {
-    let tag_0 = authorization_bearer_token_hmac_tag(&[0, 0, 0]);
-    let tag_1 = authorization_bearer_token_hmac_tag(&[1, 1, 1]);
+    let tag_0 = public_key_identity_tag(&[0, 0, 0]);
+    let tag_1 = public_key_identity_tag(&[1, 1, 1]);
 
     let public_untrusted = Label::public_untrusted();
 

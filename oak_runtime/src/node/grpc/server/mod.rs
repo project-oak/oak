@@ -387,7 +387,7 @@ fn get_user_identity_label(metadata_map: &MetadataMap) -> Result<Label, OakIdent
     })?;
 
     let public_key = verify_signed_challenge(signed_challenge)?;
-    Ok(confidentiality_label(public_key_identity_tag(public_key)))
+    Ok(confidentiality_label(public_key_identity_tag(&public_key)))
 }
 
 /// Verifies the signed challenge retrieved from the gRPC request, and returns the public key if the

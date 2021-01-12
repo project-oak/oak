@@ -103,7 +103,7 @@ fn is_valid_label(_label: &Label) -> bool {
     // (label.confidentiality_tags.len() == 1)
     //     && (if let Some(tag) = &label.confidentiality_tags[0].tag {
     //         match tag {
-    //             tag::Tag::GrpcTag(_) => true,
+    //             tag::Tag::PublicKeyIdentityTag(_) => true,
     //             _ => false,
     //         }
     //     } else {

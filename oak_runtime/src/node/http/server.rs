@@ -374,7 +374,7 @@ impl HttpRequestHandler {
             // If no identity is provided, return public-untrusted
             Label::public_untrusted()
         } else {
-            confidentiality_label(public_key_identity_tag(user_identity))
+            confidentiality_label(public_key_identity_tag(&user_identity))
         };
 
         // Create a pair of temporary channels to pass the HTTP request to the Oak Node, and

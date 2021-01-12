@@ -25,7 +25,6 @@ cc_library(
     hdrs = ["application_client.h"],
     visibility = ["//visibility:public"],
     deps = [
-        ":authorization_bearer_token_metadata",
         ":label_metadata",
         "//oak/common:hmac",
         "//oak/common:nonce_generator",
@@ -42,18 +41,6 @@ cc_library(
     deps = [
         "//oak/common:label",
         "//oak_abi/proto:label_cc_proto",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/base",
-    ],
-)
-
-cc_library(
-    name = "authorization_bearer_token_metadata",
-    srcs = ["authorization_bearer_token_metadata.cc"],
-    hdrs = ["authorization_bearer_token_metadata.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//oak/common:label",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/base",
     ],
