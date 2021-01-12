@@ -27,11 +27,6 @@ namespace oak {
 // Keep in sync with /oak_runtime/src/node/grpc/server/mod.rs.
 const char kOakLabelGrpcMetadataKey[] = "x-oak-label-bin";
 
-// The `-bin` suffix allows sending binary data for this metadata key.
-//
-// See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
-const char kOakPublicKeyIdentityGrpcMetadataKey[] = "x-oak-public-key-identity-bin";
-
 std::string SerializeLabel(const oak::label::Label& label_proto) {
   return label_proto.SerializeAsString();
 }

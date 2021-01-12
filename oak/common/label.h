@@ -26,9 +26,6 @@ namespace oak {
 // effectively treated as the name of a custom HTTP header.
 ABSL_CONST_INIT extern const char kOakLabelGrpcMetadataKey[];
 
-// Metadata key used to refer to public key identity.
-ABSL_CONST_INIT extern const char kOakPublicKeyIdentityGrpcMetadataKey[];
-
 // Serialized the provided label so that it can be sent as a binary gRPC metadata value.
 std::string SerializeLabel(const oak::label::Label& label_proto);
 

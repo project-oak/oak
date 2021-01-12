@@ -21,7 +21,6 @@
 #include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/label_metadata.h"
-#include "oak/client/public_key_identity_metadata.h"
 #include "oak/common/label.h"
 #include "oak/common/nonce_generator.h"
 #include "oak/common/utils.h"
@@ -35,16 +34,6 @@ namespace oak {
 // TODO(#752): Verify remote attestations.
 class ApplicationClient {
  public:
-  // Creates gRPC channel credentials by using the provided public key identity.
-  static std::shared_ptr<grpc::CallCredentials> public_key_identity_call_credentials(
-      const std::string& public_key_identity) {
-    return grpc::CompositeCallCredentials(
-        grpc::MetadataCredentialsFromPlugin(
-            absl::make_unique<PublicKeyIdentityMetadata>(public_key_identity)),
-        grpc::MetadataCredentialsFromPlugin(
-            absl::make_unique<LabelMetadata>(PublicKeyIdentityLabel(public_key_identity))));
-  }
-
   // Returns a grpc Channel connecting to the specified address initialised with the following
   // composite channel credentials:
   // - Channel credentials, which should usually be TLS credentials

@@ -26,7 +26,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":label_metadata",
-        ":public_key_identity_metadata",
         "//oak/common:hmac",
         "//oak/common:nonce_generator",
         "//oak/common:utils",
@@ -44,18 +43,5 @@ cc_library(
         "//oak_abi/proto:label_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/base",
-    ],
-)
-
-cc_library(
-    name = "public_key_identity_metadata",
-    srcs = ["public_key_identity_metadata.cc"],
-    hdrs = ["public_key_identity_metadata.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//oak/common:label",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/base",
-        "@com_google_absl//absl/status",
     ],
 )
