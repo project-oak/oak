@@ -994,7 +994,7 @@
             <span class="comment">// If no identity is provided, return public-untrusted</span>
             <span class="ident">Label</span>::<span class="ident">public_untrusted</span>()
         } <span class="kw">else</span> {
-            <span class="ident">confidentiality_label</span>(<span class="ident">public_key_identity_tag</span>(<span class="ident">user_identity</span>))
+            <span class="ident">confidentiality_label</span>(<span class="ident">public_key_identity_tag</span>(<span class="kw-2">&amp;</span><span class="ident">user_identity</span>))
         };
 
         <span class="comment">// Create a pair of temporary channels to pass the HTTP request to the Oak Node, and</span>
