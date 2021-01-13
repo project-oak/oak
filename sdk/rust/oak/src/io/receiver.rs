@@ -48,6 +48,10 @@ pub trait ReceiverExt<T: Decodable> {
     /// the Oak Runtime is terminating.
     fn wait(&self) -> Result<ChannelReadStatus, OakStatus>;
 
+    /// The same as [`wait`](#method.wait), but also applies the current Node's downgrade privilege
+    /// when checking IFC restrictions.
+    fn wait_with_downgrade(&self) -> Result<ChannelReadStatus, OakStatus>;
+
     /// Consumes the receiver and returns an iterator that will block waiting for messages. It will
     /// return None when the node terminates, or a non-transient error occurs when reading from the
     /// channel. Transient errors will be silently ignored by this iterator, including cases in
@@ -162,7 +166,7 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
     }
 
     fn receive_with_downgrade(&self) -> Result<T, OakError> {
-        self.wait()?;
+        self.wait_with_downgrade()?;
         self.try_receive_with_downgrade()
     }
 
@@ -216,6 +220,39 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
             }
             Err(status) => {
                 error!("Should never get here. `wait_on_channels` should never return {:?}.", status);
+                Err(OakStatus::ErrInternal)
+            }
+        }
+    }
+
+    fn wait_with_downgrade(&self) -> Result<ChannelReadStatus, OakStatus> {
+        // TODO(#500): Consider creating the handle notification space once and for all in `new`.
+        let read_handles = vec![self.handle];
+        let mut space = crate::new_handle_space(&read_handles);
+        crate::prep_handle_space(&mut space);
+        let status = unsafe {
+            oak_abi::wait_on_channels_with_downgrade(space.as_mut_ptr(), read_handles.len() as u32)
+        };
+
+        match crate::result_from_status(status as i32, ()) {
+            Ok(()) => space
+                .get(oak_abi::SPACE_BYTES_PER_HANDLE - 1)
+                .cloned()
+                .map(i32::from)
+                .and_then(ChannelReadStatus::from_i32)
+                .ok_or_else(|| {
+                    error!(
+                        "Should never get here. `wait_on_channels_with_downgrade` always yields a valid `ChannelReadStatus` if the returned status is not Err(OakStatus::ErrTerminated)."
+                    );
+                    OakStatus::ErrInternal
+                }),
+            Err(OakStatus::ErrTerminated) => Err(OakStatus::ErrTerminated),
+            Err(OakStatus::ErrInvalidArgs) => {
+                error!("Should never get here. `ErrInvalidArgs` here indicates that `space` is corrupted.");
+                Err(OakStatus::ErrInternal)
+            }
+            Err(status) => {
+                error!("Should never get here. `wait_on_channels_with_downgrade` should never return {:?}.", status);
                 Err(OakStatus::ErrInternal)
             }
         }

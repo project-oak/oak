@@ -292,16 +292,20 @@ impl OakAbiTestService for FrontendNode {
             (Self::test_channel_chain_recovered, Count::Unchanged),
         );
         tests.insert(
-            "WaitOnChannelsRaw",
-            (Self::test_channel_wait_raw, Count::Unchanged),
-        );
-        tests.insert(
             "WaitOnChannels",
             (Self::test_channel_wait, Count::Unchanged),
         );
         tests.insert(
             "WaitOnChannelsOrphan",
             (Self::test_channel_wait_orphan, Count::Unchanged),
+        );
+        tests.insert(
+            "WaitOnChannelsWithDowngrade",
+            (Self::test_channel_wait_with_downgrade, Count::Unchanged),
+        );
+        tests.insert(
+            "WaitOnChannelsRaw",
+            (Self::test_channel_wait_raw, Count::Unchanged),
         );
         tests.insert("NodeCreate", (Self::test_node_create, Count::Unchanged));
         tests.insert(
@@ -1665,6 +1669,41 @@ impl FrontendNode {
         expect_eq!(Ok(()), oak::channel_close(in1.handle));
         expect_eq!(Ok(()), oak::channel_close(in2.handle));
         expect_eq!(Ok(()), oak::channel_close(out2.handle));
+        Ok(())
+    }
+
+    fn test_channel_wait_with_downgrade(&mut self) -> TestResult {
+        let test_msg = vec![0x01, 0x02, 0x03];
+
+        let (public_out_channel, public_in_channel) =
+            oak::channel_create("Public test channel", &Label::public_untrusted())
+                .expect("could not create channel");
+
+        // Test that [`oak::wait_on_channels_with_downgrade`] is successful and returns
+        // [`ChannelReadStatus::ReadReady`].
+        oak::channel_write(public_out_channel, &test_msg, &[]).expect("could not write to channel");
+        expect_eq!(
+            vec![ChannelReadStatus::ReadReady],
+            status_convert(oak::wait_on_channels_with_downgrade(&[public_in_channel]))?
+        );
+        expect_eq!(Ok(()), oak::channel_close(public_out_channel.handle));
+        expect_eq!(Ok(()), oak::channel_close(public_in_channel.handle));
+
+        let (private_out_channel, private_in_channel) =
+            oak::channel_create("Private test channel", &confidentiality_label(top()))
+                .expect("could not create channel");
+
+        // Test that [`oak::wait_on_channels_with_downgrade`] returns
+        // [`ChannelReadStatus::PermissionDenied`].
+        oak::channel_write(private_out_channel, &test_msg, &[])
+            .expect("could not write to channel");
+        expect_eq!(
+            vec![ChannelReadStatus::PermissionDenied],
+            status_convert(oak::wait_on_channels_with_downgrade(&[private_in_channel]))?
+        );
+        expect_eq!(Ok(()), oak::channel_close(private_out_channel.handle));
+        expect_eq!(Ok(()), oak::channel_close(private_in_channel.handle));
+
         Ok(())
     }
 

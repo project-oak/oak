@@ -341,7 +341,7 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::wait_on_channels`].
+    /// Calls [`Runtime::wait_on_channels`] without using the Node's privilege.
     pub fn wait_on_channels(
         &self,
         read_handles: &[oak_abi::Handle],
@@ -356,6 +356,28 @@ impl RuntimeProxy {
             .wait_on_channels(self.node_id, read_handles, Downgrading::No);
         debug!(
             "{:?}: wait_on_channels(count={}) -> {:?}",
+            self.get_debug_id(),
+            read_handles.len(),
+            result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::wait_on_channels`] using the Node's privilege.
+    pub fn wait_on_channels_with_downgrade(
+        &self,
+        read_handles: &[oak_abi::Handle],
+    ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+        debug!(
+            "{:?}: wait_on_channels_with_downgrade(count={})",
+            self.get_debug_id(),
+            read_handles.len()
+        );
+        let result = self
+            .runtime
+            .wait_on_channels(self.node_id, read_handles, Downgrading::Yes);
+        debug!(
+            "{:?}: wait_on_channels_with_downgrade(count={}) -> {:?}",
             self.get_debug_id(),
             read_handles.len(),
             result

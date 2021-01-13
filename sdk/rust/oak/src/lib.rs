@@ -133,6 +133,32 @@ pub fn wait_on_channels<R: Borrow<ReadHandle>>(
     }
 }
 
+/// The same as [`wait_on_channels`](#method.wait_on_channels), but also applies the current Node's
+/// downgrade privilege when checking IFC restrictions.
+pub fn wait_on_channels_with_downgrade(
+    handles: &[ReadHandle],
+) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+    let mut space = new_handle_space(handles);
+    unsafe {
+        let status =
+            oak_abi::wait_on_channels_with_downgrade(space.as_mut_ptr(), handles.len() as u32);
+        result_from_status(status as i32, ())?;
+        let mut results = Vec::with_capacity(handles.len());
+        for i in 0..handles.len() {
+            match space
+                .get(i * oak_abi::SPACE_BYTES_PER_HANDLE + (oak_abi::SPACE_BYTES_PER_HANDLE - 1))
+                .cloned()
+                .map(i32::from)
+                .and_then(ChannelReadStatus::from_i32)
+            {
+                Some(status) => results.push(status),
+                None => return Err(OakStatus::Unspecified),
+            }
+        }
+        Ok(results)
+    }
+}
+
 /// Read a message from a channel without blocking.
 ///
 /// It also returns an error if the underlying channel is empty (i.e. not ready to read).
