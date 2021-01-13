@@ -22,13 +22,14 @@
 use crate::{
     io::ReceiverExt,
     node::{
-        http::util::{HttpError, Pipe},
+        http::util::Pipe,
         ConfigurationError, Node, NodePrivilege,
     },
     proto::oak::invocation::HttpInvocationSender,
     RuntimeProxy,
 };
-use core::task::{Context, Poll};
+use anyhow::{anyhow, Context};
+use core::task::Poll;
 use futures_util::stream::Stream;
 use http::{request::Request, response::Response};
 use hyper::{
@@ -79,7 +80,7 @@ impl hyper::server::accept::Accept for TlsServer<'_> {
     /// Poll to accept the next connection.
     fn poll_accept(
         mut self: Pin<&mut Self>,
-        cx: &mut Context,
+        cx: &mut core::task::Context,
     ) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
         let connection = Pin::new(&mut self.acceptor).poll_next(cx);
         match connection {
@@ -309,7 +310,7 @@ impl HttpRequestHandler {
         })
     }
 
-    async fn handle_request(&self, req: Request<Body>) -> Result<Response<Body>, HttpError> {
+    async fn handle_request(&self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
         let request = to_oak_http_request(req).await?;
         match get_oak_label(&request) {
             Ok(oak_label) => {
@@ -322,12 +323,7 @@ impl HttpRequestHandler {
                 debug!("Injecting the request into the Oak Node");
                 let response = self
                     .inject_http_request(request, oak_label)
-                    .map_err(|err| {
-                        HttpError::ChannelOperation(format!(
-                            "Error when injecting the request into the Oak Node: {:?}",
-                            err
-                        ))
-                    })?;
+                    .context("Error when injecting the request into the Oak Node")?;
 
                 response.try_into_hyper_response()
             }
@@ -336,27 +332,21 @@ impl HttpRequestHandler {
                 http::response::Builder::new()
                     .status(StatusCode::BAD_REQUEST)
                     .body(Body::from("Invalid or missing Oak label."))
-                    .map_err(|e| {
-                        HttpError::HttpResponse(format!("Could not create response: {}", e))
-                    })
+                    .context("Couldn't create response")
             }
             Err(HttpError::IdentityVerification(msg)) => {
                 warn!("Could not verify user's identity: {}", msg);
                 http::response::Builder::new()
                     .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from("Could not verify user's identity."))
-                    .map_err(|e| {
-                        HttpError::HttpResponse(format!("Could not create response: {}", e))
-                    })
+                    .body(Body::from("Couldn't verify user's identity."))
+                    .context("Couldn't create response")
             }
             Err(http_err) => {
                 warn!("Internal server error: {:?}", http_err);
                 http::response::Builder::new()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
                     .body(Body::from("Internal server error."))
-                    .map_err(|e| {
-                        HttpError::HttpResponse(format!("Could not create response: {}", e))
-                    })
+                    .context("Couldn't create response")
             }
         }
     }
@@ -368,7 +358,7 @@ impl HttpRequestHandler {
         &self,
         request: HttpRequest,
         request_label: Label,
-    ) -> Result<HttpResponseReceiver, HttpError> {
+    ) -> anyhow::Result<HttpResponseReceiver> {
         let user_identity = get_user_identity(&request)?;
         let user_identity_label = if user_identity.is_empty() {
             // If no identity is provided, return public-untrusted
@@ -418,7 +408,7 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, HttpError> {
     match headers {
         (Some([json_label]), None) => parse_json_label(json_label),
         (None, Some([protobuf_label])) => parse_protobuf_label(protobuf_label),
-        _ => Err(HttpError::RequestLabel(format!(
+        _ => Err(anyhow!(format!(
             "Exactly one request label must be provided via an {} or an {} header.",
             oak_abi::OAK_LABEL_HTTP_JSON_KEY,
             oak_abi::OAK_LABEL_HTTP_PROTOBUF_KEY
@@ -436,7 +426,7 @@ fn get_oak_label(req: &HttpRequest) -> Result<Label, HttpError> {
 ///
 /// Providing the user's identity in the HTTP request is optional, so if a challenge response is
 /// not provided, an empty vector is returned.
-fn get_user_identity(req: &HttpRequest) -> Result<Vec<u8>, HttpError> {
+fn get_user_identity(req: &HttpRequest) -> anyhow::Result<Vec<u8>> {
     let headers = (
         req.headers.as_ref().and_then(|map| {
             map.headers
@@ -454,7 +444,7 @@ fn get_user_identity(req: &HttpRequest) -> Result<Vec<u8>, HttpError> {
         (Some([json_signature]), None) => verify_json_challenge(json_signature),
         (None, Some([protobuf_signature])) => verify_protobuf_challenge(protobuf_signature),
         (None, None) => Ok(vec![]),
-        _ => Err(HttpError::IdentityVerification(format!(
+        _ => Err(anyhow!(format!(
             "At most one signed-challenge must be provided via an {} or an {} header.",
             oak_abi::OAK_SIGNED_CHALLENGE_HTTP_JSON_KEY,
             oak_abi::OAK_SIGNED_CHALLENGE_HTTP_PROTOBUF_KEY
@@ -462,65 +452,40 @@ fn get_user_identity(req: &HttpRequest) -> Result<Vec<u8>, HttpError> {
     }
 }
 
-fn parse_json_label(label_str: &[u8]) -> Result<Label, HttpError> {
-    let label_str = String::from_utf8(label_str.to_vec()).map_err(|err| {
-        HttpError::RequestLabel(format!(
-            "The label must be a valid UTF-8 JSON-formatted string: {}",
-            err
-        ))
-    })?;
-    serde_json::from_str(&label_str)
-        .map_err(|err| HttpError::RequestLabel(format!("Could not parse HTTP label: {}", err)))
+fn parse_json_label(label_str: &[u8]) -> anyhow::Result<Label> {
+    let label_str = String::from_utf8(label_str.to_vec())
+    .context("The label must be a valid UTF-8 JSON-formatted string")?;
+    serde_json::from_str(&label_str).context("Couldn't parse HTTP label")
 }
 
-fn parse_protobuf_label(base64_protobuf_label: &[u8]) -> Result<Label, HttpError> {
-    let protobuf_label = base64::decode(base64_protobuf_label).map_err(|err| {
-        HttpError::RequestLabel(format!("Could not decode Base64 HTTP label: {}", err))
-    })?;
-    Label::decode(&protobuf_label[..])
-        .map_err(|err| HttpError::RequestLabel(format!("Could not parse HTTP label: {}", err)))
+fn parse_protobuf_label(base64_protobuf_label: &[u8]) -> anyhow::Result<Label> {
+    let protobuf_label = base64::decode(base64_protobuf_label)
+        .context("Couldn't decode Base64 HTTP label")?;
+    Label::decode(&protobuf_label[..]).context("Couldn't parse HTTP label")
 }
 
 /// Checks that the input signature (containing the signed challenge and the corresponding public
-/// key) is valid. If the signature is valid, this function returns the public key, otherwise
-/// returns an [`HttpError`].
-fn verify_json_challenge(signature: &[u8]) -> Result<Vec<u8>, HttpError> {
-    let signature = parse_json_signed_challenge(signature.to_vec()).map_err(|err| {
-        HttpError::IdentityVerification(format!(
-            "Could not parse json formatted signed challenge: {:?}",
-            err
-        ))
-    })?;
+/// key) is valid. If the signature is valid, this function returns the public key.
+fn verify_json_challenge(signature: &[u8]) -> anyhow::Result<Vec<u8>> {
+    let signature = parse_json_signed_challenge(signature.to_vec())
+        .context("Couldn't parse json formatted signed challenge")?;
     verify_signed_challenge(signature)
 }
 
 /// Tries to parse the signed challenge retrieved from the HTTP request into an instance of
-/// [`SignedChallenge`]. If not successful, returns an [`HttpError`].
-fn parse_json_signed_challenge(bytes: Vec<u8>) -> Result<SignedChallenge, HttpError> {
-    let signature_str = String::from_utf8(bytes).map_err(|err| {
-        HttpError::IdentityVerification(format!("Could not parse signed challenge: {:?}", err))
-    })?;
-    serde_json::from_str(&signature_str).map_err(|err| {
-        HttpError::IdentityVerification(format!("Malformed signed challenge: {:?}", err))
-    })
+/// [`SignedChallenge`].
+fn parse_json_signed_challenge(bytes: Vec<u8>) -> anyhow::Result<SignedChallenge> {
+    let signature_str = String::from_utf8(bytes).context("Couldn't parse signed challenge")?;
+    serde_json::from_str(&signature_str).context("Malformed signed challenge")
 }
 
 /// Checks that the input signature (containing the signed challenge and the corresponding public
-/// key) is valid. If the signature is valid, this function returns the public key, otherwise it
-/// returns an [`HttpError`].
-fn verify_protobuf_challenge(base64_signature: &[u8]) -> Result<Vec<u8>, HttpError> {
-    let signature_bytes = base64::decode(base64_signature).map_err(|err| {
-        HttpError::IdentityVerification(format!(
-            "Could not decode Base64 signed challenge: {}",
-            err
-        ))
-    })?;
-    let signature = SignedChallenge::decode(&signature_bytes[..]).map_err(|err| {
-        HttpError::IdentityVerification(format!(
-            "Could not parse protobuf encoded signed challenge: {}",
-            err
-        ))
-    })?;
+/// key) is valid. If the signature is valid, this function returns the public key.
+fn verify_protobuf_challenge(base64_signature: &[u8]) -> anyhow::Result<Vec<u8>> {
+    let signature_bytes = base64::decode(base64_signature)
+        .context("Couldn't decode Base64 signed challenge")?;
+    let signature = SignedChallenge::decode(&signature_bytes[..])
+        .context("Couldn't parse protobuf encoded signed challenge")?;
     verify_signed_challenge(signature)
 }
 
@@ -528,7 +493,7 @@ fn verify_protobuf_challenge(base64_signature: &[u8]) -> Result<Vec<u8>, HttpErr
 /// signature is valid.
 fn verify_signed_challenge(
     signature: oak_abi::proto::oak::identity::SignedChallenge,
-) -> Result<Vec<u8>, HttpError> {
+) -> anyhow::Result<Vec<u8>> {
     let hash = oak_sign::get_sha256(oak_abi::OAK_CHALLENGE.as_bytes());
 
     let sig_bundle = oak_sign::SignatureBundle {
@@ -537,13 +502,8 @@ fn verify_signed_challenge(
         hash,
     };
 
-    match sig_bundle.verify() {
-        Ok(()) => Ok(signature.public_key),
-        Err(err) => Err(HttpError::IdentityVerification(format!(
-            "Could not verify the signature: {}.",
-            err
-        ))),
-    }
+    sig_bundle.verify().context("Couldn't verify the signature")?;
+    Ok(signature.public_key)
 }
 
 struct HttpResponseReceiver {
@@ -556,7 +516,7 @@ impl HttpResponseReceiver {
         self.response_receiver.receive(&self.runtime)
     }
 
-    fn try_into_hyper_response(&self) -> Result<Response<Body>, HttpError> {
+    fn try_into_hyper_response(&self) -> anyhow::Result<Response<Body>> {
         info!(
             "Generating response for runtime {} and receiver {:?}.",
             self.runtime.node_id.0, self.response_receiver
@@ -564,31 +524,24 @@ impl HttpResponseReceiver {
         match self.read_response() {
             Ok(http_response) => to_hyper_response(http_response),
             Err(status) => {
-                warn!("Could not read response: {}", status);
+                warn!("Couldn't read response: {}", status);
                 http::response::Builder::new()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
                     .body(Body::empty())
-                    .map_err(|err| {
-                        HttpError::HttpResponse(format!("Could not create response: {}", err))
-                    })
+                    .context("Couldn't create response")
             }
         }
     }
 }
 
 /// Create an instance of Oak HttpRequest from the given hyper Request.
-async fn to_oak_http_request(req: Request<Body>) -> Result<HttpRequest, HttpError> {
+async fn to_oak_http_request(req: Request<Body>) -> anyhow::Result<HttpRequest> {
     let uri = req.uri().to_string();
     let method = req.method().as_str().to_string();
     let headers = Some(HeaderMap::from(req.headers().to_owned()));
     let body = hyper::body::to_bytes(req.into_body())
         .await
-        .map_err(|err| {
-            HttpError::HttpRequest(format!(
-                "Error when reading request body from the connection: {}",
-                err
-            ))
-        })?
+        .context("Error when reading request body from the connection")?
         .to_vec();
 
     Ok(HttpRequest {
@@ -600,7 +553,7 @@ async fn to_oak_http_request(req: Request<Body>) -> Result<HttpRequest, HttpErro
 }
 
 /// Convert an instance of Oak HttpResponse to hyper Response.
-fn to_hyper_response(http_response: HttpResponse) -> Result<Response<Body>, HttpError> {
+fn to_hyper_response(http_response: HttpResponse) -> anyhow::Result<Response<Body>> {
     let mut builder = http::response::Builder::new();
     if let Some(headers) = http_response.headers {
         let headers = headers.into_iter();
@@ -612,5 +565,5 @@ fn to_hyper_response(http_response: HttpResponse) -> Result<Response<Body>, Http
     builder
         .status(http_response.status as u16)
         .body(Body::from(http_response.body))
-        .map_err(|err| HttpError::HttpResponse(format!("Could not build response: {}", err)))
+        .context("Couldn't build response")
 }
