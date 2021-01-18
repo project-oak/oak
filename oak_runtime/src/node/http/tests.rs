@@ -89,7 +89,7 @@ impl Node for RouterNode {
             // Send the newly created invocation to the request channel.
             echo_sender.send(invocation.clone(), &runtime).unwrap();
             if let Err(error) = echo_sender.close(&runtime) {
-                panic!("Could not close the `invocation_sender` channel: {}", error);
+                panic!("Couldn't close the `invocation_sender` channel: {}", error);
             }
             runtime
                 .node_register(
@@ -145,7 +145,7 @@ impl Node for EchoNode {
                 .receiver
                 .unwrap()
                 .receive(&runtime)
-                .expect("Could not receive the request");
+                .expect("Couldn't receive the request");
 
             info!("Got the request: {:?}", request);
             if self.can_reply {
@@ -184,7 +184,7 @@ impl HttpServerTester {
                 &Label::public_untrusted(),
                 invocation_receiver.handle.handle,
             )
-            .expect("Could not create Oak node!");
+            .expect("Couldn't create Oak node!");
 
         HttpServerTester { runtime }
     }
@@ -366,7 +366,7 @@ fn create_runtime() -> RuntimeProxy {
         "../examples/certs/local/local.pem",
         "../examples/certs/local/local.key",
     )
-    .expect("Could not create TLS config from local certs.");
+    .expect("Couldn't create TLS config from local certs.");
     let secure_server_config = crate::SecureServerConfiguration {
         grpc_config: None,
         http_config: Some(crate::HttpConfiguration {
@@ -748,15 +748,15 @@ impl Node for ClientTesterNode {
             confidentiality_label(tls_endpoint_tag(&self.authority))
         };
         // create channel
-        let pipe = Pipe::new(&runtime, &label, &label).expect("Could not create the Pipe");
+        let pipe = Pipe::new(&runtime, &label, &label).expect("Couldn't create the Pipe");
 
         // send the request on invocation_sender
         pipe.insert_message(&runtime, request)
-            .expect("Could not insert HTTP request in the pipe");
+            .expect("Couldn't insert HTTP request in the pipe");
 
         // send the invocation to the HTTP client pseudo-node
         pipe.send_invocation(&runtime, invocation_sender.handle.handle)
-            .expect("Could not send the invocation");
+            .expect("Couldn't send the invocation");
 
         // wait for the response to come
         let response = pipe.response_receiver.receive(&runtime);
