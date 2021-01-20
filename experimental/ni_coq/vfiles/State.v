@@ -21,15 +21,14 @@ Record message := Message {
     rhs : Ensemble handle;   (* a set of read handles being sent *)
     whs : Ensemble handle;   (* a set of write handles being sent *)
 }.
+
 (* etamessage just enumerates the fields of the record, as provided
 * by https://github.com/tchajed/coq-record-update *)
 (* When a new field is added to a record, be sure to add it here as well *)
 Instance etamessage : Settable _ := settable! Message<bytes; rhs; whs>.
 
 (* 
-messages model the messages in the oak impl. found in
-oak/oak_io/src/lib.rs. Note that unlike in the implementation,
-this model separates read and write handles into two different types
+Messages model the messages in the oak impl. found in oak/oak_io/src/lib.rs. 
 *)
 
 Inductive channelStatus: Type := | ValidChannel | ClosedChannel.
@@ -65,9 +64,12 @@ Inductive call: Type :=
         (* returns the label of the calling node *)
     | ChannelLabelRead (h: handle): call
         (* returns the label of the target handle *)
-    | Internal: call. (* this is any action done by the node other than some
-                         ABI call, it is "internal" to the node because it does
-                         not affect the rest of the system*)
+    | Internal: call
+        (* this is any action done by the node other than some
+        ABI call, it is "internal" to the node because it does
+        not affect the rest of the system*)
+    (* The following calls are only in the downgrading implementation *)
+    | WriteChannelDown(h: handle)(m: message)(ell': level): call.
 (* TODO wait_on_channels, channel_close *)
 
 Record node := Node {

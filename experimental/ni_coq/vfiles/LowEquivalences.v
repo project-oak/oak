@@ -147,7 +147,6 @@ Inductive trace_low_eq: @trace_low_eqT (state * (@labeled event)) :=
         state_low_eq ell xs ys ->
         trace_low_eq ell ((xs, xe)::t1) ((ys, ye)::t2).
 
-
 (* An alternative way of specifying security for
    concurrent systems is observational determinism, which says
    that for any two executions that begin from low-equivalent

@@ -20,3 +20,5 @@ vfiles/PossibilisticNI.v
 vfiles/RuntimeModelPS.v
 vfiles/LowEqPS.v
 vfiles/LowProjPS_Thms.v
+vfiles/RuntimeModelDwn.v
+vfiles/EscapeHatchCondition_def.v
