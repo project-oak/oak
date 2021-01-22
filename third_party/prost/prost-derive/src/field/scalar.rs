@@ -671,8 +671,8 @@ impl DefaultValue {
                 }
 
                 // Rust doesn't have a negative literals, so they have to be parsed specially.
-                if value.starts_with('-') {
-                    if let Ok(lit) = syn::parse_str::<Lit>(&value[1..]) {
+                if let Some(stripped) = value.strip_prefix('-') {
+                    if let Ok(lit) = syn::parse_str::<Lit>(stripped) {
                         match lit {
                             Lit::Int(ref lit) if is_i32 && empty_or_is("i32", lit.suffix()) => {
                                 // Initially parse into an i64, so that i32::MIN does not overflow.
