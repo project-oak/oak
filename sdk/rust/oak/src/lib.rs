@@ -18,6 +18,7 @@
 //! underlying Oak platform functionality.
 
 use byteorder::WriteBytesExt;
+use core::borrow::Borrow;
 use log::{debug, error, warn};
 use oak_abi::proto::oak::application::NodeConfiguration;
 use oak_io::{Decodable, Encodable};
@@ -80,11 +81,12 @@ enum Downgrading {
 
 // Build a chunk of memory that is suitable for passing to oak_abi::wait_on_channels,
 // holding the given collection of channel handles.
-fn new_handle_space(handles: &[ReadHandle]) -> Vec<u8> {
+// TODO(#1854): Only accept &[&ReadHandle] once handles are always linear types
+fn new_handle_space<R: Borrow<ReadHandle>>(handles: &[R]) -> Vec<u8> {
     let mut space = Vec::with_capacity(oak_abi::SPACE_BYTES_PER_HANDLE * handles.len());
     for handle in handles {
         space
-            .write_u64::<byteorder::LittleEndian>(handle.handle)
+            .write_u64::<byteorder::LittleEndian>(handle.borrow().handle)
             .unwrap();
         space.push(0x00);
     }
@@ -107,7 +109,10 @@ fn prep_handle_space(space: &mut [u8]) {
 /// This is a convenience wrapper around the [`oak_abi::wait_on_channels`] host
 /// function. This version is easier to use in Rust but is less efficient
 /// (because the notification space is re-created on each invocation).
-pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+// TODO(#1854): Only accept &[&ReadHandle] once handles are always linear types
+pub fn wait_on_channels<R: Borrow<ReadHandle>>(
+    handles: &[R],
+) -> Result<Vec<ChannelReadStatus>, OakStatus> {
     let mut space = new_handle_space(handles);
     unsafe {
         let status = oak_abi::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
@@ -135,28 +140,30 @@ pub fn wait_on_channels(handles: &[ReadHandle]) -> Result<Vec<ChannelReadStatus>
 /// The provided vectors for received data and associated handles will be
 /// resized to accommodate the information in the message; any data already
 /// held in the vectors will be overwritten.
-pub fn channel_read(
-    half: ReadHandle,
+// TODO(#1854): Only accept &ReadHandle once handles are always linear types
+pub fn channel_read<R: Borrow<ReadHandle>>(
+    half: R,
     buf: &mut Vec<u8>,
     handles: &mut Vec<Handle>,
 ) -> Result<(), OakStatus> {
-    channel_read_util(half, buf, handles, Downgrading::No)
+    channel_read_util(half.borrow(), buf, handles, Downgrading::No)
 }
 
 /// The same as [`channel_read`](#method.channel_read), but also applies the current Node's
 /// downgrade privilege when checking IFC restrictions.
-pub fn channel_read_with_downgrade(
-    half: ReadHandle,
+// TODO(#1854): Only accept &ReadHandle once handles are always linear types
+pub fn channel_read_with_downgrade<R: Borrow<ReadHandle>>(
+    half: R,
     buf: &mut Vec<u8>,
     handles: &mut Vec<Handle>,
 ) -> Result<(), OakStatus> {
-    channel_read_util(half, buf, handles, Downgrading::Yes)
+    channel_read_util(half.borrow(), buf, handles, Downgrading::Yes)
 }
 
 /// Helper function used by [`channel_read`](#method.channel_read) and
 /// [`channel_read_with_downgrade`](#method.channel_read_with_downgrade).
 fn channel_read_util(
-    half: ReadHandle,
+    half: &ReadHandle,
     buf: &mut Vec<u8>,
     handles: &mut Vec<Handle>,
     downgrade: Downgrading,
@@ -257,11 +264,16 @@ fn channel_read_util(
 }
 
 /// Write a message to a channel.
-pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Result<(), OakStatus> {
+// TODO(#1854): Only accept &WriteHandle once handles are always linear types
+pub fn channel_write<W: Borrow<WriteHandle>>(
+    half: W,
+    buf: &[u8],
+    handles: &[Handle],
+) -> Result<(), OakStatus> {
     let handle_buf = crate::handle::pack(handles);
     let status = unsafe {
         oak_abi::channel_write(
-            half.handle,
+            half.borrow().handle,
             buf.as_ptr(),
             buf.len(),
             handle_buf.as_ptr(),
@@ -273,15 +285,16 @@ pub fn channel_write(half: WriteHandle, buf: &[u8], handles: &[Handle]) -> Resul
 
 /// The same as [`channel_write`](#method.channel_write), but also applies the current Node's
 /// downgrade privilege when checking IFC restrictions.
-pub fn channel_write_with_downgrade(
-    half: WriteHandle,
+// TODO(#1854): Only accept &WriteHandle once handles are always linear types
+pub fn channel_write_with_downgrade<W: Borrow<WriteHandle>>(
+    half: W,
     buf: &[u8],
     handles: &[Handle],
 ) -> Result<(), OakStatus> {
     let handle_buf = crate::handle::pack(handles);
     let status = unsafe {
         oak_abi::channel_write_with_downgrade(
-            half.handle,
+            half.borrow().handle,
             buf.as_ptr(),
             buf.len(),
             handle_buf.as_ptr(),
