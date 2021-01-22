@@ -183,6 +183,13 @@
 <span id="180">180</span>
 <span id="181">181</span>
 <span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -291,11 +298,13 @@
                         <span class="string">&quot;Could not parse request.&quot;</span>,
                         <span class="ident">runtime</span>,
                     );
+                    <span class="kw">return</span>;
                 }
             }
             <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Error reading request: {:?}&quot;</span>, <span class="ident">error</span>);
                 <span class="ident">invocation</span>.<span class="ident">send_error</span>(<span class="ident">Code</span>::<span class="ident">InvalidArgument</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>, <span class="ident">runtime</span>);
+                <span class="kw">return</span>;
             }
         };
 
@@ -364,6 +373,11 @@
                 }
             }
         }
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">channel_close</span>(<span class="ident">handle</span>);
+        <span class="macro">info</span><span class="macro">!</span>(
+            <span class="string">&quot;{} Roughtime pseudo-Node execution complete&quot;</span>,
+            <span class="self">self</span>.<span class="ident">node_name</span>
+        );
     }
 }
 </pre></div>

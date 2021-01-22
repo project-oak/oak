@@ -190,6 +190,13 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// An ApplicationConfiguration represents a unit of deployment in Oak.</span>
 <span class="doccomment">///</span>
@@ -239,7 +246,7 @@
 <span class="doccomment">/// NodeConfiguration indicates the configuration of a created Node.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodeConfiguration</span> {
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;node_configuration::ConfigType&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;1, 2, 3, 4, 5, 6, 7, 8&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;node_configuration::ConfigType&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;1, 2, 3, 4, 5, 6, 7, 8, 9&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">config_type</span>: ::<span class="ident">core</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">node_configuration</span>::<span class="ident">ConfigType</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// Nested message and enum types in `NodeConfiguration`.</span>
@@ -262,6 +269,8 @@
         <span class="ident">HttpServerConfig</span>(<span class="kw">super</span>::<span class="ident">HttpServerConfiguration</span>),
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;8&quot;</span>)]</span>
         <span class="ident">HttpClientConfig</span>(<span class="kw">super</span>::<span class="ident">HttpClientConfiguration</span>),
+        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;9&quot;</span>)]</span>
+        <span class="ident">CryptoConfig</span>(<span class="kw">super</span>::<span class="ident">CryptoConfiguration</span>),
     }
 }
 <span class="doccomment">/// WebAssemblyConfiguration describes the configuration of a Web Assembly based</span>
@@ -353,6 +362,11 @@
     <span class="doccomment">/// to set the privilege of the node.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">authority</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+}
+<span class="doccomment">/// CryptoConfiguration describes the configuration of a cryptographic</span>
+<span class="doccomment">/// pseudo-Node (which is provided by the Oak Runtime).</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CryptoConfiguration</span> {
 }
 <span class="doccomment">/// Information to identify a particular Roughtime server.</span>
 <span class="doccomment">/// Only UDP and Ed25519 public keys are currently supported.</span>

@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["encap",""],["log",""],["roughtime",""]]});
+initSidebarItems({"mod":[["crypto",""],["encap",""],["log",""],["roughtime",""]]});

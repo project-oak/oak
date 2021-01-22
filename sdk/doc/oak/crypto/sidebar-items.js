@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["KeysetFormat","Format of an encrypted keyset."]],"struct":[["Crypto","Local representation of the connection to an external crypto service."]],"type":[["KeysetHandle","Opaque handle for a keyset, which is a collection of key material held by the Oak crypto pseudo-Node."]]});
