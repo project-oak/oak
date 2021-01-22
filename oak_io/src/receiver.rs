@@ -26,7 +26,8 @@ use prost::{
 /// For use when the underlying [`Handle`] is known to be for a receive half.
 ///
 /// [`Handle`]: crate::Handle
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
+#[cfg_attr(not(feature = "linear-handles"), derive(Copy))]
 pub struct Receiver<T: Decodable> {
     pub handle: ReadHandle,
     phantom: std::marker::PhantomData<T>,

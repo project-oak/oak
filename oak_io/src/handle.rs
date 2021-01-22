@@ -22,7 +22,8 @@ use oak_abi::Handle;
 /// Wrapper for a handle to the read half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(PartialEq)]
+#[cfg_attr(not(feature = "linear-handles"), derive(Copy, Clone))]
 pub struct ReadHandle {
     pub handle: Handle,
 }
@@ -42,7 +43,8 @@ impl From<Handle> for ReadHandle {
 /// Wrapper for a handle to the send half of a channel.
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(PartialEq)]
+#[cfg_attr(not(feature = "linear-handles"), derive(Copy, Clone))]
 pub struct WriteHandle {
     pub handle: Handle,
 }
@@ -56,6 +58,67 @@ impl std::fmt::Debug for WriteHandle {
 impl From<Handle> for WriteHandle {
     fn from(handle: Handle) -> Self {
         WriteHandle { handle }
+    }
+}
+
+/// Provides implementations of `Clone` and `Drop` for handle types, based on the `handle_clone` and
+/// `channel_close` ABI syscalls, respectively.
+#[cfg(feature = "linear-handles")]
+mod linear_handles {
+    use super::*;
+    use crate::OakStatus;
+    use log::trace;
+
+    /// Creates a new distinct handle using `oak_abi::clone_handle`
+    impl Clone for ReadHandle {
+        fn clone(&self) -> Self {
+            Self {
+                handle: clone_handle(self.handle),
+            }
+        }
+    }
+
+    /// Creates a new distinct handle using `oak_abi::clone_handle`
+    impl Clone for WriteHandle {
+        fn clone(&self) -> Self {
+            Self {
+                handle: clone_handle(self.handle),
+            }
+        }
+    }
+
+    /// Closes the handle using `oak_abi::channel_close`
+    impl Drop for ReadHandle {
+        fn drop(&mut self) {
+            drop_handle(self.handle);
+        }
+    }
+
+    /// Closes the handle using `oak_abi::channel_close`
+    impl Drop for WriteHandle {
+        fn drop(&mut self) {
+            drop_handle(self.handle);
+        }
+    }
+
+    fn clone_handle(handle: Handle) -> Handle {
+        let mut cloned_handle = 0;
+        let result = OakStatus::from_i32(unsafe {
+            oak_abi::handle_clone(handle, &mut cloned_handle as *mut Handle) as i32
+        })
+        .expect("handle_clone returned invalid oak status");
+        if result != OakStatus::Ok {
+            panic!("Failed to clone handle: {:?}", result);
+        }
+        cloned_handle
+    }
+
+    fn drop_handle(handle: Handle) {
+        // The channel may have already been closed, or it may be invalid due to extracting it for
+        // serialization, so we only log errors here (and at the lowest priority).
+        trace!("Drop handle {}: {}", handle, unsafe {
+            oak_abi::channel_close(handle)
+        });
     }
 }
 
