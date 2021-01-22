@@ -379,10 +379,10 @@ impl<'a> CodeGenerator<'a> {
         }
         self.buf.push_str(&ty);
         if boxed {
-            self.buf.push_str(">");
+            self.buf.push('>');
         }
         if repeated || optional {
-            self.buf.push_str(">");
+            self.buf.push('>');
         }
         self.buf.push_str(",\n");
     }
@@ -699,7 +699,7 @@ impl<'a> CodeGenerator<'a> {
         self.buf.push_str(&to_snake(module));
         self.buf.push_str(" {\n");
 
-        self.package.push_str(".");
+        self.package.push('.');
         self.package.push_str(module);
 
         self.depth += 1;
@@ -828,23 +828,23 @@ impl<'a> CodeGenerator<'a> {
 
 /// Returns `true` if the repeated field type can be packed.
 fn can_pack(field: &FieldDescriptorProto) -> bool {
-    match field.r#type() {
+    matches!(
+        field.r#type(),
         Type::Float
-        | Type::Double
-        | Type::Int32
-        | Type::Int64
-        | Type::Uint32
-        | Type::Uint64
-        | Type::Sint32
-        | Type::Sint64
-        | Type::Fixed32
-        | Type::Fixed64
-        | Type::Sfixed32
-        | Type::Sfixed64
-        | Type::Bool
-        | Type::Enum => true,
-        _ => false,
-    }
+            | Type::Double
+            | Type::Int32
+            | Type::Int64
+            | Type::Uint32
+            | Type::Uint64
+            | Type::Sint32
+            | Type::Sint64
+            | Type::Fixed32
+            | Type::Fixed64
+            | Type::Sfixed32
+            | Type::Sfixed64
+            | Type::Bool
+            | Type::Enum
+    )
 }
 
 /// Based on [`google::protobuf::UnescapeCEscapeString`][1]
@@ -961,8 +961,8 @@ fn unescape_c_escape_string(s: &str) -> Vec<u8> {
 /// It also tries to handle cases where the stripped name would be
 /// invalid - for example, if it were to begin with a number.
 fn strip_enum_prefix<'a>(prefix: &str, name: &'a str) -> &'a str {
-    let stripped = if name.starts_with(prefix) {
-        &name[prefix.len()..]
+    let stripped = if let Some(stripped) = name.strip_prefix(prefix) {
+        stripped
     } else {
         name
     };
