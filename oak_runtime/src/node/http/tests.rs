@@ -495,6 +495,7 @@ fn create_runtime(permissions: PermissionsConfiguration) -> RuntimeProxy {
         &permissions,
         &secure_server_config,
         &signature_table,
+        None,
     )
 }
 

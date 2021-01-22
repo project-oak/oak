@@ -67,6 +67,7 @@ impl RuntimeProxy {
         permissions_configuration: &PermissionsConfiguration,
         secure_server_configuration: &SecureServerConfiguration,
         signature_table: &SignatureTable,
+        kms_credentials: Option<&std::path::PathBuf>,
     ) -> RuntimeProxy {
         let runtime = Arc::new(Runtime {
             terminating: AtomicBool::new(false),
@@ -81,6 +82,7 @@ impl RuntimeProxy {
                 permissions_configuration: permissions_configuration.clone(),
                 secure_server_configuration: secure_server_configuration.clone(),
                 signature_table: signature_table.clone(),
+                kms_credentials: kms_credentials.map(|p| p.to_path_buf()),
             },
         });
         let new_node_name = "implicit.initial";

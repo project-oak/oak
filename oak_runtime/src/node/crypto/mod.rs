@@ -34,12 +34,6 @@ use tokio::sync::oneshot;
 
 mod tinkwrap;
 
-/// Cryptographic pseudo-Node.
-pub struct CryptoNode {
-    node_name: String,
-    tink: tinkwrap::TinkWrapper,
-}
-
 /// Build an [`rpc::Status`] from a [`Code`] and a message.
 pub fn rpc_status(code: Code, msg: String) -> rpc::Status {
     rpc::Status {
@@ -75,12 +69,19 @@ where
     Ok(rsp_data)
 }
 
-impl CryptoNode {
+/// gRPC server implementation for cryptographic pseudo-Node. Held in a separate structure from
+/// [`CryptoNode`] to avoid need for `Send + Sync` support.
+pub struct CryptoNodeServer {
+    node_name: String,
+    tink: tinkwrap::TinkWrapper,
+}
+
+impl CryptoNodeServer {
     /// Creates a new [`CryptoNode`] instance, but does not start it.
-    pub fn new(node_name: &str) -> Self {
+    pub fn new(node_name: &str, kms_credentials: Option<std::path::PathBuf>) -> Self {
         Self {
             node_name: node_name.to_string(),
-            tink: tinkwrap::TinkWrapper::new(),
+            tink: tinkwrap::TinkWrapper::new(kms_credentials),
         }
     }
 
@@ -154,6 +155,22 @@ impl CryptoNode {
     }
 }
 
+/// Cryptographic pseudo-Node.
+pub struct CryptoNode {
+    node_name: String,
+    kms_credentials: Option<std::path::PathBuf>,
+}
+
+impl CryptoNode {
+    /// Creates a new [`CryptoNode`] instance, but does not start it.
+    pub fn new(node_name: &str, kms_credentials: Option<std::path::PathBuf>) -> Self {
+        Self {
+            node_name: node_name.to_string(),
+            kms_credentials,
+        }
+    }
+}
+
 impl super::Node for CryptoNode {
     fn node_type(&self) -> &'static str {
         "crypto"
@@ -168,19 +185,22 @@ impl super::Node for CryptoNode {
 
     /// Main execution loop for the crypto pseudo-Node.
     fn run(
-        mut self: Box<Self>,
+        self: Box<Self>,
         runtime: RuntimeProxy,
         handle: oak_abi::Handle,
         _notify_receiver: oneshot::Receiver<()>,
     ) {
         info!("{}: Starting crypto pseudo-Node", self.node_name);
+
+        let mut server = CryptoNodeServer::new(&self.node_name, self.kms_credentials.clone());
+
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
             debug!("Waiting for gRPC invocation");
             match receiver.receive(&runtime) {
                 Ok(invocation) => {
-                    self.process_invocation(&runtime, &invocation);
+                    server.process_invocation(&runtime, &invocation);
                     invocation.close(&runtime);
                 }
                 Err(OakError::OakStatus(OakStatus::ErrTerminated)) => {

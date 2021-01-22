@@ -508,6 +508,14 @@ impl Cmd {
     }
 }
 
+/// If environment variable `name` is set in the current environment, pass it through
+/// so the same value for `name` is visible when the command is executed.
+fn env_passthru(cmd: &mut tokio::process::Command, name: &str) {
+    if let Ok(v) = std::env::var(name) {
+        cmd.env(name, v);
+    }
+}
+
 impl Runnable for Cmd {
     fn description(&self) -> String {
         format!("{} {}", self.executable, self.args.join(" "))
@@ -526,22 +534,14 @@ impl Runnable for Cmd {
         // General variables.
         cmd.env("HOME", std::env::var("HOME").unwrap());
         cmd.env("PATH", std::env::var("PATH").unwrap());
-        if let Ok(v) = std::env::var("USER") {
-            cmd.env("USER", v);
-        }
+        env_passthru(&mut cmd, "USER");
 
         // Python variables.
-        if let Ok(v) = std::env::var("PYTHONPATH") {
-            cmd.env("PYTHONPATH", v);
-        }
+        env_passthru(&mut cmd, "PYTHONPATH");
 
         // Rust compilation variables.
-        if let Ok(v) = std::env::var("RUSTUP_HOME") {
-            cmd.env("RUSTUP_HOME", v);
-        }
-        if let Ok(v) = std::env::var("CARGO_HOME") {
-            cmd.env("CARGO_HOME", v);
-        }
+        env_passthru(&mut cmd, "RUSTUP_HOME");
+        env_passthru(&mut cmd, "CARGO_HOME");
 
         // Rust runtime variables.
         cmd.env(
@@ -551,15 +551,14 @@ impl Runnable for Cmd {
         cmd.env("RUST_BACKTRACE", "1");
 
         // Emscripten variables.
-        if let Ok(v) = std::env::var("EMSDK") {
-            cmd.env("EMSDK", v);
-        }
-        if let Ok(v) = std::env::var("EM_CACHE") {
-            cmd.env("EM_CACHE", v);
-        }
-        if let Ok(v) = std::env::var("EM_CONFIG") {
-            cmd.env("EM_CONFIG", v);
-        }
+        env_passthru(&mut cmd, "EMSDK");
+        env_passthru(&mut cmd, "EM_CACHE");
+        env_passthru(&mut cmd, "EM_CONFIG");
+
+        // OpenSSL variables.
+        env_passthru(&mut cmd, "PKG_CONFIG_ALLOW_CROSS");
+        env_passthru(&mut cmd, "OPENSSL_STATIC");
+        env_passthru(&mut cmd, "OPENSSL_DIR");
 
         cmd.envs(&self.env);
 

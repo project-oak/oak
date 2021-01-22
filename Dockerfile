@@ -262,6 +262,25 @@ RUN chmod +x ${install_dir}/rust-analyzer
 # its own home folder.
 ENV CARGO_HOME ""
 
+# Build a statically-linked version of OpenSSL with musl
+ENV OPENSSL_DIR /musl
+RUN mkdir ${OPENSSL_DIR}
+
+RUN ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm
+RUN ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic
+RUN ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
+
+ARG openssl_dir=/usr/local/openssl
+RUN mkdir --parents ${openssl_dir}
+RUN curl --location https://github.com/openssl/openssl/archive/OpenSSL_1_1_1f.tar.gz | tar --extract --gzip --directory=${openssl_dir}/
+WORKDIR ${openssl_dir}/openssl-OpenSSL_1_1_1f
+RUN CC="musl-gcc -fPIE -pie" ./Configure no-shared no-async --prefix=/musl --openssldir="${OPENSSL_DIR}/ssl" linux-x86_64
+RUN make depend && make -j"$(nproc)"&& make install_sw install_ssldirs
+
+# Allow the build to find statically built OpenSSL.
+ENV PKG_CONFIG_ALLOW_CROSS 1
+ENV OPENSSL_STATIC 1
+
 # Placeholder args that are expected to be passed in at image build time.
 # See https://code.visualstudio.com/docs/remote/containers-advanced#_creating-a-nonroot-user
 ARG USERNAME=user-name-goes-here

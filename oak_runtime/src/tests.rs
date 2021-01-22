@@ -68,6 +68,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
             http_config: None,
         },
         &signature_table,
+        None,
     );
 
     struct TestNode {

@@ -53,7 +53,10 @@ serde_json = "*"
 sha2 = "^0.9.1"
 tink-core = { version = "^0.1", features = ["json"] }
 tink-aead = "^0.1"
+tink-awskms = "^0.1"
 tink-daead = "^0.1"
+# TODO(#745): sort out clashing dependencies
+# tink-gcpkms = "^0.1"
 tink-mac = "^0.1"
 tink-prf = "^0.1"
 tink-proto = "^0.1"

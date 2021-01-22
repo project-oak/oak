@@ -28,14 +28,25 @@ fn tinkerr(e: tink_core::TinkError) -> rpc::Status {
     rpc_status(Code::Internal, format!("{:?}", e))
 }
 
-/// Wrapper around the Tink cryptographic library which maintains a map
-/// from opaque `u64` values to `[tink_core::keyset::Handle`] objects.
+/// Alias type for a [`tink_core::Aead`] that is backed by a KMS.
+type KmsAead = Box<dyn tink_core::Aead>;
+
+/// Possible types that opaque `u64` API values refer to,
+/// either `[tink_core::keyset::Handle`]s or a [`KmsAead`].
+enum Keyset {
+    Local(tink_core::keyset::Handle),
+    Proxy(KmsAead),
+}
+
+/// Wrapper around the Tink cryptographic library which maintains a map from opaque `u64` values to
+/// objects that can perform cryptographic operations.
 pub struct TinkWrapper {
-    handles: HashMap<u64, tink_core::keyset::Handle>,
+    handles: HashMap<u64, Keyset>,
+    kms_credentials: Option<std::path::PathBuf>,
 }
 
 impl TinkWrapper {
-    pub fn new() -> TinkWrapper {
+    pub fn new(kms_credentials: Option<std::path::PathBuf>) -> TinkWrapper {
         tink_aead::init();
         tink_daead::init();
         tink_mac::init();
@@ -43,26 +54,59 @@ impl TinkWrapper {
         tink_signature::init();
         TinkWrapper {
             handles: HashMap::new(),
+            kms_credentials,
+        }
+    }
+
+    /// Register a [`Keyset`] and return an opaque `u64` that will be used to refer
+    /// to it on the gRPC API.
+    fn register_keyset(&mut self, k: Keyset) -> u64 {
+        loop {
+            let candidate = rand::thread_rng().next_u64();
+            if self.handles.get(&candidate).is_none() {
+                self.handles.insert(candidate, k);
+                return candidate;
+            }
         }
     }
 
     /// Register a [`tink_core::keyset::Handle`] and return an opaque `u64` that will
     /// be used to refer to this keyset on the gRPC API.
     fn register_handle(&mut self, kh: tink_core::keyset::Handle) -> u64 {
-        loop {
-            let candidate = rand::thread_rng().next_u64();
-            if self.handles.get(&candidate).is_none() {
-                self.handles.insert(candidate, kh);
-                return candidate;
-            }
-        }
+        self.register_keyset(Keyset::Local(kh))
+    }
+
+    /// Register a [`KmsAead`] and return an opaque `u64` that will
+    /// be used to refer to it on the gRPC API.
+    fn register_kms_aead(&mut self, aead: KmsAead) -> u64 {
+        self.register_keyset(Keyset::Proxy(aead))
+    }
+
+    /// Retrieve the [`Keyset`] that corresponds to an opaque `u64` value.
+    fn get_keyset(&self, h: u64) -> Result<&Keyset, rpc::Status> {
+        self.handles
+            .get(&h)
+            .ok_or_else(|| rpc_status(Code::InvalidArgument, "unknown keyset handle".to_string()))
+    }
+
+    /// For AEAD operations (only), the opaque `u64` may refer to either a local handle or
+    /// to a KMS-backed AEAD.
+    fn get_aead(&self, h: u64) -> Result<Box<dyn tink_core::Aead>, rpc::Status> {
+        Ok(match self.get_keyset(h)? {
+            Keyset::Local(kh) => tink_aead::new(&kh).map_err(tinkerr)?,
+            Keyset::Proxy(aead) => aead.box_clone(),
+        })
     }
 
     /// Retrieve the [`tink_core::keyset::Handle`] that corresponds to an opaque `u64` value.
     fn get_handle(&self, h: u64) -> Result<&tink_core::keyset::Handle, rpc::Status> {
-        self.handles
-            .get(&h)
-            .ok_or_else(|| rpc_status(Code::InvalidArgument, "unknown keyset handle".to_string()))
+        match self.get_keyset(h)? {
+            Keyset::Local(kh) => Ok(&kh),
+            Keyset::Proxy(_) => Err(rpc_status(
+                Code::InvalidArgument,
+                "wrong keyset type".to_string(),
+            )),
+        }
     }
 
     pub fn generate(
@@ -115,8 +159,7 @@ impl TinkWrapper {
         &self,
         req: crypto::KeysetBindRequest,
     ) -> Result<crypto::KeysetBindResponse, rpc::Status> {
-        let kh = self.get_handle(req.keyset_handle)?;
-        let aead = tink_aead::new(&kh).map_err(tinkerr)?;
+        let aead = self.get_aead(req.keyset_handle)?;
         let inner_kh = self.get_handle(req.inner_keyset_handle)?;
 
         let mut encrypted_keyset = vec![];
@@ -146,8 +189,7 @@ impl TinkWrapper {
         &mut self,
         req: crypto::KeysetUnbindRequest,
     ) -> Result<crypto::KeysetResponse, rpc::Status> {
-        let kh = self.get_handle(req.keyset_handle)?;
-        let aead = tink_aead::new(&kh).map_err(tinkerr)?;
+        let aead = self.get_aead(req.keyset_handle)?;
 
         let inner_kh = match crypto::KeysetFormat::from_i32(req.format) {
             Some(crypto::KeysetFormat::Binary) => read_keyset_with(
@@ -173,22 +215,27 @@ impl TinkWrapper {
     }
 
     pub fn kms_proxy(
-        &self,
-        _req: crypto::KmsProxyRequest,
+        &mut self,
+        req: crypto::KmsProxyRequest,
     ) -> Result<crypto::KeysetResponse, rpc::Status> {
-        // TODO(#745): implement KMS integration
-        Err(rpc_status(Code::Internal, "not implemented".to_string()))
+        let kms_client = self.get_kms_client(&req.kms_identifier).map_err(tinkerr)?;
+        let aead = kms_client.get_aead(&req.kms_identifier).map_err(tinkerr)?;
+
+        let api_handle = self.register_kms_aead(aead);
+        Ok(crypto::KeysetResponse {
+            keyset_handle: api_handle,
+        })
     }
 
     pub fn encrypt(
         &self,
         req: crypto::AeadEncryptRequest,
     ) -> Result<crypto::AeadEncryptResponse, rpc::Status> {
-        let kh = self.get_handle(req.keyset_handle)?;
-        let d = tink_aead::new(&kh).map_err(tinkerr)?;
-        let ct = d
+        let aead = self.get_aead(req.keyset_handle)?;
+        let ct = aead
             .encrypt(&req.plaintext, &req.associated_data)
             .map_err(tinkerr)?;
+
         Ok(crypto::AeadEncryptResponse { ciphertext: ct })
     }
 
@@ -196,9 +243,8 @@ impl TinkWrapper {
         &self,
         req: crypto::AeadDecryptRequest,
     ) -> Result<crypto::AeadDecryptResponse, rpc::Status> {
-        let kh = self.get_handle(req.keyset_handle)?;
-        let d = tink_aead::new(&kh).map_err(tinkerr)?;
-        let pt = d
+        let aead = self.get_aead(req.keyset_handle)?;
+        let pt = aead
             .decrypt(&req.ciphertext, &req.associated_data)
             .map_err(tinkerr)?;
         Ok(crypto::AeadDecryptResponse { plaintext: pt })
@@ -278,6 +324,33 @@ impl TinkWrapper {
         let d = tink_signature::new_verifier(&kh).map_err(tinkerr)?;
         d.verify(&req.signature, &req.data).map_err(tinkerr)?;
         Ok(crypto::SignatureVerifyResponse {})
+    }
+
+    fn get_kms_client(
+        &self,
+        key_uri: &str,
+    ) -> Result<std::sync::Arc<dyn tink_core::registry::KmsClient>, tink_core::TinkError> {
+        if key_uri.starts_with(tink_awskms::AWS_PREFIX) {
+            let g = if let Some(kms_creds) = &self.kms_credentials {
+                tink_awskms::AwsClient::new_with_credentials(key_uri, &kms_creds)?
+            } else {
+                tink_awskms::AwsClient::new(key_uri)?
+            };
+            tink_core::registry::register_kms_client(g);
+            tink_core::registry::get_kms_client(key_uri)
+        /* TODO(#745): sort out clashing dependencies
+        } else if key_uri.starts_with(tink_gcpkms::GCP_PREFIX) {
+            let g = if let Some(kms_creds) = &self.kms_credentials {
+                tink_gcpkms::GcpClient::new_with_credentials(key_uri, &kms_creds)?
+            } else {
+                tink_gcpkms::GcpClient::new(key_uri)?
+            };
+            tink_core::registry::register_kms_client(g);
+            tink_core::registry::get_kms_client(key_uri)
+        */
+        } else {
+            Err("Unrecognized key URI".into())
+        }
     }
 }
 
