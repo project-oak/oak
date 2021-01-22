@@ -73,6 +73,7 @@ Definition low_proj {A: Type} ell ( labeled_thing: @labeled A) :=
 Definition node_low_proj := @low_proj node.
 Definition chan_low_proj := @low_proj channel.
 Definition event_low_proj := @low_proj event.
+Definition down_low_proj := @low_proj down_event.
 
 Definition node_state_low_proj (ell: level)(ns: node_state): node_state :=
     fun id => low_proj ell (ns id).
@@ -96,6 +97,7 @@ Definition low_eq {A: Type} ell (x: @labeled A) (y: @labeled A) :=
 Definition node_low_eq := @low_eq node.
 Definition chan_low_eq := @low_eq channel.
 Definition event_low_eq := @low_eq event.
+Definition down_low_eq := @low_eq down_event.
 Definition node_state_low_eq := fun ell ns1 ns2 =>
     forall nid, (node_state_low_proj ell ns1) nid = (node_state_low_proj ell ns2) nid.
 Definition chan_state_low_eq := fun ell cs1 cs2 =>
@@ -105,7 +107,6 @@ Definition state_low_eq := fun ell s1 s2 =>
         (state_low_proj ell s2).(nodes) nid) /\
     (forall han, (state_low_proj ell s1).(chans) han=
         (state_low_proj ell s2).(chans) han ).
-
 (*============================================================================
 * Trace Low Equivalences
 *===========================================================================*)
