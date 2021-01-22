@@ -25,8 +25,13 @@ const MODULE_WASM_FILE_NAME: &str = "chat.wasm";
 #[serial]
 async fn test_chat() {
     let _ = env_logger::builder().is_test(true).try_init();
+    let permissions = oak_runtime::permissions::PermissionsConfiguration {
+        allow_grpc_server_nodes: true,
+        allow_log_nodes: true,
+        ..Default::default()
+    };
 
-    let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "main")
+    let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "main", permissions)
         .expect("could not configure runtime with test Wasm file");
 
     let room_0_key_pair = oak_sign::KeyPair::generate().expect("could not generate room key pair");

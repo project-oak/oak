@@ -156,8 +156,7 @@ message HttpClientConfiguration {
 
 // CryptoConfiguration describes the configuration of a cryptographic
 // pseudo-Node (which is provided by the Oak Runtime).
-message CryptoConfiguration {
-}
+message CryptoConfiguration {}
 
 // Information to identify a particular Roughtime server.
 // Only UDP and Ed25519 public keys are currently supported.

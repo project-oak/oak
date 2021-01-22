@@ -29,6 +29,7 @@ use std::sync::Arc;
 pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, OakError> {
     let proxy = RuntimeProxy::create_runtime(
         &config.app_config,
+        &config.permissions_config,
         &config.secure_server_configuration,
         &config.sign_table,
     );

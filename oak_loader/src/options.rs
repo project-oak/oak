@@ -23,6 +23,7 @@ use log::debug;
 use oak_abi::proto::oak::application::{ApplicationConfiguration, ConfigMap};
 use oak_runtime::{
     auth::oidc_utils::{parse_client_info_json, ClientInfo},
+    permissions::PermissionsConfiguration,
     tls::Certificate,
     SignatureTable,
 };
@@ -41,6 +42,12 @@ use tonic::transport::Identity;
 pub struct Opt {
     #[structopt(long, help = "Application configuration file.")]
     application: String,
+    // `permissions` file is only required with Logless servers (when `oak_debug` is disabled).
+    #[cfg_attr(
+        not(feature = "oak_debug"),
+        structopt(long, help = "Permissions configuration file.")
+    )]
+    permissions: String,
     #[structopt(long, help = "Private RSA key file used by gRPC server pseudo-Nodes.")]
     grpc_tls_private_key: Option<String>,
     #[structopt(
@@ -123,6 +130,10 @@ pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfigurati
     // Load application configuration.
     let app_config = create_app_config(&opt).context("could not create app config")?;
 
+    // Load permissions configuration.
+    let permissions_config =
+        create_permissions_config(&opt).context("could not create app config")?;
+
     // Create the overall gRPC configuration.
     let secure_server_configuration = create_secure_server_config(&opt)?;
 
@@ -143,6 +154,7 @@ pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfigurati
         },
         secure_server_configuration,
         app_config,
+        permissions_config,
         sign_table,
         config_map,
     };
@@ -313,4 +325,19 @@ fn create_app_config(opt: &Opt) -> anyhow::Result<ApplicationConfiguration> {
         read(&opt.application).context("could not read application configuration")?;
     Ok(ApplicationConfiguration::decode(app_config_data.as_ref())
         .context("could not parse application configuration")?)
+}
+
+/// Parse permissions configuration into an instance of [`PermissionsConfiguration`] in the
+/// non-debug mode, or use a default `PermissionsConfiguration` if `oak_debug` is enabled.
+fn create_permissions_config(opt: &Opt) -> anyhow::Result<PermissionsConfiguration> {
+    if cfg!(feature = "oak_debug") {
+        Ok(PermissionsConfiguration::default())
+    } else {
+        let permissions_config_data =
+            read(&opt.permissions).context("could not read permissions configuration")?;
+        let permissions: PermissionsConfiguration =
+            toml::from_str(std::str::from_utf8(permissions_config_data.as_ref())?)
+                .context("could not parse permissions configuration")?;
+        Ok(permissions)
+    }
 }

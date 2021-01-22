@@ -16,7 +16,10 @@
 
 //! Functionality for different Node types.
 
-use crate::{NodePrivilege, RuntimeProxy, SecureServerConfiguration, SignatureTable};
+use crate::{
+    permissions::PermissionsConfiguration, NodePrivilege, RuntimeProxy, SecureServerConfiguration,
+    SignatureTable,
+};
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, CryptoConfiguration,
     LogConfiguration, NodeConfiguration,
@@ -73,7 +76,7 @@ pub enum NodeIsolation {
     Uncontrolled,
 }
 
-/// A enumeration for errors occuring when creating a new [`Node`] instance.
+/// A enumeration for errors occurring when creating a new [`Node`] instance.
 // TODO(#1027): Improve or delete this enum.
 #[derive(Debug)]
 pub enum ConfigurationError {
@@ -84,6 +87,7 @@ pub enum ConfigurationError {
     IncorrectWebAssemblyModuleName,
     InvalidNodeConfiguration,
     WasmiModuleInializationError(wasmi::Error),
+    NodeCreationNotPermitted,
 }
 
 impl From<AddrParseError> for ConfigurationError {
@@ -108,6 +112,9 @@ impl std::fmt::Display for ConfigurationError {
             ConfigurationError::WasmiModuleInializationError(e) => {
                 write!(f, "Failed to initialize wasmi::Module: {}", e)
             }
+            ConfigurationError::NodeCreationNotPermitted => {
+                write!(f, "Node creation not permitted")
+            }
         }
     }
 }
@@ -116,6 +123,7 @@ impl std::fmt::Display for ConfigurationError {
 /// environments with WebAssembly support.
 pub struct ServerNodeFactory {
     pub application_configuration: ApplicationConfiguration,
+    pub permissions_configuration: PermissionsConfiguration,
     pub secure_server_configuration: SecureServerConfiguration,
     pub signature_table: SignatureTable,
 }
@@ -126,6 +134,15 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
         node_name: &str,
         node_configuration: &NodeConfiguration,
     ) -> Result<Box<dyn Node>, ConfigurationError> {
+        if !self
+            .permissions_configuration
+            .allowed_creation(&node_configuration)
+            // TODO(#1027): Use anyhow or an improved ConfigurationError
+            .map_err(|_| ConfigurationError::InvalidNodeConfiguration)?
+        {
+            return Err(ConfigurationError::NodeCreationNotPermitted);
+        }
+
         match &node_configuration.config_type {
             Some(ConfigType::CryptoConfig(CryptoConfiguration {})) => {
                 Ok(Box::new(crypto::CryptoNode::new(node_name)))

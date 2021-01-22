@@ -28,6 +28,7 @@ use crate::{
     message::Message,
     metrics::Metrics,
     node::{Node, NodeIsolation},
+    permissions::PermissionsConfiguration,
     proto::oak::introspection_events::{
         event::EventDetails, ChannelCreated, Direction, Event, HandleCreated, HandleDestroyed,
         MessageDequeued, MessageEnqueued, NodeCreated, NodeDestroyed,
@@ -75,7 +76,7 @@ mod io;
 mod message;
 mod metrics;
 mod node;
-mod permissions;
+pub mod permissions;
 mod proto;
 mod proxy;
 #[cfg(test)]
@@ -95,6 +96,8 @@ pub struct RuntimeConfiguration {
     pub secure_server_configuration: SecureServerConfiguration,
     /// Application configuration.
     pub app_config: ApplicationConfiguration,
+    /// Permissions configuration.
+    pub permissions_config: PermissionsConfiguration,
     /// Table that contains signatures and public keys corresponding to Oak modules.
     pub sign_table: SignatureTable,
     /// Start-of-day configuration to feed to the running Application.

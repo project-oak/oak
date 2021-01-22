@@ -23,6 +23,7 @@ using the --oidc-client flag:
 ```bash
 cargo run --manifest-path=oak_loader/Cargo.toml -- \
     --application=<APP_CONFIG_PATH> \
+    --permissions=<PERM_CONFIG_PATH_FOR_LOGLESS_SERVERS> \
     --grpc-tls-private-key=<PRIVATE_KEY_PATH> \
     --grpc-tls-certificate=<CERTIFICATE_PATH> \
     --root-tls-certificate=<CERTIFICATE_PATH> \

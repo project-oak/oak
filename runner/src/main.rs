@@ -414,6 +414,7 @@ fn run_ci() -> Step {
             run_tests_tsan(),
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
+                permissions_file: "./examples/permissions/permissions.toml".to_string(),
                 example_name: None,
                 run_server: None,
                 client_additional_args: Vec::new(),
@@ -432,6 +433,7 @@ fn run_ci() -> Step {
             }),
             run_examples(&RunExamples {
                 application_variant: "cpp".to_string(),
+                permissions_file: "./examples/permissions/permissions.toml".to_string(),
                 example_name: None,
                 run_server: None,
                 client_additional_args: Vec::new(),
@@ -451,6 +453,7 @@ fn run_ci() -> Step {
             // Package the Hello World application in a Docker image.
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
+                permissions_file: "./examples/permissions/permissions.toml".to_string(),
                 example_name: Some("hello_world".to_string()),
                 run_server: Some(false),
                 client_additional_args: Vec::new(),
@@ -476,6 +479,7 @@ fn run_example_server(
     example_server: &ExampleServer,
     server_additional_args: Vec<String>,
     application_file: &str,
+    permissions_file: &str,
 ) -> Box<dyn Runnable> {
     Cmd::new_with_env(
         "oak_loader/bin/oak_loader",
@@ -486,6 +490,10 @@ fn run_example_server(
             "--http-tls-private-key=./examples/certs/local/local.key".to_string(),
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
+            match opt.server_variant {
+                ServerVariant::Logless => format!("--permissions={}", permissions_file),
+                _ => "".to_string(),
+            },
             ...match opt.server_variant {
                 ServerVariant::Logless => vec![],
                 _ => vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()],
@@ -573,6 +581,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
         &example.server,
         opt.server_additional_args.clone(),
         &application.out,
+        &opt.permissions_file,
     );
     let run_clients = Step::Multiple {
         name: "run clients".to_string(),
