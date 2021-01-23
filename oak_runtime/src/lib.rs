@@ -463,7 +463,7 @@ impl Runtime {
             if node_info.abi_handles.get(&candidate).is_none() {
                 debug!(
                     "{:?}: new ABI handle {} maps to {:?}",
-                    self.get_node_debug_id(node_id),
+                    node_info.get_debug_id(node_id),
                     candidate,
                     half
                 );
