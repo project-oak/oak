@@ -5,6 +5,7 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 # Build the example client and Application in coverage mode and run them.
+export RUST_LOG=trace
 "${SCRIPTS_DIR}/runner" run-examples --example-name=abitest --server-variant=coverage
 
 # Generate coverage summary
