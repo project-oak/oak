@@ -120,13 +120,8 @@ Inductive stut_trace_low_eq {s_leq: @low_eq_t state}{e_leq: @low_eq_t event_l}:
 * ==========================================================================*)
 (* These are used for downgrading conditions involving *)
 
-(* this is just "map ._2" *)
 Fixpoint extract_downgrade_trace (t: @trace (state * down_l * event_l)):
-        @trace down_l :=
-    match t with
-        | [] => []
-        | (s, d, e) :: ts => d :: (extract_downgrade_trace ts)
-    end.
+    @trace down_l := map (fun '(s, d, e) => d) t.
 
 Inductive down_list_low_eq: level -> list down_l -> list down_l -> Prop :=
     | DwnlNilEQ ell: down_list_low_eq ell [] []
