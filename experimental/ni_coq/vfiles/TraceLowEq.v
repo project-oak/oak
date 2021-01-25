@@ -114,3 +114,37 @@ Inductive stut_trace_low_eq {s_leq: @low_eq_t state}{e_leq: @low_eq_t event_l}:
         event_low_eq ell xe ye ->
         state_low_eq ell xs ys ->
         stut_trace_low_eq ell ((xs, xe)::t1) ((ys, ye)::t2).
+
+(*============================================================================
+* Low Equivalences for escape hatch condition
+* ==========================================================================*)
+(* These are used for downgrading conditions involving *)
+
+Fixpoint extract_downgrade_trace (t: @trace (state * down_l * event_l)):
+    @trace down_l := map (fun '(s, d, e) => d) t.
+
+Inductive down_list_low_eq: level -> list down_l -> list down_l -> Prop :=
+    | DwnlNilEQ ell: down_list_low_eq ell [] []
+    | DwnBothEq ell d1 d2 l1 l2:
+        down_list_low_eq ell l1 l2 ->
+        down_low_eq ell d1 d2 ->
+        down_list_low_eq ell (d1::l1) (d2::l2).
+
+Inductive dwn_t_low_eq: @trace_low_eqT down_l :=
+    | DTNilEq ell: dwn_t_low_eq ell [] []
+    | DTAddBoth ell d1 d2 t1 t2:
+            dwn_t_low_eq ell t1 t2 ->
+            down_low_eq ell d1 d2 ->
+            dwn_t_low_eq ell (d1 :: t1) (d2 :: t2).
+
+Inductive trace_low_eq_down {s_leq: @low_eq_t state}
+        {d_leq: @low_eq_t down_l}{e_leq: @low_eq_t event_l}:
+        @trace_low_eqT (state * down_l * event_l) :=
+    | TDNilEQ ell: trace_low_eq_down ell [] []
+    | TDAddBoth ell s1 s2 d1 d2 e1 e2 t1 t2:
+        trace_low_eq_down ell t1 t2 ->
+        s_leq ell s1 s2 ->
+        d_leq ell d1 d2 ->
+        e_leq ell e1 e2 ->
+        trace_low_eq_down ell ((s1, d1, e1) :: t1) ((s2, d2, e2) :: t2).
+

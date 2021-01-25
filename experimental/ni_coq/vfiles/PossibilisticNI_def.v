@@ -8,8 +8,7 @@ From OakIFC Require Import
     Events
     LowEquivalences
     ModelTypes
-    TraceLowEq
-    Tactics.
+    TraceLowEq.
 (*
 This is the top-level candidate security condition. This is a
 "possibilistic security condition". A possibilistic security condition

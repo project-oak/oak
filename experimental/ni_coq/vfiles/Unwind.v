@@ -125,7 +125,7 @@ Theorem state_upd_node_labeled_unwind: forall ell id n1 n2 s1 s2,
 Proof.
     unfold state_low_eq, state_upd_node_labeled.
     intros; split; logical_simplify.
-    Focus 2. auto.
+    2: { auto. }
     destruct s1, s2. cbv [RecordSet.set State.nodes] in *. simpl.
     intros. do 2 rewrite node_state_proj_index_assoc.
     destruct (dec_eq_nid id nid). 

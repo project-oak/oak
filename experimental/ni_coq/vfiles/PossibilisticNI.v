@@ -10,6 +10,7 @@ From OakIFC Require Import
     State
     Events
     LowEquivalences
+    TraceLowEq
     TraceTheorems
     NIUtilTheorems
     Unwind
@@ -37,7 +38,7 @@ Definition empty_event (ell: level) := Labeled event None ell.
 Theorem trace_leq_imples_head_st_leq: forall ell t1 t2 s1 s2,
     (head_st t1 = Some s1) ->
     (head_st t2 = Some s2) ->
-    (trace_low_eq ell t1 t2) ->
+    (trace_low_eq_pni ell t1 t2) ->
     (state_low_eq ell s1 s2).
 Proof.
     inversion 3. 
