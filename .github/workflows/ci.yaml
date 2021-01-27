@@ -21,6 +21,7 @@ jobs:
           - build-server --server-variant=base
           - build-server --server-variant=logless
           - build-server --server-variant=kms
+          - build-server --server-variant=experimental
           - run-tests
           - run-tests-tsan
           - run-examples --application-variant=rust

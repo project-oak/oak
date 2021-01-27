@@ -23,6 +23,8 @@ members = [
   "private_set_intersection/client/rust",
   "private_set_intersection/main_module/rust",
   "private_set_intersection/handler_module/rust",
+  "proxy_attestation/client/rust",
+  "proxy_attestation/module/rust",
   "translator/grpc",
   "translator/common",
   "translator/module/rust",
@@ -40,6 +42,7 @@ oak_abi = { path = "../oak_abi" }
 oak_client = { path = "../oak_client" }
 oak_derive = { path = "../oak_derive" }
 oak_io = { path = "../oak_io" }
+oak_proxy_attestation = { path = "../experimental/proxy_attestation" }
 oak_runtime = { path = "../oak_runtime" }
 oak_services = { path = "../oak_services" }
 oak_sign = { path = "../oak_sign" }

@@ -28,6 +28,8 @@
 //! ```
 
 use anyhow::Context;
+#[cfg(feature = "oak_attestation")]
+pub mod attestation;
 use log::info;
 mod options;
 use oak_runtime::config::configure_and_run;
@@ -41,7 +43,8 @@ use std::sync::{
 mod tests;
 
 /// Main execution point for the Oak loader.
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     if cfg!(feature = "oak_debug") {
         env_logger::init();
     } else {
@@ -49,7 +52,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     // Create Runtime config.
-    let runtime_configuration = create_runtime_config()?;
+    let runtime_configuration = create_runtime_config().await?;
 
     // Start the Runtime from the given config.
     info!("starting Runtime");

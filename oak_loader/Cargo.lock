@@ -1395,17 +1395,40 @@ dependencies = [
  "anyhow",
  "env_logger",
  "hex",
+ "http",
  "log",
  "maplit",
  "oak_abi",
+ "oak_proxy_attestation",
  "oak_runtime",
  "oak_sign",
+ "openssl",
  "prost",
  "rustls",
  "serde",
  "signal-hook",
  "structopt",
+ "tokio",
  "toml",
+ "tonic",
+]
+
+[[package]]
+name = "oak_proxy_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "http",
+ "log",
+ "oak_utils",
+ "openssl",
+ "prost",
+ "structopt",
+ "tokio",
  "tonic",
 ]
 
@@ -1536,6 +1559,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
 
 [[package]]
+name = "openssl-src"
+version = "111.13.0+1.1.1i"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "045e4dc48af57aad93d665885789b43222ae26f4886494da12d1ed58d309dcb6"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "openssl-sys"
 version = "0.9.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1544,6 +1576,7 @@ dependencies = [
  "autocfg",
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]

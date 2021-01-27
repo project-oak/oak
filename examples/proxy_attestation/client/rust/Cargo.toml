@@ -1,0 +1,34 @@
+[package]
+name = "proxy_attestation_client"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+name = "proxy_attestation_client"
+path = "src/lib.rs"
+
+[[bin]]
+name = "proxy_attestation_client_bin"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "*"
+base64 = "*"
+env_logger = "*"
+http = "*"
+log = "*"
+oak_abi = "=0.1.0"
+oak_client = "=0.1.0"
+oak_proxy_attestation = "*"
+oak_sign = "=0.1.0"
+pem = "*"
+prost = "*"
+structopt = "*"
+# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
+tokio = { version = "0.2", features = ["fs", "macros", "sync", "stream"] }
+tonic = { version = "*", features = ["tls"] }
+
+[build-dependencies]
+oak_utils = "*"
