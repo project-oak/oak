@@ -47,6 +47,7 @@ const RANDOM_GET: usize = 2;
 const CHANNEL_CLOSE: usize = 3;
 const CHANNEL_CREATE: usize = 4;
 const CHANNEL_CREATE_WITH_DOWNGRADE: usize = 5;
+const HANDLE_CLONE: usize = 14;
 const CHANNEL_WRITE: usize = 6;
 const CHANNEL_WRITE_WITH_DOWNGRADE: usize = 7;
 const CHANNEL_READ: usize = 8;
@@ -346,6 +347,35 @@ impl WasmInterface {
             .map_err(|err| {
                 error!(
                     "{}: channel_create_using_creator(): Unable to write reader handle into guest memory: {:?}",
+                    self.pretty_name, err
+                );
+                OakStatus::ErrInvalidArgs
+            })
+    }
+
+    /// Corresponds to the host ABI function [`handle_clone`](https://github.com/project-oak/oak/blob/main/docs/abi.md#handle_clone).
+    fn handle_clone(
+        &mut self,
+        handle: oak_abi::Handle,
+        cloned_handle_out: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        trace!(
+            "{}: handle_clone({}, {})",
+            self.pretty_name,
+            handle,
+            cloned_handle_out,
+        );
+
+        // Check that the address to write the handle to is valid before cloning the handle, or we
+        // risk leaking the handle on failure
+        self.validate_ptr(cloned_handle_out, 8)?;
+
+        let cloned_handle = self.runtime.handle_clone(handle)?;
+        self.get_memory()
+            .set_value(cloned_handle_out, cloned_handle as i64)
+            .map_err(|err| {
+                error!(
+                    "{}: handle_clone(): Unable to write cloned handle into guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
@@ -818,6 +848,9 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(4)?,
                 args.nth_checked(5)?,
             )),
+            HANDLE_CLONE => {
+                map_host_errors(self.handle_clone(args.nth_checked(0)?, args.nth_checked(1)?))
+            }
             CHANNEL_WRITE => map_host_errors(self.channel_write(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
@@ -929,6 +962,16 @@ fn oak_resolve_func(
             wasmi::Signature::new(
                 &[
                     ValueType::I64, // handle
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "handle_clone" => (
+            HANDLE_CLONE,
+            wasmi::Signature::new(
+                &[
+                    ValueType::I64, // handle
+                    ABI_USIZE,      // cloned_handle (out)
                 ][..],
                 Some(ValueType::I32),
             ),

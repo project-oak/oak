@@ -66,6 +66,8 @@ WASM_IMPORT("oak")
 oak_abi::OakStatus channel_label_read(oak_abi::Handle handle, uint8_t* label_buf, size_t label_size,
                                       uint32_t* actual_size);
 WASM_IMPORT("oak")
+oak_abi::OakStatus handle_clone(oak_abi::Handle handle, oak_abi::Handle* cloned_handle);
+WASM_IMPORT("oak")
 oak_abi::OakStatus node_label_read(uint8_t* label_buf, size_t label_size, uint32_t* actual_size);
 WASM_IMPORT("oak")
 oak_abi::OakStatus node_privilege_read(uint8_t* label_buf, size_t label_size,

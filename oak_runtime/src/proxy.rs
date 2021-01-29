@@ -313,6 +313,17 @@ impl RuntimeProxy {
         result
     }
 
+    /// Calls [`Runtime::handle_clone`].
+    pub fn handle_clone(&self, handle: oak_abi::Handle) -> Result<oak_abi::Handle, OakStatus> {
+        debug!("{:?}: handle_clone({:?}", self.node_id, handle,);
+        let result = self.runtime.handle_clone(self.node_id, handle);
+        debug!(
+            "{:?}: handle_clone({:?}) -> {:?}",
+            self.node_id, handle, result
+        );
+        result
+    }
+
     /// See [`Runtime::channel_close`].
     pub fn channel_close(&self, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         debug!("{:?}: channel_close({})", self.get_debug_id(), handle);

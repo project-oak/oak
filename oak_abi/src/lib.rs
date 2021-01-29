@@ -192,6 +192,13 @@ extern "C" {
         label_len: usize,
     ) -> u32;
 
+    /// Create a new distinct handle to the same channel as `handle`.
+    ///
+    /// The new handle value is written to `cloned_handle_out`.
+    ///
+    /// Returns the status of the operation, as an [`OakStatus`] value.
+    pub fn handle_clone(handle: u64, cloned_handle_out: *mut u64) -> u32;
+
     /// Closes the channel identified by `handle`.
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.

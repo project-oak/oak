@@ -70,6 +70,10 @@ pub extern "C" fn channel_close() {
     panic!("stub function invoked!");
 }
 #[no_mangle]
+pub extern "C" fn handle_clone() {
+    panic!("stub function invoked!");
+}
+#[no_mangle]
 pub extern "C" fn node_create() {
     panic!("stub function invoked!");
 }

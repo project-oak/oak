@@ -906,6 +906,20 @@ impl Runtime {
         Ok((write_handle, read_handle))
     }
 
+    /// Creates a new distinct handle to the same channel as `handle`.
+    fn handle_clone(
+        self: &Arc<Self>,
+        node_id: NodeId,
+        handle: oak_abi::Handle,
+    ) -> Result<oak_abi::Handle, OakStatus> {
+        if self.is_terminating() {
+            return Err(OakStatus::ErrTerminated);
+        }
+
+        let cloned_half = self.abi_to_half(node_id, handle)?;
+        Ok(self.new_abi_handle(node_id, cloned_half))
+    }
+
     /// Reads the readable statuses for a slice of `ChannelHalf`s.
     fn readers_statuses(
         &self,
