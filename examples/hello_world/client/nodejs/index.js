@@ -19,10 +19,10 @@ const protobufjs = require('protobufjs');
 const grpc = require('@grpc/grpc-js');
 const grpcProtoLoader = require('@grpc/proto-loader');
 
-const CERT_PATH = __dirname + '/../../../certs/local/ca.pem';
-const SERVICE_PROTO_PATH = __dirname + '/../../proto/hello_world.proto';
-const OAK_LABEL_PROTO_PATH =
-  __dirname + '/../../../../oak_abi/proto/label.proto';
+const REPOSITORY_ROOT = `${__dirname}/../../../..`;
+const CERT_PATH = `${REPOSITORY_ROOT}/examples/certs/local/ca.pem`;
+const OAK_LABEL_PROTO_PATH = `${REPOSITORY_ROOT}/oak_abi/proto/label.proto`;
+const SERVICE_PROTO_PATH = `${REPOSITORY_ROOT}/examples/hello_world/proto/hello_world.proto`;
 
 // Keep in sync with /oak_runtime/src/node/grpc/server/mod.rs.
 const oakLabelGrpcMetadataKey = 'x-oak-label-bin';
