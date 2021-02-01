@@ -18,7 +18,7 @@
 
 use anyhow::{ensure, Context};
 use log::info;
-use oak_abi::label::Label;
+use oak_abi::label::{confidentiality_label, public_key_identity_tag};
 use oak_client::{
     create_tls_channel,
     interceptors::{auth::AuthInterceptor, combine, label::LabelInterceptor},
@@ -74,11 +74,11 @@ async fn main() -> anyhow::Result<()> {
     let channel = create_tls_channel(&uri, &root_tls_certificate)
         .await
         .context("Couldn't create TLS channel")?;
-    let label = Label::public_untrusted();
-    let label_interceptor =
-        LabelInterceptor::create(&label).context("Couldn't create gRPC interceptor")?;
 
     let key_pair = oak_sign::KeyPair::generate()?;
+    let label = confidentiality_label(public_key_identity_tag(&key_pair.pkcs8_public_key()));
+    let label_interceptor =
+        LabelInterceptor::create(&label).context("Couldn't create gRPC interceptor")?;
     let auth_interceptor = AuthInterceptor::create(key_pair);
 
     let interceptor = combine(label_interceptor, auth_interceptor);
