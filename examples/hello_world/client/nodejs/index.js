@@ -53,12 +53,19 @@ async function main() {
 
   const grpcClient = new grpc.Client('localhost:8080', credentials);
 
+  // protobufjs supports rpc services, but does not provide an underlying rpc
+  // implementation. Hence a function implemnting gRPC requests is passed when
+  // creating a client instance of for this service.
+  // Ref: http://protobufjs.github.io/protobuf.js/rpc.Service.html#rpcImpl
   const helloWorld = helloWorldService.create(
     (method, requestData, callback) => {
+      // Ref: https://grpc.github.io/grpc/node/grpc.Client.html#makeUnaryRequest
       grpcClient.makeUnaryRequest(
         `/oak.examples.hello_world.HelloWorld/${method.name}`,
-        (arg) => arg,
-        (arg) => arg,
+        // Serializer and deserializer function required by grpc-js. protobufjs
+        // already implements these, hence we just pass the data through.
+        (requestData) => requestData,
+        (responseData) => responseData,
         requestData,
         getGrpcMetadata(),
         callback
