@@ -34,11 +34,11 @@ async function main() {
 
   function getGrpcMetadata() {
     // TODO(#1097): move this into an SDK package to allow re-use.
-    const OakLabel = protos.lookupType('oak.label.Label');
+    const oakLabel = protos.lookupType('oak.label.Label');
 
     // TODO(#1066): Use a more restrictive Label.
-    const publicUntrustedLabel = OakLabel.create({});
-    const encodedLabel = OakLabel.encode(publicUntrustedLabel).finish();
+    const publicUntrustedLabel = oakLabel.create({});
+    const encodedLabel = oakLabel.encode(publicUntrustedLabel).finish();
 
     const metaData = new grpc.Metadata();
     metaData.add(oakLabelGrpcMetadataKey, encodedLabel);
@@ -53,7 +53,7 @@ async function main() {
 
   const grpcClient = new grpc.Client('localhost:8080', credentials);
 
-  const HelloWorld = helloWorldService.create(
+  const helloWorld = helloWorldService.create(
     (method, requestData, callback) => {
       grpcClient.makeUnaryRequest(
         `/oak.examples.hello_world.HelloWorld/${method.name}`,
@@ -67,7 +67,7 @@ async function main() {
   );
 
   try {
-    const response = await HelloWorld.sayHello({ greeting: 'Node.js' });
+    const response = await helloWorld.sayHello({ greeting: 'Node.js' });
     console.log(response.reply);
     process.exit(0);
   } catch (error) {
