@@ -21,36 +21,81 @@ const grpc = require('@grpc/grpc-js');
 const REPOSITORY_ROOT = `${__dirname}/../../../..`;
 const CERT_PATH = `${REPOSITORY_ROOT}/examples/certs/local/ca.pem`;
 const OAK_LABEL_PROTO_PATH = `${REPOSITORY_ROOT}/oak_abi/proto/label.proto`;
+const OAK_IDENTITY_PROTO_PATH = `${REPOSITORY_ROOT}/oak_abi/proto/identity.proto`;
 const SERVICE_PROTO_PATH = `${REPOSITORY_ROOT}/examples/hello_world/proto/hello_world.proto`;
 
-// Keep in sync with /oak_runtime/src/node/grpc/server/mod.rs.
-const oakLabelGrpcMetadataKey = 'x-oak-label-bin';
+// Keep these in sync with /oak_abi/src/lib.rs
+const OAK_LABEL_GRPC_METADATA_KEY = 'x-oak-label-bin';
+const OAK_SIGNED_CHALLENGE_GRPC_METADATA_KEY =
+  'x-oak-signed-auth-challenge-bin';
+
+// Generated using the command:
+// ```shell
+// cargo run --manifest-path=oak_sign/Cargo.toml -- \
+//     generate \
+//     --private-key=http-test.key \
+//     --public-key=http-test.pub
+// ```
+// TODO(##1859): Generate a key in JS, instead of hardcoding one.
+const PUBLIC_KEY = Buffer.from(
+  'i7g/Mgft/2hsZBGRd+MF4f+Eir2Iyamkch8l4vPgLac=',
+  'base64'
+);
+
+// Generated using the command:
+// ```shell
+// cargo run --manifest-path=oak_sign/Cargo.toml -- \
+//     sign \
+//     --private-key=http-test.key \
+//     --input-string="oak-challenge" \
+//     --signature-file=http-test.sign
+// ```
+// TODO(##1859): Sign the hash in JS, instead of hardcoding this.
+const SIGNED_HASH = Buffer.from(
+  'ijbZOQ9mTtDEQyDEt+G3Rh0E0zwnY6+DkRd7bkllJINJbAhIiss3krdOzWo9d/iz5NJ9XGbp/qutOjAPSBkyDg==',
+  'base64'
+);
 
 async function main() {
   const protos = await protobufjs.load([
     OAK_LABEL_PROTO_PATH,
+    OAK_IDENTITY_PROTO_PATH,
     SERVICE_PROTO_PATH,
   ]);
 
-  function getGrpcMetadata() {
+  function getMetadata() {
+    const metadata = new grpc.Metadata();
+
     // TODO(#1097): move this into an SDK package to allow re-use.
-    const oakLabel = protos.lookupType('oak.label.Label');
-
+    const oakLabelType = protos.lookupType('oak.label.Label');
     // TODO(#1066): Use a more restrictive Label.
-    const publicUntrustedLabel = oakLabel.create({});
-    const encodedLabel = oakLabel.encode(publicUntrustedLabel).finish();
+    const publicUntrustedLabel = oakLabelType.create({});
+    const encodedLabel = oakLabelType.encode(publicUntrustedLabel).finish();
+    metadata.set(OAK_LABEL_GRPC_METADATA_KEY, encodedLabel);
 
-    const metaData = new grpc.Metadata();
-    metaData.add(oakLabelGrpcMetadataKey, encodedLabel);
+    const oakSignedChallengeType = protos.lookupType(
+      'oak.identity.SignedChallenge'
+    );
+    const signedChallenge = oakSignedChallengeType.create({
+      signedHash: SIGNED_HASH,
+      publicKey: PUBLIC_KEY,
+    });
+    const encodedSignedChallenge = oakSignedChallengeType
+      .encode(signedChallenge)
+      .finish();
+    metadata.set(
+      OAK_SIGNED_CHALLENGE_GRPC_METADATA_KEY,
+      encodedSignedChallenge
+    );
 
-    return metaData;
+    return metadata;
   }
 
   const helloWorldService = protos.lookupService(
     'oak.examples.hello_world.HelloWorld'
   );
-  const credentials = grpc.credentials.createSsl(fs.readFileSync(CERT_PATH));
 
+  const credentials = grpc.credentials.createSsl(fs.readFileSync(CERT_PATH));
   const grpcClient = new grpc.Client('localhost:8080', credentials);
 
   // protobufjs supports rpc services, but does not provide an underlying rpc
@@ -67,7 +112,7 @@ async function main() {
         (requestData) => requestData,
         (responseData) => responseData,
         requestData,
-        getGrpcMetadata(),
+        getMetadata(),
         callback
       );
     }
