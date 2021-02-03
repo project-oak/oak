@@ -40,7 +40,7 @@ jobs:
           sudo rm --force /swapfile
           sudo apt clean
           docker rmi $(docker image ls --all --quiet)
-          rm -rf "$AGENT_TOOLSDIRECTORY"
+          rm --recursive --force "$AGENT_TOOLSDIRECTORY"
           df --human-readable
 
       # Build Docker image, caching from the latest version from the remote repository.
