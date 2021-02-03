@@ -15,7 +15,6 @@
 //
 
 use crate::{
-    graph::DotIdentifier,
     message::Message,
     proto::oak::introspection_events::{event::EventDetails, ChannelDestroyed},
     Runtime,
@@ -32,6 +31,12 @@ use std::{
 };
 
 type Messages = VecDeque<Message>;
+
+/// Trait that gives an identifier for a data structure that is suitable for
+/// use with Graphviz/Dot.
+pub trait DotIdentifier {
+    fn dot_id(&self) -> String;
+}
 
 /// A `HashMap` of waiting threads, keyed by `ThreadId`.
 ///

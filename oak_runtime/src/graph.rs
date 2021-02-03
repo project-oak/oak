@@ -16,16 +16,10 @@
 
 /// This module defines a trait and an implementation for representing the [`Runtime`] as
 /// a Graphviz dot graph. This is used in the introspection service.
-use crate::{ChannelHalf, ChannelHalfDirection, NodeId, Runtime};
+use crate::{channel::DotIdentifier, ChannelHalf, ChannelHalfDirection, NodeId, Runtime};
 use itertools::Itertools;
 use log::info;
 use std::{collections::HashSet, fmt::Write, string::String};
-
-/// Trait that gives an identifier for a data structure that is suitable for
-/// use with Graphviz/Dot.
-pub trait DotIdentifier {
-    fn dot_id(&self) -> String;
-}
 
 /// Trait that returns the path at which the debug introspection server will
 /// show a page for a data structure.
