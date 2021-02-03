@@ -120,19 +120,18 @@ impl RuntimeProxy {
             .runtime_health_check
             .set(1);
 
-        if cfg!(feature = "oak_debug") {
-            if let Some(port) = runtime_configuration.introspect_port {
-                self.runtime
-                    .aux_servers
-                    .lock()
-                    .unwrap()
-                    .push(AuxServer::new(
-                        "introspect",
-                        port,
-                        self.runtime.clone(),
-                        crate::introspect::serve,
-                    ));
-            }
+        #[cfg(feature = "oak_debug")]
+        if let Some(port) = runtime_configuration.introspect_port {
+            self.runtime
+                .aux_servers
+                .lock()
+                .unwrap()
+                .push(AuxServer::new(
+                    "introspect",
+                    port,
+                    self.runtime.clone(),
+                    crate::introspect::serve,
+                ));
         }
         if let Some(port) = runtime_configuration.metrics_port {
             self.runtime

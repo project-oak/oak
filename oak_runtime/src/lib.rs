@@ -438,6 +438,7 @@ pub struct Runtime {
     aux_servers: Mutex<Vec<AuxServer>>,
 
     /// Queue of introspection events in chronological order.
+    #[allow(dead_code)]
     introspection_event_queue: Mutex<VecDeque<Event>>,
 
     node_factory: node::ServerNodeFactory,
