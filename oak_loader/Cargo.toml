@@ -11,7 +11,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [features]
-oak_debug = []
+oak_debug = ["oak_runtime/oak_debug"]
 # Enabling this feature enables the feature of the same name in the
 # oak_runtime create. https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 oak_introspection_client = ["oak_runtime/oak_introspection_client"]
@@ -23,7 +23,7 @@ env_logger = "*"
 hex = "*"
 log = "*"
 oak_abi = { path = "../oak_abi" }
-oak_runtime = { path = "../oak_runtime" }
+oak_runtime = { path = "../oak_runtime", default-features = false }
 oak_sign = { path = "../oak_sign" }
 prost = { path = "../third_party/prost" }
 rustls = "*"
