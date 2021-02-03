@@ -36,8 +36,6 @@ jobs:
       - name: Free disk space
         run: |
           df --human-readable
-          sudo swapoff --all
-          sudo rm --force /swapfile
           sudo apt clean
           docker rmi $(docker image ls --all --quiet)
           rm --recursive --force "$AGENT_TOOLSDIRECTORY"
