@@ -32,13 +32,13 @@ jobs:
         uses: actions/checkout@v2
 
       # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
+      # and https://github.com/actions/virtual-environments/issues/709#issuecomment-612569242
       - name: Free disk space
         run: |
           df --human-readable
-          sudo swapoff --all
-          sudo rm --force /swapfile
           sudo apt clean
           docker rmi $(docker image ls --all --quiet)
+          rm --recursive --force "$AGENT_TOOLSDIRECTORY"
           df --human-readable
 
       # Build Docker image, caching from the latest version from the remote repository.
