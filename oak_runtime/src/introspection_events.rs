@@ -14,19 +14,15 @@
 // limitations under the License.
 //
 
-use crate::{
-    proto::oak::introspection_events::{event::EventDetails, Event},
-    Runtime,
-};
-use prost_types::Timestamp;
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::{proto::oak::introspection_events::event::EventDetails, Runtime};
 
-fn current_timestamp() -> Timestamp {
-    let duration_since_unix_epoch = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
+#[cfg(feature = "oak_debug")]
+fn current_timestamp() -> prost_types::Timestamp {
+    let duration_since_unix_epoch = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
         .expect("Time went backwards");
 
-    Timestamp {
+    prost_types::Timestamp {
         seconds: duration_since_unix_epoch.as_secs() as i64,
         nanos: duration_since_unix_epoch.subsec_nanos() as i32,
     }
@@ -38,7 +34,7 @@ impl Runtime {
     /// internal data structures
     #[cfg(feature = "oak_debug")]
     pub fn introspection_event(&self, event_details: EventDetails) {
-        let event = Event {
+        let event = crate::proto::oak::introspection_events::Event {
             timestamp: Some(current_timestamp()),
             event_details: Some(event_details),
         };
@@ -51,5 +47,5 @@ impl Runtime {
 
     /// no-op implementation, introspection events are a debugging feature.
     #[cfg(not(feature = "oak_debug"))]
-    pub fn introspection_event(&self, event_details: EventDetails) {}
+    pub fn introspection_event(&self, _event_details: EventDetails) {}
 }
