@@ -33,6 +33,7 @@ const WASM_MODULE_FILE_NAME: &str = "aggregator.wasm";
 const WASM_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";
 const MODULE_NAME: &str = "app";
 const ENTRYPOINT_NAME: &str = "oak_main";
+const BACKEND_SERVER_URI: &str = "localhost:8888";
 
 async fn submit_sample(
     client: &mut AggregatorClient<tonic::transport::Channel>,
@@ -61,10 +62,18 @@ async fn test_aggregator() {
 
     let module_config = format!(
         "grpc_server_listen_address = \"[::]:8080\"\n\
-         backend_server_address = \"https://localhost:8888\"\n\
+         backend_server_address = \"https://{}\"\n\
          aggregator_module_hash = \"{}\"",
+        BACKEND_SERVER_URI,
         hex::encode(&wasm_module_hash)
     );
+    let permissions = oak_runtime::permissions::PermissionsConfiguration {
+        allow_grpc_server_nodes: true,
+        allow_log_nodes: true,
+        allow_egress_https_authorities: vec![BACKEND_SERVER_URI.to_string()],
+        ..Default::default()
+    };
+
     let config = oak_tests::runtime_config_wasm(
         hashmap! { MODULE_NAME.to_owned() => wasm_module },
         MODULE_NAME,
@@ -74,6 +83,7 @@ async fn test_aggregator() {
                 "config".to_string() => module_config.as_bytes().to_vec()
             },
         },
+        permissions,
         oak_runtime::SignatureTable::default(),
     );
 

@@ -34,7 +34,11 @@ const TRANSLATOR_MODULE_WASM_FILE_NAME: &str = "translator.wasm";
 #[tokio::test(core_threads = 2)]
 async fn test_say_hello() {
     let _ = env_logger::builder().is_test(true).try_init();
-
+    let permissions = oak_runtime::permissions::PermissionsConfiguration {
+        allow_grpc_server_nodes: true,
+        allow_log_nodes: true,
+        ..Default::default()
+    };
     let runtime_config = oak_tests::runtime_config_wasm(
         hashmap! {
             MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_WASM_FILE_NAME, oak_tests::Profile::Release).expect("Couldn't compile main module"),
@@ -43,6 +47,7 @@ async fn test_say_hello() {
         MAIN_MODULE_NAME,
         MAIN_ENTRYPOINT_NAME,
         ConfigMap::default(),
+        permissions,
         oak_runtime::SignatureTable::default(),
     );
     let runtime = oak_runtime::configure_and_run(runtime_config)

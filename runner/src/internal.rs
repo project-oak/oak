@@ -62,6 +62,12 @@ pub struct RunExamples {
         default_value = "rust"
     )]
     pub application_variant: String,
+    #[structopt(
+        long,
+        help = "Path to permissions file",
+        default_value = "./examples/permissions/permissions.toml"
+    )]
+    pub permissions_file: String,
     // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
     #[structopt(
         long,

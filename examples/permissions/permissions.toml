@@ -1,0 +1,11 @@
+allow_grpc_server_nodes = true
+allow_http_server_nodes = true
+allow_log_nodes = true
+allow_insecure_http_egress = true
+allow_egress_authorities = [
+  "localhost:7878",
+  "test.invalid:9999",
+  "localhost:8888",
+  "localhost:8080",
+  "localhost:7856",
+]

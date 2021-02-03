@@ -18,9 +18,9 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    construct_debug_id, metrics::Metrics, AuxServer, ChannelHalfDirection, Downgrading,
-    LabelReadStatus, NodeId, NodeMessage, NodePrivilege, NodeReadStatus, Runtime,
-    SecureServerConfiguration, SignatureTable,
+    construct_debug_id, metrics::Metrics, permissions::PermissionsConfiguration, AuxServer,
+    ChannelHalfDirection, Downgrading, LabelReadStatus, NodeId, NodeMessage, NodePrivilege,
+    NodeReadStatus, Runtime, SecureServerConfiguration, SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -64,6 +64,7 @@ impl RuntimeProxy {
     /// Creates a [`Runtime`] instance with a single initial Node configured, and no channels.
     pub fn create_runtime(
         application_configuration: &ApplicationConfiguration,
+        permissions_configuration: &PermissionsConfiguration,
         secure_server_configuration: &SecureServerConfiguration,
         signature_table: &SignatureTable,
     ) -> RuntimeProxy {
@@ -77,6 +78,7 @@ impl RuntimeProxy {
             metrics_data: Metrics::new(),
             node_factory: crate::node::ServerNodeFactory {
                 application_configuration: application_configuration.clone(),
+                permissions_configuration: permissions_configuration.clone(),
                 secure_server_configuration: secure_server_configuration.clone(),
                 signature_table: signature_table.clone(),
             },

@@ -47,6 +47,13 @@ async fn setup() -> (
     OakAbiTestServiceClient<tonic::transport::Channel>,
 ) {
     let _ = env_logger::builder().is_test(true).try_init();
+    let permissions = oak_runtime::permissions::PermissionsConfiguration {
+        allow_grpc_server_nodes: true,
+        allow_http_server_nodes: true,
+        allow_log_nodes: true,
+        allow_insecure_http_egress: true,
+        allow_egress_https_authorities: vec!["localhost:7856".to_string()],
+    };
 
     let wasm_modules = build_wasm().expect("failed to build wasm modules");
     let config = oak_tests::runtime_config_wasm(
@@ -54,6 +61,7 @@ async fn setup() -> (
         FRONTEND_MODULE_NAME,
         FRONTEND_ENTRYPOINT_NAME,
         ConfigMap::default(),
+        permissions,
         oak_runtime::SignatureTable::default(),
     );
     let runtime =

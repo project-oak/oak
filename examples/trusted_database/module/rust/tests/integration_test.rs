@@ -121,11 +121,17 @@ async fn test_trusted_database() {
         items: hashmap! {"database".to_string() => XML_DATABASE.as_bytes().to_vec()},
     };
     let wasm_modules = build_wasm().expect("Couldn't build wasm modules");
+    let permissions = oak_runtime::permissions::PermissionsConfiguration {
+        allow_grpc_server_nodes: true,
+        allow_log_nodes: true,
+        ..Default::default()
+    };
     let config = oak_tests::runtime_config_wasm(
         wasm_modules,
         MAIN_MODULE_NAME,
         MAIN_ENTRYPOINT_NAME,
         config_map,
+        permissions,
         oak_runtime::SignatureTable::default(),
     );
     let runtime =

@@ -103,8 +103,9 @@ const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(800
 /// the default name "oak_main" for its entrypoint.
 pub fn run_single_module_default(
     module_config_name: &str,
+    permissions: oak_runtime::permissions::PermissionsConfiguration,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakError> {
-    run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME)
+    run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME, permissions)
 }
 
 /// Convenience helper to build and run a single-Node application with the given Wasm module file
@@ -112,8 +113,14 @@ pub fn run_single_module_default(
 pub fn run_single_module(
     module_wasm_file_name: &str,
     entrypoint_name: &str,
+    permissions: oak_runtime::permissions::PermissionsConfiguration,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakError> {
-    run_single_module_with_config(module_wasm_file_name, entrypoint_name, ConfigMap::default())
+    run_single_module_with_config(
+        module_wasm_file_name,
+        entrypoint_name,
+        ConfigMap::default(),
+        permissions,
+    )
 }
 
 /// Convenience helper to build and run a single-Node application with the given Wasm module file
@@ -122,8 +129,14 @@ pub fn run_single_module_with_config(
     module_wasm_file_name: &str,
     entrypoint_name: &str,
     config_map: ConfigMap,
+    permissions: oak_runtime::permissions::PermissionsConfiguration,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakError> {
-    let combined_config = runtime_config(module_wasm_file_name, entrypoint_name, config_map);
+    let combined_config = runtime_config(
+        module_wasm_file_name,
+        entrypoint_name,
+        config_map,
+        permissions,
+    );
     oak_runtime::configure_and_run(combined_config)
 }
 
@@ -134,6 +147,7 @@ pub fn runtime_config(
     module_wasm_file_name: &str,
     entrypoint_name: &str,
     config_map: ConfigMap,
+    permissions: oak_runtime::permissions::PermissionsConfiguration,
 ) -> oak_runtime::RuntimeConfiguration {
     let wasm: HashMap<String, Vec<u8>> = [(
         DEFAULT_MODULE_NAME.to_string(),
@@ -153,6 +167,7 @@ pub fn runtime_config(
         DEFAULT_MODULE_NAME,
         entrypoint_name,
         config_map,
+        permissions,
         oak_runtime::SignatureTable::default(),
     )
 }
@@ -164,6 +179,7 @@ pub fn runtime_config_wasm(
     module_config_name: &str,
     entrypoint_name: &str,
     config_map: ConfigMap,
+    permissions: oak_runtime::permissions::PermissionsConfiguration,
     sign_table: oak_runtime::SignatureTable,
 ) -> oak_runtime::RuntimeConfiguration {
     oak_runtime::RuntimeConfiguration {
@@ -193,6 +209,7 @@ pub fn runtime_config_wasm(
             }),
             module_signatures: vec![],
         },
+        permissions_config: permissions,
         config_map,
         sign_table,
     }

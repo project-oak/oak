@@ -17,6 +17,7 @@
 use crate::{
     io::{channel_create, ReceiverExt, SenderExt},
     node::Node,
+    permissions::PermissionsConfiguration,
     proto::oak::invocation::{HttpInvocation, HttpInvocationSender},
     NodePrivilege, RuntimeProxy,
 };
@@ -172,8 +173,9 @@ impl HttpServerTester {
     /// Test setup. Creates an Oak runtime, a test HTTP server node on the given port, and an Oak
     /// node simulator thread.
     fn new(port: u32) -> HttpServerTester {
-        let runtime = create_runtime();
-        let invocation_receiver = create_server_node(&runtime, port);
+        let runtime = create_runtime(get_permissions());
+        let invocation_receiver =
+            create_server_node(&runtime, port).expect("Couldn't create HTTP server node!");
         let _ = env_logger::builder().is_test(true).try_init();
 
         // Create an Oak node that responds with 200 (OK) to every request it receives.
@@ -200,6 +202,24 @@ fn init_logger() {
     // initialized more than once. Also, if the logger is not initialized, we cannot log an
     // error!
     let _res = env_logger::builder().is_test(true).try_init();
+}
+
+#[cfg(not(feature = "oak_debug"))]
+#[test]
+fn test_cannot_create_server_node_if_not_permitted() {
+    init_logger();
+    let runtime = create_runtime(PermissionsConfiguration::default());
+    let result = create_server_node(&runtime, 8080);
+    assert!(result.is_err())
+}
+
+#[cfg(not(feature = "oak_debug"))]
+#[test]
+fn test_cannot_create_insecure_http_client_node_if_not_permitted() {
+    init_logger();
+    let runtime = create_runtime(PermissionsConfiguration::default());
+    let result = create_client_node(&runtime, "".to_string());
+    assert!(result.is_err())
 }
 
 #[tokio::test]
@@ -356,7 +376,97 @@ async fn test_https_server_can_serve_https_requests_with_user_identity_as_reques
     http_server_tester.cleanup();
 }
 
-fn create_runtime() -> RuntimeProxy {
+#[test]
+fn test_https_client_can_handle_https_requests_to_an_external_service() {
+    init_logger();
+
+    let runtime = create_runtime(get_permissions());
+
+    // Create an HTTP client pseudo-node to serve requests to `https://www.google.com/`. A valid
+    // authority is expected in the URI, so we cannot instead start a server on localhost and use
+    // that as the external service. The HTTP client pseudo-node is created with a communication
+    // channel. A handle to the read half of the channel is returned. The Oak node will use it
+    // to fetch the write handle to an invocation channel for sending the invocations to the
+    // HTTP client pseudo-node.
+    let authority = "www.google.com";
+    let oak_node_init_receiver = create_client_node(&runtime, authority.to_string())
+        .expect("Couldn't create HTTP client node!");
+
+    // Create a sync_channel to be notified when the Oak Node is completed.
+    let (result_sender, result_receiver) = mpsc::sync_channel(1);
+
+    // Create a test Oak node that sends requests to the HTTP client pseudo-node.
+    let client_test_node = ClientTesterNode {
+        uri: "https://www.google.com/".to_string(),
+        result_sender,
+        authority: authority.to_string(),
+    };
+
+    // Register the test Oak node in the runtime.
+    runtime
+        .node_register(
+            Box::new(client_test_node),
+            "client_test_node",
+            &confidentiality_label(tls_endpoint_tag(&authority)),
+            oak_node_init_receiver.handle.handle,
+        )
+        .unwrap();
+
+    // Wait for the test Node to complete execution before terminating the Runtime.
+    let result_value = result_receiver.recv().expect("test node disconnected");
+
+    assert!(result_value.is_ok());
+    let resp = result_value.unwrap();
+    // The test uses a self signed certificate. So, we expect an error that is converted to an
+    // INTERNAL_SERVER_ERROR response in the HTTP client node.
+    assert_eq!(
+        resp.status,
+        http::StatusCode::INTERNAL_SERVER_ERROR.as_u16() as i32
+    );
+    runtime.runtime.stop();
+}
+
+#[test]
+fn test_https_client_can_handle_http_requests_to_an_external_service() {
+    init_logger();
+
+    let runtime = create_runtime(get_permissions());
+    // This is a public node, so the authority can be empty.
+    let empty_authority = "".to_string();
+    // Create an HTTP client pseudo-node to serve `HTTP` requests`.
+    let oak_node_init_receiver =
+        create_client_node(&runtime, empty_authority).expect("Couldn't create HTTP client node!");
+
+    // Create a sync_channel to be notified when the Oak Node is completed.
+    let (result_sender, result_receiver) = mpsc::sync_channel(1);
+
+    // Create a test Oak node that sends requests to the HTTP client pseudo-node.
+    let client_test_node = ClientTesterNode {
+        uri: "http://www.google.com".to_string(),
+        result_sender,
+        authority: "".to_string(),
+    };
+
+    // Register the test Oak node in the runtime.
+    runtime
+        .node_register(
+            Box::new(client_test_node),
+            "client_test_node",
+            &Label::public_untrusted(),
+            oak_node_init_receiver.handle.handle,
+        )
+        .unwrap();
+
+    // Wait for the test Node to complete execution before terminating the Runtime.
+    let result_value = result_receiver.recv().expect("test node disconnected");
+
+    assert!(result_value.is_ok());
+    let resp = result_value.unwrap();
+    assert_eq!(resp.status, http::StatusCode::OK.as_u16() as i32);
+    runtime.runtime.stop();
+}
+
+fn create_runtime(permissions: PermissionsConfiguration) -> RuntimeProxy {
     let configuration = ApplicationConfiguration {
         wasm_modules: hashmap! {},
         initial_node_configuration: None,
@@ -380,10 +490,27 @@ fn create_runtime() -> RuntimeProxy {
     let signature_table = crate::SignatureTable::default();
     info!("Create runtime for test");
 
-    crate::RuntimeProxy::create_runtime(&configuration, &secure_server_config, &signature_table)
+    crate::RuntimeProxy::create_runtime(
+        &configuration,
+        &permissions,
+        &secure_server_config,
+        &signature_table,
+    )
 }
 
-fn create_server_node(runtime: &RuntimeProxy, port: u32) -> Receiver<HttpInvocation> {
+fn get_permissions() -> PermissionsConfiguration {
+    PermissionsConfiguration {
+        allow_http_server_nodes: true,
+        allow_insecure_http_egress: true,
+        allow_egress_https_authorities: vec!["www.google.com".to_string()],
+        ..Default::default()
+    }
+}
+
+fn create_server_node(
+    runtime: &RuntimeProxy,
+    port: u32,
+) -> Result<Receiver<HttpInvocation>, OakStatus> {
     let (init_receiver, invocation_receiver) = create_communication_channel(runtime);
     let server_config = NodeConfiguration {
         config_type: Some(ConfigType::HttpServerConfig(HttpServerConfiguration {
@@ -395,16 +522,14 @@ fn create_server_node(runtime: &RuntimeProxy, port: u32) -> Receiver<HttpInvocat
     // the top of the identity sub-lattice.
     let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
 
-    runtime
-        .node_create(
-            "test_server",
-            &server_config,
-            &top_label,
-            init_receiver.handle.handle,
-        )
-        .expect("Couldn't create HTTP server node!");
+    runtime.node_create(
+        "test_server",
+        &server_config,
+        &top_label,
+        init_receiver.handle.handle,
+    )?;
 
-    invocation_receiver
+    Ok(invocation_receiver)
 }
 
 fn create_communication_channel(
@@ -529,96 +654,11 @@ async fn send_request(
     }
 }
 
-#[test]
-fn test_https_client_can_handle_https_requests_to_an_external_service() {
-    init_logger();
-
-    let runtime = create_runtime();
-
-    // Create an HTTP client pseudo-node to serve requests to `https://www.google.com/`. A valid
-    // authority is expected in the URI, so we cannot instead start a server on localhost and use
-    // that as the external service. The HTTP client pseudo-node is created with a communication
-    // channel. A handle to the read half of the channel is returned. The Oak node will use it
-    // to fetch the write handle to an invocation channel for sending the invocations to the
-    // HTTP client pseudo-node.
-    let authority = "www.google.com";
-    let oak_node_init_receiver = create_client_node(&runtime, authority.to_string());
-
-    // Create a sync_channel to be notified when the Oak Node is completed.
-    let (result_sender, result_receiver) = mpsc::sync_channel(1);
-
-    // Create a test Oak node that sends requests to the HTTP client pseudo-node.
-    let client_test_node = ClientTesterNode {
-        uri: "https://www.google.com/".to_string(),
-        result_sender,
-        authority: authority.to_string(),
-    };
-
-    // Register the test Oak node in the runtime.
-    runtime
-        .node_register(
-            Box::new(client_test_node),
-            "client_test_node",
-            &confidentiality_label(tls_endpoint_tag(&authority)),
-            oak_node_init_receiver.handle.handle,
-        )
-        .unwrap();
-
-    // Wait for the test Node to complete execution before terminating the Runtime.
-    let result_value = result_receiver.recv().expect("test node disconnected");
-
-    assert!(result_value.is_ok());
-    let resp = result_value.unwrap();
-    // The test uses a self signed certificate. So, we expect an error that is converted to an
-    // INTERNAL_SERVER_ERROR response in the HTTP client node.
-    assert_eq!(
-        resp.status,
-        http::StatusCode::INTERNAL_SERVER_ERROR.as_u16() as i32
-    );
-    runtime.runtime.stop();
-}
-
-#[test]
-fn test_https_client_can_handle_http_requests_to_an_external_service() {
-    init_logger();
-
-    let runtime = create_runtime();
-    // This is a public node, so the authority can be empty.
-    let empty_authority = "".to_string();
-    // Create an HTTP client pseudo-node to serve `HTTP` requests`.
-    let oak_node_init_receiver = create_client_node(&runtime, empty_authority);
-
-    // Create a sync_channel to be notified when the Oak Node is completed.
-    let (result_sender, result_receiver) = mpsc::sync_channel(1);
-
-    // Create a test Oak node that sends requests to the HTTP client pseudo-node.
-    let client_test_node = ClientTesterNode {
-        uri: "http://www.google.com".to_string(),
-        result_sender,
-        authority: "".to_string(),
-    };
-
-    // Register the test Oak node in the runtime.
-    runtime
-        .node_register(
-            Box::new(client_test_node),
-            "client_test_node",
-            &Label::public_untrusted(),
-            oak_node_init_receiver.handle.handle,
-        )
-        .unwrap();
-
-    // Wait for the test Node to complete execution before terminating the Runtime.
-    let result_value = result_receiver.recv().expect("test node disconnected");
-
-    assert!(result_value.is_ok());
-    let resp = result_value.unwrap();
-    assert_eq!(resp.status, http::StatusCode::OK.as_u16() as i32);
-    runtime.runtime.stop();
-}
-
 /// Creates an HTTP client pseudo-node in the given Runtime.
-fn create_client_node(runtime: &RuntimeProxy, authority: String) -> Receiver<HttpInvocationSender> {
+fn create_client_node(
+    runtime: &RuntimeProxy,
+    authority: String,
+) -> Result<Receiver<HttpInvocationSender>, OakStatus> {
     let label = if authority.is_empty() {
         Label::public_untrusted()
     } else {
@@ -631,16 +671,14 @@ fn create_client_node(runtime: &RuntimeProxy, authority: String) -> Receiver<Htt
         })),
     };
 
-    runtime
-        .node_create(
-            "test_http_client",
-            &client_config,
-            &label,
-            invocation_receiver.handle.handle,
-        )
-        .expect("Couldn't create HTTP client node!");
+    runtime.node_create(
+        "test_http_client",
+        &client_config,
+        &label,
+        invocation_receiver.handle.handle,
+    )?;
 
-    init_receiver
+    Ok(init_receiver)
 }
 
 /// An HTTP client pseudo-node needs a channel to read `HttpInvocation`s from.

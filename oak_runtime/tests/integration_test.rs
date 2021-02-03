@@ -60,6 +60,10 @@ mod common {
             }),
             module_signatures: vec![],
         };
+        let permissions = oak_runtime::permissions::PermissionsConfiguration {
+            allow_grpc_server_nodes: true,
+            ..Default::default()
+        };
 
         info!("Starting the runtime with one node.");
         config::configure_and_run(oak_runtime::RuntimeConfiguration {
@@ -67,6 +71,7 @@ mod common {
             introspect_port: None,
             secure_server_configuration: SecureServerConfiguration::default(),
             app_config: application_configuration,
+            permissions_config: permissions,
             sign_table: SignatureTable::default(),
             config_map: ConfigMap::default(),
         })

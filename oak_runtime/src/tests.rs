@@ -43,10 +43,16 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         initial_node_configuration: None,
         module_signatures: vec![],
     };
+    let permissions = crate::permissions::PermissionsConfiguration {
+        allow_grpc_server_nodes: true,
+        allow_log_nodes: true,
+        ..Default::default()
+    };
     let signature_table = SignatureTable::default();
     info!("Create runtime for test");
     let proxy = crate::RuntimeProxy::create_runtime(
         &configuration,
+        &permissions,
         &SecureServerConfiguration {
             grpc_config: Some(GrpcConfiguration {
                 grpc_server_tls_identity: Some(Identity::from_pem(

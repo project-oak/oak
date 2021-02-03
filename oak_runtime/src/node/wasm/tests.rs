@@ -15,7 +15,7 @@
 //
 
 use super::*;
-use crate::{RuntimeProxy, SecureServerConfiguration};
+use crate::{permissions::PermissionsConfiguration, RuntimeProxy, SecureServerConfiguration};
 use maplit::hashmap;
 use oak_abi::{
     label::Label,
@@ -50,11 +50,16 @@ fn start_node(
             return Err(OakStatus::ErrInvalidArgs);
         }
     }
+    let permissions = PermissionsConfiguration {
+        allow_grpc_server_nodes: true,
+        ..Default::default()
+    };
     let signature_table = SignatureTable {
         values: hashmap! { module_hash => signatures.to_vec() },
     };
     let proxy = RuntimeProxy::create_runtime(
         &application_configuration,
+        &permissions,
         &SecureServerConfiguration::default(),
         &signature_table,
     );

@@ -51,11 +51,17 @@ impl OakApplication {
             items: hashmap! {"database".to_string() => database.as_bytes().to_vec()},
         };
         let wasm_modules = build_wasm().expect("Couldn't build wasm modules");
+        let permissions = oak_runtime::permissions::PermissionsConfiguration {
+            allow_grpc_server_nodes: true,
+            allow_log_nodes: true,
+            ..Default::default()
+        };
         let config = oak_tests::runtime_config_wasm(
             wasm_modules,
             MAIN_MODULE_NAME,
             MAIN_ENTRYPOINT_NAME,
             config_map,
+            permissions,
             oak_runtime::SignatureTable::default(),
         );
         let runtime = oak_runtime::configure_and_run(config)

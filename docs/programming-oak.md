@@ -368,20 +368,52 @@ using the following script:
 ./scripts/push_example -e hello_world
 ```
 
+### Creating a Permissions File
+
+A permissions file is a `.toml` file provided by the host owner, as an
+additional layer of defense. This file specifies the features of Oak that are
+permitted for the applications running on the host. In particular, using this
+file, the host owner can enable or disable gRPC or HTTP connections. In
+addition, it is possible to specify an allowlist of external gRPC or HTTP
+authorities (in the `[userinfo@]host[:port]` format) that the applications can
+connect to over TLS. Interaction with all other authorities is prohibited.
+Connections to insecure HTTP servers are allowed only if explicitly enabled via
+the `allow_insecure_http_egress` flag.
+
+Here is an example of a permissions file:
+
+```toml
+allow_grpc_server_nodes = true
+allow_http_server_nodes = true
+allow_log_nodes = true
+allow_insecure_http_egress = true
+allow_egress_https_authorities = ["localhost:8080", "localhost:8888"]
+
+```
+
+All permissions are denied by default. So, an empty permissions file is the most
+restrictive one.
+
 ### Starting the Oak Application
 
 The Oak Application is then started using the Oak Loader:
 
 ```bash
-./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader --application=./examples/hello_world/bin/hello_world.oak
+./oak_loader/target/x86_64-unknown-linux-musl/release/oak_loader \
+  --application=./examples/hello_world/bin/hello_world.oak \
+  --permissions=./examples/permissions/permissions.toml
 ```
+
+Providing a permissions file via the `permissions` flag is only needed for
+Logless server releases.
 
 The Oak Loader will launch an [Oak Runtime](concepts.md#oak-runtime), and this
 Runtime will check the provided Wasm module(s) and application configuration.
 Assuming everything is correct (e.g. the Nodes all have a main entrypoint and
 only expect to link to the Oak [host functions](abi.md#host-functions)), the Oak
-Runtime opens up the gRPC port specified by the Application Configuration. This
-port is then used by clients to connect to the Oak Application.
+Runtime opens up the gRPC port specified by the Application Configuration, if
+creating a gRPC connection is permitted in the permissions file. This port is
+then used by clients to connect to the Oak Application.
 
 ### Configuring the Oak Application
 
@@ -678,8 +710,13 @@ framework via the Oak Runtime:
 #[tokio::test(core_threads = 2)]
 async fn test_translate() {
     let _ = env_logger::builder().is_test(true).try_init();
+    let permissions = oak_runtime::permissions::PermissionsConfiguration {
+        allow_grpc_server_nodes: true,
+        allow_log_nodes: true,
+        ..Default::default()
+    };
 
-    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME)
+    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME, permissions)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
@@ -731,7 +768,11 @@ like in the following example:
 #[tokio::test(core_threads = 2)]
 async fn test_say_hello() {
     let _ = env_logger::builder().is_test(true).try_init();
-
+    let permissions = oak_runtime::permissions::PermissionsConfiguration {
+        allow_grpc_server_nodes: true,
+        allow_log_nodes: true,
+        ..Default::default()
+    };
     let runtime_config = oak_tests::runtime_config_wasm(
         hashmap! {
             MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_WASM_FILE_NAME, oak_tests::Profile::Release).expect("Couldn't compile main module"),
@@ -740,6 +781,7 @@ async fn test_say_hello() {
         MAIN_MODULE_NAME,
         MAIN_ENTRYPOINT_NAME,
         ConfigMap::default(),
+        permissions,
         oak_runtime::SignatureTable::default(),
     );
     let runtime = oak_runtime::configure_and_run(runtime_config)
