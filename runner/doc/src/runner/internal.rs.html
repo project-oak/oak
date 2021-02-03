@@ -787,6 +787,12 @@
 <span id="784">784</span>
 <span id="785">785</span>
 <span id="786">786</span>
+<span id="787">787</span>
+<span id="788">788</span>
+<span id="789">789</span>
+<span id="790">790</span>
+<span id="791">791</span>
+<span id="792">792</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -852,6 +858,12 @@
         <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;rust&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">application_variant</span>: <span class="ident">String</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(
+        <span class="ident">long</span>,
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Path to permissions file&quot;</span>,
+        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;./examples/permissions/permissions.toml&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">permissions_file</span>: <span class="ident">String</span>,
     <span class="comment">// TODO(#396): Clarify the name and type of this, currently it is not very intuitive.</span>
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,

@@ -1526,6 +1526,9 @@
 <span id="1523">1523</span>
 <span id="1524">1524</span>
 <span id="1525">1525</span>
+<span id="1526">1526</span>
+<span id="1527">1527</span>
+<span id="1528">1528</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1557,6 +1560,7 @@
     <span class="ident">message</span>::<span class="ident">Message</span>,
     <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
     <span class="ident">node</span>::{<span class="ident">Node</span>, <span class="ident">NodeIsolation</span>},
+    <span class="ident">permissions</span>::<span class="ident">PermissionsConfiguration</span>,
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::{
         <span class="ident">event</span>::<span class="ident">EventDetails</span>, <span class="ident">ChannelCreated</span>, <span class="ident">Direction</span>, <span class="ident">Event</span>, <span class="ident">HandleCreated</span>, <span class="ident">HandleDestroyed</span>,
         <span class="ident">MessageDequeued</span>, <span class="ident">MessageEnqueued</span>, <span class="ident">NodeCreated</span>, <span class="ident">NodeDestroyed</span>,
@@ -1604,7 +1608,7 @@
 <span class="kw">mod</span> <span class="ident">message</span>;
 <span class="kw">mod</span> <span class="ident">metrics</span>;
 <span class="kw">mod</span> <span class="ident">node</span>;
-<span class="kw">mod</span> <span class="ident">permissions</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">permissions</span>;
 <span class="kw">mod</span> <span class="ident">proto</span>;
 <span class="kw">mod</span> <span class="ident">proxy</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -1624,6 +1628,8 @@
     <span class="kw">pub</span> <span class="ident">secure_server_configuration</span>: <span class="ident">SecureServerConfiguration</span>,
     <span class="doccomment">/// Application configuration.</span>
     <span class="kw">pub</span> <span class="ident">app_config</span>: <span class="ident">ApplicationConfiguration</span>,
+    <span class="doccomment">/// Permissions configuration.</span>
+    <span class="kw">pub</span> <span class="ident">permissions_config</span>: <span class="ident">PermissionsConfiguration</span>,
     <span class="doccomment">/// Table that contains signatures and public keys corresponding to Oak modules.</span>
     <span class="kw">pub</span> <span class="ident">sign_table</span>: <span class="ident">SignatureTable</span>,
     <span class="doccomment">/// Start-of-day configuration to feed to the running Application.</span>
