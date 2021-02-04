@@ -15,6 +15,7 @@
 //
 
 use super::rpc_status;
+use log::debug;
 use oak_services::proto::{
     google::{rpc, rpc::Code},
     oak::{crypto, crypto::keyset_generate_request::TemplateId},
@@ -330,6 +331,11 @@ impl TinkWrapper {
         &self,
         key_uri: &str,
     ) -> Result<std::sync::Arc<dyn tink_core::registry::KmsClient>, tink_core::TinkError> {
+        debug!(
+            "retrieve KMS client for {} using credentials in {:?}",
+            key_uri, self.kms_credentials
+        );
+        #[cfg(feature = "awskms")]
         if key_uri.starts_with(tink_awskms::AWS_PREFIX) {
             let g = if let Some(kms_creds) = &self.kms_credentials {
                 tink_awskms::AwsClient::new_with_credentials(key_uri, &kms_creds)?
@@ -337,20 +343,20 @@ impl TinkWrapper {
                 tink_awskms::AwsClient::new(key_uri)?
             };
             tink_core::registry::register_kms_client(g);
-            tink_core::registry::get_kms_client(key_uri)
-        /* TODO(#745): sort out clashing dependencies
-        } else if key_uri.starts_with(tink_gcpkms::GCP_PREFIX) {
+            return tink_core::registry::get_kms_client(key_uri);
+        }
+        // TODO(#745): sort out clashing dependencies
+        #[cfg(feature = "gcpkms")]
+        if key_uri.starts_with(tink_gcpkms::GCP_PREFIX) {
             let g = if let Some(kms_creds) = &self.kms_credentials {
                 tink_gcpkms::GcpClient::new_with_credentials(key_uri, &kms_creds)?
             } else {
                 tink_gcpkms::GcpClient::new(key_uri)?
             };
             tink_core::registry::register_kms_client(g);
-            tink_core::registry::get_kms_client(key_uri)
-        */
-        } else {
-            Err("Unrecognized key URI".into())
+            return tink_core::registry::get_kms_client(key_uri);
         }
+        Err("Unrecognized key URI".into())
     }
 }
 
