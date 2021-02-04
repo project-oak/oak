@@ -114,6 +114,7 @@ pub enum ServerVariant {
     Coverage,
     Logless,
     NoIntrospectionClient,
+    Kms,
 }
 
 impl std::str::FromStr for ServerVariant {
@@ -123,6 +124,7 @@ impl std::str::FromStr for ServerVariant {
             "base" => Ok(ServerVariant::Base),
             "coverage" => Ok(ServerVariant::Coverage),
             "logless" => Ok(ServerVariant::Logless),
+            "kms" => Ok(ServerVariant::Kms),
             "no-introspection-client" => Ok(ServerVariant::NoIntrospectionClient),
             _ => Err(format!("Failed to parse server variant {}", variant)),
         }

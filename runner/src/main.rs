@@ -271,7 +271,7 @@ fn build_server(opt: &BuildServer) -> Step {
                 ),
             }],
             match opt.server_variant {
-                ServerVariant::Base | ServerVariant::Coverage => vec![Step::Single {
+                ServerVariant::Base | ServerVariant::Coverage | ServerVariant::Kms => vec![Step::Single {
                     name: "build introspection browser client".to_string(),
                     command: Cmd::new("npm",
                                       vec![
@@ -310,6 +310,10 @@ fn build_server(opt: &BuildServer) -> Step {
                                 "--release".to_string(),
                             ],
                             ServerVariant::Base => vec!["--features=oak_introspection_client".to_string(),
+                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                                "--release".to_string(),
+                            ],
+                            ServerVariant::Kms => vec!["--features=oak_introspection_client,awskms".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
@@ -407,6 +411,11 @@ fn run_ci() -> Step {
             }),
             build_server(&BuildServer {
                 server_variant: ServerVariant::Logless,
+                server_rust_toolchain: None,
+                server_rust_target: None,
+            }),
+            build_server(&BuildServer {
+                server_variant: ServerVariant::Kms,
                 server_rust_toolchain: None,
                 server_rust_target: None,
             }),

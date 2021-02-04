@@ -20,6 +20,7 @@ jobs:
           - run-cargo-udeps
           - build-server --server-variant=base
           - build-server --server-variant=logless
+          - build-server --server-variant=kms
           - run-tests
           - run-tests-tsan
           - run-examples --application-variant=rust
