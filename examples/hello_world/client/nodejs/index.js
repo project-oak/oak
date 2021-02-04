@@ -36,7 +36,7 @@ const OAK_SIGNED_CHALLENGE_GRPC_METADATA_KEY =
 //     --private-key=http-test.key \
 //     --public-key=http-test.pub
 // ```
-// TODO(##1859): Generate a key in JS, instead of hardcoding one.
+// TODO(#1859): Generate a key in JS, instead of hardcoding one.
 const PUBLIC_KEY = Buffer.from(
   'i7g/Mgft/2hsZBGRd+MF4f+Eir2Iyamkch8l4vPgLac=',
   'base64'
@@ -50,7 +50,7 @@ const PUBLIC_KEY = Buffer.from(
 //     --input-string="oak-challenge" \
 //     --signature-file=http-test.sign
 // ```
-// TODO(##1859): Sign the hash in JS, instead of hardcoding this.
+// TODO(#1859): Sign the hash in JS, instead of hardcoding this.
 const SIGNED_HASH = Buffer.from(
   'ijbZOQ9mTtDEQyDEt+G3Rh0E0zwnY6+DkRd7bkllJINJbAhIiss3krdOzWo9d/iz5NJ9XGbp/qutOjAPSBkyDg==',
   'base64'
