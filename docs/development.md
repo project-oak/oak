@@ -309,7 +309,7 @@ This command generates a signature file `signature.sign` containing a public
 key, a signature of the Wasm module SHA-256 hash (also encoded with PEM) and a
 Wasm module SHA-256 hash itself.
 
-Wasm module signatures are specified as part of the Oak apllication manifest.
+Wasm module signatures are specified as part of the Oak application manifest.
 The application manifest can contain locations of signature manifest files. Each
 signature manifest file contains the locations of signature files for signed Oak
 Wasm modules. Also, since each module can be signed by multiple entities, each

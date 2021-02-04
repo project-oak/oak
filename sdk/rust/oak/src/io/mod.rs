@@ -104,7 +104,9 @@ pub fn entrypoint_node_create<
 ) -> Result<Sender<Command>, oak_io::OakError> {
     let node_config = &crate::node_config::wasm(wasm_module_name, T::ENTRYPOINT_NAME);
     let init_sender = node_create(name, label, node_config)?;
-    send_init(init_sender, init, label)
+    let result = send_init(&init_sender, init, label);
+    init_sender.close()?;
+    result
 }
 
 /// Sends an init message over the provided [`Sender`], which is consumed by this method, and
@@ -154,10 +156,19 @@ pub fn forward_invocation(
             // Check if request label is valid in the context of invocation sender.
             if request_label.flows_to(&sender_label) {
                 // Forward invocation through invocation sender.
-                invocation_sender
+                let result = invocation_sender
                     .send(&invocation)
-                    .context("Couldn't forward invocation")
+                    .context("Couldn't forward invocation");
+                // Close the channels.
+                invocation.close()?;
+                result
             } else {
+                // Close the receiver channel separately.
+                invocation
+                    .receiver
+                    .expect("Couldn't get receiver")
+                    .close()
+                    .expect("Couldn't close the receiver");
                 // Return an error through `response_sender`.
                 let grpc_response_writer =
                     crate::grpc::ChannelResponseWriter::new(response_sender.clone());

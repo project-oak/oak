@@ -20,6 +20,7 @@ use crate::{
     io::{ReceiverExt, SenderExt},
     OakError, OakStatus,
 };
+use anyhow::Context;
 use log::{error, warn};
 use oak_abi::label::Label;
 use oak_services::proto::google::rpc;
@@ -36,6 +37,19 @@ pub mod server;
 /// [`Status`]: oak_services::proto::google::rpc::Status
 pub type Result<T> = std::result::Result<T, rpc::Status>;
 pub type Invocation = crate::proto::oak::invocation::GrpcInvocation;
+
+impl Invocation {
+    pub fn close(self) -> anyhow::Result<()> {
+        self.receiver
+            .expect("Couldn't get receiver")
+            .close()
+            .context("Couldn't close the receiver")?;
+        self.sender
+            .expect("Couldn't get sender")
+            .close()
+            .context("Couldn't close the sender")
+    }
+}
 
 /// Helper to create a gRPC status object.
 pub fn build_status(code: rpc::Code, msg: &str) -> rpc::Status {

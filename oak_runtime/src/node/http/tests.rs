@@ -794,7 +794,7 @@ impl Node for ClientTesterNode {
             .expect("Couldn't insert HTTP request in the pipe");
 
         // send the invocation to the HTTP client pseudo-node
-        pipe.send_invocation(&runtime, invocation_sender.handle.handle)
+        pipe.send_invocation(&runtime, invocation_sender.handle)
             .expect("Couldn't send the invocation");
 
         // wait for the response to come

@@ -764,6 +764,7 @@ macro_rules! entrypoint_command_handler_init {
             use ::oak::io::ReceiverExt;
             use ::oak::WithInit;
             let init_wrapper = receiver.receive().expect("could not receive init");
+            receiver.close().expect("could not close the receiver channel");
             let instance = <$handler>::create(init_wrapper.init);
             ::oak::run_command_loop(instance, init_wrapper.command_receiver.iter());
         });

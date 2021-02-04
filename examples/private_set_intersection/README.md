@@ -2,6 +2,9 @@
 
 ## To update this example
 
+This example requires a valid signature of the `handler` module. So, whenever
+the code is modified, the wasm module and the signature must be regenerated:
+
 1. Build the example, including the Wasm module
 1. Push the module to GS via
    `./scripts/push_example -e private_set_intersection`
