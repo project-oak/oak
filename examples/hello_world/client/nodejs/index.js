@@ -17,6 +17,7 @@
 const fs = require('fs');
 const protobufjs = require('protobufjs');
 const grpc = require('@grpc/grpc-js');
+const oakSign = require('./oakSign.js');
 
 const REPOSITORY_ROOT = `${__dirname}/../../../..`;
 const CERT_PATH = `${REPOSITORY_ROOT}/examples/certs/local/ca.pem`;
@@ -28,42 +29,19 @@ const SERVICE_PROTO_PATH = `${REPOSITORY_ROOT}/examples/hello_world/proto/hello_
 const OAK_LABEL_GRPC_METADATA_KEY = 'x-oak-label-bin';
 const OAK_SIGNED_CHALLENGE_GRPC_METADATA_KEY =
   'x-oak-signed-auth-challenge-bin';
-
-// Generated using the command:
-// ```shell
-// cargo run --manifest-path=oak_sign/Cargo.toml -- \
-//     generate \
-//     --private-key=http-test.key \
-//     --public-key=http-test.pub
-// ```
-// TODO(#1859): Generate a key in JS, instead of hardcoding one.
-const PUBLIC_KEY = Buffer.from(
-  'i7g/Mgft/2hsZBGRd+MF4f+Eir2Iyamkch8l4vPgLac=',
-  'base64'
-);
-
-// Generated using the command:
-// ```shell
-// cargo run --manifest-path=oak_sign/Cargo.toml -- \
-//     sign \
-//     --private-key=http-test.key \
-//     --input-string="oak-challenge" \
-//     --signature-file=http-test.sign
-// ```
-// TODO(#1859): Sign the hash in JS, instead of hardcoding this.
-const SIGNED_HASH = Buffer.from(
-  'ijbZOQ9mTtDEQyDEt+G3Rh0E0zwnY6+DkRd7bkllJINJbAhIiss3krdOzWo9d/iz5NJ9XGbp/qutOjAPSBkyDg==',
-  'base64'
-);
+const OAK_CHALLENGE = 'oak-challenge';
 
 async function main() {
-  const protos = await protobufjs.load([
-    OAK_LABEL_PROTO_PATH,
-    OAK_IDENTITY_PROTO_PATH,
-    SERVICE_PROTO_PATH,
+  const [protos, keyPair] = await Promise.all([
+    protobufjs.load([
+      OAK_LABEL_PROTO_PATH,
+      OAK_IDENTITY_PROTO_PATH,
+      SERVICE_PROTO_PATH,
+    ]),
+    oakSign.generateKeyPair(),
   ]);
 
-  function getMetadata() {
+  async function getMetadata() {
     const metadata = new grpc.Metadata();
 
     // TODO(#1097): move this into an SDK package to allow re-use.
@@ -76,9 +54,13 @@ async function main() {
     const oakSignedChallengeType = protos.lookupType(
       'oak.identity.SignedChallenge'
     );
+    const signedHash = await oakSign.hashAndSign(
+      Buffer.from(OAK_CHALLENGE),
+      keyPair.privateKey
+    );
     const signedChallenge = oakSignedChallengeType.create({
-      signedHash: SIGNED_HASH,
-      publicKey: PUBLIC_KEY,
+      signedHash: signedHash,
+      publicKey: keyPair.publicKey,
     });
     const encodedSignedChallenge = oakSignedChallengeType
       .encode(signedChallenge)
@@ -103,7 +85,7 @@ async function main() {
   // creating a client instance of for this service.
   // Ref: http://protobufjs.github.io/protobuf.js/rpc.Service.html#rpcImpl
   const helloWorld = helloWorldService.create(
-    (method, requestData, callback) => {
+    async (method, requestData, callback) => {
       // Ref: https://grpc.github.io/grpc/node/grpc.Client.html#makeUnaryRequest
       grpcClient.makeUnaryRequest(
         `/oak.examples.hello_world.HelloWorld/${method.name}`,
@@ -112,7 +94,7 @@ async function main() {
         (requestData) => requestData,
         (responseData) => responseData,
         requestData,
-        getMetadata(),
+        await getMetadata(),
         callback
       );
     }
