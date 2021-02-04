@@ -23,6 +23,17 @@ package(
     licenses = ["notice"],
 )
 
+# Build configurations for different platforms.
+config_setting(
+    name = "arm_build",
+    values = {"cpu": "arm"},
+)
+
+config_setting(
+    name = "x86_build",
+    values = {"cpu": "x86"},
+)
+
 # Export LICENSE file for projects that reference Oak in Bazel as an external dependency.
 exports_files(["LICENSE"])
 
