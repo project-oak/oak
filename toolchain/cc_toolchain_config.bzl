@@ -68,14 +68,19 @@ def _impl(ctx):
     # TODO: Bazel has a limitation as these paths can be only relative to the toolchain folder.
     # The hack around this is to have a script file that just redirects to the correct binary.
     # We need to fix this once Bazel does this properly.
+    if ctx.attr.cpu == "armv8":
+        clang = "clang_arm.sh"
+    else:
+        clang = "clang.sh"
+
     tool_paths = [
         tool_path(
             name = "gcc",
-            path = "clang.sh",
+            path = clang,
         ),
         tool_path(
             name = "ld",
-            path = "clang.sh",
+            path = clang,
         ),
         tool_path(
             name = "ar",
