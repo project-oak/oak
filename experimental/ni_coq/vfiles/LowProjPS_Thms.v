@@ -38,6 +38,11 @@ some weaker theorems
 must be a better way to refactor these. Lots of redundancy. Might be clearer 
 what the differences are when the proofs are really finished *)
 
+Hint Unfold state_low_eq chan_state_low_eq node_state_low_eq event_low_eq
+    chan_low_eq node_low_eq low_eq state_low_proj chan_state_low_proj
+    node_state_low_proj event_low_proj chan_low_proj node_low_proj
+    low_proj: loweq.
+
 Section low_projection.
 
 (* These first 3 theorems are weaker than the theorems we can prove
@@ -228,12 +233,53 @@ Proof. congruence. Qed.
 Global Instance event_low_eq_sym: forall ell, Symmetric (event_low_eq ell) | 10.
 Proof. congruence. Qed.
 
-End low_equivalence.
+Hint Unfold obj lbl fnd: structs.
 
-Hint Unfold state_low_eq chan_state_low_eq node_state_low_eq event_low_eq
-    chan_low_eq node_low_eq low_eq state_low_proj chan_state_low_proj
-    node_state_low_proj event_low_proj chan_low_proj node_low_proj
-    low_proj: loweq.
+Lemma state_low_eq_implies_node_lookup_eq ell s1 s2 :
+  state_low_eq ell s1 s2 ->
+  forall id,
+    (nodes (state_low_proj ell s2)).[? id]
+    = (nodes (state_low_proj ell s1)).[? id].
+Proof.
+  autounfold with loweq; autounfold with structs; 
+  intros; logical_simplify; congruence.
+Qed.
+
+Lemma state_low_eq_implies_chan_lookup_eq ell s1 s2 :
+  state_low_eq ell s1 s2 ->
+  forall han,
+    (chans (state_low_proj ell s2)).[? han]
+    = (chans (state_low_proj ell s1)).[? han].
+Proof.
+  autounfold with loweq; autounfold with structs; intros;
+  logical_simplify; congruence.
+Qed.
+
+Theorem node_state_proj_index_assoc: forall ell ns id,
+    (node_state_low_proj ell ns) id = low_proj ell (ns id).
+Proof.
+    autounfold with loweq. auto.
+Qed.
+
+Theorem node_state_proj_index_assoc_form2: forall ell s id,
+    nodes (state_low_proj ell s) id = low_proj ell ((nodes s) id).
+Proof.
+    autounfold with loweq. auto.
+Qed.
+
+Theorem chan_state_proj_index_assoc: forall ell cs han,
+    (chan_state_low_proj ell cs) han = low_proj ell (cs han).
+Proof.
+    autounfold with loweq. auto.
+Qed.
+
+Theorem chan_state_proj_index_assoc_form2: forall ell s han,
+    (chans (state_low_proj ell s)) han = low_proj ell ((chans s) han).
+Proof.
+    autounfold with loweq. auto.
+Qed.
+
+End low_equivalence.
 
 Theorem state_low_eq_parts: forall ell s1 s2,
     node_state_low_eq ell s1.(nodes) s2.(nodes) -> 
@@ -243,6 +289,22 @@ Proof.
     autounfold with loweq; intros; eauto.
 Qed.
 
+Theorem state_upd_node_unobs: forall ell s id n,
+    ~(lbl (nodes s).[? id] <<L ell) ->
+    (state_low_eq ell s (state_upd_node id n s)).
+Proof.
+    intros. unfold fnd in H. split; intros; simpl.
+    (* chan_state_low_proj *) 2:congruence.
+    (* node_state_low_proj *)
+    unfold node_state_low_proj.
+    destruct (dec_eq_nid nid id); subst.
+    - (* nid = id *)
+        rewrite upd_eq. unfold fnd, low_proj.
+        destruct_match. simpl in *.
+        destruct (lbl <<? ell); try congruence.
+    - (* nid <> id *)
+        rewrite upd_neq; auto.
+Qed.
 
 Theorem chan_state_fe: forall ell chs1 chs2,
     (forall h, low_eq ell chs1.[?h] chs2.[?h]) ->

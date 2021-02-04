@@ -7,7 +7,9 @@ From OakIFC Require Import
     State
     Events
     RuntimeModel
-    EvAugSemantics.
+    RuntimeModelPS
+    EvAugSemantics
+    EvAugSemanticsPS.
 
 (** Generically useful tactics **)
 
@@ -46,10 +48,21 @@ Ltac step_econstruct :=
         | H: _ = ncall _ |- _ => progress rewrite <- H
     end;
     lazymatch goal with
-        | |- step_system_ev _ _ _ => econstructor; eauto
-        | |- step_node_ev _ _ _ _ _  => econstructor; eauto
-        | |- step_system _ _ => econstructor; eauto
-        | |- step_node _ _ _ _ => econstructor; eauto
+        | |- EvAugSemantics.step_system_ev _ _ _ => econstructor; eauto
+        | |- EvAugSemantics.step_node_ev _ _ _ _ _  => econstructor; eauto
+        | |- RuntimeModel.step_system _ _ => econstructor; eauto
+        | |- RuntimeModel.step_node _ _ _ _ => econstructor; eauto
+    end.
+
+Ltac step_econstruct_PS :=
+    repeat match goal with
+        | H: _ = ncall _ |- _ => progress rewrite <- H
+    end;
+    lazymatch goal with
+        | |- EvAugSemanticsPS.step_system_ev _ _ _ => econstructor; eauto
+        | |- EvAugSemanticsPS.step_node_ev _ _ _ _ _  => econstructor; eauto
+        | |- RuntimeModelPS.step_system _ _ => econstructor; eauto
+        | |- RuntimeModelPS.step_node _ _ _ _ => econstructor; eauto
     end.
 
 (* Single step of [crush] *)
@@ -59,6 +72,7 @@ Ltac crush_step :=
          | _ => progress subst
          | _ => progress logical_simplify
          | _ => progress step_econstruct
+         | _ => progress step_econstruct_PS
          | H : Some _ = Some _ |- _ => invert_clean H
          | H1 : ?x = Some _, H2 : ?x = Some _ |- _ =>
            rewrite H2 in H1; invert_clean H1
@@ -76,12 +90,23 @@ Ltac split_ands :=
 
 Ltac apply_all_constructors :=
   lazymatch goal with
-  | |- step_system_ev _ _ _ =>
-    eapply SystemEvStepNode; apply_all_constructors
-  | |- step_node_ev _ _ _ _ _ =>
+  | |- EvAugSemantics.step_system_ev _ _ _ =>
+    eapply EvAugSemantics.SystemEvStepNode; apply_all_constructors
+  | |- EvAugSemantics.step_node_ev _ _ _ _ _ =>
     econstructor; apply_all_constructors
-  | |- step_node _ _ _ _ =>
+  | |- RuntimeModel.step_node _ _ _ _ =>
     econstructor; apply_all_constructors
+  | _ => idtac (* ignore goals that don't match one of the previous patterns *)
+  end.
+
+Ltac apply_all_constructors_PS :=
+  lazymatch goal with
+  | |- EvAugSemanticsPS.step_system_ev _ _ _ =>
+    eapply EvAugSemanticsPS.SystemEvStepNode; apply_all_constructors_PS
+  | |- EvAugSemanticsPS.step_node_ev _ _ _ _ _ =>
+    econstructor; apply_all_constructors_PS
+  | |- RuntimeModelPS.step_node _ _ _ _ =>
+    econstructor; apply_all_constructors_PS
   | _ => idtac (* ignore goals that don't match one of the previous patterns *)
   end.
 

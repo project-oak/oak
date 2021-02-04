@@ -8,13 +8,17 @@ vfiles/ModelTypes.v
 vfiles/RuntimeModel.v
 vfiles/Events.v
 vfiles/EvAugSemantics.v
+vfiles/EvAugSemanticsPS.v
 vfiles/LowEquivalences.v
 vfiles/TraceLowEq.v
+vfiles/TraceLowEqPS.v
 vfiles/Tactics.v
 vfiles/TraceTheorems.v
+vfiles/TraceTheoremsPS.v
 vfiles/Unfold.v
 vfiles/NIUtilTheorems.v
 vfiles/Unwind.v
+vfiles/UnwindPS.v
 vfiles/PossibilisticNI_def.v
 vfiles/PossibilisticNI.v
 vfiles/RuntimeModelPS.v
