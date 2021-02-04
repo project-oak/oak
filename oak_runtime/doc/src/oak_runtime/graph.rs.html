@@ -328,12 +328,6 @@
 <span id="325">325</span>
 <span id="326">326</span>
 <span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -353,16 +347,10 @@
 
 <span class="doccomment">/// This module defines a trait and an implementation for representing the [`Runtime`] as</span>
 <span class="doccomment">/// a Graphviz dot graph. This is used in the introspection service.</span>
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ChannelHalf</span>, <span class="ident">ChannelHalfDirection</span>, <span class="ident">NodeId</span>, <span class="ident">Runtime</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">channel</span>::<span class="ident">DotIdentifier</span>, <span class="ident">ChannelHalf</span>, <span class="ident">ChannelHalfDirection</span>, <span class="ident">NodeId</span>, <span class="ident">Runtime</span>};
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashSet</span>, <span class="ident">fmt</span>::<span class="ident">Write</span>, <span class="ident">string</span>::<span class="ident">String</span>};
-
-<span class="doccomment">/// Trait that gives an identifier for a data structure that is suitable for</span>
-<span class="doccomment">/// use with Graphviz/Dot.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">DotIdentifier</span> {
-    <span class="kw">fn</span> <span class="ident">dot_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span>;
-}
 
 <span class="doccomment">/// Trait that returns the path at which the debug introspection server will</span>
 <span class="doccomment">/// show a page for a data structure.</span>

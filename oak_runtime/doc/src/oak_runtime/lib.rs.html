@@ -1529,6 +1529,7 @@
 <span id="1526">1526</span>
 <span id="1527">1527</span>
 <span id="1528">1528</span>
+<span id="1529">1529</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1970,6 +1971,7 @@
     <span class="ident">aux_servers</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AuxServer</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
     <span class="doccomment">/// Queue of introspection events in chronological order.</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="ident">introspection_event_queue</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
     <span class="ident">node_factory</span>: <span class="ident">node</span>::<span class="ident">ServerNodeFactory</span>,
