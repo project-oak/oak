@@ -1791,7 +1791,7 @@ dependencies = [
 name = "prost"
 version = "0.6.1"
 dependencies = [
- "bytes 0.5.6",
+ "bytes 0.6.0",
  "prost-derive",
 ]
 
@@ -1799,7 +1799,7 @@ dependencies = [
 name = "prost-build"
 version = "0.6.1"
 dependencies = [
- "bytes 0.5.6",
+ "bytes 0.6.0",
  "heck",
  "itertools",
  "log",
@@ -1826,7 +1826,7 @@ dependencies = [
 name = "prost-types"
 version = "0.6.1"
 dependencies = [
- "bytes 0.5.6",
+ "bytes 0.6.0",
  "prost",
 ]
 
