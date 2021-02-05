@@ -344,6 +344,9 @@
 <span id="341">341</span>
 <span id="342">342</span>
 <span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -436,6 +439,8 @@
     <span class="ident">introspect_port</span>: <span class="ident">u16</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Starts the Runtime without an introspection server.&quot;</span>)]</span>
     <span class="ident">no_introspect</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Filename for KMS credentials.&quot;</span>)]</span>
+    <span class="ident">kms_credentials</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Configuration files to expose to the Oak Application, each in key=filename format.&quot;</span>
@@ -499,6 +504,7 @@
         } <span class="kw">else</span> {
             <span class="prelude-val">None</span>
         },
+        <span class="ident">kms_credentials</span>: <span class="ident">opt</span>.<span class="ident">kms_credentials</span>.<span class="ident">map</span>(<span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span>::<span class="ident">from</span>),
         <span class="ident">secure_server_configuration</span>,
         <span class="ident">app_config</span>,
         <span class="ident">permissions_config</span>,

@@ -793,6 +793,7 @@
 <span id="790">790</span>
 <span id="791">791</span>
 <span id="792">792</span>
+<span id="793">793</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -910,6 +911,7 @@
     <span class="ident">Coverage</span>,
     <span class="ident">Logless</span>,
     <span class="ident">NoIntrospectionClient</span>,
+    <span class="ident">Kms</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span> <span class="kw">for</span> <span class="ident">ServerVariant</span> {
@@ -919,6 +921,7 @@
             <span class="string">&quot;base&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Base</span>),
             <span class="string">&quot;coverage&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Coverage</span>),
             <span class="string">&quot;logless&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Logless</span>),
+            <span class="string">&quot;kms&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Kms</span>),
             <span class="string">&quot;no-introspection-client&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">NoIntrospectionClient</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Failed to parse server variant {}&quot;</span>, <span class="ident">variant</span>)),
         }
@@ -1304,6 +1307,14 @@
     }
 }
 
+<span class="doccomment">/// If environment variable `name` is set in the current environment, pass it through</span>
+<span class="doccomment">/// so the same value for `name` is visible when the command is executed.</span>
+<span class="kw">fn</span> <span class="ident">env_passthru</span>(<span class="ident">cmd</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tokio</span>::<span class="ident">process</span>::<span class="ident">Command</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="ident">name</span>) {
+        <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="ident">name</span>, <span class="ident">v</span>);
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">Runnable</span> <span class="kw">for</span> <span class="ident">Cmd</span> {
     <span class="kw">fn</span> <span class="ident">description</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
         <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="self">self</span>.<span class="ident">executable</span>, <span class="self">self</span>.<span class="ident">args</span>.<span class="ident">join</span>(<span class="string">&quot; &quot;</span>))
@@ -1322,22 +1333,14 @@
         <span class="comment">// General variables.</span>
         <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;HOME&quot;</span>, <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;HOME&quot;</span>).<span class="ident">unwrap</span>());
         <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;PATH&quot;</span>, <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;PATH&quot;</span>).<span class="ident">unwrap</span>());
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;USER&quot;</span>) {
-            <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;USER&quot;</span>, <span class="ident">v</span>);
-        }
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;USER&quot;</span>);
 
         <span class="comment">// Python variables.</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;PYTHONPATH&quot;</span>) {
-            <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;PYTHONPATH&quot;</span>, <span class="ident">v</span>);
-        }
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;PYTHONPATH&quot;</span>);
 
         <span class="comment">// Rust compilation variables.</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;RUSTUP_HOME&quot;</span>) {
-            <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;RUSTUP_HOME&quot;</span>, <span class="ident">v</span>);
-        }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;CARGO_HOME&quot;</span>) {
-            <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;CARGO_HOME&quot;</span>, <span class="ident">v</span>);
-        }
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;RUSTUP_HOME&quot;</span>);
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;CARGO_HOME&quot;</span>);
 
         <span class="comment">// Rust runtime variables.</span>
         <span class="ident">cmd</span>.<span class="ident">env</span>(
@@ -1347,15 +1350,14 @@
         <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;RUST_BACKTRACE&quot;</span>, <span class="string">&quot;1&quot;</span>);
 
         <span class="comment">// Emscripten variables.</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;EMSDK&quot;</span>) {
-            <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;EMSDK&quot;</span>, <span class="ident">v</span>);
-        }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;EM_CACHE&quot;</span>) {
-            <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;EM_CACHE&quot;</span>, <span class="ident">v</span>);
-        }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;EM_CONFIG&quot;</span>) {
-            <span class="ident">cmd</span>.<span class="ident">env</span>(<span class="string">&quot;EM_CONFIG&quot;</span>, <span class="ident">v</span>);
-        }
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;EMSDK&quot;</span>);
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;EM_CACHE&quot;</span>);
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;EM_CONFIG&quot;</span>);
+
+        <span class="comment">// OpenSSL variables.</span>
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;PKG_CONFIG_ALLOW_CROSS&quot;</span>);
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;OPENSSL_STATIC&quot;</span>);
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;OPENSSL_DIR&quot;</span>);
 
         <span class="ident">cmd</span>.<span class="ident">envs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">env</span>);
 

@@ -292,6 +292,7 @@
 <span id="289">289</span>
 <span id="290">290</span>
 <span id="291">291</span>
+<span id="292">292</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -480,6 +481,7 @@
     <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
         <span class="ident">metrics_port</span>: <span class="prelude-val">Some</span>(<span class="number">9090</span>),
         <span class="ident">introspect_port</span>: <span class="prelude-val">Some</span>(<span class="number">1909</span>),
+        <span class="ident">kms_credentials</span>: <span class="prelude-val">None</span>,
         <span class="ident">secure_server_configuration</span>: <span class="ident">oak_runtime</span>::<span class="ident">SecureServerConfiguration</span> {
             <span class="ident">grpc_config</span>: <span class="prelude-val">Some</span>(<span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span> {
                 <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-val">Some</span>(<span class="ident">Identity</span>::<span class="ident">from_pem</span>(

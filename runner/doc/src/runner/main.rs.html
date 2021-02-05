@@ -1431,6 +1431,15 @@
 <span id="1428">1428</span>
 <span id="1429">1429</span>
 <span id="1430">1430</span>
+<span id="1431">1431</span>
+<span id="1432">1432</span>
+<span id="1433">1433</span>
+<span id="1434">1434</span>
+<span id="1435">1435</span>
+<span id="1436">1436</span>
+<span id="1437">1437</span>
+<span id="1438">1438</span>
+<span id="1439">1439</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1705,7 +1714,7 @@
                 ),
             }],
             <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
-                <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">|</span> <span class="ident">ServerVariant</span>::<span class="ident">Coverage</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Step</span>::<span class="ident">Single</span> {
+                <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">|</span> <span class="ident">ServerVariant</span>::<span class="ident">Coverage</span> <span class="op">|</span> <span class="ident">ServerVariant</span>::<span class="ident">Kms</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Step</span>::<span class="ident">Single</span> {
                     <span class="ident">name</span>: <span class="string">&quot;build introspection browser client&quot;</span>.<span class="ident">to_string</span>(),
                     <span class="ident">command</span>: <span class="ident">Cmd</span>::<span class="ident">new</span>(<span class="string">&quot;npm&quot;</span>,
                                       <span class="macro">vec</span><span class="macro">!</span>[
@@ -1744,6 +1753,10 @@
                                 <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
                             ],
                             <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak_introspection_client&quot;</span>.<span class="ident">to_string</span>(),
+                                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--target={}&quot;</span>, <span class="ident">opt</span>.<span class="ident">server_rust_target</span>.<span class="ident">as_deref</span>().<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_SERVER_RUST_TARGET</span>)),
+                                <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
+                            ],
+                            <span class="ident">ServerVariant</span>::<span class="ident">Kms</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak_introspection_client,awskms&quot;</span>.<span class="ident">to_string</span>(),
                                 <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--target={}&quot;</span>, <span class="ident">opt</span>.<span class="ident">server_rust_target</span>.<span class="ident">as_deref</span>().<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_SERVER_RUST_TARGET</span>)),
                                 <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
                             ],
@@ -1841,6 +1854,11 @@
             }),
             <span class="ident">build_server</span>(<span class="kw-2">&amp;</span><span class="ident">BuildServer</span> {
                 <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>::<span class="ident">Logless</span>,
+                <span class="ident">server_rust_toolchain</span>: <span class="prelude-val">None</span>,
+                <span class="ident">server_rust_target</span>: <span class="prelude-val">None</span>,
+            }),
+            <span class="ident">build_server</span>(<span class="kw-2">&amp;</span><span class="ident">BuildServer</span> {
+                <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>::<span class="ident">Kms</span>,
                 <span class="ident">server_rust_toolchain</span>: <span class="prelude-val">None</span>,
                 <span class="ident">server_rust_target</span>: <span class="prelude-val">None</span>,
             }),

@@ -1530,6 +1530,8 @@
 <span id="1527">1527</span>
 <span id="1528">1528</span>
 <span id="1529">1529</span>
+<span id="1530">1530</span>
+<span id="1531">1531</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1625,6 +1627,8 @@
     <span class="kw">pub</span> <span class="ident">metrics_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Port to run an introspection server on, if provided.</span>
     <span class="kw">pub</span> <span class="ident">introspect_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Credentials filename for KMS integration, if provided.</span>
+    <span class="kw">pub</span> <span class="ident">kms_credentials</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Security options for server pseudo-nodes.</span>
     <span class="kw">pub</span> <span class="ident">secure_server_configuration</span>: <span class="ident">SecureServerConfiguration</span>,
     <span class="doccomment">/// Application configuration.</span>
