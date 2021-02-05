@@ -89,6 +89,8 @@ pub struct Opt {
     introspect_port: u16,
     #[structopt(long, help = "Starts the Runtime without an introspection server.")]
     no_introspect: bool,
+    #[structopt(long, help = "Filename for KMS credentials.")]
+    kms_credentials: Option<String>,
     #[structopt(
         long,
         help = "Configuration files to expose to the Oak Application, each in key=filename format."
@@ -152,6 +154,7 @@ pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfigurati
         } else {
             None
         },
+        kms_credentials: opt.kms_credentials.map(std::path::PathBuf::from),
         secure_server_configuration,
         app_config,
         permissions_config,

@@ -37,7 +37,7 @@ service OakCrypto {
   rpc Unbind(KeysetUnbindRequest) returns (KeysetResponse) {}
 
   // Return a keyset that acts as a proxy to key material held in
-  // an external KMS.
+  // an external KMS, suitable for use as an AEAD.
   rpc KMSProxy(KMSProxyRequest) returns (KeysetResponse) {}
 
   // All primitive operations below take a keyset handle as a primary parameter,

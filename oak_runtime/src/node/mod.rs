@@ -126,6 +126,7 @@ pub struct ServerNodeFactory {
     pub permissions_configuration: PermissionsConfiguration,
     pub secure_server_configuration: SecureServerConfiguration,
     pub signature_table: SignatureTable,
+    pub kms_credentials: Option<std::path::PathBuf>,
 }
 
 impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
@@ -144,9 +145,9 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
         }
 
         match &node_configuration.config_type {
-            Some(ConfigType::CryptoConfig(CryptoConfiguration {})) => {
-                Ok(Box::new(crypto::CryptoNode::new(node_name)))
-            }
+            Some(ConfigType::CryptoConfig(CryptoConfiguration {})) => Ok(Box::new(
+                crypto::CryptoNode::new(node_name, self.kms_credentials.clone()),
+            )),
             Some(ConfigType::LogConfig(LogConfiguration {})) => {
                 Ok(Box::new(logger::LogNode::new(node_name)))
             }

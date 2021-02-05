@@ -69,6 +69,7 @@ mod common {
         config::configure_and_run(oak_runtime::RuntimeConfiguration {
             metrics_port: Some(crate::METRICS_PORT),
             introspect_port: None,
+            kms_credentials: None,
             secure_server_configuration: SecureServerConfiguration::default(),
             app_config: application_configuration,
             permissions_config: permissions,

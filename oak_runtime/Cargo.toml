@@ -13,6 +13,9 @@ license = "Apache-2.0"
 [features]
 oak_debug = ["regex"]
 oak_introspection_client = []
+awskms = ["tink-awskms"]
+# TODO(#745): sort out clashing dependencies
+# gcpkms = ["tink-gcpkms"]
 default = ["oak_debug"]
 
 [dependencies]
@@ -53,7 +56,10 @@ serde_json = "*"
 sha2 = "^0.9.1"
 tink-core = { version = "^0.1", features = ["json"] }
 tink-aead = "^0.1"
+tink-awskms = { version = "^0.1", optional = true }
 tink-daead = "^0.1"
+# TODO(#745): sort out clashing dependencies
+# tink-gcpkms = {version = "^0.1", optional = true }
 tink-mac = "^0.1"
 tink-prf = "^0.1"
 tink-proto = "^0.1"
