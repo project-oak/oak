@@ -1,0 +1,13 @@
+[package]
+name = "abitest_linear_handles"
+version = "0.1.0"
+authors = ["Daan de Graaf <daagra@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+oak_abi = "=0.1.0"
+oak_io = { version = "=0.1.0", features = ["linear-handles"] }

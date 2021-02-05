@@ -69,7 +69,7 @@ mod linear_handles {
     use crate::OakStatus;
     use log::trace;
 
-    /// Creates a new distinct handle using `oak_abi::clone_handle`
+    /// Creates a new distinct handle using [`oak_abi::handle_clone`]
     impl Clone for ReadHandle {
         fn clone(&self) -> Self {
             Self {
@@ -78,7 +78,7 @@ mod linear_handles {
         }
     }
 
-    /// Creates a new distinct handle using `oak_abi::clone_handle`
+    /// Creates a new distinct handle using [`oak_abi::handle_clone`]
     impl Clone for WriteHandle {
         fn clone(&self) -> Self {
             Self {
@@ -87,14 +87,14 @@ mod linear_handles {
         }
     }
 
-    /// Closes the handle using `oak_abi::channel_close`
+    /// Closes the handle using [`oak_abi::channel_close`]
     impl Drop for ReadHandle {
         fn drop(&mut self) {
             drop_handle(self.handle);
         }
     }
 
-    /// Closes the handle using `oak_abi::channel_close`
+    /// Closes the handle using [`oak_abi::channel_close`]
     impl Drop for WriteHandle {
         fn drop(&mut self) {
             drop_handle(self.handle);
@@ -102,23 +102,30 @@ mod linear_handles {
     }
 
     fn clone_handle(handle: Handle) -> Handle {
+        if handle == oak_abi::INVALID_HANDLE {
+            panic!("Cannot clone() INVALID_HANDLE");
+        }
         let mut cloned_handle = 0;
         let result = OakStatus::from_i32(unsafe {
             oak_abi::handle_clone(handle, &mut cloned_handle as *mut Handle) as i32
         })
         .expect("handle_clone returned invalid oak status");
         if result != OakStatus::Ok {
-            panic!("Failed to clone handle: {:?}", result);
+            panic!("Failed to clone handle: {}", result);
         }
         cloned_handle
     }
 
     fn drop_handle(handle: Handle) {
-        // The channel may have already been closed, or it may be invalid due to extracting it for
-        // serialization, so we only log errors here (and at the lowest priority).
-        trace!("Drop handle {}: {}", handle, unsafe {
-            oak_abi::channel_close(handle)
-        });
+        // serialization may set handles to this value.
+        if handle == oak_abi::INVALID_HANDLE {
+            return;
+        }
+        // The channel may have already been closed, so we only log errors here (and at the lowest
+        // priority).
+        let result = OakStatus::from_i32(unsafe { oak_abi::channel_close(handle) as i32 })
+            .expect("channel_close returned invalid oak status");
+        trace!("Drop handle {}: {}", handle, result);
     }
 }
 

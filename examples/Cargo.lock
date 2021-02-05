@@ -69,6 +69,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "abitest_linear_handles"
+version = "0.1.0"
+dependencies = [
+ "oak_abi",
+ "oak_io",
+]
+
+[[package]]
 name = "aead"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
