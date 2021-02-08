@@ -56,6 +56,9 @@ use oak_abi::proto::oak::identity::SignedChallenge;
 use prost::Message;
 use tokio_rustls::TlsAcceptor;
 
+// Workaround for https://rust-lang.github.io/rust-clippy/master/index.html#borrow_interior_mutable_const.
+static TRANSFER_ENCODING: http::header::HeaderName = http::header::TRANSFER_ENCODING;
+
 /// Checks that port is not reserved (i.e., is greater than 1023).
 fn check_port(address: &SocketAddr) -> Result<(), ConfigurationError> {
     if address.port() > 1023 {
@@ -297,6 +300,7 @@ struct HttpRequestHandler {
 
 impl HttpRequestHandler {
     async fn handle(&self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
+        let req = validate_request(req)?;
         let request = to_oak_http_request(req).await?;
         match get_oak_label(&request) {
             Ok(oak_label) => {
@@ -355,6 +359,23 @@ impl HttpRequestHandler {
             runtime: self.runtime.clone(),
             response_receiver,
         })
+    }
+}
+
+/// Check if the request contains a `TRANSFER_ENCODING` header, and reject the request in that case
+/// by returning an error.
+// TODO(#1874): Remove when tonic and hyper versions are updated.
+fn validate_request(req: Request<Body>) -> anyhow::Result<Request<Body>> {
+    if req
+        .headers()
+        .get(&TRANSFER_ENCODING.as_str().to_string())
+        .is_some()
+    {
+        Err(anyhow!(
+            "Requests containing TRANSFER_ENCODING headers are not allowed."
+        ))
+    } else {
+        Ok(req)
     }
 }
 
