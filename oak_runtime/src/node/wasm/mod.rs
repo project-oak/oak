@@ -18,7 +18,8 @@
 
 use crate::{
     node::{ConfigurationError, NodeIsolation},
-    LabelReadStatus, NodeMessage, NodePrivilege, NodeReadStatus, RuntimeProxy, SignatureTable,
+    Downgrading, LabelReadStatus, NodeMessage, NodePrivilege, NodeReadStatus, RuntimeProxy,
+    SignatureTable,
 };
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error, info, trace, warn};
@@ -47,16 +48,17 @@ const RANDOM_GET: usize = 2;
 const CHANNEL_CLOSE: usize = 3;
 const CHANNEL_CREATE: usize = 4;
 const CHANNEL_CREATE_WITH_DOWNGRADE: usize = 5;
-const HANDLE_CLONE: usize = 14;
-const CHANNEL_WRITE: usize = 6;
-const CHANNEL_WRITE_WITH_DOWNGRADE: usize = 7;
-const CHANNEL_READ: usize = 8;
-const WAIT_ON_CHANNELS: usize = 9;
-const CHANNEL_LABEL_READ: usize = 10;
-const NODE_LABEL_READ: usize = 11;
-const NODE_PRIVILEGE_READ: usize = 12;
+const HANDLE_CLONE: usize = 6;
+const CHANNEL_WRITE: usize = 7;
+const CHANNEL_WRITE_WITH_DOWNGRADE: usize = 8;
+const CHANNEL_READ: usize = 9;
+const CHANNEL_READ_WITH_DOWNGRADE: usize = 10;
+const WAIT_ON_CHANNELS: usize = 11;
+const CHANNEL_LABEL_READ: usize = 12;
+const NODE_LABEL_READ: usize = 13;
+const NODE_PRIVILEGE_READ: usize = 14;
 // TODO(#817): remove this; we shouldn't need to have WASI stubs.
-const WASI_STUB: usize = 13;
+const WASI_STUB: usize = 15;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -457,14 +459,88 @@ impl WasmInterface {
             actual_handle_count_addr
         );
 
+        self.channel_read_util(
+            reader_handle,
+            dest,
+            dest_capacity,
+            actual_length_addr,
+            handles_dest,
+            handles_capacity,
+            actual_handle_count_addr,
+            Downgrading::No,
+        )
+    }
+
+    /// Corresponds to the host ABI function [`channel_read_with_downgrade`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_read_with_downgrade).
+    #[allow(clippy::too_many_arguments)]
+    fn channel_read_with_downgrade(
+        &mut self,
+        reader_handle: oak_abi::Handle,
+
+        dest: AbiPointer,
+        dest_capacity: AbiPointerOffset,
+        actual_length_addr: AbiPointer,
+
+        handles_dest: AbiPointer,
+        handles_capacity: AbiPointerOffset,
+        actual_handle_count_addr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        trace!(
+            "{}: channel_read_with_downgrade({}, {}, {}, {}, {}, {}, {})",
+            self.pretty_name,
+            reader_handle,
+            dest,
+            dest_capacity,
+            actual_length_addr,
+            handles_dest,
+            handles_capacity,
+            actual_handle_count_addr
+        );
+
+        self.channel_read_util(
+            reader_handle,
+            dest,
+            dest_capacity,
+            actual_length_addr,
+            handles_dest,
+            handles_capacity,
+            actual_handle_count_addr,
+            Downgrading::Yes,
+        )
+    }
+
+    /// Helper function used by [`channel_read`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_read)
+    /// and [`channel_read_with_downgrade`](https://github.com/project-oak/oak/blob/main/docs/abi.md#channel_read_with_downgrade).
+    #[allow(clippy::too_many_arguments)]
+    fn channel_read_util(
+        &mut self,
+        reader_handle: oak_abi::Handle,
+
+        dest: AbiPointer,
+        dest_capacity: AbiPointerOffset,
+        actual_length_addr: AbiPointer,
+
+        handles_dest: AbiPointer,
+        handles_capacity: AbiPointerOffset,
+        actual_handle_count_addr: AbiPointer,
+
+        downgrade: Downgrading,
+    ) -> Result<(), OakStatus> {
         self.validate_ptr(dest, dest_capacity)?;
         self.validate_ptr(handles_dest, handles_capacity * 8)?;
 
-        let msg = self.runtime.channel_try_read_message(
-            reader_handle,
-            dest_capacity as usize,
-            handles_capacity as usize,
-        )?;
+        let msg = match downgrade {
+            Downgrading::Yes => self.runtime.channel_try_read_message_with_downgrade(
+                reader_handle,
+                dest_capacity as usize,
+                handles_capacity as usize,
+            ),
+            Downgrading::No => self.runtime.channel_try_read_message(
+                reader_handle,
+                dest_capacity as usize,
+                handles_capacity as usize,
+            ),
+        }?;
 
         let (actual_length, actual_handle_count) = match &msg {
             None => (0, 0),
@@ -478,7 +554,7 @@ impl WasmInterface {
             .set(actual_length_addr, raw_writer)
             .map_err(|err| {
                 error!(
-                    "{}: channel_read(): Unable to write actual length into guest memory: {:?}",
+                    "{}: channel_read_util(): Unable to write actual length into guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
@@ -490,7 +566,7 @@ impl WasmInterface {
             .set(actual_handle_count_addr, raw_writer)
             .map_err(|err| {
                 error!(
-                    "{}: channel_read(): Unable to write actual handle count into guest memory: {:?}",
+                    "{}: channel_read_util(): Unable to write actual handle count into guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
@@ -500,7 +576,7 @@ impl WasmInterface {
             Some(NodeReadStatus::Success(msg)) => {
                 self.get_memory().set(dest, &msg.bytes).map_err(|err| {
                     error!(
-                        "{}: channel_read(): Unable to write destination buffer into guest memory: {:?}",
+                        "{}: channel_read_util(): Unable to write destination buffer into guest memory: {:?}",
                         self.pretty_name, err
                     );
                     OakStatus::ErrInvalidArgs
@@ -516,7 +592,7 @@ impl WasmInterface {
                     .set(handles_dest, &raw_writer)
                     .map_err(|err| {
                         error!(
-                            "{}: channel_read(): Unable to write destination buffer into guest memory: {:?}",
+                            "{}: channel_read_util(): Unable to write destination buffer into guest memory: {:?}",
                             self.pretty_name, err
                         );
                         OakStatus::ErrInvalidArgs
@@ -874,6 +950,15 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(5)?,
                 args.nth_checked(6)?,
             )),
+            CHANNEL_READ_WITH_DOWNGRADE => map_host_errors(self.channel_read_with_downgrade(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+                args.nth_checked(4)?,
+                args.nth_checked(5)?,
+                args.nth_checked(6)?,
+            )),
             CHANNEL_LABEL_READ => map_host_errors(self.channel_label_read(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
@@ -1032,6 +1117,21 @@ fn oak_resolve_func(
         ),
         "channel_read" => (
             CHANNEL_READ,
+            wasmi::Signature::new(
+                &[
+                    ValueType::I64, // handle
+                    ABI_USIZE,      // buf
+                    ABI_USIZE,      // size
+                    ABI_USIZE,      // actual_size (out)
+                    ABI_USIZE,      // handle_buf
+                    ValueType::I32, // handle_count
+                    ABI_USIZE,      // actual_handle_count (out)
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "channel_read_with_downgrade" => (
+            CHANNEL_READ_WITH_DOWNGRADE,
             wasmi::Signature::new(
                 &[
                     ValueType::I64, // handle

@@ -443,7 +443,7 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::channel_try_read_message`].
+    /// Calls [`Runtime::channel_try_read_message`] without the Node's privilege.
     pub fn channel_try_read_message(
         &self,
         read_handle: oak_abi::Handle,
@@ -466,6 +466,38 @@ impl RuntimeProxy {
         );
         debug!(
             "{:?}: channel_try_read({}, bytes_capacity={}, handles_capacity={}) -> {:?}",
+            self.get_debug_id(),
+            read_handle,
+            bytes_capacity,
+            handles_capacity,
+            result
+        );
+        result
+    }
+
+    /// Calls [`Runtime::channel_try_read_message`] using the Node's privilege.
+    pub fn channel_try_read_message_with_downgrade(
+        &self,
+        read_handle: oak_abi::Handle,
+        bytes_capacity: usize,
+        handles_capacity: usize,
+    ) -> Result<Option<NodeReadStatus>, OakStatus> {
+        debug!(
+            "{:?}: channel_try_read_message_with_downgrade({}, bytes_capacity={}, handles_capacity={})",
+            self.get_debug_id(),
+            read_handle,
+            bytes_capacity,
+            handles_capacity
+        );
+        let result = self.runtime.channel_try_read_message(
+            self.node_id,
+            read_handle,
+            bytes_capacity,
+            handles_capacity,
+            Downgrading::Yes,
+        );
+        debug!(
+            "{:?}: channel_try_read_message_with_downgrade({}, bytes_capacity={}, handles_capacity={}) -> {:?}",
             self.get_debug_id(),
             read_handle,
             bytes_capacity,

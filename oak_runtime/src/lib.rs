@@ -670,7 +670,7 @@ impl Runtime {
     }
 
     /// Returns the effective label for `initial_label` in the context of the Node, taking into
-    /// acount whether the downgrade privilege should be applied.
+    /// account whether the downgrade privilege should be applied.
     fn get_effective_label(
         &self,
         node_id: NodeId,
