@@ -1,0 +1,65 @@
+// This is not valid datalog syntax. This file is meant to show what the 
+// user-facing frontend would be for the policy language that extends datalog. 
+// This does the "Slightly more complicated example" from 
+// flowsToSaysAxioms_test. This would be mechanically translated into that.
+
+//-----------------------------------------------------------------------------
+// This is the file containing the policy for node "x"
+//-----------------------------------------------------------------------------
+// The head of rules here get converted into "x says ..."
+
+// These declarations could potentially be generated automatically, or made 
+// unnecessary by some rules that produce them from the larger relations. 
+// (Figuring this out does not seem to be the highest-priority thing.)
+isPrincipal("x").
+isPrincipal("differentialPrivacyTool").
+
+// gets converted into a declartion that has the extra argument for the speaker
+.decl is_buffer_overflow_free(p: principal)
+.decl is_differentially_private(p: principal)
+
+// gets converted into "x says trustsConf(...)" and these get signed by x's 
+// private key
+trustsConf("x", p) :-
+    x says is_differentially_private(p).
+    // alternatively could drop the "x says" part here and have the absence of 
+    // a "says" as a syntactic sugar for "top says ..."
+
+is_differentially_private(p) :-
+    differentialPrivacyTool says is_differentially_private(p).
+    // might need the isPrincipal(p) clause still, but we could potentially 
+    // generate rules in the background
+
+
+// Need to figure this part out in more detail:
+// ------------------
+// we need some way of ensuring that only the specific dif_priv tool 
+// can make use of a specific private key for signing. It generates the
+// following credential:
+//
+// differentialPrivacyTool says is_differentially_private("y")
+//
+// where the argument "y" (the principal name) needs to be connected to the 
+// right binary so that the signature can include both 
+// is_differentially_private and the hash of the binary that "y" refers to
+
+//-----------------------------------------------------------------------------
+// This is the file containing the policy for node y
+//-----------------------------------------------------------------------------
+isPrincipal("y").
+isPrincipal("auditorX").
+
+// as before this gets exported as "y says trustsInteg(...) :- ..."
+trustsInteg("y", p) :-
+    y says is_buffer_overflow_free(p).
+
+trusts("y", "auditorX").
+
+// this axiom is generated in the background for each predicate like 
+// is_buffer_overflow_free, but the user does not write it explicitly
+// is_buffer_overflow_free(s, p) :-
+//     trusts("top", s, q),
+//     is_buffer_overflow_free(q, p).
+
+// We also need some way of connecting the identity of the named auditor to 
+// the right asymmetric key pair
