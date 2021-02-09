@@ -1,0 +1,40 @@
+.type principal <: symbol
+
+// We could also imagine using "trusts", "trustConfidentiality" and
+// "trustsIntegrity" instead of speaksfor*. Perhaps trusts is more intuitive
+
+.decl isPrincipal(p: principal)
+.decl speaksFor(p: principal, q: principal)
+.decl speaksForConf(p: principal, q: principal)
+.decl speaksForInteg(p: principal, q: principal)
+
+speaksFor(p, p) :- isPrincipal(p).
+speaksFor(p, r) :- speaksFor(p, q), speaksFor(q, r).
+
+speaksForConf(p, q) :- speaksFor(p, q).
+speaksForInteg(p, q) :- speaksFor(p, q).
+
+speaksForConf(p, r) :- speaksForConf(p, q), speaksForConf(q, r).
+speaksForInteg(p, r) :- speaksForInteg(p, q), speaksForInteg(q, r).
+
+// top, bottom principals in speaksFor lattice
+isPrincipal("top").
+isPrincipal("bot").
+speaksFor("top", p) :- isPrincipal(p).
+speaksFor(p, "bot") :- isPrincipal(p).
+
+.decl flowsTo(p: principal, q: principal)
+flowsTo(p, q) :- 
+    speaksForConf(q, p), speaksForInteg(p, q).
+
+.output speaksFor
+.output flowsTo
+
+/// tests
+isPrincipal("p").
+isPrincipal("q").
+isPrincipal("r").
+
+speaksForConf("q", "p").
+speaksForInteg("p", "q").
+

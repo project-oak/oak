@@ -1,0 +1,29 @@
+.type principal <: symbol
+
+.decl is_principal(p: principal)
+.decl conf(p: principal, pc: principal)
+.decl integ(p: principal, pi: principal)
+
+.decl speaksfor(p: principal, q: principal)
+
+speaksfor(p, p) :- is_principal(p).
+speaksfor(p, r) :- speaksfor(p, q), speaksfor(q, r).
+speaksfor(p, pc) :- conf(p, pc).
+speaksfor(p, pi) :- integ(p, pi).
+
+.decl flowsto(p: principal, q: principal)
+flowsto(p, q) :- 
+    conf(p, pc), integ(p, pi),
+    conf(q, qc), integ(q, qi),
+    speaksfor(qc, pc), speaksfor(pi, qi).
+        
+is_principal("p").
+is_principal("pc").
+is_principal("pi").
+conf("p", "pc").
+integ("p", "pi").
+
+.output speaksfor
+.output conf 
+.output integ 
+.output flowsto
