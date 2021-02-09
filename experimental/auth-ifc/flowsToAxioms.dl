@@ -1,40 +1,47 @@
+#ifndef FLOWSTO_AXIOMS 
+#define FLOWSTO_AXIOMS
 .type principal <: symbol
 
-// We could also imagine using "trusts", "trustConfidentiality" and
-// "trustsIntegrity" instead of speaksfor*. Perhaps trusts is more intuitive
+// These rules are inspired by the rules from FLAM. However,
+// here the "speaksFor" order is called "trusts" because it may be 
+// more intuitive.
 
 .decl isPrincipal(p: principal)
-.decl speaksFor(p: principal, q: principal)
-.decl speaksForConf(p: principal, q: principal)
-.decl speaksForInteg(p: principal, q: principal)
+// p trusts q
+.decl trusts(p: principal, q: principal)
+// p trusts q to protect p's confidentiality
+.decl trustsConf(p: principal, q: principal)
+// p trusts q to protect p's integrity
+.decl trustsInteg(p: principal, q: principal)
 
-speaksFor(p, p) :- isPrincipal(p).
-speaksFor(p, r) :- speaksFor(p, q), speaksFor(q, r).
+trusts(p, p) :- isPrincipal(p).
+trusts(p, r) :- trusts(p, q), trusts(q, r).
 
-speaksForConf(p, q) :- speaksFor(p, q).
-speaksForInteg(p, q) :- speaksFor(p, q).
+// trusts implies trust on subjects
+trustsConf(p, q) :- trusts(p, q).
+trustsInteg(p, q) :- trusts(p, q).
 
-speaksForConf(p, r) :- speaksForConf(p, q), speaksForConf(q, r).
-speaksForInteg(p, r) :- speaksForInteg(p, q), speaksForInteg(q, r).
+trustsConf(p, r) :- trustsConf(p, q), trustsConf(q, r).
+trustsInteg(p, r) :- trustsInteg(p, q), trustsInteg(q, r).
 
-// top, bottom principals in speaksFor lattice
+// top, bottom principals in trust lattice NOT IFC lattice
+// top = (secret, trusted)
+// bot = (public, untrusted)
+// so we do not have bot flowsTo top
+// (The IFC lattice is the same as the trusts lattice rotated 90 degrees. If 
+// this is confusing, just ignore!)
+
 isPrincipal("top").
 isPrincipal("bot").
-speaksFor("top", p) :- isPrincipal(p).
-speaksFor(p, "bot") :- isPrincipal(p).
+trusts(p, "top") :- isPrincipal(p).
+trusts("bot", p) :- isPrincipal(p).
 
 .decl flowsTo(p: principal, q: principal)
+// to allow data movement from p to q
+// p must trust q to protect p's confidentiality
+// q must trust p to protect q's integrity
 flowsTo(p, q) :- 
-    speaksForConf(q, p), speaksForInteg(p, q).
+    trustsConf(p, q), 
+    trustsInteg(q, p).
 
-.output speaksFor
-.output flowsTo
-
-/// tests
-isPrincipal("p").
-isPrincipal("q").
-isPrincipal("r").
-
-speaksForConf("q", "p").
-speaksForInteg("p", "q").
-
+#endif // FLOWSTO_AXIOMS

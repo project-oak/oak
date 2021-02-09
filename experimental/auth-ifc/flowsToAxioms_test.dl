@@ -1,0 +1,12 @@
+#include "flowsToAxioms.dl"
+
+.output trusts
+.output flowsTo
+
+/// tests
+isPrincipal("p").
+isPrincipal("q").
+isPrincipal("r").
+
+trustsConf("p", "q").
+trustsInteg("q", "p").
