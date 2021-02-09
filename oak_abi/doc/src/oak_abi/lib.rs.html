@@ -305,6 +305,18 @@
 <span id="302">302</span>
 <span id="303">303</span>
 <span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -431,6 +443,18 @@
     <span class="doccomment">/// [`ErrHandleSpaceTooSmall`]: crate::OakStatus::ErrHandleSpaceTooSmall</span>
     <span class="doccomment">/// [`OakStatus`]: crate::OakStatus</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_read</span>(
+        <span class="ident">handle</span>: <span class="ident">u64</span>,
+        <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>,
+        <span class="ident">size</span>: <span class="ident">usize</span>,
+        <span class="ident">actual_size</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u32</span>,
+        <span class="ident">handle_buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>,
+        <span class="ident">handle_count</span>: <span class="ident">u32</span>,
+        <span class="ident">actual_handle_count</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u32</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span>;
+
+    <span class="doccomment">/// The same as [`channel_read`](#method.channel_read), but also applies the current Node&#39;s</span>
+    <span class="doccomment">/// downgrade privilege when checking IFC restrictions.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_read_with_downgrade</span>(
         <span class="ident">handle</span>: <span class="ident">u64</span>,
         <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>,
         <span class="ident">size</span>: <span class="ident">usize</span>,
