@@ -271,7 +271,7 @@ fn build_server(opt: &BuildServer) -> Step {
                 ),
             }],
             match opt.server_variant {
-                ServerVariant::Base | ServerVariant::Coverage | ServerVariant::Kms | ServerVariant::Experimental => vec![Step::Single {
+                ServerVariant::Unsafe | ServerVariant::Coverage | ServerVariant::Kms | ServerVariant::Experimental => vec![Step::Single {
                     name: "build introspection browser client".to_string(),
                     command: Cmd::new("npm",
                                       vec![
@@ -301,26 +301,26 @@ fn build_server(opt: &BuildServer) -> Step {
                         // `--out-dir` is unstable and requires `-Zunstable-options`.
                         "-Zunstable-options".to_string(),
                         ...match opt.server_variant {
-                            ServerVariant::Logless => vec!["--no-default-features".to_string(),
+                            ServerVariant::Base => vec!["--no-default-features".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
-                            ServerVariant::NoIntrospectionClient => vec![
+                            ServerVariant::NoIntrospectionClient => vec!["--features=oak_unsafe".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
-                            ServerVariant::Base => vec!["--features=oak_introspection_client".to_string(),
+                            ServerVariant::Unsafe => vec!["--features=oak_unsafe,oak_introspection_client".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
-                            ServerVariant::Kms => vec!["--features=oak_introspection_client,awskms,gcpkms".to_string(),
+                            ServerVariant::Kms => vec!["--features=oak_unsafe,oak_introspection_client,awskms,gcpkms".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
                             // If building in coverage mode, use the default target from the host, and build
                             // in debug mode.
-                            ServerVariant::Coverage => vec!["--features=oak_introspection_client".to_string()],
-                            ServerVariant::Experimental => vec!["--features=oak_attestation,oak_introspection_client".to_string(),
+                            ServerVariant::Coverage => vec!["--features=oak_unsafe,oak_introspection_client".to_string()],
+                            ServerVariant::Experimental => vec!["--features=oak_attestation,oak_unsafe,oak_introspection_client".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
@@ -409,12 +409,12 @@ fn run_ci() -> Step {
             run_cargo_deny(),
             run_cargo_udeps(),
             build_server(&BuildServer {
-                server_variant: ServerVariant::Base,
+                server_variant: ServerVariant::Unsafe,
                 server_rust_toolchain: None,
                 server_rust_target: None,
             }),
             build_server(&BuildServer {
-                server_variant: ServerVariant::Logless,
+                server_variant: ServerVariant::Base,
                 server_rust_toolchain: None,
                 server_rust_target: None,
             }),
@@ -463,7 +463,7 @@ fn run_ci() -> Step {
                     client_rust_target: None,
                 },
                 build_server: BuildServer {
-                    server_variant: ServerVariant::Base,
+                    server_variant: ServerVariant::Unsafe,
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
@@ -483,7 +483,7 @@ fn run_ci() -> Step {
                     client_rust_target: None,
                 },
                 build_server: BuildServer {
-                    server_variant: ServerVariant::Base,
+                    server_variant: ServerVariant::Unsafe,
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
@@ -509,11 +509,11 @@ fn run_example_server(
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
             match opt.server_variant {
-                ServerVariant::Logless => format!("--permissions={}", permissions_file),
+                ServerVariant::Base => format!("--permissions={}", permissions_file),
                 _ => "".to_string(),
             },
             ...match opt.server_variant {
-                ServerVariant::Logless => vec![],
+                ServerVariant::Base => vec![],
                 _ => vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()],
             },
             ...example_server.additional_args.clone(),

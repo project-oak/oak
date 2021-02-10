@@ -1247,7 +1247,6 @@ dependencies = [
  "prost-build",
  "prost-types",
  "rand",
- "regex",
  "reqwest",
  "roughenough",
  "rustls 0.18.1",

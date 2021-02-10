@@ -404,8 +404,8 @@ The Oak Application is then started using the Oak Loader:
   --permissions=./examples/permissions/permissions.toml
 ```
 
-Providing a permissions file via the `permissions` flag is only needed for
-Logless server releases.
+Providing a permissions file via the `permissions` flag is only needed for the
+Base (log-less) server releases.
 
 The Oak Loader will launch an [Oak Runtime](concepts.md#oak-runtime), and this
 Runtime will check the provided Wasm module(s) and application configuration.
@@ -834,3 +834,9 @@ async fn test_say_hello() {
 }
 ```
 <!-- prettier-ignore-end -->
+
+## Debugging and introspection
+
+For debugging purposes, the `oak_loader` could be built with the `oak_unsafe`
+feature. This feature enables logs, and exposes an introspection server on
+`localhost` that by default is served on port `1909`.
