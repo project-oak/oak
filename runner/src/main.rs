@@ -271,7 +271,7 @@ fn build_server(opt: &BuildServer) -> Step {
                 ),
             }],
             match opt.server_variant {
-                ServerVariant::Base | ServerVariant::Coverage | ServerVariant::Kms => vec![Step::Single {
+                ServerVariant::Base | ServerVariant::Coverage | ServerVariant::Kms | ServerVariant::Experimental => vec![Step::Single {
                     name: "build introspection browser client".to_string(),
                     command: Cmd::new("npm",
                                       vec![
