@@ -82,6 +82,29 @@ Ltac crush_step :=
    possibilistic NI. *)
 Ltac crush := repeat crush_step.
 
+Ltac label_cases :=
+    match goal with
+        | l: level, ell: level |- _ =>
+            lazymatch goal with
+                | |- context [l <<? ell] =>
+                    destruct (l <<? ell)
+            end
+    end.
+
+Ltac unwind_crush_step2 :=
+    lazymatch goal with
+        | H: {| obj := _; lbl := _ |} = _ |- _ => inversion H; subst
+        | H: Some _ = Some _ |- _ => inversion H
+        | _ => idtac
+    end.
+
+Ltac unwind_crush :=
+    repeat match goal with
+        | _ => progress label_cases
+        | _ => progress unwind_crush_step2
+        | _ => progress try congruence
+    end.
+
 Ltac subst_lets :=
   repeat match goal with x := _ |- _ => subst x end.
 

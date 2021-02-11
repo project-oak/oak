@@ -61,29 +61,6 @@ Proof.
     simpl in *. erewrite upd_neq; auto. erewrite upd_neq; auto.
 Qed.
 
-Ltac label_cases :=
-    match goal with
-        | l: level, ell: level |- _ =>
-            lazymatch goal with
-                | |- context [l <<? ell] =>
-                    destruct (l <<? ell)
-            end
-    end.
-
-Ltac unwind_crush_step2 :=
-    lazymatch goal with
-        | H: {| obj := _; lbl := _ |} = _ |- _ => inversion H; subst
-        | H: Some _ = Some _ |- _ => inversion H
-        | _ => idtac
-    end.
-
-Ltac unwind_crush :=
-    repeat match goal with
-        | _ => progress label_cases
-        | _ => progress unwind_crush_step2
-        | _ => progress try congruence
-    end.
-
 Theorem chan_append_unwind: forall ell ch1 ch2 ch1obj ch2obj msg,
     chan_low_eq ell ch1 ch2 ->
     ch1.(obj) = Some ch1obj ->
