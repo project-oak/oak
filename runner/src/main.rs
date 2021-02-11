@@ -271,7 +271,7 @@ fn build_server(opt: &BuildServer) -> Step {
                 ),
             }],
             match opt.server_variant {
-                ServerVariant::Base | ServerVariant::Coverage | ServerVariant::Kms => vec![Step::Single {
+                ServerVariant::Base | ServerVariant::Coverage | ServerVariant::Kms | ServerVariant::Experimental => vec![Step::Single {
                     name: "build introspection browser client".to_string(),
                     command: Cmd::new("npm",
                                       vec![
@@ -317,9 +317,13 @@ fn build_server(opt: &BuildServer) -> Step {
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
-                        // If building in coverage mode, use the default target from the host, and build
-                        // in debug mode.
+                            // If building in coverage mode, use the default target from the host, and build
+                            // in debug mode.
                             ServerVariant::Coverage => vec!["--features=oak_introspection_client".to_string()],
+                            ServerVariant::Experimental => vec!["--features=oak_attestation,oak_introspection_client".to_string(),
+                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                                "--release".to_string(),
+                            ],
                         },
                     ],
                     &if opt.server_variant == ServerVariant::Coverage {
@@ -419,6 +423,11 @@ fn run_ci() -> Step {
                 server_rust_toolchain: None,
                 server_rust_target: None,
             }),
+            build_server(&BuildServer {
+                server_variant: ServerVariant::Experimental,
+                server_rust_toolchain: None,
+                server_rust_target: None,
+            }),
             run_tests(),
             run_tests_tsan(),
             run_examples(&RunExamples {
@@ -435,7 +444,7 @@ fn run_ci() -> Step {
                     client_rust_target: None,
                 },
                 build_server: BuildServer {
-                    server_variant: ServerVariant::Base,
+                    server_variant: ServerVariant::Experimental,
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },

@@ -17,6 +17,8 @@
 //! Helper functions to parse input arguments and create an instance of
 //! `RuntimeConfiguration` to feed into the oak_loader.
 
+#[cfg(feature = "oak_attestation")]
+use crate::attestation::get_tls_identity_from_proxy;
 use anyhow::{anyhow, Context};
 use core::str::FromStr;
 use log::debug;
@@ -64,6 +66,21 @@ pub struct Opt {
         )
     )]
     root_tls_certificate: Option<String>,
+    // Only support `proxy-uri` when `oak_attestation` is enabled.
+    #[cfg_attr(
+        feature = "oak_attestation",
+        structopt(long, help = "URI of the Proxy Attestation Service")
+    )]
+    proxy_uri: Option<String>,
+    // Only support `proxy-root-tls-certificate` when `oak_attestation` is enabled.
+    #[cfg_attr(
+        feature = "oak_attestation",
+        structopt(
+            long,
+            help = "PEM encoded X.509 TLS root certificate file of the Proxy Attestation Service"
+        )
+    )]
+    proxy_root_tls_certificate: Option<String>,
     #[structopt(
         long,
         help = "Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
@@ -119,7 +136,7 @@ impl FromStr for ConfigEntry {
 }
 
 /// Parse input options and create a `RuntimeConfiguration`.
-pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfiguration> {
+pub async fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfiguration> {
     let opt = Opt::from_args();
     debug!("parsed opts: {:?}", opt);
 
@@ -137,7 +154,7 @@ pub fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfigurati
         create_permissions_config(&opt).context("could not create app config")?;
 
     // Create the overall gRPC configuration.
-    let secure_server_configuration = create_secure_server_config(&opt)?;
+    let secure_server_configuration = create_secure_server_config(&opt).await?;
 
     // Create signature table.
     let sign_table = create_sign_table(&app_config)?;
@@ -186,41 +203,32 @@ pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<Config
 
 /// Create [`oak_runtime::SecureServerConfiguration`] containing optional TLS configurations for
 /// HTTP and gRPC server nodes.
-fn create_secure_server_config(
+async fn create_secure_server_config(
     opt: &Opt,
 ) -> anyhow::Result<oak_runtime::SecureServerConfiguration> {
     let grpc_config = create_grpc_config(&opt)
-        .map_err(|e| log::warn!("{}", e))
-        .ok();
+        .await
+        .context("Couldn't create gRPC config")?;
     let http_config = create_http_config(&opt)
         .map_err(|e| log::warn!("{}", e))
         .ok();
 
     Ok(oak_runtime::SecureServerConfiguration {
-        grpc_config,
+        grpc_config: Some(grpc_config),
         http_config,
     })
 }
 
 /// Create the overall [`oak_runtime::GrpcConfiguration`] from the TLS certificate and private key
-/// files.
-fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguration> {
-    let grpc_tls_private_key = match &opt.grpc_tls_private_key {
-        Some(path) => read_to_string(path).context("Couldn't read gRPC TLS private key")?,
-        None => return Err(anyhow!("No gRPC TLS private key file provided.")),
-    };
-    let grpc_tls_certificate = match &opt.grpc_tls_certificate {
-        Some(path) => read_to_string(path).context("Couldn't read gRPC TLS certificate")?,
-        None => return Err(anyhow!("No gRPC TLS certificate file provided.")),
-    };
+/// files or using the Proxy Attestation Service.
+async fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguration> {
+    let tls_identity = get_tls_identity(&opt).await?;
+
     let root_tls_certificate = get_root_tls_certificate_or_default(&opt).ok();
     let oidc_client_info = get_oidc_client_info(&opt)?;
 
     let grpc_config = oak_runtime::GrpcConfiguration {
-        grpc_server_tls_identity: Some(Identity::from_pem(
-            &grpc_tls_certificate,
-            &grpc_tls_private_key,
-        )),
+        grpc_server_tls_identity: Some(tls_identity),
         grpc_client_root_tls_certificate: root_tls_certificate,
         oidc_client_info,
     };
@@ -301,6 +309,48 @@ fn get_root_tls_certificate_or_default(opt: &Opt) -> anyhow::Result<Certificate>
     };
 
     Certificate::parse(certificate_bytes)
+}
+
+/// Creates [`Identity`] from the TLS certificate and private key files or using the Proxy
+/// Attestation Service.
+async fn get_tls_identity(opt: &Opt) -> anyhow::Result<Identity> {
+    match (&opt.proxy_uri, &opt.proxy_root_tls_certificate) {
+        #[cfg(feature = "oak_attestation")]
+        (Some(proxy_uri_string), Some(proxy_root_tls_certificate_path)) => {
+            let proxy_uri = proxy_uri_string
+                .parse()
+                .context("Error parsing proxy URI")?;
+            let proxy_root_tls_certificate = read_to_string(proxy_root_tls_certificate_path)
+                .context("Couldn't read proxy TLS certificate")?;
+
+            get_tls_identity_from_proxy(&proxy_uri, &proxy_root_tls_certificate.as_bytes()).await
+        }
+        #[cfg(not(feature = "oak_attestation"))]
+        (Some(_proxy_uri_string), Some(_proxy_root_tls_certificate_path)) => {
+            // Unreachable: it should not be possible to specify the flag without
+            // `oak_attestation`.
+            Err(anyhow!(
+                "Specifying `proxy-uri` or `root-tls-certificate` requires the `oak_attestation` feature."
+            ))
+        }
+        (None, Some(_)) => Err(anyhow!("No proxy URI provided.")),
+        (Some(_), None) => Err(anyhow!("No proxy TLS certificate file provided.")),
+        (None, None) => {
+            let grpc_tls_private_key = match &opt.grpc_tls_private_key {
+                Some(path) => read_to_string(path).context("Couldn't read gRPC TLS private key"),
+                None => Err(anyhow!("No gRPC TLS private key file provided.")),
+            }?;
+            let grpc_tls_certificate = match &opt.grpc_tls_certificate {
+                Some(path) => read_to_string(path).context("Couldn't read gRPC TLS certificate"),
+                None => Err(anyhow!("No gRPC TLS certificate file provided.")),
+            }?;
+
+            Ok(Identity::from_pem(
+                &grpc_tls_certificate,
+                &grpc_tls_private_key,
+            ))
+        }
+    }
 }
 
 /// Parse OpenID Connect client configuration file into a [`ClientInfo`] .

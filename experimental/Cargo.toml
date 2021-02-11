@@ -5,6 +5,7 @@ members = [
   "split_grpc/proxy",
   "split_grpc/server",
   "benchmark",
+  "proxy_attestation",
 ]
 
 [patch.crates-io]
