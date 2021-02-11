@@ -8,7 +8,7 @@ From OakIFC Require Import
     Events
     ModelSemUtils
     LowEqPS
-    NIUtilTheorems
+    Unfold
     LowProjPS_Thms
     Tactics.
 From RecordUpdate Require Import RecordSet.
@@ -19,6 +19,13 @@ Hint Unfold state_low_eq chan_state_low_eq node_state_low_eq event_low_eq
     chan_low_eq node_low_eq low_eq state_low_proj chan_state_low_proj
     node_state_low_proj event_low_proj chan_low_proj node_low_proj
     low_proj: loweq.
+
+(*
+This is a copy of Unwind but for partially-secret labels.
+This version is largely similar to Unwind, but requires an additional
+corollary top_is_top_co to prove state_upd_chan_unwind and
+state_chan_append_labeled_unwind.
+*)
 
 (*============================================================================
  Unwinding Theorems
@@ -211,8 +218,6 @@ Proof.
     rewrite H. congruence.
 Qed.
 
-(* STOPPED HERE *)
-
 Theorem set_call_unwind: forall ell id c s1 s2,
     state_low_eq ell s1 s2 ->
     state_low_eq ell (s_set_call s1 id c) (s_set_call s2 id c).
@@ -229,7 +234,7 @@ Proof.
     destruct obj; eauto using state_upd_node_unwind.
     - destruct (obj (nodes s2 id)). 
     remember (n0 <| ncall ::= (fun _ : call => c) |>) as n0'.
-    pose proof (LowProjPS_Thms.state_upd_node_unobs _ _ _ ltac:(eauto) ltac:(eauto)).
+    pose proof (state_upd_node_unobs _ _ _ ltac:(eauto) ltac:(eauto)).
     destruct (nodes s1 id), (nodes s2 id). simpl in *.
     rewrite E in H0. rewrite E1 in H0. inversion H0.
     eapply (state_low_eq_trans _ s1 s2 (state_upd_node id n0' s2)); eauto.
@@ -237,7 +242,7 @@ Proof.
     rewrite E in H0. rewrite E1 in H0. inversion H0. eauto.
     - destruct (obj (nodes s1 id)). 
     remember (n0 <| ncall ::= (fun _ : call => c) |>) as n0'.
-    pose proof (LowProjPS_Thms.state_upd_node_unobs _ _ _ ltac:(eauto) ltac:(eauto)).
+    pose proof (state_upd_node_unobs _ _ _ ltac:(eauto) ltac:(eauto)).
     destruct (nodes s1 id), (nodes s2 id). simpl in *.
     rewrite E in H0. rewrite E1 in H0. inversion H0.
     symmetry in H1.
@@ -248,19 +253,19 @@ Proof.
     (* both some *)
     remember (n1 <| ncall ::= (fun _ : call => c) |>) as n1'.
     remember (n2 <| ncall ::= (fun _ : call => c) |>) as n2'.
-    pose proof (LowProjPS_Thms.state_upd_node_unobs _ s2 _ n1' ltac:(eauto)).
-    pose proof (LowProjPS_Thms.state_upd_node_unobs _ s1 _ n2' ltac:(eauto)).
+    pose proof (state_upd_node_unobs _ s2 _ n1' ltac:(eauto)).
+    pose proof (state_upd_node_unobs _ s1 _ n2' ltac:(eauto)).
     symmetry in H2.
     eapply (state_low_eq_trans ell
         (state_upd_node id n2' s1) s1 (state_upd_node id n1' s2)); eauto.
     eapply (state_low_eq_trans ell s1 s2 (state_upd_node id n1' s2)); eauto.
     (* s2 is some*)
     remember (n1 <| ncall ::= (fun _ : call => c) |>) as n1'.
-    pose proof (LowProjPS_Thms.state_upd_node_unobs _ _ _ ltac:(eauto) ltac:(eauto)).
+    pose proof (state_upd_node_unobs _ _ _ ltac:(eauto) ltac:(eauto)).
     eapply (state_low_eq_trans _ s1 s2 (state_upd_node id n1' s2)); eauto.
     (* s1 is some *)
     remember (n1 <| ncall ::= (fun _ : call => c) |>) as n1'.
-    pose proof (LowProjPS_Thms.state_upd_node_unobs _ s1 _ n1' ltac:(eauto)).
+    pose proof (state_upd_node_unobs _ s1 _ n1' ltac:(eauto)).
     symmetry in H1.
     eapply (state_low_eq_trans _ (state_upd_node id n1' s1) s1 s2); eauto.
     eauto.

@@ -235,6 +235,12 @@ Proof. congruence. Qed.
 
 Hint Unfold obj lbl fnd: structs.
 
+(*
+The theorems below in low_equivalence are copied from NIUtilTheorems.
+The theorem statements and bodies are the same, but use the PS low
+projections and PS Hints.
+*)
+
 Lemma state_low_eq_implies_node_lookup_eq ell s1 s2 :
   state_low_eq ell s1 s2 ->
   forall id,

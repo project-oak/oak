@@ -7,7 +7,11 @@ From OakIFC Require Import
     Events
     EvAugSemanticsPS.
 
-(* This is a copy of TraceTheorems but for partially-secret labels. *)
+(*
+This is a copy of TraceTheorems but for partially-secret labels.
+The only change is that RuntimeModelPS and EvAugSemanticsPS are used
+in place of the non-PS versions.
+*)
 
 (* Single step of [crush] *)
 Local Ltac crush_step :=

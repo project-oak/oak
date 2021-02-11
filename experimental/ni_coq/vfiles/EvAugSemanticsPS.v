@@ -20,8 +20,9 @@ Import RecordSetNotations.
 Local Open Scope map_scope.
 Local Open Scope ev_notation.
 
-(* This is a copy of EvAugSemantics, but using the runtime model for
-   partially-secret labels.
+(*
+This is a copy of EvAugSemantics for partially-secret labels.
+This version uses RuntimeModelPS in place of RuntimeModel.
 *)
 
 (*
