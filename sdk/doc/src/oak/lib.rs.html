@@ -763,6 +763,19 @@
 <span id="760">760</span>
 <span id="761">761</span>
 <span id="762">762</span>
+<span id="763">763</span>
+<span id="764">764</span>
+<span id="765">765</span>
+<span id="766">766</span>
+<span id="767">767</span>
+<span id="768">768</span>
+<span id="769">769</span>
+<span id="770">770</span>
+<span id="771">771</span>
+<span id="772">772</span>
+<span id="773">773</span>
+<span id="774">774</span>
+<span id="775">775</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -784,6 +797,7 @@
 <span class="doccomment">//! underlying Oak platform functionality.</span>
 
 <span class="kw">use</span> <span class="ident">byteorder</span>::<span class="ident">WriteBytesExt</span>;
+<span class="kw">use</span> <span class="ident">core</span>::<span class="ident">borrow</span>::<span class="ident">Borrow</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">NodeConfiguration</span>;
 <span class="kw">use</span> <span class="ident">oak_io</span>::{<span class="ident">Decodable</span>, <span class="ident">Encodable</span>};
@@ -846,11 +860,12 @@
 
 <span class="comment">// Build a chunk of memory that is suitable for passing to oak_abi::wait_on_channels,</span>
 <span class="comment">// holding the given collection of channel handles.</span>
-<span class="kw">fn</span> <span class="ident">new_handle_space</span>(<span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">ReadHandle</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+<span class="comment">// TODO(#1854): Only accept &amp;[&amp;ReadHandle] once handles are always linear types</span>
+<span class="kw">fn</span> <span class="ident">new_handle_space</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">ReadHandle</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">R</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">space</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">oak_abi</span>::<span class="ident">SPACE_BYTES_PER_HANDLE</span> <span class="op">*</span> <span class="ident">handles</span>.<span class="ident">len</span>());
     <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">handles</span> {
         <span class="ident">space</span>
-            .<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>(<span class="ident">handle</span>.<span class="ident">handle</span>)
+            .<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">byteorder</span>::<span class="ident">LittleEndian</span><span class="op">&gt;</span>(<span class="ident">handle</span>.<span class="ident">borrow</span>().<span class="ident">handle</span>)
             .<span class="ident">unwrap</span>();
         <span class="ident">space</span>.<span class="ident">push</span>(<span class="number">0x00</span>);
     }
@@ -873,7 +888,10 @@
 <span class="doccomment">/// This is a convenience wrapper around the [`oak_abi::wait_on_channels`] host</span>
 <span class="doccomment">/// function. This version is easier to use in Rust but is less efficient</span>
 <span class="doccomment">/// (because the notification space is re-created on each invocation).</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait_on_channels</span>(<span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">ReadHandle</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+<span class="comment">// TODO(#1854): Only accept &amp;[&amp;ReadHandle] once handles are always linear types</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait_on_channels</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">ReadHandle</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+    <span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">R</span>],
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ChannelReadStatus</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">space</span> <span class="op">=</span> <span class="ident">new_handle_space</span>(<span class="ident">handles</span>);
     <span class="kw">unsafe</span> {
         <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">oak_abi</span>::<span class="ident">wait_on_channels</span>(<span class="ident">space</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">handles</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
@@ -901,28 +919,30 @@
 <span class="doccomment">/// The provided vectors for received data and associated handles will be</span>
 <span class="doccomment">/// resized to accommodate the information in the message; any data already</span>
 <span class="doccomment">/// held in the vectors will be overwritten.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_read</span>(
-    <span class="ident">half</span>: <span class="ident">ReadHandle</span>,
+<span class="comment">// TODO(#1854): Only accept &amp;ReadHandle once handles are always linear types</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_read</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">ReadHandle</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+    <span class="ident">half</span>: <span class="ident">R</span>,
     <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">handles</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Handle</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="ident">channel_read_util</span>(<span class="ident">half</span>, <span class="ident">buf</span>, <span class="ident">handles</span>, <span class="ident">Downgrading</span>::<span class="ident">No</span>)
+    <span class="ident">channel_read_util</span>(<span class="ident">half</span>.<span class="ident">borrow</span>(), <span class="ident">buf</span>, <span class="ident">handles</span>, <span class="ident">Downgrading</span>::<span class="ident">No</span>)
 }
 
 <span class="doccomment">/// The same as [`channel_read`](#method.channel_read), but also applies the current Node&#39;s</span>
 <span class="doccomment">/// downgrade privilege when checking IFC restrictions.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_read_with_downgrade</span>(
-    <span class="ident">half</span>: <span class="ident">ReadHandle</span>,
+<span class="comment">// TODO(#1854): Only accept &amp;ReadHandle once handles are always linear types</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_read_with_downgrade</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">ReadHandle</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+    <span class="ident">half</span>: <span class="ident">R</span>,
     <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">handles</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Handle</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-    <span class="ident">channel_read_util</span>(<span class="ident">half</span>, <span class="ident">buf</span>, <span class="ident">handles</span>, <span class="ident">Downgrading</span>::<span class="ident">Yes</span>)
+    <span class="ident">channel_read_util</span>(<span class="ident">half</span>.<span class="ident">borrow</span>(), <span class="ident">buf</span>, <span class="ident">handles</span>, <span class="ident">Downgrading</span>::<span class="ident">Yes</span>)
 }
 
 <span class="doccomment">/// Helper function used by [`channel_read`](#method.channel_read) and</span>
 <span class="doccomment">/// [`channel_read_with_downgrade`](#method.channel_read_with_downgrade).</span>
 <span class="kw">fn</span> <span class="ident">channel_read_util</span>(
-    <span class="ident">half</span>: <span class="ident">ReadHandle</span>,
+    <span class="ident">half</span>: <span class="kw-2">&amp;</span><span class="ident">ReadHandle</span>,
     <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">handles</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Handle</span><span class="op">&gt;</span>,
     <span class="ident">downgrade</span>: <span class="ident">Downgrading</span>,
@@ -1023,11 +1043,16 @@
 }
 
 <span class="doccomment">/// Write a message to a channel.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_write</span>(<span class="ident">half</span>: <span class="ident">WriteHandle</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+<span class="comment">// TODO(#1854): Only accept &amp;WriteHandle once handles are always linear types</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_write</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">WriteHandle</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+    <span class="ident">half</span>: <span class="ident">W</span>,
+    <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    <span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>],
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">handle_buf</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">pack</span>(<span class="ident">handles</span>);
     <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> {
         <span class="ident">oak_abi</span>::<span class="ident">channel_write</span>(
-            <span class="ident">half</span>.<span class="ident">handle</span>,
+            <span class="ident">half</span>.<span class="ident">borrow</span>().<span class="ident">handle</span>,
             <span class="ident">buf</span>.<span class="ident">as_ptr</span>(),
             <span class="ident">buf</span>.<span class="ident">len</span>(),
             <span class="ident">handle_buf</span>.<span class="ident">as_ptr</span>(),
@@ -1039,15 +1064,16 @@
 
 <span class="doccomment">/// The same as [`channel_write`](#method.channel_write), but also applies the current Node&#39;s</span>
 <span class="doccomment">/// downgrade privilege when checking IFC restrictions.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_write_with_downgrade</span>(
-    <span class="ident">half</span>: <span class="ident">WriteHandle</span>,
+<span class="comment">// TODO(#1854): Only accept &amp;WriteHandle once handles are always linear types</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_write_with_downgrade</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">WriteHandle</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+    <span class="ident">half</span>: <span class="ident">W</span>,
     <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
     <span class="ident">handles</span>: <span class="kw-2">&amp;</span>[<span class="ident">Handle</span>],
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">handle_buf</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">handle</span>::<span class="ident">pack</span>(<span class="ident">handles</span>);
     <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> {
         <span class="ident">oak_abi</span>::<span class="ident">channel_write_with_downgrade</span>(
-            <span class="ident">half</span>.<span class="ident">handle</span>,
+            <span class="ident">half</span>.<span class="ident">borrow</span>().<span class="ident">handle</span>,
             <span class="ident">buf</span>.<span class="ident">as_ptr</span>(),
             <span class="ident">buf</span>.<span class="ident">len</span>(),
             <span class="ident">handle_buf</span>.<span class="ident">as_ptr</span>(),

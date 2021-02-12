@@ -204,6 +204,13 @@
 <span id="201">201</span>
 <span id="202">202</span>
 <span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -225,6 +232,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">OakStatus</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
+<span class="kw">use</span> <span class="ident">core</span>::<span class="ident">borrow</span>::<span class="ident">Borrow</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>;
 <span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
@@ -318,18 +326,24 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// Useful for sending initial data to nodes instantiated via the</span>
 <span class="doccomment">/// [`crate::entrypoint_command_handler_init`] macro.</span>
-<span class="kw">fn</span> <span class="ident">send_init</span><span class="op">&lt;</span><span class="ident">Init</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span>, <span class="ident">Command</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span><span class="op">&gt;</span>(
-    <span class="ident">sender</span>: <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">oak_io</span>::<span class="ident">InitWrapper</span><span class="op">&lt;</span><span class="ident">Init</span>, <span class="ident">Command</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="kw">fn</span> <span class="ident">send_init</span><span class="op">&lt;</span><span class="ident">Init</span>, <span class="ident">Command</span>, <span class="ident">InitSender</span><span class="op">&gt;</span>(
+    <span class="ident">sender</span>: <span class="ident">InitSender</span>,
     <span class="ident">init</span>: <span class="ident">Init</span>,
     <span class="ident">command_channel_label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Command</span><span class="op">&gt;</span>, <span class="ident">oak_io</span>::<span class="ident">OakError</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Command</span><span class="op">&gt;</span>, <span class="ident">oak_io</span>::<span class="ident">OakError</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">Init</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span>,
+    <span class="ident">Command</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span>,
+    <span class="comment">// TODO(#1854): Only accept references once handles are always linear types</span>
+    <span class="ident">InitSender</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">oak_io</span>::<span class="ident">InitWrapper</span><span class="op">&lt;</span><span class="ident">Init</span>, <span class="ident">Command</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+{
     <span class="kw">let</span> (<span class="ident">command_sender</span>, <span class="ident">command_receiver</span>) <span class="op">=</span>
         <span class="ident">channel_create</span>::<span class="op">&lt;</span><span class="ident">Command</span><span class="op">&gt;</span>(<span class="string">&quot;command sender&quot;</span>, <span class="ident">command_channel_label</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">init_wrapper</span> <span class="op">=</span> <span class="ident">oak_io</span>::<span class="ident">InitWrapper</span> {
         <span class="ident">init</span>,
         <span class="ident">command_receiver</span>,
     };
-    <span class="ident">sender</span>.<span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="ident">init_wrapper</span>)<span class="question-mark">?</span>;
+    <span class="ident">sender</span>.<span class="ident">borrow</span>().<span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="ident">init_wrapper</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="ident">command_sender</span>)
 }
 
