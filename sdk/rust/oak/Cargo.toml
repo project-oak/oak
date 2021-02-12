@@ -12,7 +12,7 @@ http = "*"
 log = { version = "*", features = ["std"] }
 oak_abi = "=0.1.0"
 oak_derive = { path = "../../../oak_derive" }
-oak_io = "=0.1.0"
+oak_io = { version = "=0.1.0", features = ["no-linear-handles"] }
 oak_services = "=0.1.0"
 prost = "*"
 prost-types = "*"

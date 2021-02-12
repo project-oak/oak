@@ -23,7 +23,10 @@ use oak_abi::Handle;
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
 #[derive(PartialEq)]
-#[cfg_attr(not(feature = "linear-handles"), derive(Copy, Clone))]
+#[cfg_attr(
+    any(feature = "no-linear-handles", not(feature = "linear-handles")),
+    derive(Copy, Clone)
+)]
 pub struct ReadHandle {
     pub handle: Handle,
 }
@@ -44,7 +47,10 @@ impl From<Handle> for ReadHandle {
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
 #[derive(PartialEq)]
-#[cfg_attr(not(feature = "linear-handles"), derive(Copy, Clone))]
+#[cfg_attr(
+    any(feature = "no-linear-handles", not(feature = "linear-handles")),
+    derive(Copy, Clone)
+)]
 pub struct WriteHandle {
     pub handle: Handle,
 }
@@ -63,7 +69,7 @@ impl From<Handle> for WriteHandle {
 
 /// Provides implementations of `Clone` and `Drop` for handle types, based on the `handle_clone` and
 /// `channel_close` ABI syscalls, respectively.
-#[cfg(feature = "linear-handles")]
+#[cfg(all(feature = "linear-handles", not(feature = "no-linear-handles")))]
 mod linear_handles {
     use super::*;
     use crate::OakStatus;
@@ -106,10 +112,10 @@ mod linear_handles {
             panic!("Cannot clone() INVALID_HANDLE");
         }
         let mut cloned_handle = 0;
-        let result = OakStatus::from_i32(unsafe {
-            oak_abi::handle_clone(handle, &mut cloned_handle as *mut Handle) as i32
-        })
-        .expect("handle_clone returned invalid oak status");
+        let status =
+            unsafe { oak_abi::handle_clone(handle, &mut cloned_handle as *mut Handle) as i32 };
+        let result = OakStatus::from_i32(status)
+            .unwrap_or_else(|| panic!("handle_clone returned invalid oak status: {}", status));
         if result != OakStatus::Ok {
             panic!("Failed to clone handle: {}", result);
         }

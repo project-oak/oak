@@ -31,6 +31,9 @@ fn run_tests() {
     test_drop_closes_handle();
 }
 
+// clippy analysis is performed on the workspace level, where the linear-handles feature is
+// disabled. This results in false positives for these errors, which we thus suppress.
+#[allow(clippy::clone_on_copy)]
 fn test_cloned_handles_are_valid_and_distinct() {
     let (w, r) = channel_create().expect("Failed to create channel");
     let w2 = w.clone();
@@ -45,6 +48,7 @@ fn test_cloned_handles_are_valid_and_distinct() {
 }
 
 // Writes from the cloned handle should be readable from the original, and vice versa
+#[allow(clippy::clone_on_copy)]
 fn test_original_and_clone_are_connected() {
     let (w, r) = channel_create().expect("Failed to create channel");
     let w2 = w.clone();
@@ -61,6 +65,7 @@ fn test_original_and_clone_are_connected() {
     assert_eq!(msg2, "msg2");
 }
 
+#[allow(clippy::drop_copy)]
 fn test_drop_closes_handle() {
     let (w, r) = channel_create().expect("Failed to create channel");
     assert_eq!(channel_read(&r), Err(OakStatus::ErrChannelEmpty));
@@ -112,7 +117,7 @@ fn write_result(init_handle: u64, msg: &str) {
     unsafe {
         oak_abi::channel_read(
             init_handle,
-            0 as *mut u8,
+            core::ptr::null_mut::<u8>(),
             0,
             &mut _actual_size as *mut u32,
             &mut result_handle as *mut u64 as *mut u8,
@@ -124,7 +129,7 @@ fn write_result(init_handle: u64, msg: &str) {
             result_handle,
             buf.as_ptr() as *const u8,
             buf.len(),
-            0 as *const u8,
+            core::ptr::null::<u8>(),
             0,
         );
     }
@@ -142,7 +147,7 @@ fn channel_read(r: &ReadHandle) -> Result<String, OakStatus> {
             &mut buf[0] as *mut u8,
             BUF_LEN,
             &mut actual_size as *mut u32,
-            0 as *mut u8,
+            core::ptr::null_mut::<u8>(),
             0,
             &mut _actual_handle_count as *mut u32,
         )
@@ -160,7 +165,7 @@ fn channel_write(w: &WriteHandle, msg: &str) -> Result<(), OakStatus> {
             w.handle,
             msg.as_ptr() as *const u8,
             msg.len(),
-            0 as *const u8,
+            core::ptr::null::<u8>(),
             0,
         )
     };

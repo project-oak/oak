@@ -888,7 +888,7 @@ impl FrontendNode {
         oak::channel_write(init_wh, &[], &[result_wh.handle])
             .expect("Failed to write result handle");
 
-        // the linear_handles module should return a single result message (without handles), its
+        // The linear_handles module should return a single result message (without handles), its
         // body a string containing the test result.
         let mut buf = Vec::new();
         let mut handles = Vec::new();
