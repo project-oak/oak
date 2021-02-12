@@ -56,9 +56,11 @@ impl CommandHandler for Router {
             self.init.clone(),
         )
         .context("Couldn't create handler node")?;
-        handler_invocation_sender
+        let result = handler_invocation_sender
             .send(&invocation)
-            .context("Couldn't send invocation to handler node")
+            .context("Couldn't send invocation to handler node");
+        invocation.close()?;
+        result
     }
 }
 

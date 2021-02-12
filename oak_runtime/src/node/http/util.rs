@@ -73,16 +73,14 @@ impl Pipe {
     pub fn send_invocation(
         &self,
         runtime: &RuntimeProxy,
-        invocation_channel: oak_abi::Handle,
+        invocation_channel: WriteHandle,
     ) -> anyhow::Result<()> {
         // Create an invocation containing request-specific channels.
         let invocation = HttpInvocation {
             receiver: Some(self.request_receiver.clone()),
             sender: Some(self.response_sender.clone()),
         };
-        let invocation_sender = crate::io::Sender::new(WriteHandle {
-            handle: invocation_channel,
-        });
+        let invocation_sender = crate::io::Sender::new(invocation_channel);
         invocation_sender
             .send_with_downgrade(invocation, runtime)
             .context("Couldn't write the invocation message")

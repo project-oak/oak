@@ -266,7 +266,8 @@ impl CommandHandler for RedirectHelper {
     type Command = RedirectInvocation;
 
     fn handle_command(&mut self, invocation: RedirectInvocation) -> anyhow::Result<()> {
-        let request = invocation.request_receiver.unwrap().receive()?;
+        let request = invocation.request_receiver.as_ref().unwrap().receive()?;
+        invocation.request_receiver.unwrap().close()?;
         let client_invocation = invocation.http_invocation_source.unwrap();
         let uri = request.uri.parse::<http::Uri>()?;
 

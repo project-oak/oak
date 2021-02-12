@@ -118,7 +118,7 @@ impl oak::CommandHandler for Router {
         // The router node has a public confidentiality label, and therefore cannot read the
         // contents of the request of the invocation (unless it happens to be public as well), but
         // it can always inspect its label.
-        match (&command.receiver, &command.sender) {
+        let result = match (&command.receiver, &command.sender) {
             (Some(receiver), Some(sender)) => {
                 let label = receiver.label()?;
                 let grpc_response_writer = oak::grpc::ChannelResponseWriter::new(sender.clone());
@@ -150,7 +150,9 @@ impl oak::CommandHandler for Router {
             _ => {
                 anyhow::bail!("received malformed gRPC invocation");
             }
-        }
+        };
+        command.close()?;
+        result
     }
 }
 

@@ -38,7 +38,10 @@ use oak_abi::{
     proto::oak::application::HttpServerConfiguration,
     OakStatus,
 };
-use oak_io::{handle::ReadHandle, OakError, Receiver};
+use oak_io::{
+    handle::{ReadHandle, WriteHandle},
+    OakError, Receiver,
+};
 use oak_services::proto::oak::encap::{HeaderMap, HttpRequest, HttpResponse};
 use std::{io, net::SocketAddr, pin::Pin};
 use tokio::{
@@ -226,27 +229,20 @@ impl Node for HttpServerNode {
         // At start-of-day we need/expect to receive a write handle for an invocation channel
         // to use for all subsequent activity.
         info!("{}: Waiting for invocation channel", self.node_name);
-        let startup_receiver = Receiver::<HttpInvocationSender>::new(ReadHandle {
+        let read_handle = ReadHandle {
             handle: startup_handle,
-        });
-        let invocation_channel =
-            match startup_receiver
-                .receive(&runtime)
-                .and_then(|invocation_sender| {
-                    invocation_sender
-                        .sender
-                        .ok_or(OakError::OakStatus(OakStatus::ErrBadHandle))
-                }) {
-                Ok(sender) => sender.handle.handle,
-                Err(status) => {
-                    error!(
-                        "Failed to retrieve invocation channel write handle: {:?}",
-                        status
-                    );
-                    return;
-                }
-            };
-        if let Err(err) = startup_receiver.close(&runtime) {
+        };
+        let invocation_channel = match get_invocation_channel(&runtime, read_handle) {
+            Ok(writer) => writer,
+            Err(status) => {
+                error!(
+                    "Failed to retrieve invocation channel write handle: {:?}",
+                    status
+                );
+                return;
+            }
+        };
+        if let Err(err) = runtime.channel_close(startup_handle) {
             error!(
                 "Failed to close initial inbound channel {}: {:?}",
                 startup_handle, err
@@ -274,6 +270,30 @@ impl Node for HttpServerNode {
     }
 }
 
+/// Reads the [`WriteHandle`] (to be used for sending new invocations) from a startup channel.
+/// Returns an error if the startup channel couldn't be read, or if the initial message is
+/// invalid (it must be an encoded [`HttpInvocationSender`]).
+fn get_invocation_channel(
+    runtime: &RuntimeProxy,
+    startup_handle: ReadHandle,
+) -> Result<WriteHandle, OakError> {
+    let startup_receiver = Receiver::<HttpInvocationSender>::new(startup_handle);
+    let invocation_channel = startup_receiver.receive(&runtime)?;
+    match &invocation_channel.sender {
+        Some(invocation_sender) => {
+            info!(
+                "Invocation channel write handle received: {}",
+                invocation_sender.handle.handle
+            );
+            Ok(invocation_sender.handle)
+        }
+        None => {
+            error!("Couldn't receive the invocation sender.");
+            Err(OakError::OakStatus(OakStatus::ErrBadHandle))
+        }
+    }
+}
+
 fn create_async_runtime() -> tokio::runtime::Runtime {
     tokio::runtime::Builder::new()
         // Use simple scheduler that runs all tasks on the current-thread.
@@ -295,7 +315,7 @@ struct HttpRequestHandler {
     /// Reference to the Runtime in the context of this HTTP server pseudo-Node.
     runtime: RuntimeProxy,
     /// Channel handle used for writing HTTP invocations.
-    invocation_channel: oak_abi::Handle,
+    invocation_channel: WriteHandle,
 }
 
 impl HttpRequestHandler {
@@ -525,6 +545,20 @@ impl HttpResponseReceiver {
                     .body(Body::empty())
                     .context("Couldn't create response")
             }
+        }
+    }
+}
+
+impl Drop for HttpResponseReceiver {
+    fn drop(&mut self) {
+        if let Err(err) = self
+            .runtime
+            .channel_close(self.response_receiver.handle.handle)
+        {
+            error!(
+                "Failed to close response channel {}: {:?}",
+                self.response_receiver.handle.handle, err
+            );
         }
     }
 }
