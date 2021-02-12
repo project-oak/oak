@@ -50,6 +50,7 @@ const FRONTEND_MODULE_NAME: &str = "frontend_module";
 const BACKEND_MODULE_NAME: &str = "backend_module";
 const BACKEND_ENTRYPOINT_NAME: &str = "backend_oak_main";
 const STORAGE_NAME_PREFIX: &str = "abitest";
+const LINEAR_HANDLES_MODULE_NAME: &str = "linear_handles_module";
 
 // Distinct listening addresses to avoid port-in-use errors
 const HTTP_ADDR: &str = "[::]:8383";
@@ -233,6 +234,10 @@ impl OakAbiTestService for FrontendNode {
         tests.insert(
             "HandleCloneRaw",
             (Self::test_handle_clone_raw, Count::Unchanged),
+        );
+        tests.insert(
+            "LinearHandles",
+            (Self::test_linear_handles, Count::Unchanged),
         );
         tests.insert(
             "ChannelReadRaw",
@@ -859,6 +864,45 @@ impl FrontendNode {
         }
         expect_eq!(Ok(()), oak::channel_close(w));
         expect_eq!(Ok(()), oak::channel_close(r));
+        Ok(())
+    }
+
+    fn test_linear_handles(&mut self) -> TestResult {
+        let (init_wh, init_rh) =
+            oak::channel_create("linear_handle_init", &Label::public_untrusted()).unwrap();
+        // The actual tests run in a separate node, as that code must be compiled with oak_io
+        // feature linear-handles enabled
+        oak::node_create(
+            "linear_handles",
+            &oak::node_config::wasm(LINEAR_HANDLES_MODULE_NAME, "linear_handles_oak_main"),
+            &Label::public_untrusted(),
+            init_rh,
+        )
+        .expect("failed to create linear_handles Node");
+
+        let (result_wh, result_rh) =
+            oak::channel_create("linear_handle_result", &Label::public_untrusted()).unwrap();
+
+        // The linear_handles module expects to read a single init message with exactly one handle:
+        // a write handle to return the result message in.
+        oak::channel_write(init_wh, &[], &[result_wh.handle])
+            .expect("Failed to write result handle");
+
+        // The linear_handles module should return a single result message (without handles), its
+        // body a string containing the test result.
+        let mut buf = Vec::new();
+        let mut handles = Vec::new();
+        oak::wait_on_channels(&[result_rh]).expect("Channel did not become readable");
+        oak::channel_read(result_rh, &mut buf, &mut handles).expect("Failed to read response");
+        let msg = String::from_utf8(buf).expect("Response message is not valid UTF8");
+        // "OK" if all tests passed, the error message otherwise.
+        expect_eq!(msg, "OK");
+
+        expect_eq!(Ok(()), oak::channel_close(init_wh.handle));
+        expect_eq!(Ok(()), oak::channel_close(init_rh.handle));
+        expect_eq!(Ok(()), oak::channel_close(result_wh.handle));
+        expect_eq!(Ok(()), oak::channel_close(result_rh.handle));
+
         Ok(())
     }
 
