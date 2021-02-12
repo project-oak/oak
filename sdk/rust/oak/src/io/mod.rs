@@ -18,6 +18,7 @@
 
 use crate::OakStatus;
 use anyhow::Context;
+use core::borrow::Borrow;
 use oak_abi::label::Label;
 use oak_services::proto::google::rpc;
 use std::io;
@@ -111,18 +112,24 @@ pub fn entrypoint_node_create<
 ///
 /// Useful for sending initial data to nodes instantiated via the
 /// [`crate::entrypoint_command_handler_init`] macro.
-fn send_init<Init: Encodable + Decodable, Command: Encodable + Decodable>(
-    sender: Sender<oak_io::InitWrapper<Init, Command>>,
+fn send_init<Init, Command, InitSender>(
+    sender: InitSender,
     init: Init,
     command_channel_label: &Label,
-) -> Result<Sender<Command>, oak_io::OakError> {
+) -> Result<Sender<Command>, oak_io::OakError>
+where
+    Init: Encodable + Decodable,
+    Command: Encodable + Decodable,
+    // TODO(#1854): Only accept references once handles are always linear types
+    InitSender: Borrow<Sender<oak_io::InitWrapper<Init, Command>>>,
+{
     let (command_sender, command_receiver) =
         channel_create::<Command>("command sender", command_channel_label)?;
     let init_wrapper = oak_io::InitWrapper {
         init,
         command_receiver,
     };
-    sender.send(&init_wrapper)?;
+    sender.borrow().send(&init_wrapper)?;
     Ok(command_sender)
 }
 
