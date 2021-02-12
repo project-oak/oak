@@ -72,8 +72,9 @@ dependencies = [
 name = "abitest_linear_handles"
 version = "0.1.0"
 dependencies = [
+ "log",
+ "oak",
  "oak_abi",
- "oak_io",
 ]
 
 [[package]]

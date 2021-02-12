@@ -10,4 +10,9 @@ crate-type = ["cdylib", "lib"]
 
 [dependencies]
 oak_abi = "=0.1.0"
-oak_io = { version = "=0.1.0", features = ["linear-handles"] }
+log = "*"
+
+[dependencies.oak]
+version = "=0.1.0"
+features = ["linear-handles"]
+default-features = false

@@ -5,6 +5,11 @@ authors = ["Tiziano Santoro <tzn@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[features]
+default = ["no-linear-handles"]
+no-linear-handles = ["oak_io/no-linear-handles"]
+linear-handles = ["oak_io/linear-handles"]
+
 [dependencies]
 anyhow = "*"
 byteorder = "*"
@@ -12,7 +17,7 @@ http = "*"
 log = { version = "*", features = ["std"] }
 oak_abi = "=0.1.0"
 oak_derive = { path = "../../../oak_derive" }
-oak_io = { version = "=0.1.0", features = ["no-linear-handles"] }
+oak_io = { version = "=0.1.0" }
 oak_services = "=0.1.0"
 prost = "*"
 prost-types = "*"

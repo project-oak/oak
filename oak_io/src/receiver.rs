@@ -51,6 +51,16 @@ impl<T: Decodable> Receiver<T> {
             phantom: std::marker::PhantomData,
         }
     }
+
+    pub fn as_proto_handle(&self) -> crate::handle::Receiver {
+        crate::handle::Receiver {
+            id: self.handle.handle,
+        }
+    }
+
+    pub fn into_inner(self) -> ReadHandle {
+        self.handle
+    }
 }
 
 impl<T: Decodable> From<ReadHandle> for Receiver<T> {
@@ -62,14 +72,6 @@ impl<T: Decodable> From<ReadHandle> for Receiver<T> {
 impl<T: Decodable> crate::handle::HandleVisit for Receiver<T> {
     fn fold<B>(&mut self, init: B, f: fn(B, &mut crate::Handle) -> B) -> B {
         f(init, &mut self.handle.handle)
-    }
-}
-
-impl<T: Decodable> Receiver<T> {
-    pub fn as_proto_handle(&self) -> crate::handle::Receiver {
-        crate::handle::Receiver {
-            id: self.handle.handle,
-        }
     }
 }
 

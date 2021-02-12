@@ -51,6 +51,7 @@ pub fn channel_create_with_downgrade<T: Encodable + Decodable>(
 
 /// Creates a node and corresponding inbound channel of the same type, and returns [`Sender`] for
 /// such channel.
+#[cfg(any(not(feature = "linear-handles"), feature = "no-linear-handles"))] // no linear handles version
 pub fn node_create<T: Encodable + Decodable>(
     name: &str,
     label: &Label,
@@ -69,8 +70,22 @@ pub fn node_create<T: Encodable + Decodable>(
     Ok(sender)
 }
 
+/// Creates a node and corresponding inbound channel of the same type, and returns [`Sender`] for
+/// such channel.
+#[cfg(all(not(feature = "no-linear-handles"), feature = "linear-handles"))] // linear handles version
+pub fn node_create<T: Encodable + Decodable>(
+    name: &str,
+    label: &Label,
+    node_config: &crate::NodeConfiguration,
+) -> Result<Sender<T>, OakStatus> {
+    let (sender, receiver) = channel_create(&format!("{}-in", name), label)?;
+    crate::node_create(name, node_config, label, receiver.into_inner())?;
+    Ok(sender)
+}
+
 /// Uses the current node's label-downgrading privilege to create a node and corresponding inbound
 /// channel of the same type, and returns a [`Sender`] for the channel.
+#[cfg(any(not(feature = "linear-handles"), feature = "no-linear-handles"))] // no linear handles version
 pub fn node_create_with_downgrade<T: Encodable + Decodable>(
     name: &str,
     label: &Label,
@@ -86,6 +101,19 @@ pub fn node_create_with_downgrade<T: Encodable + Decodable>(
         }
     };
     receiver.close()?;
+    Ok(sender)
+}
+
+/// Uses the current node's label-downgrading privilege to create a node and corresponding inbound
+/// channel of the same type, and returns a [`Sender`] for the channel.
+#[cfg(all(not(feature = "no-linear-handles"), feature = "linear-handles"))] // linear handles version
+pub fn node_create_with_downgrade<T: Encodable + Decodable>(
+    name: &str,
+    label: &Label,
+    node_config: &crate::NodeConfiguration,
+) -> Result<Sender<T>, OakStatus> {
+    let (sender, receiver) = channel_create_with_downgrade(&format!("{}-in", name), label)?;
+    crate::node_create_with_downgrade(name, node_config, label, receiver.into_inner())?;
     Ok(sender)
 }
 
