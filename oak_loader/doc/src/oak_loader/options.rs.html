@@ -347,6 +347,56 @@
 <span id="344">344</span>
 <span id="345">345</span>
 <span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -367,6 +417,8 @@
 <span class="doccomment">//! Helper functions to parse input arguments and create an instance of</span>
 <span class="doccomment">//! `RuntimeConfiguration` to feed into the oak_loader.</span>
 
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>)]</span>
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">attestation</span>::<span class="ident">get_tls_identity_from_proxy</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
@@ -414,6 +466,21 @@
         )
     )]</span>
     <span class="ident">root_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="comment">// Only support `proxy-uri` when `oak_attestation` is enabled.</span>
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(
+        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>,
+        <span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;URI of the Proxy Attestation Service&quot;</span>)
+    )]</span>
+    <span class="ident">proxy_uri</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="comment">// Only support `proxy-root-tls-certificate` when `oak_attestation` is enabled.</span>
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(
+        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>,
+        <span class="ident">structopt</span>(
+            <span class="ident">long</span>,
+            <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS root certificate file of the Proxy Attestation Service&quot;</span>
+        )
+    )]</span>
+    <span class="ident">proxy_root_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Path to the downloaded JSON-encoded client identity file for OpenID Connect. \
@@ -469,7 +536,7 @@
 }
 
 <span class="doccomment">/// Parse input options and create a `RuntimeConfiguration`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_runtime_config</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">create_runtime_config</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt</span>::<span class="ident">from_args</span>();
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;parsed opts: {:?}&quot;</span>, <span class="ident">opt</span>);
 
@@ -487,7 +554,7 @@
         <span class="ident">create_permissions_config</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>).<span class="ident">context</span>(<span class="string">&quot;could not create app config&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Create the overall gRPC configuration.</span>
-    <span class="kw">let</span> <span class="ident">secure_server_configuration</span> <span class="op">=</span> <span class="ident">create_secure_server_config</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">secure_server_configuration</span> <span class="op">=</span> <span class="ident">create_secure_server_config</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>).<span class="ident">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// Create signature table.</span>
     <span class="kw">let</span> <span class="ident">sign_table</span> <span class="op">=</span> <span class="ident">create_sign_table</span>(<span class="kw-2">&amp;</span><span class="ident">app_config</span>)<span class="question-mark">?</span>;
@@ -536,41 +603,32 @@
 
 <span class="doccomment">/// Create [`oak_runtime::SecureServerConfiguration`] containing optional TLS configurations for</span>
 <span class="doccomment">/// HTTP and gRPC server nodes.</span>
-<span class="kw">fn</span> <span class="ident">create_secure_server_config</span>(
+<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">create_secure_server_config</span>(
     <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">SecureServerConfiguration</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">grpc_config</span> <span class="op">=</span> <span class="ident">create_grpc_config</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>)
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">log</span>::<span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">e</span>))
-        .<span class="ident">ok</span>();
+        .<span class="ident">await</span>
+        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create gRPC config&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">http_config</span> <span class="op">=</span> <span class="ident">create_http_config</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>)
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">log</span>::<span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">e</span>))
         .<span class="ident">ok</span>();
 
     <span class="prelude-val">Ok</span>(<span class="ident">oak_runtime</span>::<span class="ident">SecureServerConfiguration</span> {
-        <span class="ident">grpc_config</span>,
+        <span class="ident">grpc_config</span>: <span class="prelude-val">Some</span>(<span class="ident">grpc_config</span>),
         <span class="ident">http_config</span>,
     })
 }
 
 <span class="doccomment">/// Create the overall [`oak_runtime::GrpcConfiguration`] from the TLS certificate and private key</span>
-<span class="doccomment">/// files.</span>
-<span class="kw">fn</span> <span class="ident">create_grpc_config</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_to_string</span>(<span class="ident">path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read gRPC TLS private key&quot;</span>)<span class="question-mark">?</span>,
-        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No gRPC TLS private key file provided.&quot;</span>)),
-    };
-    <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_to_string</span>(<span class="ident">path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read gRPC TLS certificate&quot;</span>)<span class="question-mark">?</span>,
-        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No gRPC TLS certificate file provided.&quot;</span>)),
-    };
+<span class="doccomment">/// files or using the Proxy Attestation Service.</span>
+<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">create_grpc_config</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">tls_identity</span> <span class="op">=</span> <span class="ident">get_tls_identity</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>).<span class="ident">await</span><span class="question-mark">?</span>;
+
     <span class="kw">let</span> <span class="ident">root_tls_certificate</span> <span class="op">=</span> <span class="ident">get_root_tls_certificate_or_default</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>).<span class="ident">ok</span>();
     <span class="kw">let</span> <span class="ident">oidc_client_info</span> <span class="op">=</span> <span class="ident">get_oidc_client_info</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">grpc_config</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">GrpcConfiguration</span> {
-        <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-val">Some</span>(<span class="ident">Identity</span>::<span class="ident">from_pem</span>(
-            <span class="kw-2">&amp;</span><span class="ident">grpc_tls_certificate</span>,
-            <span class="kw-2">&amp;</span><span class="ident">grpc_tls_private_key</span>,
-        )),
+        <span class="ident">grpc_server_tls_identity</span>: <span class="prelude-val">Some</span>(<span class="ident">tls_identity</span>),
         <span class="ident">grpc_client_root_tls_certificate</span>: <span class="ident">root_tls_certificate</span>,
         <span class="ident">oidc_client_info</span>,
     };
@@ -651,6 +709,48 @@
     };
 
     <span class="ident">Certificate</span>::<span class="ident">parse</span>(<span class="ident">certificate_bytes</span>)
+}
+
+<span class="doccomment">/// Creates [`Identity`] from the TLS certificate and private key files or using the Proxy</span>
+<span class="doccomment">/// Attestation Service.</span>
+<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">get_tls_identity</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Identity</span><span class="op">&gt;</span> {
+    <span class="kw">match</span> (<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">proxy_uri</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">proxy_root_tls_certificate</span>) {
+        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>)]</span>
+        (<span class="prelude-val">Some</span>(<span class="ident">proxy_uri_string</span>), <span class="prelude-val">Some</span>(<span class="ident">proxy_root_tls_certificate_path</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">proxy_uri</span> <span class="op">=</span> <span class="ident">proxy_uri_string</span>
+                .<span class="ident">parse</span>()
+                .<span class="ident">context</span>(<span class="string">&quot;Error parsing proxy URI&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">proxy_root_tls_certificate</span> <span class="op">=</span> <span class="ident">read_to_string</span>(<span class="ident">proxy_root_tls_certificate_path</span>)
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read proxy TLS certificate&quot;</span>)<span class="question-mark">?</span>;
+
+            <span class="ident">get_tls_identity_from_proxy</span>(<span class="kw-2">&amp;</span><span class="ident">proxy_uri</span>, <span class="kw-2">&amp;</span><span class="ident">proxy_root_tls_certificate</span>.<span class="ident">as_bytes</span>()).<span class="ident">await</span>
+        }
+        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>))]</span>
+        (<span class="prelude-val">Some</span>(<span class="ident">_proxy_uri_string</span>), <span class="prelude-val">Some</span>(<span class="ident">_proxy_root_tls_certificate_path</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="comment">// Unreachable: it should not be possible to specify the flag without</span>
+            <span class="comment">// `oak_attestation`.</span>
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(
+                <span class="string">&quot;Specifying `proxy-uri` or `root-tls-certificate` requires the `oak_attestation` feature.&quot;</span>
+            ))
+        }
+        (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No proxy URI provided.&quot;</span>)),
+        (<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No proxy TLS certificate file provided.&quot;</span>)),
+        (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">grpc_tls_private_key</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_private_key</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_to_string</span>(<span class="ident">path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read gRPC TLS private key&quot;</span>),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No gRPC TLS private key file provided.&quot;</span>)),
+            }<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">grpc_tls_certificate</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">grpc_tls_certificate</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_to_string</span>(<span class="ident">path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read gRPC TLS certificate&quot;</span>),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No gRPC TLS certificate file provided.&quot;</span>)),
+            }<span class="question-mark">?</span>;
+
+            <span class="prelude-val">Ok</span>(<span class="ident">Identity</span>::<span class="ident">from_pem</span>(
+                <span class="kw-2">&amp;</span><span class="ident">grpc_tls_certificate</span>,
+                <span class="kw-2">&amp;</span><span class="ident">grpc_tls_private_key</span>,
+            ))
+        }
+    }
 }
 
 <span class="doccomment">/// Parse OpenID Connect client configuration file into a [`ClientInfo`] .</span>

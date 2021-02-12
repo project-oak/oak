@@ -794,6 +794,8 @@
 <span id="791">791</span>
 <span id="792">792</span>
 <span id="793">793</span>
+<span id="794">794</span>
+<span id="795">795</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -910,8 +912,9 @@
     <span class="ident">Base</span>,
     <span class="ident">Coverage</span>,
     <span class="ident">Logless</span>,
-    <span class="ident">NoIntrospectionClient</span>,
     <span class="ident">Kms</span>,
+    <span class="ident">NoIntrospectionClient</span>,
+    <span class="ident">Experimental</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span> <span class="kw">for</span> <span class="ident">ServerVariant</span> {
@@ -923,6 +926,7 @@
             <span class="string">&quot;logless&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Logless</span>),
             <span class="string">&quot;kms&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Kms</span>),
             <span class="string">&quot;no-introspection-client&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">NoIntrospectionClient</span>),
+            <span class="string">&quot;experimental&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Experimental</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Failed to parse server variant {}&quot;</span>, <span class="ident">variant</span>)),
         }
     }
@@ -932,8 +936,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BuildServer</span> {
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, coverage, logless, no-introspection-client]&quot;</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;base&quot;</span>
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;server variant: [base, coverage, logless, no-introspection-client, experimental]&quot;</span>,
+        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;experimental&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
