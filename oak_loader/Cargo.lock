@@ -1516,7 +1516,7 @@ dependencies = [
  "serde",
  "signal-hook",
  "structopt",
- "tokio",
+ "tokio 0.2.23",
  "toml",
  "tonic",
 ]
@@ -1536,7 +1536,7 @@ dependencies = [
  "openssl",
  "prost",
  "structopt",
- "tokio",
+ "tokio 0.2.23",
  "tonic",
 ]
 

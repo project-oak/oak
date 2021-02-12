@@ -27,18 +27,22 @@ use std::{collections::HashMap, sync::Arc};
 // config held in ../../../config.
 const FRONTEND_MODULE_NAME: &str = "frontend_module";
 const BACKEND_MODULE_NAME: &str = "backend_module";
+const LINEAR_HANDLES_MODULE_NAME: &str = "linear_handles_module";
 const FRONTEND_ENTRYPOINT_NAME: &str = "frontend_oak_main";
 
 const FRONTEND_MANIFEST: &str = "../../module_0/rust/Cargo.toml";
 const BACKEND_MANIFEST: &str = "../../module_1/rust/Cargo.toml";
+const LINEAR_HANDLES_MANIFEST: &str = "../../module_linear_handles/rust/Cargo.toml";
 
 const FRONTEND_MODULE_WASM_FILE_NAME: &str = "abitest_0_frontend.wasm";
 const BACKEND_MODULE_WASM_FILE_NAME: &str = "abitest_1_backend.wasm";
+const LINEAR_HANDLES_MODULE_WASM_FILE_NAME: &str = "abitest_linear_handles.wasm";
 
 fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
     Ok(hashmap! {
         FRONTEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(FRONTEND_MANIFEST, FRONTEND_MODULE_WASM_FILE_NAME, oak_tests::Profile::Debug).context("could not compile frontend module")?,
         BACKEND_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(BACKEND_MANIFEST, BACKEND_MODULE_WASM_FILE_NAME, oak_tests::Profile::Debug).context("could not compile backend module")?,
+        LINEAR_HANDLES_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(LINEAR_HANDLES_MANIFEST, LINEAR_HANDLES_MODULE_WASM_FILE_NAME, oak_tests::Profile::Debug).context("could not compile linear_handles module")?,
     })
 }
 
