@@ -1,4 +1,4 @@
-8c72eaa14887bd90799f215faf0641d497b0e0007d9853289a7e3dfbc177ed5f  ./examples/abitest/bin/abitest_0_frontend.wasm
+a38a6077739f975b3ab13b6e1383402f7a1402152469cc660687d4a546c3edaf  ./examples/abitest/bin/abitest_0_frontend.wasm
 ba8998cfb93ef6f5eaa56f2c68f252cbb52314a0fe218e11bee9ca67906e0cc9  ./examples/abitest/bin/abitest_1_backend.wasm
 108864ffe7e2e478429dd29ea832b34ff59d2ad311f5b2cb8355767614172919  ./examples/aggregator/bin/aggregator.wasm
 a507ddc9397f99732c5f2a93b0cc67329ec75ec93cca1c1764b735e0551c1ce6  ./examples/chat/bin/chat.wasm
@@ -11,4 +11,4 @@ bd603a81ca1d3c51504116803753b148b24e0363f883a4719d85aff4620c231a  ./examples/pri
 5d446e200c0a96092c946db8bc36f0a1347dc223d13dac79f7b36f5cfbbdc671  ./examples/proxy_attestation/bin/proxy_attestation_example.wasm
 18c1587164a465bfb060b51092419a81e341be58807624f35053291121eee922  ./examples/translator/bin/translator.wasm
 d35e7c4f85d875ef443b75097e1ef39d025e8df334a60ca5d5cfdde4d0cac1b9  ./examples/trusted_database/bin/trusted_database.wasm
-f35ed23ca8506f2c27cb664f457ed09483ebe79130d9b59872cd3369a3ba643e  ./oak_loader/bin/oak_loader
+9e7e9594a2e6d44e65ad9c570b088329307f9b842c24a27d9f7961d37bb390ef  ./oak_loader/bin/oak_loader
