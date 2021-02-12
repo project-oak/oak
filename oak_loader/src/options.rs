@@ -44,9 +44,9 @@ use tonic::transport::Identity;
 pub struct Opt {
     #[structopt(long, help = "Application configuration file.")]
     application: String,
-    // `permissions` file is only required with Logless servers (when `oak_debug` is disabled).
+    // `permissions` file is only required with Base servers (with all optional features disabled).
     #[cfg_attr(
-        not(feature = "oak_debug"),
+        not(feature = "oak_unsafe"),
         structopt(long, help = "Permissions configuration file.")
     )]
     permissions: String,
@@ -57,9 +57,9 @@ pub struct Opt {
         help = "PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes."
     )]
     grpc_tls_certificate: Option<String>,
-    // Only support `root-tls-certificate` when `oak_debug` is enabled.
+    // Only support `root-tls-certificate` when `oak_unsafe` is enabled.
     #[cfg_attr(
-        feature = "oak_debug",
+        feature = "oak_unsafe",
         structopt(
             long,
             help = "PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service."
@@ -161,12 +161,12 @@ pub async fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfi
 
     // Create Runtime config.
     let runtime_configuration = oak_runtime::RuntimeConfiguration {
-        metrics_port: if cfg!(feature = "oak_debug") && !opt.no_metrics {
+        metrics_port: if cfg!(feature = "oak_unsafe") && !opt.no_metrics {
             Some(opt.metrics_port)
         } else {
             None
         },
-        introspect_port: if cfg!(feature = "oak_debug") && !opt.no_introspect {
+        introspect_port: if cfg!(feature = "oak_unsafe") && !opt.no_introspect {
             Some(opt.introspect_port)
         } else {
             None
@@ -290,17 +290,17 @@ fn create_http_config(opt: &Opt) -> anyhow::Result<oak_runtime::HttpConfiguratio
     }
 }
 
-/// If `oak_debug` is enabled, reads root TLS certificate from the specified file into a byte array.
-/// Otherwise, loads the default root TLS certificate from the embedded byte array.
+/// If `oak_unsafe` is enabled, reads root TLS certificate from the specified file into a byte
+/// array. Otherwise, loads the default root TLS certificate from the embedded byte array.
 /// Parses the byte array into a [`Certificate`], or returns an error if the byte array does not
 /// represent a valid PEM formatted certificate.
 fn get_root_tls_certificate_or_default(opt: &Opt) -> anyhow::Result<Certificate> {
     let certificate_bytes = match &opt.root_tls_certificate {
         Some(certificate_path) => {
-            if !cfg!(feature = "oak_debug") {
-                // Unreachable: it should not be possible to specify the flag without `oak_debug`.
+            if !cfg!(feature = "oak_unsafe") {
+                // Unreachable: it should not be possible to specify the flag without `oak_unsafe`.
                 anyhow::bail!(
-                    "Specifying `root-tls-certificate` requires the `oak_debug` feature."
+                    "Specifying `root-tls-certificate` requires the `oak_unsafe` feature."
                 );
             };
             read(certificate_path).context("could not read root TLS certificate")?
@@ -380,10 +380,10 @@ fn create_app_config(opt: &Opt) -> anyhow::Result<ApplicationConfiguration> {
         .context("could not parse application configuration")?)
 }
 
-/// Parse permissions configuration into an instance of [`PermissionsConfiguration`] in the
-/// non-debug mode, or use a default `PermissionsConfiguration` if `oak_debug` is enabled.
+/// Parse permissions configuration into an instance of [`PermissionsConfiguration`], if
+/// `oak_unsafe` is not enabled. Otherwise, use a default [`PermissionsConfiguration`].
 fn create_permissions_config(opt: &Opt) -> anyhow::Result<PermissionsConfiguration> {
-    if cfg!(feature = "oak_debug") {
+    if cfg!(feature = "oak_unsafe") {
         Ok(PermissionsConfiguration::default())
     } else {
         let permissions_config_data =

@@ -46,13 +46,13 @@ impl super::Node for LogNode {
         "logger"
     }
 
-    #[cfg(feature = "oak_debug")]
+    #[cfg(feature = "oak_unsafe")]
     fn get_privilege(&self) -> NodePrivilege {
         // Allow the logger Node to declassify log messages in debug builds only.
         NodePrivilege::top_privilege()
     }
 
-    #[cfg(not(feature = "oak_debug"))]
+    #[cfg(not(feature = "oak_unsafe"))]
     fn get_privilege(&self) -> NodePrivilege {
         // The logger must not have any declassification privilege in non-debug builds.
         NodePrivilege::default()
@@ -72,7 +72,7 @@ impl super::Node for LogNode {
                 Ok(msg) => {
                     // Log messages that arrive from Oak applications over a logging channel
                     // are controlled by IFC, and so need to be emitted independently of
-                    // whether the Runtime has been built with the `oak_debug` feature
+                    // whether the Runtime has been built with the `oak_unsafe` feature
                     // enabled (and thus whether log! is connected up to anything or not).
                     // So send to stderr.
                     let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();

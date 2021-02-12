@@ -16,7 +16,7 @@
 
 use crate::{proto::oak::introspection_events::event::EventDetails, Runtime};
 
-#[cfg(feature = "oak_debug")]
+#[cfg(feature = "oak_unsafe")]
 fn current_timestamp() -> prost_types::Timestamp {
     let duration_since_unix_epoch = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -32,7 +32,7 @@ fn current_timestamp() -> prost_types::Timestamp {
 impl Runtime {
     /// Generates an introspection event recording a modification to the Runtime's
     /// internal data structures
-    #[cfg(feature = "oak_debug")]
+    #[cfg(feature = "oak_unsafe")]
     pub fn introspection_event(&self, event_details: EventDetails) {
         let event = crate::proto::oak::introspection_events::Event {
             timestamp: Some(current_timestamp()),
@@ -46,6 +46,6 @@ impl Runtime {
     }
 
     /// no-op implementation, introspection events are a debugging feature.
-    #[cfg(not(feature = "oak_debug"))]
+    #[cfg(not(feature = "oak_unsafe"))]
     pub fn introspection_event(&self, _event_details: EventDetails) {}
 }

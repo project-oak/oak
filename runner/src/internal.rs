@@ -112,10 +112,10 @@ pub struct BuildClient {
 pub enum ServerVariant {
     Base,
     Coverage,
-    Logless,
+    Experimental,
     Kms,
     NoIntrospectionClient,
-    Experimental,
+    Unsafe,
 }
 
 impl std::str::FromStr for ServerVariant {
@@ -124,10 +124,10 @@ impl std::str::FromStr for ServerVariant {
         match variant {
             "base" => Ok(ServerVariant::Base),
             "coverage" => Ok(ServerVariant::Coverage),
-            "logless" => Ok(ServerVariant::Logless),
             "kms" => Ok(ServerVariant::Kms),
             "no-introspection-client" => Ok(ServerVariant::NoIntrospectionClient),
             "experimental" => Ok(ServerVariant::Experimental),
+            "unsafe" => Ok(ServerVariant::Unsafe),
             _ => Err(format!("Failed to parse server variant {}", variant)),
         }
     }
@@ -137,7 +137,7 @@ impl std::str::FromStr for ServerVariant {
 pub struct BuildServer {
     #[structopt(
         long,
-        help = "server variant: [base, coverage, logless, no-introspection-client, experimental]",
+        help = "server variant: [base, coverage, unsafe, no-introspection-client, experimental]",
         default_value = "experimental"
     )]
     pub server_variant: ServerVariant,

@@ -21,7 +21,7 @@
 //! ```shell
 //! cargo run --manifest-path=oak_loader/Cargo.toml -- \
 //!     --application=<APP_CONFIG_PATH> \
-//!     --permissions=<PERM_CONFIG_PATH_FOR_LOGLESS_SERVERS> \
+//!     --permissions=<PERM_CONFIG_PATH_FOR_BASE_SERVER_VARIANTS> \
 //!     --grpc-tls-private-key=<PRIVATE_KEY_PATH> \
 //!     --grpc-tls-certificate=<CERTIFICATE_PATH> \
 //!     --root-tls-certificate=<CERTIFICATE_PATH>
@@ -45,7 +45,7 @@ mod tests;
 /// Main execution point for the Oak loader.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    if cfg!(feature = "oak_debug") {
+    if cfg!(feature = "oak_unsafe") {
         env_logger::init();
     } else {
         eprintln!("No debugging output configured at build time");

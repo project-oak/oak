@@ -46,7 +46,7 @@ jobs:
       # Build artifacts that are supposed to be reproducible.
       - name: Build Rust server
         run: |
-          ./scripts/docker_run ./scripts/runner build-server --server-variant=base
+          ./scripts/docker_run ./scripts/runner build-server --server-variant=unsafe
 
       - name: Build examples
         run: |
