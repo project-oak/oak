@@ -313,7 +313,7 @@ fn build_server(opt: &BuildServer) -> Step {
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
-                            ServerVariant::Kms => vec!["--features=oak_introspection_client,awskms".to_string(),
+                            ServerVariant::Kms => vec!["--features=oak_introspection_client,awskms,gcpkms".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],

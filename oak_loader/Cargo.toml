@@ -14,6 +14,7 @@ license = "Apache-2.0"
 # Enabling these features enables the features of the same name in the oak_runtime crate.
 # https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 awskms = ["oak_runtime/awskms"]
+gcpkms = ["oak_runtime/gcpkms"]
 oak_debug = ["oak_runtime/oak_debug"]
 oak_introspection_client = ["oak_runtime/oak_introspection_client"]
 oak_attestation = ["oak_proxy_attestation", "openssl"]
