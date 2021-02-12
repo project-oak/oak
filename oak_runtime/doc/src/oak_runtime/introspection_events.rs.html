@@ -71,7 +71,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::<span class="ident">event</span>::<span class="ident">EventDetails</span>, <span class="ident">Runtime</span>};
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>)]</span>
 <span class="kw">fn</span> <span class="ident">current_timestamp</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">prost_types</span>::<span class="ident">Timestamp</span> {
     <span class="kw">let</span> <span class="ident">duration_since_unix_epoch</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">SystemTime</span>::<span class="ident">now</span>()
         .<span class="ident">duration_since</span>(<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">UNIX_EPOCH</span>)
@@ -87,7 +87,7 @@
 <span class="kw">impl</span> <span class="ident">Runtime</span> {
     <span class="doccomment">/// Generates an introspection event recording a modification to the Runtime&#39;s</span>
     <span class="doccomment">/// internal data structures</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">introspection_event</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">event_details</span>: <span class="ident">EventDetails</span>) {
         <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::<span class="ident">Event</span> {
             <span class="ident">timestamp</span>: <span class="prelude-val">Some</span>(<span class="ident">current_timestamp</span>()),
@@ -101,7 +101,7 @@
     }
 
     <span class="doccomment">/// no-op implementation, introspection events are a debugging feature.</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>))]</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>))]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">introspection_event</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_event_details</span>: <span class="ident">EventDetails</span>) {}
 }
 </pre></div>

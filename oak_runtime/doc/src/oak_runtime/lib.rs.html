@@ -1553,7 +1553,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Features</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The `oak_debug` feature enables various debugging features, including</span>
+<span class="doccomment">//! The `oak_unsafe` feature enables various debugging features, including</span>
 <span class="doccomment">//! data structure introspection functionality. This feature should only</span>
 <span class="doccomment">//! be enabled in development, as it destroys the privacy guarantees of the</span>
 <span class="doccomment">//! platform by providing easy channels for the exfiltration of private data.</span>
@@ -1602,9 +1602,9 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">auth</span>;
 <span class="kw">mod</span> <span class="ident">channel</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">config</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">graph</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">introspect</span>;
 <span class="kw">mod</span> <span class="ident">introspection_events</span>;
 <span class="kw">mod</span> <span class="ident">io</span>;
