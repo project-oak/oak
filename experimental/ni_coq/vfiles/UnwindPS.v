@@ -7,13 +7,26 @@ From OakIFC Require Import
     State
     Events
     ModelSemUtils
-    LowEquivalences
-    NIUtilTheorems
-    Tactics
-    Unfold.
+    LowEqPS
+    Unfold
+    LowProjPS_Thms
+    Tactics.
 From RecordUpdate Require Import RecordSet.
 Import RecordSetNotations.
 Local Open Scope map_scope.
+
+Hint Unfold state_low_eq chan_state_low_eq node_state_low_eq event_low_eq
+    chan_low_eq node_low_eq low_eq state_low_proj chan_state_low_proj
+    node_state_low_proj event_low_proj chan_low_proj node_low_proj
+    low_proj: loweq.
+
+(*
+This is a copy of Unwind but for partially-secret labels.
+This version is largely similar to Unwind, but requires an additional
+corollary top_is_top_co to prove state_upd_chan_unwind and
+state_chan_append_labeled_unwind.
+*)
+
 (*============================================================================
  Unwinding Theorems
 ============================================================================*)
@@ -75,6 +88,12 @@ Proof.
     unwind_crush.
 Qed.
 
+Lemma top_is_top_co: forall ell,
+    top <<L ell -> ell = top.
+Proof.
+    intros. apply ord_anti. apply top_is_top. apply H.
+Qed.
+
 Theorem state_upd_chan_unwind: forall ell han ch s1 s2,
     state_low_eq ell s1 s2 ->
     state_low_eq ell (state_upd_chan han ch s1) (state_upd_chan han ch s2).
@@ -90,6 +109,11 @@ Proof.
         specialize (H0 han). autounfold with loweq in *.
         destruct (chans han), (chans0 han). simpl in *.
         unwind_crush.
+        (* TODO(mcswiggen): Make this part more concise *)
+        { apply top_is_top_co in o. rewrite -> o in n.
+        destruct n. apply top_is_top. }
+        { apply top_is_top_co in o. rewrite -> o in n.
+        destruct n. apply top_is_top. }
         * (* <> *)
         subst. erewrite upd_neq. erewrite upd_neq.
         all: eauto. 
@@ -150,10 +174,17 @@ Proof.
         destruct (chans han), (chans0 han). simpl in *.
         (* just using unwind_crush here doesn't work *)
         destruct (lbl <<? ell), (lbl0 <<? ell) eqn:E.
-        all: unwind_crush. 
-        all: try congruence.
-        (* not sure what happened here ...*)
-        destruct obj; destruct obj0; (rewrite E; auto).
+        all: unwind_crush.
+        (* TODO(mcswiggen): Make this part more concise *)
+        { clear E. apply top_is_top_co in o. rewrite -> o in n.
+        destruct n. apply top_is_top. }
+        { clear E. apply top_is_top_co in o. rewrite -> o in n.
+        destruct n. apply top_is_top. }
+        {
+            destruct obj; destruct obj0; (rewrite E; auto);
+            destruct (ord_dec lbl ell).
+            all:auto. all:congruence.
+        }
 Qed.
 
 Theorem set_call_none_is_nop: forall s id c,
