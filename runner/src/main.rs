@@ -1357,7 +1357,7 @@ fn run_cargo_test_tsan() -> Step {
             &hashmap! {
                 "RUST_BACKTRACE".to_string() => "1".to_string(),
                 "RUSTFLAGS".to_string() => "-Z sanitizer=thread".to_string(),
-                "TSAN_OPTIONS".to_string() => format!("halt_on_error=1 report_atomic_races=0 suppressions={}/.tsan_suppress", std::env::current_dir().unwrap().display()),
+                "TSAN_OPTIONS".to_string() => "halt_on_error=1 report_atomic_races=0".to_string(),
             },
         ),
     }
