@@ -22,6 +22,7 @@ declare -ar ALL_CRATES=(
   examples
   experimental
   oak_abi
+  oak_client
   oak_derive
   oak_io
   oak_loader
