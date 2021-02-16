@@ -9,6 +9,7 @@ on:
 jobs:
   runner:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     # We use the same job template, but parametrize the actual command to be passed to the runner
     # binary using the matrix strategy, so that we get the commands running in parallel.
     strategy:
@@ -50,5 +51,52 @@ jobs:
           docker pull gcr.io/oak-ci/oak:latest
           docker build --pull --cache-from=gcr.io/oak-ci/oak:latest --tag=gcr.io/oak-ci/oak:latest .
 
+      # Init .git repository used by check_generated.
+      # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
+      - name: Git init
+        run: ./scripts/docker_run ./scripts/git_init
+
+      - name: Cargo crev
+        run: ./scripts/docker_run ./scripts/run_cargo_crev
+
       - name: Run command
         run: ./scripts/docker_run ./scripts/runner ${{ matrix.cmd }}
+
+      - name: Generate root CA certs
+        run: ./scripts/docker_run ./scripts/generate_root_ca_certs
+
+      # Check whether any of the previous steps resulted in file diffs that were not checked in or
+      # ignored by git.
+      - name: Git check diff
+        run: ./scripts/docker_run ./scripts/git_check_diff
+
+  android-runner:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v2
+
+      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
+      # and https://github.com/actions/virtual-environments/issues/709#issuecomment-612569242
+      - name: Free disk space
+        run: |
+          df --human-readable
+          sudo apt clean
+          docker rmi $(docker image ls --all --quiet)
+          rm --recursive --force "$AGENT_TOOLSDIRECTORY"
+          df --human-readable
+
+      # Build Docker image based for Android SDK.
+      - name: Android Docker build
+        timeout-minutes: 30
+        run: |
+          docker pull gcr.io/oak-ci/oak-android:latest
+          docker build --pull --cache-from=gcr.io/oak-ci/oak-android:latest --tag=gcr.io/oak-ci/oak-android:latest --file=android.Dockerfile .
+
+      # Build Android Hello-World application.
+      - name: Build Android Hello-World
+        run:
+          docker run --volume=$PWD:/opt/my-project --workdir=/opt/my-project
+          gcr.io/oak-ci/oak-android:latest ./scripts/build_examples_android
