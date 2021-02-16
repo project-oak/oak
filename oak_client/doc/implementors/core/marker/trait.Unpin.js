@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_client"] = [{"text":"impl&lt;A, B&gt; Unpin for CombinedInterceptor&lt;A, B&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A: Unpin,<br>&nbsp;&nbsp;&nbsp;&nbsp;B: Unpin,&nbsp;</span>","synthetic":true,"types":[]},{"text":"impl Unpin for AuthInterceptor","synthetic":true,"types":[]},{"text":"impl Unpin for LabelInterceptor","synthetic":true,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

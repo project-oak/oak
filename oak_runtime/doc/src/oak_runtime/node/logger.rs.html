@@ -171,13 +171,13 @@
         <span class="string">&quot;logger&quot;</span>
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>)]</span>
     <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
         <span class="comment">// Allow the logger Node to declassify log messages in debug builds only.</span>
         <span class="ident">NodePrivilege</span>::<span class="ident">top_privilege</span>()
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>))]</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>))]</span>
     <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
         <span class="comment">// The logger must not have any declassification privilege in non-debug builds.</span>
         <span class="ident">NodePrivilege</span>::<span class="ident">default</span>()
@@ -197,7 +197,7 @@
                 <span class="prelude-val">Ok</span>(<span class="ident">msg</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="comment">// Log messages that arrive from Oak applications over a logging channel</span>
                     <span class="comment">// are controlled by IFC, and so need to be emitted independently of</span>
-                    <span class="comment">// whether the Runtime has been built with the `oak_debug` feature</span>
+                    <span class="comment">// whether the Runtime has been built with the `oak_unsafe` feature</span>
                     <span class="comment">// enabled (and thus whether log! is connected up to anything or not).</span>
                     <span class="comment">// So send to stderr.</span>
                     <span class="kw">let</span> <span class="ident">now</span>: <span class="ident">chrono</span>::<span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">chrono</span>::<span class="ident">Utc</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">chrono</span>::<span class="ident">Utc</span>::<span class="ident">now</span>();

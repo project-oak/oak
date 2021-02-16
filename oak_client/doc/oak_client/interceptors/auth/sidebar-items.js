@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["AuthInterceptor","Intercepts gRPC requests and authenticates the client with the provided [`KeyPair`]."]]});
