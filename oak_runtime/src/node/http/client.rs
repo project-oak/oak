@@ -47,8 +47,6 @@ pub struct HttpClientNode {
     /// URIs can be handled. If the authority is empty, the client must be public and it may
     /// handle arbitrary requests to any HTTP or HTTPS services.
     authority: String,
-    /// Downgrading privilege of this client.
-    node_privilege: NodePrivilege,
 }
 
 /// Oak Node implementation for the HTTP client pseudo-Node.
@@ -79,19 +77,15 @@ impl Node for HttpClientNode {
         ));
         info!("{}: Exiting HTTP client pseudo-Node thread", self.node_name);
     }
-
-    fn get_privilege(&self) -> NodePrivilege {
-        self.node_privilege.clone()
-    }
 }
 
-pub(crate) fn get_privilege(authority: String) -> NodePrivilege {
+pub(crate) fn get_privilege(authority: &str) -> NodePrivilege {
     if authority.is_empty() {
         NodePrivilege::default()
     } else {
         NodePrivilege::new(
-            hashset! { oak_abi::label::tls_endpoint_tag(&authority.as_str()) },
-            hashset! { oak_abi::label::tls_endpoint_tag(&authority.as_str()) },
+            hashset! { oak_abi::label::tls_endpoint_tag(authority) },
+            hashset! { oak_abi::label::tls_endpoint_tag(authority) },
         )
     }
 }
@@ -120,12 +114,10 @@ impl HttpClientNode {
         root_ca: crate::tls::Certificate,
     ) -> Result<Self, ConfigurationError> {
         let http_client = create_client(root_ca);
-        let node_privilege = get_privilege(config.authority.clone());
         Ok(HttpClientNode {
             node_name: node_name.to_string(),
             http_client,
             authority: config.authority,
-            node_privilege,
         })
     }
 

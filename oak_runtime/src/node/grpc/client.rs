@@ -25,7 +25,7 @@ use crate::{
 };
 use log::{debug, error, info, trace, warn};
 use maplit::hashset;
-use oak_abi::{proto::oak::application::GrpcClientConfiguration, Handle, OakStatus};
+use oak_abi::{Handle, OakStatus};
 use oak_io::{handle::ReadHandle, OakError};
 use oak_services::proto::{google::rpc, oak::encap::GrpcResponse};
 use tokio::sync::oneshot;
@@ -43,7 +43,6 @@ pub struct GrpcClientNode {
     root_tls_certificate: Certificate,
     /// gRPC client to allow re-use of connection across multiple method invocations.
     grpc_client: Option<tonic::client::Grpc<tonic::transport::channel::Channel>>,
-    node_privilege: NodePrivilege,
 }
 
 /// Checks if URI contains the "Host" element.
@@ -54,7 +53,7 @@ fn check_uri(uri: &Uri) -> Result<(), ConfigurationError> {
         .ok_or(ConfigurationError::NoHostElement)
 }
 
-fn grpc_client_node_privilege(uri: &Uri) -> NodePrivilege {
+pub(crate) fn get_privilege(uri: &Uri) -> NodePrivilege {
     if uri.scheme() == Some(&http::uri::Scheme::HTTPS) {
         // Authority is the host:port portion of the endpoint name.
         if let Some(authority) = uri.authority() {
@@ -74,24 +73,16 @@ impl GrpcClientNode {
     /// Creates a new [`GrpcClientNode`] instance, but does not start it.
     pub fn new(
         node_name: &str,
-        config: GrpcClientConfiguration,
+        uri: &Uri,
         root_tls_certificate_bytes: crate::tls::Certificate,
     ) -> Result<Self, ConfigurationError> {
-        let uri = config.uri.parse().map_err(|error| {
-            error!("Error parsing URI {}: {:?}", config.uri, error);
-            ConfigurationError::IncorrectURI
-        })?;
         check_uri(&uri)?;
-        // We compute the node privilege once and for all at start and just store it, since it does
-        // not change throughout the node execution.
-        let node_privilege = grpc_client_node_privilege(&uri);
         let root_tls_certificate = root_tls_certificate_bytes.into();
         Ok(Self {
             node_name: node_name.to_string(),
-            uri,
+            uri: uri.clone(),
             root_tls_certificate,
             grpc_client: None,
-            node_privilege,
         })
     }
 
@@ -404,10 +395,6 @@ impl Node for GrpcClientNode {
             notify_receiver,
         ));
         info!("{}: Exiting gRPC client pseudo-Node thread", self.node_name);
-    }
-
-    fn get_privilege(&self) -> NodePrivilege {
-        self.node_privilege.clone()
     }
 }
 

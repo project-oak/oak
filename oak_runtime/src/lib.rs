@@ -27,7 +27,7 @@ use crate::{
     channel::{with_reader_channel, with_writer_channel, Channel},
     message::Message,
     metrics::Metrics,
-    node::{Node, NodeIsolation},
+    node::NodeIsolation,
     permissions::PermissionsConfiguration,
     proto::oak::introspection_events::{
         event::EventDetails, ChannelCreated, Direction, Event, HandleCreated, HandleDestroyed,
@@ -39,7 +39,7 @@ use auth::oidc_utils::ClientInfo;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
-use node::NodeFactory;
+use node::{CreatedNode, NodeFactory};
 use oak_abi::{
     label::{top, Label, Tag},
     proto::oak::application::{ApplicationConfiguration, ConfigMap, NodeConfiguration},
@@ -1332,15 +1332,15 @@ impl Runtime {
         self.node_register(node_id, instance, name, label, initial_handle, downgrade)
     }
 
-    /// Registers the given [`Node`] instance within the [`Runtime`]. The registration fails if the
-    /// labels violate the IFC rules.
+    /// Registers the given [`CreatedNode`] instance within the [`Runtime`]. The registration fails
+    /// if the labels violate the IFC rules.
     ///
     /// If `downgrade` is set to [`Downgrading::Yes`], the calling Node's downgrading privilege is
     /// taken into account when checking IFC restrictions.
     fn node_register(
         self: Arc<Self>,
         node_id: NodeId,
-        instance: Box<dyn Node>,
+        created_node: CreatedNode,
         node_name: &str,
         label: &Label,
         initial_handle: oak_abi::Handle,
@@ -1358,8 +1358,10 @@ impl Runtime {
         // by the current Node, since in general this may be lower than "public untrusted".
         self.validate_can_write_to_label(node_id, label, downgrade)?;
 
+        let instance = created_node.instance;
+
         let node_type = instance.node_type();
-        let node_privilege = instance.get_privilege();
+        let node_privilege = created_node.privilege;
 
         // If the new node is not sandboxed it can communicate externally without restriction, so we
         // should make sure that it has the privilege to downgrade its label to "public untrusted"

@@ -73,7 +73,6 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
 
     struct TestNode {
         node_body: Box<NodeBody>,
-        node_privilege: NodePrivilege,
         result_sender: mpsc::SyncSender<Result<(), OakStatus>>,
     };
 
@@ -97,10 +96,6 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
             // Make the result of the test visible outside of this thread.
             self.result_sender.send(result).unwrap();
         }
-
-        fn get_privilege(&self) -> NodePrivilege {
-            self.node_privilege.clone()
-        }
     }
 
     let (result_sender, result_receiver) = mpsc::sync_channel(1);
@@ -108,7 +103,6 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     // Create a new Oak node.
     let node_instance = TestNode {
         node_body,
-        node_privilege: node_privilege.clone(),
         result_sender,
     };
     let (_write_handle, read_handle) = proxy
@@ -116,7 +110,15 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         .expect("Could not create init channel");
 
     proxy
-        .node_register(Box::new(node_instance), "test", node_label, read_handle)
+        .node_register(
+            CreatedNode {
+                instance: Box::new(node_instance),
+                privilege: node_privilege.clone(),
+            },
+            "test",
+            node_label,
+            read_handle,
+        )
         .expect("Could not create Oak node!");
 
     // Wait for the test Node to complete execution before terminating the Runtime.

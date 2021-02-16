@@ -18,9 +18,10 @@
 //! context of a specific Node or pseudo-Node.
 
 use crate::{
-    construct_debug_id, metrics::Metrics, permissions::PermissionsConfiguration, AuxServer,
-    ChannelHalfDirection, Downgrading, LabelReadStatus, NodeId, NodeMessage, NodePrivilege,
-    NodeReadStatus, Runtime, SecureServerConfiguration, SignatureTable,
+    construct_debug_id, metrics::Metrics, node::ServerNodeFactory,
+    permissions::PermissionsConfiguration, AuxServer, ChannelHalfDirection, Downgrading,
+    LabelReadStatus, NodeId, NodeMessage, NodePrivilege, NodeReadStatus, Runtime,
+    RuntimeConfiguration, SecureServerConfiguration, SignatureTable,
 };
 use core::sync::atomic::{AtomicBool, AtomicU64};
 use log::debug;
@@ -35,7 +36,7 @@ use std::{
 };
 
 #[cfg(test)]
-use crate::node::Node;
+use crate::node::CreatedNode;
 
 /// A proxy object that binds together a reference to the underlying [`Runtime`] with a single
 /// [`NodeId`].
@@ -77,7 +78,7 @@ impl RuntimeProxy {
             aux_servers: Mutex::new(Vec::new()),
             introspection_event_queue: Mutex::new(VecDeque::new()),
             metrics_data: Metrics::new(),
-            node_factory: crate::node::ServerNodeFactory {
+            node_factory: ServerNodeFactory {
                 application_configuration: application_configuration.clone(),
                 permissions_configuration: permissions_configuration.clone(),
                 secure_server_configuration: secure_server_configuration.clone(),
@@ -107,7 +108,7 @@ impl RuntimeProxy {
     /// the configuration.
     pub fn start_runtime(
         &self,
-        runtime_configuration: crate::RuntimeConfiguration,
+        runtime_configuration: RuntimeConfiguration,
     ) -> Result<oak_abi::Handle, OakStatus> {
         let node_configuration = self
             .runtime
@@ -242,7 +243,7 @@ impl RuntimeProxy {
     #[cfg(test)]
     pub fn node_register(
         &self,
-        instance: Box<dyn Node>,
+        created_node: CreatedNode,
         node_name: &str,
         label: &Label,
         initial_handle: oak_abi::Handle,
@@ -255,7 +256,7 @@ impl RuntimeProxy {
         );
         let result = self.runtime.clone().node_register(
             self.node_id,
-            instance,
+            created_node,
             node_name,
             label,
             initial_handle,
