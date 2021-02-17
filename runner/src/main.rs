@@ -320,7 +320,7 @@ fn build_server(opt: &BuildServer) -> Step {
                             // If building in coverage mode, use the default target from the host, and build
                             // in debug mode.
                             ServerVariant::Coverage => vec!["--features=oak_unsafe,oak_introspection_client".to_string()],
-                            ServerVariant::Experimental => vec!["--features=oak_attestation".to_string(),
+                            ServerVariant::Experimental => vec!["--features=oak_attestation,oak_unsafe,oak_introspection_client".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
@@ -509,11 +509,11 @@ fn run_example_server(
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
             match opt.server_variant {
-                ServerVariant::Base | ServerVariant::Experimental => format!("--permissions={}", permissions_file),
+                ServerVariant::Base => format!("--permissions={}", permissions_file),
                 _ => "".to_string(),
             },
             ...match opt.server_variant {
-                ServerVariant::Base | ServerVariant::Experimental => vec![],
+                ServerVariant::Base => vec![],
                 _ => vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()],
             },
             ...example_server.additional_args.clone(),
