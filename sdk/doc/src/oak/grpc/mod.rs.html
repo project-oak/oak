@@ -408,6 +408,20 @@
 <span id="405">405</span>
 <span id="406">406</span>
 <span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2018 The Project Oak Authors</span>
@@ -431,6 +445,7 @@
     <span class="ident">io</span>::{<span class="ident">ReceiverExt</span>, <span class="ident">SenderExt</span>},
     <span class="ident">OakError</span>, <span class="ident">OakStatus</span>,
 };
+<span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">Label</span>;
 <span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">google</span>::<span class="ident">rpc</span>;
@@ -447,6 +462,19 @@
 <span class="doccomment">/// [`Status`]: oak_services::proto::google::rpc::Status</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">rpc</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Invocation</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">invocation</span>::<span class="ident">GrpcInvocation</span>;
+
+<span class="kw">impl</span> <span class="ident">Invocation</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">receiver</span>
+            .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t get receiver&quot;</span>)
+            .<span class="ident">close</span>()
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t close the receiver&quot;</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">sender</span>
+            .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t get sender&quot;</span>)
+            .<span class="ident">close</span>()
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t close the sender&quot;</span>)
+    }
+}
 
 <span class="doccomment">/// Helper to create a gRPC status object.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_status</span>(<span class="ident">code</span>: <span class="ident">rpc</span>::<span class="ident">Code</span>, <span class="ident">msg</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">rpc</span>::<span class="ident">Status</span> {

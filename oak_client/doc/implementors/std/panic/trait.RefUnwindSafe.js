@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_client"] = [{"text":"impl&lt;A, B&gt; RefUnwindSafe for CombinedInterceptor&lt;A, B&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A: RefUnwindSafe,<br>&nbsp;&nbsp;&nbsp;&nbsp;B: RefUnwindSafe,&nbsp;</span>","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for AuthInterceptor","synthetic":true,"types":[]},{"text":"impl RefUnwindSafe for LabelInterceptor","synthetic":true,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -318,14 +318,6 @@
 <span id="315">315</span>
 <span id="316">316</span>
 <span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -376,8 +368,6 @@
     <span class="doccomment">/// URIs can be handled. If the authority is empty, the client must be public and it may</span>
     <span class="doccomment">/// handle arbitrary requests to any HTTP or HTTPS services.</span>
     <span class="ident">authority</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// Downgrading privilege of this client.</span>
-    <span class="ident">node_privilege</span>: <span class="ident">NodePrivilege</span>,
 }
 
 <span class="doccomment">/// Oak Node implementation for the HTTP client pseudo-Node.</span>
@@ -408,19 +398,15 @@
         ));
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{}: Exiting HTTP client pseudo-Node thread&quot;</span>, <span class="self">self</span>.<span class="ident">node_name</span>);
     }
-
-    <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
-        <span class="self">self</span>.<span class="ident">node_privilege</span>.<span class="ident">clone</span>()
-    }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="ident">authority</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="ident">authority</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
     <span class="kw">if</span> <span class="ident">authority</span>.<span class="ident">is_empty</span>() {
         <span class="ident">NodePrivilege</span>::<span class="ident">default</span>()
     } <span class="kw">else</span> {
         <span class="ident">NodePrivilege</span>::<span class="ident">new</span>(
-            <span class="macro">hashset</span><span class="macro">!</span> { <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">tls_endpoint_tag</span>(<span class="kw-2">&amp;</span><span class="ident">authority</span>.<span class="ident">as_str</span>()) },
-            <span class="macro">hashset</span><span class="macro">!</span> { <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">tls_endpoint_tag</span>(<span class="kw-2">&amp;</span><span class="ident">authority</span>.<span class="ident">as_str</span>()) },
+            <span class="macro">hashset</span><span class="macro">!</span> { <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">tls_endpoint_tag</span>(<span class="ident">authority</span>) },
+            <span class="macro">hashset</span><span class="macro">!</span> { <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">tls_endpoint_tag</span>(<span class="ident">authority</span>) },
         )
     }
 }
@@ -449,12 +435,10 @@
         <span class="ident">root_ca</span>: <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">Certificate</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">http_client</span> <span class="op">=</span> <span class="ident">create_client</span>(<span class="ident">root_ca</span>);
-        <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="ident">get_privilege</span>(<span class="ident">config</span>.<span class="ident">authority</span>.<span class="ident">clone</span>());
         <span class="prelude-val">Ok</span>(<span class="ident">HttpClientNode</span> {
             <span class="ident">node_name</span>: <span class="ident">node_name</span>.<span class="ident">to_string</span>(),
             <span class="ident">http_client</span>,
             <span class="ident">authority</span>: <span class="ident">config</span>.<span class="ident">authority</span>,
-            <span class="ident">node_privilege</span>,
         })
     }
 
