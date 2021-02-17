@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["oak_client"] = [{"text":"impl&lt;A, B&gt; Sync for CombinedInterceptor&lt;A, B&gt;","synthetic":true,"types":[]},{"text":"impl Sync for AuthInterceptor","synthetic":true,"types":[]},{"text":"impl Sync for LabelInterceptor","synthetic":true,"types":[]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
