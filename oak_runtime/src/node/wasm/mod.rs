@@ -26,9 +26,7 @@ use log::{debug, error, info, trace, warn};
 use maplit::hashset;
 use oak_abi::{
     label::Label,
-    proto::oak::application::{
-        ApplicationConfiguration, NodeConfiguration, WebAssemblyConfiguration,
-    },
+    proto::oak::application::{NodeConfiguration, WebAssemblyConfiguration},
     OakStatus,
 };
 use oak_sign::get_sha256_hex;
@@ -1339,7 +1337,6 @@ pub struct WasmNode {
     node_name: String,
     module: Arc<wasmi::Module>,
     entrypoint_name: String,
-    node_privilege: NodePrivilege,
 }
 
 impl WasmNode {
@@ -1347,15 +1344,9 @@ impl WasmNode {
     /// May fail if the provided Wasm module is not valid.
     pub fn new(
         node_name: &str,
-        application_configuration: &ApplicationConfiguration,
+        wasm_module_bytes: &[u8],
         node_configuration: WebAssemblyConfiguration,
-        signature_table: &SignatureTable,
     ) -> Result<Self, ConfigurationError> {
-        let wasm_module_bytes = application_configuration
-            .wasm_modules
-            .get(&node_configuration.wasm_module_name)
-            .ok_or(ConfigurationError::IncorrectWebAssemblyModuleName)?;
-
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)
             .map_err(ConfigurationError::WasmiModuleInializationError)?;
         let entrypoint_name = node_configuration.wasm_entrypoint_name;
@@ -1364,15 +1355,10 @@ impl WasmNode {
             ConfigurationError::IncorrectWebAssemblyModuleName
         })?;
 
-        // We compute the node privilege once and for all at start and just store it, since it does
-        // not change throughout the node execution.
-        let node_privilege = wasm_node_privilege(&wasm_module_bytes, signature_table);
-
         Ok(Self {
             node_name: node_name.to_string(),
             module: Arc::new(module),
             entrypoint_name,
-            node_privilege,
         })
     }
 }
@@ -1380,7 +1366,7 @@ impl WasmNode {
 /// Computes the [`NodePrivilege`] granted to a WebAssembly Node running the specified WebAssembly
 /// module.
 /// Created [`NodePrivilege`] consists of Wasm module hash and any matching signatures.
-fn wasm_node_privilege(
+pub(crate) fn get_privilege(
     wasm_module_bytes: &[u8],
     signature_table: &SignatureTable,
 ) -> NodePrivilege {
@@ -1457,9 +1443,5 @@ impl super::Node for WasmNode {
             "{}: entrypoint '{}' completed",
             self.node_name, self.entrypoint_name
         );
-    }
-
-    fn get_privilege(&self) -> NodePrivilege {
-        self.node_privilege.clone()
     }
 }

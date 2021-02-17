@@ -20,6 +20,7 @@ use crate::{
     permissions::PermissionsConfiguration, NodePrivilege, RuntimeProxy, SecureServerConfiguration,
     SignatureTable,
 };
+use log::warn;
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, ApplicationConfiguration, CryptoConfiguration,
     LogConfiguration, NodeConfiguration,
@@ -62,11 +63,6 @@ pub trait Node: Send {
         handle: oak_abi::Handle,
         notify_receiver: oneshot::Receiver<()>,
     );
-
-    /// Gets the privilege associated with the Node.
-    fn get_privilege(&self) -> NodePrivilege {
-        NodePrivilege::default()
-    }
 }
 
 /// Indication of the level of isolation of a node.
@@ -134,7 +130,7 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
         &self,
         node_name: &str,
         node_configuration: &NodeConfiguration,
-    ) -> Result<Box<dyn Node>, ConfigurationError> {
+    ) -> Result<CreatedNode, ConfigurationError> {
         if !self
             .permissions_configuration
             .allowed_creation(&node_configuration)
@@ -145,35 +141,66 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
         }
 
         match &node_configuration.config_type {
-            Some(ConfigType::CryptoConfig(CryptoConfiguration {})) => Ok(Box::new(
-                crypto::CryptoNode::new(node_name, self.kms_credentials.clone()),
-            )),
-            Some(ConfigType::LogConfig(LogConfiguration {})) => {
-                Ok(Box::new(logger::LogNode::new(node_name)))
-            }
+            Some(ConfigType::CryptoConfig(CryptoConfiguration {})) => Ok(CreatedNode {
+                instance: Box::new(crypto::CryptoNode::new(
+                    node_name,
+                    self.kms_credentials.clone(),
+                )),
+                // TODO(#1842): sort out IFC interactions so that the crypto pseudo-Node can receive
+                // labelled plaintext data and emit unlabelled encrypted data (which would probably
+                // mean top_privilege() goes here).
+                privilege: NodePrivilege::default(),
+            }),
+            Some(ConfigType::LogConfig(LogConfiguration {})) => Ok(CreatedNode {
+                instance: Box::new(logger::LogNode::new(node_name)),
+
+                // Allow the logger Node to declassify log messages in debug builds only.
+                #[cfg(feature = "oak_unsafe")]
+                privilege: NodePrivilege::top_privilege(),
+
+                // The logger must not have any declassification privilege in non-debug builds.
+                #[cfg(not(feature = "oak_unsafe"))]
+                privilege: NodePrivilege::default(),
+            }),
             Some(ConfigType::GrpcServerConfig(config)) => {
                 let grpc_configuration = self
                     .secure_server_configuration
                     .grpc_config
                     .clone()
                     .expect("no gRPC identity provided to Oak Runtime");
-                Ok(Box::new(grpc::server::GrpcServerNode::new(
-                    node_name,
-                    config.clone(),
-                    grpc_configuration
-                        .grpc_server_tls_identity
-                        .as_ref()
-                        .expect("no gRPC server TLS identity provided to Oak Runtime")
-                        .clone(),
-                    grpc_configuration.oidc_client_info.clone(),
-                )?))
+                Ok(CreatedNode {
+                    instance: Box::new(grpc::server::GrpcServerNode::new(
+                        node_name,
+                        config.clone(),
+                        grpc_configuration
+                            .grpc_server_tls_identity
+                            .as_ref()
+                            .expect("no gRPC server TLS identity provided to Oak Runtime")
+                            .clone(),
+                        grpc_configuration.oidc_client_info.clone(),
+                    )?),
+                    // This node needs to have `top` privilege to be able to declassify data tagged
+                    // with any arbitrary user identities.
+                    // TODO(#1631): When we have a separate top for each sub-lattice, this should be
+                    // changed to the top of the identity sub-lattice.
+                    privilege: NodePrivilege::top_privilege(),
+                })
             }
-            Some(ConfigType::WasmConfig(config)) => Ok(Box::new(wasm::WasmNode::new(
-                node_name,
-                &self.application_configuration,
-                config.clone(),
-                &self.signature_table,
-            )?)),
+            Some(ConfigType::WasmConfig(config)) => {
+                let wasm_module_bytes = self
+                    .application_configuration
+                    .wasm_modules
+                    .get(&config.wasm_module_name)
+                    .ok_or(ConfigurationError::IncorrectWebAssemblyModuleName)?;
+                Ok(CreatedNode {
+                    instance: Box::new(wasm::WasmNode::new(
+                        node_name,
+                        &wasm_module_bytes,
+                        config.clone(),
+                    )?),
+                    privilege: wasm::get_privilege(&wasm_module_bytes, &self.signature_table),
+                })
+            }
             Some(ConfigType::GrpcClientConfig(config)) => {
                 let grpc_client_root_tls_certificate = self
                     .secure_server_configuration
@@ -182,18 +209,27 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                     .expect("no gRPC identity provided to Oak Runtime")
                     .grpc_client_root_tls_certificate
                     .expect("no root TLS certificate provided to Oak Runtime");
-                Ok(Box::new(grpc::client::GrpcClientNode::new(
-                    node_name,
-                    config.clone(),
-                    grpc_client_root_tls_certificate,
-                )?))
+                let uri = config.uri.parse().map_err(|err| {
+                    warn!("could not parse URI {}: {:?}", config.uri, err);
+                    ConfigurationError::IncorrectURI
+                })?;
+                Ok(CreatedNode {
+                    instance: Box::new(grpc::client::GrpcClientNode::new(
+                        node_name,
+                        &uri,
+                        grpc_client_root_tls_certificate,
+                    )?),
+                    privilege: grpc::client::get_privilege(&uri),
+                })
             }
-            Some(ConfigType::RoughtimeClientConfig(config)) => Ok(Box::new(
-                roughtime::RoughtimeClientNode::new(node_name, config),
-            )),
-            Some(ConfigType::StorageConfig(_config)) => {
-                Ok(Box::new(storage::StorageNode::new(node_name)))
-            }
+            Some(ConfigType::RoughtimeClientConfig(config)) => Ok(CreatedNode {
+                instance: Box::new(roughtime::RoughtimeClientNode::new(node_name, config)),
+                privilege: NodePrivilege::default(),
+            }),
+            Some(ConfigType::StorageConfig(_config)) => Ok(CreatedNode {
+                instance: Box::new(storage::StorageNode::new(node_name)),
+                privilege: NodePrivilege::default(),
+            }),
             Some(ConfigType::HttpServerConfig(config)) => {
                 let tls_config = self
                     .secure_server_configuration
@@ -201,11 +237,18 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                     .clone()
                     .expect("no TLS configuration for HTTP servers provided to Oak Runtime")
                     .tls_config;
-                Ok(Box::new(http::server::HttpServerNode::new(
-                    node_name,
-                    config.clone(),
-                    tls_config,
-                )?))
+                Ok(CreatedNode {
+                    instance: Box::new(http::server::HttpServerNode::new(
+                        node_name,
+                        config.clone(),
+                        tls_config,
+                    )?),
+                    // This node needs to have `top` privilege to be able to declassify data tagged
+                    // with any arbitrary user identities.
+                    // TODO(#1631): When we have a separate top for each sub-lattice, this should be
+                    // changed to the top of the `identity` sub-lattice.
+                    privilege: NodePrivilege::top_privilege(),
+                })
             }
             Some(ConfigType::HttpClientConfig(config)) => {
                 let http_client_root_tls_certificate = self
@@ -215,15 +258,32 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                     .expect("no HTTP configuration provided to Oak Runtime")
                     .http_client_root_tls_certificate
                     .expect("no root TLS certificate provided to Oak Runtime");
-                Ok(Box::new(http::client::HttpClientNode::new(
-                    node_name,
-                    config.clone(),
-                    http_client_root_tls_certificate,
-                )?))
+                Ok(CreatedNode {
+                    instance: Box::new(http::client::HttpClientNode::new(
+                        node_name,
+                        config.clone(),
+                        http_client_root_tls_certificate,
+                    )?),
+                    privilege: http::client::get_privilege(&config.authority),
+                })
             }
             None => Err(ConfigurationError::InvalidNodeConfiguration),
         }
     }
+}
+
+/// A holder struct containing a [`Node`] instance, together with the [`NodePrivilege`] that is
+/// assigned to it.
+///
+/// The reason the privilege is returned here and not by the node itself is that it should be
+/// determined by the [`NodeFactory`] instance, so that an untrusted Node may not be able to
+/// single-handedly increase its own privilege. In this codebase all the Nodes are defined alongside
+/// each other, so this does not make much difference, but if Nodes were loaded dynamically or from
+/// untrusted libraries, then it would be more obvious that we would still want to keep the
+/// privilege assignment here.
+pub struct CreatedNode {
+    pub instance: Box<dyn Node>,
+    pub privilege: NodePrivilege,
 }
 
 /// A trait implemented by a concrete factory of nodes that creates nodes based on a Node
@@ -235,5 +295,5 @@ pub trait NodeFactory<T> {
         &self,
         node_name: &str,
         node_configuration: &T,
-    ) -> Result<Box<dyn Node>, ConfigurationError>;
+    ) -> Result<CreatedNode, ConfigurationError>;
 }

@@ -20,7 +20,7 @@ use crate::{
     io::{Receiver, ReceiverExt},
     node::invocation::InvocationExt,
     proto::oak::invocation::GrpcInvocation as Invocation,
-    NodePrivilege, RuntimeProxy,
+    RuntimeProxy,
 };
 use log::{debug, error, info};
 use oak_abi::OakStatus;
@@ -174,13 +174,6 @@ impl CryptoNode {
 impl super::Node for CryptoNode {
     fn node_type(&self) -> &'static str {
         "crypto"
-    }
-
-    fn get_privilege(&self) -> NodePrivilege {
-        NodePrivilege::default()
-        // TODO(#1842): sort out IFC interactions so that the crypto pseudo-Node can receive
-        // labelled plaintext data and emit unlabelled encrypted data (which would probably
-        // mean top_privilege() goes here).
     }
 
     /// Main execution loop for the crypto pseudo-Node.

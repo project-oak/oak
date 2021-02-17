@@ -16,21 +16,12 @@
 
 use crate::{
     io::{channel_create, ReceiverExt, SenderExt},
-    node::Node,
+    node::{http::util::Pipe, CreatedNode, Node, NodeIsolation},
     permissions::PermissionsConfiguration,
     proto::oak::invocation::{HttpInvocation, HttpInvocationSender},
     NodePrivilege, RuntimeProxy,
 };
 use log::{error, info};
-use oak_io::{handle::ReadHandle, Receiver};
-use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
-use std::io;
-use tokio::sync::oneshot;
-
-use crate::node::NodeIsolation;
-use std::sync::mpsc;
-
-use crate::node::http::util::Pipe;
 use maplit::hashmap;
 use oak_abi::{
     label::{confidentiality_label, public_key_identity_tag, tls_endpoint_tag, Label},
@@ -40,9 +31,11 @@ use oak_abi::{
     },
     OakStatus,
 };
-use oak_io::OakError;
+use oak_io::{handle::ReadHandle, OakError, Receiver};
+use oak_services::proto::oak::encap::{HttpRequest, HttpResponse};
 use prost::Message;
-use std::fs;
+use std::{fs, io, sync::mpsc};
+use tokio::sync::oneshot;
 
 const LOCAL_CA: &str = "../examples/certs/local/ca.pem";
 const GCP_CA: &str = "../examples/certs/gcp/ca.pem";
@@ -94,7 +87,10 @@ impl Node for RouterNode {
             }
             runtime
                 .node_register(
-                    Box::new(echo_node),
+                    CreatedNode {
+                        instance: Box::new(echo_node),
+                        privilege: NodePrivilege::default(),
+                    },
                     "echo_node",
                     &request_label,
                     echo_receiver.handle.handle,
@@ -181,7 +177,10 @@ impl HttpServerTester {
         // Create an Oak node that responds with 200 (OK) to every request it receives.
         runtime
             .node_register(
-                Box::new(RouterNode),
+                CreatedNode {
+                    instance: Box::new(RouterNode),
+                    privilege: NodePrivilege::default(),
+                },
                 "oak_node_for_test",
                 &Label::public_untrusted(),
                 invocation_receiver.handle.handle,
@@ -405,8 +404,15 @@ fn test_https_client_can_handle_https_requests_to_an_external_service() {
     // Register the test Oak node in the runtime.
     runtime
         .node_register(
-            Box::new(client_test_node),
-            "client_test_node",
+            CreatedNode {
+                instance: Box::new(client_test_node),
+                // The node requires this privilege to be able to create a [`Pipe`] for interaction
+                // with the HTTP client pseudo-node. In a more realistic scenario,
+                // such a node should not have a privilege like this, and the
+                // [`Pipe`] has to be created by the planner node.
+                privilege: crate::node::http::client::get_privilege(authority),
+            },
+            "client_tester_node",
             &confidentiality_label(tls_endpoint_tag(&authority)),
             oak_node_init_receiver.handle.handle,
         )
@@ -450,8 +456,11 @@ fn test_https_client_can_handle_http_requests_to_an_external_service() {
     // Register the test Oak node in the runtime.
     runtime
         .node_register(
-            Box::new(client_test_node),
-            "client_test_node",
+            CreatedNode {
+                instance: Box::new(client_test_node),
+                privilege: NodePrivilege::default(),
+            },
+            "client_tester_node",
             &Label::public_untrusted(),
             oak_node_init_receiver.handle.handle,
         )
@@ -742,12 +751,6 @@ impl Node for ClientTesterNode {
         // Even though this node is not actually sandboxed, we are simulating a Wasm node during
         // testing.
         NodeIsolation::Sandboxed
-    }
-    fn get_privilege(&self) -> NodePrivilege {
-        // The node requires this privilege to be able to create a [`Pipe`] for interaction with the
-        // HTTP client pseudo-node. In a more realistic scenario, such a node should not have a
-        // privilege like this, and the [`Pipe`] has to be created by the planner node.
-        super::client::get_privilege(self.authority.clone())
     }
     fn run(
         self: Box<Self>,
