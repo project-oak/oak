@@ -25,7 +25,7 @@ use prost::Message;
 use regex::Regex;
 use std::{net::SocketAddr, sync::Arc};
 
-#[cfg(not(feature = "oak_introspection_client"))]
+#[cfg(not(feature = "oak-introspection-client"))]
 mod introspection_client {
     use super::*;
 
@@ -34,7 +34,7 @@ mod introspection_client {
     }
 }
 
-#[cfg(feature = "oak_introspection_client")]
+#[cfg(feature = "oak-introspection-client")]
 mod introspection_client {
     use super::*;
     use hyper::header::CONTENT_ENCODING;

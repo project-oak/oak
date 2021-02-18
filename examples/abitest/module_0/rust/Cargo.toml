@@ -9,7 +9,7 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "lib"]
 
 [features]
-default = ["oak_runtime/oak_unsafe"]
+default = ["oak_runtime/oak-unsafe"]
 
 [dependencies]
 abitest_common = { path = "../../abitest_common" }

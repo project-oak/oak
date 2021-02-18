@@ -203,7 +203,7 @@ fn init_logger() {
     let _res = env_logger::builder().is_test(true).try_init();
 }
 
-#[cfg(not(feature = "oak_unsafe"))]
+#[cfg(not(feature = "oak-unsafe"))]
 #[test]
 fn test_cannot_create_server_node_if_not_permitted() {
     init_logger();
@@ -212,7 +212,7 @@ fn test_cannot_create_server_node_if_not_permitted() {
     assert!(result.is_err())
 }
 
-#[cfg(not(feature = "oak_unsafe"))]
+#[cfg(not(feature = "oak-unsafe"))]
 #[test]
 fn test_cannot_create_insecure_http_client_node_if_not_permitted() {
     init_logger();

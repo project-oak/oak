@@ -57,10 +57,10 @@ pub struct PermissionsConfiguration {
 
 impl PermissionsConfiguration {
     /// Check if this permissions configuration allows creating a node with the given node
-    /// configuration. This check is disabled when `oak_unsafe` is enabled. In that case, this
+    /// configuration. This check is disabled when `oak-unsafe` is enabled. In that case, this
     /// function returns `true` regardless of the node configuration.
     pub fn allowed_creation(&self, node_configuration: &NodeConfiguration) -> anyhow::Result<bool> {
-        if cfg!(feature = "oak_unsafe") {
+        if cfg!(feature = "oak-unsafe") {
             Ok(true)
         } else {
             match &node_configuration.config_type {

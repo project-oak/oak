@@ -3155,7 +3155,7 @@ impl FrontendNode {
     }
 
     fn test_logger_pseudo_node_privilege(&mut self) -> TestResult {
-        // Logger pseudo node can be created with a non-public label when the `oak_unsafe` feature
+        // Logger pseudo node can be created with a non-public label when the `oak-unsafe` feature
         // is enabled.
         let label = oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(
             GRPC_CLIENT_ADDRESS

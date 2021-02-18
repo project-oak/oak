@@ -60,7 +60,7 @@ impl super::Node for LogNode {
                 Ok(msg) => {
                     // Log messages that arrive from Oak applications over a logging channel
                     // are controlled by IFC, and so need to be emitted independently of
-                    // whether the Runtime has been built with the `oak_unsafe` feature
+                    // whether the Runtime has been built with the `oak-unsafe` feature
                     // enabled (and thus whether log! is connected up to anything or not).
                     // So send to stderr.
                     let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();

@@ -110,12 +110,16 @@ pub struct BuildClient {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ServerVariant {
+    /// Production-like server variant, without any of the features enabled
     Base,
-    Coverage,
-    Experimental,
-    Kms,
-    NoIntrospectionClient,
+    /// Debug server with logging and introspection client enabled
     Unsafe,
+    /// Debug server with logging, but no introspection client
+    NoIntrospectionClient,
+    /// Similar to Unsafe, but with additional commands for running coverage
+    Coverage,
+    /// Debug server, with logging, introspection client, and experimental features enabled
+    Experimental,
 }
 
 impl std::str::FromStr for ServerVariant {
@@ -124,7 +128,6 @@ impl std::str::FromStr for ServerVariant {
         match variant {
             "base" => Ok(ServerVariant::Base),
             "coverage" => Ok(ServerVariant::Coverage),
-            "kms" => Ok(ServerVariant::Kms),
             "no-introspection-client" => Ok(ServerVariant::NoIntrospectionClient),
             "experimental" => Ok(ServerVariant::Experimental),
             "unsafe" => Ok(ServerVariant::Unsafe),

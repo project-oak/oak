@@ -86,7 +86,7 @@ pub fn init(log_sender: Sender<LogMessage>, level: Level) -> Result<(), SetLogge
 
 pub fn create() -> Result<Sender<LogMessage>, OakStatus> {
     // If we get a permission-denied error when creating the logger Node with top secret
-    // confidentiality it means that the Runtime was not built with the `oak_unsafe` feature, so
+    // confidentiality it means that the Runtime was not built with the `oak-unsafe` feature, so
     // we try to create it as a public Node.
     for label in &[confidentiality_label(top()), Label::public_untrusted()] {
         match crate::io::node_create("log", &label, &crate::node_config::log()) {

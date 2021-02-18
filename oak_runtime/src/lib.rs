@@ -18,7 +18,7 @@
 //!
 //! # Features
 //!
-//! The `oak_unsafe` feature enables various debugging features, including
+//! The `oak-unsafe` feature enables various debugging features, including
 //! data structure introspection functionality. This feature should only
 //! be enabled in development, as it destroys the privacy guarantees of the
 //! platform by providing easy channels for the exfiltration of private data.
@@ -67,9 +67,9 @@ pub use proxy::RuntimeProxy;
 pub mod auth;
 mod channel;
 pub mod config;
-#[cfg(feature = "oak_unsafe")]
+#[cfg(feature = "oak-unsafe")]
 mod graph;
-#[cfg(feature = "oak_unsafe")]
+#[cfg(feature = "oak-unsafe")]
 mod introspect;
 mod introspection_events;
 mod io;

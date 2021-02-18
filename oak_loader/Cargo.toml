@@ -15,9 +15,9 @@ license = "Apache-2.0"
 # https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 awskms = ["oak_runtime/awskms"]
 gcpkms = ["oak_runtime/gcpkms"]
-oak_unsafe = ["oak_runtime/oak_unsafe"]
-oak_introspection_client = ["oak_runtime/oak_introspection_client"]
-oak_attestation = ["oak_proxy_attestation", "openssl"]
+oak-unsafe = ["oak_runtime/oak-unsafe"]
+oak-introspection-client = ["oak_runtime/oak-introspection-client"]
+oak-attestation = ["oak_proxy_attestation", "openssl"]
 default = []
 
 [dependencies]

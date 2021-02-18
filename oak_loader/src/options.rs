@@ -17,7 +17,7 @@
 //! Helper functions to parse input arguments and create an instance of
 //! `RuntimeConfiguration` to feed into the oak_loader.
 
-#[cfg(feature = "oak_attestation")]
+#[cfg(feature = "oak-attestation")]
 use crate::attestation::get_tls_identity_from_proxy;
 use anyhow::{anyhow, Context};
 use core::str::FromStr;
@@ -46,7 +46,7 @@ pub struct Opt {
     application: String,
     // `permissions` file is only required with Base servers (with all optional features disabled).
     #[cfg_attr(
-        not(feature = "oak_unsafe"),
+        not(feature = "oak-unsafe"),
         structopt(long, help = "Permissions configuration file.")
     )]
     permissions: String,
@@ -57,24 +57,24 @@ pub struct Opt {
         help = "PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes."
     )]
     grpc_tls_certificate: Option<String>,
-    // Only support `root-tls-certificate` when `oak_unsafe` is enabled.
+    // Only support `root-tls-certificate` when `oak-unsafe` is enabled.
     #[cfg_attr(
-        feature = "oak_unsafe",
+        feature = "oak-unsafe",
         structopt(
             long,
             help = "PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service."
         )
     )]
     root_tls_certificate: Option<String>,
-    // Only support `proxy-uri` when `oak_attestation` is enabled.
+    // Only support `proxy-uri` when `oak-attestation` is enabled.
     #[cfg_attr(
-        feature = "oak_attestation",
+        feature = "oak-attestation",
         structopt(long, help = "URI of the Proxy Attestation Service")
     )]
     proxy_uri: Option<String>,
-    // Only support `proxy-root-tls-certificate` when `oak_attestation` is enabled.
+    // Only support `proxy-root-tls-certificate` when `oak-attestation` is enabled.
     #[cfg_attr(
-        feature = "oak_attestation",
+        feature = "oak-attestation",
         structopt(
             long,
             help = "PEM encoded X.509 TLS root certificate file of the Proxy Attestation Service"
@@ -161,12 +161,12 @@ pub async fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfi
 
     // Create Runtime config.
     let runtime_configuration = oak_runtime::RuntimeConfiguration {
-        metrics_port: if cfg!(feature = "oak_unsafe") && !opt.no_metrics {
+        metrics_port: if cfg!(feature = "oak-unsafe") && !opt.no_metrics {
             Some(opt.metrics_port)
         } else {
             None
         },
-        introspect_port: if cfg!(feature = "oak_unsafe") && !opt.no_introspect {
+        introspect_port: if cfg!(feature = "oak-unsafe") && !opt.no_introspect {
             Some(opt.introspect_port)
         } else {
             None
@@ -290,17 +290,17 @@ fn create_http_config(opt: &Opt) -> anyhow::Result<oak_runtime::HttpConfiguratio
     }
 }
 
-/// If `oak_unsafe` is enabled, reads root TLS certificate from the specified file into a byte
+/// If `oak-unsafe` is enabled, reads root TLS certificate from the specified file into a byte
 /// array. Otherwise, loads the default root TLS certificate from the embedded byte array.
 /// Parses the byte array into a [`Certificate`], or returns an error if the byte array does not
 /// represent a valid PEM formatted certificate.
 fn get_root_tls_certificate_or_default(opt: &Opt) -> anyhow::Result<Certificate> {
     let certificate_bytes = match &opt.root_tls_certificate {
         Some(certificate_path) => {
-            if !cfg!(feature = "oak_unsafe") {
-                // Unreachable: it should not be possible to specify the flag without `oak_unsafe`.
+            if !cfg!(feature = "oak-unsafe") {
+                // Unreachable: it should not be possible to specify the flag without `oak-unsafe`.
                 anyhow::bail!(
-                    "Specifying `root-tls-certificate` requires the `oak_unsafe` feature."
+                    "Specifying `root-tls-certificate` requires the `oak-unsafe` feature."
                 );
             };
             read(certificate_path).context("could not read root TLS certificate")?
@@ -315,7 +315,7 @@ fn get_root_tls_certificate_or_default(opt: &Opt) -> anyhow::Result<Certificate>
 /// Attestation Service.
 async fn get_tls_identity(opt: &Opt) -> anyhow::Result<Identity> {
     match (&opt.proxy_uri, &opt.proxy_root_tls_certificate) {
-        #[cfg(feature = "oak_attestation")]
+        #[cfg(feature = "oak-attestation")]
         (Some(proxy_uri_string), Some(proxy_root_tls_certificate_path)) => {
             let proxy_uri = proxy_uri_string
                 .parse()
@@ -325,12 +325,12 @@ async fn get_tls_identity(opt: &Opt) -> anyhow::Result<Identity> {
 
             get_tls_identity_from_proxy(&proxy_uri, &proxy_root_tls_certificate.as_bytes()).await
         }
-        #[cfg(not(feature = "oak_attestation"))]
+        #[cfg(not(feature = "oak-attestation"))]
         (Some(_proxy_uri_string), Some(_proxy_root_tls_certificate_path)) => {
             // Unreachable: it should not be possible to specify the flag without
-            // `oak_attestation`.
+            // `oak-attestation`.
             Err(anyhow!(
-                "Specifying `proxy-uri` or `root-tls-certificate` requires the `oak_attestation` feature."
+                "Specifying `proxy-uri` or `root-tls-certificate` requires the `oak-attestation` feature."
             ))
         }
         (None, Some(_)) => Err(anyhow!("No proxy URI provided.")),
@@ -381,9 +381,9 @@ fn create_app_config(opt: &Opt) -> anyhow::Result<ApplicationConfiguration> {
 }
 
 /// Parse permissions configuration into an instance of [`PermissionsConfiguration`], if
-/// `oak_unsafe` is not enabled. Otherwise, use a default [`PermissionsConfiguration`].
+/// `oak-unsafe` is not enabled. Otherwise, use a default [`PermissionsConfiguration`].
 fn create_permissions_config(opt: &Opt) -> anyhow::Result<PermissionsConfiguration> {
-    if cfg!(feature = "oak_unsafe") {
+    if cfg!(feature = "oak-unsafe") {
         Ok(PermissionsConfiguration::default())
     } else {
         let permissions_config_data =
