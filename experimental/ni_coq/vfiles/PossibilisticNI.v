@@ -35,6 +35,9 @@ Hint Extern 4 (low_eq _ _ _) => unfold low_eq : unobs_ev.
 
 Definition empty_event (ell: level) := Labeled event None ell.
 
+Definition trace_low_eq_pni := 
+    @trace_low_eq (state_low_eq)(@low_eq event).
+
 Theorem trace_leq_imples_head_st_leq: forall ell t1 t2 s1 s2,
     (head_st t1 = Some s1) ->
     (head_st t2 = Some s2) ->
@@ -618,7 +621,7 @@ Proof.
         econstructor; crush; eauto.
 Qed.
 
-Theorem possibilistic_ni: (conjecture_possibilistic_ni step_system_ev_multi).
+Theorem possibilistic_ni: (conjecture_possibilistic_ni step_system_ev_multi trace_low_eq_pni).
 Proof.
   unfold conjecture_possibilistic_ni. crush.
   let H := match goal with H : step_system_ev_multi _ _ |- _ => H end in

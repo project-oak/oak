@@ -6,8 +6,6 @@ From OakIFC Require Import
     ModelTypes
     State
     Events
-    LowEquivalences
-    ModelTypes
     TraceLowEq.
 (*
 This is the top-level candidate security condition. This is a
@@ -60,16 +58,14 @@ https://www.cs.cornell.edu/andru/papers/csfw03.pdf
 Definition pni_t := @trace (state * event_l).
 Definition is_init(t: pni_t) := length t = 1.
 
-Definition trace_low_eq_pni := 
-    @trace_low_eq (state_low_eq)(@low_eq event).
-
 Definition conjecture_possibilistic_ni 
     (sem: @trace_semanticsT (state * event_l))
+    (leq: @trace_low_eqT (state * (@labeled event)))
         := forall ell t1_init t2_init t1n,
-    (trace_low_eq_pni ell t1_init t2_init) /\
+    (leq ell t1_init t2_init) /\
     (is_init t1_init) /\
     (is_init t2_init) /\
     (sem t1_init t1n) ->
     (exists t2n,
         (sem t2_init t2n) /\
-        (trace_low_eq_pni ell t1n t2n)).
+        (leq ell t1n t2n)).
