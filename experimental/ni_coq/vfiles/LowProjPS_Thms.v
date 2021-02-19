@@ -295,6 +295,8 @@ Proof.
     autounfold with loweq; intros; eauto.
 Qed.
 
+Section unobservable.
+
 Theorem state_upd_node_unobs: forall ell s id n,
     ~(lbl (nodes s).[? id] <<L ell) ->
     (state_low_eq ell s (state_upd_node id n s)).
@@ -312,6 +314,78 @@ Proof.
         rewrite upd_neq; auto.
 Qed.
 
+Theorem state_upd_node_labeled_unobs: forall ell s id n_l,
+    ~(lbl (nodes s).[? id] <<L ell) ->
+    ~(lbl n_l <<L ell) ->
+    (state_low_eq ell s (state_upd_node_labeled id n_l s)).
+Proof.
+    intros. unfold fnd in H. split; intros; simpl.
+    (* chan_state_low_proj *) 2:congruence.
+    (* node_state_low_proj *)
+    unfold node_state_low_proj.
+    destruct (dec_eq_nid nid id); subst.
+    - (* nid = id *)
+        rewrite upd_eq. unfold fnd, low_proj.
+        destruct (nodes s id); destruct n_l; cbv [State.lbl] in *.
+        destruct_match; destruct_match; try contradiction. congruence.
+    - (* nid <> id *)
+        rewrite upd_neq; auto.
+Qed.
+
+Theorem state_upd_chan_unobs: forall ell s han ch,
+    ~(lbl (chans s).[? han] <<L ell) ->
+    (state_low_eq ell s (state_upd_chan han ch s)).
+Proof.
+    intros. unfold fnd in H. split; intros; simpl.
+    (* node_state_low_proj *) congruence.
+    (* chan_state_low_proj *)
+    unfold chan_state_low_proj.
+    destruct (dec_eq_h han0 han); subst.
+    - (* han0 = han *)
+        rewrite upd_eq. unfold fnd, low_proj.
+        destruct_match. simpl in *.
+        destruct (lbl <<? ell); congruence.
+    - (* han0 <> han *)
+        rewrite upd_neq; auto.
+Qed.
+
+(* TODO(mcswiggen): Possibly this and state_upd_chan_unobs could be combined? *)
+Theorem state_upd_chan_labeled_unobs: forall ell s han ch_l,
+    ~(lbl (chans s).[? han] <<L ell) ->
+    ~(lbl ch_l <<L ell) ->
+    (state_low_eq ell s (state_upd_chan_labeled han ch_l s)).
+Proof.
+    intros. unfold fnd in H. split; intros; simpl.
+    (* node_state_low_proj *) congruence.
+    (* chan_state_low_proj *)
+    unfold chan_state_low_proj.
+    destruct (dec_eq_h han0 han); subst.
+    - (* han0 = han *)
+        rewrite upd_eq. unfold fnd, low_proj.
+        destruct (chans s han); destruct ch_l; cbv [State.obj State.lbl] in *.
+        destruct_match; destruct_match; try contradiction. congruence.
+    - (* han0 <> han *)
+        rewrite upd_neq; auto.
+Qed.
+
+Theorem state_chan_append_labeled_unobs: forall ell s han msg,
+    ~(lbl (chans s).[? han] <<L ell) ->
+    (state_low_eq ell s (state_chan_append_labeled han msg s)).
+Proof.
+    intros. unfold fnd in H. split; intros; simpl.
+    (* node_state_low_proj *) congruence.
+    (* chan_state_low_proj *)
+    unfold chan_state_low_proj.
+    destruct (dec_eq_h han0 han); subst.
+    - (* han0 = han *)
+        rewrite upd_eq. unfold chan_append_labeled, fnd.
+        destruct (chans s han); cbv [State.obj State.lbl] in *.
+        destruct_match. simpl. destruct (lbl <<? ell).
+        contradiction. congruence. congruence.
+    - (* han0 <> han *)
+        rewrite upd_neq; auto.
+Qed.
+
 Theorem chan_state_fe: forall ell chs1 chs2,
     (forall h, low_eq ell chs1.[?h] chs2.[?h]) ->
     chan_state_low_eq ell chs1 chs2.
@@ -320,6 +394,8 @@ Proof.
     intros. specialize (H han). unfold low_eq in *. 
     unfold low_proj in *. eauto.
 Qed.
+
+End unobservable.
 
 (*
 Theorem new_secret_chan_unobs: forall ell ell' s h ,

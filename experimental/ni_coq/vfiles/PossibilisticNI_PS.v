@@ -4,16 +4,16 @@ From OakIFC Require Import
     Lattice
     Parameters
     GenericMap
-    RuntimeModel
+    RuntimeModelPS
     ModelSemUtils
-    EvAugSemantics
+    EvAugSemanticsPS
     State
     Events
-    LowEquivalences
+    LowEqPS
     TraceLowEq
-    TraceTheorems
-    NIUtilTheorems
-    Unwind
+    TraceTheoremsPS
+    LowProjPS_Thms
+    UnwindPS
     PossibilisticNI_def
     Tactics.
 From RecordUpdate Require Import RecordSet.
@@ -34,6 +34,9 @@ Hint Extern 4 (event_low_eq _ _ _) => unfold event_low_eq : unobs_ev.
 Hint Extern 4 (low_eq _ _ _) => unfold low_eq : unobs_ev.
 
 Definition empty_event (ell: level) := Labeled event None ell.
+
+Definition trace_low_eq_pni := 
+    @trace_low_eq (state_low_eq)(@low_eq event).
 
 Theorem trace_leq_imples_head_st_leq: forall ell t1 t2 s1 s2,
     (head_st t1 = Some s1) ->
@@ -83,23 +86,44 @@ Proof.
             ltac:(eauto)).
         Unshelve. subst. eauto.
     - (* CreateChannel *)
-        (* there are no unobservable channel creations, these only happen
-        from public *)
-        pose proof (bot_is_bot ell).
-        rewrite H4 in H2.
-        contradiction.
+        (* TODO(mcswiggen): Can this be simplified? *)
+        assert (~ nlbl0 <<L ell) by congruence.
+        assert ( ~ (clbl <<L ell) ) by eauto using ord_trans.
+        eapply (state_low_eq_trans _ _
+            (state_upd_node id (node_add_rhan h n0) (state_upd_chan_labeled h {| obj := new_chan; lbl := clbl |} s))).
+        eapply (state_low_eq_trans _ _ (state_upd_chan_labeled h {| obj := new_chan; lbl := clbl |} s)).
+        + (* state_upd_chan_labeled *)
+            eapply state_upd_chan_labeled_unobs.
+            (* These three lines are definitely more complicated than it needs to be... *)
+            inversion H11. rewrite H11. simpl.
+            unfold not. intros. apply top_is_top_co in H8. rewrite H8 in H2.
+            exfalso. apply H2. apply top_is_top.
+            auto.
+        + (* node_add_rhan *)
+            eapply state_upd_node_unobs. auto.
+        + (* node_add_whan *)
+            eapply state_upd_node_unobs. 
+            simpl; unfold fnd; rewrite upd_eq. simpl. apply H2.
     - (* CreateNode *)
-        (* there are no unobservable node creations, these only happen
-        from public*)
-        pose proof (bot_is_bot ell).
-        rewrite H4 in H2.
-        contradiction.
-    - (* ChannelClose *)
-        unfold fnd in *. subst.
-        assert (~(lbl (chans s han)) <<L ell) by eauto using ord_trans.
-        eapply state_upd_chan_unobs; eauto.
+        assert (~ nlbl0 <<L ell) by congruence.
+        assert ( ~ (new_lbl <<L ell) ) by eauto using ord_trans.
+        eapply (state_low_eq_trans _ _
+            (state_upd_node_labeled new_id {| obj := Some {| read_handles := Ensembles.Singleton h; write_handles := Ensembles.Empty_set; ncall := Internal |}; lbl := new_lbl |} s)).
+        + (* state_upd_node_labeled *)
+            eapply state_upd_node_labeled_unobs.
+            (* These three lines are definitely more complicated than it needs to be... *)
+            inversion H12. rewrite H12. simpl.
+            unfold not. intros. apply top_is_top_co in H8. rewrite H8 in H2.
+            exfalso. apply H2. apply top_is_top.
+            auto.
+        + (* node_add_rhan *) 
+            eapply state_upd_node_unobs. simpl. 
+            destruct (dec_eq_nid new_id id). (* This feels a bit weird because new_id should be new, right? *)
+            * rewrite e; simpl; unfold fnd; rewrite upd_eq. auto.
+            * simpl; unfold fnd; rewrite upd_neq; auto.
     - (* ChannelLabelRead *)
-        inversion H6. subst. reflexivity.
+        (* Should probably just delete this, since it's not in the RuntimeModel? *)
+        inversion H6.
 Qed.
 
 Theorem step_implies_lowproj_steps_leq: forall ell s1 s1' e1,
