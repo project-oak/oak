@@ -109,7 +109,7 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
     | SCreateNode s n nlbl new_id new_lbl h:
         (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
             (* caller is a real node with label nlbl *)
-        fresh_nid s id ->
+        fresh_nid s new_id ->
             (* target nid is not in use *)
         nlbl = bot ->
             (* only public/trusted nodes can create nodes for now *)
