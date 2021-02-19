@@ -14,14 +14,8 @@
 // limitations under the License.
 //
 
-/// Tests the linear-handles feature in `oak_io`.
-// Note: This environment is very bare. the Oak SDK does not support linear handles, so we can
-// only use the ABI and `oak_io`
-use oak_abi::proto::oak::label::Label;
-use oak_io::{
-    handle::{ReadHandle, WriteHandle},
-    OakStatus,
-};
+/// Tests the linear-handles feature in `oak`.
+use oak::{Label, OakStatus, ReadHandle, WriteHandle};
 
 fn run_tests() {
     test_cloned_handles_are_valid_and_distinct();
@@ -35,7 +29,8 @@ fn run_tests() {
 // disabled. This results in false positives for these errors, which we thus suppress.
 #[allow(clippy::clone_on_copy)]
 fn test_cloned_handles_are_valid_and_distinct() {
-    let (w, r) = channel_create().expect("Failed to create channel");
+    let (w, r) =
+        oak::channel_create("test", &Label::public_untrusted()).expect("Failed to create channel");
     let w2 = w.clone();
     let r2 = r.clone();
 
@@ -50,7 +45,8 @@ fn test_cloned_handles_are_valid_and_distinct() {
 // Writes from the cloned handle should be readable from the original, and vice versa
 #[allow(clippy::clone_on_copy)]
 fn test_original_and_clone_are_connected() {
-    let (w, r) = channel_create().expect("Failed to create channel");
+    let (w, r) =
+        oak::channel_create("test", &Label::public_untrusted()).expect("Failed to create channel");
     let w2 = w.clone();
     let r2 = r.clone();
 
@@ -67,7 +63,8 @@ fn test_original_and_clone_are_connected() {
 
 #[allow(clippy::drop_copy)]
 fn test_drop_closes_handle() {
-    let (w, r) = channel_create().expect("Failed to create channel");
+    let (w, r) =
+        oak::channel_create("test", &Label::public_untrusted()).expect("Failed to create channel");
     assert_eq!(channel_read(&r), Err(OakStatus::ErrChannelEmpty));
 
     // Explicitly drop the handle
@@ -79,125 +76,45 @@ fn test_drop_closes_handle() {
 
 #[no_mangle]
 pub extern "C" fn linear_handles_oak_main(init_handle: u64) {
-    let _ = std::panic::catch_unwind(|| {
-        // Set up a panic handler that reports errors to the parent node
-        std::panic::set_hook(Box::new(move |panic_info| {
-            let message = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
-                s.to_owned()
-            } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
-                s
-            } else {
-                "<no message available>"
-            };
-            let location = if let Some(location) = panic_info.location() {
-                format!("{}:{}", location.file(), location.line())
-            } else {
-                "<location unavailable>".to_string()
-            };
-            write_result(
-                init_handle,
-                &format!(
-                    "panic in linear handles module at ({}), message: {}",
-                    location, message
-                ),
-            );
-        }));
-        run_tests();
+    let log_sender = oak::logger::create().unwrap();
+    oak::logger::init(log_sender, log::Level::Debug).unwrap();
+    oak::set_panic_hook();
 
-        write_result(init_handle, "OK");
-    });
+    run_tests();
+
+    write_result(init_handle, "OK");
 }
 
+// Writes the test result to the abitest frontend
 fn write_result(init_handle: u64, msg: &str) {
-    let buf = msg.as_bytes();
-    let mut _actual_size = 0u32;
-    let mut _actual_handle_count = 0u32;
-    let mut result_handle = 0u64;
+    let mut buf = Vec::new();
+    let mut handles = Vec::new();
 
-    unsafe {
-        oak_abi::channel_read(
-            init_handle,
-            core::ptr::null_mut::<u8>(),
-            0,
-            &mut _actual_size as *mut u32,
-            &mut result_handle as *mut u64 as *mut u8,
-            1,
-            &mut _actual_handle_count as *mut u32,
-        );
+    oak::channel_read(
+        &ReadHandle {
+            handle: init_handle,
+        },
+        &mut buf,
+        &mut handles,
+    )
+    .unwrap();
+    // Expect exactly one handle (to write the result to)
+    assert_eq!(handles.len(), 1);
 
-        oak_abi::channel_write(
-            result_handle,
-            buf.as_ptr() as *const u8,
-            buf.len(),
-            core::ptr::null::<u8>(),
-            0,
-        );
-    }
+    let result_handle = WriteHandle { handle: handles[0] };
+    channel_write(&result_handle, msg).expect("Failed to write result message");
 }
+
+// Convenience functions to send and receive strings over a channel.
 
 fn channel_read(r: &ReadHandle) -> Result<String, OakStatus> {
-    const BUF_LEN: usize = 256;
-    let mut buf = [0u8; BUF_LEN];
-    let mut actual_size = 0u32;
-    let mut _actual_handle_count = 0u32;
-
-    let result = unsafe {
-        oak_abi::channel_read(
-            r.handle,
-            &mut buf[0] as *mut u8,
-            BUF_LEN,
-            &mut actual_size as *mut u32,
-            core::ptr::null_mut::<u8>(),
-            0,
-            &mut _actual_handle_count as *mut u32,
-        )
-    };
-    let result = OakStatus::from_i32(result as i32).unwrap();
-    match result {
-        OakStatus::Ok => Ok(String::from_utf8_lossy(&buf[..(actual_size as usize)]).into_owned()),
-        e => Err(e),
-    }
+    let mut buf = Vec::new();
+    let mut handles = Vec::new();
+    oak::channel_read(r, &mut buf, &mut handles)?;
+    let s = String::from_utf8_lossy(&buf[..]).into_owned();
+    Ok(s)
 }
 
 fn channel_write(w: &WriteHandle, msg: &str) -> Result<(), OakStatus> {
-    let result = unsafe {
-        oak_abi::channel_write(
-            w.handle,
-            msg.as_ptr() as *const u8,
-            msg.len(),
-            core::ptr::null::<u8>(),
-            0,
-        )
-    };
-    let result = OakStatus::from_i32(result as i32).unwrap();
-    match result {
-        OakStatus::Ok => Ok(()),
-        e => Err(e),
-    }
-}
-
-fn channel_create() -> Result<(WriteHandle, ReadHandle), OakStatus> {
-    let mut w = WriteHandle {
-        handle: oak_abi::INVALID_HANDLE,
-    };
-    let mut r = ReadHandle {
-        handle: oak_abi::INVALID_HANDLE,
-    };
-    let name_bytes = "test_channel".as_bytes();
-    let label_bytes = Label::public_untrusted().serialize();
-    let result = unsafe {
-        oak_abi::channel_create(
-            &mut w.handle as *mut u64,
-            &mut r.handle as *mut u64,
-            name_bytes.as_ptr(),
-            name_bytes.len(),
-            label_bytes.as_ptr(),
-            label_bytes.len(),
-        )
-    };
-    let result = OakStatus::from_i32(result as i32).unwrap();
-    match result {
-        OakStatus::Ok => Ok((w, r)),
-        e => Err(e),
-    }
+    oak::channel_write(w, msg.as_bytes(), &[])
 }

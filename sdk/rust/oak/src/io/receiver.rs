@@ -178,7 +178,7 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
     fn try_receive_with_downgrade(&self) -> Result<T, OakError> {
         let mut bytes = Vec::with_capacity(1024);
         let mut handles = Vec::with_capacity(16);
-        crate::channel_read_with_downgrade(self.handle, &mut bytes, &mut handles)?;
+        crate::channel_read_with_downgrade(&self.handle, &mut bytes, &mut handles)?;
         // `bytes` and `handles` are moved into `Message`, so there is no extra copy happening here.
         let message = crate::io::Message { bytes, handles };
         T::decode(&message)

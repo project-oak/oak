@@ -870,8 +870,8 @@ impl FrontendNode {
     fn test_linear_handles(&mut self) -> TestResult {
         let (init_wh, init_rh) =
             oak::channel_create("linear_handle_init", &Label::public_untrusted()).unwrap();
-        // The actual tests run in a separate node, as that code must be compiled with oak_io
-        // feature linear-handles enabled
+        // The actual tests run in a separate node, as that code must be compiled with SDK
+        // feature 'linear-handles' enabled
         oak::node_create(
             "linear_handles",
             &oak::node_config::wasm(LINEAR_HANDLES_MODULE_NAME, "linear_handles_oak_main"),
@@ -889,7 +889,7 @@ impl FrontendNode {
             .expect("Failed to write result handle");
 
         // The linear_handles module should return a single result message (without handles), its
-        // body a string containing the test result.
+        // body a string containing "OK".
         let mut buf = Vec::new();
         let mut handles = Vec::new();
         oak::wait_on_channels(&[result_rh]).expect("Channel did not become readable");
