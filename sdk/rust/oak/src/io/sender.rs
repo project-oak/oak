@@ -43,12 +43,14 @@ impl<T: Encodable> SenderExt<T> for Sender<T> {
     fn send(&self, t: &T) -> Result<(), OakError> {
         let message = t.encode()?;
         crate::channel_write(&self.handle, &message.bytes, &message.handles)?;
+        drop_handles(message);
         Ok(())
     }
 
     fn send_with_downgrade(&self, t: &T) -> Result<(), OakError> {
         let message = t.encode()?;
         crate::channel_write_with_downgrade(&self.handle, &message.bytes, &message.handles)?;
+        drop_handles(message);
         Ok(())
     }
 
@@ -56,4 +58,17 @@ impl<T: Encodable> SenderExt<T> for Sender<T> {
         let label = crate::channel_label_read(self.handle.handle)?;
         Ok(label)
     }
+}
+
+// Explicitly closes handles in the given [`Message`] so they do not leak
+#[cfg(all(not(feature = "no-linear-handles"), feature = "linear-handles"))] // linear handles version
+fn drop_handles(msg: oak_io::Message) {
+    for handle in msg.handles {
+        let _ = crate::channel_close(handle);
+    }
+}
+
+#[cfg(any(not(feature = "linear-handles"), feature = "no-linear-handles"))] // no linear handles version
+fn drop_handles(_: oak_io::Message) {
+    // Do nothing. The caller owns the handles
 }

@@ -78,31 +78,51 @@ use proto::{
 };
 
 oak::entrypoint!(grpc_fe<ConfigMap> => |_receiver| {
+    grpc_fe_entrypoint()
+});
+
+// the linear-handles feature is disabled during clippy analysis, so this lint is a false-positive
+#[allow(clippy::clone_on_copy)]
+fn grpc_fe_entrypoint() {
     let log_sender = oak::logger::create().unwrap();
     oak::logger::init(log_sender, log::Level::Debug).unwrap();
 
-    let (to_provider_write_handle, to_provider_read_handle) = oak::channel_create("To-provider", &Label::public_untrusted()).unwrap();
-    let (from_provider_write_handle, from_provider_read_handle) = oak::channel_create("From-provider", &Label::public_untrusted()).unwrap();
+    let (to_provider_write_handle, to_provider_read_handle) =
+        oak::channel_create("To-provider", &Label::public_untrusted()).unwrap();
+    let (from_provider_write_handle, from_provider_read_handle) =
+        oak::channel_create("From-provider", &Label::public_untrusted()).unwrap();
 
-    oak::node_create("provider", &oak::node_config::wasm("app", "provider"), &Label::public_untrusted(), to_provider_read_handle)
-        .expect("Failed to create provider");
-    oak::channel_close(to_provider_read_handle.handle).expect("Failed to close channel");
+    oak::node_create(
+        "provider",
+        &oak::node_config::wasm("app", "provider"),
+        &Label::public_untrusted(),
+        to_provider_read_handle,
+    )
+    .expect("Failed to create provider");
 
-    Sender::new(to_provider_write_handle)
-        .send(&BlobStoreProviderSender { sender: Some(Sender::new(from_provider_write_handle)) })
+    Sender::new(to_provider_write_handle.clone())
+        .send(&BlobStoreProviderSender {
+            sender: Some(Sender::new(from_provider_write_handle)),
+        })
         .expect("Failed to send handle to provider");
-    oak::channel_close(from_provider_write_handle.handle).expect("Failed to close channel");
 
     let frontend = BlobStoreFrontend::new(
-            Sender::new(to_provider_write_handle),
-            Receiver::new(from_provider_read_handle));
-    let grpc_channel = oak::grpc::server::init("[::]:8080")
-        .expect("could not create gRPC server pseudo-Node");
+        Sender::new(to_provider_write_handle),
+        Receiver::new(from_provider_read_handle),
+    );
+    let grpc_channel =
+        oak::grpc::server::init("[::]:8080").expect("could not create gRPC server pseudo-Node");
 
     oak::run_command_loop(frontend, grpc_channel.iter());
-});
+}
 
 oak::entrypoint!(provider<BlobStoreRequest> => |receiver: Receiver<BlobStoreRequest>| {
+    provider_entrypoint(receiver)
+});
+
+// the linear-handles feature is disabled during clippy analysis, so this lint is a false-positive
+#[allow(clippy::clone_on_copy)]
+fn provider_entrypoint(receiver: Receiver<BlobStoreRequest>) {
     let log_sender = oak::logger::create().unwrap();
     oak::logger::init(log_sender, log::Level::Debug).unwrap();
 
@@ -110,15 +130,21 @@ oak::entrypoint!(provider<BlobStoreRequest> => |receiver: Receiver<BlobStoreRequ
     // therefore we create a temporary alternative Receiver reading from the same underlying channel
     // but decoding to a different type.
     // TODO(#1584): Replace this with a more type safe pattern.
-    let frontend_sender =
-        Receiver::<BlobStoreProviderSender>::new(receiver.handle).receive()
-            .expect("Did not receive a decodable message")
-            .sender
-            .expect("No sender in received message");
+    let frontend_sender = Receiver::<BlobStoreProviderSender>::new(receiver.handle.clone())
+        .receive()
+        .expect("Did not receive a decodable message")
+        .sender
+        .expect("No sender in received message");
     oak::run_command_loop(BlobStoreProvider::new(frontend_sender), receiver.iter());
-});
+}
 
 oak::entrypoint!(store<BlobRequest> => |receiver: Receiver<BlobRequest>| {
+    store_entrypoint(receiver)
+});
+
+// the linear-handles feature is disabled during clippy analysis, so this lint is a false-positive
+#[allow(clippy::clone_on_copy)]
+fn store_entrypoint(receiver: Receiver<BlobRequest>) {
     let log_sender = oak::logger::create().unwrap();
     oak::logger::init(log_sender, log::Level::Debug).unwrap();
 
@@ -126,13 +152,13 @@ oak::entrypoint!(store<BlobRequest> => |receiver: Receiver<BlobRequest>| {
     // therefore we create a temporary alternative Receiver reading from the same underlying channel
     // but decoding to a different type.
     // TODO(#1584): Replace this with a more type safe pattern.
-    let sender =
-        Receiver::<BlobStoreSender>::new(receiver.handle).receive()
-            .expect("Did not receive a write handle")
-            .sender
-            .expect("No write handle in received message");
+    let sender = Receiver::<BlobStoreSender>::new(receiver.handle.clone())
+        .receive()
+        .expect("Did not receive a write handle")
+        .sender
+        .expect("No write handle in received message");
     oak::run_command_loop(BlobStoreImpl::new(sender), receiver.iter());
-});
+}
 
 enum BlobStoreAccess {
     BlobStoreProvider {
@@ -164,12 +190,10 @@ impl BlobStoreFrontend {
             sender
                 .send(&BlobStoreRequest {})
                 .expect("Failed to send BlobStoreRequest");
-            sender.close().expect("Failed to close sender");
 
             let iface = receiver
                 .receive()
                 .expect("Failed to receive BlobStoreInterface");
-            receiver.close().expect("Failed to close receiver");
 
             self.store = BlobStoreAccess::BlobStore(iface);
         };
@@ -224,6 +248,9 @@ impl BlobStoreProvider {
 impl oak::CommandHandler for BlobStoreProvider {
     type Command = BlobStoreRequest;
 
+    // the linear-handles feature is disabled during clippy analysis, so this lint is a
+    // false-positive
+    #[allow(clippy::clone_on_copy)]
     fn handle_command(&mut self, _command: BlobStoreRequest) -> anyhow::Result<()> {
         // Create new BlobStore
         let (to_store_write_handle, to_store_read_handle) =
@@ -238,14 +265,12 @@ impl oak::CommandHandler for BlobStoreProvider {
             &Label::public_untrusted(),
             to_store_read_handle,
         )?;
-        oak::channel_close(to_store_read_handle.handle).context("Could not close channel")?;
 
-        Sender::new(to_store_write_handle)
+        Sender::new(to_store_write_handle.clone())
             .send(&BlobStoreSender {
                 sender: Some(Sender::new(from_store_write_handle)),
             })
             .context("Could not send value")?;
-        oak::channel_close(from_store_write_handle.handle).context("Could not close channel")?;
 
         self.sender
             .send(&BlobStoreInterface {
