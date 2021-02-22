@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
   // https://github.com/project-oak/oak/blob/hashes/reproducibility_index.
   // TODO(#1674): Add appropriate TLS endpoint tag to the label as well.
   oak::label::Label label = oak::WebAssemblyModuleHashLabel(
-      absl::HexStringToBytes("6ec12d5b2631efc2f30b6377a0ad0075e432165752dc360f5354bf9eebc535a7"));
+      absl::HexStringToBytes("2d33ea304486337108d2fc23ee583947bd8f91f0c526637bd330db39251b9ec7"));
   // Connect to the Oak Application.
   auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));

@@ -1159,6 +1159,8 @@ impl FrontendNode {
         expect_eq!(Ok(()), oak::channel_close(private_out_channel.handle));
         expect_eq!(Ok(()), oak::channel_close(private_in_channel.handle));
 
+        // TODO(#1819): Check the case where results are different from the `channel_read` once the
+        // ABI tests can support wasm hash labels.
         Ok(())
     }
 
@@ -1704,6 +1706,8 @@ impl FrontendNode {
         expect_eq!(Ok(()), oak::channel_close(private_out_channel.handle));
         expect_eq!(Ok(()), oak::channel_close(private_in_channel.handle));
 
+        // TODO(#1819): Check the case where results are different from the `wait_on_channels` once
+        // the ABI tests can support wasm hash labels.
         Ok(())
     }
 

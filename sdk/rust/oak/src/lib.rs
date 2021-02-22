@@ -113,35 +113,33 @@ fn prep_handle_space(space: &mut [u8]) {
 pub fn wait_on_channels<R: Borrow<ReadHandle>>(
     handles: &[R],
 ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
-    let mut space = new_handle_space(handles);
-    unsafe {
-        let status = oak_abi::wait_on_channels(space.as_mut_ptr(), handles.len() as u32);
-        result_from_status(status as i32, ())?;
-        let mut results = Vec::with_capacity(handles.len());
-        for i in 0..handles.len() {
-            match space
-                .get(i * oak_abi::SPACE_BYTES_PER_HANDLE + (oak_abi::SPACE_BYTES_PER_HANDLE - 1))
-                .cloned()
-                .map(i32::from)
-                .and_then(ChannelReadStatus::from_i32)
-            {
-                Some(status) => results.push(status),
-                None => return Err(OakStatus::Unspecified),
-            }
-        }
-        Ok(results)
-    }
+    wait_on_channels_util(handles, Downgrading::No)
 }
 
 /// The same as [`wait_on_channels`](#method.wait_on_channels), but also applies the current Node's
 /// downgrade privilege when checking IFC restrictions.
-pub fn wait_on_channels_with_downgrade(
-    handles: &[ReadHandle],
+// TODO(#1854): Only accept &[&ReadHandle] once handles are always linear types
+pub fn wait_on_channels_with_downgrade<R: Borrow<ReadHandle>>(
+    handles: &[R],
+) -> Result<Vec<ChannelReadStatus>, OakStatus> {
+    wait_on_channels_util(handles, Downgrading::Yes)
+}
+
+/// Helper function used by [`wait_on_channels`](#method.wait_on_channels) and
+/// [`wait_on_channels_with_downgrade`](#method.wait_on_channels_with_downgrade).
+// TODO(#1854): Only accept &[&ReadHandle] once handles are always linear types
+fn wait_on_channels_util<R: Borrow<ReadHandle>>(
+    handles: &[R],
+    downgrade: Downgrading,
 ) -> Result<Vec<ChannelReadStatus>, OakStatus> {
     let mut space = new_handle_space(handles);
     unsafe {
-        let status =
-            oak_abi::wait_on_channels_with_downgrade(space.as_mut_ptr(), handles.len() as u32);
+        let status = match downgrade {
+            Downgrading::Yes => {
+                oak_abi::wait_on_channels_with_downgrade(space.as_mut_ptr(), handles.len() as u32)
+            }
+            Downgrading::No => oak_abi::wait_on_channels(space.as_mut_ptr(), handles.len() as u32),
+        };
         result_from_status(status as i32, ())?;
         let mut results = Vec::with_capacity(handles.len());
         for i in 0..handles.len() {
