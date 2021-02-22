@@ -1526,14 +1526,6 @@
 <span id="1523">1523</span>
 <span id="1524">1524</span>
 <span id="1525">1525</span>
-<span id="1526">1526</span>
-<span id="1527">1527</span>
-<span id="1528">1528</span>
-<span id="1529">1529</span>
-<span id="1530">1530</span>
-<span id="1531">1531</span>
-<span id="1532">1532</span>
-<span id="1533">1533</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1555,7 +1547,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Features</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The `oak_unsafe` feature enables various debugging features, including</span>
+<span class="doccomment">//! The `oak_debug` feature enables various debugging features, including</span>
 <span class="doccomment">//! data structure introspection functionality. This feature should only</span>
 <span class="doccomment">//! be enabled in development, as it destroys the privacy guarantees of the</span>
 <span class="doccomment">//! platform by providing easy channels for the exfiltration of private data.</span>
@@ -1564,8 +1556,7 @@
     <span class="ident">channel</span>::{<span class="ident">with_reader_channel</span>, <span class="ident">with_writer_channel</span>, <span class="ident">Channel</span>},
     <span class="ident">message</span>::<span class="ident">Message</span>,
     <span class="ident">metrics</span>::<span class="ident">Metrics</span>,
-    <span class="ident">node</span>::<span class="ident">NodeIsolation</span>,
-    <span class="ident">permissions</span>::<span class="ident">PermissionsConfiguration</span>,
+    <span class="ident">node</span>::{<span class="ident">Node</span>, <span class="ident">NodeIsolation</span>},
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">introspection_events</span>::{
         <span class="ident">event</span>::<span class="ident">EventDetails</span>, <span class="ident">ChannelCreated</span>, <span class="ident">Direction</span>, <span class="ident">Event</span>, <span class="ident">HandleCreated</span>, <span class="ident">HandleDestroyed</span>,
         <span class="ident">MessageDequeued</span>, <span class="ident">MessageEnqueued</span>, <span class="ident">NodeCreated</span>, <span class="ident">NodeDestroyed</span>,
@@ -1576,7 +1567,7 @@
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>::<span class="ident">SeqCst</span>};
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
-<span class="kw">use</span> <span class="ident">node</span>::{<span class="ident">CreatedNode</span>, <span class="ident">NodeFactory</span>};
+<span class="kw">use</span> <span class="ident">node</span>::<span class="ident">NodeFactory</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
     <span class="ident">label</span>::{<span class="ident">top</span>, <span class="ident">Label</span>, <span class="ident">Tag</span>},
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{<span class="ident">ApplicationConfiguration</span>, <span class="ident">ConfigMap</span>, <span class="ident">NodeConfiguration</span>},
@@ -1604,16 +1595,16 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">auth</span>;
 <span class="kw">mod</span> <span class="ident">channel</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">config</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">graph</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">introspect</span>;
 <span class="kw">mod</span> <span class="ident">introspection_events</span>;
 <span class="kw">mod</span> <span class="ident">io</span>;
 <span class="kw">mod</span> <span class="ident">message</span>;
 <span class="kw">mod</span> <span class="ident">metrics</span>;
 <span class="kw">mod</span> <span class="ident">node</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">permissions</span>;
+<span class="kw">mod</span> <span class="ident">permissions</span>;
 <span class="kw">mod</span> <span class="ident">proto</span>;
 <span class="kw">mod</span> <span class="ident">proxy</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -1629,14 +1620,10 @@
     <span class="kw">pub</span> <span class="ident">metrics_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Port to run an introspection server on, if provided.</span>
     <span class="kw">pub</span> <span class="ident">introspect_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Credentials filename for KMS integration, if provided.</span>
-    <span class="kw">pub</span> <span class="ident">kms_credentials</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Security options for server pseudo-nodes.</span>
     <span class="kw">pub</span> <span class="ident">secure_server_configuration</span>: <span class="ident">SecureServerConfiguration</span>,
     <span class="doccomment">/// Application configuration.</span>
     <span class="kw">pub</span> <span class="ident">app_config</span>: <span class="ident">ApplicationConfiguration</span>,
-    <span class="doccomment">/// Permissions configuration.</span>
-    <span class="kw">pub</span> <span class="ident">permissions_config</span>: <span class="ident">PermissionsConfiguration</span>,
     <span class="doccomment">/// Table that contains signatures and public keys corresponding to Oak modules.</span>
     <span class="kw">pub</span> <span class="ident">sign_table</span>: <span class="ident">SignatureTable</span>,
     <span class="doccomment">/// Start-of-day configuration to feed to the running Application.</span>
@@ -1977,7 +1964,6 @@
     <span class="ident">aux_servers</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AuxServer</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
     <span class="doccomment">/// Queue of introspection events in chronological order.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="ident">introspection_event_queue</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
     <span class="ident">node_factory</span>: <span class="ident">node</span>::<span class="ident">ServerNodeFactory</span>,
@@ -2207,7 +2193,7 @@
     }
 
     <span class="doccomment">/// Returns the effective label for `initial_label` in the context of the Node, taking into</span>
-    <span class="doccomment">/// account whether the downgrade privilege should be applied.</span>
+    <span class="doccomment">/// acount whether the downgrade privilege should be applied.</span>
     <span class="kw">fn</span> <span class="ident">get_effective_label</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
@@ -2869,15 +2855,15 @@
         <span class="self">self</span>.<span class="ident">node_register</span>(<span class="ident">node_id</span>, <span class="ident">instance</span>, <span class="ident">name</span>, <span class="ident">label</span>, <span class="ident">initial_handle</span>, <span class="ident">downgrade</span>)
     }
 
-    <span class="doccomment">/// Registers the given [`CreatedNode`] instance within the [`Runtime`]. The registration fails</span>
-    <span class="doccomment">/// if the labels violate the IFC rules.</span>
+    <span class="doccomment">/// Registers the given [`Node`] instance within the [`Runtime`]. The registration fails if the</span>
+    <span class="doccomment">/// labels violate the IFC rules.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// If `downgrade` is set to [`Downgrading::Yes`], the calling Node&#39;s downgrading privilege is</span>
     <span class="doccomment">/// taken into account when checking IFC restrictions.</span>
     <span class="kw">fn</span> <span class="ident">node_register</span>(
         <span class="self">self</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">node_id</span>: <span class="ident">NodeId</span>,
-        <span class="ident">created_node</span>: <span class="ident">CreatedNode</span>,
+        <span class="ident">instance</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">Node</span><span class="op">&gt;</span>,
         <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
         <span class="ident">initial_handle</span>: <span class="ident">oak_abi</span>::<span class="ident">Handle</span>,
@@ -2895,10 +2881,8 @@
         <span class="comment">// by the current Node, since in general this may be lower than &quot;public untrusted&quot;.</span>
         <span class="self">self</span>.<span class="ident">validate_can_write_to_label</span>(<span class="ident">node_id</span>, <span class="ident">label</span>, <span class="ident">downgrade</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">created_node</span>.<span class="ident">instance</span>;
-
         <span class="kw">let</span> <span class="ident">node_type</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">node_type</span>();
-        <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="ident">created_node</span>.<span class="ident">privilege</span>;
+        <span class="kw">let</span> <span class="ident">node_privilege</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">get_privilege</span>();
 
         <span class="comment">// If the new node is not sandboxed it can communicate externally without restriction, so we</span>
         <span class="comment">// should make sure that it has the privilege to downgrade its label to &quot;public untrusted&quot;</span>
