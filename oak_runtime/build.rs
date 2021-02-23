@@ -27,6 +27,16 @@ fn main() {
     )
     .expect("Proto compilation failed.");
 
+    generate_grpc_code(
+        "../proto",
+        &["remote.proto"],
+        CodegenOptions {
+            build_client: true,
+            build_server: true,
+        },
+    )
+    .expect("Proto compilation failed.");
+
     compile_protos_with_options(
         &[
             "../oak_services/proto/grpc_invocation.proto",
