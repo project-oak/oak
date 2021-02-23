@@ -227,7 +227,7 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
 
     fn wait_with_downgrade(&self) -> Result<ChannelReadStatus, OakStatus> {
         // TODO(#500): Consider creating the handle notification space once and for all in `new`.
-        let read_handles = vec![self.handle];
+        let read_handles = vec![&self.handle];
         let mut space = crate::new_handle_space(&read_handles);
         crate::prep_handle_space(&mut space);
         let status = unsafe {
