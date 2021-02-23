@@ -14,7 +14,7 @@ files or using the Proxy Attestation Service.</p>
 </td></tr><tr class="module-item"><td><a class="fn" href="fn.create_http_config.html" title="oak_loader::options::create_http_config fn">create_http_config</a></td><td class="docblock-short"><p>Create the overall [<code>oak_runtime::HttpConfiguration</code>] from the TLS certificate and private key
 files.</p>
 </td></tr><tr class="module-item"><td><a class="fn" href="fn.create_permissions_config.html" title="oak_loader::options::create_permissions_config fn">create_permissions_config</a></td><td class="docblock-short"><p>Parse permissions configuration into an instance of [<code>PermissionsConfiguration</code>], if
-<code>oak_unsafe</code> is not enabled. Otherwise, use a default [<code>PermissionsConfiguration</code>].</p>
+<code>oak-unsafe</code> is not enabled. Otherwise, use a default [<code>PermissionsConfiguration</code>].</p>
 </td></tr><tr class="module-item"><td><a class="fn" href="fn.create_runtime_config.html" title="oak_loader::options::create_runtime_config fn">create_runtime_config</a></td><td class="docblock-short"><p>Parse input options and create a <code>RuntimeConfiguration</code>.</p>
 </td></tr><tr class="module-item"><td><a class="fn" href="fn.create_secure_server_config.html" title="oak_loader::options::create_secure_server_config fn">create_secure_server_config</a></td><td class="docblock-short"><p>Create [<code>oak_runtime::SecureServerConfiguration</code>] containing optional TLS configurations for
 HTTP and gRPC server nodes.</p>
@@ -23,7 +23,7 @@ Returns an [<code>SignatureTable</code>] that maps each module hash to a vector 
 Returned signatures are not verified yet, they are supposed to be verified by the <code>oak_runtime</code>.</p>
 </td></tr><tr class="module-item"><td><a class="fn" href="fn.get_default_root_tls_certs.html" title="oak_loader::options::get_default_root_tls_certs fn">get_default_root_tls_certs</a></td><td class="docblock-short"><p>Gets the default root TLS certificates from the embedded byte array.</p>
 </td></tr><tr class="module-item"><td><a class="fn" href="fn.get_oidc_client_info.html" title="oak_loader::options::get_oidc_client_info fn">get_oidc_client_info</a></td><td class="docblock-short"><p>Parse OpenID Connect client configuration file into a [<code>ClientInfo</code>] .</p>
-</td></tr><tr class="module-item"><td><a class="fn" href="fn.get_root_tls_certificate_or_default.html" title="oak_loader::options::get_root_tls_certificate_or_default fn">get_root_tls_certificate_or_default</a></td><td class="docblock-short"><p>If <code>oak_unsafe</code> is enabled, reads root TLS certificate from the specified file into a byte
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.get_root_tls_certificate_or_default.html" title="oak_loader::options::get_root_tls_certificate_or_default fn">get_root_tls_certificate_or_default</a></td><td class="docblock-short"><p>If <code>oak-unsafe</code> is enabled, reads root TLS certificate from the specified file into a byte
 array. Otherwise, loads the default root TLS certificate from the embedded byte array.
 Parses the byte array into a [<code>Certificate</code>], or returns an error if the byte array does not
 represent a valid PEM formatted certificate.</p>

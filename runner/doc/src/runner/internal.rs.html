@@ -796,6 +796,9 @@
 <span id="793">793</span>
 <span id="794">794</span>
 <span id="795">795</span>
+<span id="796">796</span>
+<span id="797">797</span>
+<span id="798">798</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -909,12 +912,16 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ServerVariant</span> {
+    <span class="doccomment">/// Production-like server variant, without any of the features enabled</span>
     <span class="ident">Base</span>,
-    <span class="ident">Coverage</span>,
-    <span class="ident">Experimental</span>,
-    <span class="ident">Kms</span>,
-    <span class="ident">NoIntrospectionClient</span>,
+    <span class="doccomment">/// Debug server with logging and introspection client enabled</span>
     <span class="ident">Unsafe</span>,
+    <span class="doccomment">/// Debug server with logging, but no introspection client</span>
+    <span class="ident">NoIntrospectionClient</span>,
+    <span class="doccomment">/// Similar to Unsafe, but with additional commands for running coverage</span>
+    <span class="ident">Coverage</span>,
+    <span class="doccomment">/// Debug server, with logging, introspection client, and experimental features enabled</span>
+    <span class="ident">Experimental</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span> <span class="kw">for</span> <span class="ident">ServerVariant</span> {
@@ -923,7 +930,6 @@
         <span class="kw">match</span> <span class="ident">variant</span> {
             <span class="string">&quot;base&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Base</span>),
             <span class="string">&quot;coverage&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Coverage</span>),
-            <span class="string">&quot;kms&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Kms</span>),
             <span class="string">&quot;no-introspection-client&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">NoIntrospectionClient</span>),
             <span class="string">&quot;experimental&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Experimental</span>),
             <span class="string">&quot;unsafe&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ServerVariant</span>::<span class="ident">Unsafe</span>),

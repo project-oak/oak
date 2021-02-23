@@ -1449,6 +1449,28 @@
 <span id="1446">1446</span>
 <span id="1447">1447</span>
 <span id="1448">1448</span>
+<span id="1449">1449</span>
+<span id="1450">1450</span>
+<span id="1451">1451</span>
+<span id="1452">1452</span>
+<span id="1453">1453</span>
+<span id="1454">1454</span>
+<span id="1455">1455</span>
+<span id="1456">1456</span>
+<span id="1457">1457</span>
+<span id="1458">1458</span>
+<span id="1459">1459</span>
+<span id="1460">1460</span>
+<span id="1461">1461</span>
+<span id="1462">1462</span>
+<span id="1463">1463</span>
+<span id="1464">1464</span>
+<span id="1465">1465</span>
+<span id="1466">1466</span>
+<span id="1467">1467</span>
+<span id="1468">1468</span>
+<span id="1469">1469</span>
+<span id="1470">1470</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1723,7 +1745,7 @@
                 ),
             }],
             <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
-                <span class="ident">ServerVariant</span>::<span class="ident">Unsafe</span> <span class="op">|</span> <span class="ident">ServerVariant</span>::<span class="ident">Coverage</span> <span class="op">|</span> <span class="ident">ServerVariant</span>::<span class="ident">Kms</span> <span class="op">|</span> <span class="ident">ServerVariant</span>::<span class="ident">Experimental</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Step</span>::<span class="ident">Single</span> {
+                <span class="ident">ServerVariant</span>::<span class="ident">Unsafe</span> <span class="op">|</span> <span class="ident">ServerVariant</span>::<span class="ident">Coverage</span> <span class="op">|</span> <span class="ident">ServerVariant</span>::<span class="ident">Experimental</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Step</span>::<span class="ident">Single</span> {
                     <span class="ident">name</span>: <span class="string">&quot;build introspection browser client&quot;</span>.<span class="ident">to_string</span>(),
                     <span class="ident">command</span>: <span class="ident">Cmd</span>::<span class="ident">new</span>(<span class="string">&quot;npm&quot;</span>,
                                       <span class="macro">vec</span><span class="macro">!</span>[
@@ -1753,26 +1775,22 @@
                         <span class="comment">// `--out-dir` is unstable and requires `-Zunstable-options`.</span>
                         <span class="string">&quot;-Zunstable-options&quot;</span>.<span class="ident">to_string</span>(),
                         ...<span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
-                            <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--no-default-features&quot;</span>.<span class="ident">to_string</span>(),
+                            <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[
                                 <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--target={}&quot;</span>, <span class="ident">opt</span>.<span class="ident">server_rust_target</span>.<span class="ident">as_deref</span>().<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_SERVER_RUST_TARGET</span>)),
                                 <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
                             ],
-                            <span class="ident">ServerVariant</span>::<span class="ident">NoIntrospectionClient</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak_unsafe&quot;</span>.<span class="ident">to_string</span>(),
+                            <span class="ident">ServerVariant</span>::<span class="ident">NoIntrospectionClient</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak-unsafe&quot;</span>.<span class="ident">to_string</span>(),
                                 <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--target={}&quot;</span>, <span class="ident">opt</span>.<span class="ident">server_rust_target</span>.<span class="ident">as_deref</span>().<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_SERVER_RUST_TARGET</span>)),
                                 <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
                             ],
-                            <span class="ident">ServerVariant</span>::<span class="ident">Unsafe</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak_unsafe,oak_introspection_client&quot;</span>.<span class="ident">to_string</span>(),
-                                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--target={}&quot;</span>, <span class="ident">opt</span>.<span class="ident">server_rust_target</span>.<span class="ident">as_deref</span>().<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_SERVER_RUST_TARGET</span>)),
-                                <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
-                            ],
-                            <span class="ident">ServerVariant</span>::<span class="ident">Kms</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak_unsafe,oak_introspection_client,awskms,gcpkms&quot;</span>.<span class="ident">to_string</span>(),
+                            <span class="ident">ServerVariant</span>::<span class="ident">Unsafe</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak-unsafe,oak-introspection-client&quot;</span>.<span class="ident">to_string</span>(),
                                 <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--target={}&quot;</span>, <span class="ident">opt</span>.<span class="ident">server_rust_target</span>.<span class="ident">as_deref</span>().<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_SERVER_RUST_TARGET</span>)),
                                 <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
                             ],
                             <span class="comment">// If building in coverage mode, use the default target from the host, and build</span>
-                            <span class="comment">// in debug mode.</span>
-                            <span class="ident">ServerVariant</span>::<span class="ident">Coverage</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak_unsafe,oak_introspection_client&quot;</span>.<span class="ident">to_string</span>()],
-                            <span class="ident">ServerVariant</span>::<span class="ident">Experimental</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak_attestation,oak_unsafe,oak_introspection_client&quot;</span>.<span class="ident">to_string</span>(),
+                            <span class="comment">// in unsafe (debug) mode.</span>
+                            <span class="ident">ServerVariant</span>::<span class="ident">Coverage</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak-unsafe,oak-introspection-client&quot;</span>.<span class="ident">to_string</span>()],
+                            <span class="ident">ServerVariant</span>::<span class="ident">Experimental</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--features=oak-attestation,awskms,gcpkms,oak-unsafe,oak-introspection-client&quot;</span>.<span class="ident">to_string</span>(),
                                 <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--target={}&quot;</span>, <span class="ident">opt</span>.<span class="ident">server_rust_target</span>.<span class="ident">as_deref</span>().<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_SERVER_RUST_TARGET</span>)),
                                 <span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>(),
                             ],
@@ -1861,17 +1879,22 @@
             <span class="ident">run_cargo_deny</span>(),
             <span class="ident">run_cargo_udeps</span>(),
             <span class="ident">build_server</span>(<span class="kw-2">&amp;</span><span class="ident">BuildServer</span> {
-                <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>::<span class="ident">Unsafe</span>,
-                <span class="ident">server_rust_toolchain</span>: <span class="prelude-val">None</span>,
-                <span class="ident">server_rust_target</span>: <span class="prelude-val">None</span>,
-            }),
-            <span class="ident">build_server</span>(<span class="kw-2">&amp;</span><span class="ident">BuildServer</span> {
                 <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>::<span class="ident">Base</span>,
                 <span class="ident">server_rust_toolchain</span>: <span class="prelude-val">None</span>,
                 <span class="ident">server_rust_target</span>: <span class="prelude-val">None</span>,
             }),
             <span class="ident">build_server</span>(<span class="kw-2">&amp;</span><span class="ident">BuildServer</span> {
-                <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>::<span class="ident">Kms</span>,
+                <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>::<span class="ident">NoIntrospectionClient</span>,
+                <span class="ident">server_rust_toolchain</span>: <span class="prelude-val">None</span>,
+                <span class="ident">server_rust_target</span>: <span class="prelude-val">None</span>,
+            }),
+            <span class="ident">build_server</span>(<span class="kw-2">&amp;</span><span class="ident">BuildServer</span> {
+                <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>::<span class="ident">Unsafe</span>,
+                <span class="ident">server_rust_toolchain</span>: <span class="prelude-val">None</span>,
+                <span class="ident">server_rust_target</span>: <span class="prelude-val">None</span>,
+            }),
+            <span class="ident">build_server</span>(<span class="kw-2">&amp;</span><span class="ident">BuildServer</span> {
+                <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>::<span class="ident">Coverage</span>,
                 <span class="ident">server_rust_toolchain</span>: <span class="prelude-val">None</span>,
                 <span class="ident">server_rust_target</span>: <span class="prelude-val">None</span>,
             }),
@@ -1884,7 +1907,7 @@
             <span class="ident">run_tests_tsan</span>(),
             <span class="ident">run_examples</span>(<span class="kw-2">&amp;</span><span class="ident">RunExamples</span> {
                 <span class="ident">application_variant</span>: <span class="string">&quot;rust&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">permissions_file</span>: <span class="string">&quot;./examples/permissions/permissions.toml&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="ident">permissions_file</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="ident">example_name</span>: <span class="prelude-val">None</span>,
                 <span class="ident">run_server</span>: <span class="prelude-val">None</span>,
                 <span class="ident">client_additional_args</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
@@ -1903,7 +1926,7 @@
             }),
             <span class="ident">run_examples</span>(<span class="kw-2">&amp;</span><span class="ident">RunExamples</span> {
                 <span class="ident">application_variant</span>: <span class="string">&quot;cpp&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">permissions_file</span>: <span class="string">&quot;./examples/permissions/permissions.toml&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="ident">permissions_file</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="ident">example_name</span>: <span class="prelude-val">None</span>,
                 <span class="ident">run_server</span>: <span class="prelude-val">None</span>,
                 <span class="ident">client_additional_args</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
@@ -1925,6 +1948,25 @@
                 <span class="ident">application_variant</span>: <span class="string">&quot;rust&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="ident">permissions_file</span>: <span class="string">&quot;./examples/permissions/permissions.toml&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="ident">example_name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;hello_world&quot;</span>.<span class="ident">to_string</span>()),
+                <span class="ident">run_server</span>: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
+                <span class="ident">client_additional_args</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
+                <span class="ident">server_additional_args</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
+                <span class="ident">build_docker</span>: <span class="bool-val">true</span>,
+                <span class="ident">build_client</span>: <span class="ident">BuildClient</span> {
+                    <span class="ident">client_variant</span>: <span class="ident">NO_CLIENTS</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">client_rust_toolchain</span>: <span class="prelude-val">None</span>,
+                    <span class="ident">client_rust_target</span>: <span class="prelude-val">None</span>,
+                },
+                <span class="ident">build_server</span>: <span class="ident">BuildServer</span> {
+                    <span class="ident">server_variant</span>: <span class="ident">ServerVariant</span>::<span class="ident">Base</span>,
+                    <span class="ident">server_rust_toolchain</span>: <span class="prelude-val">None</span>,
+                    <span class="ident">server_rust_target</span>: <span class="prelude-val">None</span>,
+                },
+            }),
+            <span class="ident">run_examples</span>(<span class="kw-2">&amp;</span><span class="ident">RunExamples</span> {
+                <span class="ident">application_variant</span>: <span class="string">&quot;rust&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="ident">permissions_file</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="ident">example_name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;abitest&quot;</span>.<span class="ident">to_string</span>()),
                 <span class="ident">run_server</span>: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
                 <span class="ident">client_additional_args</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
                 <span class="ident">server_additional_args</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
@@ -1962,10 +2004,12 @@
             <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--application={}&quot;</span>, <span class="ident">application_file</span>),
             <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
                 <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--permissions={}&quot;</span>, <span class="ident">permissions_file</span>),
+                <span class="comment">// server variants that have `oak-unsafe` cannot accept a `permissions` file</span>
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
             },
             ...<span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
                 <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[],
+                <span class="comment">// server variants that have `oak-unsafe` need to specify `root-tls-certificate`</span>
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--root-tls-certificate=./examples/certs/local/ca.pem&quot;</span>.<span class="ident">to_string</span>()],
             },
             ...<span class="ident">example_server</span>.<span class="ident">additional_args</span>.<span class="ident">clone</span>(),

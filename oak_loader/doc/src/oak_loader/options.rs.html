@@ -417,7 +417,7 @@
 <span class="doccomment">//! Helper functions to parse input arguments and create an instance of</span>
 <span class="doccomment">//! `RuntimeConfiguration` to feed into the oak_loader.</span>
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-attestation&quot;</span>)]</span>
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">attestation</span>::<span class="ident">get_tls_identity_from_proxy</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
@@ -446,7 +446,7 @@
     <span class="ident">application</span>: <span class="ident">String</span>,
     <span class="comment">// `permissions` file is only required with Base servers (with all optional features disabled).</span>
     <span class="attribute">#[<span class="ident">cfg_attr</span>(
-        <span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>),
+        <span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>),
         <span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;Permissions configuration file.&quot;</span>)
     )]</span>
     <span class="ident">permissions</span>: <span class="ident">String</span>,
@@ -457,24 +457,24 @@
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS certificate file used by gRPC server pseudo-Nodes.&quot;</span>
     )]</span>
     <span class="ident">grpc_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="comment">// Only support `root-tls-certificate` when `oak_unsafe` is enabled.</span>
+    <span class="comment">// Only support `root-tls-certificate` when `oak-unsafe` is enabled.</span>
     <span class="attribute">#[<span class="ident">cfg_attr</span>(
-        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>,
+        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>,
         <span class="ident">structopt</span>(
             <span class="ident">long</span>,
             <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS root certificate file used to authenticate an external gRPC service.&quot;</span>
         )
     )]</span>
     <span class="ident">root_tls_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="comment">// Only support `proxy-uri` when `oak_attestation` is enabled.</span>
+    <span class="comment">// Only support `proxy-uri` when `oak-attestation` is enabled.</span>
     <span class="attribute">#[<span class="ident">cfg_attr</span>(
-        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>,
+        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-attestation&quot;</span>,
         <span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;URI of the Proxy Attestation Service&quot;</span>)
     )]</span>
     <span class="ident">proxy_uri</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="comment">// Only support `proxy-root-tls-certificate` when `oak_attestation` is enabled.</span>
+    <span class="comment">// Only support `proxy-root-tls-certificate` when `oak-attestation` is enabled.</span>
     <span class="attribute">#[<span class="ident">cfg_attr</span>(
-        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>,
+        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-attestation&quot;</span>,
         <span class="ident">structopt</span>(
             <span class="ident">long</span>,
             <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;PEM encoded X.509 TLS root certificate file of the Proxy Attestation Service&quot;</span>
@@ -561,12 +561,12 @@
 
     <span class="comment">// Create Runtime config.</span>
     <span class="kw">let</span> <span class="ident">runtime_configuration</span> <span class="op">=</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
-        <span class="ident">metrics_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>) <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_metrics</span> {
+        <span class="ident">metrics_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>) <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_metrics</span> {
             <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">metrics_port</span>)
         } <span class="kw">else</span> {
             <span class="prelude-val">None</span>
         },
-        <span class="ident">introspect_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>) <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_introspect</span> {
+        <span class="ident">introspect_port</span>: <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>) <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">opt</span>.<span class="ident">no_introspect</span> {
             <span class="prelude-val">Some</span>(<span class="ident">opt</span>.<span class="ident">introspect_port</span>)
         } <span class="kw">else</span> {
             <span class="prelude-val">None</span>
@@ -690,17 +690,17 @@
     }
 }
 
-<span class="doccomment">/// If `oak_unsafe` is enabled, reads root TLS certificate from the specified file into a byte</span>
+<span class="doccomment">/// If `oak-unsafe` is enabled, reads root TLS certificate from the specified file into a byte</span>
 <span class="doccomment">/// array. Otherwise, loads the default root TLS certificate from the embedded byte array.</span>
 <span class="doccomment">/// Parses the byte array into a [`Certificate`], or returns an error if the byte array does not</span>
 <span class="doccomment">/// represent a valid PEM formatted certificate.</span>
 <span class="kw">fn</span> <span class="ident">get_root_tls_certificate_or_default</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Certificate</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">certificate_bytes</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">root_tls_certificate</span> {
         <span class="prelude-val">Some</span>(<span class="ident">certificate_path</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">if</span> <span class="op">!</span><span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>) {
-                <span class="comment">// Unreachable: it should not be possible to specify the flag without `oak_unsafe`.</span>
+            <span class="kw">if</span> <span class="op">!</span><span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>) {
+                <span class="comment">// Unreachable: it should not be possible to specify the flag without `oak-unsafe`.</span>
                 <span class="ident">anyhow</span>::<span class="macro">bail</span><span class="macro">!</span>(
-                    <span class="string">&quot;Specifying `root-tls-certificate` requires the `oak_unsafe` feature.&quot;</span>
+                    <span class="string">&quot;Specifying `root-tls-certificate` requires the `oak-unsafe` feature.&quot;</span>
                 );
             };
             <span class="ident">read</span>(<span class="ident">certificate_path</span>).<span class="ident">context</span>(<span class="string">&quot;could not read root TLS certificate&quot;</span>)<span class="question-mark">?</span>
@@ -715,7 +715,7 @@
 <span class="doccomment">/// Attestation Service.</span>
 <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">get_tls_identity</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Identity</span><span class="op">&gt;</span> {
     <span class="kw">match</span> (<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">proxy_uri</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">proxy_root_tls_certificate</span>) {
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>)]</span>
+        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-attestation&quot;</span>)]</span>
         (<span class="prelude-val">Some</span>(<span class="ident">proxy_uri_string</span>), <span class="prelude-val">Some</span>(<span class="ident">proxy_root_tls_certificate_path</span>)) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">proxy_uri</span> <span class="op">=</span> <span class="ident">proxy_uri_string</span>
                 .<span class="ident">parse</span>()
@@ -725,12 +725,12 @@
 
             <span class="ident">get_tls_identity_from_proxy</span>(<span class="kw-2">&amp;</span><span class="ident">proxy_uri</span>, <span class="kw-2">&amp;</span><span class="ident">proxy_root_tls_certificate</span>.<span class="ident">as_bytes</span>()).<span class="ident">await</span>
         }
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_attestation&quot;</span>))]</span>
+        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-attestation&quot;</span>))]</span>
         (<span class="prelude-val">Some</span>(<span class="ident">_proxy_uri_string</span>), <span class="prelude-val">Some</span>(<span class="ident">_proxy_root_tls_certificate_path</span>)) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="comment">// Unreachable: it should not be possible to specify the flag without</span>
-            <span class="comment">// `oak_attestation`.</span>
+            <span class="comment">// `oak-attestation`.</span>
             <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(
-                <span class="string">&quot;Specifying `proxy-uri` or `root-tls-certificate` requires the `oak_attestation` feature.&quot;</span>
+                <span class="string">&quot;Specifying `proxy-uri` or `root-tls-certificate` requires the `oak-attestation` feature.&quot;</span>
             ))
         }
         (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No proxy URI provided.&quot;</span>)),
@@ -781,9 +781,9 @@
 }
 
 <span class="doccomment">/// Parse permissions configuration into an instance of [`PermissionsConfiguration`], if</span>
-<span class="doccomment">/// `oak_unsafe` is not enabled. Otherwise, use a default [`PermissionsConfiguration`].</span>
+<span class="doccomment">/// `oak-unsafe` is not enabled. Otherwise, use a default [`PermissionsConfiguration`].</span>
 <span class="kw">fn</span> <span class="ident">create_permissions_config</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">Opt</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PermissionsConfiguration</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_unsafe&quot;</span>) {
+    <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-unsafe&quot;</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">PermissionsConfiguration</span>::<span class="ident">default</span>())
     } <span class="kw">else</span> {
         <span class="kw">let</span> <span class="ident">permissions_config_data</span> <span class="op">=</span>
