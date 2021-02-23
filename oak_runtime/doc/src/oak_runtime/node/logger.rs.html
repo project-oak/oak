@@ -110,18 +110,6 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -143,7 +131,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">io</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>},
-    <span class="ident">NodePrivilege</span>, <span class="ident">RuntimeProxy</span>,
+    <span class="ident">RuntimeProxy</span>,
 };
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">OakStatus</span>;
@@ -171,18 +159,6 @@
         <span class="string">&quot;logger&quot;</span>
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
-        <span class="comment">// Allow the logger Node to declassify log messages in debug builds only.</span>
-        <span class="ident">NodePrivilege</span>::<span class="ident">top_privilege</span>()
-    }
-
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak_debug&quot;</span>))]</span>
-    <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
-        <span class="comment">// The logger must not have any declassification privilege in non-debug builds.</span>
-        <span class="ident">NodePrivilege</span>::<span class="ident">default</span>()
-    }
-
     <span class="doccomment">/// Main execution loop for the logging pseudo-Node just waits for incoming</span>
     <span class="doccomment">/// `LogMessage`s and outputs them.</span>
     <span class="kw">fn</span> <span class="ident">run</span>(
@@ -197,7 +173,7 @@
                 <span class="prelude-val">Ok</span>(<span class="ident">msg</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="comment">// Log messages that arrive from Oak applications over a logging channel</span>
                     <span class="comment">// are controlled by IFC, and so need to be emitted independently of</span>
-                    <span class="comment">// whether the Runtime has been built with the `oak_debug` feature</span>
+                    <span class="comment">// whether the Runtime has been built with the `oak_unsafe` feature</span>
                     <span class="comment">// enabled (and thus whether log! is connected up to anything or not).</span>
                     <span class="comment">// So send to stderr.</span>
                     <span class="kw">let</span> <span class="ident">now</span>: <span class="ident">chrono</span>::<span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">chrono</span>::<span class="ident">Utc</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">chrono</span>::<span class="ident">Utc</span>::<span class="ident">now</span>();
