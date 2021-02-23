@@ -28,8 +28,8 @@ fn main() {
     .expect("Proto compilation failed.");
 
     generate_grpc_code(
-        "../proto",
-        &["remote.proto"],
+        "..",
+        &["proto/remote.proto"],
         CodegenOptions {
             build_client: true,
             build_server: true,

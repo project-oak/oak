@@ -79,6 +79,7 @@ mod node;
 pub mod permissions;
 mod proto;
 mod proxy;
+mod remote;
 #[cfg(test)]
 mod tests;
 pub mod time;
