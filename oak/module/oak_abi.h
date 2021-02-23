@@ -42,6 +42,7 @@ enum OakStatus : uint32_t {
 
 // Function declarations for the host functions available on the Oak ABI.
 WASM_IMPORT("oak") oak_abi::OakStatus wait_on_channels(uint8_t* buff, int32_t count);
+WASM_IMPORT("oak") oak_abi::OakStatus wait_on_channels_with_downgrade(uint8_t* buff, int32_t count);
 WASM_IMPORT("oak")
 oak_abi::OakStatus channel_read(oak_abi::Handle handle, uint8_t* buff, size_t usize,
                                 uint32_t* actual_size, oak_abi::Handle* handle_buff,

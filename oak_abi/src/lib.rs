@@ -100,6 +100,10 @@ extern "C" {
     /// [`OakStatus`]: crate::OakStatus
     pub fn wait_on_channels(buf: *mut u8, count: u32) -> u32;
 
+    /// The same as [`wait_on_channels`](#method.wait_on_channels), but also applies the current
+    /// Node's downgrade privilege when checking IFC restrictions.
+    pub fn wait_on_channels_with_downgrade(buf: *mut u8, count: u32) -> u32;
+
     /// Read a message from a channel.
     ///
     /// Reads from the channel identified by `handle`, storing data into `buf`

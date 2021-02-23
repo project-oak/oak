@@ -52,11 +52,12 @@ const CHANNEL_WRITE_WITH_DOWNGRADE: usize = 8;
 const CHANNEL_READ: usize = 9;
 const CHANNEL_READ_WITH_DOWNGRADE: usize = 10;
 const WAIT_ON_CHANNELS: usize = 11;
-const CHANNEL_LABEL_READ: usize = 12;
-const NODE_LABEL_READ: usize = 13;
-const NODE_PRIVILEGE_READ: usize = 14;
+const WAIT_ON_CHANNELS_WITH_DOWNGRADE: usize = 12;
+const CHANNEL_LABEL_READ: usize = 13;
+const NODE_LABEL_READ: usize = 14;
+const NODE_PRIVILEGE_READ: usize = 15;
 // TODO(#817): remove this; we shouldn't need to have WASI stubs.
-const WASI_STUB: usize = 15;
+const WASI_STUB: usize = 16;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -627,6 +628,34 @@ impl WasmInterface {
             handles_count
         );
 
+        self.wait_on_channels_util(status_buff, handles_count, Downgrading::No)
+    }
+
+    /// Corresponds to the host ABI function [`wait_on_channels_with_downgrade`](https://github.com/project-oak/oak/blob/main/docs/abi.md#wait_on_channels_with_downgrade).
+    fn wait_on_channels_with_downgrade(
+        &mut self,
+        status_buff: AbiPointer,
+        handles_count: AbiPointerOffset,
+    ) -> Result<(), OakStatus> {
+        trace!(
+            "{}: wait_on_channels_with_downgrade({}, {})",
+            self.pretty_name,
+            status_buff,
+            handles_count
+        );
+
+        self.wait_on_channels_util(status_buff, handles_count, Downgrading::Yes)
+    }
+
+    /// Helper function used by [`wait_on_channels`](https://github.com/project-oak/oak/blob/main/docs/abi.md#wait_on_channels)
+    /// and [`wait_on_channels_with_downgrade`](https://github.com/project-oak/oak/blob/main/docs/abi.md#wait_on_channels_with_downgrade).
+    #[allow(clippy::too_many_arguments)]
+    fn wait_on_channels_util(
+        &mut self,
+        status_buff: AbiPointer,
+        handles_count: AbiPointerOffset,
+        downgrade: Downgrading,
+    ) -> Result<(), OakStatus> {
         let handles_raw: Vec<u8> = self
             .get_memory()
             .get(
@@ -635,7 +664,7 @@ impl WasmInterface {
             )
             .map_err(|err| {
                 error!(
-                    "{}: wait_on_channels(): Unable to read handles from guest memory: {:?}",
+                    "{}: wait_on_channels_util(): Unable to read handles from guest memory: {:?}",
                     self.pretty_name, err
                 );
                 OakStatus::ErrInvalidArgs
@@ -645,13 +674,16 @@ impl WasmInterface {
             .map(|bytes| LittleEndian::read_u64(bytes))
             .collect();
 
-        let statuses = self.runtime.wait_on_channels(&handles)?;
+        let statuses = match downgrade {
+            Downgrading::Yes => self.runtime.wait_on_channels_with_downgrade(&handles),
+            Downgrading::No => self.runtime.wait_on_channels(&handles),
+        }?;
         for (i, status) in statuses.iter().enumerate() {
             self.get_memory()
                 .set_value(status_buff + 8 + (i as u32 * 9), *status as u8)
                 .map_err(|err| {
                     error!(
-                        "{}: wait_on_channels(): Unable to set status[{}] to {:?}: {:?}",
+                        "{}: wait_on_channels_util(): Unable to set status[{}] to {:?}: {:?}",
                         self.pretty_name, i, status, err
                     );
                     OakStatus::ErrInvalidArgs
@@ -976,6 +1008,9 @@ impl wasmi::Externals for WasmInterface {
             WAIT_ON_CHANNELS => {
                 map_host_errors(self.wait_on_channels(args.nth_checked(0)?, args.nth_checked(1)?))
             }
+            WAIT_ON_CHANNELS_WITH_DOWNGRADE => map_host_errors(
+                self.wait_on_channels_with_downgrade(args.nth_checked(0)?, args.nth_checked(1)?),
+            ),
             WASI_STUB => panic!("Attempt to invoke unimplemented WASI function"),
             _ => panic!("Unimplemented function at {}", index),
         }
@@ -1145,6 +1180,16 @@ fn oak_resolve_func(
         ),
         "wait_on_channels" => (
             WAIT_ON_CHANNELS,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE,      // buf
+                    ValueType::I32, // count
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "wait_on_channels_with_downgrade" => (
+            WAIT_ON_CHANNELS_WITH_DOWNGRADE,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE,      // buf

@@ -67,6 +67,12 @@ pub extern "C" fn wait_on_channels(buf: *mut u8, count: u32) -> u32 {
     }) as i32 as u32
 }
 
+/// Stub function necessary for Oak ABI.
+#[no_mangle]
+pub extern "C" fn wait_on_channels_with_downgrade(_buf: *mut u8, _count: u32) -> u32 {
+    0
+}
+
 type WaitOnChannelsHandler = Box<dyn FnMut(&mut [HandleWithStatus]) -> OakStatus>;
 std::thread_local! {
     static WAIT_ON_CHANNELS_HANDLER: RefCell<Option<WaitOnChannelsHandler>> = RefCell::new(None);
