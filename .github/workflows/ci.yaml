@@ -53,8 +53,8 @@ jobs:
 
       # Init .git repository used by check_generated.
       # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
-      - name: Git init
-        run: ./scripts/docker_run ./scripts/git_init
+      # - name: Git init
+      #   run: ./scripts/docker_run ./scripts/git_init
 
       - name: Cargo crev
         run: ./scripts/docker_run ./scripts/run_cargo_crev
