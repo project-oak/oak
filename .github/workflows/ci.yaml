@@ -55,6 +55,8 @@ jobs:
       # Workaround for https://github.com/GoogleCloudPlatform/cloud-builders/issues/236
       # - name: Git init
       #   run: ./scripts/docker_run ./scripts/git_init
+      - name: Git check diff
+        run: ./scripts/docker_run ./scripts/git_check_diff
 
       - name: Cargo crev
         run: ./scripts/docker_run ./scripts/run_cargo_crev
