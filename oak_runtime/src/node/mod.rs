@@ -155,11 +155,11 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                 instance: Box::new(logger::LogNode::new(node_name)),
 
                 // Allow the logger Node to declassify log messages in debug builds only.
-                #[cfg(feature = "oak_unsafe")]
+                #[cfg(feature = "oak-unsafe")]
                 privilege: NodePrivilege::top_privilege(),
 
                 // The logger must not have any declassification privilege in non-debug builds.
-                #[cfg(not(feature = "oak_unsafe"))]
+                #[cfg(not(feature = "oak-unsafe"))]
                 privilege: NodePrivilege::default(),
             }),
             Some(ConfigType::GrpcServerConfig(config)) => {

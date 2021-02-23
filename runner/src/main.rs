@@ -271,7 +271,7 @@ fn build_server(opt: &BuildServer) -> Step {
                 ),
             }],
             match opt.server_variant {
-                ServerVariant::Unsafe | ServerVariant::Coverage | ServerVariant::Kms | ServerVariant::Experimental => vec![Step::Single {
+                ServerVariant::Unsafe | ServerVariant::Coverage | ServerVariant::Experimental => vec![Step::Single {
                     name: "build introspection browser client".to_string(),
                     command: Cmd::new("npm",
                                       vec![
@@ -301,26 +301,22 @@ fn build_server(opt: &BuildServer) -> Step {
                         // `--out-dir` is unstable and requires `-Zunstable-options`.
                         "-Zunstable-options".to_string(),
                         ...match opt.server_variant {
-                            ServerVariant::Base => vec!["--no-default-features".to_string(),
+                            ServerVariant::Base => vec![
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
-                            ServerVariant::NoIntrospectionClient => vec!["--features=oak_unsafe".to_string(),
+                            ServerVariant::NoIntrospectionClient => vec!["--features=oak-unsafe".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
-                            ServerVariant::Unsafe => vec!["--features=oak_unsafe,oak_introspection_client".to_string(),
-                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                                "--release".to_string(),
-                            ],
-                            ServerVariant::Kms => vec!["--features=oak_unsafe,oak_introspection_client,awskms,gcpkms".to_string(),
+                            ServerVariant::Unsafe => vec!["--features=oak-unsafe,oak-introspection-client".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
                             // If building in coverage mode, use the default target from the host, and build
-                            // in debug mode.
-                            ServerVariant::Coverage => vec!["--features=oak_unsafe,oak_introspection_client".to_string()],
-                            ServerVariant::Experimental => vec!["--features=oak_attestation,oak_unsafe,oak_introspection_client".to_string(),
+                            // in unsafe (debug) mode.
+                            ServerVariant::Coverage => vec!["--features=oak-unsafe,oak-introspection-client".to_string()],
+                            ServerVariant::Experimental => vec!["--features=oak-attestation,awskms,gcpkms,oak-unsafe,oak-introspection-client".to_string(),
                                 format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
                                 "--release".to_string(),
                             ],
@@ -409,17 +405,22 @@ fn run_ci() -> Step {
             run_cargo_deny(),
             run_cargo_udeps(),
             build_server(&BuildServer {
-                server_variant: ServerVariant::Unsafe,
-                server_rust_toolchain: None,
-                server_rust_target: None,
-            }),
-            build_server(&BuildServer {
                 server_variant: ServerVariant::Base,
                 server_rust_toolchain: None,
                 server_rust_target: None,
             }),
             build_server(&BuildServer {
-                server_variant: ServerVariant::Kms,
+                server_variant: ServerVariant::NoIntrospectionClient,
+                server_rust_toolchain: None,
+                server_rust_target: None,
+            }),
+            build_server(&BuildServer {
+                server_variant: ServerVariant::Unsafe,
+                server_rust_toolchain: None,
+                server_rust_target: None,
+            }),
+            build_server(&BuildServer {
+                server_variant: ServerVariant::Coverage,
                 server_rust_toolchain: None,
                 server_rust_target: None,
             }),
@@ -432,7 +433,7 @@ fn run_ci() -> Step {
             run_tests_tsan(),
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
-                permissions_file: "./examples/permissions/permissions.toml".to_string(),
+                permissions_file: "".to_string(),
                 example_name: None,
                 run_server: None,
                 client_additional_args: Vec::new(),
@@ -451,7 +452,7 @@ fn run_ci() -> Step {
             }),
             run_examples(&RunExamples {
                 application_variant: "cpp".to_string(),
-                permissions_file: "./examples/permissions/permissions.toml".to_string(),
+                permissions_file: "".to_string(),
                 example_name: None,
                 run_server: None,
                 client_additional_args: Vec::new(),
@@ -473,6 +474,25 @@ fn run_ci() -> Step {
                 application_variant: "rust".to_string(),
                 permissions_file: "./examples/permissions/permissions.toml".to_string(),
                 example_name: Some("hello_world".to_string()),
+                run_server: Some(false),
+                client_additional_args: Vec::new(),
+                server_additional_args: Vec::new(),
+                build_docker: true,
+                build_client: BuildClient {
+                    client_variant: NO_CLIENTS.to_string(),
+                    client_rust_toolchain: None,
+                    client_rust_target: None,
+                },
+                build_server: BuildServer {
+                    server_variant: ServerVariant::Base,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+            }),
+            run_examples(&RunExamples {
+                application_variant: "rust".to_string(),
+                permissions_file: "".to_string(),
+                example_name: Some("abitest".to_string()),
                 run_server: Some(false),
                 client_additional_args: Vec::new(),
                 server_additional_args: Vec::new(),
@@ -510,10 +530,12 @@ fn run_example_server(
             format!("--application={}", application_file),
             match opt.server_variant {
                 ServerVariant::Base => format!("--permissions={}", permissions_file),
+                // server variants that have `oak-unsafe` cannot accept a `permissions` file
                 _ => "".to_string(),
             },
             ...match opt.server_variant {
                 ServerVariant::Base => vec![],
+                // server variants that have `oak-unsafe` need to specify `root-tls-certificate`
                 _ => vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()],
             },
             ...example_server.additional_args.clone(),

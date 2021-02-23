@@ -123,7 +123,7 @@ impl RuntimeProxy {
             .runtime_health_check
             .set(1);
 
-        #[cfg(feature = "oak_unsafe")]
+        #[cfg(feature = "oak-unsafe")]
         if let Some(port) = runtime_configuration.introspect_port {
             self.runtime
                 .aux_servers

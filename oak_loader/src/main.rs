@@ -28,7 +28,7 @@
 //! ```
 
 use anyhow::Context;
-#[cfg(feature = "oak_attestation")]
+#[cfg(feature = "oak-attestation")]
 pub mod attestation;
 use log::info;
 mod options;
@@ -45,7 +45,7 @@ mod tests;
 /// Main execution point for the Oak loader.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    if cfg!(feature = "oak_unsafe") {
+    if cfg!(feature = "oak-unsafe") {
         env_logger::init();
     } else {
         eprintln!("No debugging output configured at build time");

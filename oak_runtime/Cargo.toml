@@ -11,8 +11,8 @@ edition = "2018"
 license = "Apache-2.0"
 
 [features]
-oak_unsafe = ["regex"]
-oak_introspection_client = []
+oak-unsafe = ["regex"]
+oak-introspection-client = ["oak-unsafe"]
 awskms = ["tink-awskms"]
 gcpkms = ["tink-gcpkms"]
 default = []
