@@ -4,8 +4,5 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-echo TEST > ./examples/translator/proto/translator.pb.go
-
-git status
 # Check that any generated files match those that are checked in.
 git diff --exit-code -- . ':!*.bazelrc'
