@@ -35,10 +35,11 @@ message NodeCreateRequest {
     string name = 1;
     oak.application.NodeConfiguration node_configuration = 2;
     oak.label.Label label = 3;
+    fixed64 initial_handle = 4;
 }
 
 message NodeCreateResponse {
-  string remote_node_id = 1;
+  fixed64 remote_node_id = 1;
 }
 
 message ChannelReadRequest {

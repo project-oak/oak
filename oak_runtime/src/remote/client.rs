@@ -17,38 +17,31 @@
 //! Functionality for remote runtime clients.
 
 use crate::proto::oak::remote::remote_runtime_client::RemoteRuntimeClient;
-use std::collections::HashMap;
+use std::collections::HashSet;
 use tonic::transport::Channel;
 
 #[derive(Default)]
 pub struct RemoteClients {
-    /// Map of remote runtime ids and their addresses
-    clients: HashMap<String, String>,
+    /// Set of known remote runtime addresses
+    clients: HashSet<String>,
 }
 
 impl RemoteClients {
-    pub fn new() -> Self {
-        RemoteClients {
-            ..Default::default()
-        }
-    }
-
-    pub fn add_remote(&mut self, remote_id: String, remote_addr: String) {
-        self.clients.insert(remote_id, remote_addr);
+    pub fn add_remote(&mut self, remote_addr: String) {
+        self.clients.insert(remote_addr);
     }
 
     pub async fn get_client(
         &self,
-        remote_id: String,
+        remote_addr: String,
     ) -> anyhow::Result<RemoteRuntimeClient<Channel>> {
-        let remote_addr = self
-            .clients
-            .get(&remote_id)
-            .ok_or_else(|| anyhow::anyhow!("Could not find remote with the given id"))?;
-
-        let channel = Channel::from_shared(remote_addr.to_owned())?
-            .connect()
-            .await?;
-        Ok(RemoteRuntimeClient::new(channel))
+        if self.clients.contains(&remote_addr) {
+            let channel = Channel::from_shared(remote_addr.to_owned())?
+                .connect()
+                .await?;
+            Ok(RemoteRuntimeClient::new(channel))
+        } else {
+            Err(anyhow::anyhow!("Could not find remote with the given id"))
+        }
     }
 }
