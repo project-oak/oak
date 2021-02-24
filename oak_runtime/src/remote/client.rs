@@ -31,6 +31,7 @@ impl RemoteClients {
         self.clients.insert(remote_addr);
     }
 
+    #[allow(dead_code)]
     pub async fn get_client(
         &self,
         remote_addr: String,

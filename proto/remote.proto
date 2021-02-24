@@ -23,12 +23,13 @@ import "oak_abi/proto/label.proto";
 import "oak_abi/proto/application.proto";
 
 message AddRemoteRequest {
+  string remote_uuid = 1;
   // IP address and port number for a remote Runtime
-  string remote_address = 1;
+  string remote_address = 2;
 }
 
 message AddRemoteResponse {
-  // empty response
+  string runtime_uuid = 1;
 }
 
 message NodeCreateRequest {

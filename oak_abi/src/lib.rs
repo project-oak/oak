@@ -65,7 +65,26 @@ pub const OAK_CHALLENGE: &str = "oak-challenge";
 /// Handle used to identify read or write channel halves.
 ///
 /// These handles are used for all host function calls.
+#[cfg(not(feature = "distributed-rt"))]
 pub type Handle = u64;
+
+#[cfg(feature = "distributed-rt")]
+#[derive(Clone)]
+pub struct Handle {
+    handle: u64,
+    runtime: HostRuntime,
+}
+
+/// Enum representing a local or remote runtime.
+// TODO(#1854): This works better with linear handles, since this enum is not copy.
+#[cfg(feature = "distributed-rt")]
+#[derive(Clone)]
+pub enum HostRuntime {
+    /// Current Runtime
+    Local,
+    /// Remote runtime, identified using an ID.
+    Remote { id: String },
+}
 
 /// Expected type for a Node entrypoint that is exposed as a Wasm export.
 pub type NodeMainC = extern "C" fn(Handle);

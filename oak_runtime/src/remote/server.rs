@@ -31,6 +31,7 @@ use tonic::{Request, Response, Status};
 
 pub struct RemoteRuntimeHandler {
     runtime: RuntimeProxy,
+    runtime_uuid: String,
     remotes: Mutex<RemoteClients>,
 }
 
@@ -46,7 +47,9 @@ impl RemoteRuntime for RemoteRuntimeHandler {
             .lock()
             .unwrap()
             .add_remote(req.into_inner().remote_address);
-        Ok(Response::new(AddRemoteResponse {}))
+        Ok(Response::new(AddRemoteResponse {
+            runtime_uuid: self.runtime_uuid.clone(),
+        }))
     }
 
     async fn node_create(

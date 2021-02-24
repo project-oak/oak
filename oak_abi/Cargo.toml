@@ -7,6 +7,11 @@ authors = ["David Drysdale <drysdale@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[features]
+# Support distributed runtime. 
+# For this to work, we need channel handles to also include the id of a local or remote runtime.
+distributed-rt = []
+
 [dependencies]
 prost = { path = "../third_party/prost" }
 prost-types = { path = "../third_party/prost/prost-types" }
