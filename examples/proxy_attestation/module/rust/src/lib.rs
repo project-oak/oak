@@ -39,6 +39,9 @@ use oak::{grpc, Label};
 use oak_abi::proto::oak::application::ConfigMap;
 use oak_services::proto::oak::log::LogInit;
 
+// Example message to send to the client.
+const EXAMPLE_MESSAGE: &str = "Example message";
+
 oak::entrypoint_command_handler!(oak_main => Main);
 
 #[derive(Default)]
@@ -89,7 +92,7 @@ impl ExampleApplication for Handler {
     ) -> grpc::Result<GetExampleMessageResponse> {
         info!("Received request");
         Ok(GetExampleMessageResponse {
-            message: "Example message".to_string(),
+            message: EXAMPLE_MESSAGE.to_string(),
         })
     }
 }

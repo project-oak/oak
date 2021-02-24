@@ -5,6 +5,7 @@ members = [
   "split_grpc/proxy",
   "split_grpc/server",
   "benchmark",
+  "attestation_common",
   "proxy_attestation",
 ]
 

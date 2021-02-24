@@ -7,15 +7,31 @@ authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[features]
+oak-attestation = [
+  "oak_attestation_common",
+  "regex",
+  "tokio-rustls",
+  "x509-parser",
+  "webpki"
+]
+
 [dependencies]
 anyhow = "*"
 http = "*"
 hyper = "*"
 log = "*"
 oak_abi = { path = "../oak_abi" }
+oak_attestation_common = { path = "../experimental/attestation_common", optional = true }
 oak_sign = { path = "../oak_sign" }
 prost = "*"
+regex = { version = "*", optional = true }
+tokio-rustls = { version = "*", features = [
+  "dangerous_configuration"
+], optional = true }
 tonic = { version = "*", features = ["tls"] }
+x509-parser = { version = "*", optional = true }
+webpki = { version = "*", optional = true }
 
 # Patch dependencies on oak crates so that they refer to the versions within this same repository.
 #

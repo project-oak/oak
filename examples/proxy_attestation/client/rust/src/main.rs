@@ -24,7 +24,10 @@ use anyhow::Context;
 use http::uri::Uri;
 use log::info;
 use oak_abi::label::Label;
-use oak_client::{create_tls_channel, interceptors::label::LabelInterceptor};
+use oak_client::{
+    attestation::create_attested_tls_channel, create_tls_channel,
+    interceptors::label::LabelInterceptor,
+};
 use oak_proxy_attestation::proto::{
     proxy_attestation_client::ProxyAttestationClient, GetRootCertificateRequest,
 };
@@ -35,7 +38,7 @@ use structopt::StructOpt;
 use tonic::{transport::Channel, Request};
 
 #[derive(StructOpt, Clone)]
-#[structopt(about = "Private Set Intersection Client")]
+#[structopt(about = "Proxy Attestation Client")]
 pub struct Opt {
     #[structopt(
         long,
@@ -56,6 +59,11 @@ pub struct Opt {
     proxy_root_tls_certificate: String,
 }
 
+// TODO(#1867): Add remote attestation support.
+const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
+// Example message expected from the Oak application.
+const EXAMPLE_MESSAGE: &str = "Example message";
+
 /// Create gRPC client for Proxy Attestation Service.
 async fn create_proxy_client(
     uri: &Uri,
@@ -72,9 +80,10 @@ async fn create_proxy_client(
 async fn create_application_client(
     uri: &Uri,
     root_tls_certificate: &[u8],
+    tee_measurement: &[u8],
 ) -> anyhow::Result<ExampleApplicationClient<Channel>> {
     info!("Connecting to Oak application: {:?}", uri);
-    let channel = create_tls_channel(uri, root_tls_certificate)
+    let channel = create_attested_tls_channel(uri, root_tls_certificate, tee_measurement)
         .await
         .context("Couldn't create TLS channel")?;
     let label = Label::public_untrusted();
@@ -103,20 +112,22 @@ async fn get_root_tls_certificate(
 }
 
 /// Connect to Oak application using root TLS certificate received from Proxy Attestation Service.
-/// TODO(#1861): Check TEE quotes in server certificates.
-async fn create_application_connection(
+async fn get_example_message(
     uri: &Uri,
     root_tls_certificate: &[u8],
-) -> anyhow::Result<()> {
-    let mut client = create_application_client(&uri, &root_tls_certificate)
+    tee_measurement: &[u8],
+) -> anyhow::Result<String> {
+    let mut client = create_application_client(&uri, &root_tls_certificate, tee_measurement)
         .await
         .context("Couldn't create gRPC client")?;
     let request = Request::new(GetExampleMessageRequest {});
-    client
+    let example_message = client
         .get_example_message(request)
         .await
-        .context("Couldn't connect to backend")?;
-    Ok(())
+        .context("Couldn't connect to backend")?
+        .into_inner()
+        .message;
+    Ok(example_message)
 }
 
 #[tokio::main]
@@ -132,7 +143,13 @@ async fn main() -> anyhow::Result<()> {
     let root_tls_certificate =
         get_root_tls_certificate(&proxy_uri, &proxy_root_tls_certificate).await?;
     info!("Received root certificate from Proxy Attestation Service");
-    create_application_connection(&app_uri, &root_tls_certificate).await?;
+    let example_message = get_example_message(
+        &app_uri,
+        &root_tls_certificate,
+        TEST_TEE_MEASUREMENT.as_bytes(),
+    )
+    .await?;
+    assert_eq!(EXAMPLE_MESSAGE, example_message);
     info!("Successfully connected to Oak application");
 
     Ok(())
