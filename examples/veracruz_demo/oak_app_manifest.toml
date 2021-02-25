@@ -1,0 +1,5 @@
+name = "veracruz_demo"
+
+[modules]
+app = { path = "examples/veracruz_demo/bin/veracruz_demo.wasm" }
+translator = { path = "examples/veracruz_demo/bin/translator.wasm" }

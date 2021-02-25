@@ -29,6 +29,9 @@ members = [
   "translator/grpc",
   "translator/common",
   "translator/module/rust",
+  "veracruz_demo/grpc",
+  "veracruz_demo/client/rust",
+  "veracruz_demo/module/rust",
 ]
 
 # Patch dependencies on oak crates so that they refer to the versions within this same repository.
@@ -67,3 +70,5 @@ prost = { path = "../third_party/prost" }
 prost-build = { path = "../third_party/prost/prost-build" }
 prost-derive = { path = "../third_party/prost/prost-derive" }
 prost-types = { path = "../third_party/prost/prost-types" }
+veracruz_demo_client = { path = "veracruz_demo/client/rust" }
+veracruz_demo_grpc = { path = "veracruz_demo/grpc" }

@@ -1,0 +1,27 @@
+[package]
+name = "veracruz_demo_client"
+version = "0.1.0"
+authors = ["Derek Miller <derek.miller@arm.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[[bin]]
+name = "veracruz_demo_client_bin"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+futures = "*"
+log = "*"
+oak_abi = "=0.1.0"
+oak_client = "=0.1.0"
+veracruz_demo_grpc = "=0.1.0"
+prost = "*"
+structopt = "*"
+# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
+tokio = { version = "0.2", features = ["fs", "macros", "sync", "stream"] }
+tonic = { version = "*", features = ["tls"] }
+
+[build-dependencies]
+oak_utils = "*"

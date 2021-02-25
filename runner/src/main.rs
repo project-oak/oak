@@ -517,6 +517,26 @@ fn run_ci() -> Step {
                     server_rust_target: None,
                 },
             }),
+            // Package the Veracruz Demo application in a Docker image.
+            run_examples(&RunExamples {
+                application_variant: "rust".to_string(),
+                permissions_file: "./examples/permissions/permissions.toml".to_string(),
+                example_name: Some("veracruz_demo".to_string()),
+                run_server: Some(false),
+                client_additional_args: Vec::new(),
+                server_additional_args: Vec::new(),
+                build_docker: true,
+                build_client: BuildClient {
+                    client_variant: NO_CLIENTS.to_string(),
+                    client_rust_toolchain: None,
+                    client_rust_target: None,
+                },
+                build_server: BuildServer {
+                    server_variant: ServerVariant::Unsafe,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+            }),
         ],
     }
 }
