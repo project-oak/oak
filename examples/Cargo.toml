@@ -26,6 +26,8 @@ members = [
   "private_set_intersection/handler_module/rust",
   "proxy_attestation/client/rust",
   "proxy_attestation/module/rust",
+  "tls_attestation/backend",
+  "tls_attestation/client/rust",
   "translator/grpc",
   "translator/common",
   "translator/module/rust",

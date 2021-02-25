@@ -16,19 +16,28 @@
 
 use anyhow::{anyhow, Context};
 use http::uri::Uri;
-use oak_attestation_common::{Report, TEE_EXTENSION_OID};
-use tokio_rustls::rustls;
+use log::{debug, warn};
+use oak_attestation_common::{
+    get_sha256,
+    report::{AttestationInfo, TEE_EXTENSION_OID},
+};
+use tokio_rustls::rustls::{self, ServerCertVerifier};
 use tonic::transport::{Channel, ClientTlsConfig};
 use x509_parser::{der_parser::der::parse_der, parse_x509_certificate};
 
-/// Creates a remotely attested TLS channel for connecting to Oak.
-pub async fn create_attested_tls_channel(
+/// Creates a gRPC channel to a TEE service specified by [`uri`] that checks that:
+/// - TLS certificate was signed by the [`root_tls_certificate`] of the Proxy Attestation Service.
+/// - X.509 TEE extension contains a TEE report with expected [`tee_measurement`].
+pub async fn create_attested_grpc_channel(
     uri: &Uri,
     root_tls_certificate: &[u8],
     tee_measurement: &[u8],
 ) -> anyhow::Result<Channel> {
-    let tls_config = create_tls_attestation_config(root_tls_certificate, tee_measurement)
-        .context("Couldn't create TLS config")?;
+    let tls_config = {
+        let config = create_tls_attestation_config(root_tls_certificate, tee_measurement)
+            .context("Couldn't create TLS config")?;
+        ClientTlsConfig::new().rustls_client_config(config)
+    };
     Channel::builder(uri.clone())
         .tls_config(tls_config)
         .context("Couldn't create TLS configuration")?
@@ -37,34 +46,50 @@ pub async fn create_attested_tls_channel(
         .context("Couldn't connect to Oak Application")
 }
 
-/// Create client TLS configuration with a custom X.509 certificate verifier.
+/// Creates an HTTPS client which checks that X.509 TEE extension contains a TEE report with the
+/// expected [`tee_measurement`] and a hash of the public key used to the TLS certificate.
+pub async fn create_attested_https_client(
+    tee_measurement: &[u8],
+) -> anyhow::Result<hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>> {
+    // Config doesn't need root certificates, since it accepts self-signed ones.
+    let tls_config = create_tls_attestation_config(&[], tee_measurement)
+        .context("Couldn't create TLS config")?;
+
+    let mut http = hyper::client::HttpConnector::new();
+    // Enable HTTPS by allowing Uri`s to have the `https` scheme.
+    http.enforce_http(false);
+    let https = hyper_rustls::HttpsConnector::from((http, tls_config));
+    let client: hyper::client::Client<_, hyper::Body> =
+        hyper::client::Client::builder().build(https);
+
+    Ok(client)
+}
+
+/// Creates client TLS configuration with a custom X.509 certificate verifier.
+/// The verifier also checks that the `tee_measurement` is the same as the TEE measurement included
+/// in the certificate.
 /// [`root_tls_certificate`] should contain only a single PEM encoded certificate.
 /// https://tools.ietf.org/html/rfc1421
 pub fn create_tls_attestation_config(
     root_tls_certificate: &[u8],
     tee_measurement: &[u8],
-) -> anyhow::Result<ClientTlsConfig> {
+) -> anyhow::Result<rustls::ClientConfig> {
     let mut config = rustls::ClientConfig::new();
 
-    // Configure ALPN to accept HTTP/2.
+    // Configure ALPN to accept HTTP/1.1 and HTTP/2.
     // https://tools.ietf.org/html/rfc7639
-    config.set_protocols(&[b"h2".to_vec()]);
+    config.set_protocols(&[b"http/1.1".to_vec(), b"h2".to_vec()]);
 
     // Add root TLS certificate.
     let mut cc_reader = std::io::BufReader::new(&root_tls_certificate[..]);
     let certs = rustls::internal::pemfile::certs(&mut cc_reader)
         .map_err(|error| anyhow!("Couldn't parse TLS certificate: {:?}", error))?;
-    // Only the Proxy Attestation root certificate is required.
-    if certs.len() != 1 {
-        return Err(anyhow!(
-            "Only a single PEM certificate must be provided, provided {}",
-            certs.len()
-        ));
+    for certificate in certs.iter() {
+        config
+            .root_store
+            .add(certificate)
+            .context("Couldn't add root certificate")?;
     }
-    config
-        .root_store
-        .add(&certs[0])
-        .context("Couldn't add root certificate")?;
 
     // Set custom X.509 certificate verifier.
     config
@@ -75,8 +100,7 @@ pub fn create_tls_attestation_config(
         .set_certificate_verifier(std::sync::Arc::new(RemoteAttestationVerifier::new(
             tee_measurement,
         )));
-
-    Ok(ClientTlsConfig::new().rustls_client_config(config))
+    Ok(config)
 }
 
 /// Custom X.509 certificate verifier that checks TEE reports in the X.509 TEE extension.
@@ -90,69 +114,158 @@ impl RemoteAttestationVerifier {
             tee_measurement: tee_measurement.to_vec(),
         }
     }
-
-    fn check_tee_report(&self, extension: &str) -> anyhow::Result<()> {
-        let tee_report = Report::from_string(extension).context("Couldn't parse TEE report")?;
-        if self.tee_measurement == tee_report.measurement {
-            Ok(())
-        } else {
-            Err(anyhow!("Incorrect TEE report"))
-        }
-    }
 }
 
 impl rustls::ServerCertVerifier for RemoteAttestationVerifier {
     fn verify_server_cert(
         &self,
-        roots: &rustls::RootCertStore,
-        certs: &[rustls::Certificate],
+        root_certificates: &rustls::RootCertStore,
+        certificates: &[rustls::Certificate],
         hostname: webpki::DNSNameRef,
         ocsp: &[u8],
     ) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
-        // Only a certificate created by the Attestation Proxy is required.
-        if certs.len() != 1 {
-            return Err(rustls::TLSError::General(format!(
-                "Only a single certificate must be provided, provided {}",
-                certs.len()
-            )));
-        }
-        let certificate = &certs[0].0;
-
-        // Parse X.509 certificate encoded using DER format.
-        // https://tools.ietf.org/html/rfc7468
-        let (_, parsed_certificate) = parse_x509_certificate(&certificate).map_err(|error| {
-            rustls::TLSError::General(format!("Couldn't parse certificate: {}", error))
-        })?;
-
-        // Extract X.509 TEE extension.
-        let extensions = parsed_certificate.extensions();
-        let tee_extension = extensions.get(&TEE_EXTENSION_OID).ok_or_else(|| {
-            rustls::TLSError::General("Couldn't find X.509 TEE extension".to_string())
-        })?;
-        let tee_extension_value = parse_der(tee_extension.value)
-            .map_err(|error| {
-                rustls::TLSError::General(format!(
-                    "Couldn't parse X.509 TEE extension: {:?}",
+        // Client expects a single certificate corresponding to remote attestation.
+        for certificate in certificates.iter() {
+            verify_certificate(certificate, root_certificates, hostname, ocsp).map_err(
+                |error| {
+                    let error =
+                        rustls::TLSError::General(format!("Certificate is not valid: {:?}", error));
+                    warn!("{:?}", error);
                     error
-                ))
-            })?
-            .1
-            .as_str()
-            .map_err(|error| {
-                rustls::TLSError::General(format!("Couldn't parse TEE report value: {:?}", error))
-            })?;
+                },
+            )?;
 
-        // Check that X.509 TEE extension contains a correct TEE report.
-        self.check_tee_report(tee_extension_value)
-            .map_err(|error| {
-                rustls::TLSError::General(format!("Incorrect TEE report: {:?}", error))
+            verify_attestation(certificate, &self.tee_measurement).map_err(|error| {
+                let error = rustls::TLSError::General(format!(
+                    "Remote attestation is not valid: {:?}",
+                    error
+                ));
+                warn!("{:?}", error);
+                error
             })?;
+        }
 
-        // Use [`rustls::WebPKIVerifier`] to check certificate correctness.
-        // This check is required since [`rustls::DangerousClientConfig::set_certificate_verifier`]
-        // completely overwrites the default verifier.
-        // https://docs.rs/rustls/0.19.0/rustls/struct.DangerousClientConfig.html#impl
-        let verifier = rustls::WebPKIVerifier::new();
-        verifier.verify_server_cert(roots, certs, hostname, ocsp)
+        Ok(rustls::ServerCertVerified::assertion())
     }
+}
+
+/// Verifies certificate correctness using [`WebPKIVerifier`].
+fn verify_certificate(
+    certificate: &rustls::Certificate,
+    root_certificates: &rustls::RootCertStore,
+    hostname: webpki::DNSNameRef,
+    ocsp: &[u8],
+) -> anyhow::Result<()> {
+    // This check is required since [`rustls::DangerousClientConfig::set_certificate_verifier`]
+    // completely overwrites the default verifier.
+    // https://docs.rs/rustls/0.19.0/rustls/struct.DangerousClientConfig.html#impl
+    let verifier = rustls::WebPKIVerifier::new();
+    if root_certificates.is_empty() {
+        // Verify self-signed certificate validity using the certificate as it's own root
+        // certificate.
+        let mut root_certificates = rustls::RootCertStore::empty();
+        root_certificates
+            .add(certificate)
+            .context("Malformed certificate")?;
+        verifier
+            .verify_server_cert(&root_certificates, &[certificate.clone()], hostname, ocsp)
+            .context("Self-signed certificate is not valid")?;
+    } else {
+        verifier
+            .verify_server_cert(root_certificates, &[certificate.clone()], hostname, ocsp)
+            .context("Certificate is not valid")?;
+    }
+
+    Ok(())
+}
+
+/// Verifies remote attestation:
+/// - Checks that the TEE report is signed by TEE firmware Provider’s root key
+///   - The corresponding TEE Provider’s certificate is sent alongside the TEE report
+/// - Checks that the public key hash from the TEE report is equal to the hash of the public key
+///   presented in the self-signed X.509 certificate
+/// - Extracts the TEE measurement from the TEE report and compares it to the expected one
+fn verify_attestation(
+    certificate: &rustls::Certificate,
+    tee_measurement: &[u8],
+) -> anyhow::Result<()> {
+    // Parse X.509 certificate encoded using DER format.
+    // https://tools.ietf.org/html/rfc7468
+    let (_, parsed_certificate) =
+        parse_x509_certificate(&certificate.0).context("Couldn't parse certificate")?;
+
+    // Extract public key.
+    let parsed_openssl_certificate =
+        openssl::x509::X509::from_der(&certificate.0).context("Couldn't parse certificate")?;
+    let public_key = parsed_openssl_certificate
+        .public_key()
+        .context("Couldn't extract public key")?
+        .public_key_to_der()
+        .context("Couldn't convert public key to PEM")?;
+
+    // Extract X.509 TEE extension.
+    let extensions = parsed_certificate.extensions();
+    debug!("Provided X.509 extension: {:?}", extensions);
+    let tee_extension = extensions
+        .get(&TEE_EXTENSION_OID)
+        .context("Couldn't find X.509 TEE extension")?;
+    let tee_extension_value = parse_der(tee_extension.value)
+        .context("Couldn't parse X.509 TEE extension")?
+        .1
+        .as_str()
+        .context("Couldn't convert TEE extension to string")?;
+    debug!(
+        "Found TEE X.509 extension: {:?}, {:?}",
+        TEE_EXTENSION_OID, tee_extension_value
+    );
+
+    // Check that X.509 TEE extension contains a correct TEE report.
+    verify_tee_extension(tee_extension_value, &public_key, tee_measurement)
+        .context("Incorrect TEE extension")?;
+
+    Ok(())
+}
+
+/// Verifies X.509 TEE extension:
+/// - Checks that the extension contains a TEE report and a SHA-256 digest of the [`public_key`].
+/// - Checks that the TEE report is signed by TEE firmware Provider’s root key
+/// - Also checks the correctness of the TEE measurement from the TEE report, i.e. checks that it's
+///   equal to the [`tee_measurement`].
+fn verify_tee_extension(
+    extension: &str,
+    public_key: &[u8],
+    tee_measurement: &[u8],
+) -> anyhow::Result<()> {
+    let public_key_hash = get_sha256(public_key);
+
+    // Attestation info is encoded using JSON.
+    let attestation_info =
+        AttestationInfo::from_string(extension).context("Couldn't parse attestation info")?;
+
+    debug!("Expected public key hash: {:?}", public_key_hash);
+    debug!(
+        "Received public key hash: {:?}",
+        attestation_info.report.data
+    );
+    if public_key_hash != attestation_info.report.data {
+        return Err(anyhow!("TEE report contains incorrect public key"));
+    }
+    debug!("Expected TEE measurement: {:?}", tee_measurement);
+    debug!(
+        "Received TEE measurement: {:?}",
+        attestation_info.report.measurement
+    );
+    if tee_measurement != attestation_info.report.measurement {
+        return Err(anyhow!("TEE report contains incorrect TEE measurements"));
+    }
+    verify_tee_report_signature(&attestation_info)
+        .context("TEE report contains incorrect signature")?;
+    Ok(())
+}
+
+/// Verifies that the TEE report is signed by TEE firmware Provider’s root key.
+fn verify_tee_report_signature(_attestation_info: &AttestationInfo) -> anyhow::Result<()> {
+    // Placeholder for verifying TEE report's signature.
+    // TODO(#1867): Add remote attestation support.
+    Ok(())
 }

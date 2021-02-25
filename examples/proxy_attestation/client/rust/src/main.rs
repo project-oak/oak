@@ -21,11 +21,12 @@
 //! that the example application received a signed certificate from the Proxy Attestation Service.
 
 use anyhow::Context;
+use assert_matches::assert_matches;
 use http::uri::Uri;
 use log::info;
 use oak_abi::label::Label;
 use oak_client::{
-    attestation::create_attested_tls_channel, create_tls_channel,
+    attestation::create_attested_grpc_channel, create_tls_channel,
     interceptors::label::LabelInterceptor,
 };
 use oak_proxy_attestation::proto::{
@@ -61,6 +62,7 @@ pub struct Opt {
 
 // TODO(#1867): Add remote attestation support.
 const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
+const INVALID_TEST_TEE_MEASUREMENT: &str = "Invalid test TEE measurement";
 // Example message expected from the Oak application.
 const EXAMPLE_MESSAGE: &str = "Example message";
 
@@ -83,7 +85,7 @@ async fn create_application_client(
     tee_measurement: &[u8],
 ) -> anyhow::Result<ExampleApplicationClient<Channel>> {
     info!("Connecting to Oak application: {:?}", uri);
-    let channel = create_attested_tls_channel(uri, root_tls_certificate, tee_measurement)
+    let channel = create_attested_grpc_channel(uri, root_tls_certificate, tee_measurement)
         .await
         .context("Couldn't create TLS channel")?;
     let label = Label::public_untrusted();
@@ -143,14 +145,25 @@ async fn main() -> anyhow::Result<()> {
     let root_tls_certificate =
         get_root_tls_certificate(&proxy_uri, &proxy_root_tls_certificate).await?;
     info!("Received root certificate from Proxy Attestation Service");
+
+    // Test that invalid TEE measurements are not accepted by the client.
+    let result = get_example_message(
+        &app_uri,
+        &root_tls_certificate,
+        INVALID_TEST_TEE_MEASUREMENT.as_bytes(),
+    )
+    .await;
+    assert_matches!(result, Err(_));
+
     let example_message = get_example_message(
         &app_uri,
         &root_tls_certificate,
         TEST_TEE_MEASUREMENT.as_bytes(),
     )
-    .await?;
+    .await
+    .context("Couldn't send request")?;
     assert_eq!(EXAMPLE_MESSAGE, example_message);
-    info!("Successfully connected to Oak application");
+    info!("Successfully connected to: {:?}", &opt.proxy_uri);
 
     Ok(())
 }

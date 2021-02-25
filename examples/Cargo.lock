@@ -1622,6 +1622,7 @@ name = "oak_attestation_common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "log",
  "openssl",
  "serde",
  "serde_json",
@@ -1636,10 +1637,12 @@ dependencies = [
  "anyhow",
  "http",
  "hyper",
+ "hyper-rustls",
  "log",
  "oak_abi",
  "oak_attestation_common",
  "oak_sign",
+ "openssl",
  "prost",
  "regex",
  "tokio-rustls",
@@ -2254,6 +2257,7 @@ name = "proxy_attestation_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert_matches",
  "base64 0.13.0",
  "env_logger",
  "http",
@@ -2956,6 +2960,48 @@ name = "tinyvec_macros"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
+
+[[package]]
+name = "tls_attestation_backend"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "http",
+ "hyper",
+ "log",
+ "structopt",
+ "tokio 0.2.23",
+]
+
+[[package]]
+name = "tls_attestation_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "base64 0.13.0",
+ "env_logger",
+ "http",
+ "hyper",
+ "hyper-rustls",
+ "log",
+ "oak_abi",
+ "oak_client",
+ "prost",
+ "regex",
+ "rustls",
+ "serde_json",
+ "structopt",
+ "tokio 0.2.23",
+ "tokio-rustls",
+ "tonic",
+ "webpki",
+ "x509-parser",
+]
 
 [[package]]
 name = "tokio"

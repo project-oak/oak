@@ -41,13 +41,10 @@
 //!
 //! Note: Current version of Remote Attestation Service doesn't have remote attestation.
 
-mod certificate;
-
-use crate::certificate::CertificateAuthority;
 use anyhow::Context;
 use futures::future::FutureExt;
 use log::{error, info};
-use oak_attestation_common::Report;
+use oak_attestation_common::certificate::{AddTeeExtension, CertificateAuthority};
 use oak_proxy_attestation::proto::{
     proxy_attestation_server::{ProxyAttestation, ProxyAttestationServer},
     GetRootCertificateRequest, GetRootCertificateResponse, GetSignedCertificateRequest,
@@ -76,25 +73,27 @@ pub struct Opt {
         help = "PEM encoded X.509 TLS certificate file used by gRPC server."
     )]
     grpc_tls_certificate: String,
-}
-
-// TODO(#1867): Add remote attestation support.
-const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
-
-/// Placeholder function for collecting TEE measurement of remotely attested TEEs.
-fn get_example_tee_report() -> Report {
-    Report::new(TEST_TEE_MEASUREMENT.to_string().as_bytes(), &[])
+    #[structopt(
+        long,
+        help = "PEM encoded X.509 certificate that signs TEE firmware key.",
+        default_value = "./examples/certs/local/ca.pem"
+    )]
+    tee_certificate: String,
 }
 
 pub struct Proxy {
     certificate_authority: CertificateAuthority,
+    tee_certificate: Vec<u8>,
 }
 
 impl Proxy {
-    fn new() -> Self {
-        Self {
-            certificate_authority: CertificateAuthority::new(),
-        }
+    fn create(tee_certificate: Vec<u8>) -> anyhow::Result<Self> {
+        let certificate_authority = CertificateAuthority::create(AddTeeExtension::No)
+            .context("Couldn't create certificate authority")?;
+        Ok(Self {
+            certificate_authority,
+            tee_certificate,
+        })
     }
 }
 
@@ -106,17 +105,16 @@ impl ProxyAttestation for Proxy {
         req: Request<GetSignedCertificateRequest>,
     ) -> Result<Response<GetSignedCertificateResponse>, Status> {
         info!("Received certificate sign request");
-        let tee_report = get_example_tee_report();
         let certificate_request = X509Req::from_pem(&req.into_inner().certificate_request)
             .map_err(|error| {
                 let msg = "Certificate deserialize certificate request";
                 error!("{}: {}", msg, error);
                 Status::invalid_argument(msg)
             })?;
-        match self
-            .certificate_authority
-            .sign_certificate(certificate_request, &tee_report)
-        {
+        match self.certificate_authority.sign_certificate(
+            certificate_request,
+            AddTeeExtension::Yes(self.tee_certificate.to_vec()),
+        ) {
             Ok(certificate) => match certificate.to_pem() {
                 Ok(serialized_certificate) => {
                     info!("Sending signed certificate");
@@ -166,12 +164,14 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::from_args();
 
-    let private_key =
+    let grpc_tls_private_key =
         std::fs::read(&opt.grpc_tls_private_key).context("Couldn't load private key")?;
-    let certificate =
+    let grpc_tls_certificate =
         std::fs::read(&opt.grpc_tls_certificate).context("Couldn't load certificate")?;
+    let tee_certificate =
+        std::fs::read(&opt.tee_certificate).context("Couldn't load certificate")?;
 
-    let identity = Identity::from_pem(certificate, private_key);
+    let identity = Identity::from_pem(grpc_tls_certificate, grpc_tls_private_key);
     let address = opt
         .grpc_listen_address
         .parse()
@@ -182,7 +182,9 @@ async fn main() -> anyhow::Result<()> {
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))
         .context("Couldn't create TLS configuration")?
-        .add_service(ProxyAttestationServer::new(Proxy::new()))
+        .add_service(ProxyAttestationServer::new(
+            Proxy::create(tee_certificate).context("Couldn't create proxy")?,
+        ))
         .serve_with_shutdown(address, tokio::signal::ctrl_c().map(|r| r.unwrap()))
         .await
         .context("Couldn't start server")?;
