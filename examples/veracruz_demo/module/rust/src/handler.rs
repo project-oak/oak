@@ -15,7 +15,7 @@
 //
 
 use crate::proto::oak::examples::veracruz_demo::{
-    RandomRequest, RandomResponse, VeracruzDemo, VeracruzDemoDispatcher, Init,
+    RandomRequest, RandomResponse, RandomResult, VeracruzDemo, VeracruzDemoDispatcher, Init,
 };
 use log::info;
 use oak::grpc;
@@ -49,12 +49,29 @@ impl Handler {
 
 impl VeracruzDemo for Handler {
     fn generate_random(&mut self, req: RandomRequest) -> grpc::Result<RandomResponse> {
-        info!("generate random called requesting {:} bits", req.number_of_bytes);
+        info!("generate random called requesting {:} bytes", req.number_of_bytes);
         let mut response: RandomResponse = RandomResponse::default();
-        let mut data = vec![0; req.number_of_bytes as usize];
+        let mut data: Vec<u8> = vec![0; req.number_of_bytes as usize];
         oak::random_get(&mut data).unwrap();
         response.data = data;
         Ok(response)
+    }
+
+    fn forward_random(&mut self, req: RandomRequest) -> grpc::Result<RandomResult> {
+        info!("forward random called requesting {:} bytes", req.number_of_bytes);
+        let mut result: RandomResult = RandomResult::default();
+        let mut data: Vec<u8> = vec![0; req.number_of_bytes as usize];
+        match oak::random_get(&mut data) {
+            Ok(_) => {},
+            Err(_) => {
+                result.status = 1;
+                return Ok(result);
+            }
+        }
+
+        result.status = 0;
+
+        Ok(result)
     }
 
 }

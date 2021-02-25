@@ -62,41 +62,26 @@ async fn main() -> anyhow::Result<()> {
     let mut client = VeracruzDemoClient::with_interceptor(channel, interceptor);
 
     info!("Sending requests");
-    let request: Request<RandomRequest> = Request::new(RandomRequest {
+    let gen_request: Request<RandomRequest> = Request::new(RandomRequest {
         number_of_bytes: 16
     });
-    let result = client.generate_random(request).await;
+    let result = client.clone().generate_random(gen_request).await;
     match result {
         Ok(res) => {
             info!("Received response: {:?}", res.get_ref().data)
         },
-        Err(err) => panic!("ERror sending request {:?}", err),
+        Err(err) => panic!("Error sending request {:?}", err),
     }
 
-    // let responses = worlds
-    //     .iter()
-    //     .map(|world| {
-    //         let req = Request::new(HelloRequest {
-    //             greeting: String::from(*world),
-    //         });
-    //         // https://docs.rs/tonic/0.3.0/tonic/client/index.html#concurrent-usage
-    //         let mut c = client.clone();
-    //         async move {
-    //             // Process each request concurrently.
-    //             let result = c.say_hello(req).await;
-    //             match result {
-    //                 Ok(res) => {
-    //                     info!("Received response: {}", res.get_ref().reply);
-    //                     res.get_ref().reply.clone()
-    //                 }
-    //                 Err(e) => panic!("Error sending request {:?}", e),
-    //             }
-    //         }
-    //     })
-    //     .collect::<Vec<_>>();
-
-    // // Join all the tasks. NB: this is where the tasks are being run!
-    // futures::future::join_all(responses).await;
-
+    let forward_request: Request<RandomRequest> = Request::new(RandomRequest {
+        number_of_bytes: 16
+    });
+    let result = client.clone().forward_random(forward_request).await;
+    match result {
+        Ok(res) => {
+            info!("Received response: {:?}", res.get_ref().status)
+        },
+        Err(err) => panic!("Error sending request {:?}", err),
+    }
     Ok(())
 }

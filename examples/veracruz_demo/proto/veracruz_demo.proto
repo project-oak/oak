@@ -28,7 +28,12 @@ message RandomResponse {
   bytes data = 1;
 }
 
+message RandomResult {
+  uint32 status = 1;
+}
+
 // As seen in https://grpc.io/docs/guides/concepts/.
 service VeracruzDemo {
   rpc GenerateRandom(RandomRequest) returns (RandomResponse);
+  rpc ForwardRandom(RandomRequest) returns (RandomResult);
 }
