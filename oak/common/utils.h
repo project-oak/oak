@@ -17,6 +17,7 @@
 #ifndef OAK_COMMON_UTILS_H_
 #define OAK_COMMON_UTILS_H_
 
+#include <map>
 #include <string>
 
 namespace oak {
@@ -27,6 +28,9 @@ std::string read_file(const std::string& filename);
 
 // Writes `data` string into a binary file.
 void write_file(const std::string& data, const std::string& filename);
+
+// Read a PEM file into a keys and values map.
+std::map<std::string, std::string> read_pem(const std::string& filename);
 
 }  // namespace utils
 }  // namespace oak

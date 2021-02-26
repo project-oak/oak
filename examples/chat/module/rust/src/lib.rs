@@ -97,7 +97,8 @@ oak::entrypoint_command_handler_init!(router => Router);
 /// by this application. Any other label would cause the application to get stuck and not be able to
 /// declassify data in the future, therefore in this case we fail early with an appropriate error
 /// code to the client.
-fn is_valid_label(_label: &Label) -> bool {
+fn is_valid_label(label: &Label) -> bool {
+    log::info!("The label is: {:?}", &label);
     true
     // TODO(#1357): Verify that the label corresponds to exactly a single PublicKeyIdentityTag.
     // (label.confidentiality_tags.len() == 1)

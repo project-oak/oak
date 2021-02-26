@@ -17,7 +17,8 @@
 #include "oak/common/utils.h"
 
 #include <fstream>
-#include <sstream>
+#include <map>
+#include <regex>
 
 #include "glog/logging.h"
 
@@ -41,6 +42,30 @@ void write_file(const std::string& data, const std::string& filename) {
   }
   t << data;
   t.close();
+}
+
+std::map<std::string, std::string> read_pem(const std::string& filename) {
+  std::map<std::string, std::string> content;
+  std::ifstream pem_file(filename, std::ifstream::in);
+  if (!pem_file.is_open()) {
+    LOG(FATAL) << "Could not open file '" << filename << "'";
+  }
+
+  std::string line;
+  std::regex header_regex("-----BEGIN (.*)-----");
+  while (std::getline(pem_file, line)) {
+    std::smatch header_match;
+    if (std::regex_search(line, header_match, header_regex)) {
+      std::string header = header_match[1].str();
+      std::string footer = "-----END " + header + "-----";
+      std::string value;
+      while (std::getline(pem_file, line) && line.find(footer) == std::string::npos) {
+        value.append(line);
+      }
+      content[header] = value;
+    }
+  }
+  return content;
 }
 
 }  // namespace utils

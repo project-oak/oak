@@ -21,8 +21,10 @@
 #include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/label_metadata.h"
+#include "oak/client/signature_metadata.h"
 #include "oak/common/label.h"
 #include "oak/common/nonce_generator.h"
+#include "oak/common/oak_sign.h"
 #include "oak/common/utils.h"
 
 namespace oak {
@@ -59,6 +61,20 @@ class ApplicationClient {
       oak::label::Label label) {
     auto call_credentials =
         grpc::MetadataCredentialsFromPlugin(absl::make_unique<LabelMetadata>(label));
+    return CreateChannel(addr, channel_credentials, call_credentials);
+  }
+
+  // Returns a gRPC Channel connecting to the specified address, initialised with a fixed Oak Label
+  // and the given identity.
+  static std::shared_ptr<grpc::Channel> CreateChannel(
+      std::string addr, std::shared_ptr<grpc::ChannelCredentials> channel_credentials,
+      oak::label::Label label, oak::identity::SignedChallenge proto_signature) {
+    auto label_call_credentials =
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<LabelMetadata>(label));
+    auto sign_call_credentials =
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<SignatureMetadata>(proto_signature));
+    auto call_credentials =
+        grpc::CompositeCallCredentials(label_call_credentials, sign_call_credentials);
     return CreateChannel(addr, channel_credentials, call_credentials);
   }
 
@@ -100,6 +116,62 @@ class ApplicationClient {
       LOG(FATAL) << "Could not decode public key: " << public_key;
     }
     return decoded_public_key;
+  }
+
+  static void GenerateKeyPair(std::string output_private_key_path,
+                              std::string output_public_key_path) {
+    const uint8_t* private_key_path_ptr =
+        reinterpret_cast<const uint8_t*>(&output_private_key_path[0]);
+    uintptr_t private_key_path_len = output_private_key_path.length();
+
+    const uint8_t* public_key_path_ptr =
+        reinterpret_cast<const uint8_t*>(&output_public_key_path[0]);
+    uintptr_t public_key_path_len = output_public_key_path.length();
+
+    oak::generate(private_key_path_ptr, private_key_path_len, public_key_path_ptr,
+                  public_key_path_len);
+  }
+
+  static void Sign(std::string private_key_path, std::string input_string,
+                   std::string output_signature_path) {
+    const uint8_t* private_key_path_ptr = reinterpret_cast<const uint8_t*>(&private_key_path[0]);
+    uintptr_t private_key_path_len = private_key_path.length();
+
+    const uint8_t* input_string_ptr = reinterpret_cast<const uint8_t*>(&input_string[0]);
+    uintptr_t input_string_len = input_string.length();
+
+    const uint8_t* signature_path_ptr = reinterpret_cast<const uint8_t*>(&output_signature_path[0]);
+    uintptr_t signature_path_len = output_signature_path.length();
+
+    oak::sign(private_key_path_ptr, private_key_path_len, input_string_ptr, input_string_len,
+              signature_path_ptr, signature_path_len);
+  }
+
+  static oak::identity::SignedChallenge ReadSignedChallenge(const std::string& filename) {
+    auto pem_map = oak::utils::read_pem(filename);
+    oak::identity::SignedChallenge signature;
+
+    if (pem_map.find("PUBLIC KEY") == pem_map.end()) {
+      LOG(FATAL) << "No public key in the pem file";
+    } else {
+      std::string public_key;
+      if (!absl::Base64Unescape(pem_map["PUBLIC KEY"], &public_key)) {
+        LOG(FATAL) << "Failed to decode base64 public key";
+      }
+      signature.set_public_key(public_key);
+    }
+
+    if (pem_map.find("SIGNATURE") == pem_map.end()) {
+      LOG(FATAL) << "No public key in the pem file";
+    } else {
+      std::string signed_hash;
+      if (!absl::Base64Unescape(pem_map["SIGNATURE"], &signed_hash)) {
+        LOG(FATAL) << "Failed to decode base64 signed challenge";
+      }
+      signature.set_signed_hash(signed_hash);
+    }
+
+    return signature;
   }
 };
 

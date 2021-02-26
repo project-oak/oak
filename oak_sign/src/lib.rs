@@ -243,3 +243,58 @@ pub fn get_sha256_hex(bytes: &[u8]) -> String {
     let hash_value = get_sha256(bytes);
     hex::encode(hash_value)
 }
+
+#[deny(clippy::not_unsafe_ptr_arg_deref)]
+unsafe fn str_from_utf8<'a>(input_ptr: *const u8, len: usize) -> &'a str {
+    let input = std::slice::from_raw_parts(input_ptr, len);
+    std::str::from_utf8(input).expect("Couldn't convert bytes to string")
+}
+
+/// # Safety
+/// - This function is only intended for c library
+#[no_mangle]
+pub unsafe extern "C" fn generate(
+    private_key_path_ptr: *const u8,
+    private_key_path_len: usize,
+    public_key_path_ptr: *const u8,
+    public_key_path_len: usize,
+) {
+    let key_pair = KeyPair::generate().expect("Couldn't generate key-pair");
+    write_pem_file(
+        str_from_utf8(private_key_path_ptr, private_key_path_len),
+        PRIVATE_KEY_TAG,
+        &key_pair.pkcs8_key_pair(),
+    )
+    .expect("Couldn't write private key.");
+    write_pem_file(
+        str_from_utf8(public_key_path_ptr, public_key_path_len),
+        PUBLIC_KEY_TAG,
+        &key_pair.pkcs8_public_key(),
+    )
+    .expect("Couldn't write public key.");
+}
+
+/// # Safety
+/// - This function is only intended for c library
+#[no_mangle]
+pub unsafe extern "C" fn sign(
+    private_key_path_ptr: *const u8,
+    private_key_path_len: usize,
+    input_string_ptr: *const u8,
+    input_string_len: usize,
+    signature_file_ptr: *const u8,
+    signature_file_len: usize,
+) {
+    let private_key = read_pem_file(str_from_utf8(private_key_path_ptr, private_key_path_len))
+        .expect("Couldn't read private key.");
+    let key_pair = KeyPair::parse(&private_key).expect("Couldn't parse private key.");
+    if input_string_len < 1 {
+        panic!("`input_string` must have non-zero length");
+    }
+    let input_string = std::slice::from_raw_parts(input_string_ptr, input_string_len);
+    let signature =
+        SignatureBundle::create(input_string, &key_pair).expect("Couldn't create a signature.");
+    signature
+        .to_pem_file(str_from_utf8(signature_file_ptr, signature_file_len))
+        .expect("Couldn't write signature file.");
+}
