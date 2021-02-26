@@ -23,14 +23,14 @@ use crate::{
         ChannelReadRequest, ChannelReadResponse, ChannelWriteRequest, ChannelWriteResponse,
         NodeCreateRequest, NodeCreateResponse,
     },
-    RuntimeProxy,
+    Downgrading, NodeId, Runtime,
 };
 use oak_io::Message;
 use std::sync::Mutex;
 use tonic::{Request, Response, Status};
 
 pub struct RemoteRuntimeHandler {
-    runtime: RuntimeProxy,
+    runtime: Runtime,
     runtime_uuid: String,
     remotes: Mutex<RemoteClients>,
 }
@@ -81,10 +81,26 @@ impl RemoteRuntime for RemoteRuntimeHandler {
         let request = req.into_inner();
         let msg = Message {
             bytes: request.data,
-            handles: request.handles,
+            // TODO: replace handles in Message with the one in the remote.proto, with remote
+            // runtime ID.
+            handles: request
+                .handles
+                .into_iter()
+                .map(|handle| handle.raw_handle)
+                .collect(),
+        };
+        let downgrading = if request.downgrade {
+            Downgrading::Yes
+        } else {
+            Downgrading::No
         };
         self.runtime
-            .channel_write(request.write_handle, msg)
+            .channel_write(
+                NodeId(request.node_id),
+                request.write_handle,
+                msg,
+                downgrading,
+            )
             .map_err(|err| Status::internal(format!("{}", err)))?;
         Ok(Response::new(ChannelWriteResponse {}))
     }

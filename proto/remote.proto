@@ -24,7 +24,8 @@ import "oak_abi/proto/application.proto";
 
 message AddRemoteRequest {
   string remote_uuid = 1;
-  // IP address and port number for a remote Runtime
+  // IP address and port number for a remote Runtime. This could be retrieved from the request, but
+  // tonic does not fully support that currently.
   string remote_address = 2;
 }
 
@@ -32,11 +33,16 @@ message AddRemoteResponse {
   string runtime_uuid = 1;
 }
 
+// Request matching a call to the `node_create` function in the runtime.
 message NodeCreateRequest {
-    string name = 1;
-    oak.application.NodeConfiguration node_configuration = 2;
-    oak.label.Label label = 3;
-    fixed64 initial_handle = 4;
+  // Name of the node
+  string name = 1;
+  // Node configuration
+  oak.application.NodeConfiguration node_configuration = 2;
+  // Label of the node
+  oak.label.Label label = 3;
+  // The initial handle is a handle to a channel on the remote runtime
+  Handle initial_handle = 4;
 }
 
 message NodeCreateResponse {
@@ -44,7 +50,12 @@ message NodeCreateResponse {
 }
 
 message ChannelReadRequest {
-    fixed64 read_handle = 1;
+  // Both runtimes must have the node_info about the node requesting the read, although only one runtime actually holds the node. 
+  fixed64 node_id = 1;
+  // Handle to a channel on the runtime serving this request
+  fixed64 read_handle = 2;
+  // Whether or not to use downgrading privilege when reading from the channel. 
+  bool downgrade = 3;
 }
 
 message ChannelReadResponse {
@@ -53,19 +64,41 @@ message ChannelReadResponse {
 }
 
 message ChannelWriteRequest {
-  fixed64 write_handle = 1;
-  bytes data = 2;
-  repeated fixed64 handles = 3;
+  // Both runtimes must have the node_info about the node requesting the read, although only one runtime actually holds the node. 
+  fixed64 node_id = 1;
+  fixed64 write_handle = 2;
+  // Whether or not to use downgrading privilege when writing to the channel. 
+  bool downgrade = 3;
+  // Bytes content of the message
+  bytes data = 4;
+  // Handles content of the message
+  repeated Handle handles = 5;
 }
 
 message ChannelWriteResponse {
   // empty response
 }
 
+message Handle {
+  fixed64 raw_handle = 1;
+  string runtime_uuid = 2;
+}
+
 // As seen in https://grpc.io/docs/guides/concepts/.
 service RemoteRuntime {
+  // Add the given address to the list of remote runtimes. Returns the `runtime_uuid` of the runtime
+  // serving the request in the response, so that the caller can as well add the runtime to the list
+  // of its remotes.
   rpc AddRemote(AddRemoteRequest) returns (AddRemoteResponse);
+
+  // Request matching a call to the `node_create` function in the runtime. Returns the `node_id` of
+  // the newly created node.
   rpc NodeCreate(NodeCreateRequest) returns (NodeCreateResponse);
+
+  // Request matching a call to the `channel_read` function in the runtime. Returns the message
+  // (composed of bytes and handles) if read is successful.
   rpc ChannelRead(ChannelReadRequest) returns (ChannelReadResponse);
+
+  // Request matching a call to the `channel_write` function in the runtime.
   rpc ChannelWrite(ChannelWriteRequest) returns (ChannelWriteResponse);
 }
