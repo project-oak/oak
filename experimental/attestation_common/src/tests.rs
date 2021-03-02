@@ -17,9 +17,9 @@
 use crate::Report;
 use assert_matches::assert_matches;
 
-const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
-const TEST_TEE_DATA: &str = "Test TEE data";
-const TEST_REPORT: &str = r#"{"measurement":[84,101,115,116,32,84,69,69,32,109,101,97,115,117,114,101,109,101,110,116],"data":[84,101,115,116,32,84,69,69,32,100,97,116,97]}"#;
+const TEST_TEE_MEASUREMENT: &str = "Measurement";
+const TEST_TEE_DATA: &str = "Data";
+const TEST_REPORT: &str = r#"{"version":0,"svn":0,"platform_version":0,"report_data":[68,97,116,97],"measurement":[77,101,97,115,117,114,101,109,101,110,116],"signature":[]}"#;
 
 #[test]
 fn test_report_serialization() {

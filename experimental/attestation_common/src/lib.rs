@@ -22,26 +22,37 @@ use openssl::{nid::Nid, x509::X509Extension};
 use serde::{Deserialize, Serialize};
 use x509_parser::der_parser::{self, oid::Oid};
 
-// Using `NETSCAPE_COMMENT` extension since `rust-openssl` doesn't support custom
-// extensions yet.
+// Using `NETSCAPE_COMMENT` extension since `rust-openssl` doesn't support custom extensions yet.
 // https://github.com/sfackler/rust-openssl/issues/1411
 // https://www.alvestrand.no/objectid/2.16.840.1.113730.1.13.html
 pub const TEE_EXTENSION_OID: Oid<'static> = der_parser::oid!(2.16.840.1.113730.1.13);
 
 /// Placeholder implementation of TEE report for remote attestation.
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+/// https://www.amd.com/system/files/TechDocs/56860.pdf#page=39
+/// 
+/// TODO(#1867): Add remote attestation support and use real TEE report.
+#[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct Report {
+    /// Version number of this attestation report.
+    pub version: u8,
+    /// Security version number of SNP firmware.
+    pub svn: u8,
+    /// The install version of firmware.
+    pub platform_version: u8,
+    /// Arbitrary data to put into the TEE report.
+    pub report_data: Vec<u8>,
     /// TEE measurement, i.e. VM hash.
     pub measurement: Vec<u8>,
-    /// Arbitrary data to put into the TEE report.
-    pub data: Vec<u8>,
+    /// Signature of this report.
+    pub signature: Vec<u8>,
 }
 
 impl Report {
     pub fn new(measurement: &[u8], data: &[u8]) -> Self {
         Self {
             measurement: measurement.to_vec(),
-            data: data.to_vec(),
+            report_data: data.to_vec(),
+            ..Default::default()
         }
     }
 
