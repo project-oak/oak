@@ -15,7 +15,7 @@
 //
 
 use log::info;
-use oak_attestation_common::{get_sha256, Report};
+use oak_attestation_common::Report;
 use openssl::{
     asn1::Asn1Time,
     bn::{BigNum, MsbOption},
@@ -106,7 +106,7 @@ impl CertificateAuthority {
     pub fn sign_certificate(
         &self,
         request: X509Req,
-        tee_measurement: &[u8],
+        tee_report: &Report,
     ) -> anyhow::Result<X509> {
         info!("Signing certificate");
 
@@ -152,8 +152,7 @@ impl CertificateAuthority {
             builder.append_extension2(extension)?;
         }
 
-        let public_key_hash = get_sha256(&request.public_key()?.public_key_to_pem()?);
-        let tee_report_extension = Report::new(tee_measurement, &public_key_hash).to_extension()?;
+        let tee_report_extension = tee_report.to_extension()?;
         builder.append_extension(tee_report_extension)?;
 
         builder.sign(&self.key_pair, MessageDigest::sha256())?;

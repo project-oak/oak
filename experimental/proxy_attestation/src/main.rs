@@ -47,6 +47,7 @@ use crate::certificate::CertificateAuthority;
 use anyhow::Context;
 use futures::future::FutureExt;
 use log::{error, info};
+use oak_attestation_common::Report;
 use oak_proxy_attestation::proto::{
     proxy_attestation_server::{ProxyAttestation, ProxyAttestationServer},
     GetRootCertificateRequest, GetRootCertificateResponse, GetSignedCertificateRequest,
@@ -75,8 +76,8 @@ pub struct Opt {
 const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
 
 /// Placeholder function for collecting TEE measurement of remotely attested TEEs.
-fn get_tee_measurement(_req: &Request<GetSignedCertificateRequest>) -> Vec<u8> {
-    TEST_TEE_MEASUREMENT.to_string().as_bytes().to_vec()
+fn get_example_tee_report() -> Report {
+    Report::new(TEST_TEE_MEASUREMENT.to_string().as_bytes(), &vec![])
 }
 
 pub struct Proxy {
@@ -99,7 +100,7 @@ impl ProxyAttestation for Proxy {
         req: Request<GetSignedCertificateRequest>,
     ) -> Result<Response<GetSignedCertificateResponse>, Status> {
         info!("Received certificate sign request");
-        let tee_measurement = get_tee_measurement(&req);
+        let tee_report = get_example_tee_report();
         let certificate_request = X509Req::from_pem(&req.into_inner().certificate_request)
             .map_err(|error| {
                 let msg = "Certificate deserialize certificate request";
@@ -108,7 +109,7 @@ impl ProxyAttestation for Proxy {
             })?;
         match self
             .certificate_authority
-            .sign_certificate(certificate_request, &tee_measurement)
+            .sign_certificate(certificate_request, &tee_report)
         {
             Ok(certificate) => match certificate.to_pem() {
                 Ok(serialized_certificate) => {
