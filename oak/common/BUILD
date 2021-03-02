@@ -74,10 +74,9 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "oak_sign",
-    srcs = ["liboak_sign.so"],
-    hdrs = ["oak_sign.h"],
-    visibility = ["//visibility:public"],
-    deps = [],
-)
+# cc_library(
+#     name = "oak_sign",
+#    srcs = ["liboak_sign.so"],
+#    hdrs = ["oak_sign.h"],
+#    visibility = ["//visibility:public"],
+#)

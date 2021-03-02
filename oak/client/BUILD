@@ -29,8 +29,8 @@ cc_library(
         ":signature_metadata",
         "//oak/common:hmac",
         "//oak/common:nonce_generator",
-        "//oak/common:oak_sign",
         "//oak/common:utils",
+        "//oak_sign",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )

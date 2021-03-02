@@ -24,8 +24,8 @@
 #include "oak/client/signature_metadata.h"
 #include "oak/common/label.h"
 #include "oak/common/nonce_generator.h"
-#include "oak/common/oak_sign.h"
 #include "oak/common/utils.h"
+#include "oak_sign/oak_sign.h"
 
 namespace oak {
 
