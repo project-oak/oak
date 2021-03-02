@@ -19,6 +19,7 @@ use assert_matches::assert_matches;
 
 const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
 const TEST_TEE_DATA: &str = "Test TEE data";
+const TEST_REPORT: &str = r#"{"measurement":[84,101,115,116,32,84,69,69,32,109,101,97,115,117,114,101,109,101,110,116],"data":[84,101,115,116,32,84,69,69,32,100,97,116,97]}"#;
 
 #[test]
 fn test_report_serialization() {
@@ -27,10 +28,10 @@ fn test_report_serialization() {
     let serialized_report_result = report.to_string();
     assert_matches!(serialized_report_result, Ok(_));
     let serialized_report = serialized_report_result.unwrap();
+    assert_eq!(serialized_report, TEST_REPORT);
 
-    let deserialized_report_result = Report::from_string(&serialized_report);
+    let deserialized_report_result = Report::from_string(TEST_REPORT);
     assert_matches!(deserialized_report_result, Ok(_));
     let deserialized_report = deserialized_report_result.unwrap();
-
-    assert_eq!(report, deserialized_report);
+    assert_eq!(deserialized_report, report);
 }
