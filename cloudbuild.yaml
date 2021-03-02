@@ -58,7 +58,7 @@ steps:
   # Pull Android Docker image.
   - name: 'gcr.io/cloud-builders/docker'
     id: pull_android_image
-    waitFor: ['-']
+    waitFor: ['runner_ci']
     timeout: 10m
     args: ['pull', 'gcr.io/oak-ci/oak-android:latest']
   # Build Docker image based for Android SDK.
