@@ -123,6 +123,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf8dcb5b4bbaa28653b647d8c77bd4ed40183b48882e130c1f1ffb73de069fd7"
 
 [[package]]
+name = "arrayvec"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
+
+[[package]]
 name = "assert_matches"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -202,7 +208,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d2838fdd79e8776dbe07a106c784b0f8dda571a21b2750a092cc4cbaa653c8e"
 dependencies = [
  "funty",
- "radium",
+ "radium 0.4.1",
+ "wyz",
+]
+
+[[package]]
+name = "bitvec"
+version = "0.19.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7ba35e9565969edb811639dbebfe34edc0368e472c5018474c8eb2543397f81"
+dependencies = [
+ "funty",
+ "radium 0.5.3",
+ "tap",
  "wyz",
 ]
 
@@ -407,12 +425,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-encoding"
+version = "2.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ee2393c4a91429dffb4bedf19f4d6abf27d8a732c8ce4980305d782e5426d57"
+
+[[package]]
 name = "dbl"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2735145c3b9ba15f2d7a3ae8cdafcbc8c98a7bef7f62afe9d08bd99fbf7130de"
 dependencies = [
  "generic-array",
+]
+
+[[package]]
+name = "der-oid-macro"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd17d13ecf875e704369fdbde242483ac769fc18f6af21e43d5a692a079732fc"
+dependencies = [
+ "nom",
+ "num-bigint 0.3.1",
+ "num-traits",
+ "proc-macro-hack",
+]
+
+[[package]]
+name = "der-parser"
+version = "5.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb4b1e27396f46037881c39d821660f2ff48797aaa7152a45ded7a93b368a819"
+dependencies = [
+ "der-oid-macro",
+ "nom",
+ "num-bigint 0.3.1",
+ "num-traits",
+ "proc-macro-hack",
+ "rusticata-macros",
 ]
 
 [[package]]
@@ -476,7 +526,7 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b76528f382c916bbb94470b4e7ad107a3d01619503f7ffba86c93aea04e215"
 dependencies = [
- "bitvec",
+ "bitvec 0.18.4",
  "digest",
  "ff",
  "generic-array",
@@ -528,7 +578,7 @@ version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01646e077d4ebda82b73f1bca002ea1e91561a77df2431a9e79729bcc31950ef"
 dependencies = [
- "bitvec",
+ "bitvec 0.18.4",
  "rand_core",
  "subtle",
 ]
@@ -988,6 +1038,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
+name = "lexical-core"
+version = "0.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21f866863575d0e1d654fbeeabdc927292fdf862873dc3c96c6f753357e13374"
+dependencies = [
+ "arrayvec",
+ "bitflags",
+ "cfg-if 1.0.0",
+ "ryu",
+ "static_assertions",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.80"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1140,6 +1203,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nom"
+version = "6.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d521ee2250f619dd5e06515ba405858d249edc8fae9ddee2dba0695e57db01b"
+dependencies = [
+ "bitvec 0.19.4",
+ "lexical-core",
+ "memchr",
+ "version_check",
+]
+
+[[package]]
 name = "ntapi"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1153,6 +1228,17 @@ name = "num-bigint"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e9a41747ae4633fce5adffb4d2e81ffc5e89593cb19917f8fb2cc5ff76507bf"
 dependencies = [
  "autocfg",
  "num-integer",
@@ -1243,6 +1329,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation_common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "openssl",
+ "serde",
+ "serde_json",
+ "sha2",
+ "x509-parser",
+]
+
+[[package]]
 name = "oak_client"
 version = "0.1.0"
 dependencies = [
@@ -1291,6 +1390,7 @@ dependencies = [
  "futures-util",
  "http",
  "log",
+ "oak_attestation_common",
  "oak_utils",
  "openssl",
  "prost",
@@ -1406,6 +1506,15 @@ dependencies = [
  "quote",
  "tempfile",
  "tonic-build",
+]
+
+[[package]]
+name = "oid-registry"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2508c8f170e55be68508b1113956a760a82684f42022f8834fb16ca198621211"
+dependencies = [
+ "der-parser",
 ]
 
 [[package]]
@@ -1761,6 +1870,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64de9a0c5361e034f1aefc9f71a86871ec870e766fe31a009734a989b329286a"
 
 [[package]]
+name = "radium"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "941ba9d78d8e2f7ce474c015eea4d9c6d25b6a3327f9832ee29a4de27f91bbb8"
+
+[[package]]
 name = "rand"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1907,6 +2022,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusticata-macros"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7390af60e66c44130b4c5ea85f2555b7ace835d73b4b889c704dc3cb4c0468c8"
+dependencies = [
+ "nom",
+]
+
+[[package]]
 name = "rustls"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1918,6 +2042,12 @@ dependencies = [
  "sct",
  "webpki",
 ]
+
+[[package]]
+name = "rustversion"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb5d2a036dc6d2d8fd16fde3498b04306e29bd193bf306a57427019b823d5acd"
 
 [[package]]
 name = "ryu"
@@ -2042,7 +2172,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "692ca13de57ce0613a363c8c2f1de925adebc81b04c923ac60c5488bb44abe4b"
 dependencies = [
  "chrono",
- "num-bigint",
+ "num-bigint 0.2.6",
  "num-traits",
 ]
 
@@ -2111,6 +2241,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
 name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2168,6 +2304,12 @@ dependencies = [
  "syn",
  "unicode-xid",
 ]
+
+[[package]]
+name = "tap"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tempfile"
@@ -3114,6 +3256,26 @@ name = "wyz"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85e60b0d1b5f99db2556934e21937020776a5d31520bf169e851ac44e6420214"
+
+[[package]]
+name = "x509-parser"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db7999ae290e75ec1d4dc8e9ff9870e48e3542a8f2e9c1e2e07d7ca02b459e10"
+dependencies = [
+ "base64 0.13.0",
+ "chrono",
+ "data-encoding",
+ "der-oid-macro",
+ "der-parser",
+ "lazy_static",
+ "nom",
+ "num-bigint 0.3.1",
+ "oid-registry",
+ "rusticata-macros",
+ "rustversion",
+ "thiserror",
+]
 
 [[package]]
 name = "zeroize"

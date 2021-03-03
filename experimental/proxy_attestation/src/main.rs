@@ -47,6 +47,7 @@ use crate::certificate::CertificateAuthority;
 use anyhow::Context;
 use futures::future::FutureExt;
 use log::{error, info};
+use oak_attestation_common::Report;
 use oak_proxy_attestation::proto::{
     proxy_attestation_server::{ProxyAttestation, ProxyAttestationServer},
     GetRootCertificateRequest, GetRootCertificateResponse, GetSignedCertificateRequest,
@@ -71,12 +72,12 @@ pub struct Opt {
     grpc_tls_certificate: String,
 }
 
-const TEST_TEE_QUOTE: &str = "Test TEE quote";
+// TODO(#1867): Add remote attestation support.
+const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
 
-/// Placeholder function for collecting quotes of remotely attested TEEs.
-fn get_tee_quote(_req: &Request<GetSignedCertificateRequest>) -> String {
-    // TODO(#1867): Add remote attestation support.
-    TEST_TEE_QUOTE.to_string()
+/// Placeholder function for collecting TEE measurement of remotely attested TEEs.
+fn get_example_tee_report() -> Report {
+    Report::new(TEST_TEE_MEASUREMENT.to_string().as_bytes(), &[])
 }
 
 pub struct Proxy {
@@ -99,7 +100,7 @@ impl ProxyAttestation for Proxy {
         req: Request<GetSignedCertificateRequest>,
     ) -> Result<Response<GetSignedCertificateResponse>, Status> {
         info!("Received certificate sign request");
-        let tee_quote = get_tee_quote(&req);
+        let tee_report = get_example_tee_report();
         let certificate_request = X509Req::from_pem(&req.into_inner().certificate_request)
             .map_err(|error| {
                 let msg = "Certificate deserialize certificate request";
@@ -108,7 +109,7 @@ impl ProxyAttestation for Proxy {
             })?;
         match self
             .certificate_authority
-            .sign_certificate(certificate_request, &tee_quote)
+            .sign_certificate(certificate_request, &tee_report)
         {
             Ok(certificate) => match certificate.to_pem() {
                 Ok(serialized_certificate) => {

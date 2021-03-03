@@ -15,17 +15,16 @@
 //
 
 use log::info;
+use oak_attestation_common::Report;
 use openssl::{
     asn1::Asn1Time,
     bn::{BigNum, MsbOption},
-    error::ErrorStack,
     hash::MessageDigest,
-    nid::Nid,
     pkey::{PKey, Private},
     rsa::Rsa,
     x509::{
         extension::{AuthorityKeyIdentifier, BasicConstraints, KeyUsage, SubjectKeyIdentifier},
-        X509Extension, X509NameBuilder, X509Req, X509,
+        X509NameBuilder, X509Req, X509,
     },
 };
 
@@ -38,28 +37,6 @@ const CERTIFICATE_VERSION: i32 = 2;
 // the most significant bit.
 const SERIAL_NUMBER_SIZE: i32 = 159;
 const CERTIFICATE_EXPIRATION_INTERVAL_IN_DAYS: u32 = 1;
-
-/// Custom X.509 extension with a TEE application quote that was remotely attested by the Proxy
-/// Attestation Service.
-pub struct Quote {
-    value: String,
-}
-
-impl Quote {
-    pub fn new(value: &str) -> Self {
-        Self {
-            value: format!("Quote:{}", value.to_string()),
-        }
-    }
-
-    /// Return the [`Quote`] extension as an [`X509Extension`].
-    pub fn build(&self) -> Result<X509Extension, ErrorStack> {
-        // Using [`Nid::NETSCAPE_COMMENT`] identifier since `rust-openssl` doesn't support custom
-        // extensions yet:
-        // https://github.com/sfackler/rust-openssl/issues/1411
-        X509Extension::new_nid(None, None, Nid::NETSCAPE_COMMENT, &self.value)
-    }
-}
 
 /// Convenience structure for creating X.509 certificates.
 /// https://tools.ietf.org/html/rfc5280
@@ -126,7 +103,7 @@ impl CertificateAuthority {
     }
 
     /// Create an X509 certificate based on the certificate signing `request`.
-    pub fn sign_certificate(&self, request: X509Req, tee_quote: &str) -> anyhow::Result<X509> {
+    pub fn sign_certificate(&self, request: X509Req, tee_report: &Report) -> anyhow::Result<X509> {
         info!("Signing certificate");
 
         let mut builder = X509::builder()?;
@@ -171,8 +148,8 @@ impl CertificateAuthority {
             builder.append_extension2(extension)?;
         }
 
-        let tee_quote_extension = Quote::new(tee_quote).build()?;
-        builder.append_extension(tee_quote_extension)?;
+        let tee_report_extension = tee_report.to_extension()?;
+        builder.append_extension(tee_report_extension)?;
 
         builder.sign(&self.key_pair, MessageDigest::sha256())?;
         let certificate = builder.build();

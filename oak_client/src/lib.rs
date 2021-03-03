@@ -20,6 +20,8 @@ use anyhow::Context;
 use http::uri::Uri;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
+#[cfg(feature = "oak-attestation")]
+pub mod attestation;
 pub mod interceptors;
 
 /// Creates a TLS channel for connecting to Oak.

@@ -21,6 +21,7 @@ futures-core = "*"
 futures-util = "*"
 http = "*"
 log = "*"
+oak_attestation_common = { version = "*", path = "../attestation_common" }
 openssl = "*"
 prost = "*"
 structopt = "*"
