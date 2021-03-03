@@ -36,6 +36,8 @@
 <span id="33">33</span>
 <span id="34">34</span>
 <span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -59,6 +61,8 @@
 <span class="kw">use</span> <span class="ident">http</span>::<span class="ident">uri</span>::<span class="ident">Uri</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>};
 
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-attestation&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">attestation</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">interceptors</span>;
 
 <span class="doccomment">/// Creates a TLS channel for connecting to Oak.</span>
