@@ -36,7 +36,6 @@ pub async fn create_attested_tls_channel(
         .await
         .context("Couldn't connect to Oak Application")
 }
-
 /// Create client TLS configuration with a custom X.509 certificate verifier.
 /// [`root_tls_certificate`] should contain only a single PEM encoded certificate.
 /// https://tools.ietf.org/html/rfc1421
