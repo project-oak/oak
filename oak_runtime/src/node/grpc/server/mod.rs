@@ -377,7 +377,6 @@ fn get_user_identity_label(metadata_map: &MetadataMap) -> Result<Label, OakIdent
         warn!("could not parse gRPC label: {}", err);
         OakIdentityError::InvalidIdentity
     })?;
-    info!("Got a signed challenge: {:?}", &signed_challenge);
 
     let public_key = verify_signed_challenge(signed_challenge)?;
     Ok(confidentiality_label(public_key_identity_tag(&public_key)))

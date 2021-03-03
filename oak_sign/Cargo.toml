@@ -10,7 +10,6 @@ license = "Apache-2.0"
 [lib]
 name = "oak_sign"
 path = "src/lib.rs"
-crate-type = ["cdylib", "lib"]
 
 [[bin]]
 name = "oak_sign_bin"
