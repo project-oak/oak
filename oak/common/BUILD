@@ -74,9 +74,15 @@ cc_library(
     ],
 )
 
-# cc_library(
-#     name = "oak_sign",
-#    srcs = ["liboak_sign.so"],
-#    hdrs = ["oak_sign.h"],
-#    visibility = ["//visibility:public"],
-#)
+cc_library(
+    name = "oak_sign",
+    srcs = ["oak_sign.cc"],
+    hdrs = ["oak_sign.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":utils",
+        "@boringssl//:crypto",
+        "@com_google_absl//absl/strings",
+        "@com_github_google_glog//:glog",
+    ],
+)

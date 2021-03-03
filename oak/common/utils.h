@@ -32,6 +32,9 @@ void write_file(const std::string& data, const std::string& filename);
 // Read a PEM file into a keys and values map.
 std::map<std::string, std::string> read_pem(const std::string& filename);
 
+// Write the given key-value pairs as a PEM file.
+void write_pem(const std::map<std::string, std::string>& map, const std::string& filename);
+
 }  // namespace utils
 }  // namespace oak
 

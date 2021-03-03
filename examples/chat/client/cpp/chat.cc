@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
+#include <openssl/curve25519.h>
+#include <openssl/evp.h>
+
+#include <iomanip>
+#include <sstream>
 #include <thread>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/strings/escaping.h"
 #include "absl/synchronization/mutex.h"
 #include "examples/chat/proto/chat.grpc.pb.h"
 #include "examples/chat/proto/chat.pb.h"
@@ -164,9 +170,12 @@ int main(int argc, char** argv) {
   }
 
   // Using the room's secret to sign the challenge required for authenticating the client.
-  oak::ApplicationClient::Sign(room_secret, "oak-challenge", "chat-room.sign");
-  oak::identity::SignedChallenge signed_challenge =
-      oak::ApplicationClient::ReadSignedChallenge("client-identity.sign");
+  std::string signed_hash = oak::ApplicationClient::Sign(room_secret, "oak-challenge");
+  // TODO(#1851): remove this when `Sign` can derive public key from private key
+  std::string public_key = oak::ApplicationClient::LoadPublicKey("chat-room.pub");
+  oak::identity::SignedChallenge signed_challenge;
+  signed_challenge.set_signed_hash(signed_hash);
+  signed_challenge.set_public_key(public_key);
 
   stub = create_stub(address, ca_cert, signed_challenge);
 

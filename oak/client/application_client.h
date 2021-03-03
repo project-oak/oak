@@ -24,8 +24,8 @@
 #include "oak/client/signature_metadata.h"
 #include "oak/common/label.h"
 #include "oak/common/nonce_generator.h"
+#include "oak/common/oak_sign.h"
 #include "oak/common/utils.h"
-#include "oak_sign/oak_sign.h"
 
 namespace oak {
 
@@ -120,31 +120,16 @@ class ApplicationClient {
 
   static void GenerateKeyPair(std::string output_private_key_path,
                               std::string output_public_key_path) {
-    const uint8_t* private_key_path_ptr =
-        reinterpret_cast<const uint8_t*>(&output_private_key_path[0]);
-    uintptr_t private_key_path_len = output_private_key_path.length();
-
-    const uint8_t* public_key_path_ptr =
-        reinterpret_cast<const uint8_t*>(&output_public_key_path[0]);
-    uintptr_t public_key_path_len = output_public_key_path.length();
-
-    oak::generate(private_key_path_ptr, private_key_path_len, public_key_path_ptr,
-                  public_key_path_len);
+    oak::generate(output_private_key_path, output_public_key_path);
   }
 
-  static void Sign(std::string private_key_path, std::string input_string,
-                   std::string output_signature_path) {
-    const uint8_t* private_key_path_ptr = reinterpret_cast<const uint8_t*>(&private_key_path[0]);
-    uintptr_t private_key_path_len = private_key_path.length();
-
-    const uint8_t* input_string_ptr = reinterpret_cast<const uint8_t*>(&input_string[0]);
-    uintptr_t input_string_len = input_string.length();
-
-    const uint8_t* signature_path_ptr = reinterpret_cast<const uint8_t*>(&output_signature_path[0]);
-    uintptr_t signature_path_len = output_signature_path.length();
-
-    oak::sign(private_key_path_ptr, private_key_path_len, input_string_ptr, input_string_len,
-              signature_path_ptr, signature_path_len);
+  static std::string Sign(std::string private_key_path, std::string input_string) {
+    std::string base64_signature = oak::sign(private_key_path, input_string);
+    std::string signature;
+    if (!absl::Base64Unescape(base64_signature, &signature)) {
+      LOG(FATAL) << "Failed to decode base64 signature";
+    }
+    return signature;
   }
 
   static oak::identity::SignedChallenge ReadSignedChallenge(const std::string& filename) {

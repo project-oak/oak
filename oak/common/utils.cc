@@ -68,5 +68,21 @@ std::map<std::string, std::string> read_pem(const std::string& filename) {
   return content;
 }
 
+void write_pem(const std::map<std::string, std::string>& map, const std::string& filename) {
+  std::ofstream out_file(filename, std::ofstream::out);
+  if (!out_file.is_open()) {
+    LOG(FATAL) << "Could not open file '" << filename << "'";
+  }
+  for (const auto& item : map) {
+    std::string header = "-----BEGIN " + item.first + "-----";
+    std::string footer = "-----END " + item.first + "-----";
+
+    out_file << header << "\n";
+    out_file << item.second << "\n";
+    out_file << footer << "\n";
+  }
+  out_file.close();
+}
+
 }  // namespace utils
 }  // namespace oak

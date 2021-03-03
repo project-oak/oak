@@ -30,7 +30,7 @@ cc_library(
         "//oak/common:hmac",
         "//oak/common:nonce_generator",
         "//oak/common:utils",
-        "//oak_sign",
+        "//oak/common:oak_sign",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )
