@@ -77,7 +77,7 @@ const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
 
 /// Placeholder function for collecting TEE measurement of remotely attested TEEs.
 fn get_example_tee_report() -> Report {
-    Report::new(TEST_TEE_MEASUREMENT.to_string().as_bytes(), &vec![])
+    Report::new(TEST_TEE_MEASUREMENT.to_string().as_bytes(), &[])
 }
 
 pub struct Proxy {

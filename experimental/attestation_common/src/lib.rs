@@ -29,7 +29,7 @@ pub const TEE_EXTENSION_OID: Oid<'static> = der_parser::oid!(2.16.840.1.113730.1
 
 /// Placeholder implementation of TEE report for remote attestation.
 /// https://www.amd.com/system/files/TechDocs/56860.pdf#page=39
-/// 
+///
 /// TODO(#1867): Add remote attestation support and use real TEE report.
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct Report {

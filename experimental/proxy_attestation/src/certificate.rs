@@ -103,11 +103,7 @@ impl CertificateAuthority {
     }
 
     /// Create an X509 certificate based on the certificate signing `request`.
-    pub fn sign_certificate(
-        &self,
-        request: X509Req,
-        tee_report: &Report,
-    ) -> anyhow::Result<X509> {
+    pub fn sign_certificate(&self, request: X509Req, tee_report: &Report) -> anyhow::Result<X509> {
         info!("Signing certificate");
 
         let mut builder = X509::builder()?;
