@@ -281,9 +281,12 @@ RUN make depend && make -j"$(nproc)"&& make install_sw install_ssldirs
 ENV PKG_CONFIG_ALLOW_CROSS 1
 ENV OPENSSL_STATIC 1
 
+# We use the `docker` user in order to maintain library paths on different
+# machines and to make Wasm modules reproducible.
+ARG USERNAME=docker
+
 # Placeholder args that are expected to be passed in at image build time.
 # See https://code.visualstudio.com/docs/remote/containers-advanced#_creating-a-nonroot-user
-ARG USERNAME=user-name-goes-here
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
 
