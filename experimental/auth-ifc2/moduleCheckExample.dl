@@ -1,0 +1,45 @@
+#include "labelChecking.dl"
+
+// label environment
+// a :: L1
+// b :: L2
+// c :: L3 
+//      (where L1 flowsTo L3, L2 flowsTo L3)
+
+labelEnvironment("a", "l1").
+labelEnvironment("b", "l2").
+labelEnvironment("c", "l3").
+
+flowsTo("l1", "l3").
+flowsTo("l2", "l3").
+
+// Partcle P:
+//    reads: a
+//    reads: b
+//    writes c
+// (should be OK)
+
+bindModule("p",
+    $FlatMod(
+        $Cons("a", $Cons("b", $Nil())),
+        $Cons("c", $Nil())
+    )
+).
+
+// Particle Q:
+//     reads: a
+//     reads: c
+//     writes: b
+// (should NOT be ok)
+bindModule("q",
+    $FlatMod(
+        $Cons("a", $Cons("c", $Nil())),
+        $Cons("b", $Nil())
+    )
+).
+
+.output flowsTo
+.output bindModule
+.output labelEnvironment
+.output isMeetOverList
+.output moduleLabelChecks 

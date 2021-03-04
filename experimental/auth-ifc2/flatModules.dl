@@ -1,0 +1,32 @@
+#ifndef FLAT_MODULES
+#define FLAT_MODULES
+
+//-----------------------------------------------------------------------------
+// Flattened modules
+//-----------------------------------------------------------------------------
+// These are code modules without nested structs at their interfaces.
+// Interfaces have been flattened into simple lists (post type-slicing).
+.type locationName <: symbol
+.type moduleName <: symbol
+.type locationList = Nil {} | Cons {e: locationName, l: locationList}
+.type flatModule = FlatMod { readLocations: locationList, writeLocations: locationList}
+
+// // A variable n is bound to a module body fm
+.decl bindModule(n: moduleName, fm: flatModule)
+
+.decl groundedLocation(l: locationName)
+.decl groundedList(ls: locationList)
+.decl groundedModuleName(m: moduleName)
+.decl groundedFlatMod(fm: flatModule)
+
+
+//---- ground lowering rules:
+// If a top-level thing is valid, make its parts valid
+groundedLocation(l) :- groundedList($Cons(l, _)).
+groundedList(ls) :- groundedFlatMod($FlatMod(ls, _)).
+groundedList(ls) :- groundedFlatMod($FlatMod(_, ls)).
+groundedList(ls) :- groundedList($Cons(_, ls)).
+groundedModuleName(mn) :- bindModule(mn, _).
+groundedFlatMod(fm) :- bindModule(_, fm).
+
+#endif // FLAT_MODULES
