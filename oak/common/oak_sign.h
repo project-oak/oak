@@ -16,14 +16,20 @@
 
 #include <string>
 
+#include "oak_abi/proto/identity.pb.h"
+
 namespace oak {
 
-// Generates an X25519 key pair, and writes them as Base64-encoded strings in two separate files in
-// the provided paths.
-void generate(const std::string& private_key_path, const std::string& public_key_path);
+// Generates an Ed25519 key pair, and return the private key. The public key can be generated from
+// the private key.
+std::string generate();
 
-// Signs the sha256 hash of the message using the given private key. Returns the base64 hash of the
-// signature.
-std::string sign(const std::string& private_key_path, const std::string& input_string);
+// Store the given private key as a base64 encoded string in a PEM file in the given path.
+void store_private_key(const std::string& private_key, const std::string& private_key_path);
+
+// Signs the sha256 hash of the message using the given private key. Returns a SignedChallenge
+// containing the signed hash and the public key corresponding to the input private key.
+oak::identity::SignedChallenge sign(const std::string& private_key,
+                                    const std::string& input_string);
 
 }  // namespace oak

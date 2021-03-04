@@ -28,84 +28,67 @@
 #include "absl/strings/escaping.h"
 #include "glog/logging.h"
 #include "oak/common/utils.h"
+#include "tink/signature/ed25519_sign_key_manager.h"
+#include "tink/subtle/ed25519_verify_boringssl.h"
+#include "tink/util/istream_input_stream.h"
 
-struct Bytes {
-  uint8_t* data;
-  unsigned int length;
-};
-bool compute_base64_hash(const std::string& unhashed, std::string& base64_hash);
-std::string bytes_to_base64(uint8_t* bytes, unsigned int length);
-Bytes base64_to_bytes(std::string& base64);
+using crypto::tink::Ed25519SignKeyManager;
+using ::crypto::tink::util::StatusOr;
+using ::google::crypto::tink::Ed25519KeyFormat;
+using ::google::crypto::tink::Ed25519PrivateKey;
+using ::google::crypto::tink::Ed25519PublicKey;
 
+bool compute_sha256_hash(const std::string& unhashed, std::string& hashed);
 namespace oak {
 
-void generate(const std::string& private_key_path, const std::string& public_key_path) {
-  uint8_t public_key[32], private_key[64];
-  ED25519_keypair(public_key, private_key);
-
-  std::stringstream pub_ss;
-  for (unsigned int i = 0; i < 32; ++i) {
-    pub_ss << (char)public_key[i];
+std::string generate() {
+  StatusOr<Ed25519PrivateKey> key_or = Ed25519SignKeyManager().CreateKey(Ed25519KeyFormat());
+  if (!key_or.ok()) {
+    LOG(FATAL) << "Could not generate Ed25519 key pair";
   }
-  std::map<std::string, std::string> pub_map;
-  pub_map["PUBLIC KEY"] = absl::Base64Escape(pub_ss.str());
-  oak::utils::write_pem(pub_map, public_key_path);
+  Ed25519PrivateKey key = key_or.ValueOrDie();
 
-  std::stringstream pri_ss;
-  for (unsigned int i = 0; i < 64; ++i) {
-    pri_ss << (char)private_key[i];
-  }
+  return key.key_value();
+}
+
+void store_private_key(const std::string& private_key, const std::string& private_key_path) {
   std::map<std::string, std::string> pri_map;
-  pri_map["PRIVATE KEY"] = absl::Base64Escape(pri_ss.str());
+  pri_map["PRIVATE KEY"] = absl::Base64Escape(private_key);
   oak::utils::write_pem(pri_map, private_key_path);
 }
 
-// TODO(#1851): Compute public key from the private key, and store everything in file.
-std::string sign(const std::string& private_key_path, const std::string& input_string) {
-  auto pem_map = oak::utils::read_pem(private_key_path);
+oak::identity::SignedChallenge sign(const std::string& private_key,
+                                    const std::string& input_string) {
+  Ed25519KeyFormat format;
 
-  // Read base64 private key from file and decode it
-  Bytes private_key;
-  if (pem_map.find("PRIVATE KEY") == pem_map.end()) {
-    LOG(FATAL) << "No private key in the pem file";
-  } else {
-    private_key = base64_to_bytes(pem_map["PRIVATE KEY"]);
+  crypto::tink::util::IstreamInputStream input_stream{
+      absl::make_unique<std::stringstream>(private_key)};
+
+  StatusOr<Ed25519PrivateKey> key_or = Ed25519SignKeyManager().DeriveKey(format, &input_stream);
+  if (!key_or.ok()) {
+    LOG(FATAL) << "Couldn't derive keys from the given private key";
   }
+  Ed25519PrivateKey key = key_or.ValueOrDie();
 
-  // Compute base64-encoded hash of the input string
-  std::string base64_hash;
-  if (!compute_base64_hash(input_string, base64_hash)) {
-    LOG(FATAL) << "Failed to compute base64-encoded hash.";
+  auto signer_or = Ed25519SignKeyManager().GetPrimitive<crypto::tink::PublicKeySign>(key);
+
+  // Compute sha256 hash of the input string
+  std::string hash_value;
+  if (!compute_sha256_hash(input_string, hash_value)) {
+    LOG(FATAL) << "Failed to compute sha256 hash.";
   }
-  // Decode hash into byte array
-  Bytes hash_bytes = base64_to_bytes(base64_hash);
+  std::string signed_hash = signer_or.ValueOrDie()->Sign(hash_value).ValueOrDie();
 
-  // Compute signature for the hash
-  uint8_t signature[64];
-  if (!ED25519_sign(signature, hash_bytes.data, hash_bytes.length, private_key.data)) {
-    LOG(FATAL) << "Failed to sign the message";
-  }
+  oak::identity::SignedChallenge signed_challenge;
+  signed_challenge.set_signed_hash(signed_hash);
+  signed_challenge.set_public_key(key_or.ValueOrDie().public_key().key_value());
 
-  delete[] private_key.data;
-  delete[] hash_bytes.data;
-
-  // Get base64 encoding of the signature
-  return bytes_to_base64(signature, 64);
-
-  // TODO(#1851): Uncomment when this method can derive public key from the private key and write
-  // everything to file.
-
-  // write to file
-  //   std::map<std::string, std::string> map;
-  //   map["PUBLIC KEY"] = base64_public_key;
-  //   map["SIGNATURE"] = base64_signature;
-  //   map["HASH"] = base64_hash;
-  //   oak::utils::write_pem(map, signature_file);
+  return signed_challenge;
 }
 
 }  // namespace oak
 
-bool compute_base64_hash(const std::string& unhashed, std::string& base64_hash) {
+bool compute_sha256_hash(const std::string& unhashed, std::string& hashed) {
   bool success = false;
 
   EVP_MD_CTX* context = EVP_MD_CTX_new();
@@ -117,7 +100,11 @@ bool compute_base64_hash(const std::string& unhashed, std::string& base64_hash) 
         unsigned int lengthOfHash = 0;
 
         if (EVP_DigestFinal_ex(context, hash, &lengthOfHash)) {
-          base64_hash = bytes_to_base64(hash, lengthOfHash);
+          std::stringstream ss;
+          for (unsigned int i = 0; i < lengthOfHash; ++i) {
+            ss << (char)hash[i];
+          }
+          hashed = ss.str();
           success = true;
         }
       }
@@ -128,49 +115,3 @@ bool compute_base64_hash(const std::string& unhashed, std::string& base64_hash) 
 
   return success;
 }
-
-std::string bytes_to_base64(uint8_t* bytes, unsigned int length) {
-  std::stringstream ss;
-  for (unsigned int i = 0; i < length; ++i) {
-    ss << (char)bytes[i];
-  }
-  return absl::Base64Escape(ss.str());
-}
-
-Bytes base64_to_bytes(std::string& base64) {
-  std::string decoded_val;
-  if (!absl::Base64Unescape(base64, &decoded_val)) {
-    LOG(FATAL) << "Failed to decode base64.";
-  }
-  Bytes bytes;
-  bytes.data = new uint8_t[decoded_val.length()];
-  memcpy(bytes.data, decoded_val.data(), decoded_val.length());
-  bytes.length = decoded_val.length();
-
-  return bytes;
-}
-
-// TODO(#1851): Fix this
-// std::string derive_public_key_from_private_key(Bytes private_key) {
-//   // Compute public key from the private key
-//   CBS pri_key;
-//   CBS_init(&pri_key, private_key.data, private_key.length);
-//   EVP_PKEY* pkey = PKCS8_parse_encrypted_private_key(&pri_key, NULL, 0);
-
-//   // Get base64 encoding of the public key
-//   if (pkey == NULL || EVP_PKEY_id(pkey) != EVP_PKEY_EC) {
-//     LOG(FATAL) << "Failed to parse private key.";
-//   }
-//   const EC_POINT* pub = EC_KEY_get0_public_key(pkey->pkey.ec);
-
-//   BIGNUM* x = BN_new();
-//   BIGNUM* y = BN_new();
-
-//   if (!EC_POINT_get_affine_coordinates_GFp(EC_KEY_get0_group(pkey->pkey.ec), pub, x, y, NULL)) {
-//     LOG(FATAL) << "Failed to get public key.";
-//   }
-
-//   uint8_t* public_key;
-//   int len = BN_bn2bin(x, public_key);
-//   return bytes_to_base64(public_key, len);
-// }

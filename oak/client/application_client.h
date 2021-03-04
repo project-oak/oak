@@ -118,45 +118,29 @@ class ApplicationClient {
     return decoded_public_key;
   }
 
-  static void GenerateKeyPair(std::string output_private_key_path,
-                              std::string output_public_key_path) {
-    oak::generate(output_private_key_path, output_public_key_path);
+  static std::string GenerateKeyPair() { return oak::generate(); }
+
+  static oak::identity::SignedChallenge Sign(std::string private_key, std::string input_string) {
+    return oak::sign(private_key, input_string);
   }
 
-  static std::string Sign(std::string private_key_path, std::string input_string) {
-    std::string base64_signature = oak::sign(private_key_path, input_string);
-    std::string signature;
-    if (!absl::Base64Unescape(base64_signature, &signature)) {
-      LOG(FATAL) << "Failed to decode base64 signature";
-    }
-    return signature;
-  }
-
-  static oak::identity::SignedChallenge ReadSignedChallenge(const std::string& filename) {
+  static std::string LoadPrivateKey(const std::string& filename) {
     auto pem_map = oak::utils::read_pem(filename);
     oak::identity::SignedChallenge signature;
 
-    if (pem_map.find("PUBLIC KEY") == pem_map.end()) {
+    if (pem_map.find("PRIVATE KEY") == pem_map.end()) {
       LOG(FATAL) << "No public key in the pem file";
-    } else {
-      std::string public_key;
-      if (!absl::Base64Unescape(pem_map["PUBLIC KEY"], &public_key)) {
-        LOG(FATAL) << "Failed to decode base64 public key";
-      }
-      signature.set_public_key(public_key);
     }
-
-    if (pem_map.find("SIGNATURE") == pem_map.end()) {
-      LOG(FATAL) << "No public key in the pem file";
-    } else {
-      std::string signed_hash;
-      if (!absl::Base64Unescape(pem_map["SIGNATURE"], &signed_hash)) {
-        LOG(FATAL) << "Failed to decode base64 signed challenge";
-      }
-      signature.set_signed_hash(signed_hash);
+    std::string private_key;
+    if (!absl::Base64Unescape(pem_map["PUBLIC KEY"], &private_key)) {
+      LOG(FATAL) << "Failed to decode base64 public key";
     }
+    return private_key;
+  }
 
-    return signature;
+  // Store the given private key as a base64-encoded string in a PEM file in the given path.
+  static void StorePrivateKey(const std::string& private_key, const std::string& filename) {
+    oak::store_private_key(private_key, filename);
   }
 };
 

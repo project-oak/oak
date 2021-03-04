@@ -32,5 +32,8 @@ cc_binary(
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/synchronization",
+        "@tink_cc",
+        "@tink_cc//signature:signature_config",
+        "@tink_cc//util:istream_input_stream",
     ],
 )

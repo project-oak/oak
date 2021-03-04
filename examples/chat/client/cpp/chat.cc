@@ -34,6 +34,23 @@
 #include "oak/common/nonce_generator.h"
 #include "oak_abi/proto/identity.pb.h"
 
+////
+#include <string>
+
+#include "absl/strings/str_cat.h"
+#include "openssl/curve25519.h"
+#include "tink/public_key_sign.h"
+#include "tink/public_key_verify.h"
+#include "tink/signature/ed25519_sign_key_manager.h"
+#include "tink/subtle/ed25519_verify_boringssl.h"
+#include "tink/util/istream_input_stream.h"
+
+using crypto::tink::Ed25519SignKeyManager;
+using ::crypto::tink::util::StatusOr;
+using ::google::crypto::tink::Ed25519KeyFormat;
+using ::google::crypto::tink::Ed25519PrivateKey;
+using ::google::crypto::tink::Ed25519PublicKey;
+
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, room_secret, "",
@@ -159,24 +176,23 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
   std::string room_secret = absl::GetFlag(FLAGS_room_secret);
+  std::string private_key;
 
-  std::unique_ptr<Chat::Stub> stub;
-
-  // If no room key pair file was provided, create a fresh key pair. A secure key sharing mechanims
-  // is needed to share the file containing the key pair with others.
+  // If no room secret, containing a private key, was provided, create a fresh private/public key
+  // pair, and store the private key in a file for later use. A secure key sharing mechanims is
+  // needed to share this file with other clients.
   if (room_secret.empty()) {
-    oak::ApplicationClient::GenerateKeyPair("chat-room.key", "chat-room.pub");
-    room_secret = "chat-room.key";
+    private_key = oak::ApplicationClient::GenerateKeyPair();
+    oak::ApplicationClient::StorePrivateKey(private_key, "chat-room.key");
+  } else {
+    private_key = oak::ApplicationClient::LoadPrivateKey(room_secret);
   }
 
-  // Using the room's secret to sign the challenge required for authenticating the client.
-  std::string signed_hash = oak::ApplicationClient::Sign(room_secret, "oak-challenge");
-  // TODO(#1851): remove this when `Sign` can derive public key from private key
-  std::string public_key = oak::ApplicationClient::LoadPublicKey("chat-room.pub");
-  oak::identity::SignedChallenge signed_challenge;
-  signed_challenge.set_signed_hash(signed_hash);
-  signed_challenge.set_public_key(public_key);
+  // Use the room's secret to sign the challenge required for authenticating the client.
+  oak::identity::SignedChallenge signed_challenge =
+      oak::ApplicationClient::Sign(private_key, "oak-challenge");
 
+  std::unique_ptr<Chat::Stub> stub;
   stub = create_stub(address, ca_cert, signed_challenge);
 
   if (absl::GetFlag(FLAGS_test)) {

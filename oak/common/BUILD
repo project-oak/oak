@@ -81,8 +81,11 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":utils",
-        "@boringssl//:crypto",
+        "//oak_abi/proto:identity_cc_proto",
         "@com_github_google_glog//:glog",
         "@com_google_absl//absl/strings",
+        "@tink_cc",
+        "@tink_cc//signature:signature_config",
+        "@tink_cc//util:istream_input_stream",
     ],
 )
