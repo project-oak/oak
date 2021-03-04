@@ -7,6 +7,11 @@
 .decl isLabel(ell: label)
 .decl flowsTo(ell1: label, ell2: label)
 
+// in reality, this would extend from the more general logic including says and 
+// rules for delegation, simplified here since this is a quick prototype.
+.decl saysDowngrades(speaker: label, inModule: moduleName,
+    x: locationName, newLabel: label)
+
 isLabel("top").
 isLabel("bot").
 
@@ -19,39 +24,55 @@ flowsTo(p, p) :- isLabel(p).
 flowsTo(p1, p3) :- flowsTo(p1, p2), flowsTo(p2, p3).
 // no antisym
 
-// maps locations to labels
-// (if we need a notion of different label environments, we could encode that 
-// by adding an env_name element here, and passing that name to other relations 
-// like meets/joins over lists).
+// This is a labl environment mapping locations to labels. It is populated by 
+// the language for describing particles + policies.
 .decl labelEnvironment(loc: locationName, ell: label)
+
+// This is the relation for type judgements on locations.
+// there are two rules for proving that a location has a label:
+// - using the label of x in the label environment
+// - using a downgrade. The principal owning the label of x says the module can 
+// downgrade this to a new label.
+.decl locationHasLabel(context: moduleName, loc: locationName, ell: label)
+
+locationHasLabel(ctxt, loc, ell) :-
+    groundedModuleName(ctxt),
+    labelEnvironment(loc, ell).
+locationHasLabel(ctxt, loc, ell) :-
+    labelEnvironment(loc, ellPrime),
+    saysDowngrades(ellPrime, ctxt, loc, ell).
+
 // true if ell is a lower bound of the labels in the list
-.decl isMeetOverList(ell: label, ls: locationList)
+.decl isMeetOverList(context: moduleName, ell: label, ls: locationList)
 // true if ell is an upper bound of the labels in the list
-.decl isJoinOverList(ell: label, ls: locationList)
+.decl isJoinOverList(context: moduleName, ell: label, ls: locationList)
 
-isMeetOverList(ell, $Cons(locx, $Nil())) :- 
-    labelEnvironment(locx, ell1), flowsTo(ell, ell1).
-isMeetOverList(ell, $Cons(locx, lsPrime)) :- 
+
+// computes the meet over the labels of locations in in the list in the context 
+// of the current module
+isMeetOverList(context, ell, $Cons(locx, $Nil())) :- 
+    locationHasLabel(context, locx, ell1), flowsTo(ell, ell1).
+isMeetOverList(context, ell, $Cons(locx, lsPrime)) :- 
     groundedList(lsPrime),
-    labelEnvironment(locx, ell1),
-    flowsTo(ell, ell1), isMeetOverList(ell, lsPrime).
+    locationHasLabel(context, locx, ell1),
+    flowsTo(ell, ell1), isMeetOverList(context, ell, lsPrime).
 
-isJoinOverList(ell, $Cons(locx, $Nil())) :- 
-    labelEnvironment(locx, ell1), flowsTo(ell1, ell).
-isJoinOverList(ell, $Cons(locx, lsPrime)) :- 
+isJoinOverList(context, ell, $Cons(locx, $Nil())) :- 
+    locationHasLabel(context, locx, ell1), flowsTo(ell1, ell).
+isJoinOverList(context, ell, $Cons(locx, lsPrime)) :- 
     groundedList(lsPrime),
-    labelEnvironment(locx, ell1),
-    flowsTo(ell1, ell), isJoinOverList(ell, lsPrime).
+    locationHasLabel(context, locx, ell1),
+    flowsTo(ell1, ell), isJoinOverList(context, ell, lsPrime).
 
-.decl flatModLabelChecks(fm: flatModule)
+.decl flatModLabelChecks(m: moduleName, fm: flatModule)
 // True if the module label checks
-flatModLabelChecks($FlatMod(reads, writes)) :- 
-    isJoinOverList(readBound, reads),
-    isMeetOverList(writeBound, writes),
+flatModLabelChecks(m, $FlatMod(reads, writes)) :- 
+    isJoinOverList(m, readBound, reads),
+    isMeetOverList(m, writeBound, writes),
     flowsTo(readBound, writeBound).
 
 .decl moduleLabelChecks(n: moduleName)
-moduleLabelChecks(n) :- bindModule(n, fm), flatModLabelChecks(fm).
+moduleLabelChecks(n) :- bindModule(n, fm), flatModLabelChecks(n, fm).
     
 
 // ground lowering rules

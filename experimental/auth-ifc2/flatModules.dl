@@ -9,7 +9,8 @@
 .type locationName <: symbol
 .type moduleName <: symbol
 .type locationList = Nil {} | Cons {e: locationName, l: locationList}
-.type flatModule = FlatMod { readLocations: locationList, writeLocations: locationList}
+.type flatModule = FlatMod { readLocations: locationList,
+    writeLocations: locationList}
 
 // // A variable n is bound to a module body fm
 .decl bindModule(n: moduleName, fm: flatModule)

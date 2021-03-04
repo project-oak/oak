@@ -38,8 +38,27 @@ bindModule("q",
     )
 ).
 
+// Particle R:
+//      reads: a
+//      reads: c
+//      writes: b
+// policy includes:
+//      L1 says downgrades(R, a, l2)
+//      L3 says downgrades(R, c, l2)
+// (should be OK (using the downgrades))
+
+bindModule("r",
+    $FlatMod(
+        $Cons("a", $Cons("c", $Nil())),
+        $Cons("b", $Nil())
+    )
+).
+
+saysDowngrades("l1", "r", "a", "l2").
+saysDowngrades("l3", "r", "c", "l2").
+
 .output flowsTo
 .output bindModule
 .output labelEnvironment
-.output isMeetOverList
+.output saysDowngrades
 .output moduleLabelChecks 
