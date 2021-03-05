@@ -19,6 +19,13 @@ use crate::proto::oak::examples::veracruz_demo::{
 };
 use log::info;
 use oak::grpc;
+use http;
+use oak::http::create_http_invocation;
+use oak_abi::{
+    label::{confidentiality_label, tls_endpoint_tag}
+};
+
+use oak::io::SenderExt;
 
 oak::impl_dispatcher!(impl Handler : VeracruzDemoDispatcher);
 oak::entrypoint_command_handler_init!(handler => Handler);
@@ -68,6 +75,44 @@ impl VeracruzDemo for Handler {
                 return Ok(result);
             }
         }
+
+        // Here's where the fun begins. How do we instantiate a http client pseudo node?
+
+        let authority = "https://172.17.0.1:8090/hello";
+        let request = http::Request::builder()
+            .method(http::Method::GET)
+            .uri(authority)
+            .body(data)
+            .unwrap();
+        info!("creating client node");
+        let client_invocation_sender = oak::http::client::init("").unwrap();
+        let label = oak_abi::label::Label::public_untrusted();
+        //let label = confidentiality_label(tls_endpoint_tag(authority));
+        let (client_invocation, client_invocation_source) = create_http_invocation(&label).unwrap();
+        info!("sending client_invocation to client_invocation_sender");
+        client_invocation_sender.send(&client_invocation).unwrap();
+        info!("Sending request to client_invocation_source");
+        match client_invocation_source.send(request) {
+            Ok(whatisthis) => info!("Send Ok:{:?}", whatisthis),
+            Err(err) => info!("Send Err:{:?}", err),
+        }
+        info!("Receiving through client_invocation_source");
+        match client_invocation_source.receive() {
+            Ok(whatisthis) => info!("Receive Ok:{:?}", whatisthis),
+            Err(err) => info!("Receive Err:{:?}", err),
+        }
+        // info!("forward random calling send");
+        // let send_request: http::request::Request<Vec<u8>> = http::request::Builder::new()
+        //     .uri("https://172.17.0.1:8090/hello")
+        //     .body(data).expect("Crap");
+        // match client_invocation_source.send(send_request) {
+        //     Ok(whatisthis) => info!("It's all good:{:?}", whatisthis),
+        //     Err(err) => info!("crap:{:?}", err),
+        // }
+        // match client_invocation_source.receive() {
+        //     Ok(whatisthis) => info!("Receive went well:{:?}", whatisthis),
+        //     Err(err) => info!("receive failed:{:?}", err),
+        // }
 
         result.status = 0;
 

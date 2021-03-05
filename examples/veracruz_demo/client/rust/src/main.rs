@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
     let label = Label::public_untrusted();
     let interceptor =
         LabelInterceptor::create(&label).context("Couldn't create gRPC interceptor")?;
-    let mut client = VeracruzDemoClient::with_interceptor(channel, interceptor);
+    let client = VeracruzDemoClient::with_interceptor(channel, interceptor);
 
     info!("Sending requests");
     let gen_request: Request<RandomRequest> = Request::new(RandomRequest {
