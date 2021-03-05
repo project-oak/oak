@@ -30,6 +30,7 @@
 #include "oak/common/utils.h"
 #include "tink/signature/ed25519_sign_key_manager.h"
 #include "tink/subtle/ed25519_verify_boringssl.h"
+#include "tink/subtle/subtle_util_boringssl.h"
 #include "tink/util/istream_input_stream.h"
 
 using crypto::tink::Ed25519SignKeyManager;
@@ -89,29 +90,17 @@ oak::identity::SignedChallenge sign(const std::string& private_key,
 }  // namespace oak
 
 bool compute_sha256_hash(const std::string& unhashed, std::string& hashed) {
-  bool success = false;
-
-  EVP_MD_CTX* context = EVP_MD_CTX_new();
-
-  if (context != NULL) {
-    if (EVP_DigestInit_ex(context, EVP_sha256(), NULL)) {
-      if (EVP_DigestUpdate(context, unhashed.c_str(), unhashed.length())) {
-        uint8_t hash[EVP_MAX_MD_SIZE];
-        unsigned int lengthOfHash = 0;
-
-        if (EVP_DigestFinal_ex(context, hash, &lengthOfHash)) {
-          std::stringstream ss;
-          for (unsigned int i = 0; i < lengthOfHash; ++i) {
-            ss << (char)hash[i];
-          }
-          hashed = ss.str();
-          success = true;
-        }
-      }
-    }
-
-    EVP_MD_CTX_free(context);
+  StatusOr<const EVP_MD*> res =
+      crypto::tink::subtle::SubtleUtilBoringSSL::EvpHash(crypto::tink::subtle::HashType::SHA256);
+  const EVP_MD* evp_sha256 = res.ValueOrDie();
+  auto digest_result = crypto::tink::subtle::boringssl::ComputeHash(unhashed, *evp_sha256);
+  if (!digest_result.ok()) return false;
+  auto digest = digest_result.ValueOrDie();
+  auto hash = digest.data();
+  std::stringstream ss;
+  for (unsigned int i = 0; i < digest.size(); ++i) {
+    ss << (char)hash[i];
   }
-
-  return success;
+  hashed = ss.str();
+  return true;
 }
