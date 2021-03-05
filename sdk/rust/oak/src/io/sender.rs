@@ -61,14 +61,14 @@ impl<T: Encodable> SenderExt<T> for Sender<T> {
 }
 
 // Explicitly closes handles in the given [`Message`] so they do not leak
-#[cfg(all(not(feature = "no-linear-handles"), feature = "linear-handles"))] // linear handles version
+#[cfg(feature = "linear-handles")] // linear handles version
 fn drop_handles(msg: oak_io::Message) {
     for handle in msg.handles {
         let _ = crate::channel_close(handle);
     }
 }
 
-#[cfg(any(not(feature = "linear-handles"), feature = "no-linear-handles"))] // no linear handles version
+#[cfg(not(feature = "linear-handles"))] // no linear handles version
 fn drop_handles(_: oak_io::Message) {
     // Do nothing. The caller owns the handles
 }

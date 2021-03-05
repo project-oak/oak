@@ -12,13 +12,6 @@ license = "Apache-2.0"
 # At the expense of making them non-copy, this causes handles to be
 # automaticaly dropped, so that channels cannot accidentally linger on.
 linear-handles = []
-# For crates that explicitly do NOT support linear-handles yet (e.g. Oak SDK)
-# If this crate is compiled with both features, linear-handles suppport is
-# disabled.
-# When compiling individual crates this would not be needed, but compiling an
-# entire workspace with just one crate enabling 'linear-handles' will also
-# enable it for all crates in that workspace, due to a quirk in Cargo.
-no-linear-handles = []
 
 [dependencies]
 hex = "*"
