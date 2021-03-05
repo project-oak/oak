@@ -181,17 +181,20 @@ fn run_examples(opt: &RunExamples) -> Step {
 
 fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
     match target {
-        Target::Cargo { cargo_manifest } => Step::Single {
+        Target::Cargo {
+            cargo_manifest,
+            additional_build_args,
+        } => Step::Single {
             name: format!("wasm:{}:{}", name, cargo_manifest.to_string()),
             command: Cmd::new(
                 "cargo",
-                &[
+                spread![
                     // `--out-dir` is unstable and requires `-Zunstable-options`.
-                    "-Zunstable-options",
-                    "build",
-                    "--release",
-                    "--target=wasm32-unknown-unknown",
-                    &format!("--manifest-path={}", cargo_manifest),
+                    "-Zunstable-options".to_string(),
+                    "build".to_string(),
+                    "--release".to_string(),
+                    "--target=wasm32-unknown-unknown".to_string(),
+                    format!("--manifest-path={}", cargo_manifest),
                     // Use a fixed target directory, because `--target-dir` influences SHA256 hash
                     // of Wasm module.  Target directory should also be synchronized with
                     // `--target-dir` used in [`oak_tests::compile_rust_wasm`] in order to have
@@ -201,13 +204,14 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                     // `cargo test`, which also executes [`oak_tests::compile_rust_wasm`] and thus
                     // runs `cargo build` inside it. It may lead to errors, since dependencies may
                     // be recompiled by `cargo build` and `cargo test` will fail to continue.
-                    &format!("--target-dir={}", {
+                    format!("--target-dir={}", {
                         let mut target_dir = PathBuf::from(cargo_manifest);
                         target_dir.pop();
                         target_dir.push("target");
                         target_dir.to_str().expect("Invalid target dir").to_string()
                     }),
-                    &format!("--out-dir=examples/{}/bin", example_name),
+                    format!("--out-dir=examples/{}/bin", example_name),
+                    ...additional_build_args
                 ],
             ),
         },
@@ -601,6 +605,8 @@ enum Target {
     },
     Cargo {
         cargo_manifest: String,
+        #[serde(default)]
+        additional_build_args: Vec<String>,
     },
     Npm {
         package_directory: String,
@@ -803,9 +809,12 @@ fn build_docker(example: &Example) -> Step {
 
 fn build(target: &Target, opt: &BuildClient) -> Box<dyn Runnable> {
     match target {
-        Target::Cargo { cargo_manifest } => Cmd::new(
+        Target::Cargo {
+            cargo_manifest,
+            additional_build_args,
+        } => Cmd::new(
             "cargo",
-            vec![
+            spread![
                 "build".to_string(),
                 "--release".to_string(),
                 format!(
@@ -815,6 +824,7 @@ fn build(target: &Target, opt: &BuildClient) -> Box<dyn Runnable> {
                         .unwrap_or(DEFAULT_EXAMPLE_BACKEND_RUST_TARGET)
                 ),
                 format!("--manifest-path={}", cargo_manifest),
+                ...additional_build_args,
             ],
         ),
         Target::Bazel {
@@ -846,13 +856,17 @@ fn run(
     additional_args: Vec<String>,
 ) -> Box<dyn Runnable> {
     match &executable.target {
-        Target::Cargo { cargo_manifest } => Cmd::new(
+        Target::Cargo {
+            cargo_manifest,
+            additional_build_args,
+        } => Cmd::new(
             "cargo",
             spread![
                 "run".to_string(),
                 "--release".to_string(),
                 format!("--target={}", opt.client_rust_target.as_deref().unwrap_or(DEFAULT_EXAMPLE_BACKEND_RUST_TARGET)),
                 format!("--manifest-path={}", cargo_manifest),
+                ...additional_build_args,
                 "--".to_string(),
                 ...executable.additional_args.clone(),
                 ...additional_args,
