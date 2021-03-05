@@ -9,7 +9,7 @@ license = "Apache-2.0"
 env_logger = "*"
 log = "*"
 prost = "*"
-tokio = { version = "*", features = ["fs", "macros"] }
+tokio = { version = "*", features = ["fs", "macros", "rt-multi-thread"] }
 tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]

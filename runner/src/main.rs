@@ -954,11 +954,11 @@ fn source_files() -> impl Iterator<Item = PathBuf> {
         .map(|e| e.into_path())
 }
 
-/// Return an iterator of all known Cargo Manifest files that define workspaces.
-fn workspace_manifest_files() -> impl Iterator<Item = PathBuf> {
+/// Return an iterator of all known Cargo Manifest files that define crates.
+fn crate_manifest_files() -> impl Iterator<Item = PathBuf> {
     source_files()
         .filter(is_cargo_toml_file)
-        .filter(is_cargo_workspace_file)
+        .filter(|p| !is_cargo_workspace_file(p))
 }
 
 /// Return whether the provided path refers to a source file in a programming language.
@@ -1317,7 +1317,7 @@ fn run_check_todo() -> Step {
 fn run_cargo_fmt(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "cargo fmt".to_string(),
-        steps: workspace_manifest_files()
+        steps: crate_manifest_files()
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -1347,7 +1347,7 @@ fn run_cargo_fmt(mode: FormatMode) -> Step {
 fn run_cargo_test() -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
-        steps: workspace_manifest_files()
+        steps: crate_manifest_files()
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -1397,7 +1397,7 @@ fn run_cargo_test_tsan() -> Step {
 fn run_cargo_clippy() -> Step {
     Step::Multiple {
         name: "cargo clippy".to_string(),
-        steps: workspace_manifest_files()
+        steps: crate_manifest_files()
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -1427,7 +1427,7 @@ fn run_cargo_clippy() -> Step {
 fn run_cargo_deny() -> Step {
     Step::Multiple {
         name: "cargo deny".to_string(),
-        steps: workspace_manifest_files()
+        steps: crate_manifest_files()
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -1443,7 +1443,7 @@ fn run_cargo_deny() -> Step {
 fn run_cargo_udeps() -> Step {
     Step::Multiple {
         name: "cargo udeps".to_string(),
-        steps: workspace_manifest_files()
+        steps: crate_manifest_files()
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
