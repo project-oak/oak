@@ -690,8 +690,41 @@ services.
 
 ## Using External HTTP Services
 
-TODO: describe use of HTTP client pseudo-Node to connect to external HTTP
-services.
+An Oak application may need to interact with external services. This can be done
+using an HTTP client pseudo node. The Oak SDK provides a convenient API for
+creating HTTP Client pseudo nodes:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/http_server/module/src/lib.rs Rust /.*let client_invocation_sender.*/)
+```Rust
+    let client_invocation_sender = oak::http::client::init("localhost:8080").unwrap();
+```
+<!-- prettier-ignore-end -->
+
+The input parameter to `init` is the authority of the server that the Oak
+application needs to connect to. If an empty string is passed as the authority,
+then this client node can connect to any external server. Otherwise, the HTTP
+client pseudo node can only connect to the server specified by the given
+authority over HTTPS. The `init` method returns a handle to a channel that can
+be used for sending invocations to the client pseudo node. From there you can
+create normal HTTP requests and send them via the client pseudo node:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/http_server/module/src/lib.rs Rust /.*http::Req/ /HTTP client.*;$/)
+```Rust
+        let request = http::Request::builder()
+            .method(http::Method::GET)
+            .uri("https://localhost:8080")
+            .header(oak_abi::OAK_LABEL_HTTP_JSON_KEY, label_bytes)
+            .body(vec![])
+            .context("Couldn't build request")?;
+
+        // Send the request to the HTTP client pseudo-Node
+        client_invocation
+            .send(request)
+            .context("Couldn't send the request to the HTTP client")?;
+```
+<!-- prettier-ignore-end -->
 
 ## Testing
 
