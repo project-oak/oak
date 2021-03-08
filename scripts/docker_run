@@ -43,6 +43,8 @@ if [[ -z "${CI:-}" ]]; then
   docker_run_flags+=('--interactive')
 fi
 
+docker_run_flags+=('--add-host=veracruz:172.17.0.1')
+
 if [[ "$1" == '--detach' ]]; then
   docker_run_flags+=('--detach')
   docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_NAME:latest" "${@:2}"

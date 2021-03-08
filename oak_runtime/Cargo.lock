@@ -1533,6 +1533,7 @@ dependencies = [
  "tonic",
  "wasmi",
  "wat",
+ "webpki",
 ]
 
 [[package]]

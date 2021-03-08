@@ -31,6 +31,7 @@ use oak_io::{handle::ReadHandle, OakError};
 use oak_services::proto::oak::encap::{HeaderMap, HttpResponse};
 use std::io;
 use tokio::sync::oneshot;
+use webpki;
 
 type HyperClient =
     hyper::client::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>, hyper::Body>;
@@ -169,8 +170,8 @@ impl HttpClientNode {
         let request = invocation
             .receive_request(&runtime)
             .map_err(ProcessingError::ReadFailed)?;
-        debug!("Incoming HTTP request: {:?}", request);
-
+        info!("Incoming HTTP request: {:?}", request);
+        info!("request.uri:{:?}", request.uri);
         let uri = request
             .uri
             .parse::<Uri>()
@@ -308,10 +309,24 @@ fn create_client(root_ca: crate::tls::Certificate) -> HyperClient {
 
     // Build a TLS client, using the custom CA store for lookups.
     let mut tls = rustls::ClientConfig::new();
+    let no_verifier = std::sync::Arc::new(NoVerifier {});
+    tls.dangerous().set_certificate_verifier(no_verifier);
     tls.root_store
         .add_pem_file(&mut ca_reader)
         .expect("failed to load custom CA store");
     // Join the above part into an HTTPS connector.
     let https = hyper_rustls::HttpsConnector::from((http, tls));
     hyper::client::Client::builder().build(https)
+}
+
+pub struct NoVerifier;
+
+impl rustls::ServerCertVerifier for NoVerifier {
+    fn verify_server_cert(&self,
+                          roots:&rustls::RootCertStore,
+                          presented_certs: &[rustls::Certificate],
+                          dns_name: webpki::DNSNameRef,
+                          ocsp_response: &[u8]) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
+        return Ok(rustls::ServerCertVerified::assertion());
+    }
 }

@@ -1264,6 +1264,7 @@ dependencies = [
  "tokio-rustls",
  "tonic",
  "wasmi",
+ "webpki",
 ]
 
 [[package]]

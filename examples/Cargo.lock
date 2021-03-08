@@ -1707,6 +1707,7 @@ dependencies = [
  "tokio-rustls",
  "tonic",
  "wasmi",
+ "webpki",
 ]
 
 [[package]]
@@ -3436,6 +3437,7 @@ dependencies = [
  "assert_matches",
  "either",
  "env_logger",
+ "http",
  "log",
  "maplit",
  "oak",

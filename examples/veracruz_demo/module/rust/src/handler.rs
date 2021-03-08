@@ -78,7 +78,7 @@ impl VeracruzDemo for Handler {
 
         // Here's where the fun begins. How do we instantiate a http client pseudo node?
 
-        let authority = "https://172.17.0.1:8090/hello";
+        let authority = "https://veracruz:8090/hello";
         let request = http::Request::builder()
             .method(http::Method::GET)
             .uri(authority)
@@ -101,18 +101,6 @@ impl VeracruzDemo for Handler {
             Ok(whatisthis) => info!("Receive Ok:{:?}", whatisthis),
             Err(err) => info!("Receive Err:{:?}", err),
         }
-        // info!("forward random calling send");
-        // let send_request: http::request::Request<Vec<u8>> = http::request::Builder::new()
-        //     .uri("https://172.17.0.1:8090/hello")
-        //     .body(data).expect("Crap");
-        // match client_invocation_source.send(send_request) {
-        //     Ok(whatisthis) => info!("It's all good:{:?}", whatisthis),
-        //     Err(err) => info!("crap:{:?}", err),
-        // }
-        // match client_invocation_source.receive() {
-        //     Ok(whatisthis) => info!("Receive went well:{:?}", whatisthis),
-        //     Err(err) => info!("receive failed:{:?}", err),
-        // }
 
         result.status = 0;
 
