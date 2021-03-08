@@ -14,22 +14,28 @@
  * limitations under the License.
  */
 
-#include <string>
-
+#include "absl/base/attributes.h"
 #include "oak_abi/proto/identity.pb.h"
 
 namespace oak {
 
-// Generates an Ed25519 key pair, and return the private key. The public key can be generated from
-// the private key.
-std::string generate();
+// `PRIVATE KEY` tag for reading and writing from and to PEM files.
+ABSL_CONST_INIT extern const char kPrivateKeyPemTag[];
 
-// Store the given private key as a base64 encoded string in a PEM file in the given path.
+// Generates an ed25519 key pair, and return the private key. The public key can be derived from
+// the private key.
+std::string generate_ed25519_key_pair();
+
+// Stores the given private key as a base64 encoded string in a PEM file in the given path.
 void store_private_key(const std::string& private_key, const std::string& private_key_path);
 
 // Signs the sha256 hash of the message using the given private key. Returns a SignedChallenge
 // containing the signed hash and the public key corresponding to the input private key.
-oak::identity::SignedChallenge sign(const std::string& private_key,
-                                    const std::string& input_string);
+oak::identity::SignedChallenge sign_ed25519(const std::string& private_key,
+                                            const std::string& input_string);
+
+// Computes the sha256 hash of the unhashed input string. Returns true if hashing is successful. In
+// this case the hashed value is stored in the second input parameter.
+bool compute_sha256_hash(const std::string& unhashed, std::string& hashed);
 
 }  // namespace oak

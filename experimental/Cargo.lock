@@ -1489,6 +1489,7 @@ dependencies = [
  "log",
  "oak",
  "oak_abi",
+ "oak_client",
  "oak_runtime",
  "prost",
  "rand",

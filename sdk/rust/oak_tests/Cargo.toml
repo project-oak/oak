@@ -12,6 +12,7 @@ lazy_static = "*"
 log = { version = "*", features = ["std"] }
 oak = "=0.1.0"
 oak_abi = "=0.1.0"
+oak_client = { path = "../../../oak_client" }
 oak_runtime = "=0.1.0"
 prost = "*"
 rand = { version = "*" }

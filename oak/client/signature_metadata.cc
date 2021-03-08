@@ -15,12 +15,6 @@
  */
 
 #include "oak/client/signature_metadata.h"
-
-#include <map>
-#include <utility>
-
-#include "absl/strings/escaping.h"
-
 namespace oak {
 
 // The `-bin` suffix allows sending binary data for this metadata key.

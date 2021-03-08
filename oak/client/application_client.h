@@ -65,14 +65,14 @@ class ApplicationClient {
   }
 
   // Returns a gRPC Channel connecting to the specified address, initialised with a fixed Oak Label
-  // and the given identity.
+  // and the given signature.
   static std::shared_ptr<grpc::Channel> CreateChannel(
       std::string addr, std::shared_ptr<grpc::ChannelCredentials> channel_credentials,
-      oak::label::Label label, oak::identity::SignedChallenge proto_signature) {
+      oak::label::Label label, oak::identity::SignedChallenge signed_challenge) {
     auto label_call_credentials =
         grpc::MetadataCredentialsFromPlugin(absl::make_unique<LabelMetadata>(label));
     auto sign_call_credentials =
-        grpc::MetadataCredentialsFromPlugin(absl::make_unique<SignatureMetadata>(proto_signature));
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<SignatureMetadata>(signed_challenge));
     auto call_credentials =
         grpc::CompositeCallCredentials(label_call_credentials, sign_call_credentials);
     return CreateChannel(addr, channel_credentials, call_credentials);
@@ -118,27 +118,32 @@ class ApplicationClient {
     return decoded_public_key;
   }
 
-  static std::string GenerateKeyPair() { return oak::generate(); }
+  // Generates an ed25519 key pair, and return the private key. The public key can be derived from
+  // the private key.
+  static std::string GenerateKeyPair() { return oak::generate_ed25519_key_pair(); }
 
+  // Signs the sha256 hash of the message using the given private key. Returns a SignedChallenge
+  // containing the signed hash and the public key corresponding to the input private key.
   static oak::identity::SignedChallenge Sign(std::string private_key, std::string input_string) {
-    return oak::sign(private_key, input_string);
+    return oak::sign_ed25519(private_key, input_string);
   }
 
+  // Loads the PEM-encoded private key, and returns the raw private key.
   static std::string LoadPrivateKey(const std::string& filename) {
     auto pem_map = oak::utils::read_pem(filename);
     oak::identity::SignedChallenge signature;
 
-    if (pem_map.find("PRIVATE KEY") == pem_map.end()) {
-      LOG(FATAL) << "No public key in the pem file";
+    if (pem_map.find(kPrivateKeyPemTag) == pem_map.end()) {
+      LOG(FATAL) << "No private key in the pem file";
     }
     std::string private_key;
-    if (!absl::Base64Unescape(pem_map["PUBLIC KEY"], &private_key)) {
-      LOG(FATAL) << "Failed to decode base64 public key";
+    if (!absl::Base64Unescape(pem_map[kPrivateKeyPemTag], &private_key)) {
+      LOG(FATAL) << "Failed to decode base64 private key";
     }
     return private_key;
   }
 
-  // Store the given private key as a base64-encoded string in a PEM file in the given path.
+  // Stores the given private key as a base64-encoded string in a PEM file in the given path.
   static void StorePrivateKey(const std::string& private_key, const std::string& filename) {
     oak::store_private_key(private_key, filename);
   }

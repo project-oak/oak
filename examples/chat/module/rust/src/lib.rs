@@ -21,7 +21,7 @@ use oak::{
     io::{ReceiverExt, Sender, SenderExt},
     Label,
 };
-use oak_abi::proto::oak::application::ConfigMap;
+use oak_abi::proto::oak::{application::ConfigMap, label::tag};
 use oak_services::proto::{
     google::rpc,
     oak::log::{LogInit, LogMessage},
@@ -98,18 +98,15 @@ oak::entrypoint_command_handler_init!(router => Router);
 /// declassify data in the future, therefore in this case we fail early with an appropriate error
 /// code to the client.
 fn is_valid_label(label: &Label) -> bool {
-    log::info!("The label is: {:?}", &label);
-    true
-    // TODO(#1357): Verify that the label corresponds to exactly a single PublicKeyIdentityTag.
-    // (label.confidentiality_tags.len() == 1)
-    //     && (if let Some(tag) = &label.confidentiality_tags[0].tag {
-    //         match tag {
-    //             tag::Tag::PublicKeyIdentityTag(_) => true,
-    //             _ => false,
-    //         }
-    //     } else {
-    //         false
-    //     })
+    (label.confidentiality_tags.len() == 1)
+        && (if let Some(tag) = &label.confidentiality_tags[0].tag {
+            match tag {
+                tag::Tag::PublicKeyIdentityTag(_) => true,
+                _ => false,
+            }
+        } else {
+            false
+        })
 }
 
 impl oak::CommandHandler for Router {

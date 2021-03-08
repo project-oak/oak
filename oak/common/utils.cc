@@ -59,6 +59,7 @@ std::map<std::string, std::string> read_pem(const std::string& filename) {
       std::string header = header_match[1].str();
       std::string footer = "-----END " + header + "-----";
       std::string value;
+      // Build the value by concatenating all the lines between the header and the footer.
       while (std::getline(pem_file, line) && line.find(footer) == std::string::npos) {
         value.append(line);
       }

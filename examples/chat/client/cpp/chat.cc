@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include <openssl/curve25519.h>
 #include <openssl/evp.h>
 
 #include <iomanip>
@@ -31,30 +30,12 @@
 #include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/nonce_generator.h"
 #include "oak_abi/proto/identity.pb.h"
-
-////
-#include <string>
-
-#include "absl/strings/str_cat.h"
-#include "openssl/curve25519.h"
-#include "tink/public_key_sign.h"
-#include "tink/public_key_verify.h"
-#include "tink/signature/ed25519_sign_key_manager.h"
-#include "tink/subtle/ed25519_verify_boringssl.h"
-#include "tink/util/istream_input_stream.h"
-
-using crypto::tink::Ed25519SignKeyManager;
-using ::crypto::tink::util::StatusOr;
-using ::google::crypto::tink::Ed25519KeyFormat;
-using ::google::crypto::tink::Ed25519PrivateKey;
-using ::google::crypto::tink::Ed25519PublicKey;
 
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, room_secret, "",
-          "Path to a file containing base64-encoded key pair for joining the room");
+          "Path to a file containing base64-encoded private key for joining the room");
 ABSL_FLAG(std::string, handle, "", "User handle to display");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
@@ -153,9 +134,9 @@ void Chat(Chat::Stub* stub, const std::string& user_handle) {
   SendLoop(stub, user_handle, done);
 }
 
-// Create a gRPC stub for an application, with the provided room access token, which will be used as
-// confidentiality label for any messages sent, and also to authenticate to the application in order
-// to read messages sent by other clients.
+// Create a gRPC stub for an application, with the provided signed challenge, which will be used for
+// adding a confidentiality label to any messages sent, and also to authenticate to the application
+// in order to read messages sent by other clients.
 std::unique_ptr<Chat::Stub> create_stub(std::string address, std::string ca_cert,
                                         oak::identity::SignedChallenge signed_challenge) {
   oak::label::Label label = oak::PublicKeyIdentityLabel(signed_challenge.public_key());
@@ -178,8 +159,8 @@ int main(int argc, char** argv) {
   std::string room_secret = absl::GetFlag(FLAGS_room_secret);
   std::string private_key;
 
-  // If no room secret, containing a private key, was provided, create a fresh private/public key
-  // pair, and store the private key in a file for later use. A secure key sharing mechanims is
+  // If no room secret, for retreiving a private key, was provided, create a fresh private/public
+  // key pair, and store the private key in a file for later use. A secure key sharing mechanims is
   // needed to share this file with other clients.
   if (room_secret.empty()) {
     private_key = oak::ApplicationClient::GenerateKeyPair();
