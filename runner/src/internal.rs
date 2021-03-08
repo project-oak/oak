@@ -46,6 +46,8 @@ pub enum Command {
     Format,
     CheckFormat,
     RunTests,
+    RunCargoTests,
+    RunBazelTests,
     RunTestsTsan,
     RunCargoDeny,
     RunCargoUdeps,

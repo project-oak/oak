@@ -22,7 +22,8 @@ jobs:
           - build-server --server-variant=unsafe
           - build-server --server-variant=base
           - build-server --server-variant=experimental
-          - run-tests
+          - run-cargo-tests
+          - run-bazel-tests
           - run-tests-tsan
           - run-examples --application-variant=rust
           - run-examples --application-variant=cpp
@@ -51,12 +52,17 @@ jobs:
         run: |
           docker pull gcr.io/oak-ci/oak:latest
           docker build --pull --cache-from=gcr.io/oak-ci/oak:latest --tag=gcr.io/oak-ci/oak:latest .
+          df --human-readable
 
       - name: Cargo crev
-        run: ./scripts/docker_run ./scripts/run_cargo_crev
+        run: |
+          ./scripts/docker_run ./scripts/run_cargo_crev
+          df --human-readable
 
       - name: Run command
-        run: ./scripts/docker_run ./scripts/runner ${{ matrix.cmd }}
+        run: |
+          ./scripts/docker_run ./scripts/runner ${{ matrix.cmd }}
+          df --human-readable
 
       - name: Generate root CA certs
         run: ./scripts/docker_run ./scripts/generate_root_ca_certs

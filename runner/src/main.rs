@@ -86,6 +86,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::RunExamples(ref opt) => run_examples(&opt),
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::RunTests => run_tests(),
+            Command::RunCargoTests => run_cargo_tests(),
+            Command::RunBazelTests => run_bazel_tests(),
             Command::RunTestsTsan => run_tests_tsan(),
             Command::Format => format(),
             Command::CheckFormat => check_format(),
@@ -344,14 +346,21 @@ fn build_server(opt: &BuildServer) -> Step {
 fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
-        steps: vec![
-            run_cargo_clippy(),
-            run_cargo_test(),
-            run_cargo_doc(),
-            run_bazel_build(),
-            run_bazel_test(),
-            run_clang_tidy(),
-        ],
+        steps: vec![run_cargo_tests(), run_bazel_tests()],
+    }
+}
+
+fn run_cargo_tests() -> Step {
+    Step::Multiple {
+        name: "cargo tests".to_string(),
+        steps: vec![run_cargo_clippy(), run_cargo_test(), run_cargo_doc()],
+    }
+}
+
+fn run_bazel_tests() -> Step {
+    Step::Multiple {
+        name: "bazel tests".to_string(),
+        steps: vec![run_bazel_build(), run_bazel_test(), run_clang_tidy()],
     }
 }
 
