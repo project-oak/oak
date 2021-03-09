@@ -22,7 +22,7 @@ jobs:
       matrix:
         coq_version:
           - '8.12'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
