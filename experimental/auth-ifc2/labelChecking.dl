@@ -7,11 +7,6 @@
 .decl isLabel(ell: label)
 .decl flowsTo(ell1: label, ell2: label)
 
-// in reality, this would extend from the more general logic including says and 
-// rules for delegation, simplified here since this is a quick prototype.
-.decl saysDowngrades(speaker: label, inModule: moduleName,
-    x: locationName, newLabel: label)
-
 isLabel("top").
 isLabel("bot").
 
@@ -23,6 +18,29 @@ flowsTo(p, p) :- isLabel(p).
 // trans
 flowsTo(p1, p3) :- flowsTo(p1, p2), flowsTo(p2, p3).
 // no antisym
+
+// saysDowngrades and saysCanSayDowngrades are a specializations of what a 
+// SecPal-like language would provide. says and canSay would be applicable to 
+// any fact. Here they are just specialized to the proposition saysDowngrades 
+// since this is a quick prototype. I'm assuming we would use a translation 
+// similar to the one described in Section 6 here:
+// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.123.2526&rep=rep1&type=pdf
+// and that rules for the semantics in Section 3 are generated for each fact.
+//
+// This relation is used for downgrading
+.decl saysDowngrades(speaker: label, inModule: moduleName,
+    x: locationName, newLabel: label)
+
+// This relation is used for delegation
+.decl saysCanSayDowngrades(speaker: label, delegatee: label,
+    inModule: moduleName, x: locationName, newLabel: label)
+
+.decl saysCanActAs(speaker: label, acting: 
+
+// relation for delegating downgrades
+saysDowngrades(a, m, x, ell) :-
+    saysDowngrades(b, m, x, ell),
+    saysCanSayDowngrades(a, b, m, x, ell).
 
 // This is a labl environment mapping locations to labels. It is populated by 
 // the language for describing particles + policies.
