@@ -1753,6 +1753,7 @@ dependencies = [
  "oak_abi",
  "oak_client",
  "oak_runtime",
+ "oak_sign",
  "prost",
  "rand",
  "rustls",

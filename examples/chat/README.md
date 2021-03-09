@@ -34,7 +34,7 @@ Another party can then join the same chat room by setting `room_secret` to a
 path to a file containing the private key:
 
 ```bash
-./scripts/runner --logs run-examples --run-server=false --example-name=chat --client-additional-args=--test=false --client-additional-args=--room_secret="chat-room.key"
+./scripts/runner --logs run-examples --run-server=false --example-name=chat --client-additional-args=--test=false --client-additional-args=--room_secret=chat-room.key
 ```
 
 ## CI Invocation

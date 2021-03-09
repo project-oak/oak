@@ -16,7 +16,6 @@
 
 #include "oak/common/oak_sign.h"
 
-#include "absl/strings/escaping.h"
 #include "glog/logging.h"
 #include "oak/common/utils.h"
 #include "tink/signature/ed25519_sign_key_manager.h"
@@ -48,7 +47,7 @@ std::string generate_ed25519_key_pair() {
 
 void store_private_key(const std::string& private_key, const std::string& private_key_path) {
   std::map<std::string, std::string> pri_map;
-  pri_map[kPrivateKeyPemTag] = absl::Base64Escape(private_key);
+  pri_map[kPrivateKeyPemTag] = private_key;
   oak::utils::write_pem(pri_map, private_key_path);
 }
 
@@ -60,7 +59,7 @@ oak::identity::SignedChallenge sign_ed25519(const std::string& private_key,
     LOG(FATAL) << "Failed to compute sha256 hash.";
   }
 
-  // Retreive private and public keys from the input private key string
+  // Retrieve private and public keys from the input private key string
   crypto::tink::util::IstreamInputStream input_stream(
       absl::make_unique<std::stringstream>(private_key));
 
@@ -91,12 +90,7 @@ bool compute_sha256_hash(const std::string& unhashed, std::string& hashed) {
   }
   auto digest = digest_result.ValueOrDie();
   unsigned char* hash = digest.data();
-  // Convert the byte array into string
-  std::stringstream ss;
-  for (unsigned int i = 0; i < digest.size(); ++i) {
-    ss << (char)hash[i];
-  }
-  hashed = ss.str();
+  hashed = std::string(reinterpret_cast<char const*>(hash), digest.size());
   return true;
 }
 

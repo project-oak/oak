@@ -27,6 +27,10 @@ namespace oak {
 // effectively treated as the name of a custom HTTP header.
 ABSL_CONST_INIT extern const char kOakSignedChallengeGrpcMetadataKey[];
 
+// The fixed challenge for challenge-response-based authentication.
+// TODO(#1357): Remove, or move to tests, when we have a per-connection challenge string.
+ABSL_CONST_INIT extern const char kOakChallenge[];
+
 // This class injects the provided signed challenge to each outgoing gRPC call, passed over gRPC
 // binary metadata.
 //

@@ -71,6 +71,16 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "utils_test",
+    srcs = ["utils_test.cc"],
+    deps = [
+        ":utils",
+        "@gtest//:gtest_main",
     ],
 )
 

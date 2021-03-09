@@ -141,7 +141,7 @@ std::unique_ptr<Chat::Stub> create_stub(std::string address, std::string ca_cert
                                         oak::identity::SignedChallenge signed_challenge) {
   oak::label::Label label = oak::PublicKeyIdentityLabel(signed_challenge.public_key());
   // Connect to the Oak Application.
-  auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(
+  auto stub = Chat::NewStub(oak::ApplicationClient::CreatePrivateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label, signed_challenge));
   if (stub == nullptr) {
     LOG(FATAL) << "Failed to create application stub";
@@ -160,8 +160,8 @@ int main(int argc, char** argv) {
   std::string private_key;
 
   // If no room secret, for retreiving a private key, was provided, create a fresh private/public
-  // key pair, and store the private key in a file for later use. A secure key sharing mechanims is
-  // needed to share this file with other clients.
+  // key pair, and store the private key in a file for later use.
+  // TODO(#1905): A secure key sharing mechanims is needed to share this file with other clients.
   if (room_secret.empty()) {
     private_key = oak::ApplicationClient::GenerateKeyPair();
     oak::ApplicationClient::StorePrivateKey(private_key, "chat-room.key");
@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
 
   // Use the room's secret to sign the challenge required for authenticating the client.
   oak::identity::SignedChallenge signed_challenge =
-      oak::ApplicationClient::Sign(private_key, "oak-challenge");
+      oak::ApplicationClient::Sign(private_key, oak::kOakChallenge);
 
   std::unique_ptr<Chat::Stub> stub;
   stub = create_stub(address, ca_cert, signed_challenge);

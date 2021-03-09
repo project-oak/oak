@@ -20,6 +20,7 @@
 #include <map>
 #include <regex>
 
+#include "absl/strings/escaping.h"
 #include "glog/logging.h"
 
 namespace oak {
@@ -45,25 +46,31 @@ void write_file(const std::string& data, const std::string& filename) {
 }
 
 std::map<std::string, std::string> read_pem(const std::string& filename) {
-  std::map<std::string, std::string> content;
-  std::ifstream pem_file(filename, std::ifstream::in);
-  if (!pem_file.is_open()) {
-    LOG(FATAL) << "Could not open file '" << filename << "'";
-  }
+  auto pem_encoded_data = read_file(filename);
+  return decode_pem(pem_encoded_data);
+}
 
+std::map<std::string, std::string> decode_pem(const std::string& pem_encoded_data) {
+  std::map<std::string, std::string> content;
+  std::stringstream streamed_pem(pem_encoded_data);
   std::string line;
+
   std::regex header_regex("-----BEGIN (.*)-----");
-  while (std::getline(pem_file, line)) {
+  while (std::getline(streamed_pem, line, '\n')) {
     std::smatch header_match;
     if (std::regex_search(line, header_match, header_regex)) {
       std::string header = header_match[1].str();
       std::string footer = "-----END " + header + "-----";
       std::string value;
       // Build the value by concatenating all the lines between the header and the footer.
-      while (std::getline(pem_file, line) && line.find(footer) == std::string::npos) {
+      while (std::getline(streamed_pem, line, '\n') && line.find(footer) == std::string::npos) {
         value.append(line);
       }
-      content[header] = value;
+      std::string decoded_value;
+      if (!absl::Base64Unescape(value, &decoded_value)) {
+        LOG(FATAL) << "Could not decode base64 value.";
+      };
+      content[header] = decoded_value;
     }
   }
   return content;
@@ -74,15 +81,24 @@ void write_pem(const std::map<std::string, std::string>& map, const std::string&
   if (!out_file.is_open()) {
     LOG(FATAL) << "Could not open file '" << filename << "'";
   }
+
+  auto pem_encoded_data = encode_pem(map);
+  out_file << pem_encoded_data;
+
+  out_file.close();
+}
+
+std::string encode_pem(const std::map<std::string, std::string>& map) {
+  std::stringstream buffer;
   for (const auto& item : map) {
     std::string header = "-----BEGIN " + item.first + "-----";
     std::string footer = "-----END " + item.first + "-----";
 
-    out_file << header << "\n";
-    out_file << item.second << "\n";
-    out_file << footer << "\n";
+    buffer << header << "\n";
+    buffer << absl::Base64Escape(item.second) << "\n";
+    buffer << footer << "\n\n";
   }
-  out_file.close();
+  return buffer.str();
 }
 
 }  // namespace utils

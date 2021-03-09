@@ -17,7 +17,6 @@
 use assert_matches::assert_matches;
 use chat_grpc::proto::{chat_client::ChatClient, Message, SendMessageRequest, SubscribeRequest};
 use log::info;
-use oak_client::interceptors;
 use serial_test::serial;
 use std::time::Duration;
 
@@ -146,11 +145,9 @@ impl<'a> Chatter<'a> {
         );
 
         // Use key pair to label requests and authenticate this client.
-        let (channel, label_interceptor) =
-            oak_tests::authenticated_channel_and_interceptor(&room_key_pair.pkcs8_public_key())
-                .await;
-        let auth_interceptor = interceptors::auth::AuthInterceptor::create(room_key_pair.clone());
-        let interceptor = interceptors::combine(label_interceptor, auth_interceptor);
+        let (channel, interceptor) =
+            oak_tests::private_channel_and_interceptor(room_key_pair.clone()).await;
+
         let client = ChatClient::with_interceptor(channel, interceptor);
         Chatter {
             client,

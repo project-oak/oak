@@ -1323,6 +1323,7 @@ dependencies = [
  "oak_abi",
  "oak_client",
  "oak_runtime",
+ "oak_sign",
  "prost",
  "rand",
  "rustls 0.19.0",

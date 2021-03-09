@@ -65,8 +65,8 @@ class ApplicationClient {
   }
 
   // Returns a gRPC Channel connecting to the specified address, initialised with a fixed Oak Label
-  // and the given signature.
-  static std::shared_ptr<grpc::Channel> CreateChannel(
+  // and signed with the given signed challenge for authentication.
+  static std::shared_ptr<grpc::Channel> CreatePrivateChannel(
       std::string addr, std::shared_ptr<grpc::ChannelCredentials> channel_credentials,
       oak::label::Label label, oak::identity::SignedChallenge signed_challenge) {
     auto label_call_credentials =
@@ -118,7 +118,7 @@ class ApplicationClient {
     return decoded_public_key;
   }
 
-  // Generates an ed25519 key pair, and return the private key. The public key can be derived from
+  // Generates an ed25519 key pair, and returns the private key. The public key can be derived from
   // the private key.
   static std::string GenerateKeyPair() { return oak::generate_ed25519_key_pair(); }
 
@@ -131,16 +131,12 @@ class ApplicationClient {
   // Loads the PEM-encoded private key, and returns the raw private key.
   static std::string LoadPrivateKey(const std::string& filename) {
     auto pem_map = oak::utils::read_pem(filename);
-    oak::identity::SignedChallenge signature;
 
     if (pem_map.find(kPrivateKeyPemTag) == pem_map.end()) {
       LOG(FATAL) << "No private key in the pem file";
     }
-    std::string private_key;
-    if (!absl::Base64Unescape(pem_map[kPrivateKeyPemTag], &private_key)) {
-      LOG(FATAL) << "Failed to decode base64 private key";
-    }
-    return private_key;
+
+    return pem_map[kPrivateKeyPemTag];
   }
 
   // Stores the given private key as a base64-encoded string in a PEM file in the given path.

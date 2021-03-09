@@ -25,7 +25,9 @@ use oak_abi::{
         WebAssemblyConfiguration,
     },
 };
-use oak_client::interceptors::label::LabelInterceptor;
+use oak_client::interceptors::{
+    self, auth::AuthInterceptor, label::LabelInterceptor, CombinedInterceptor,
+};
 use std::{collections::HashMap, path::PathBuf, process::Command, sync::Arc};
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity};
 
@@ -277,10 +279,20 @@ pub async fn public_channel_and_interceptor() -> (Channel, impl Into<tonic::Inte
 }
 
 /// Build a channel and a label interceptor suitable for building a client that connects to a
-/// Runtime under test. The interceptor uses the given public key to attach a public-key identity
-/// tag to every request.
-pub async fn authenticated_channel_and_interceptor(
-    public_key: &[u8],
-) -> (Channel, LabelInterceptor) {
-    channel_and_interceptor(&confidentiality_label(public_key_identity_tag(public_key))).await
+/// Runtime under test. The interceptor uses the given key pair to attach a signature and public-key
+/// identity tag to every request.
+pub async fn private_channel_and_interceptor(
+    key_pair: oak_sign::KeyPair,
+) -> (
+    Channel,
+    CombinedInterceptor<LabelInterceptor, AuthInterceptor>,
+) {
+    let (channel, label_interceptor) = channel_and_interceptor(&confidentiality_label(
+        public_key_identity_tag(&key_pair.pkcs8_public_key()),
+    ))
+    .await;
+    let auth_interceptor = AuthInterceptor::create(key_pair);
+    let interceptor = interceptors::combine(label_interceptor, auth_interceptor);
+
+    (channel, interceptor)
 }

@@ -21,8 +21,11 @@ namespace oak {
 //
 // See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md.
 //
-// Keep in sync with OAK_SIGNED_CHALLENGE_GRPC_METADATA_KEY in /oak_abi/src/lib.rs.
+// Keep in sync with OAK_SIGNED_CHALLENGE_GRPC_METADATA_KEY in `oak_abi/src/lib.rs`.
 const char kOakSignedChallengeGrpcMetadataKey[] = "x-oak-signed-auth-challenge-bin";
+
+// Keep in sync with OAK_CHALLENGE in `oak_abi/src/lib.rs`.
+const char kOakChallenge[] = "oak-challenge";
 
 SignatureMetadata::SignatureMetadata(const oak::identity::SignedChallenge signed_challenge)
     : serialized_signed_challenge_(signed_challenge.SerializeAsString()) {}
