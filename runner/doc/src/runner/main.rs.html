@@ -1471,6 +1471,15 @@
 <span id="1468">1468</span>
 <span id="1469">1469</span>
 <span id="1470">1470</span>
+<span id="1471">1471</span>
+<span id="1472">1472</span>
+<span id="1473">1473</span>
+<span id="1474">1474</span>
+<span id="1475">1475</span>
+<span id="1476">1476</span>
+<span id="1477">1477</span>
+<span id="1478">1478</span>
+<span id="1479">1479</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1560,6 +1569,8 @@
             <span class="ident">Command</span>::<span class="ident">RunExamples</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_examples</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>),
             <span class="ident">Command</span>::<span class="ident">BuildServer</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">build_server</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>),
             <span class="ident">Command</span>::<span class="ident">RunTests</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_tests</span>(),
+            <span class="ident">Command</span>::<span class="ident">RunCargoTests</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_cargo_tests</span>(),
+            <span class="ident">Command</span>::<span class="ident">RunBazelTests</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_bazel_tests</span>(),
             <span class="ident">Command</span>::<span class="ident">RunTestsTsan</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_tests_tsan</span>(),
             <span class="ident">Command</span>::<span class="ident">Format</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">format</span>(),
             <span class="ident">Command</span>::<span class="ident">CheckFormat</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">check_format</span>(),
@@ -1818,14 +1829,21 @@
 <span class="kw">fn</span> <span class="ident">run_tests</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
     <span class="ident">Step</span>::<span class="ident">Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;tests&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="macro">vec</span><span class="macro">!</span>[
-            <span class="ident">run_cargo_clippy</span>(),
-            <span class="ident">run_cargo_test</span>(),
-            <span class="ident">run_cargo_doc</span>(),
-            <span class="ident">run_bazel_build</span>(),
-            <span class="ident">run_bazel_test</span>(),
-            <span class="ident">run_clang_tidy</span>(),
-        ],
+        <span class="ident">steps</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">run_cargo_tests</span>(), <span class="ident">run_bazel_tests</span>()],
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">run_cargo_tests</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    <span class="ident">Step</span>::<span class="ident">Multiple</span> {
+        <span class="ident">name</span>: <span class="string">&quot;cargo tests&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="ident">steps</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">run_cargo_clippy</span>(), <span class="ident">run_cargo_test</span>(), <span class="ident">run_cargo_doc</span>()],
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">run_bazel_tests</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    <span class="ident">Step</span>::<span class="ident">Multiple</span> {
+        <span class="ident">name</span>: <span class="string">&quot;bazel tests&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="ident">steps</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">run_bazel_build</span>(), <span class="ident">run_bazel_test</span>(), <span class="ident">run_clang_tidy</span>()],
     }
 }
 
