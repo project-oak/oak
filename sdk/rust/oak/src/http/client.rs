@@ -31,3 +31,13 @@ pub fn init(authority: &str) -> Result<Sender<HttpInvocation>, OakStatus> {
     };
     crate::io::node_create::<HttpInvocation>("http_client", &label, &config)
 }
+
+pub fn init_credentialed(authority: &str, credentials: (String, String)) -> Result<Sender<HttpInvocation>, OakStatus> {
+    let config = crate::node_config::http_credentialed_client(authority, credentials);
+    let label = if authority.is_empty() {
+        Label::public_untrusted()
+    } else {
+        confidentiality_label(tls_endpoint_tag(authority))
+    };
+    crate::io::node_create::<HttpInvocation>("http_client", &label, &config)
+}

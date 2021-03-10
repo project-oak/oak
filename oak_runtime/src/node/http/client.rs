@@ -26,7 +26,7 @@ use http::{uri::Scheme, Uri};
 use hyper::body::to_bytes;
 use log::{debug, error, info, warn};
 use maplit::hashset;
-use oak_abi::{proto::oak::application::HttpClientConfiguration, Handle, OakStatus};
+use oak_abi::{proto::oak::application::HttpClientConfiguration, proto::oak::application::HttpCredentialedClientConfiguration, Handle, OakStatus};
 use oak_io::{handle::ReadHandle, OakError};
 use oak_services::proto::oak::encap::{HeaderMap, HttpResponse};
 use std::io;
@@ -114,7 +114,20 @@ impl HttpClientNode {
         config: HttpClientConfiguration,
         root_ca: crate::tls::Certificate,
     ) -> Result<Self, ConfigurationError> {
-        let http_client = create_client(root_ca);
+        let http_client = create_client(root_ca, None);
+        Ok(HttpClientNode {
+            node_name: node_name.to_string(),
+            http_client,
+            authority: config.authority,
+        })
+    }
+
+    pub fn new_credentialed(
+        node_name: &str,
+        config: HttpCredentialedClientConfiguration,
+        root_ca: crate::tls::Certificate,
+    ) -> Result<Self, ConfigurationError> {
+        let http_client = create_client(root_ca, Some((config.certificate_pem, config.private_key_pem)));
         Ok(HttpClientNode {
             node_name: node_name.to_string(),
             http_client,
@@ -298,7 +311,7 @@ fn create_async_runtime() -> tokio::runtime::Runtime {
 }
 
 /// Creates a client that allows `Uri`s with either the `HTTP` or the `HTTPS` scheme.
-fn create_client(root_ca: crate::tls::Certificate) -> HyperClient {
+fn create_client(root_ca: crate::tls::Certificate, credentials: Option<(String, String)>) -> HyperClient {
     // Build an HTTP connector which supports HTTPS too.
     let mut http = hyper::client::HttpConnector::new();
     // Allow the client to handle both HTTP and HTTPS requests.
@@ -314,6 +327,21 @@ fn create_client(root_ca: crate::tls::Certificate) -> HyperClient {
     tls.root_store
         .add_pem_file(&mut ca_reader)
         .expect("failed to load custom CA store");
+    if let Some((client_certificate_pem, client_private_key_pem)) = credentials {
+        // set the client certificate for the TLS session
+        let client_certs: Vec<rustls::Certificate> = {
+            let mut cursor = std::io::Cursor::new(client_certificate_pem);
+            rustls::internal::pemfile::certs(&mut cursor).unwrap()
+        };
+
+        let client_key: Vec<rustls::PrivateKey> = {
+            let mut cursor = std::io::Cursor::new(client_private_key_pem);
+            rustls::internal::pemfile::rsa_private_keys(&mut cursor).unwrap()
+        };
+
+        tls.set_single_client_cert(client_certs, client_key[0].clone()).unwrap();
+    }
+
     // Join the above part into an HTTPS connector.
     let https = hyper_rustls::HttpsConnector::from((http, tls));
     hyper::client::Client::builder().build(https)

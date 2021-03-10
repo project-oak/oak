@@ -18,7 +18,7 @@
 
 use oak_abi::proto::oak::application::{
     node_configuration::ConfigType, GrpcClientConfiguration, GrpcServerConfiguration,
-    HttpClientConfiguration, HttpServerConfiguration, LogConfiguration, NodeConfiguration,
+    HttpClientConfiguration, HttpCredentialedClientConfiguration, HttpServerConfiguration, LogConfiguration, NodeConfiguration,
     WebAssemblyConfiguration,
 };
 
@@ -43,6 +43,16 @@ pub fn http_client(authority: &str) -> NodeConfiguration {
         config_type: Some(ConfigType::HttpClientConfig(HttpClientConfiguration {
             authority: authority.to_string(),
         })),
+    }
+}
+
+pub fn http_credentialed_client(authority: &str, credentials: (String, String)) -> NodeConfiguration {
+    NodeConfiguration {
+        config_type: Some(ConfigType::HttpCredentialedClientConfig(HttpCredentialedClientConfiguration {
+            authority: authority.to_string(),
+            certificate_pem: credentials.0,
+            private_key_pem: credentials.1,
+        }))
     }
 }
 

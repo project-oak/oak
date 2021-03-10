@@ -267,6 +267,23 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                     privilege: http::client::get_privilege(&config.authority),
                 })
             }
+            Some(ConfigType::HttpCredentialedClientConfig(config)) => {
+                let http_client_root_tls_certificate = self
+                    .secure_server_configuration
+                    .http_config
+                    .clone()
+                    .expect("no HTTP configuration provided to Oak Runtime")
+                    .http_client_root_tls_certificate
+                    .expect("no root TLS certificate provided to Oak Runtime");
+                Ok(CreatedNode {
+                    instance: Box::new(http::client::HttpClientNode::new_credentialed(
+                        node_name,
+                        config.clone(),
+                        http_client_root_tls_certificate,
+                    )?),
+                    privilege: http::client::get_privilege(&config.authority)
+                })
+            }
             None => Err(ConfigurationError::InvalidNodeConfiguration),
         }
     }
