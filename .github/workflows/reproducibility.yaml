@@ -8,7 +8,7 @@ on:
 
 jobs:
   build_reproducibility_index:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Checkout branch

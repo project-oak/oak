@@ -8,7 +8,7 @@ on:
 
 jobs:
   runner:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 120
     # We use the same job template, but parametrize the actual command to be passed to the runner
     # binary using the matrix strategy, so that we get the commands running in parallel.
@@ -73,7 +73,7 @@ jobs:
         run: ./scripts/docker_run ./scripts/git_check_diff
 
   android-runner:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
     steps:
