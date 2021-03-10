@@ -18,7 +18,6 @@
 
 #include "glog/logging.h"
 #include "oak/common/utils.h"
-#include "tink/signature/ed25519_sign_key_manager.h"
 #include "tink/subtle/ed25519_verify_boringssl.h"
 #include "tink/subtle/subtle_util_boringssl.h"
 #include "tink/util/istream_input_stream.h"
@@ -35,30 +34,7 @@ using ::google::crypto::tink::Ed25519PublicKey;
 namespace oak {
 const char kPrivateKeyPemTag[] = "PRIVATE KEY";
 
-std::string generate_ed25519_key_pair() {
-  StatusOr<Ed25519PrivateKey> key_or = Ed25519SignKeyManager().CreateKey(Ed25519KeyFormat());
-  if (!key_or.ok()) {
-    LOG(FATAL) << "Could not generate Ed25519 key pair";
-  }
-  Ed25519PrivateKey key = key_or.ValueOrDie();
-
-  return key.key_value();
-}
-
-void store_private_key(const std::string& private_key, const std::string& private_key_path) {
-  std::map<std::string, std::string> pri_map;
-  pri_map[kPrivateKeyPemTag] = private_key;
-  oak::utils::write_pem(pri_map, private_key_path);
-}
-
-oak::identity::SignedChallenge sign_ed25519(const std::string& private_key,
-                                            const std::string& input_string) {
-  // Compute sha256 hash of the input string
-  std::string hash_value;
-  if (!compute_sha256_hash(input_string, hash_value)) {
-    LOG(FATAL) << "Failed to compute sha256 hash.";
-  }
-
+Ed25519PrivateKey parse_key(const std::string& private_key) {
   // Retrieve private and public keys from the input private key string
   crypto::tink::util::IstreamInputStream input_stream(
       absl::make_unique<std::stringstream>(private_key));
@@ -69,16 +45,37 @@ oak::identity::SignedChallenge sign_ed25519(const std::string& private_key,
     LOG(FATAL) << "Couldn't derive keys from the given private key";
   }
   Ed25519PrivateKey key = key_or.ValueOrDie();
+  return key;
+}
+
+KeyPair::KeyPair(const std::string& private_key) : KeyPair(parse_key(private_key)) {}
+
+std::unique_ptr<KeyPair> KeyPair::Generate() {
+  StatusOr<Ed25519PrivateKey> key_or = Ed25519SignKeyManager().CreateKey(Ed25519KeyFormat());
+  if (!key_or.ok()) {
+    LOG(FATAL) << "Could not generate Ed25519 key pair";
+  }
+  Ed25519PrivateKey key = key_or.ValueOrDie();
+  std::unique_ptr<KeyPair> key_pair(new KeyPair(key));
+  return key_pair;
+}
+
+Signature KeyPair::Sign(const std::string& message) {
+  // Compute sha256 hash of the input string
+  std::string hash_value;
+  if (!compute_sha256_hash(message, hash_value)) {
+    LOG(FATAL) << "Failed to compute sha256 hash.";
+  }
 
   // Sign the hash with the private key
-  auto signer_or = Ed25519SignKeyManager().GetPrimitive<crypto::tink::PublicKeySign>(key);
+  auto signer_or = Ed25519SignKeyManager().GetPrimitive<crypto::tink::PublicKeySign>(key_);
   std::string signed_hash = signer_or.ValueOrDie()->Sign(hash_value).ValueOrDie();
 
-  oak::identity::SignedChallenge signed_challenge;
-  signed_challenge.set_signed_hash(signed_hash);
-  signed_challenge.set_public_key(key.public_key().key_value());
+  Signature signature;
+  signature.signed_hash = signed_hash;
+  signature.public_key = key_.public_key().key_value();
 
-  return signed_challenge;
+  return signature;
 }
 
 bool compute_sha256_hash(const std::string& unhashed, std::string& hashed) {

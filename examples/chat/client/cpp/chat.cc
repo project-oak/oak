@@ -35,7 +35,7 @@
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, room_secret, "",
-          "Path to a file containing base64-encoded private key for joining the room");
+          "Path to a PEM file containing the private key for joining the room");
 ABSL_FLAG(std::string, handle, "", "User handle to display");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
 
@@ -157,21 +157,22 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
   std::string room_secret = absl::GetFlag(FLAGS_room_secret);
-  std::string private_key;
+  std::unique_ptr<oak::KeyPair> key_pair;
 
-  // If no room secret, for retreiving a private key, was provided, create a fresh private/public
-  // key pair, and store the private key in a file for later use.
-  // TODO(#1905): A secure key sharing mechanims is needed to share this file with other clients.
+  // TODO(#1905): A secure mechanism for sharing and retreiving the private key is needed. In the
+  // meantime, we use `room_secret` to pass in a file containing the private key. If no room secret
+  // is provided, we create a fresh private/public key pair, and store the private key in a file for
+  // later use.
   if (room_secret.empty()) {
-    private_key = oak::ApplicationClient::GenerateKeyPair();
-    oak::ApplicationClient::StorePrivateKey(private_key, "chat-room.key");
+    key_pair = oak::KeyPair::Generate();
+    oak::ApplicationClient::StoreKeyPair(key_pair, "chat-room.key");
   } else {
-    private_key = oak::ApplicationClient::LoadPrivateKey(room_secret);
+    key_pair = oak::ApplicationClient::LoadKeyPair(room_secret);
   }
 
   // Use the room's secret to sign the challenge required for authenticating the client.
   oak::identity::SignedChallenge signed_challenge =
-      oak::ApplicationClient::Sign(private_key, oak::kOakChallenge);
+      oak::ApplicationClient::SignChallenge(key_pair, oak::kOakChallenge);
 
   std::unique_ptr<Chat::Stub> stub;
   stub = create_stub(address, ca_cert, signed_challenge);

@@ -118,30 +118,34 @@ class ApplicationClient {
     return decoded_public_key;
   }
 
-  // Generates an ed25519 key pair, and returns the private key. The public key can be derived from
-  // the private key.
-  static std::string GenerateKeyPair() { return oak::generate_ed25519_key_pair(); }
-
-  // Signs the sha256 hash of the message using the given private key. Returns a SignedChallenge
-  // containing the signed hash and the public key corresponding to the input private key.
-  static oak::identity::SignedChallenge Sign(std::string private_key, std::string input_string) {
-    return oak::sign_ed25519(private_key, input_string);
+  // Signs the sha256 hash of the input challenge with the give key pair. Returns a
+  // SignedChallenge containing the signed hash and the public key part of the key pair.
+  static oak::identity::SignedChallenge SignChallenge(std::unique_ptr<oak::KeyPair>& key_pair,
+                                                      std::string challenge) {
+    oak::Signature signature = key_pair->Sign(challenge);
+    oak::identity::SignedChallenge signed_challenge;
+    signed_challenge.set_public_key(signature.public_key);
+    signed_challenge.set_signed_hash(signature.signed_hash);
+    return signed_challenge;
   }
 
-  // Loads the PEM-encoded private key, and returns the raw private key.
-  static std::string LoadPrivateKey(const std::string& filename) {
+  // Loads the PEM-encoded private key, and returns a KeyPair object derived from it.
+  static std::unique_ptr<oak::KeyPair> LoadKeyPair(const std::string& filename) {
     auto pem_map = oak::utils::read_pem(filename);
 
     if (pem_map.find(kPrivateKeyPemTag) == pem_map.end()) {
       LOG(FATAL) << "No private key in the pem file";
     }
 
-    return pem_map[kPrivateKeyPemTag];
+    std::unique_ptr<oak::KeyPair> key_pair(new oak::KeyPair(pem_map[kPrivateKeyPemTag]));
+    return key_pair;
   }
 
-  // Stores the given private key as a base64-encoded string in a PEM file in the given path.
-  static void StorePrivateKey(const std::string& private_key, const std::string& filename) {
-    oak::store_private_key(private_key, filename);
+  // Stores the PEM-encoding of the private key part of the given key pair in the given path.
+  static void StoreKeyPair(std::unique_ptr<oak::KeyPair>& key_pair, const std::string& filename) {
+    std::map<std::string, std::string> pri_map;
+    pri_map[kPrivateKeyPemTag] = key_pair->GetPrivateKey();
+    oak::utils::write_pem(pri_map, filename);
   }
 };
 

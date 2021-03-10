@@ -16,23 +16,38 @@
 
 #include "absl/base/attributes.h"
 #include "oak_abi/proto/identity.pb.h"
+#include "tink/signature/ed25519_sign_key_manager.h"
+
+using ::google::crypto::tink::Ed25519PrivateKey;
 
 namespace oak {
 
 // `PRIVATE KEY` tag for reading and writing from and to PEM files.
 ABSL_CONST_INIT extern const char kPrivateKeyPemTag[];
 
-// Generates an ed25519 key pair, and returns the private key. The public key can be derived from
-// the private key.
-std::string generate_ed25519_key_pair();
+struct Signature {
+  std::string signed_hash;
+  std::string public_key;
+};
 
-// Stores the given private key in a PEM file in the given path.
-void store_private_key(const std::string& private_key, const std::string& private_key_path);
+class KeyPair {
+ public:
+  KeyPair(const std::string& private_key);
 
-// Signs the sha256 hash of the message using the given private key. Returns a SignedChallenge
-// containing the signed hash and the public key corresponding to the input private key.
-oak::identity::SignedChallenge sign_ed25519(const std::string& private_key,
-                                            const std::string& input_string);
+  // Signs the sha256 hash of the given message using private key in this KeyPair. Returns a
+  // Signature containing the signed hash and the public key in this KeyPair.
+  Signature Sign(const std::string& message);
+
+  std::string GetPublicKey() { return key_.public_key().key_value(); }
+  std::string GetPrivateKey() { return key_.key_value(); }
+
+  // Generates a new KeyPair instance containing an ed25519 key pair.
+  static std::unique_ptr<KeyPair> Generate();
+
+ private:
+  Ed25519PrivateKey key_;
+  KeyPair(const Ed25519PrivateKey private_key) : key_(private_key) {}
+};
 
 // Computes the sha256 hash of the unhashed input string. Returns true if hashing is successful. In
 // this case the hashed value is stored in the second input parameter.
