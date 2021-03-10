@@ -685,8 +685,56 @@ TODO: describe use of storage
 
 ## Using External gRPC Services
 
-TODO: describe use of gRPC client pseudo-Node to connect to external gRPC
-services.
+To allow Oak applications connect to external gRPC services, the Oak SDK
+provides a convenient API for creating gRPC Client pseudo nodes:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/aggregator/module/rust/src/lib.rs Rust /.*let grpc_client_invocation_sender.*/ /gRPC client.*/)
+```Rust
+        let grpc_client_invocation_sender = oak::grpc::client::init(&config.backend_server_address)
+            .context("Couldn't create gRPC client")?;
+```
+<!-- prettier-ignore-end -->
+
+The client is initialized with the `address` of the external gRPC service (e.g.,
+`https://localhost:8888`). The `init` method returns a handle to a channel that
+can be used for sending invocations to the client pseudo node. With this handle
+gRPC client stub can be created, as in the `Aggregator` example:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/aggregator/module/rust/src/handler.rs Rust /.*oak::WithInit/ /^}$/)
+```Rust
+impl oak::WithInit for Handler {
+    type Init = HandlerInit;
+
+    fn create(init: Self::Init) -> Self {
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
+        let grpc_client_invocation_sender = init
+            .grpc_client_invocation_sender
+            .expect("Couldn't receive gRPC invocation sender")
+            .sender
+            .expect("Empty gRPC invocation sender");
+
+        Self::new(grpc_client_invocation_sender)
+    }
+}
+```
+<!-- prettier-ignore-end -->
+
+The call to `Self::new` above creates an instance of `AggregatorClient`
+initialized with the write-half of the channel to the gRPC client pseudo node:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/aggregator/module/rust/src/handler.rs Rust /.*fn new/ /^    }$/)
+```Rust
+    fn new(invocation_sender: Sender<grpc::Invocation>) -> Self {
+        Self {
+            backend_client: AggregatorClient(invocation_sender),
+            aggregators: HashMap::new(),
+        }
+    }
+```
+<!-- prettier-ignore-end -->
 
 ## Using External HTTP Services
 
