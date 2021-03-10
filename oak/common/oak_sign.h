@@ -32,17 +32,12 @@ struct Signature {
 
 class KeyPair {
  public:
-  // The input `private_key` should be a 64-byte key, composed of a 32-byte ed25519 private key,
-  // followed by the corresponding 32-byte public key.
-  // Note: This parameter is called `private_key`, although it also contains the public key, because
-  // this is what `openssl` refers to as an ed25519 private key.
-  //
-  // See https://github.com/google/boringssl/blob/master/include/openssl/curve25519.h
-  KeyPair(const std::string& private_key);
-
   // Signs the sha256 hash of the given message using private key in this KeyPair. Returns a
   // Signature containing the signed hash and the public key in this KeyPair.
   Signature Sign(const std::string& message);
+
+  // Generates a PKCS#8 encoded string from this key pair.
+  std::string ToPkcs8();
 
   std::string GetPublicKey() { return key_.public_key().key_value(); }
   std::string GetPrivateKey() { return key_.key_value(); }
@@ -50,13 +45,18 @@ class KeyPair {
   // Generates a new KeyPair instance containing an ed25519 key pair.
   static std::unique_ptr<KeyPair> Generate();
 
+  // Creates a KeyPair instance from a raw unencrypted PKCS#8 encoded private key. A PKCS#8 encoded
+  // string containing both the 32-byte private key (or seed), and the corresponding 32-byte public
+  // key is expected.
+  static std::unique_ptr<KeyPair> FromPkcs8(const std::string& pkcs8_private_key);
+
  private:
   Ed25519PrivateKey key_;
   KeyPair(const Ed25519PrivateKey private_key) : key_(private_key) {}
 };
 
 // Computes the sha256 hash of the unhashed input string. Returns true if hashing is successful. In
-// this case the hashed value is stored in the second input parameter.
+// this case the hashed value is stored in the second input parameter as an octet string.
 bool compute_sha256_hash(const std::string& unhashed, std::string& hashed);
 
 }  // namespace oak

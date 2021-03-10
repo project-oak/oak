@@ -16,7 +16,9 @@
 
 #include "oak/common/oak_sign.h"
 
+#include "absl/strings/escaping.h"
 #include "glog/logging.h"
+#include "oak/common/pkcs8.h"
 #include "oak/common/utils.h"
 #include "tink/subtle/ed25519_verify_boringssl.h"
 #include "tink/subtle/subtle_util_boringssl.h"
@@ -30,27 +32,29 @@ using ::crypto::tink::util::StatusOr;
 using ::google::crypto::tink::Ed25519KeyFormat;
 using ::google::crypto::tink::Ed25519PrivateKey;
 using ::google::crypto::tink::Ed25519PublicKey;
+using oak::pkcs8::ByteArray;
+using oak::pkcs8::PrivateKeyInfo;
 
 namespace oak {
 const char kPrivateKeyPemTag[] = "PRIVATE KEY";
 
-// Creates an Ed25519PrivateKey instance from the input private key string. The input private key
-// should be 64 bytes, composed of a 32-byte ed25519 private key, followed by a matching 32-byte
-// public key.
-Ed25519PrivateKey parse_key(const std::string& private_key) {
-  crypto::tink::util::IstreamInputStream input_stream(
-      absl::make_unique<std::stringstream>(private_key));
+// Creates an Ed25519PrivateKey instance from the raw PKCS#8 encoded input private key.
+Ed25519PrivateKey parse_pkcs8(const std::string& pkcs8_private_key) {
+  oak::pkcs8::ByteArray pk_bytes(pkcs8_private_key);
+  oak::pkcs8::PrivateKeyInfo key_info =
+      oak::pkcs8::from_pkcs8(pk_bytes, oak::pkcs8::kEd25519Pkcs8Template);
 
-  StatusOr<Ed25519PrivateKey> key_or =
-      Ed25519SignKeyManager().DeriveKey(Ed25519KeyFormat(), &input_stream);
-  if (!key_or.ok()) {
-    LOG(FATAL) << "Couldn't derive keys from the given private key";
-  }
-  Ed25519PrivateKey key = key_or.ValueOrDie();
-  return key;
+  int version = oak::pkcs8::kEd25519Pkcs8Template.version;
+  Ed25519PrivateKey ed25519_key;
+  ed25519_key.set_version(version);
+  ed25519_key.set_key_value(key_info.private_key.ToString());
+
+  auto public_key = ed25519_key.mutable_public_key();
+  public_key->set_version(version);
+  public_key->set_key_value(key_info.public_key.ToString());
+
+  return ed25519_key;
 }
-
-KeyPair::KeyPair(const std::string& private_key) : KeyPair(parse_key(private_key)) {}
 
 std::unique_ptr<KeyPair> KeyPair::Generate() {
   StatusOr<Ed25519PrivateKey> key_or = Ed25519SignKeyManager().CreateKey(Ed25519KeyFormat());
@@ -60,6 +64,19 @@ std::unique_ptr<KeyPair> KeyPair::Generate() {
   Ed25519PrivateKey key = key_or.ValueOrDie();
   std::unique_ptr<KeyPair> key_pair(new KeyPair(key));
   return key_pair;
+}
+
+std::unique_ptr<KeyPair> KeyPair::FromPkcs8(const std::string& pkcs8_private_key) {
+  Ed25519PrivateKey key = parse_pkcs8(pkcs8_private_key);
+  std::unique_ptr<KeyPair> key_pair(new KeyPair(key));
+  return key_pair;
+}
+
+std::string KeyPair::ToPkcs8() {
+  oak::pkcs8::PrivateKeyInfo pk_info{ByteArray(GetPrivateKey()), ByteArray(GetPublicKey())};
+  std::unique_ptr<oak::pkcs8::ByteArray> pkcs8_encoded =
+      oak::pkcs8::to_pkcs8(pk_info, oak::pkcs8::kEd25519Pkcs8Template);
+  return pkcs8_encoded->ToString();
 }
 
 Signature KeyPair::Sign(const std::string& message) {

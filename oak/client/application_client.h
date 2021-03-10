@@ -118,7 +118,7 @@ class ApplicationClient {
     return decoded_public_key;
   }
 
-  // Signs the sha256 hash of the input challenge with the give key pair. Returns a
+  // Signs the sha256 hash of the input challenge with the given key pair. Returns a
   // SignedChallenge containing the signed hash and the public key part of the key pair.
   static oak::identity::SignedChallenge SignChallenge(std::unique_ptr<oak::KeyPair>& key_pair,
                                                       std::string challenge) {
@@ -129,8 +129,8 @@ class ApplicationClient {
     return signed_challenge;
   }
 
-  // Loads the PEM-encoded private key, and returns a KeyPair object derived from it. The private
-  // key must be 64 bytes conforming to `openssl` representation of an ed25519 private key.
+  // Loads a base64 PKCS#8 encoded private key from the given PEM file, and returns a
+  // KeyPair object created from it.
   static std::unique_ptr<oak::KeyPair> LoadKeyPair(const std::string& filename) {
     auto pem_map = oak::utils::read_pem(filename);
 
@@ -138,16 +138,14 @@ class ApplicationClient {
       LOG(FATAL) << "No private key in the pem file";
     }
 
-    std::unique_ptr<oak::KeyPair> key_pair(new oak::KeyPair(pem_map[kPrivateKeyPemTag]));
+    std::unique_ptr<oak::KeyPair> key_pair = oak::KeyPair::FromPkcs8(pem_map[kPrivateKeyPemTag]);
     return key_pair;
   }
 
-  // Stores the PEM-encoding of the key pair in the given path. The files has a single "PRIVATE KEY"
-  // entry for the 64-byte ed25519 private key in `openssl` representation. In this representation,
-  // the private key contains the public key as a suffix.
+  // Stores the base64 PKCS#8 encoding of the given private key in a PEM file in the given path.
   static void StoreKeyPair(std::unique_ptr<oak::KeyPair>& key_pair, const std::string& filename) {
     std::map<std::string, std::string> pri_map;
-    pri_map[kPrivateKeyPemTag] = key_pair->GetPrivateKey();
+    pri_map[kPrivateKeyPemTag] = key_pair->ToPkcs8();
     oak::utils::write_pem(pri_map, filename);
   }
 };
