@@ -129,7 +129,8 @@ class ApplicationClient {
     return signed_challenge;
   }
 
-  // Loads the PEM-encoded private key, and returns a KeyPair object derived from it.
+  // Loads the PEM-encoded private key, and returns a KeyPair object derived from it. The private
+  // key must be 64 bytes conforming to `openssl` representation of an ed25519 private key.
   static std::unique_ptr<oak::KeyPair> LoadKeyPair(const std::string& filename) {
     auto pem_map = oak::utils::read_pem(filename);
 
@@ -141,7 +142,9 @@ class ApplicationClient {
     return key_pair;
   }
 
-  // Stores the PEM-encoding of the private key part of the given key pair in the given path.
+  // Stores the PEM-encoding of the key pair in the given path. The files has a single "PRIVATE KEY"
+  // entry for the 64-byte ed25519 private key in `openssl` representation. In this representation,
+  // the private key contains the public key as a suffix.
   static void StoreKeyPair(std::unique_ptr<oak::KeyPair>& key_pair, const std::string& filename) {
     std::map<std::string, std::string> pri_map;
     pri_map[kPrivateKeyPemTag] = key_pair->GetPrivateKey();

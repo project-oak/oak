@@ -34,8 +34,10 @@ using ::google::crypto::tink::Ed25519PublicKey;
 namespace oak {
 const char kPrivateKeyPemTag[] = "PRIVATE KEY";
 
+// Creates an Ed25519PrivateKey instance from the input private key string. The input private key
+// should be 64 bytes, composed of a 32-byte ed25519 private key, followed by a matching 32-byte
+// public key.
 Ed25519PrivateKey parse_key(const std::string& private_key) {
-  // Retrieve private and public keys from the input private key string
   crypto::tink::util::IstreamInputStream input_stream(
       absl::make_unique<std::stringstream>(private_key));
 

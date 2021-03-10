@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
   std::string room_secret = absl::GetFlag(FLAGS_room_secret);
   std::unique_ptr<oak::KeyPair> key_pair;
 
-  // TODO(#1905): A secure mechanism for sharing and retreiving the private key is needed. In the
+  // TODO(#1905): A secure mechanism for sharing and retrieving the private key is needed. In the
   // meantime, we use `room_secret` to pass in a file containing the private key. If no room secret
   // is provided, we create a fresh private/public key pair, and store the private key in a file for
   // later use.

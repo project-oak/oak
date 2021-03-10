@@ -32,6 +32,12 @@ struct Signature {
 
 class KeyPair {
  public:
+  // The input `private_key` should be a 64-byte key, composed of a 32-byte ed25519 private key,
+  // followed by the corresponding 32-byte public key.
+  // Note: This parameter is called `private_key`, although it also contains the public key, because
+  // this is what `openssl` refers to as an ed25519 private key.
+  //
+  // See https://github.com/google/boringssl/blob/master/include/openssl/curve25519.h
   KeyPair(const std::string& private_key);
 
   // Signs the sha256 hash of the given message using private key in this KeyPair. Returns a
