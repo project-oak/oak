@@ -35,8 +35,6 @@ flowsTo(p1, p3) :- flowsTo(p1, p2), flowsTo(p2, p3).
 .decl saysCanSayDowngrades(speaker: label, delegatee: label,
     inModule: moduleName, x: locationName, newLabel: label)
 
-.decl saysCanActAs(speaker: label, acting: 
-
 // relation for delegating downgrades
 saysDowngrades(a, m, x, ell) :-
     saysDowngrades(b, m, x, ell),

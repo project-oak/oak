@@ -1,0 +1,81 @@
+#include "labelChecking.dl"
+
+// Badge reader
+// computation:
+// - emits badge IDs
+
+labelEnvironment("badge_id", "ell_badge_id").
+bindModule("badge_reader",
+    $FlatMod(
+        $Nil(),
+        $Cons("badge_id", $Nil())
+    )).
+    
+
+/// Security camera
+// locations:
+// - camera virtual device
+// - database of faces
+// - network channel from badge reader
+// - storage for video of incidents
+// - network channel to security personnel
+// computation:
+// - face classification / detect incidents
+// - log incident
+// - retrieve video 
+
+labelEnvironment("camera", "ell_camera").
+labelEnvironment("face_db", "ell_face").
+labelEnvironment("video_storage", "ell_video").
+labelEnvironment("net_incident", "ell_incident").
+
+labelEnvironment("net_incident", "ell_net_incident").
+bindModule("face_detector",
+    $FlatMod(
+        $Cons("badge_id", $Cons("face_db", $Cons("camera", $Nil()))),
+        $Cons("net_incident", $Nil())
+    )).
+
+
+labelEnvironment("report_incident", "bot").
+labelEnvironment("incident_chunk_ttls", "incident_chunk_ttls").
+
+bindModule("log_incident",
+    $FlatMod(
+        $Cons("report_incident", $Nil()), 
+        $Cons("incident_chunk_ttls", $Nil())
+    )).
+
+labelEnvironment("retrieve_vide_channel", "ell_vid_chan").
+bindModule("retrieve_video",
+    $FlatMod(
+        $Cons("retrieve_video_channel", $Cons("video_storage", $Nil())),
+        $Cons("retrieve_video_channel", $Nil())
+    )).
+
+// Security personnel:
+// locations:
+// - network channel from incident process on cam
+// - local storage for video
+// - network channel for escalating incidents
+// computation:
+// - report_incident
+// - read_video_file
+
+labelEnvironment("sp_video_storage", "ell_sp_video_storage").
+bindModule("report_incident",
+    $FlatMod(
+        $Cons("sp_report_ui", $Nil()), 
+        $Cons("report_incident", $Nil())
+    )).
+
+
+
+// Police machine:
+// location:
+// - nework channel from security personnel
+// - network channel to security cam
+// computation
+// - file_report
+//
+
