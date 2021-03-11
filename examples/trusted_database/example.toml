@@ -14,13 +14,16 @@ additional_args = [
   "--config-files=database=third_party/data/cycle-hire-availability/livecyclehireupdates.xml"
 ]
 
-[clients]
-rust = { Cargo = { cargo_manifest = "examples/trusted_database/client/rust/Cargo.toml" }, additional_args = [
+[clients.rust]
+Cargo = { cargo_manifest = "examples/trusted_database/client/rust/Cargo.toml", additional_build_args = [
+  "--features=binary"
+] }
+additional_args = [
   "--root-tls-certificate=examples/certs/local/ca.pem",
   "--latitude=0.0",
-  "--longitude=0.0"
-] }
-cpp = { Bazel = { bazel_target = "//examples/trusted_database/client/cpp:client" }, additional_args = [
-  "--latitude=0.0",
-  "--longitude=0.0"
-] }
+  "--longitude=0.0",
+]
+
+[clients.cpp]
+Bazel = { bazel_target = "//examples/trusted_database/client/cpp:client" }
+additional_args = ["--latitude=0.0", "--longitude=0.0"]

@@ -5,6 +5,18 @@ authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[features]
+binary = [
+  "log",
+  "structopt",
+  "oak_abi",
+  "oak_client",
+  "oak_sign",
+  "anyhow",
+  "env_logger",
+  "tokio"
+]
+
 [lib]
 name = "trusted_database_client"
 path = "src/lib.rs"
@@ -12,19 +24,26 @@ path = "src/lib.rs"
 [[bin]]
 name = "trusted_database_client_bin"
 path = "src/main.rs"
+required-features = ["binary"]
 
 [dependencies]
-anyhow = "*"
-env_logger = "*"
-log = "*"
-oak_abi = "=0.1.0"
-oak_client = "=0.1.0"
-oak_sign = "=0.1.0"
-prost = "*"
-structopt = "*"
-# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
-tokio = { version = "0.2", features = ["fs", "macros", "sync", "stream"] }
 tonic = { version = "*", features = ["tls"] }
+prost = "*"
+# Dependencies for main, not required to build the library
+log = { version = "*", optional = true }
+structopt = { version = "*", optional = true }
+oak_abi = { version = "=0.1.0", optional = true }
+oak_client = { version = "=0.1.0", optional = true }
+oak_sign = { version = "=0.1.0", optional = true }
+anyhow = { version = "*", optional = true }
+env_logger = { version = "*", optional = true }
+# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
+tokio = { version = "0.2", features = [
+  "fs",
+  "macros",
+  "sync",
+  "stream"
+], optional = true }
 
 [build-dependencies]
 oak_utils = "*"

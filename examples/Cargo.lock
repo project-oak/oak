@@ -2228,7 +2228,6 @@ name = "proxy_attestation_example"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.13.0",
  "hex",
  "log",
  "maplit",

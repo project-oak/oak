@@ -2897,16 +2897,8 @@ dependencies = [
 name = "trusted_database_client"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "env_logger 0.8.2",
- "log",
- "oak_abi",
- "oak_client",
- "oak_sign",
  "oak_utils",
  "prost",
- "structopt",
- "tokio 0.2.23",
  "tonic",
 ]
 
