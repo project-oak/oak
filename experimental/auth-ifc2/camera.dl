@@ -1,18 +1,22 @@
 #include "labelChecking.dl"
 
+//-----------------------------------------------------------------------------
 // Badge reader
+//-----------------------------------------------------------------------------
 // computation:
 // - emits badge IDs
 
-labelEnvironment("badge_id", "ell_badge_id").
+labelEnvironment("net_badge_id", "ell_badge_id").
 bindModule("badge_reader",
     $FlatMod(
         $Nil(),
-        $Cons("badge_id", $Nil())
+        $Cons("net_badge_id", $Nil())
     )).
     
 
+//-----------------------------------------------------------------------------
 /// Security camera
+//-----------------------------------------------------------------------------
 // locations:
 // - camera virtual device
 // - database of faces
@@ -24,58 +28,171 @@ bindModule("badge_reader",
 // - log incident
 // - retrieve video 
 
-labelEnvironment("camera", "ell_camera").
-labelEnvironment("face_db", "ell_face").
-labelEnvironment("video_storage", "ell_video").
+labelEnvironment("dev_camera", "ell_camera").
+labelEnvironment("store_face_db", "ell_face_db").
+labelEnvironment("store_video", "ell_camera").
+labelEnvironment("store_chunk_ttls", "ell_vid_ttls").
 labelEnvironment("net_incident", "ell_incident").
+labelEnvironment("net_escalate_incident", "ell_untrusted_net_to_cam").
+labelEnvironment("net_retrieve_video", "ell_vid_escalated").
 
-labelEnvironment("net_incident", "ell_net_incident").
+// The organization owning the camera device owns the camera data:
+saysCanSayDowngrades("ell_camera", "humans_cam_owner", m, x, ellPrime) :-
+    groundedModuleName(m), groundedLocation(x), isLabel(ellPrime).
+
+// The camera owner delegates to an auditor (about everything)
+saysCanSayDowngrades("humans_cam_owner", "auditor", m, x, ellPrime) :-
+    groundedModuleName(m), groundedLocation(x), isLabel(ellPrime).
+
+// this should be clearer/better with the rules for "isA/canActAs"
+// fleshed out.
+.decl saysOnlyOutputsIncidents(speaker: label, mn: moduleName, x: locationName)
+saysDowngrades("auditor", "face_detector", "net_incident", "ell_incident") :-
+    saysOnlyOutputsIncidents("auditor", "face_detector", "net_incident").
+saysOnlyOutputsIncidents("auditor", "face_detector", "net_incident").
+
+// This is a rule for allowing an endorsement because a message received from 
+// an untrusted channel influences whether or not a TTL is increased. The point 
+// of the rule is to check for a message that is signed with a key from some 
+// security personnel (or involving a delegation chan).
+//
+// NOTE: There is a built-in assumption here that facts like "saysEscalated" can be 
+// sent over the network from one runtime to another.
+.decl saysEscalated(speaker: label, incident_id: number)
+.decl groundIncident(incident_id: number)
+.decl saysIncident(speaker: label, incident_id: number)
+.decl saysExpiration(speaker: label, incident_id: number, exp_time: number)
+.decl saysCurTime(speaker: label, cur_time: number)
+saysDowngrades("auditor", "log_incident",
+    "net_escalate_incident", "ell_vid_ttls") :- 
+        saysIncident("face_detector_prin", incident_id), 
+        saysEscalated("security_personnel", incident_id),
+        saysExpiration("ttl_checker", incident_id, exp_time),
+        saysCurTime("trusted_time", cur_time),
+        cur_time < exp_time.
+        // NOTE: with RPCs it was possible to downgrade just the specific 
+        // argument to the call. Here that precision seems lost and the policy 
+        // is a little less meaningful.
+        // Errrr no... I think I can just add more inputs to these modules and 
+        // then we have the same behavior.
+
+// TODO: It seems useful to specify updates to the database here to 
+// capture the change to the TTL when the incident is escalated, like:
+// saysEscalated("ttl_checker", incident_id, exp_time) :-
+//     saysIncident("face_detector_prin", incident_id), 
+//     saysEscalated("security_personnel", incident_id),
+//     saysExpiration("ttl_checker", incident_id, exp_time),
+//     saysCurTime("trusted_time", cur_time),
+//     -saysExpiration("ttl_checker", incident_id, exp_time)
+//     +saysExpiration("ttl_checker", incident_id, cur_time+30)
+
+saysDowngrades("auditor", "retrieve_video", "net_retrieve_video", 
+    "ell_vid_escalated") :-
+        groundIncident(incident_id),
+        saysIncident("face_detector_prin", incident_id), 
+        saysEscalated("security_personnel", incident_id),
+        saysExpiration("ttl_checker", incident_id, exp_time),
+        saysCurTime("trusted_time", cur_time),
+        exp_time > cur_time.
+
 bindModule("face_detector",
     $FlatMod(
-        $Cons("badge_id", $Cons("face_db", $Cons("camera", $Nil()))),
+        $Cons("net_badge_id", $Cons("store_face_db", $Cons("dev_camera", $Nil()))),
         $Cons("net_incident", $Nil())
     )).
 
-
-labelEnvironment("report_incident", "bot").
-labelEnvironment("incident_chunk_ttls", "incident_chunk_ttls").
-
 bindModule("log_incident",
     $FlatMod(
-        $Cons("report_incident", $Nil()), 
-        $Cons("incident_chunk_ttls", $Nil())
+        $Cons("net_escalate_incident", $Nil()), 
+        $Cons("store_chunk_ttls", $Nil())
     )).
 
-labelEnvironment("retrieve_vide_channel", "ell_vid_chan").
 bindModule("retrieve_video",
     $FlatMod(
-        $Cons("retrieve_video_channel", $Cons("video_storage", $Nil())),
-        $Cons("retrieve_video_channel", $Nil())
+        $Cons("net_retrieve_video", $Cons("store_video", $Nil())),
+        $Cons("net_retrieve_video", $Nil())
     )).
 
+//-----------------------------------------------------------------------------
 // Security personnel:
+//-----------------------------------------------------------------------------
 // locations:
 // - network channel from incident process on cam
 // - local storage for video
+// - local mapping from chunk IDs to TTLs
 // - network channel for escalating incidents
 // computation:
 // - report_incident
+// - fetch video chunks
 // - read_video_file
 
-labelEnvironment("sp_video_storage", "ell_sp_video_storage").
+// NOTE: The reason "report_incident" matters for the policy is that it 
+// generates facts about incidents being escalated (which influence downgrades 
+// elsewhere), but direct dataflow does not matter much here.
+// Having a rule with a side-effect that generates a fact seems like 
+// it would capture this.
+
+labelEnvironment("ui_report_sp", "ell_vid_escalated").
+labelEnvironment("store_video_sp", "ell_vid_escalated").
+labelEnvironment("arg_view_chunk_id", "ell_chunk_id"). 
+    // "ell_chunk_id" is an input controlled by whoever sits at the 
+    // security personnel machine. It indirectly influences whether or not 
+    // the video data gets moved somewhere else (so it is an untrusted 
+    // input from the perspective of the camera owner).
+
+labelEnvironment("ui_view_video", "ell_ui_sp_screen").
+
+//////// --- this bit would actually be generated by the compiler -------------
+.decl saysCanSayEscalated(speaker: label, delegatee: label,
+    incident_id: number)
+saysEscalated(s, i) :- saysCanSayEscalated(s, d, i), saysEscalated(d, i).
+//-----------------------------------------------------------------------------
+
+saysCanSayEscalated("security_personnel", "auditor", incident_id) :-
+    groundIncident(incident_id). 
+saysCanSayEscalated("auditor", "ui_report_sp", incident_id) :-
+    groundIncident(incident_id).
+
+// incident_id not exactly tied to the argument of the function call...
+saysDowngrades("auditor", "view_video_chunk", "ui_view_video", 
+    "ell_ui_sp_screen") :- 
+        groundIncident(incident_id),
+        saysExpiration("ttl_checker", incident_id, exp_time),
+        saysCurTime("trusted_time", cur_time),
+        cur_time < exp_time.
+
 bindModule("report_incident",
     $FlatMod(
-        $Cons("sp_report_ui", $Nil()), 
-        $Cons("report_incident", $Nil())
+        $Cons("ui_report_sp", $Nil()), 
+        $Cons("net_escalate_incident_sp", $Nil())
     )).
 
+bindModule("fetch_video_chunk",
+    $FlatMod(
+        $Cons("net_retrieve_video", $Nil()),
+        $Cons("store_video_sp", $Nil())
+    )).
 
+bindModule("view_video_chunk",
+    $FlatMod(
+        $Cons("store_video_sp", $Cons("arg_view_chunk_id", $Nil())),
+        $Cons("ui_view_video", $Nil())
+    )).
 
+//-----------------------------------------------------------------------------
 // Police machine:
+//-----------------------------------------------------------------------------
 // location:
 // - nework channel from security personnel
 // - network channel to security cam
 // computation
 // - file_report
-//
+
+
+
+.output flowsTo
+.output bindModule
+.output labelEnvironment
+.output saysDowngrades
+.output moduleLabelChecks 
 
