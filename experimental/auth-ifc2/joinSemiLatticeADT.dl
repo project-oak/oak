@@ -1,0 +1,50 @@
+// This is an encoding of join semilattices using ADTs. A similar ADT-based 
+// encoding of full lattices would likely require SAT.
+.type latAtom <: symbol
+.type latElt = Atom {e: latAtom} | Bot{} | Top{} |
+    Join{l1: latElt, l2: latElt}
+
+.decl groundedAtom(a: latAtom)
+.decl groundedLatElt(e: latElt)
+.decl subEq(l: latElt, r: latElt)
+
+subEq($Atom(e), $Atom(e)) :- groundedAtom(e).
+subEq($Atom(e), $Join(l, r)) :-
+    groundedLatElt($Join(l, r)),
+    (subEq($Atom(e), l); subEq($Atom(e), r)).
+subEq($Join(l, r), lat2) :- 
+    groundedLatElt(lat2), groundedLatElt($Join(l, r)),
+    subEq(l, lat2), subEq(r, lat2).
+subEq($Bot(), lat) :- groundedLatElt(lat).
+subEq(lat, $Top()) :- groundedLatElt(lat).
+
+
+// --- ground lowering
+groundedAtom(e) :- groundedLatElt($Atom(e)).
+groundedLatElt($Bot()).
+groundedLatElt($Top()).
+groundedLatElt(l) :- groundedLatElt($Join(l, _)).
+groundedLatElt(r) :- groundedLatElt($Join(_, r)).
+groundedLatElt(l) :- subEq(l, _).
+groundedLatElt(r) :- subEq(_, r).
+
+.decl test(n: number) 
+// TBD, would need to correctly generate these given 
+groundedLatElt($Join($Atom("a"), $Atom("c"))).
+groundedLatElt($Join($Join($Atom("a"), $Atom("b")), $Atom("c"))).
+groundedLatElt($Join($Atom("a"), $Atom("a"))). // for test 7
+
+test(1) :- subEq($Atom("a"), $Atom("a")). // yes
+test(2) :- subEq($Atom("a"), $Atom("b")). // no
+test(3) :- subEq($Atom("a"), $Join($Atom("a"), $Atom("b"))). // yes
+test(4) :- subEq($Join($Atom("a"), $Atom("b")), $Join($Atom("a"), $Atom("b"))).
+    // yes
+test(5) :- subEq($Join($Atom("a"), $Atom("c")), $Join($Atom("a"), $Atom("b"))).
+    // no
+test(6) :- subEq($Join($Atom("a"), $Atom("c")),
+    $Join($Join($Atom("a"), $Atom("b")), $Atom("c"))).
+    //yes
+test(7) :- subEq($Join($Atom("a"), $Atom("a")), $Atom("a")).
+
+.output test
+.output subEq
