@@ -1,0 +1,74 @@
+// 4D hypercube. The number of dimensions is fixed at compile-time
+.type latElt = [d1: number, d2: number, d3: number, d4: number]
+
+.decl groundedLatElt(lat: latElt)
+.decl groundedDim(n: number)
+
+
+.decl subEq(l: latElt, r: latElt)
+subEq([l1, l2, l3, l4], [r1, r2, r3, r4]) :-
+    groundedLatElt([l1, l2, l3, l4]),
+    groundedLatElt([r1, r2, r3, r4]),
+    l1 <= r1, l2 <= r2, l3 <= r3, l4 <= r4.
+
+// max/min are both keywords
+.decl maxDim(n1: number, n2: number, n3: number)
+maxDim(n1, n2, n1) :- 
+    groundedDim(n1), groundedDim(n2), n1 >= n2.
+maxDim(n1, n2, n2) :- 
+    groundedDim(n1), groundedDim(n2), n2 > n1.
+
+.decl minDim(n1: number, n2: number, n3: number)
+minDim(n1, n2, n1) :- 
+    groundedDim(n1), groundedDim(n2), n1 <= n2.
+minDim(n1, n2, n2) :- 
+    groundedDim(n1), groundedDim(n2), n2 < n1.
+
+.decl join(l1: latElt, l2: latElt, j: latElt)
+.decl meet(r1: latElt, r2: latElt, j: latElt)
+
+join([l1, l2, l3, l4], [r1, r2, r3, r4],
+    [e1, e2, e3, e4]) :-
+    groundedLatElt([l1, l2, l3, l4]),
+    groundedLatElt([r1, r2, r3, r4]),
+    groundedLatElt([e1, e2, e3, e4]),
+    maxDim(l1, r1, e1),
+    maxDim(l2, r2, e2),
+    maxDim(l3, r3, e3),
+    maxDim(l4, r4, e4).
+
+meet([l1, l2, l3, l4], [r1, r2, r3, r4],
+    [e1, e2, e3, e4]) :-
+    groundedLatElt([l1, l2, l3, l4]),
+    groundedLatElt([r1, r2, r3, r4]),
+    groundedLatElt([e1, e2, e3, e4]),
+    minDim(l1, r1, e1),
+    minDim(l2, r2, e2),
+    minDim(l3, r3, e3),
+    minDim(l4, r4, e4).
+    
+
+// rules for grounding
+groundedDim(0).
+groundedDim(x+1) :- groundedDim(x), x < 4.
+// max height along a particular dimension is also fixed at compile-time, but 
+// we could scale it up during compilation
+groundedLatElt([d1, d2, d3, d4]) :-
+    groundedDim(d1), groundedDim(d2),
+    groundedDim(d3), groundedDim(d4).
+
+// These do work but are slow because the CSV files they generate are large
+// .output subEq
+// .output join
+// .output meet
+
+// This is actually also slow because datalog uses bottom-up evaluation and 
+// apparently outputting the relations subEq, join, and meet is not slow jus 
+// because of I/O
+.decl test(n: number)
+test(1) :- subEq([0, 1, 1, 2], [1, 1, 1, 4]). //yes
+test(2) :- subEq([1, 0, 1, 0], [0, 1, 0, 1]). // no!
+test(3) :- join([0, 1, 4, 0], [3, 2, 0, 3], [3, 2, 4, 3]). // yes
+test(4) :- meet([0, 1, 1, 1], [1, 0, 1, 1], [0, 0, 1, 1]). //no
+.output test
+
