@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 assert_matches = "*"
 env_logger = "*"
 log = "*"
-oak_runtime = "=0.1.0"
+oak_runtime = { version = "=0.1.0", features = ["linear-handles"] }
 oak_tests = "=0.1.0"
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
 translator_grpc = "=0.1.0"
@@ -20,7 +20,7 @@ translator_grpc = "=0.1.0"
 [dependencies]
 anyhow = "*"
 log = "*"
-oak = "=0.1.0"
+oak = { version = "=0.1.0", features = ["linear-handles"] }
 oak_abi = "=0.1.0"
 oak_io = "=0.1.0"
 oak_services = "=0.1.0"
