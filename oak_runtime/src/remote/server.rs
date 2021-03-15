@@ -57,6 +57,8 @@ impl RemoteRuntime for RemoteRuntimeHandler {
         _req: Request<NodeCreateRequest>,
     ) -> Result<Response<NodeCreateResponse>, Status> {
         // TODO
+        // register remote channel with the node.
+        // on success remote runtime should increase reader counts on the channel.
         log::info!("Processing the node_create request");
         Ok(Response::new(NodeCreateResponse { remote_node_id: 0 }))
     }
@@ -94,15 +96,12 @@ impl RemoteRuntime for RemoteRuntimeHandler {
         } else {
             Downgrading::No
         };
+        // TODO: fetch the actual channel half corresponding to `request.write_handle` from the
+        // runtime
+        let handle = 0;
         self.runtime
-            .channel_write(
-                NodeId(request.node_id),
-                request.write_handle,
-                msg,
-                downgrading,
-            )
+            .channel_write(NodeId(request.node_id), handle, msg, downgrading)
             .map_err(|err| Status::internal(format!("{}", err)))?;
         Ok(Response::new(ChannelWriteResponse {}))
     }
 }
-// This start a server to listen on a port

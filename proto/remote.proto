@@ -23,6 +23,7 @@ import "oak_abi/proto/label.proto";
 import "oak_abi/proto/application.proto";
 
 message AddRemoteRequest {
+  // TODO: Why is this needed?
   string remote_uuid = 1;
   // IP address and port number for a remote Runtime. This could be retrieved from the request, but
   // tonic does not fully support that currently.
@@ -30,6 +31,7 @@ message AddRemoteRequest {
 }
 
 message AddRemoteResponse {
+  // TODO: Why is this needed?
   string runtime_uuid = 1;
 }
 
@@ -42,7 +44,7 @@ message NodeCreateRequest {
   // Label of the node
   oak.label.Label label = 3;
   // The initial handle is a handle to a channel on the remote runtime
-  Handle initial_handle = 4;
+  RemoteHandle initial_handle = 4;
 }
 
 message NodeCreateResponse {
@@ -53,35 +55,37 @@ message ChannelReadRequest {
   // Both runtimes must have the node_info about the node requesting the read, although only one runtime actually holds the node. 
   fixed64 node_id = 1;
   // Handle to a channel on the runtime serving this request
-  fixed64 read_handle = 2;
+  RemoteHandle read_handle = 2;
   // Whether or not to use downgrading privilege when reading from the channel. 
   bool downgrade = 3;
 }
 
 message ChannelReadResponse {
   bytes data = 1;
-  repeated fixed64 handles = 2;
+  repeated RemoteHandle handles = 2;
 }
 
 message ChannelWriteRequest {
   // Both runtimes must have the node_info about the node requesting the read, although only one runtime actually holds the node. 
   fixed64 node_id = 1;
-  fixed64 write_handle = 2;
+  RemoteHandle write_handle = 2;
   // Whether or not to use downgrading privilege when writing to the channel. 
   bool downgrade = 3;
   // Bytes content of the message
   bytes data = 4;
-  // Handles content of the message
-  repeated Handle handles = 5;
+  // Handles content of the message. Handles may be on any of the runtimes in the whole system.
+  repeated RemoteHandle handles = 5;
 }
 
 message ChannelWriteResponse {
   // empty response
 }
 
-message Handle {
+// Represents a handle, on a potentially remote runtime. 
+message RemoteHandle {
   fixed64 raw_handle = 1;
-  string runtime_uuid = 2;
+  // In the first step, this can be the ID of a remote runtime.
+  string runtime_id = 2;
 }
 
 // As seen in https://grpc.io/docs/guides/concepts/.

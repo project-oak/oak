@@ -164,41 +164,52 @@ impl Runtime {
                         }
                     }
                     // Include messages in the channel.
-                    let messages = half.get_messages();
-                    if messages.len() > 0 {
-                        writeln!(&mut s, "  {{").unwrap();
-                        writeln!(
-                            &mut s,
-                            r###"    node [shape=rect fontsize=10 label="msg"]"###
-                        )
-                        .unwrap();
-                        // Messages have no identifier, so just use a count (and don't make it
-                        // visible to the user).
-                        let mut prev_graph_node = half.dot_id();
-                        for msg in messages.iter() {
-                            msg_counter += 1;
-                            let graph_node = format!("msg{}", msg_counter);
+                    if let Some(messages) = half.get_messages() {
+                        if messages.len() > 0 {
+                            writeln!(&mut s, "  {{").unwrap();
                             writeln!(
                                 &mut s,
-                                "    {} -> {} [style=dashed arrowhead=none]",
-                                graph_node, prev_graph_node
+                                r###"    node [shape=rect fontsize=10 label="msg"]"###
                             )
                             .unwrap();
-                            for half in &msg.channels {
-                                match half.direction {
-                                    ChannelHalfDirection::Write => {
-                                        writeln!(&mut s, "    {} -> {}", graph_node, half.dot_id())
+                            // Messages have no identifier, so just use a count (and don't make it
+                            // visible to the user).
+                            let mut prev_graph_node = half.dot_id();
+                            for msg in messages.iter() {
+                                msg_counter += 1;
+                                let graph_node = format!("msg{}", msg_counter);
+                                writeln!(
+                                    &mut s,
+                                    "    {} -> {} [style=dashed arrowhead=none]",
+                                    graph_node, prev_graph_node
+                                )
+                                .unwrap();
+                                for half in &msg.channels {
+                                    match half.direction {
+                                        ChannelHalfDirection::Write => {
+                                            writeln!(
+                                                &mut s,
+                                                "    {} -> {}",
+                                                graph_node,
+                                                half.dot_id()
+                                            )
                                             .unwrap();
-                                    }
-                                    ChannelHalfDirection::Read => {
-                                        writeln!(&mut s, "    {} -> {}", half.dot_id(), graph_node)
+                                        }
+                                        ChannelHalfDirection::Read => {
+                                            writeln!(
+                                                &mut s,
+                                                "    {} -> {}",
+                                                half.dot_id(),
+                                                graph_node
+                                            )
                                             .unwrap();
+                                        }
                                     }
                                 }
+                                prev_graph_node = graph_node;
                             }
-                            prev_graph_node = graph_node;
+                            writeln!(&mut s, "  }}").unwrap();
                         }
-                        writeln!(&mut s, "  }}").unwrap();
                     }
                 }
             }
