@@ -6,8 +6,6 @@ edition = "2018"
 license = "Apache-2.0"
 
 [features]
-default = ["no-linear-handles"]
-no-linear-handles = ["oak_io/no-linear-handles"]
 linear-handles = ["oak_io/linear-handles"]
 
 [dependencies]

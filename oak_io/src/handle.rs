@@ -23,10 +23,7 @@ use oak_abi::Handle;
 ///
 /// For use when the underlying [`Handle`] is known to be for a receive half.
 #[derive(PartialEq)]
-#[cfg_attr(
-    any(feature = "no-linear-handles", not(feature = "linear-handles")),
-    derive(Copy, Clone)
-)]
+#[cfg_attr(not(feature = "linear-handles"), derive(Copy, Clone))]
 pub struct ReadHandle {
     pub handle: Handle,
 }
@@ -47,10 +44,7 @@ impl From<Handle> for ReadHandle {
 ///
 /// For use when the underlying [`Handle`] is known to be for a send half.
 #[derive(PartialEq)]
-#[cfg_attr(
-    any(feature = "no-linear-handles", not(feature = "linear-handles")),
-    derive(Copy, Clone)
-)]
+#[cfg_attr(not(feature = "linear-handles"), derive(Copy, Clone))]
 pub struct WriteHandle {
     pub handle: Handle,
 }
@@ -69,7 +63,7 @@ impl From<Handle> for WriteHandle {
 
 /// Provides implementations of `Clone` and `Drop` for handle types, based on the `handle_clone` and
 /// `channel_close` ABI syscalls, respectively.
-#[cfg(all(feature = "linear-handles", not(feature = "no-linear-handles")))]
+#[cfg(feature = "linear-handles")]
 mod linear_handles {
     use super::*;
     use crate::OakStatus;
