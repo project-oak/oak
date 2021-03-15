@@ -334,12 +334,6 @@
 <span id="331">331</span>
 <span id="332">332</span>
 <span id="333">333</span>
-<span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -366,10 +360,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// For use when the underlying [`Handle`] is known to be for a receive half.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>)]</span>
-<span class="attribute">#[<span class="ident">cfg_attr</span>(
-    <span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no-linear-handles&quot;</span>, <span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>)),
-    <span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>)
-)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>), <span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ReadHandle</span> {
     <span class="kw">pub</span> <span class="ident">handle</span>: <span class="ident">Handle</span>,
 }
@@ -390,10 +381,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// For use when the underlying [`Handle`] is known to be for a send half.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>)]</span>
-<span class="attribute">#[<span class="ident">cfg_attr</span>(
-    <span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no-linear-handles&quot;</span>, <span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>)),
-    <span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>)
-)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>), <span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WriteHandle</span> {
     <span class="kw">pub</span> <span class="ident">handle</span>: <span class="ident">Handle</span>,
 }
@@ -412,7 +400,7 @@
 
 <span class="doccomment">/// Provides implementations of `Clone` and `Drop` for handle types, based on the `handle_clone` and</span>
 <span class="doccomment">/// `channel_close` ABI syscalls, respectively.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>, <span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no-linear-handles&quot;</span>)))]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">linear_handles</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
     <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">OakStatus</span>;

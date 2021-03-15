@@ -139,14 +139,14 @@
 }
 
 <span class="comment">// Explicitly closes handles in the given [`Message`] so they do not leak</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no-linear-handles&quot;</span>), <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>))]</span> <span class="comment">// linear handles version</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>)]</span> <span class="comment">// linear handles version</span>
 <span class="kw">fn</span> <span class="ident">drop_handles</span>(<span class="ident">msg</span>: <span class="ident">oak_io</span>::<span class="ident">Message</span>) {
     <span class="kw">for</span> <span class="ident">handle</span> <span class="kw">in</span> <span class="ident">msg</span>.<span class="ident">handles</span> {
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">channel_close</span>(<span class="ident">handle</span>);
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>), <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no-linear-handles&quot;</span>))]</span> <span class="comment">// no linear handles version</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>))]</span> <span class="comment">// no linear handles version</span>
 <span class="kw">fn</span> <span class="ident">drop_handles</span>(<span class="kw">_</span>: <span class="ident">oak_io</span>::<span class="ident">Message</span>) {
     <span class="comment">// Do nothing. The caller owns the handles</span>
 }

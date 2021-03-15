@@ -304,7 +304,7 @@
 
 <span class="doccomment">/// Creates a node and corresponding inbound channel of the same type, and returns [`Sender`] for</span>
 <span class="doccomment">/// such channel.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>), <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no-linear-handles&quot;</span>))]</span> <span class="comment">// no linear handles version</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>))]</span> <span class="comment">// no linear handles version</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_create</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span><span class="op">&gt;</span>(
     <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
@@ -325,7 +325,7 @@
 
 <span class="doccomment">/// Creates a node and corresponding inbound channel of the same type, and returns [`Sender`] for</span>
 <span class="doccomment">/// such channel.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no-linear-handles&quot;</span>), <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>))]</span> <span class="comment">// linear handles version</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>)]</span> <span class="comment">// linear handles version</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_create</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span><span class="op">&gt;</span>(
     <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
@@ -338,7 +338,7 @@
 
 <span class="doccomment">/// Uses the current node&#39;s label-downgrading privilege to create a node and corresponding inbound</span>
 <span class="doccomment">/// channel of the same type, and returns a [`Sender`] for the channel.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>), <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no-linear-handles&quot;</span>))]</span> <span class="comment">// no linear handles version</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>))]</span> <span class="comment">// no linear handles version</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_create_with_downgrade</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span><span class="op">&gt;</span>(
     <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
@@ -359,7 +359,7 @@
 
 <span class="doccomment">/// Uses the current node&#39;s label-downgrading privilege to create a node and corresponding inbound</span>
 <span class="doccomment">/// channel of the same type, and returns a [`Sender`] for the channel.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;no-linear-handles&quot;</span>), <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>))]</span> <span class="comment">// linear handles version</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>)]</span> <span class="comment">// linear handles version</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">node_create_with_downgrade</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Encodable</span> <span class="op">+</span> <span class="ident">Decodable</span><span class="op">&gt;</span>(
     <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>,
