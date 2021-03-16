@@ -69,7 +69,7 @@ struct Template {
 // ByteArray, using the given template.
 std::unique_ptr<ByteArray> to_pkcs8(const PrivateKeyInfo& data, const Template& pkcs8_template);
 
-// Exrtact private key info from a PKCS#8 encoded private key, using the given template.
+// Extract private key info from a PKCS#8 encoded private key, using the given template.
 PrivateKeyInfo from_pkcs8(const ByteArray& pkcs_str, const Template& pkcs8_template);
 
 // Template for serializing and deserializing Ed25519 keys as unencrypted PKCS#8 byte arrays, as

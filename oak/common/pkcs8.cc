@@ -28,18 +28,18 @@ namespace pkcs8 {
 // Template of the form |prefix|middle| for serializing and deserializing Ed25519 keys as
 // unencrypted PKCS#8 byte arrays. With this template, the 32-byte
 // private key (or seed) will be placed after the `prefix`, and the 32-byte public key will be
-// inserted at the end, resulting in |prefix|private-key|middle|public-key|. With this tempplate,
-// no additional attributes can be included in the encoded byte array. This tempplate should be used
+// inserted at the end, resulting in |prefix|private-key|middle|public-key|. With this template,
+// no additional attributes can be included in the encoded byte array. This template should be used
 // in combination with `kEd25519Pkcs8Template`, which specifies the location of the split between
 // `prefix` and `middle`.
 //
 // This is copied from the Rust ring crate
 // https://github.com/briansmith/ring/blob/main/src/ec/curve25519/ed25519/ed25519_pkcs8_v2_template.der.
-const char kBase64Ed25519Pkcs8Templace[] = "MFMCAQEwBQYDK2VwBCIEIKEjAyEA";
+const char kBase64Ed25519Pkcs8Template[] = "MFMCAQEwBQYDK2VwBCIEIKEjAyEA";
 
 // Encapsulates the template byte array, the version (for convenience), and the index at which the
 // template should be split into `prefix` and `middle`.
-const Template kEd25519Pkcs8Template{ByteArray::FromBase64(kBase64Ed25519Pkcs8Templace), 1, 16, 32};
+const Template kEd25519Pkcs8Template{ByteArray::FromBase64(kBase64Ed25519Pkcs8Template), 1, 16, 32};
 
 ByteArray::ByteArray(unsigned char* in_bytes, int in_len) {
   bytes = new unsigned char[in_len];
