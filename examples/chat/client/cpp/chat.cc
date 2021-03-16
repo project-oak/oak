@@ -17,7 +17,6 @@
 #include <openssl/evp.h>
 
 #include <iomanip>
-#include <sstream>
 #include <thread>
 
 #include "absl/base/thread_annotations.h"

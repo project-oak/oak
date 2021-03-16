@@ -32,7 +32,6 @@ using ::crypto::tink::util::StatusOr;
 using ::google::crypto::tink::Ed25519KeyFormat;
 using ::google::crypto::tink::Ed25519PrivateKey;
 using ::google::crypto::tink::Ed25519PublicKey;
-using oak::pkcs8::ByteArray;
 using oak::pkcs8::PrivateKeyInfo;
 
 namespace oak {
@@ -40,18 +39,17 @@ const char kPrivateKeyPemTag[] = "PRIVATE KEY";
 
 // Creates an Ed25519PrivateKey instance from the raw PKCS#8 encoded input private key.
 Ed25519PrivateKey parse_pkcs8(const std::string& pkcs8_private_key) {
-  oak::pkcs8::ByteArray pk_bytes(pkcs8_private_key);
   oak::pkcs8::PrivateKeyInfo key_info =
-      oak::pkcs8::from_pkcs8(pk_bytes, oak::pkcs8::kEd25519Pkcs8Template);
+      oak::pkcs8::from_pkcs8(pkcs8_private_key, oak::pkcs8::kEd25519Pkcs8Template);
 
   int version = oak::pkcs8::kEd25519Pkcs8Template.version;
   Ed25519PrivateKey ed25519_key;
   ed25519_key.set_version(version);
-  ed25519_key.set_key_value(key_info.private_key.ToString());
+  ed25519_key.set_key_value(key_info.private_key);
 
   auto public_key = ed25519_key.mutable_public_key();
   public_key->set_version(version);
-  public_key->set_key_value(key_info.public_key.ToString());
+  public_key->set_key_value(key_info.public_key);
 
   return ed25519_key;
 }
@@ -73,10 +71,9 @@ std::unique_ptr<KeyPair> KeyPair::FromPkcs8(const std::string& pkcs8_private_key
 }
 
 std::string KeyPair::ToPkcs8() {
-  oak::pkcs8::PrivateKeyInfo pk_info{ByteArray(GetPrivateKey()), ByteArray(GetPublicKey())};
-  std::unique_ptr<oak::pkcs8::ByteArray> pkcs8_encoded =
-      oak::pkcs8::to_pkcs8(pk_info, oak::pkcs8::kEd25519Pkcs8Template);
-  return pkcs8_encoded->ToString();
+  oak::pkcs8::PrivateKeyInfo pk_info{GetPrivateKey(), GetPublicKey()};
+  std::string pkcs8_encoded = oak::pkcs8::to_pkcs8(pk_info, oak::pkcs8::kEd25519Pkcs8Template);
+  return pkcs8_encoded;
 }
 
 Signature KeyPair::Sign(const std::string& message) {

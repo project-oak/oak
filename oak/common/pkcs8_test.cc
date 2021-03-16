@@ -16,6 +16,7 @@
 
 #include "oak/common/pkcs8.h"
 
+#include "absl/strings/escaping.h"
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 
@@ -31,31 +32,37 @@ const char* BASE64_PKCS8 =
     "MFMCAQEwBQYDK2VwBCIEIOsQgGK8p9VPLen2O3DD/fXvF3LywbxM32r4ceP7XzlHoSMDIQB/jVIKU21HiLjq/"
     "ZO6HV9Atu39mpGvWUQ1qMJb3aPI/g==";
 
-TEST(Pkcs8Test, ByteArrayFromToBase64) {
-  ByteArray public_key = ByteArray::FromBase64(BASE64_PUBLIC_KEY);
-  ASSERT_EQ(public_key.len, 32);
-  ASSERT_EQ(public_key.ToBase64(), BASE64_PUBLIC_KEY);
-}
-
 TEST(Pkcs8Test, EncodeKeyPair) {
-  ByteArray public_key = ByteArray::FromBase64(BASE64_PUBLIC_KEY);
-  ByteArray private_key = ByteArray::FromBase64(BASE64_PRIVATE_KEY);
-  ASSERT_EQ(private_key.len, 32);
-  ASSERT_EQ(public_key.len, 32);
-  ASSERT_EQ(kEd25519Pkcs8Template.bytes.len, 21);
+  std::string decoded_public_key;
+  if (!absl::Base64Unescape(BASE64_PUBLIC_KEY, &decoded_public_key)) {
+    LOG(FATAL) << "Couldn't decode Base64 input";
+  }
 
-  PrivateKeyInfo pk_info{private_key, public_key};
-  std::unique_ptr<ByteArray> ba = to_pkcs8(pk_info, kEd25519Pkcs8Template);
-  ASSERT_EQ(ba->len, 85);
-  ASSERT_EQ(ba->ToBase64(), BASE64_PKCS8);
+  std::string decoded_private_key;
+  if (!absl::Base64Unescape(BASE64_PRIVATE_KEY, &decoded_private_key)) {
+    LOG(FATAL) << "Couldn't decode Base64 input";
+  }
+
+  ASSERT_EQ(decoded_private_key.length(), 32);
+  ASSERT_EQ(decoded_public_key.length(), 32);
+  ASSERT_EQ(kEd25519Pkcs8Template.bytes.length(), 21);
+
+  PrivateKeyInfo pk_info{decoded_private_key, decoded_public_key};
+  std::string pkcs8 = to_pkcs8(pk_info, kEd25519Pkcs8Template);
+  ASSERT_EQ(pkcs8.length(), 85);
+  ASSERT_EQ(absl::Base64Escape(pkcs8), BASE64_PKCS8);
 }
 
 TEST(Pkcs8Test, DecodePkcs8) {
-  ByteArray private_key = ByteArray::FromBase64(BASE64_PKCS8);
-  PrivateKeyInfo pk_info = from_pkcs8(private_key, kEd25519Pkcs8Template);
+  std::string decoded_pkcs8;
+  if (!absl::Base64Unescape(BASE64_PKCS8, &decoded_pkcs8)) {
+    LOG(FATAL) << "Couldn't decode Base64 input";
+  }
 
-  ASSERT_EQ(pk_info.private_key.ToBase64(), BASE64_PRIVATE_KEY);
-  ASSERT_EQ(pk_info.public_key.ToBase64(), BASE64_PUBLIC_KEY);
+  PrivateKeyInfo pk_info = from_pkcs8(decoded_pkcs8, kEd25519Pkcs8Template);
+
+  ASSERT_EQ(absl::Base64Escape(pk_info.private_key), BASE64_PRIVATE_KEY);
+  ASSERT_EQ(absl::Base64Escape(pk_info.public_key), BASE64_PUBLIC_KEY);
 }
 }  // namespace pkcs8
 }  // namespace oak

@@ -37,100 +37,73 @@ namespace pkcs8 {
 // https://github.com/briansmith/ring/blob/main/src/ec/curve25519/ed25519/ed25519_pkcs8_v2_template.der.
 const char kBase64Ed25519Pkcs8Template[] = "MFMCAQEwBQYDK2VwBCIEIKEjAyEA";
 
-// Encapsulates the template byte array, the version (for convenience), and the index at which the
-// template should be split into `prefix` and `middle`.
-const Template kEd25519Pkcs8Template{ByteArray::FromBase64(kBase64Ed25519Pkcs8Template), 1, 16, 32};
-
-ByteArray::ByteArray(unsigned char* in_bytes, int in_len) {
-  bytes = new unsigned char[in_len];
-  std::memcpy(bytes, in_bytes, in_len);
-  len = in_len;
-}
-
-ByteArray::ByteArray(const std::string& in_string) {
-  char* buffer = new char[in_string.length()];
-  std::memcpy(buffer, in_string.data(), in_string.length());
-  bytes = reinterpret_cast<unsigned char*>(buffer);
-  len = in_string.length();
-}
-
-ByteArray ByteArray::FromBase64(const std::string& in_string) {
-  std::string buffer;
-  if (!absl::Base64Unescape(in_string, &buffer)) {
-    LOG(FATAL) << "Couldn't decode Base64 input";
-  }
-  ByteArray byte_array(buffer);
-  return byte_array;
-}
-
-std::string ByteArray::ToBase64() {
-  std::string buffer = ToString();
-  return absl::Base64Escape(buffer);
-}
-
-std::string ByteArray::ToString() {
-  std::string buffer(std::string(reinterpret_cast<char const*>(bytes), len));
-  return buffer;
-}
+// Template for serializing and deserializing Ed25519 keys. The template encapsulates a string
+// representation of the template bytes, the version (for convenience), and the index at which the
+// template bytes should split into `prefix` and `middle`.
+const Template kEd25519Pkcs8Template = template_from_base64(kBase64Ed25519Pkcs8Template, 1, 16, 32);
 
 // Splits the bytes in the given template at the `private_key_index` into `|prefix|middle|`. Inserts
 // the private key and the public key to form `|prefix|private-key|middle|public-key|`.
-std::unique_ptr<ByteArray> to_pkcs8(const PrivateKeyInfo& data, const Template& pkcs8_template) {
-  if (pkcs8_template.private_key_len != data.private_key.len) {
+std::string to_pkcs8(const PrivateKeyInfo& data, const Template& pkcs8_template) {
+  if (pkcs8_template.private_key_len != data.private_key.length()) {
     LOG(FATAL) << "The length of the given private key does not match the length expected in the "
                   "template.";
   }
-  int len = pkcs8_template.bytes.len + data.private_key.len + data.public_key.len;
-  unsigned char* bytes = new unsigned char[len];
+
+  std::stringstream bytes;
 
   // copy `prefix` from template to bytes: |prefix|
-  std::memcpy(&bytes[0], pkcs8_template.bytes.bytes, pkcs8_template.private_key_index);
+  bytes << pkcs8_template.bytes.substr(0, pkcs8_template.private_key_index);
 
   // copy private key to bytes: |prefix|private-key|
-  std::memcpy(&bytes[pkcs8_template.private_key_index], data.private_key.bytes,
-              data.private_key.len);
+  bytes << data.private_key;
 
   // copy `middle` from template to bytes: |prefix|private-key|middle|
-  int middle_len = pkcs8_template.bytes.len - pkcs8_template.private_key_index;
-  std::memcpy(&bytes[pkcs8_template.private_key_index + data.private_key.len],
-              &pkcs8_template.bytes.bytes[pkcs8_template.private_key_index], middle_len);
+  int middle_len = pkcs8_template.bytes.length() - pkcs8_template.private_key_index;
+  bytes << pkcs8_template.bytes.substr(pkcs8_template.private_key_index, middle_len);
 
   // copy public key to bytes: |prefix|private-key|middle|public-key|
-  std::memcpy(&bytes[pkcs8_template.bytes.len + data.private_key.len], data.public_key.bytes,
-              data.public_key.len);
+  bytes << data.public_key;
 
-  std::unique_ptr<ByteArray> byte_array(new ByteArray(bytes, len));
-  delete[] bytes;
-  return byte_array;
+  return bytes.str();
 }
 
 // Splits the bytes in the given template at the `private_key_index` into `|e_prefix|e_middle|`.
-// Then using the template, splits the input array at `private_key_index` and `private_key_index +
-// private_key_len` into |a_prefix|private-key|a_middle|public-key|. If `e_prefix` and `a_prefix`
-// match, and `e_middle` and `a_middle` match, returns the private and public keys in a
-// PrivateKeyInfo object.
-PrivateKeyInfo from_pkcs8(const ByteArray& pkcs_str, const Template& pkcs8_template) {
+// Then using the template, splits the input PKCS#8-encoded string at `private_key_index` and
+// `private_key_index + private_key_len` into |a_prefix|private-key|a_middle|public-key|. If
+// `e_prefix` and `a_prefix` match, and `e_middle` and `a_middle` match, returns the private and
+// public keys in a PrivateKeyInfo object.
+PrivateKeyInfo from_pkcs8(const std::string& pkcs_str, const Template& pkcs8_template) {
   // Template `prefix` check
-  if (std::memcmp(&pkcs_str.bytes[0], &pkcs8_template.bytes.bytes[0],
-                  pkcs8_template.private_key_index) != 0) {
+  if (pkcs_str.substr(0, pkcs8_template.private_key_index) !=
+      pkcs8_template.bytes.substr(0, pkcs8_template.private_key_index)) {
     LOG(FATAL) << "PKCS#8 template prefix mismatch.";
   }
 
   // Template `middle` check
   int middle_ind = pkcs8_template.private_key_index + pkcs8_template.private_key_len;
-  int middle_len = pkcs8_template.bytes.len - pkcs8_template.private_key_index;
-  if (std::memcmp(&pkcs_str.bytes[middle_ind],
-                  &pkcs8_template.bytes.bytes[pkcs8_template.private_key_index], middle_len) != 0) {
+  int middle_len = pkcs8_template.bytes.length() - pkcs8_template.private_key_index;
+  if (pkcs_str.substr(middle_ind, middle_len) !=
+      pkcs8_template.bytes.substr(pkcs8_template.private_key_index, middle_len)) {
     LOG(FATAL) << "PKCS#8 template middle mismatch.";
   }
 
   // Extract private key and public key values
-  int public_key_len = pkcs_str.len - pkcs8_template.bytes.len - pkcs8_template.private_key_len;
-  int public_key_index = pkcs8_template.bytes.len + pkcs8_template.private_key_len;
+  int public_key_index = pkcs8_template.bytes.length() + pkcs8_template.private_key_len;
+  int public_key_len = pkcs_str.length() - public_key_index;
   PrivateKeyInfo p{
-      ByteArray(&pkcs_str.bytes[pkcs8_template.private_key_index], pkcs8_template.private_key_len),
-      ByteArray(&pkcs_str.bytes[public_key_index], public_key_len)};
+      pkcs_str.substr(pkcs8_template.private_key_index, pkcs8_template.private_key_len),
+      pkcs_str.substr(public_key_index, public_key_len)};
   return p;
+}
+
+Template template_from_base64(const std::string& base64_template, int version,
+                              int private_key_index, unsigned int private_key_len) {
+  std::string decoded_template;
+  if (!absl::Base64Unescape(base64_template, &decoded_template)) {
+    LOG(FATAL) << "Couldn't decode base64 template.";
+  }
+  return Template{decoded_template, version, private_key_index, private_key_len};
 }
 
 }  // namespace pkcs8
