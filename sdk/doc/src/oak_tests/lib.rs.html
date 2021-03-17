@@ -293,6 +293,12 @@
 <span id="290">290</span>
 <span id="291">291</span>
 <span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -315,19 +321,17 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
-    <span class="ident">label</span>::<span class="ident">Label</span>,
+    <span class="ident">label</span>::{<span class="ident">confidentiality_label</span>, <span class="ident">public_key_identity_tag</span>, <span class="ident">Label</span>},
     <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
         <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">ConfigMap</span>, <span class="ident">NodeConfiguration</span>,
         <span class="ident">WebAssemblyConfiguration</span>,
     },
 };
-<span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">process</span>::<span class="ident">Command</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
-<span class="kw">use</span> <span class="ident">tonic</span>::{
-    <span class="ident">metadata</span>::<span class="ident">MetadataValue</span>,
-    <span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>, <span class="ident">Identity</span>},
-    <span class="ident">Request</span>,
+<span class="kw">use</span> <span class="ident">oak_client</span>::<span class="ident">interceptors</span>::{
+    <span class="self">self</span>, <span class="ident">auth</span>::<span class="ident">AuthInterceptor</span>, <span class="ident">label</span>::<span class="ident">LabelInterceptor</span>, <span class="ident">CombinedInterceptor</span>,
 };
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">process</span>::<span class="ident">Command</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
+<span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>, <span class="ident">Identity</span>};
 
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Profile</span> {
     <span class="ident">Release</span>,
@@ -530,7 +534,7 @@
 
 <span class="doccomment">/// Build a labeled channel and interceptor suitable for building a client that</span>
 <span class="doccomment">/// connects to a Runtime under test.</span>
-<span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">channel_and_interceptor</span>(<span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Channel</span>, <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Interceptor</span><span class="op">&gt;</span>) {
+<span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">channel_and_interceptor</span>(<span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Channel</span>, <span class="ident">LabelInterceptor</span>) {
     <span class="comment">// Build a channel that connects to the Runtime under test.</span>
     <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="ident">RUNTIME_URI</span>.<span class="ident">parse</span>().<span class="ident">expect</span>(<span class="string">&quot;Error parsing URI&quot;</span>);
     <span class="kw">let</span> <span class="ident">tls_config</span> <span class="op">=</span> <span class="ident">ClientTlsConfig</span>::<span class="ident">new</span>()
@@ -564,19 +568,8 @@
         }
     }
 
-    <span class="comment">// Build an interceptor that will attach a public-untrusted Oak label to</span>
-    <span class="comment">// every gRPC request.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">encoded_label</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-    <span class="ident">label</span>
-        .<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">encoded_label</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;Error encoding label&quot;</span>);
-    <span class="kw">let</span> <span class="ident">interceptor</span> <span class="op">=</span> <span class="kw">move</span> <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">|</span> {
-        <span class="ident">request</span>.<span class="ident">metadata_mut</span>().<span class="ident">insert_bin</span>(
-            <span class="ident">oak_abi</span>::<span class="ident">OAK_LABEL_GRPC_METADATA_KEY</span>,
-            <span class="ident">MetadataValue</span>::<span class="ident">from_bytes</span>(<span class="ident">encoded_label</span>.<span class="ident">as_ref</span>()),
-        );
-        <span class="prelude-val">Ok</span>(<span class="ident">request</span>)
-    };
+    <span class="comment">// Build an interceptor that will attach the given Oak label to every gRPC request.</span>
+    <span class="kw">let</span> <span class="ident">interceptor</span> <span class="op">=</span> <span class="ident">LabelInterceptor</span>::<span class="ident">create</span>(<span class="ident">label</span>).<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create label interceptor.&quot;</span>);
 
     (<span class="ident">channel</span>, <span class="ident">interceptor</span>)
 }
@@ -585,6 +578,25 @@
 <span class="doccomment">/// client that connects to a Runtime under test.</span>
 <span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">public_channel_and_interceptor</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Channel</span>, <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Interceptor</span><span class="op">&gt;</span>) {
     <span class="ident">channel_and_interceptor</span>(<span class="kw-2">&amp;</span><span class="ident">Label</span>::<span class="ident">public_untrusted</span>()).<span class="ident">await</span>
+}
+
+<span class="doccomment">/// Build a channel and a label interceptor suitable for building a client that connects to a</span>
+<span class="doccomment">/// Runtime under test. The interceptor uses the given key pair to attach a signature and public-key</span>
+<span class="doccomment">/// identity tag to every request.</span>
+<span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">private_channel_and_interceptor</span>(
+    <span class="ident">key_pair</span>: <span class="ident">oak_sign</span>::<span class="ident">KeyPair</span>,
+) <span class="op">-</span><span class="op">&gt;</span> (
+    <span class="ident">Channel</span>,
+    <span class="ident">CombinedInterceptor</span><span class="op">&lt;</span><span class="ident">LabelInterceptor</span>, <span class="ident">AuthInterceptor</span><span class="op">&gt;</span>,
+) {
+    <span class="kw">let</span> (<span class="ident">channel</span>, <span class="ident">label_interceptor</span>) <span class="op">=</span> <span class="ident">channel_and_interceptor</span>(<span class="kw-2">&amp;</span><span class="ident">confidentiality_label</span>(
+        <span class="ident">public_key_identity_tag</span>(<span class="kw-2">&amp;</span><span class="ident">key_pair</span>.<span class="ident">pkcs8_public_key</span>()),
+    ))
+    .<span class="ident">await</span>;
+    <span class="kw">let</span> <span class="ident">auth_interceptor</span> <span class="op">=</span> <span class="ident">AuthInterceptor</span>::<span class="ident">create</span>(<span class="ident">key_pair</span>);
+    <span class="kw">let</span> <span class="ident">interceptor</span> <span class="op">=</span> <span class="ident">interceptors</span>::<span class="ident">combine</span>(<span class="ident">label_interceptor</span>, <span class="ident">auth_interceptor</span>);
+
+    (<span class="ident">channel</span>, <span class="ident">interceptor</span>)
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_tests";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
