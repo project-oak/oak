@@ -14,28 +14,29 @@
  * limitations under the License.
  */
 
+#include <openssl/evp.h>
+
+#include <iomanip>
 #include <thread>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/strings/escaping.h"
 #include "absl/synchronization/mutex.h"
 #include "examples/chat/proto/chat.grpc.pb.h"
 #include "examples/chat/proto/chat.pb.h"
 #include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/application_client.h"
-#include "oak/common/nonce_generator.h"
+#include "oak_abi/proto/identity.pb.h"
 
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
-// TODO(#1357): Use a public / secret key pair instead of bearer token credentials.
-ABSL_FLAG(std::string, room_access_token, "", "Base64-encoded public key of the room to join");
+ABSL_FLAG(std::string, room_secret, "",
+          "Path to a PEM file containing the private key for joining the room");
 ABSL_FLAG(std::string, handle, "", "User handle to display");
 ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
-
-// RoomToken type holds binary data (non-UTF-8, may have embedded NULs).
-using RoomToken = std::string;
 
 using ::oak::examples::chat::Chat;
 using ::oak::examples::chat::Message;
@@ -132,19 +133,15 @@ void Chat(Chat::Stub* stub, const std::string& user_handle) {
   SendLoop(stub, user_handle, done);
 }
 
-// Create a gRPC stub for an application, with the provided room access token, which will be used as
-// confidentiality label for any messages sent, and also to authenticate to the application in order
-// to read messages sent by other clients.
+// Create a gRPC stub for an application, with the provided signed challenge, which will be used for
+// adding a confidentiality label to any messages sent, and also to authenticate to the application
+// in order to read messages sent by other clients.
 std::unique_ptr<Chat::Stub> create_stub(std::string address, std::string ca_cert,
-                                        std::string room_access_token) {
-  // TODO(#1357): Use a public / secret key pair instead of bearer token credentials. In fact,
-  // currently not even bearer token credentials can be used, because the privilege is not correctly
-  // assigned to the gRPC server node, and any responses would never reach the client, so we use a
-  // public label as placeholder.
-  oak::label::Label label = oak::PublicUntrustedLabel();
+                                        oak::identity::SignedChallenge signed_challenge) {
+  oak::label::Label label = oak::PublicKeyIdentityLabel(signed_challenge.public_key());
   // Connect to the Oak Application.
-  auto stub = Chat::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+  auto stub = Chat::NewStub(oak::ApplicationClient::CreatePrivateChannel(
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label, signed_challenge));
   if (stub == nullptr) {
     LOG(FATAL) << "Failed to create application stub";
   }
@@ -158,26 +155,26 @@ int main(int argc, char** argv) {
   std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  RoomToken room_access_token;
-  if (!absl::Base64Unescape(absl::GetFlag(FLAGS_room_access_token), &room_access_token)) {
-    LOG(FATAL) << "Failed to parse --room_access_token as base64";
+  std::string room_secret = absl::GetFlag(FLAGS_room_secret);
+  std::unique_ptr<oak::KeyPair> key_pair;
+
+  // TODO(#1905): A secure mechanism for sharing and retrieving the private key is needed. In the
+  // meantime, we use `room_secret` to pass in a file containing the private key. If no room secret
+  // is provided, we create a fresh private/public key pair, and store the private key in a file for
+  // later use.
+  if (room_secret.empty()) {
+    key_pair = oak::KeyPair::Generate();
+    oak::ApplicationClient::StoreKeyPair(key_pair, "chat-room.key");
+  } else {
+    key_pair = oak::ApplicationClient::LoadKeyPair(room_secret);
   }
+
+  // Use the room's secret to sign the challenge required for authenticating the client.
+  oak::identity::SignedChallenge signed_challenge =
+      oak::ApplicationClient::SignChallenge(key_pair, oak::kOakChallenge);
 
   std::unique_ptr<Chat::Stub> stub;
-
-  // If no room access token was provided, create a fresh one, and print it out so that other
-  // clients may join the same room.
-  if (room_access_token.empty()) {
-    // TODO(#1357): Generate a public / secret key pair and use it to authenticate the client and
-    // label requests.
-    oak::NonceGenerator<64> generator;
-    auto room_access_token_bytes = generator.NextNonce();
-    room_access_token = std::string(room_access_token_bytes.begin(), room_access_token_bytes.end());
-    LOG(INFO) << "Join this room with --address=" << address
-              << " --room_access_token=" << absl::Base64Escape(room_access_token);
-  }
-
-  stub = create_stub(address, ca_cert, room_access_token);
+  stub = create_stub(address, ca_cert, signed_challenge);
 
   if (absl::GetFlag(FLAGS_test)) {
     // Disable interactive behaviour, and just attempt to send a pre-defined message.

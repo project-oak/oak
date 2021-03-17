@@ -71,5 +71,53 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "utils_test",
+    srcs = ["utils_test.cc"],
+    deps = [
+        ":utils",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "oak_sign",
+    srcs = ["oak_sign.cc"],
+    hdrs = ["oak_sign.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "pkcs8",
+        ":utils",
+        "//oak_abi/proto:identity_cc_proto",
+        "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/strings",
+        "@tink_cc",
+        "@tink_cc//signature:signature_config",
+        "@tink_cc//util:istream_input_stream",
+    ],
+)
+
+cc_library(
+    name = "pkcs8",
+    srcs = ["pkcs8.cc"],
+    hdrs = ["pkcs8.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "pkcs8_test",
+    srcs = ["pkcs8_test.cc"],
+    deps = [
+        "utils",
+        ":pkcs8",
+        "@gtest//:gtest_main",
     ],
 )

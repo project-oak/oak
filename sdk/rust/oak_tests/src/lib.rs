@@ -19,19 +19,17 @@
 use anyhow::Context;
 use log::{debug, info};
 use oak_abi::{
-    label::Label,
+    label::{confidentiality_label, public_key_identity_tag, Label},
     proto::oak::application::{
         node_configuration::ConfigType, ApplicationConfiguration, ConfigMap, NodeConfiguration,
         WebAssemblyConfiguration,
     },
 };
-use prost::Message;
-use std::{collections::HashMap, path::PathBuf, process::Command, sync::Arc};
-use tonic::{
-    metadata::MetadataValue,
-    transport::{Certificate, Channel, ClientTlsConfig, Identity},
-    Request,
+use oak_client::interceptors::{
+    self, auth::AuthInterceptor, label::LabelInterceptor, CombinedInterceptor,
 };
+use std::{collections::HashMap, path::PathBuf, process::Command, sync::Arc};
+use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity};
 
 pub enum Profile {
     Release,
@@ -234,7 +232,7 @@ fn create_http_config() -> Option<oak_runtime::HttpConfiguration> {
 
 /// Build a labeled channel and interceptor suitable for building a client that
 /// connects to a Runtime under test.
-pub async fn channel_and_interceptor(label: &Label) -> (Channel, impl Into<tonic::Interceptor>) {
+pub async fn channel_and_interceptor(label: &Label) -> (Channel, LabelInterceptor) {
     // Build a channel that connects to the Runtime under test.
     let uri = RUNTIME_URI.parse().expect("Error parsing URI");
     let tls_config = ClientTlsConfig::new()
@@ -268,19 +266,8 @@ pub async fn channel_and_interceptor(label: &Label) -> (Channel, impl Into<tonic
         }
     }
 
-    // Build an interceptor that will attach a public-untrusted Oak label to
-    // every gRPC request.
-    let mut encoded_label = Vec::new();
-    label
-        .encode(&mut encoded_label)
-        .expect("Error encoding label");
-    let interceptor = move |mut request: Request<()>| {
-        request.metadata_mut().insert_bin(
-            oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
-            MetadataValue::from_bytes(encoded_label.as_ref()),
-        );
-        Ok(request)
-    };
+    // Build an interceptor that will attach the given Oak label to every gRPC request.
+    let interceptor = LabelInterceptor::create(label).expect("Couldn't create label interceptor.");
 
     (channel, interceptor)
 }
@@ -289,4 +276,23 @@ pub async fn channel_and_interceptor(label: &Label) -> (Channel, impl Into<tonic
 /// client that connects to a Runtime under test.
 pub async fn public_channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor>) {
     channel_and_interceptor(&Label::public_untrusted()).await
+}
+
+/// Build a channel and a label interceptor suitable for building a client that connects to a
+/// Runtime under test. The interceptor uses the given key pair to attach a signature and public-key
+/// identity tag to every request.
+pub async fn private_channel_and_interceptor(
+    key_pair: oak_sign::KeyPair,
+) -> (
+    Channel,
+    CombinedInterceptor<LabelInterceptor, AuthInterceptor>,
+) {
+    let (channel, label_interceptor) = channel_and_interceptor(&confidentiality_label(
+        public_key_identity_tag(&key_pair.pkcs8_public_key()),
+    ))
+    .await;
+    let auth_interceptor = AuthInterceptor::create(key_pair);
+    let interceptor = interceptors::combine(label_interceptor, auth_interceptor);
+
+    (channel, interceptor)
 }

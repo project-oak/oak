@@ -18,6 +18,7 @@ use assert_matches::assert_matches;
 use chat_grpc::proto::{chat_client::ChatClient, Message, SendMessageRequest, SubscribeRequest};
 use log::info;
 use serial_test::serial;
+use std::time::Duration;
 
 const MODULE_WASM_FILE_NAME: &str = "chat.wasm";
 
@@ -64,14 +65,10 @@ async fn test_chat() {
             expected_message,
             bob_stream.message().await.unwrap().unwrap()
         );
-        // TODO(#1357): Verify that Eve indeed does not receive the message.
-        // assert_matches!(
-        //     tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
-        //     Err(_)
-        // );
-        assert_eq!(
-            expected_message,
-            eve_stream.message().await.unwrap().unwrap()
+        // Verify that Eve indeed does not receive the message.
+        assert_matches!(
+            tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
+            Err(_)
         );
     }
 
@@ -92,14 +89,10 @@ async fn test_chat() {
             expected_message,
             bob_stream.message().await.unwrap().unwrap()
         );
-        // TODO(#1357): Verify that Eve indeed does not receive the message.
-        // assert_matches!(
-        //     tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
-        //     Err(_)
-        // );
-        assert_eq!(
-            expected_message,
-            eve_stream.message().await.unwrap().unwrap()
+        // Verify that Eve indeed does not receive the message.
+        assert_matches!(
+            tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
+            Err(_)
         );
     }
 
@@ -124,14 +117,10 @@ async fn test_chat() {
             expected_message,
             charlie_stream.message().await.unwrap().unwrap()
         );
-        // TODO(#1357): Verify that Eve indeed does not receive the message.
-        // assert_matches!(
-        //     tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
-        //     Err(_)
-        // );
-        assert_eq!(
-            expected_message,
-            eve_stream.message().await.unwrap().unwrap()
+        // Verify that Eve indeed does not receive the message.
+        assert_matches!(
+            tokio::time::timeout(Duration::from_millis(100), eve_stream.message()).await,
+            Err(_)
         );
     }
 
@@ -154,8 +143,11 @@ impl<'a> Chatter<'a> {
             user_handle,
             base64::encode(&room_key_pair.pkcs8_public_key())
         );
-        let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
-        // TODO(#1357): Use key pair to authenticate this client and label requests.
+
+        // Use key pair to label requests and authenticate this client.
+        let (channel, interceptor) =
+            oak_tests::private_channel_and_interceptor(room_key_pair.clone()).await;
+
         let client = ChatClient::with_interceptor(channel, interceptor);
         Chatter {
             client,

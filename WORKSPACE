@@ -37,11 +37,11 @@ http_archive(
 
 http_archive(
     name = "com_google_absl",
-    sha256 = "eb44e45b9b53b506658861f734ca743346ec792732b063a5b43c96751ccd90c7",
-    strip_prefix = "abseil-cpp-7853a7586c492ce8905c9e49f8679dada6354f2c",
+    sha256 = "0dbe936c51ad6567446b5a60ea5f2649bdfe5ed4e054972960a0799b74da9d43",
+    strip_prefix = "abseil-cpp-b0735979d778a768caee207f01f327535cbd2140",
     urls = [
-        # Head commit on 2020-03-16.
-        "https://github.com/abseil/abseil-cpp/archive/7853a7586c492ce8905c9e49f8679dada6354f2c.zip",
+        # Head commit on 2021-03-04.
+        "https://github.com/abseil/abseil-cpp/archive/b0735979d778a768caee207f01f327535cbd2140.zip",
     ],
 )
 
@@ -406,3 +406,42 @@ bazelbuild_rules_pkg()
 load("@graknlabs_bazel_distribution//packer:dependencies.bzl", "deploy_packer_dependencies")
 
 deploy_packer_dependencies()
+
+# Tink for signing
+http_archive(
+    name = "tink_base",
+    sha256 = "536a4ceb3e9e7e35bf52f7cc99838679de8463ab2a1a12b90121c00ee25fe252",
+    strip_prefix = "tink-33accb5bcdff71f34d7551a669831ec9a52674aa/",
+    urls = [
+        # Head commit on 2021-03-02.
+        "https://github.com/google/tink/archive/33accb5bcdff71f34d7551a669831ec9a52674aa.zip",
+    ],
+)
+
+http_archive(
+    name = "tink_cc",
+    sha256 = "536a4ceb3e9e7e35bf52f7cc99838679de8463ab2a1a12b90121c00ee25fe252",
+    strip_prefix = "tink-33accb5bcdff71f34d7551a669831ec9a52674aa/cc",
+    urls = [
+        # Head commit on 2021-03-02.
+        "https://github.com/google/tink/archive/33accb5bcdff71f34d7551a669831ec9a52674aa.zip",
+    ],
+)
+
+# Load Tink dependencies.
+
+load("@tink_base//:tink_base_deps.bzl", "tink_base_deps")
+
+tink_base_deps()
+
+load("@tink_base//:tink_base_deps_init.bzl", "tink_base_deps_init")
+
+tink_base_deps_init()
+
+load("@tink_cc//:tink_cc_deps.bzl", "tink_cc_deps")
+
+tink_cc_deps()
+
+load("@tink_cc//:tink_cc_deps_init.bzl", "tink_cc_deps_init")
+
+tink_cc_deps_init()

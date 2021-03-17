@@ -26,8 +26,10 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":label_metadata",
+        ":signature_metadata",
         "//oak/common:hmac",
         "//oak/common:nonce_generator",
+        "//oak/common:oak_sign",
         "//oak/common:utils",
         "@com_github_grpc_grpc//:grpc++",
     ],
@@ -41,6 +43,18 @@ cc_library(
     deps = [
         "//oak/common:label",
         "//oak_abi/proto:label_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/base",
+    ],
+)
+
+cc_library(
+    name = "signature_metadata",
+    srcs = ["signature_metadata.cc"],
+    hdrs = ["signature_metadata.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//oak_abi/proto:identity_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/base",
     ],

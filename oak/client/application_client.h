@@ -21,8 +21,10 @@
 #include "glog/logging.h"
 #include "include/grpcpp/grpcpp.h"
 #include "oak/client/label_metadata.h"
+#include "oak/client/signature_metadata.h"
 #include "oak/common/label.h"
 #include "oak/common/nonce_generator.h"
+#include "oak/common/oak_sign.h"
 #include "oak/common/utils.h"
 
 namespace oak {
@@ -59,6 +61,20 @@ class ApplicationClient {
       oak::label::Label label) {
     auto call_credentials =
         grpc::MetadataCredentialsFromPlugin(absl::make_unique<LabelMetadata>(label));
+    return CreateChannel(addr, channel_credentials, call_credentials);
+  }
+
+  // Returns a gRPC Channel connecting to the specified address, initialised with a fixed Oak Label
+  // and signed with the given signed challenge for authentication.
+  static std::shared_ptr<grpc::Channel> CreatePrivateChannel(
+      std::string addr, std::shared_ptr<grpc::ChannelCredentials> channel_credentials,
+      oak::label::Label label, oak::identity::SignedChallenge signed_challenge) {
+    auto label_call_credentials =
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<LabelMetadata>(label));
+    auto sign_call_credentials =
+        grpc::MetadataCredentialsFromPlugin(absl::make_unique<SignatureMetadata>(signed_challenge));
+    auto call_credentials =
+        grpc::CompositeCallCredentials(label_call_credentials, sign_call_credentials);
     return CreateChannel(addr, channel_credentials, call_credentials);
   }
 
@@ -100,6 +116,37 @@ class ApplicationClient {
       LOG(FATAL) << "Could not decode public key: " << public_key;
     }
     return decoded_public_key;
+  }
+
+  // Signs the sha256 hash of the input challenge with the given key pair. Returns a
+  // SignedChallenge containing the signed hash and the public key part of the key pair.
+  static oak::identity::SignedChallenge SignChallenge(std::unique_ptr<oak::KeyPair>& key_pair,
+                                                      std::string challenge) {
+    oak::Signature signature = key_pair->Sign(challenge);
+    oak::identity::SignedChallenge signed_challenge;
+    signed_challenge.set_public_key(signature.public_key);
+    signed_challenge.set_signed_hash(signature.signed_hash);
+    return signed_challenge;
+  }
+
+  // Loads a base64 PKCS#8 encoded private key from the given PEM file, and returns a
+  // KeyPair object created from it.
+  static std::unique_ptr<oak::KeyPair> LoadKeyPair(const std::string& filename) {
+    auto pem_map = oak::utils::read_pem(filename);
+
+    if (pem_map.find(kPrivateKeyPemTag) == pem_map.end()) {
+      LOG(FATAL) << "No private key in the pem file";
+    }
+
+    std::unique_ptr<oak::KeyPair> key_pair = oak::KeyPair::FromPkcs8(pem_map[kPrivateKeyPemTag]);
+    return key_pair;
+  }
+
+  // Stores the base64 PKCS#8 encoding of the given private key in a PEM file in the given path.
+  static void StoreKeyPair(std::unique_ptr<oak::KeyPair>& key_pair, const std::string& filename) {
+    std::map<std::string, std::string> pri_map;
+    pri_map[kPrivateKeyPemTag] = key_pair->ToPkcs8();
+    oak::utils::write_pem(pri_map, filename);
   }
 };
 

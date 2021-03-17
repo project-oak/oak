@@ -1194,6 +1194,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "http",
+ "hyper",
+ "log",
+ "oak_abi",
+ "oak_sign",
+ "prost",
+ "tonic",
+]
+
+[[package]]
 name = "oak_derive"
 version = "0.1.0"
 dependencies = [
@@ -1307,7 +1321,9 @@ dependencies = [
  "log",
  "oak",
  "oak_abi",
+ "oak_client",
  "oak_runtime",
+ "oak_sign",
  "prost",
  "rand",
  "rustls 0.19.0",

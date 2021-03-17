@@ -26,19 +26,15 @@ and creates a first chat room inside it:
 ./scripts/runner --logs run-examples --run-server=false --example-name=chat --client-additional-args=--test=false
 ```
 
-This will emit a trace line that holds the information needed to:
+This will create a file, containing a private key, that the clients need for
+authenticating themselves and joining this room. A secure key-sharing mechanism
+is required for sharing this key with other parties.
 
-- connect to the same Oak application (with `--address`)
-- join the chat room (with `--room_access_token`).
-
-```log
-2019-10-24 10:47:20  INFO  chat.cc : 242 : Join this room with --address=localhost:8080 --room_access_token=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
-```
-
-Another party can then join the same chat room by using these arguments:
+Another party can then join the same chat room by setting `room_secret` to a
+path to a file containing the private key:
 
 ```bash
-./scripts/runner --logs run-examples --run-server=false --example-name=chat --client-additional-args=--test=false --client-additional-args=--room_access-token=NKsceNlg69UbcvryfzmFGnMv9qnZ0DYh6u6gJxujnPPxvHsxMehoD368sumKawVaq9WaSkzrcStoNYLvVNdzhA==
+./scripts/runner --logs run-examples --run-server=false --example-name=chat --client-additional-args=--test=false --client-additional-args=--room_secret=chat-room.key
 ```
 
 ## CI Invocation
