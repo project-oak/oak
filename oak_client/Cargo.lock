@@ -703,9 +703,11 @@ dependencies = [
  "hex",
  "log",
  "oak_abi",
+ "once_cell",
  "pem",
  "ring",
  "sha2",
+ "simple_asn1",
  "structopt",
 ]
 
@@ -1142,6 +1144,18 @@ dependencies = [
  "cpuid-bool",
  "digest",
  "opaque-debug",
+]
+
+[[package]]
+name = "simple_asn1"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db8d597fce66eb0f19dd129b9956e4054cba21aeaf97d4116595027b670fac50"
+dependencies = [
+ "chrono",
+ "num-bigint",
+ "num-traits",
+ "thiserror",
 ]
 
 [[package]]

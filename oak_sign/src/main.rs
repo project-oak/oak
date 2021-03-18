@@ -108,11 +108,7 @@ fn main() -> anyhow::Result<()> {
                 PRIVATE_KEY_TAG,
                 &key_pair.pkcs8_key_pair(),
             )?;
-            write_pem_file(
-                &opt.public_key,
-                PUBLIC_KEY_TAG,
-                &key_pair.pkcs8_public_key(),
-            )?;
+            write_pem_file(&opt.public_key, PUBLIC_KEY_TAG, &key_pair.pkix_public_key())?;
             info!("Key pair generated successfully");
         }
         Command::Sign(ref opt) => {

@@ -7,6 +7,6 @@ In order to create a new pair of public/private keys, run the following command:
 
 ```bash
 ./scripts/oak_sign generate \
-  --private-key=examples/certs/ed25519/test.key \
-  --public-key=examples/certs/ed25519/test.pub
+  --private-key=./examples/keys/ed25519/test.key \
+  --public-key=./examples/keys/ed25519/test.pub
 ```

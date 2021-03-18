@@ -16,11 +16,13 @@
 
 use anyhow::Context;
 use oak_abi::proto::oak::application::ModuleSignature;
+use once_cell::sync::Lazy;
 use pem::Pem;
 use ring::{
     rand,
     signature::{self, Ed25519KeyPair},
 };
+use simple_asn1::{ASN1Block, BigUint, OID};
 use std::{
     collections::HashMap,
     fs::{read, write},
@@ -65,6 +67,17 @@ impl PartialEq for KeyPair {
 
 impl Eq for KeyPair {}
 
+/// OID for the Ed25519 signature algorithm.
+///
+/// See:
+///
+/// - https://tools.ietf.org/html/rfc8419#section-2.2
+/// - https://tools.ietf.org/html/rfc8410#section-3
+/// - https://golang.org/src/crypto/x509/x509.go?s=3654:3712#L315
+static OID_ED_25519: Lazy<OID> = Lazy::new(|| simple_asn1::oid!(1, 3, 101, 112));
+
+const BITS_PER_BYTE: usize = 8;
+
 impl KeyPair {
     /// Generates a Ed25519 key pair.
     pub fn generate() -> anyhow::Result<KeyPair> {
@@ -91,12 +104,27 @@ impl KeyPair {
         self.pkcs8.to_vec()
     }
 
-    /// Returns a PKCS#8 v2 encoded public key.
-    pub fn pkcs8_public_key(&self) -> Vec<u8> {
+    /// Returns a PKIX (x509) encoded public key in DER format.
+    pub fn pkix_public_key(&self) -> Vec<u8> {
         // Trait `ring::signature::KeyPair` that contains `public_key` function is included locally
         // in this function because it conflicts with [`KeyPair`].
         use ring::signature::KeyPair;
-        self.key_pair.public_key().as_ref().to_vec()
+        let key_bytes = self.key_pair.public_key().as_ref().to_vec();
+        // Offsets are only used when parsing ASN1, so we can just leave them as zeroes here in the
+        // various blocks.
+        let key_asn_1 = ASN1Block::Sequence(
+            0,
+            vec![
+                ASN1Block::Sequence(
+                    0,
+                    vec![ASN1Block::ObjectIdentifier(0, OID_ED_25519.clone())],
+                ),
+                // Length is expressed in bits.
+                ASN1Block::BitString(0, key_bytes.len() * BITS_PER_BYTE, key_bytes),
+            ],
+        );
+        let key_der = simple_asn1::to_der(&key_asn_1).unwrap();
+        key_der
     }
 
     pub fn sign(&self, input: &[u8]) -> Vec<u8> {
@@ -116,7 +144,7 @@ impl SignatureBundle {
     pub fn create(input: &[u8], key_pair: &KeyPair) -> anyhow::Result<SignatureBundle> {
         let hash = get_sha256(input);
         Ok(SignatureBundle {
-            public_key: key_pair.pkcs8_public_key(),
+            public_key: key_pair.pkix_public_key(),
             signed_hash: key_pair.sign(&hash),
             hash,
         })
