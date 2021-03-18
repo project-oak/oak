@@ -32,7 +32,7 @@ import (
 
 var (
 	address = flag.String("address", "localhost:8080", "Address of the Oak application to connect to")
-	caCert  = flag.String("ca_cert", "", "Path to the PEM-encoded CA root certificate")
+	caCert  = flag.String("ca_cert_path", "", "Path to the PEM-encoded CA root certificate")
 )
 
 // Keep in sync with /oak_runtime/src/node/grpc/server/mod.rs.

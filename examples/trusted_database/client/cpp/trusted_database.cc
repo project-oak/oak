@@ -26,7 +26,7 @@
 #include "oak/client/application_client.h"
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
-ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, ca_cert_path, "", "Path to the PEM-encoded CA root certificate");
 ABSL_FLAG(float, latitude, float{}, "Requested location's latitude in degrees (WGS84)");
 ABSL_FLAG(float, longitude, float{}, "Requested location's longitude in degrees (WGS84)");
 
@@ -59,14 +59,15 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
-  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
+  std::string ca_cert_path =
+      oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert_path));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // TODO(#1066): Use a more restrictive Label.
   oak::label::Label label = oak::PublicUntrustedLabel();
   // Connect to the Oak Application.
   auto stub = TrustedDatabase::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert_path), label));
   if (stub == nullptr) {
     LOG(FATAL) << "Failed to create application stub";
   }

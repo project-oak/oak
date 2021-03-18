@@ -25,7 +25,7 @@
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
 ABSL_FLAG(std::string, set_id, "", "ID of the set intersection");
-ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, ca_cert_path, "", "Path to the PEM-encoded CA root certificate");
 ABSL_FLAG(std::string, public_key, "", "Path to the PEM-encoded public key used as a data label");
 
 using ::oak::examples::private_set_intersection::GetIntersectionRequest;
@@ -68,7 +68,8 @@ int main(int argc, char** argv) {
 
   std::string address = absl::GetFlag(FLAGS_address);
   std::string set_id = absl::GetFlag(FLAGS_set_id);
-  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
+  std::string ca_cert_path =
+      oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert_path));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // TODO(#1066): Use a more restrictive Label, based on a bearer token shared between the two
@@ -77,10 +78,10 @@ int main(int argc, char** argv) {
   oak::label::Label label = oak::WebAssemblyModuleSignatureLabel(public_key);
 
   auto stub_0 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert_path), label));
 
   auto stub_1 = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert_path), label));
 
   // Submit sets from different clients.
   std::vector<std::string> set_0{"a", "b", "c"};
@@ -105,7 +106,7 @@ int main(int argc, char** argv) {
   }
   oak::label::Label invalid_label = oak::WebAssemblyModuleSignatureLabel(invalid_public_key);
   auto invalid_stub = PrivateSetIntersection::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), invalid_label));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert_path), invalid_label));
   std::vector<std::string> set_2{"c", "d", "e"};
   auto submit_status_2 = SubmitSet(invalid_stub.get(), set_id, set_2);
   // Error code `3` means `could not process gRPC request`.

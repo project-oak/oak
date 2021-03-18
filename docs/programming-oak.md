@@ -470,7 +470,7 @@ running Oak Application:
 ```C++
   // Connect to the Oak Application.
   auto stub = HelloWorld::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert_path), label));
 ```
 <!-- prettier-ignore-end -->
 

@@ -60,7 +60,7 @@ hosted at a specific domain name; in this case `aggregator.oakexamples.dev`:
 ```bash
 ./bazel-client-bin/examples/aggregator/client/cpp/client \
   --address=aggregator.oakexamples.dev \
-  --ca_cert=./examples/certs/gcp/ca.pem \
+  --ca_cert_path=./examples/certs/gcp/ca.pem \
   --bucket=test \
   --data=1:10,2:20,3:30
 ```
