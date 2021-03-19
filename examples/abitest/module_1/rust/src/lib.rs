@@ -52,7 +52,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
     // be waiting on the channel.
     let mut buf = Vec::<u8>::with_capacity(2);
     let mut handles = Vec::with_capacity(2);
-    oak::channel_read(in_channel, &mut buf, &mut handles)?;
+    oak::channel_read(&in_channel, &mut buf, &mut handles)?;
     if handles.len() != 1 {
         return Err(oak::OakStatus::ErrInternal);
     }
@@ -61,7 +61,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
 
     let out_channel = oak::WriteHandle { handle: out_handle };
     // Wait on 1+N read handles (starting with N=0).
-    let mut wait_handles = vec![in_channel];
+    let mut wait_handles = vec![in_channel.clone()];
     loop {
         let ready_status = oak::wait_on_channels(&wait_handles)?;
         // If there is a message on in_channel, it is expected to contain
@@ -69,7 +69,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
         if ready_status[0] == oak::ChannelReadStatus::ReadReady {
             let mut buf = Vec::<u8>::with_capacity(16);
             let mut handles = Vec::with_capacity(5);
-            oak::channel_read(in_channel, &mut buf, &mut handles)?;
+            oak::channel_read(&in_channel, &mut buf, &mut handles)?;
             for handle in handles {
                 info!("add new handle {:?} to waiting set", handle);
                 wait_handles.push(oak::ReadHandle { handle });
@@ -96,7 +96,7 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
             let mut buf = Vec::<u8>::with_capacity(1024);
             let mut handles = Vec::with_capacity(1);
 
-            oak::channel_read(wait_handles[i], &mut buf, &mut handles).or_else(|err| {
+            oak::channel_read(&wait_handles[i], &mut buf, &mut handles).or_else(|err| {
                 if err == oak::OakStatus::ErrChannelClosed || err == oak::OakStatus::ErrChannelEmpty
                 {
                     // Multiple backend Nodes are attempting to read the message from
@@ -128,18 +128,18 @@ fn inner_main(in_handle: u64) -> Result<(), oak::OakStatus> {
                 "send serialized message to new channel {:?}: {}",
                 new_write, serialized_rsp
             );
-            oak::channel_write(new_write, &serialized_rsp.into_bytes(), &[])?;
+            oak::channel_write(&new_write, &serialized_rsp.into_bytes(), &[])?;
             // Drop the write half now it has been written to.
             oak::channel_close(new_write.handle)?;
 
             // Send a copy of the read half of the new channel back to the frontend,
             // then close our handle to the read half.
-            oak::channel_write(out_channel, &[], &[new_read.handle])?;
+            oak::channel_write(&out_channel, &[], &[new_read.handle])?;
             oak::channel_close(new_read.handle)?;
         }
 
         // Drop any orphaned channels from the wait set now iteration is done.
-        wait_handles.retain(|&h| !orphaned_handles.contains(&h.handle));
+        wait_handles.retain(|h| !orphaned_handles.contains(&h.handle));
     }
 }
 
