@@ -48,7 +48,7 @@ impl Interceptor for AuthInterceptor {
         // Signed challenge
         let signed_challenge = SignedChallenge {
             signed_hash: signature.signed_hash,
-            public_key: self.key_pair.pkix_public_key(),
+            public_key: self.key_pair.public_key_der(),
         };
 
         let mut signed_challenge_bytes = Vec::new();

@@ -141,7 +141,7 @@ impl<'a> Chatter<'a> {
         info!(
             "creating new Chatter({}, {})",
             user_handle,
-            base64::encode(&room_key_pair.pkix_public_key())
+            base64::encode(&room_key_pair.public_key_der())
         );
 
         // Use key pair to label requests and authenticate this client.

@@ -76,7 +76,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Couldn't create TLS channel")?;
 
     let key_pair = oak_sign::KeyPair::generate()?;
-    let label = confidentiality_label(public_key_identity_tag(&key_pair.pkix_public_key()));
+    let label = confidentiality_label(public_key_identity_tag(&key_pair.public_key_der()));
     let label_interceptor =
         LabelInterceptor::create(&label).context("Couldn't create gRPC interceptor")?;
     let auth_interceptor = AuthInterceptor::create(key_pair);

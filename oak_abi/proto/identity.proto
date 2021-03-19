@@ -23,5 +23,8 @@ package oak.identity;
 // public key corresponding to the private key used for signing.
 message SignedChallenge {
   bytes signed_hash = 1;
+
+  // Public key as a binary DER-encoded `SubjectPublicKeyInfo` (see
+  // https://tools.ietf.org/html/rfc5280#section-4.1).
   bytes public_key = 2;
 }
