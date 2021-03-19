@@ -30,3 +30,20 @@ See <https://sigstore.dev/what_is_sigstore/> for details about rekor.
      --public-key=./examples/keys/ed25519/test.pub \
      --pki-format=x509
    ```
+
+## To look up signatures from rekor
+
+- by key:
+
+  ```bash
+  rekor search \
+    --public-key=./examples/keys/ed25519/test.pub \
+    --pki-format=x509
+  ```
+
+- by file:
+
+  ```bash
+  rekor search \
+     --artifact=<(base64 --decode <(sed -n '11,11p' ./examples/private_set_intersection/private_set_intersection_handler.sign | tr -d '[:space:]'))
+  ```

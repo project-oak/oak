@@ -288,7 +288,7 @@ pub async fn private_channel_and_interceptor(
     CombinedInterceptor<LabelInterceptor, AuthInterceptor>,
 ) {
     let (channel, label_interceptor) = channel_and_interceptor(&confidentiality_label(
-        public_key_identity_tag(&key_pair.pkcs8_public_key()),
+        public_key_identity_tag(&key_pair.pkix_public_key()),
     ))
     .await;
     let auth_interceptor = AuthInterceptor::create(key_pair);

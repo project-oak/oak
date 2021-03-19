@@ -123,8 +123,7 @@ impl KeyPair {
                 ASN1Block::BitString(0, key_bytes.len() * BITS_PER_BYTE, key_bytes),
             ],
         );
-        let key_der = simple_asn1::to_der(&key_asn_1).unwrap();
-        key_der
+        simple_asn1::to_der(&key_asn_1).unwrap()
     }
 
     pub fn sign(&self, input: &[u8]) -> Vec<u8> {
@@ -152,6 +151,7 @@ impl SignatureBundle {
 
     /// Verifies the signature validity.
     pub fn verify(&self) -> anyhow::Result<()> {
+        // NOSUBMIT: Parse ASN1 first.
         let public_key = signature::UnparsedPublicKey::new(&signature::ED25519, &self.public_key);
         public_key
             .verify(&self.hash, &self.signed_hash)
