@@ -41,7 +41,7 @@ See <https://sigstore.dev/what_is_sigstore/> for details about rekor.
     --pki-format=x509
   ```
 
-- by file:
+- by hash:
 
   ```bash
   rekor search \
