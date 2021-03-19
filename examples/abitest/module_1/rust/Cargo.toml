@@ -11,7 +11,7 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 log = "*"
 abitest_common = { path = "../../abitest_common" }
-oak = { path = "../../../../sdk/rust/oak" }
+oak = { path = "../../../../sdk/rust/oak", features = ["linear-handles"] }
 oak_abi = { path = "../../../../oak_abi" }
 oak_io = { path = "../../../../oak_io" }
 prost = "*"
