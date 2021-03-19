@@ -28,7 +28,7 @@ use private_set_intersection_handler::Handler;
 
 // Base64 encoded Ed25519 public key corresponding to Wasm module signature.
 // Originated from `examples/keys/ed25519/test.pub`.
-const PUBLIC_KEY_BASE64: &str = "f41SClNtR4i46v2Tuh1fQLbt/ZqRr1lENajCW92jyP4=";
+const PUBLIC_KEY_BASE64: &str = "MCowBQYDK2VwAyEA3xXdTC7CVMZnzs0IVZeGbHg2CptGT6m38JbGt4wf+aI=";
 
 oak::entrypoint_command_handler!(oak_main => Main);
 
