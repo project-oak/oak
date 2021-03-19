@@ -243,7 +243,7 @@ impl Node for HttpServerNode {
 
         // Build a service to process all incoming HTTP requests.
         let generic_handler = HttpRequestHandler {
-            runtime,
+            runtime: runtime.clone(),
             invocation_channel,
         };
         let server = self.make_server(generic_handler, notify_receiver);
@@ -251,7 +251,7 @@ impl Node for HttpServerNode {
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
         // TODO(#1280): Use a single shared tokio runtime, instead of creating a new one here.
-        let mut async_runtime = create_async_runtime();
+        let mut async_runtime = create_async_runtime(runtime);
 
         // Start the HTTP server.
         info!(
@@ -271,7 +271,7 @@ fn get_invocation_channel(
 ) -> Result<WriteHandle, OakError> {
     let startup_receiver = Receiver::<HttpInvocationSender>::new(startup_handle);
     let invocation_channel = startup_receiver.receive(&runtime)?;
-    match &invocation_channel.sender {
+    match invocation_channel.sender {
         Some(invocation_sender) => {
             info!(
                 "Invocation channel write handle received: {}",
@@ -286,7 +286,7 @@ fn get_invocation_channel(
     }
 }
 
-fn create_async_runtime() -> tokio::runtime::Runtime {
+fn create_async_runtime(runtime: RuntimeProxy) -> tokio::runtime::Runtime {
     tokio::runtime::Builder::new()
         // Use simple scheduler that runs all tasks on the current-thread.
         // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
@@ -297,6 +297,7 @@ fn create_async_runtime() -> tokio::runtime::Runtime {
         // Enables the time driver.
         // Necessary for creating a Tokio Runtime.
         .enable_time()
+        .on_thread_start(move || runtime.set_as_current())
         .build()
         .expect("Couldn't create Async runtime")
 }
@@ -362,7 +363,10 @@ impl HttpRequestHandler {
         pipe.insert_message(&self.runtime, request)?;
 
         // Send an invocation message (with attached handles) to the Oak Node.
-        pipe.send_invocation(&self.runtime, self.invocation_channel)?;
+        pipe.send_invocation(
+            &self.runtime,
+            crate::node::copy_or_clone(&self.invocation_channel),
+        )?;
 
         // Close all local handles except for the one that allows reading responses.
         pipe.close(&self.runtime);

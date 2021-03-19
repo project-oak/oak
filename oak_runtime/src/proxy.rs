@@ -31,6 +31,7 @@ use oak_abi::{
     ChannelReadStatus, OakStatus,
 };
 use std::{
+    cell::RefCell,
     collections::{HashMap, VecDeque},
     sync::{Arc, Mutex, RwLock},
 };
@@ -623,5 +624,63 @@ impl RuntimeProxy {
 
     pub fn metrics_data(&self) -> Metrics {
         self.runtime.metrics_data.clone()
+    }
+
+    /// Gets the instance for the current thread.
+    ///
+    /// Panics if no instance is set for the current thread.
+    pub fn current() -> Self {
+        RUNTIME_PROXY.with(|proxy| {
+            proxy
+                .borrow()
+                .as_ref()
+                .expect("No RuntimeProxy configured for the current thread")
+                .clone()
+        })
+    }
+
+    /// Binds this instance to the current thread.
+    ///
+    /// This function should be invoked immediately after creating a new thread that may `Clone` or
+    /// `Drop` handle types, such as [`Sender`]s or [`Receiver`]s.
+    ///
+    /// In particular, make sure to call this when a new node is created.
+    pub fn set_as_current(&self) {
+        RUNTIME_PROXY.with(|proxy| {
+            proxy.replace(Some(self.clone()));
+        })
+    }
+}
+
+std::thread_local! {
+    /// Reference to the [`RuntimeProxy`] bound to the current thread.
+    ///
+    /// Access this through [`RuntimeProxy::current`], assign it with [`RuntimeProxy::set_as_current`].
+    static RUNTIME_PROXY: RefCell<Option<RuntimeProxy>> = RefCell::new(None);
+}
+
+// Called by `oak_io` when `clone()` is called on a [`oak_abi::Handle`].
+#[no_mangle]
+extern "C" fn handle_clone(
+    handle: oak_abi::Handle,
+    cloned_handle_out: *mut oak_abi::Handle,
+) -> u32 {
+    match RuntimeProxy::current().handle_clone(handle) {
+        Ok(cloned_handle) => {
+            unsafe {
+                *cloned_handle_out = cloned_handle;
+            }
+            OakStatus::Ok as u32
+        }
+        Err(e) => e as u32,
+    }
+}
+
+// Called by `oak_io` when `drop()` is called on a [`oak_abi::Handle`].
+#[no_mangle]
+extern "C" fn channel_close(handle: oak_abi::Handle) -> u32 {
+    match RuntimeProxy::current().channel_close(handle) {
+        Ok(()) => OakStatus::Ok as u32,
+        Err(e) => e as u32,
     }
 }

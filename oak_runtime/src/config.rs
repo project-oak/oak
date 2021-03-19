@@ -34,6 +34,7 @@ pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, O
         &config.sign_table,
         config.kms_credentials.as_ref(),
     );
+    proxy.set_as_current();
     let config_map = config.config_map.clone();
     let handle = proxy.start_runtime(config)?;
 

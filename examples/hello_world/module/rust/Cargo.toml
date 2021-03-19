@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 anyhow = "*"
 either = "*"
 log = "*"
-oak = "=0.1.0"
+oak = { version = "=0.1.0", features = ["linear-handles"] }
 oak_abi = "=0.1.0"
 oak_io = "=0.1.0"
 oak_services = "=0.1.0"
@@ -25,7 +25,7 @@ env_logger = "*"
 hello_world_grpc = "=0.1.0"
 log = "*"
 maplit = "*"
-oak_runtime = "=0.1.0"
+oak_runtime = { version = "=0.1.0", features = ["linear-handles"] }
 oak_tests = "=0.1.0"
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
 tonic = "*"
