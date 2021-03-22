@@ -57,7 +57,7 @@ class KeyPair {
     //           2b6570     : 1.3.101.112 = Ed25519
     //     03 21            : BIT STRING len 33
     //        00            : number of padding bits at end of content
-    //        7f8d520a536d4788b8eafd93ba1d5f40b6edfd9a91af594435a8c25bdda3c8fe
+    //        7f8d520a536d4788b8eafd93ba1d5f40b6edfd9a91af594435a8c25bdda3c8fe : [raw public key]
     //
     // Also see:
     //
