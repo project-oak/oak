@@ -27,7 +27,7 @@ ABSL_CONST_INIT extern const char kPrivateKeyPemTag[];
 
 struct Signature {
   std::string signed_hash;
-  std::string public_key;
+  std::string public_key_der;
 };
 
 class KeyPair {
@@ -38,6 +38,9 @@ class KeyPair {
 
   // Generates a PKCS#8 encoded string from this key pair.
   std::string ToPkcs8();
+
+  // Returns the public key, as a raw Ed25519 key.
+  std::string GetPublicKeyRaw() { return key_.public_key().key_value(); }
 
   // Returns the public key, as a binary DER-encoded SubjectPublicKeyInfo (see
   // https://tools.ietf.org/html/rfc5280#section-4.1).

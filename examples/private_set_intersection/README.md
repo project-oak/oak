@@ -11,9 +11,9 @@ the code is modified, the wasm module and the signature must be regenerated:
 
    ```bash
    ./scripts/oak_sign sign \
-     --private-key=examples/keys/ed25519/test.key \
-     --input-file=examples/private_set_intersection/bin/private_set_intersection_handler.wasm \
-     --signature-file=examples/private_set_intersection/private_set_intersection_handler.sign
+     --private-key=./examples/keys/ed25519/test.key \
+     --input-file=./examples/private_set_intersection/bin/private_set_intersection_handler.wasm \
+     --signature-file=./examples/private_set_intersection/private_set_intersection_handler.sign
    ```
 
 ## To publish the signature to rekor

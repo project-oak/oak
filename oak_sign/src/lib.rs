@@ -37,7 +37,7 @@ pub const HASH_TAG: &str = "HASH";
 /// Convenience struct that encapsulates `ring::signature::Ed25519KeyPair`.
 #[derive(Debug)]
 pub struct KeyPair {
-    /// PKCS#8 v2 encoded private key and public key.
+    /// PKCS#8 v2 encoded private key and public key pair.
     /// https://tools.ietf.org/html/rfc5958
     ///
     /// The encoded version is kept because a parsed `key_pair` doesn't contain a method for
@@ -88,19 +88,19 @@ impl KeyPair {
     /// Generates a Ed25519 key pair.
     pub fn generate() -> anyhow::Result<KeyPair> {
         let rng = rand::SystemRandom::new();
-        let private_key = Ed25519KeyPair::generate_pkcs8(&rng)
+        let key_pair_pkcs_8 = Ed25519KeyPair::generate_pkcs8(&rng)
             .ok()
-            .context("Couldn't generate key pair")?;
-        KeyPair::parse(private_key.as_ref())
+            .context("Couldn't generate PKCS#8 key pair")?;
+        KeyPair::parse(key_pair_pkcs_8.as_ref())
     }
 
     /// Parses a Ed25519 key pair from a PKCS#8 v2 encoded `pkcs8_key_pair`.
-    pub fn parse(pkcs8_key_pair: &[u8]) -> anyhow::Result<KeyPair> {
-        let key_pair = Ed25519KeyPair::from_pkcs8(pkcs8_key_pair)
+    pub fn parse(key_pair_pkcs_8: &[u8]) -> anyhow::Result<KeyPair> {
+        let key_pair = Ed25519KeyPair::from_pkcs8(key_pair_pkcs_8)
             .ok()
             .context("Couldn't parse generated key pair")?;
         Ok(Self {
-            pkcs8: pkcs8_key_pair.to_vec(),
+            pkcs8: key_pair_pkcs_8.to_vec(),
             key_pair,
         })
     }
