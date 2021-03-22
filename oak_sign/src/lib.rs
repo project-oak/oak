@@ -155,7 +155,7 @@ pub fn decode_public_key_der(key_der: &[u8]) -> anyhow::Result<Vec<u8>> {
         if v.len() != 2 {
             anyhow::bail!("Invalid length of ASN.1 sequence: {}, expected: 2", v.len());
         }
-        if &v[0] == &ED_25519_ALG.clone() {
+        if v[0] == ED_25519_ALG.clone() {
             if let ASN1Block::BitString(_, _, key_bytes) = &v[1] {
                 Ok(key_bytes.clone())
             } else {
