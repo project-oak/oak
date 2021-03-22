@@ -1,5 +1,8 @@
 name = "proxy_attestation"
+
+[backends]
 backend = { Cargo = { cargo_manifest = "experimental/proxy_attestation/Cargo.toml" }, additional_args = [
+  "--grpc-listen-address=[::]:8888",
   "--grpc-tls-private-key=./examples/certs/local/local.key",
   "--grpc-tls-certificate=./examples/certs/local/local.pem",
 ] }

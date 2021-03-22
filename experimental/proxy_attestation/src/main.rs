@@ -63,6 +63,12 @@ use tonic::{
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Proxy Attestation")]
 pub struct Opt {
+    #[structopt(
+        long,
+        help = "Address to listen on for the gRPC server.",
+        default_value = "[::]:8888"
+    )]
+    grpc_listen_address: String,
     #[structopt(long, help = "Private RSA key PEM encoded file used by gRPC server.")]
     grpc_tls_private_key: String,
     #[structopt(
@@ -166,7 +172,10 @@ async fn main() -> anyhow::Result<()> {
         std::fs::read(&opt.grpc_tls_certificate).context("Couldn't load certificate")?;
 
     let identity = Identity::from_pem(certificate, private_key);
-    let address = "[::]:8888".parse().context("Couldn't parse address")?;
+    let address = opt
+        .grpc_listen_address
+        .parse()
+        .context("Couldn't parse address")?;
 
     // Create proxy attestation gRPC server.
     info!("Starting proxy attestation server at {:?}", address);
