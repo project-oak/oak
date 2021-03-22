@@ -60,7 +60,7 @@ async function main() {
     );
     const signedChallenge = oakSignedChallengeType.create({
       signedHash: signedHash,
-      publicKey: keyPair.publicKey,
+      publicKey: keyPair.publicKeyDer,
     });
     const encodedSignedChallenge = oakSignedChallengeType
       .encode(signedChallenge)
