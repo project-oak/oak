@@ -1443,7 +1443,7 @@ impl super::Node for WasmNode {
         "wasm"
     }
     fn isolation(&self) -> NodeIsolation {
-        // The Wasm sandbox restricts the external communictions from the Node.
+        // The Wasm sandbox restricts the external communications from the Node.
         NodeIsolation::Sandboxed
     }
 
