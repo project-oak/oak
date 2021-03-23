@@ -35,12 +35,31 @@ namespace pkcs8 {
 //
 // This is copied from the Rust ring crate
 // https://github.com/briansmith/ring/blob/main/src/ec/curve25519/ed25519/ed25519_pkcs8_v2_template.der.
-const char kBase64Ed25519Pkcs8Template[] = "MFMCAQEwBQYDK2VwBCIEIKEjAyEA";
+//
+// This is the meaning of the template bytes interpreted as ASN.1:
+// Ref: https://tools.ietf.org/html/rfc8410#section-10.3
+//    0 30   85: SEQUENCE {
+//    2 02    1:   INTEGER 0
+//    5 30    5:   SEQUENCE {
+//    7 06    3:     OBJECT IDENTIFIER '1 3 101 112'
+//             :     }
+//   12 04   34:   OCTET STRING, encapsulates {
+//             :     04 20
+//             :     32-BYTE PRIVATE KEY
+//             :     }
+//   48 00   33:   [0] OCTET STRING, encapsulates {
+//             :     00
+//             :     32-BYTE PUBLIC KEY
+//             :     }
+//             :   }
+const std::string kBase64Ed25519Pkcs8Template =
+    std::string({0x30, 0x53, 0x02, 0x01, 0x01, 0x30,       0x05, 0x06, 0x03, 0x2b, 0x65,
+                 0x70, 0x04, 0x22, 0x04, 0x20, (char)0xa1, 0x23, 0x03, 0x21, 0x00});
 
 // Template for serializing and deserializing Ed25519 keys. The template encapsulates a string
 // representation of the template bytes, the version (for convenience), and the index at which the
 // template bytes should split into `prefix` and `middle`.
-const Template kEd25519Pkcs8Template = template_from_base64(kBase64Ed25519Pkcs8Template, 1, 16, 32);
+const Template kEd25519Pkcs8Template{kBase64Ed25519Pkcs8Template, 1, 16, 32};
 
 // Splits the bytes in the given template at the `private_key_index` into `|prefix|middle|`. Inserts
 // the private key and the public key to form `|prefix|private-key|middle|public-key|`.
@@ -95,15 +114,6 @@ PrivateKeyInfo from_pkcs8(const std::string& pkcs_str, const Template& pkcs8_tem
       pkcs_str.substr(pkcs8_template.private_key_index, pkcs8_template.private_key_len),
       pkcs_str.substr(public_key_index, public_key_len)};
   return p;
-}
-
-Template template_from_base64(const std::string& base64_template, int version,
-                              int private_key_index, unsigned int private_key_len) {
-  std::string decoded_template;
-  if (!absl::Base64Unescape(base64_template, &decoded_template)) {
-    LOG(FATAL) << "Couldn't decode base64 template.";
-  }
-  return Template{decoded_template, version, private_key_index, private_key_len};
 }
 
 }  // namespace pkcs8
