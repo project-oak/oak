@@ -1,0 +1,85 @@
+//
+// Copyright 2020 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.examples.weather_service;
+
+import "google/protobuf/empty.proto";
+
+message GetCityWeatherRequest {
+  string city_name = 1;
+}
+
+message GetCityWeatherResponse {
+  DatabaseEntry entry = 1;
+}
+
+service WeatherService {
+  // Get weather information for a specific city.
+  rpc GetCityWeather(GetCityWeatherRequest) returns (GetCityWeatherResponse);
+}
+
+message Database {
+  repeated DatabaseEntry entries = 1;
+}
+
+message DatabaseEntry {
+  City city = 1;
+  uint64 time = 2;
+  Temperature temperature = 3;
+  Wind wind = 4;
+  Clouds clouds = 5;
+  repeated Weather weather = 6;
+}
+
+message City {
+  uint32 id = 1;
+  string name = 2;
+  string uppercase_name = 3;
+  string country = 4;
+  Coordinates coordinates = 5;
+  uint32 zoom = 6;
+}
+
+message Coordinates {
+  float longitude = 1;
+  float latitude = 2;
+}
+
+message Temperature {
+  float temperature = 1;
+  float pressure = 2;
+  float temperature_min = 3;
+  float temperature_max = 4;
+  float humidity = 5;
+}
+
+message Wind {
+  float speed = 1;
+  float direction_degrees = 2;
+}
+
+message Clouds {
+  uint32 all = 1;
+}
+
+message Weather {
+  uint32 id = 1;
+  string main = 2;
+  string description = 3;
+  string icon = 4;
+}

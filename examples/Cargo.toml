@@ -29,6 +29,9 @@ members = [
   "translator/grpc",
   "translator/common",
   "translator/module/rust",
+  "weather_service/backend",
+  "weather_service/client",
+  "weather_service/module",
 ]
 
 # Patch dependencies on oak crates so that they refer to the versions within this same repository.
