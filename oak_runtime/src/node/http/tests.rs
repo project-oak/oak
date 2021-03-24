@@ -606,7 +606,7 @@ fn create_signature() -> oak_abi::proto::oak::identity::SignedChallenge {
 
     oak_abi::proto::oak::identity::SignedChallenge {
         signed_hash: signature.signed_hash,
-        public_key: key_pair.pkcs8_public_key(),
+        public_key: key_pair.public_key_der().unwrap(),
     }
 }
 

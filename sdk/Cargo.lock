@@ -1305,9 +1305,11 @@ dependencies = [
  "hex",
  "log",
  "oak_abi",
+ "once_cell",
  "pem",
  "ring",
  "sha2",
+ "simple_asn1",
  "structopt",
 ]
 

@@ -16,11 +16,13 @@
 
 use anyhow::Context;
 use oak_abi::proto::oak::application::ModuleSignature;
+use once_cell::sync::Lazy;
 use pem::Pem;
 use ring::{
     rand,
     signature::{self, Ed25519KeyPair},
 };
+use simple_asn1::{ASN1Block, BigUint, OID};
 use std::{
     collections::HashMap,
     fs::{read, write},
@@ -35,7 +37,7 @@ pub const HASH_TAG: &str = "HASH";
 /// Convenience struct that encapsulates `ring::signature::Ed25519KeyPair`.
 #[derive(Debug)]
 pub struct KeyPair {
-    /// PKCS#8 v2 encoded private key and public key.
+    /// PKCS#8 v2 encoded private key and public key pair.
     /// https://tools.ietf.org/html/rfc5958
     ///
     /// The encoded version is kept because a parsed `key_pair` doesn't contain a method for
@@ -65,38 +67,57 @@ impl PartialEq for KeyPair {
 
 impl Eq for KeyPair {}
 
+/// OID for the Ed25519 signature algorithm.
+///
+/// See:
+///
+/// - https://tools.ietf.org/html/rfc8419#section-2.2
+/// - https://tools.ietf.org/html/rfc8410#section-3
+/// - https://golang.org/src/crypto/x509/x509.go?s=3654:3712#L315
+static OID_ED_25519: Lazy<OID> = Lazy::new(|| simple_asn1::oid!(1, 3, 101, 112));
+static ED_25519_ALG: Lazy<ASN1Block> = Lazy::new(|| {
+    ASN1Block::Sequence(
+        0,
+        vec![ASN1Block::ObjectIdentifier(0, OID_ED_25519.clone())],
+    )
+});
+
+const BITS_PER_BYTE: usize = 8;
+
 impl KeyPair {
     /// Generates a Ed25519 key pair.
     pub fn generate() -> anyhow::Result<KeyPair> {
         let rng = rand::SystemRandom::new();
-        let private_key = Ed25519KeyPair::generate_pkcs8(&rng)
+        let key_pair_pkcs_8 = Ed25519KeyPair::generate_pkcs8(&rng)
             .ok()
-            .context("Couldn't generate key pair")?;
-        KeyPair::parse(private_key.as_ref())
+            .context("Couldn't generate PKCS#8 key pair")?;
+        KeyPair::parse(key_pair_pkcs_8.as_ref())
     }
 
     /// Parses a Ed25519 key pair from a PKCS#8 v2 encoded `pkcs8_key_pair`.
-    pub fn parse(pkcs8_key_pair: &[u8]) -> anyhow::Result<KeyPair> {
-        let key_pair = Ed25519KeyPair::from_pkcs8(pkcs8_key_pair)
+    pub fn parse(key_pair_pkcs_8: &[u8]) -> anyhow::Result<KeyPair> {
+        let key_pair = Ed25519KeyPair::from_pkcs8(key_pair_pkcs_8)
             .ok()
             .context("Couldn't parse generated key pair")?;
         Ok(Self {
-            pkcs8: pkcs8_key_pair.to_vec(),
+            pkcs8: key_pair_pkcs_8.to_vec(),
             key_pair,
         })
     }
 
     /// Returns a PKCS#8 v2 encoded key pair.
-    pub fn pkcs8_key_pair(&self) -> Vec<u8> {
+    pub fn key_pair_pkcs_8(&self) -> Vec<u8> {
         self.pkcs8.to_vec()
     }
 
-    /// Returns a PKCS#8 v2 encoded public key.
-    pub fn pkcs8_public_key(&self) -> Vec<u8> {
+    /// Returns the public key as a binary DER-encoded `SubjectPublicKeyInfo` (see
+    /// https://tools.ietf.org/html/rfc5280#section-4.1).
+    pub fn public_key_der(&self) -> anyhow::Result<Vec<u8>> {
         // Trait `ring::signature::KeyPair` that contains `public_key` function is included locally
         // in this function because it conflicts with [`KeyPair`].
         use ring::signature::KeyPair;
-        self.key_pair.public_key().as_ref().to_vec()
+        let key_bytes = self.key_pair.public_key().as_ref().to_vec();
+        encode_public_key_der(&key_bytes)
     }
 
     pub fn sign(&self, input: &[u8]) -> Vec<u8> {
@@ -104,9 +125,58 @@ impl KeyPair {
     }
 }
 
+/// Encodes the public key as a binary DER-encoded `SubjectPublicKeyInfo` (see
+/// https://tools.ietf.org/html/rfc5280#section-4.1).
+pub fn encode_public_key_der(key_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
+    // Offsets are only used when parsing ASN1, so we can just leave them as zeroes here in the
+    // various blocks.
+    let key_asn_1 = ASN1Block::Sequence(
+        0,
+        vec![
+            ED_25519_ALG.clone(),
+            // Length is expressed in bits.
+            ASN1Block::BitString(0, key_bytes.len() * BITS_PER_BYTE, key_bytes.into()),
+        ],
+    );
+    simple_asn1::to_der(&key_asn_1).context("Could not encode key to DER")
+}
+
+/// Decodes the public key as a binary DER-encoded `SubjectPublicKeyInfo` (see
+/// https://tools.ietf.org/html/rfc5280#section-4.1).
+pub fn decode_public_key_der(key_der: &[u8]) -> anyhow::Result<Vec<u8>> {
+    let asn_blocks = simple_asn1::from_der(key_der).unwrap();
+    if asn_blocks.len() != 1 {
+        anyhow::bail!(
+            "Invalid number of ASN.1 blocks: {}, expected: 1",
+            asn_blocks.len()
+        );
+    }
+    if let ASN1Block::Sequence(_, v) = &asn_blocks[0] {
+        if v.len() != 2 {
+            anyhow::bail!("Invalid length of ASN.1 sequence: {}, expected: 2", v.len());
+        }
+        if v[0] == ED_25519_ALG.clone() {
+            if let ASN1Block::BitString(_, _, key_bytes) = &v[1] {
+                Ok(key_bytes.clone())
+            } else {
+                anyhow::bail!("Invalid ASN.1 block: {:?}, expected: BIT STRING", v[1]);
+            }
+        } else {
+            anyhow::bail!("Invalid algorithm: {:?}", v[0]);
+        }
+    } else {
+        anyhow::bail!(
+            "Invalid ASN.1 block: {:?}, expected: SEQUENCE",
+            asn_blocks[0]
+        );
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct SignatureBundle {
-    pub public_key: Vec<u8>,
+    /// Public key as a binary DER-encoded `SubjectPublicKeyInfo` (see
+    /// https://tools.ietf.org/html/rfc5280#section-4.1).
+    pub public_key_der: Vec<u8>,
     pub signed_hash: Vec<u8>,
     pub hash: Vec<u8>,
 }
@@ -116,7 +186,7 @@ impl SignatureBundle {
     pub fn create(input: &[u8], key_pair: &KeyPair) -> anyhow::Result<SignatureBundle> {
         let hash = get_sha256(input);
         Ok(SignatureBundle {
-            public_key: key_pair.pkcs8_public_key(),
+            public_key_der: key_pair.public_key_der()?,
             signed_hash: key_pair.sign(&hash),
             hash,
         })
@@ -124,7 +194,8 @@ impl SignatureBundle {
 
     /// Verifies the signature validity.
     pub fn verify(&self) -> anyhow::Result<()> {
-        let public_key = signature::UnparsedPublicKey::new(&signature::ED25519, &self.public_key);
+        let public_key_bytes = decode_public_key_der(&self.public_key_der)?;
+        let public_key = signature::UnparsedPublicKey::new(&signature::ED25519, &public_key_bytes);
         public_key
             .verify(&self.hash, &self.signed_hash)
             .ok()
@@ -162,14 +233,14 @@ impl SignatureBundle {
             .get(HASH_TAG)
             .context("Signature file doesn't contain hash")?;
         Ok(SignatureBundle {
-            public_key: public_key.to_vec(),
+            public_key_der: public_key.to_vec(),
             signed_hash: signed_hash.to_vec(),
             hash: hash.to_vec(),
         })
     }
 
     pub fn to_pem_file(&self, filename: &str) -> anyhow::Result<()> {
-        let public_key_pem = create_pem(PUBLIC_KEY_TAG, &self.public_key);
+        let public_key_pem = create_pem(PUBLIC_KEY_TAG, &self.public_key_der);
         let signature_pem = create_pem(SIGNATURE_TAG, &self.signed_hash);
         let hash_pem = create_pem(HASH_TAG, &self.hash);
         let encoded_signature = pem::encode_many(&[public_key_pem, signature_pem, hash_pem]);
@@ -181,11 +252,11 @@ impl SignatureBundle {
 
 impl From<ModuleSignature> for SignatureBundle {
     fn from(module_signature: ModuleSignature) -> Self {
-        let public_key = module_signature.public_key;
+        let public_key_der = module_signature.public_key;
         let signed_hash = module_signature.signed_hash;
         let hash = module_signature.module_hash;
         Self {
-            public_key,
+            public_key_der,
             signed_hash,
             hash,
         }
@@ -194,7 +265,7 @@ impl From<ModuleSignature> for SignatureBundle {
 
 impl From<SignatureBundle> for ModuleSignature {
     fn from(signature_bundle: SignatureBundle) -> Self {
-        let public_key = signature_bundle.public_key;
+        let public_key = signature_bundle.public_key_der;
         let signed_hash = signature_bundle.signed_hash;
         let module_hash = signature_bundle.hash;
         Self {

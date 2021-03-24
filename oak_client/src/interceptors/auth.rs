@@ -48,7 +48,10 @@ impl Interceptor for AuthInterceptor {
         // Signed challenge
         let signed_challenge = SignedChallenge {
             signed_hash: signature.signed_hash,
-            public_key: self.key_pair.pkcs8_public_key(),
+            public_key: self.key_pair.public_key_der().map_err(|err| {
+                error!("could not parse public key: {:?}", err);
+                tonic::Status::internal("could not parse public key")
+            })?,
         };
 
         let mut signed_challenge_bytes = Vec::new();

@@ -32,6 +32,7 @@ namespace pkcs8 {
 // also omitted. That information is encapsulated in struct `Template`.
 struct PrivateKeyInfo {
   std::string private_key;
+  // Raw public key bytes.
   std::string public_key;
 };
 

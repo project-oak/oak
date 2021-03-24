@@ -26,15 +26,17 @@ const char* CA_CERT_PATH = "../../../../../../../../../examples/certs/local/ca.p
 const int PORT = 8383;
 
 // Generated using the command:
+//
 // ```shell
 // cargo run --manifest-path=oak_sign/Cargo.toml -- \
 //     generate \
 //     --private-key=http-test.key \
 //     --public-key=http-test.pub
 // ```
-const char* PUBLIC_KEY_BASE64 = "yTOK5pP6S1ebFJeOhB8KUxBY293YbBo/TW5h1/1UdKM=";
+const char* PUBLIC_KEY_BASE64 = "MCowBQYDK2VwAyEAmSeVNkzZtyQ3v4ibhsdetuOW7j+pIQDK4UJxSEfngMM=";
 
 // Generated using the command:
+//
 // ```shell
 // cargo run --manifest-path=oak_sign/Cargo.toml -- \
 //     sign \
@@ -43,7 +45,7 @@ const char* PUBLIC_KEY_BASE64 = "yTOK5pP6S1ebFJeOhB8KUxBY293YbBo/TW5h1/1UdKM=";
 //     --signature-file=http-test.sign
 // ```
 const char* SIGNED_HASH_BASE64 =
-    "rpFVU/NAIDE62/hpE0DMobLsAJ+tDLNATgPLaX8PbN6v0XeACdCNspL0YY1QfyvJN2mq3Z2h4JWgS/lVkMcHAg==";
+    "0OSnT9/FwnkuLN33yPQIPQaYbQJZGNxxFv3H/5lNdBy5d+IqS72C0MImora1QVAlrQ/AxldIfsQIJzW+LMT1CQ==";
 
 // Simple manual test case registry.
 const std::map<std::string, HttpTestFn> http_tests = {

@@ -122,7 +122,7 @@ pub struct GrpcConfiguration {
 }
 
 /// Configuration options table related to Wasm module signatures.
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct SignatureTable {
     /// Map from Oak module hashes to corresponding signatures.
     pub values: HashMap<String, Vec<SignatureBundle>>,

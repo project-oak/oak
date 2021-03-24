@@ -15,7 +15,9 @@
 //
 
 use assert_matches::assert_matches;
-use oak_sign::{get_sha256_hex, KeyPair, SignatureBundle};
+use oak_sign::{
+    decode_public_key_der, encode_public_key_der, get_sha256_hex, KeyPair, SignatureBundle,
+};
 
 const TEST_DATA: &str = "Test data";
 const TEST_SHA256: &str = "e27c8214be8b7cf5bccc7c08247e3cb0c1514a48ee1f63197fe4ef3ef51d7e6f";
@@ -28,8 +30,8 @@ fn key_pair_serialization_deserialization_test() {
     assert_matches!(generate_result, Ok(_));
     let key_pair = generate_result.unwrap();
 
-    let pkcs8_key_pair = key_pair.pkcs8_key_pair();
-    let parse_result = KeyPair::parse(&pkcs8_key_pair);
+    let key_pair_pkcs_8 = key_pair.key_pair_pkcs_8();
+    let parse_result = KeyPair::parse(&key_pair_pkcs_8);
     assert_matches!(parse_result, Ok(_));
     let parsed_key_pair = parse_result.unwrap();
 
@@ -47,12 +49,29 @@ fn signature_test() {
     assert_matches!(verify_result, Ok(_));
 
     let incorrect_signature = SignatureBundle {
-        public_key: signature.public_key.to_vec(),
+        public_key_der: signature.public_key_der.clone(),
         signed_hash: INCORRECT_SIGNATURE.as_bytes().to_vec(),
-        hash: signature.signed_hash.to_vec(),
+        hash: signature.signed_hash.clone(),
     };
     let incorrect_verify_result = incorrect_signature.verify();
     assert_matches!(incorrect_verify_result, Err(_));
+}
+
+#[test]
+fn public_key_der_encode_decode() {
+    // Ground truth: https://gchq.github.io/CyberChef/#recipe=Parse_ASN.1_hex_string(0,32)&input=MzAyYTMwMDUwNjAzMmI2NTcwMDMyMTAwN2Y4ZDUyMGE1MzZkNDc4OGI4ZWFmZDkzYmExZDVmNDBiNmVkZmQ5YTkxYWY1OTQ0MzVhOGMyNWJkZGEzYzhmZQ
+    const PUBLIC_KEY_DER_HEX: &str =
+        "302a300506032b65700321007f8d520a536d4788b8eafd93ba1d5f40b6edfd9a91af594435a8c25bdda3c8fe";
+    const PUBLIC_KEY_RAW_HEX: &str =
+        "7f8d520a536d4788b8eafd93ba1d5f40b6edfd9a91af594435a8c25bdda3c8fe";
+    assert_eq!(
+        hex::decode(PUBLIC_KEY_DER_HEX).unwrap(),
+        encode_public_key_der(&hex::decode(PUBLIC_KEY_RAW_HEX).unwrap()).unwrap()
+    );
+    assert_eq!(
+        hex::decode(PUBLIC_KEY_RAW_HEX).unwrap(),
+        decode_public_key_der(&hex::decode(PUBLIC_KEY_DER_HEX).unwrap()).unwrap()
+    );
 }
 
 #[test]

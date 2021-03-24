@@ -388,7 +388,7 @@ fn verify_signed_challenge(signature: SignedChallenge) -> Result<Vec<u8>, OakIde
     let hash = oak_sign::get_sha256(oak_abi::OAK_CHALLENGE.as_bytes());
 
     let sig_bundle = oak_sign::SignatureBundle {
-        public_key: signature.public_key.clone(),
+        public_key_der: signature.public_key.clone(),
         signed_hash: signature.signed_hash,
         hash,
     };

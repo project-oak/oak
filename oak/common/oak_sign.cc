@@ -71,7 +71,7 @@ std::unique_ptr<KeyPair> KeyPair::FromPkcs8(const std::string& pkcs8_private_key
 }
 
 std::string KeyPair::ToPkcs8() {
-  oak::pkcs8::PrivateKeyInfo pk_info{GetPrivateKey(), GetPublicKey()};
+  oak::pkcs8::PrivateKeyInfo pk_info{GetPrivateKey(), GetPublicKeyRaw()};
   std::string pkcs8_encoded = oak::pkcs8::to_pkcs8(pk_info, oak::pkcs8::kEd25519Pkcs8Template);
   return pkcs8_encoded;
 }
@@ -89,7 +89,7 @@ Signature KeyPair::Sign(const std::string& message) {
 
   Signature signature;
   signature.signed_hash = signed_hash;
-  signature.public_key = key_.public_key().key_value();
+  signature.public_key_der = this->GetPublicKeyDer();
 
   return signature;
 }

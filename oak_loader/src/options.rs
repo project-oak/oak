@@ -158,6 +158,7 @@ pub async fn create_runtime_config() -> anyhow::Result<oak_runtime::RuntimeConfi
 
     // Create signature table.
     let sign_table = create_sign_table(&app_config)?;
+    debug!("parsed signatures: {:?}", sign_table);
 
     // Create Runtime config.
     let runtime_configuration = oak_runtime::RuntimeConfiguration {

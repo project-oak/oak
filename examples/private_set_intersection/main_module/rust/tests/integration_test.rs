@@ -87,7 +87,7 @@ async fn test_set_intersection() {
         oak_runtime::configure_and_run(config).expect("Unable to configure runtime with test wasm");
 
     let public_key_label =
-        confidentiality_label(web_assembly_module_signature_tag(&signature.public_key));
+        confidentiality_label(web_assembly_module_signature_tag(&signature.public_key_der));
     let (channel, interceptor) = oak_tests::channel_and_interceptor(&public_key_label).await;
     let mut client = PrivateSetIntersectionClient::with_interceptor(channel, interceptor);
 

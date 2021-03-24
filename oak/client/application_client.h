@@ -124,7 +124,7 @@ class ApplicationClient {
                                                       std::string challenge) {
     oak::Signature signature = key_pair->Sign(challenge);
     oak::identity::SignedChallenge signed_challenge;
-    signed_challenge.set_public_key(signature.public_key);
+    signed_challenge.set_public_key(signature.public_key_der);
     signed_challenge.set_signed_hash(signature.signed_hash);
     return signed_challenge;
   }

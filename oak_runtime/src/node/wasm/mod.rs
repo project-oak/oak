@@ -1429,7 +1429,7 @@ pub(crate) fn get_privilege(
     if let Some(signatures) = signature_table.values.get(&module_hash) {
         for signature_item in signatures.iter() {
             let signature_tag =
-                oak_abi::label::web_assembly_module_signature_tag(&signature_item.public_key);
+                oak_abi::label::web_assembly_module_signature_tag(&signature_item.public_key_der);
             confidentiality_tags.insert(signature_tag.clone());
             integrity_tags.insert(signature_tag);
         }

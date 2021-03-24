@@ -27,7 +27,7 @@ ABSL_CONST_INIT extern const char kPrivateKeyPemTag[];
 
 struct Signature {
   std::string signed_hash;
-  std::string public_key;
+  std::string public_key_der;
 };
 
 class KeyPair {
@@ -39,7 +39,33 @@ class KeyPair {
   // Generates a PKCS#8 encoded string from this key pair.
   std::string ToPkcs8();
 
-  std::string GetPublicKey() { return key_.public_key().key_value(); }
+  // Returns the public key, as a raw Ed25519 key.
+  std::string GetPublicKeyRaw() { return key_.public_key().key_value(); }
+
+  // Returns the public key, as a binary DER-encoded SubjectPublicKeyInfo (see
+  // https://tools.ietf.org/html/rfc5280#section-4.1).
+  std::string GetPublicKeyDer() {
+    // Since Tink does not have functions to convert to / from ASN.1, we fake this by manually
+    // pre-computing and hardcoding a fixed prefix that, when concatenated with the actual raw key
+    // bytes, produces a valid ASN.1-encoded Ed25519 public key.
+    //
+    // This is the meaning of the prefix bytes interpreted as ASN.1:
+    //
+    // 30 2a                : SEQUENCE len 42 (SubjectPublicKeyInfo)
+    //     30 05            : SEQUENCE len 5 (AlgorithmIdentifier)
+    //        06 03         : OBJECT IDENTIFIER len 3
+    //           2b6570     : 1.3.101.112 = Ed25519
+    //     03 21            : BIT STRING len 33
+    //        00            : number of padding bits at end of content
+    //        7f8d520a536d4788b8eafd93ba1d5f40b6edfd9a91af594435a8c25bdda3c8fe : [raw public key]
+    //
+    // Also see:
+    //
+    // - https://github.com/project-oak/oak/issues/1912#issuecomment-802689201
+    // - https://tools.ietf.org/html/rfc5280#section-4.1 (SubjectPublicKeyInfo)
+    return std::string({0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00}) +
+           key_.public_key().key_value();
+  }
   std::string GetPrivateKey() { return key_.key_value(); }
 
   // Generates a new KeyPair instance containing an ed25519 key pair.
