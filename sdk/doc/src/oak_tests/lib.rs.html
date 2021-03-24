@@ -590,7 +590,7 @@
     <span class="ident">CombinedInterceptor</span><span class="op">&lt;</span><span class="ident">LabelInterceptor</span>, <span class="ident">AuthInterceptor</span><span class="op">&gt;</span>,
 ) {
     <span class="kw">let</span> (<span class="ident">channel</span>, <span class="ident">label_interceptor</span>) <span class="op">=</span> <span class="ident">channel_and_interceptor</span>(<span class="kw-2">&amp;</span><span class="ident">confidentiality_label</span>(
-        <span class="ident">public_key_identity_tag</span>(<span class="kw-2">&amp;</span><span class="ident">key_pair</span>.<span class="ident">pkcs8_public_key</span>()),
+        <span class="ident">public_key_identity_tag</span>(<span class="kw-2">&amp;</span><span class="ident">key_pair</span>.<span class="ident">public_key_der</span>().<span class="ident">unwrap</span>()),
     ))
     .<span class="ident">await</span>;
     <span class="kw">let</span> <span class="ident">auth_interceptor</span> <span class="op">=</span> <span class="ident">AuthInterceptor</span>::<span class="ident">create</span>(<span class="ident">key_pair</span>);

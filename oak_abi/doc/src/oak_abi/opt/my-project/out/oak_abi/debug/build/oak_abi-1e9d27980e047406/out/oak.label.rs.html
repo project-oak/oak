@@ -108,6 +108,11 @@
 <span id="105">105</span>
 <span id="106">106</span>
 <span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">/// Label represents information flowing through a Node or channel.</span>
 <span class="doccomment">///</span>
@@ -177,8 +182,13 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WebAssemblyModuleSignatureTag</span> {
     <span class="doccomment">/// Public key counterpart of the private key used to sign WebAssembly module.</span>
-    <span class="doccomment">/// In the current implementation is represented as a serialized Ed25519 public key.</span>
-    <span class="doccomment">/// https://ed25519.cr.yp.to</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Ed25519 public key as a binary DER-encoded `SubjectPublicKeyInfo`.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See:</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// - https://tools.ietf.org/html/rfc5280#section-4.1</span>
+    <span class="doccomment">/// - https://ed25519.cr.yp.to</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">public_key</span>: ::<span class="ident">prost</span>::<span class="ident">alloc</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }

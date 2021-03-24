@@ -1107,7 +1107,7 @@
     <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident">oak_sign</span>::<span class="ident">get_sha256</span>(<span class="ident">oak_abi</span>::<span class="ident">OAK_CHALLENGE</span>.<span class="ident">as_bytes</span>());
 
     <span class="kw">let</span> <span class="ident">sig_bundle</span> <span class="op">=</span> <span class="ident">oak_sign</span>::<span class="ident">SignatureBundle</span> {
-        <span class="ident">public_key</span>: <span class="ident">signature</span>.<span class="ident">public_key</span>.<span class="ident">clone</span>(),
+        <span class="ident">public_key_der</span>: <span class="ident">signature</span>.<span class="ident">public_key</span>.<span class="ident">clone</span>(),
         <span class="ident">signed_hash</span>: <span class="ident">signature</span>.<span class="ident">signed_hash</span>,
         <span class="ident">hash</span>,
     };

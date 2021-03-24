@@ -246,6 +246,77 @@
 <span id="243">243</span>
 <span id="244">244</span>
 <span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -265,11 +336,13 @@
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">ModuleSignature</span>;
+<span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">pem</span>::<span class="ident">Pem</span>;
 <span class="kw">use</span> <span class="ident">ring</span>::{
     <span class="ident">rand</span>,
     <span class="ident">signature</span>::{<span class="self">self</span>, <span class="ident">Ed25519KeyPair</span>},
 };
+<span class="kw">use</span> <span class="ident">simple_asn1</span>::{<span class="ident">ASN1Block</span>, <span class="ident">BigUint</span>, <span class="ident">OID</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
     <span class="ident">fs</span>::{<span class="ident">read</span>, <span class="ident">write</span>},
@@ -284,7 +357,7 @@
 <span class="doccomment">/// Convenience struct that encapsulates `ring::signature::Ed25519KeyPair`.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeyPair</span> {
-    <span class="doccomment">/// PKCS#8 v2 encoded private key and public key.</span>
+    <span class="doccomment">/// PKCS#8 v2 encoded private key and public key pair.</span>
     <span class="doccomment">/// https://tools.ietf.org/html/rfc5958</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The encoded version is kept because a parsed `key_pair` doesn&#39;t contain a method for</span>
@@ -314,38 +387,57 @@
 
 <span class="kw">impl</span> <span class="ident">Eq</span> <span class="kw">for</span> <span class="ident">KeyPair</span> {}
 
+<span class="doccomment">/// OID for the Ed25519 signature algorithm.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See:</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// - https://tools.ietf.org/html/rfc8419#section-2.2</span>
+<span class="doccomment">/// - https://tools.ietf.org/html/rfc8410#section-3</span>
+<span class="doccomment">/// - https://golang.org/src/crypto/x509/x509.go?s=3654:3712#L315</span>
+<span class="kw">static</span> <span class="ident">OID_ED_25519</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">OID</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">simple_asn1</span>::<span class="macro">oid</span><span class="macro">!</span>(<span class="number">1</span>, <span class="number">3</span>, <span class="number">101</span>, <span class="number">112</span>));
+<span class="kw">static</span> <span class="ident">ED_25519_ALG</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ASN1Block</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
+    <span class="ident">ASN1Block</span>::<span class="ident">Sequence</span>(
+        <span class="number">0</span>,
+        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ASN1Block</span>::<span class="ident">ObjectIdentifier</span>(<span class="number">0</span>, <span class="ident">OID_ED_25519</span>.<span class="ident">clone</span>())],
+    )
+});
+
+<span class="kw">const</span> <span class="ident">BITS_PER_BYTE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
+
 <span class="kw">impl</span> <span class="ident">KeyPair</span> {
     <span class="doccomment">/// Generates a Ed25519 key pair.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeyPair</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">rand</span>::<span class="ident">SystemRandom</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="ident">private_key</span> <span class="op">=</span> <span class="ident">Ed25519KeyPair</span>::<span class="ident">generate_pkcs8</span>(<span class="kw-2">&amp;</span><span class="ident">rng</span>)
+        <span class="kw">let</span> <span class="ident">key_pair_pkcs_8</span> <span class="op">=</span> <span class="ident">Ed25519KeyPair</span>::<span class="ident">generate_pkcs8</span>(<span class="kw-2">&amp;</span><span class="ident">rng</span>)
             .<span class="ident">ok</span>()
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t generate key pair&quot;</span>)<span class="question-mark">?</span>;
-        <span class="ident">KeyPair</span>::<span class="ident">parse</span>(<span class="ident">private_key</span>.<span class="ident">as_ref</span>())
+            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t generate PKCS#8 key pair&quot;</span>)<span class="question-mark">?</span>;
+        <span class="ident">KeyPair</span>::<span class="ident">parse</span>(<span class="ident">key_pair_pkcs_8</span>.<span class="ident">as_ref</span>())
     }
 
     <span class="doccomment">/// Parses a Ed25519 key pair from a PKCS#8 v2 encoded `pkcs8_key_pair`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">pkcs8_key_pair</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeyPair</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">key_pair</span> <span class="op">=</span> <span class="ident">Ed25519KeyPair</span>::<span class="ident">from_pkcs8</span>(<span class="ident">pkcs8_key_pair</span>)
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">key_pair_pkcs_8</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeyPair</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">key_pair</span> <span class="op">=</span> <span class="ident">Ed25519KeyPair</span>::<span class="ident">from_pkcs8</span>(<span class="ident">key_pair_pkcs_8</span>)
             .<span class="ident">ok</span>()
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse generated key pair&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">pkcs8</span>: <span class="ident">pkcs8_key_pair</span>.<span class="ident">to_vec</span>(),
+            <span class="ident">pkcs8</span>: <span class="ident">key_pair_pkcs_8</span>.<span class="ident">to_vec</span>(),
             <span class="ident">key_pair</span>,
         })
     }
 
     <span class="doccomment">/// Returns a PKCS#8 v2 encoded key pair.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pkcs8_key_pair</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">key_pair_pkcs_8</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">pkcs8</span>.<span class="ident">to_vec</span>()
     }
 
-    <span class="doccomment">/// Returns a PKCS#8 v2 encoded public key.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pkcs8_public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Returns the public key as a binary DER-encoded `SubjectPublicKeyInfo` (see</span>
+    <span class="doccomment">/// https://tools.ietf.org/html/rfc5280#section-4.1).</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public_key_der</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="comment">// Trait `ring::signature::KeyPair` that contains `public_key` function is included locally</span>
         <span class="comment">// in this function because it conflicts with [`KeyPair`].</span>
         <span class="kw">use</span> <span class="ident">ring</span>::<span class="ident">signature</span>::<span class="ident">KeyPair</span>;
-        <span class="self">self</span>.<span class="ident">key_pair</span>.<span class="ident">public_key</span>().<span class="ident">as_ref</span>().<span class="ident">to_vec</span>()
+        <span class="kw">let</span> <span class="ident">key_bytes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">key_pair</span>.<span class="ident">public_key</span>().<span class="ident">as_ref</span>().<span class="ident">to_vec</span>();
+        <span class="ident">encode_public_key_der</span>(<span class="kw-2">&amp;</span><span class="ident">key_bytes</span>)
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
@@ -353,9 +445,58 @@
     }
 }
 
+<span class="doccomment">/// Encodes the public key as a binary DER-encoded `SubjectPublicKeyInfo` (see</span>
+<span class="doccomment">/// https://tools.ietf.org/html/rfc5280#section-4.1).</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encode_public_key_der</span>(<span class="ident">key_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="comment">// Offsets are only used when parsing ASN1, so we can just leave them as zeroes here in the</span>
+    <span class="comment">// various blocks.</span>
+    <span class="kw">let</span> <span class="ident">key_asn_1</span> <span class="op">=</span> <span class="ident">ASN1Block</span>::<span class="ident">Sequence</span>(
+        <span class="number">0</span>,
+        <span class="macro">vec</span><span class="macro">!</span>[
+            <span class="ident">ED_25519_ALG</span>.<span class="ident">clone</span>(),
+            <span class="comment">// Length is expressed in bits.</span>
+            <span class="ident">ASN1Block</span>::<span class="ident">BitString</span>(<span class="number">0</span>, <span class="ident">key_bytes</span>.<span class="ident">len</span>() <span class="op">*</span> <span class="ident">BITS_PER_BYTE</span>, <span class="ident">key_bytes</span>.<span class="ident">into</span>()),
+        ],
+    );
+    <span class="ident">simple_asn1</span>::<span class="ident">to_der</span>(<span class="kw-2">&amp;</span><span class="ident">key_asn_1</span>).<span class="ident">context</span>(<span class="string">&quot;Could not encode key to DER&quot;</span>)
+}
+
+<span class="doccomment">/// Decodes the public key as a binary DER-encoded `SubjectPublicKeyInfo` (see</span>
+<span class="doccomment">/// https://tools.ietf.org/html/rfc5280#section-4.1).</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">decode_public_key_der</span>(<span class="ident">key_der</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">asn_blocks</span> <span class="op">=</span> <span class="ident">simple_asn1</span>::<span class="ident">from_der</span>(<span class="ident">key_der</span>).<span class="ident">unwrap</span>();
+    <span class="kw">if</span> <span class="ident">asn_blocks</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">1</span> {
+        <span class="ident">anyhow</span>::<span class="macro">bail</span><span class="macro">!</span>(
+            <span class="string">&quot;Invalid number of ASN.1 blocks: {}, expected: 1&quot;</span>,
+            <span class="ident">asn_blocks</span>.<span class="ident">len</span>()
+        );
+    }
+    <span class="kw">if</span> <span class="kw">let</span> <span class="ident">ASN1Block</span>::<span class="ident">Sequence</span>(<span class="kw">_</span>, <span class="ident">v</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">asn_blocks</span>[<span class="number">0</span>] {
+        <span class="kw">if</span> <span class="ident">v</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
+            <span class="ident">anyhow</span>::<span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;Invalid length of ASN.1 sequence: {}, expected: 2&quot;</span>, <span class="ident">v</span>.<span class="ident">len</span>());
+        }
+        <span class="kw">if</span> <span class="ident">v</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">ED_25519_ALG</span>.<span class="ident">clone</span>() {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">ASN1Block</span>::<span class="ident">BitString</span>(<span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">key_bytes</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">v</span>[<span class="number">1</span>] {
+                <span class="prelude-val">Ok</span>(<span class="ident">key_bytes</span>.<span class="ident">clone</span>())
+            } <span class="kw">else</span> {
+                <span class="ident">anyhow</span>::<span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;Invalid ASN.1 block: {:?}, expected: BIT STRING&quot;</span>, <span class="ident">v</span>[<span class="number">1</span>]);
+            }
+        } <span class="kw">else</span> {
+            <span class="ident">anyhow</span>::<span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;Invalid algorithm: {:?}&quot;</span>, <span class="ident">v</span>[<span class="number">0</span>]);
+        }
+    } <span class="kw">else</span> {
+        <span class="ident">anyhow</span>::<span class="macro">bail</span><span class="macro">!</span>(
+            <span class="string">&quot;Invalid ASN.1 block: {:?}, expected: SEQUENCE&quot;</span>,
+            <span class="ident">asn_blocks</span>[<span class="number">0</span>]
+        );
+    }
+}
+
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SignatureBundle</span> {
-    <span class="kw">pub</span> <span class="ident">public_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Public key as a binary DER-encoded `SubjectPublicKeyInfo` (see</span>
+    <span class="doccomment">/// https://tools.ietf.org/html/rfc5280#section-4.1).</span>
+    <span class="kw">pub</span> <span class="ident">public_key_der</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">signed_hash</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">hash</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
@@ -365,7 +506,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">key_pair</span>: <span class="kw-2">&amp;</span><span class="ident">KeyPair</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SignatureBundle</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident">get_sha256</span>(<span class="ident">input</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">SignatureBundle</span> {
-            <span class="ident">public_key</span>: <span class="ident">key_pair</span>.<span class="ident">pkcs8_public_key</span>(),
+            <span class="ident">public_key_der</span>: <span class="ident">key_pair</span>.<span class="ident">public_key_der</span>()<span class="question-mark">?</span>,
             <span class="ident">signed_hash</span>: <span class="ident">key_pair</span>.<span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="ident">hash</span>),
             <span class="ident">hash</span>,
         })
@@ -373,7 +514,8 @@
 
     <span class="doccomment">/// Verifies the signature validity.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">signature</span>::<span class="ident">UnparsedPublicKey</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">signature</span>::<span class="ident">ED25519</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">public_key</span>);
+        <span class="kw">let</span> <span class="ident">public_key_bytes</span> <span class="op">=</span> <span class="ident">decode_public_key_der</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">public_key_der</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">signature</span>::<span class="ident">UnparsedPublicKey</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">signature</span>::<span class="ident">ED25519</span>, <span class="kw-2">&amp;</span><span class="ident">public_key_bytes</span>);
         <span class="ident">public_key</span>
             .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">hash</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signed_hash</span>)
             .<span class="ident">ok</span>()
@@ -411,14 +553,14 @@
             .<span class="ident">get</span>(<span class="ident">HASH_TAG</span>)
             .<span class="ident">context</span>(<span class="string">&quot;Signature file doesn&#39;t contain hash&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">SignatureBundle</span> {
-            <span class="ident">public_key</span>: <span class="ident">public_key</span>.<span class="ident">to_vec</span>(),
+            <span class="ident">public_key_der</span>: <span class="ident">public_key</span>.<span class="ident">to_vec</span>(),
             <span class="ident">signed_hash</span>: <span class="ident">signed_hash</span>.<span class="ident">to_vec</span>(),
             <span class="ident">hash</span>: <span class="ident">hash</span>.<span class="ident">to_vec</span>(),
         })
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_pem_file</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">public_key_pem</span> <span class="op">=</span> <span class="ident">create_pem</span>(<span class="ident">PUBLIC_KEY_TAG</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">public_key</span>);
+        <span class="kw">let</span> <span class="ident">public_key_pem</span> <span class="op">=</span> <span class="ident">create_pem</span>(<span class="ident">PUBLIC_KEY_TAG</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">public_key_der</span>);
         <span class="kw">let</span> <span class="ident">signature_pem</span> <span class="op">=</span> <span class="ident">create_pem</span>(<span class="ident">SIGNATURE_TAG</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signed_hash</span>);
         <span class="kw">let</span> <span class="ident">hash_pem</span> <span class="op">=</span> <span class="ident">create_pem</span>(<span class="ident">HASH_TAG</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">hash</span>);
         <span class="kw">let</span> <span class="ident">encoded_signature</span> <span class="op">=</span> <span class="ident">pem</span>::<span class="ident">encode_many</span>(<span class="kw-2">&amp;</span>[<span class="ident">public_key_pem</span>, <span class="ident">signature_pem</span>, <span class="ident">hash_pem</span>]);
@@ -430,11 +572,11 @@
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ModuleSignature</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SignatureBundle</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">module_signature</span>: <span class="ident">ModuleSignature</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">module_signature</span>.<span class="ident">public_key</span>;
+        <span class="kw">let</span> <span class="ident">public_key_der</span> <span class="op">=</span> <span class="ident">module_signature</span>.<span class="ident">public_key</span>;
         <span class="kw">let</span> <span class="ident">signed_hash</span> <span class="op">=</span> <span class="ident">module_signature</span>.<span class="ident">signed_hash</span>;
         <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident">module_signature</span>.<span class="ident">module_hash</span>;
         <span class="self">Self</span> {
-            <span class="ident">public_key</span>,
+            <span class="ident">public_key_der</span>,
             <span class="ident">signed_hash</span>,
             <span class="ident">hash</span>,
         }
@@ -443,7 +585,7 @@
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">SignatureBundle</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ModuleSignature</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">signature_bundle</span>: <span class="ident">SignatureBundle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">signature_bundle</span>.<span class="ident">public_key</span>;
+        <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">signature_bundle</span>.<span class="ident">public_key_der</span>;
         <span class="kw">let</span> <span class="ident">signed_hash</span> <span class="op">=</span> <span class="ident">signature_bundle</span>.<span class="ident">signed_hash</span>;
         <span class="kw">let</span> <span class="ident">module_hash</span> <span class="op">=</span> <span class="ident">signature_bundle</span>.<span class="ident">hash</span>;
         <span class="self">Self</span> {
