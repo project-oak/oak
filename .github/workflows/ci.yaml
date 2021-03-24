@@ -36,14 +36,22 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v2
 
+      # The runner comes with all this software pre-installed: https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
+      # so we delete some large packages to make sure we have more space available.
+      #
       # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
       # and https://github.com/actions/virtual-environments/issues/709#issuecomment-612569242
       - name: Free disk space
         run: |
           df --human-readable
+          sudo apt-get remove --yes '^ghc-8.*' '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell
+          sudo apt-get autoremove --yes
           sudo apt clean
           docker rmi $(docker image ls --all --quiet)
           rm --recursive --force "$AGENT_TOOLSDIRECTORY"
+          rm --recursive --force /usr/local/share/boost
+          sudo swapoff --all
+          sudo rm --force /swapfile
           df --human-readable
 
       # Build Docker image, caching from the latest version from the remote repository.
@@ -61,7 +69,7 @@ jobs:
 
       - name: Run command
         run: |
-          ./scripts/docker_run ./scripts/runner ${{ matrix.cmd }}
+          ./scripts/docker_run ./scripts/runner --commands ${{ matrix.cmd }}
           df --human-readable
 
       - name: Generate root CA certs
