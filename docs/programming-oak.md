@@ -685,13 +685,94 @@ TODO: describe use of storage
 
 ## Using External gRPC Services
 
-TODO: describe use of gRPC client pseudo-Node to connect to external gRPC
-services.
+To allow Oak applications connect to external gRPC services, the Oak SDK
+provides a convenient API for creating gRPC Client pseudo nodes:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/aggregator/module/rust/src/lib.rs Rust /.*let grpc_client_invocation_sender.*/ /gRPC client.*/)
+```Rust
+        let grpc_client_invocation_sender = oak::grpc::client::init(&config.backend_server_address)
+            .context("Couldn't create gRPC client")?;
+```
+<!-- prettier-ignore-end -->
+
+The client is initialized with the `address` of the external gRPC service (e.g.,
+`https://localhost:8888`). The `init` method returns a handle to a channel that
+can be used for sending invocations to the client pseudo node. With this handle
+gRPC client stub can be created, as in the `Aggregator` example:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/aggregator/module/rust/src/handler.rs Rust /.*oak::WithInit/ /^}$/)
+```Rust
+impl oak::WithInit for Handler {
+    type Init = HandlerInit;
+
+    fn create(init: Self::Init) -> Self {
+        oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
+        let grpc_client_invocation_sender = init
+            .grpc_client_invocation_sender
+            .expect("Couldn't receive gRPC invocation sender")
+            .sender
+            .expect("Empty gRPC invocation sender");
+
+        Self::new(grpc_client_invocation_sender)
+    }
+}
+```
+<!-- prettier-ignore-end -->
+
+The call to `Self::new` above creates an instance of `AggregatorClient`
+initialized with the write-half of the channel to the gRPC client pseudo node:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/aggregator/module/rust/src/handler.rs Rust /.*fn new/ /^    }$/)
+```Rust
+    fn new(invocation_sender: Sender<grpc::Invocation>) -> Self {
+        Self {
+            backend_client: AggregatorClient(invocation_sender),
+            aggregators: HashMap::new(),
+        }
+    }
+```
+<!-- prettier-ignore-end -->
 
 ## Using External HTTP Services
 
-TODO: describe use of HTTP client pseudo-Node to connect to external HTTP
-services.
+An Oak application may need to interact with external services. This can be done
+using an HTTP client pseudo node. The Oak SDK provides a convenient API for
+creating HTTP Client pseudo nodes:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/http_server/module/src/lib.rs Rust /.*let client_invocation_sender.*/)
+```Rust
+    let client_invocation_sender = oak::http::client::init("localhost:8080").unwrap();
+```
+<!-- prettier-ignore-end -->
+
+The input parameter to `init` is the authority of the server that the Oak
+application needs to connect to. If an empty string is passed as the authority,
+then this client node can connect to any external server. Otherwise, the HTTP
+client pseudo node can only connect to the server specified by the given
+authority over HTTPS. The `init` method returns a handle to a channel that can
+be used for sending invocations to the client pseudo node. From there you can
+create normal HTTP requests and send them via the client pseudo node:
+
+<!-- prettier-ignore-start -->
+[embedmd]:# (../examples/http_server/module/src/lib.rs Rust /.*http::Req/ /HTTP client.*;$/)
+```Rust
+        let request = http::Request::builder()
+            .method(http::Method::GET)
+            .uri("https://localhost:8080")
+            .header(oak_abi::OAK_LABEL_HTTP_JSON_KEY, label_bytes)
+            .body(vec![])
+            .context("Couldn't build request")?;
+
+        // Send the request to the HTTP client pseudo-Node
+        client_invocation
+            .send(request)
+            .context("Couldn't send the request to the HTTP client")?;
+```
+<!-- prettier-ignore-end -->
 
 ## Testing
 
