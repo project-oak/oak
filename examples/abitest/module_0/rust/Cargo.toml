@@ -20,7 +20,7 @@ hex = "*"
 http = "*"
 http_server = { path = "../../../http_server/module" }
 log = "*"
-oak = { path = "../../../../sdk/rust/oak" }
+oak = { path = "../../../../sdk/rust/oak", features = ["linear-handles"] }
 oak_abi = { path = "../../../../oak_abi" }
 oak_io = { path = "../../../../oak_io" }
 oak_services = { path = "../../../../oak_services" }
