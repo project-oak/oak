@@ -7,14 +7,14 @@ backend = { Cargo = { cargo_manifest = "experimental/proxy_attestation/Cargo.tom
   "--grpc-tls-certificate=./examples/certs/local/local.pem",
 ] }
 
-[applications]
+# [applications]
 
-[applications.rust]
-manifest = "examples/proxy_attestation/oak_app_manifest.toml"
-out = "examples/proxy_attestation/bin/proxy_attestation.oak"
+# [applications.rust]
+# manifest = "examples/proxy_attestation/oak_app_manifest.toml"
+# out = "examples/proxy_attestation/bin/proxy_attestation.oak"
 
-[applications.rust.modules]
-module = { Cargo = { cargo_manifest = "examples/proxy_attestation/module/rust/Cargo.toml" } }
+# [applications.rust.modules]
+# module = { Cargo = { cargo_manifest = "examples/proxy_attestation/module/rust/Cargo.toml" } }
 
 [server]
 additional_args = [
