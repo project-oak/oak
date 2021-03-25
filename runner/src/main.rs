@@ -169,7 +169,7 @@ fn run_examples(opt: &RunExamples) -> Step {
                 None => true,
             })
             .filter(|example| {
-                example
+                example.applications.is_empty() || example
                     .applications
                     .get(opt.application_variant.as_str())
                     .is_some()
