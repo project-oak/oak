@@ -195,17 +195,17 @@ bool run_aux_tests() {
   success &= check_page(&introspect, "/graph");
   success &= check_page(&introspect, "/objcount");
   success &= check_page(&introspect, "/node/0");
-  success &= check_page(&introspect, "/node/3");
+  success &= check_page(&introspect, "/node/1");
   // Check some failed pages.
   success &= !check_page(&introspect, "/boguspath");
   success &= !check_page(&introspect, "/node/9999999999");
   success &= !check_page(&introspect, "/node/9999999999/1");
 
   // Look in the content of a per-Node page to find a valid /node/handle/ link.
-  auto res = introspect.Get("/node/3");
+  auto res = introspect.Get("/node/1");
   if (res && res->status == 200) {
-    // Find the first match for 'href="/node/3/\d+"' in res->body.
-    std::string prefix = "href=\"/node/3/";
+    // Find the first match for 'href="/node/1/\d+"' in res->body.
+    std::string prefix = "href=\"/node/1/";
     size_t found = res->body.find(prefix);
     if (found != std::string::npos) {
       size_t start = found + prefix.size();
@@ -213,7 +213,7 @@ bool run_aux_tests() {
       absl::string_view handle_str(res->body.c_str() + start, end - start);
       uint64_t handle;
       if (absl::SimpleAtoi(handle_str, &handle)) {
-        success &= check_page(&introspect, absl::StrCat("/node/3/", handle).c_str());
+        success &= check_page(&introspect, absl::StrCat("/node/1/", handle).c_str());
       } else {
         LOG(ERROR) << "Could not parse handle value from '" << handle_str << "'";
         success = false;
