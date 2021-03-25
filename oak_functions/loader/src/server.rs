@@ -22,6 +22,8 @@ use hyper::{
 use log::info;
 use std::{fs, net::SocketAddr, sync::Arc};
 
+const MAIN_FUNCTION_NAME: &str = "main";
+
 pub struct WasmServer {
     /// Server address to listen client requests on.
     address: SocketAddr,
@@ -44,7 +46,7 @@ impl WasmEngine {
             .expect("failed to instantiate wasm module")
             .assert_no_start();
 
-        let result = instance.invoke_export("main", &[], &mut wasmi::NopExternals);
+        let result = instance.invoke_export(MAIN_FUNCTION_NAME, &[], &mut wasmi::NopExternals);
 
         info!(
             "{:?}: Running wasm module completed with result: {:?}",

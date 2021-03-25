@@ -16,7 +16,7 @@
 use crate::server::WasmServer;
 use hyper::client::Client;
 
-const WASM_MODULE_PATH: &str = "examples/modules/non-oak-minimal.wasm";
+const WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
 
 #[tokio::test]
 async fn test_server() {
