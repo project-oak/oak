@@ -1700,7 +1700,7 @@
                 <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
             })
             .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> {
-                <span class="ident">example</span>
+                <span class="ident">example</span>.<span class="ident">applications</span>.<span class="ident">is_empty</span>() <span class="op">|</span><span class="op">|</span> <span class="ident">example</span>
                     .<span class="ident">applications</span>
                     .<span class="ident">get</span>(<span class="ident">opt</span>.<span class="ident">application_variant</span>.<span class="ident">as_str</span>())
                     .<span class="ident">is_some</span>()
