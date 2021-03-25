@@ -51,7 +51,7 @@ fn signature_test() {
     let incorrect_signature = SignatureBundle {
         public_key_der: signature.public_key_der.clone(),
         signed_hash: INCORRECT_SIGNATURE.as_bytes().to_vec(),
-        hash: signature.signed_hash.clone(),
+        hash: signature.signed_hash,
     };
     let incorrect_verify_result = incorrect_signature.verify();
     assert_matches!(incorrect_verify_result, Err(_));

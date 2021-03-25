@@ -658,7 +658,10 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
         let run_server_clients = if example.applications.is_empty() {
             if opt.build_client.client_variant == NO_CLIENTS {
-                panic!("`{}` client variant is not supported when no applications are provided", NO_CLIENTS);
+                panic!(
+                    "`{}` client variant is not supported when no applications are provided",
+                    NO_CLIENTS
+                );
             } else {
                 run_clients
             }
@@ -666,7 +669,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
             let application = example
                 .applications
                 .get(opt.application_variant.as_str())
-                .expect(&format!(
+                .unwrap_or_else(|| panic!(
                     "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
                     opt.application_variant.as_str())
                 );
@@ -729,7 +732,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 let application = example
                     .applications
                     .get(opt.application_variant.as_str())
-                    .expect(&format!(
+                    .unwrap_or_else(|| panic!(
                         "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
                         opt.application_variant.as_str())
                     );
@@ -1100,10 +1103,11 @@ fn read_file(path: &PathBuf) -> String {
 /// Return whether the provided path refers to a workspace-level `Cargo.toml` file, by looking at
 /// the contents of the file.
 fn is_cargo_workspace_file(path: &PathBuf) -> bool {
-    // We naively look for the `[workspace]` string to appear in the contents of the file. A better
-    // alternative would be to actually parse the file as `toml` and figure out whether it has a
-    // `workspace` section, but it seems overkill for now.
-    file_contains(path, "[workspace]")
+    // We naively look for the `[workspace]` string to appear in the contents of the file. Only the
+    // files that contain `[workspace]` but not `[package]` should be considered a workspace
+    // file. A better alternative would be to actually parse the file as `toml` and figure out
+    // whether it has a `workspace` section, but it seems overkill for now.
+    file_contains(path, "[workspace]") && !file_contains(path, "[package]")
 }
 
 fn file_contains(path: &PathBuf, pattern: &str) -> bool {
