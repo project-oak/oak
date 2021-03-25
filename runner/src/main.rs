@@ -575,7 +575,8 @@ struct Example {
     #[serde(default)]
     server: ExampleServer,
     #[serde(default)]
-    backend: Option<Executable>,
+    backends: HashMap<String, Executable>,
+    #[serde(default)]
     applications: HashMap<String, Application>,
     clients: HashMap<String, Executable>,
 }
@@ -626,18 +627,6 @@ struct Executable {
 }
 
 fn run_example(opt: &RunExamples, example: &Example) -> Step {
-    let application = example
-        .applications
-        .get(opt.application_variant.as_str())
-        .expect("Unsupported application variant");
-
-    let run_server = run_example_server(
-        &opt.build_server,
-        &example.server,
-        opt.server_additional_args.clone(),
-        &application.out,
-        &opt.permissions_file,
-    );
     let run_clients = Step::Multiple {
         name: "run clients".to_string(),
         steps: example
@@ -667,26 +656,55 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     // clients in the foreground.
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
-        let run_server_clients = if opt.build_client.client_variant != NO_CLIENTS {
-            Step::WithBackground {
-                name: "background server".to_string(),
-                background: run_server,
-                foreground: Box::new(run_clients),
+        let run_server_clients = if example.applications.is_empty() {
+            if opt.build_client.client_variant == NO_CLIENTS {
+                panic!("`{}` client variant is not supported when no applications are provided", NO_CLIENTS);
+            } else {
+                run_clients
             }
         } else {
-            Step::Single {
-                name: "run server".to_string(),
-                command: run_server,
+            let application = example
+                .applications
+                .get(opt.application_variant.as_str())
+                .expect(&format!(
+                    "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
+                    opt.application_variant.as_str())
+                );
+
+            let run_server = run_example_server(
+                &opt.build_server,
+                &example.server,
+                opt.server_additional_args.clone(),
+                &application.out,
+                &opt.permissions_file,
+            );
+
+            if opt.build_client.client_variant == NO_CLIENTS {
+                Step::Single {
+                    name: "run server".to_string(),
+                    command: run_server,
+                }
+            } else {
+                Step::WithBackground {
+                    name: "background server".to_string(),
+                    background: run_server,
+                    foreground: Box::new(run_clients),
+                }
             }
         };
-        match &example.backend {
-            Some(backend) => Step::WithBackground {
-                name: "background backend".to_string(),
-                background: run(&backend, &opt.build_client, Vec::new()),
-                foreground: Box::new(run_server_clients),
-            },
-            None => run_server_clients,
-        }
+        // Recursively construct backend steps.
+        example
+            .backends
+            .iter()
+            // First iteration includes `run_server_clients` as a foreground step.
+            .fold(run_server_clients, |backend_steps, (name, backend)| {
+                Step::WithBackground {
+                    name: name.to_string(),
+                    // Each `backend` is included as background step.
+                    background: run(&backend, &opt.build_client, Vec::new()),
+                    foreground: Box::new(backend_steps),
+                }
+            })
     } else {
         if opt.build_client.client_variant != NO_CLIENTS {
             run_clients
@@ -701,20 +719,36 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     Step::Multiple {
         name: example.name.to_string(),
         steps: vec![
-            vec![
-                Step::Multiple {
-                    name: "build wasm modules".to_string(),
-                    steps: application
-                        .modules
-                        .iter()
-                        .map(|(name, target)| build_wasm_module(name, target, &example.name))
-                        .collect(),
-                },
-                Step::Single {
-                    name: "build application".to_string(),
-                    command: build_application(&application),
-                },
-            ],
+            if example.applications.is_empty() {
+                if opt.build_client.client_variant == NO_CLIENTS {
+                    panic!("`{}` client variant is not supported when no applications are provided", NO_CLIENTS);
+                } else {
+                    vec![]
+                }
+            } else {
+                let application = example
+                    .applications
+                    .get(opt.application_variant.as_str())
+                    .expect(&format!(
+                        "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
+                        opt.application_variant.as_str())
+                    );
+
+                vec![
+                    Step::Multiple {
+                        name: "build wasm modules".to_string(),
+                        steps: application
+                            .modules
+                            .iter()
+                            .map(|(name, target)| build_wasm_module(name, target, &example.name))
+                            .collect(),
+                    },
+                    Step::Single {
+                        name: "build application".to_string(),
+                        command: build_application(&application),
+                    },
+                ]
+            },
             if opt.run_server.unwrap_or(true) {
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
@@ -727,13 +761,13 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
             } else {
                 vec![]
             },
-            match &example.backend {
-                Some(backend) => vec![Step::Single {
-                    name: "build backend".to_string(),
+            example.backends.iter().map(|(name, backend)| {
+                Step::Single {
+                    name: name.to_string(),
                     command: build(&backend.target, &opt.build_client),
-                }],
-                None => vec![],
-            },
+                }
+            })
+            .collect(),
             vec![Step::Multiple {
                 name: "run".to_string(),
                 steps: vec![run_backend_server_clients],
