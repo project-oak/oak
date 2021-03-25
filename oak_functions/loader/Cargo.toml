@@ -3,6 +3,7 @@ name = "oak_functions_loader"
 version = "0.1.0"
 authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2018"
+license = "Apache-2.0"
 
 [features]
 # Feature that allows logging. Should be use only for debugging purposes.
@@ -12,7 +13,6 @@ default = []
 [dependencies]
 anyhow = "*"
 env_logger = "*"
-futures = "*"
 http = "*"
 hyper = { version = "*", features = ["full"] }
 log = "*"
@@ -24,4 +24,3 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 wasmi = "*"
-wat = "*"
