@@ -16,7 +16,7 @@
 use crate::server::WasmServer;
 use hyper::client::Client;
 
-const WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
+const TEST_WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
 
 #[tokio::test]
 async fn test_server() {
@@ -26,7 +26,7 @@ async fn test_server() {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     let server =
-        WasmServer::create(&address, WASM_MODULE_PATH).expect("Couldn't create the server");
+        WasmServer::create(&address, TEST_WASM_MODULE_PATH).expect("Couldn't create the server");
 
     let server_fut = server.start(notify_receiver);
     let client_fut = create_client(port, notify_sender);
@@ -46,6 +46,8 @@ async fn create_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()
         .request(request)
         .await
         .expect("Error while awaiting response");
+
+    // TODO(#1919): Check the response.
 
     notify_sender
         .send(())

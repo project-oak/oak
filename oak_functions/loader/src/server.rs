@@ -24,10 +24,11 @@ use std::{fs, net::SocketAddr, sync::Arc};
 
 const MAIN_FUNCTION_NAME: &str = "main";
 
+/// An HTTP server that serves the `main` function of a wasm module on each invocation.
 pub struct WasmServer {
-    /// Server address to listen client requests on.
+    /// Server address to listen for client requests on.
     address: SocketAddr,
-    /// Request handler that runs the wasm_module.
+    /// The wasm engine that runs the given wasm module per incoming request.
     wasm_engine: WasmEngine,
 }
 
@@ -63,6 +64,7 @@ impl WasmEngine {
 }
 
 impl WasmServer {
+    /// Create a WasmServer to listen on the given port, serving the given wasm module.
     pub fn create(address: &str, wasm_path: &str) -> anyhow::Result<Self> {
         let wasm_module_bytes =
             fs::read(&wasm_path).with_context(|| format!("Couldn't read file {}", wasm_path))?;
@@ -74,11 +76,14 @@ impl WasmServer {
             },
         })
     }
+
+    /// Start the server, serving the wasm module function.
     pub async fn start(
         &self,
         notify_receiver: tokio::sync::oneshot::Receiver<()>,
     ) -> anyhow::Result<()> {
-        // A `Service` is needed for every connection. Here we create a service using the `handler`.
+        // A `Service` is needed for every connection. Here we create a service using the
+        // `wasm_engine`.
         let service = make_service_fn(move |_conn| {
             let wasm_engine = self.wasm_engine.clone();
             async move {
