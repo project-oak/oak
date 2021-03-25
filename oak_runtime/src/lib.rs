@@ -394,14 +394,10 @@ impl AuxServer {
     ) -> Self {
         let (termination_notificiation_sender, termination_notificiation_receiver) =
             tokio::sync::oneshot::channel::<()>();
-        let runtime_proxy = runtime.clone().proxy_for_new_node(name);
         info!("spawning {} server on new thread", name);
         let join_handle = thread::Builder::new()
             .name(format!("{}-server", name))
-            .spawn(move || {
-                runtime_proxy.set_as_current();
-                f(port, runtime, termination_notificiation_receiver)
-            })
+            .spawn(move || f(port, runtime, termination_notificiation_receiver))
             .expect("failed to spawn introspection thread");
         AuxServer {
             name: name.to_string(),
