@@ -1,4 +1,4 @@
-# RFC#01: Remote Attestation via TLS
+# RFC#01929: Remote Attestation via TLS
 
 ## Objective
 
@@ -208,18 +208,20 @@ The _Generate Assertion_ procedure in the workflow is described as follows in
 the case of TEE-based remote attestation:
 
 1. Derive a **Token** from the TLS session
-    1. **Token** is generated via deriving Exported Keying Material from an established TLS session with a specified set of parameters
+   1. **Token** is generated via deriving Exported Keying Material from an
+      established TLS session with a specified set of parameters
 1. Put the **Token** into the **TEE report** request
-    1. This means that when TEE platform signs a **TEE report**, it also signs the
-    provided **Token**
+   1. This means that when TEE platform signs a **TEE report**, it also signs
+      the provided **Token**
 1. Request a **TEE report** from hardware
 1. Firmware generates and signs a **TEE report**
-    1. The signed **TEE report** also gives clients information about the TEE itself
-    (its version and etc.) and about the code that is running inside the TEE
-1. Combine the hardware generated **TEE report** with a certificate signed by the
-  **Provider**’s root key
-    1. This is required for checking the validity of **TEE reports** and TEE platform
-  keys that were used to sign them
+   1. The signed **TEE report** also gives clients information about the TEE
+      itself (its version and etc.) and about the code that is running inside
+      the TEE
+1. Combine the hardware generated **TEE report** with a certificate signed by
+   the **Provider**’s root key
+   1. This is required for checking the validity of **TEE reports** and TEE
+      platform keys that were used to sign them
 
 Since Client and Server can exchange multiple assertions, each assertion should
 contain a **Token** that was derived using a separate Context parameter.
@@ -229,22 +231,28 @@ contain a **Token** that was derived using a separate Context parameter.
 The bidirectional workflow of the remote attestation looks as follows:
 
 1. **Client** connects to the **Server** via TLS
-    1. Server should guarantee _Perfect Forward Secrecy_
-    1. Client checks that provided `supported_groups` for key exchange guarantee _Perfect Forward Secrecy_
+   1. Server should guarantee _Perfect Forward Secrecy_
+   1. Client checks that provided `supported_groups` for key exchange guarantee
+      _Perfect Forward Secrecy_
 1. Initial Handshake
-    1. Both **Client** and **Server** negotiate assertion types they can provide and will accept
-1. **Client** generates and sends its (possibly empty) list of assertions to the **Server**
+   1. Both **Client** and **Server** negotiate assertion types they can provide
+      and will accept
+1. **Client** generates and sends its (possibly empty) list of assertions to the
+   **Server**
 1. **Server** checks the validity of the **Client** assertions
-    1. It also extracts a Token from the TLS session and compares it to the Token from the **Client** assertions
-    1. If the **Client** assertion is not valid or the Token does not match, then the **Server** closes the connection and aborts the protocol
-1. **Server** generates and sends its (possibly empty) list of assertions to the **Client**
+   1. It also extracts a Token from the TLS session and compares it to the Token
+      from the **Client** assertions
+   1. If the **Client** assertion is not valid or the Token does not match, then
+      the **Server** closes the connection and aborts the protocol
+1. **Server** generates and sends its (possibly empty) list of assertions to the
+   **Client**
 1. **Client** checks the validity of the **Server** assertions
-    1. It also extracts a Token from the TLS session and compares it to the Token from the **Server** assertions
-    1. If the **Server** assertion is not valid or the Token does not match, then the **Client** closes the connection and aborts the protocol
+   1. It also extracts a Token from the TLS session and compares it to the Token
+      from the **Server** assertions
+   1. If the **Server** assertion is not valid or the Token does not match, then
+      the **Client** closes the connection and aborts the protocol
 1. Secure attested channel is established
 
 <!-- From: -->
 <!-- https://sequencediagram.googleplex.com/view/4888181453357056 -->
 <img src="images/tls_attestation_workflow.png" width="850">
-
-
