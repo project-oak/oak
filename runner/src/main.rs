@@ -659,10 +659,10 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
         let run_server_clients = if example.applications.is_empty() {
             if opt.build_client.client_variant == NO_CLIENTS {
-                panic!(
-                    "`{}` client variant is not supported when no applications are provided",
-                    NO_CLIENTS
-                );
+                Step::Multiple {
+                    name: "run clients (empty)".to_string(),
+                    steps: vec![],
+                }
             } else {
                 run_clients
             }
@@ -710,13 +710,13 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 }
             })
     } else {
-        if opt.build_client.client_variant != NO_CLIENTS {
-            run_clients
-        } else {
+        if opt.build_client.client_variant == NO_CLIENTS {
             Step::Multiple {
                 name: "run clients (empty)".to_string(),
                 steps: vec![],
             }
+        } else {
+            run_clients
         }
     };
 
@@ -724,11 +724,7 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
         name: example.name.to_string(),
         steps: vec![
             if example.applications.is_empty() {
-                if opt.build_client.client_variant == NO_CLIENTS {
-                    panic!("`{}` client variant is not supported when no applications are provided", NO_CLIENTS);
-                } else {
-                    vec![]
-                }
+                vec![]
             } else {
                 let application = example
                     .applications
