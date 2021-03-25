@@ -87,7 +87,7 @@ impl FrontendNode {
             lose_channels();
 
             // Second, start an ephemeral Node which also loses channels.
-            let (wh, rh) =
+            let (_, rh) =
                 oak::channel_create("channel_loser-initial", &Label::public_untrusted()).unwrap();
             oak::node_create(
                 "channel_loser",
@@ -96,8 +96,6 @@ impl FrontendNode {
                 rh,
             )
             .expect("failed to create channel_loser ephemeral Node");
-            oak::channel_close(wh.handle).unwrap();
-            oak::channel_close(rh.handle).unwrap();
         }
 
         {
@@ -112,9 +110,6 @@ impl FrontendNode {
                 http_channel.handle,
             )
             .expect("failed to create http_oak_main Node");
-            // Close local handle to the HTTP invocation channel now that it's been passed
-            // to the separate HTTP handling node.
-            http_channel.close().unwrap();
         }
 
         let log_sender = oak::logger::create().unwrap();
@@ -134,7 +129,6 @@ impl FrontendNode {
                 read_handle,
             )
             .expect("could not create node");
-            oak::channel_close(read_handle.handle).expect("could not close channel");
             backend_out.push(write_handle);
 
             // Create a back channel, and pass the write half to the backend
@@ -142,7 +136,7 @@ impl FrontendNode {
             let (write_handle, read_handle) =
                 oak::channel_create(&format!("from-backend-{}", i), &Label::public_untrusted())
                     .expect("could not create channel");
-            oak::channel_write(backend_out[i], &[], &[write_handle.handle])
+            oak::channel_write(&backend_out[i], &[], &[write_handle.handle])
                 .expect("could not write to channel");
             oak::channel_close(write_handle.handle).expect("could not close channel");
             backend_in.push(read_handle);
@@ -889,23 +883,18 @@ impl FrontendNode {
 
         // The linear_handles module expects to read a single init message with exactly one handle:
         // a write handle to return the result message in.
-        oak::channel_write(init_wh, &[], &[result_wh.handle])
+        oak::channel_write(&init_wh, &[], &[result_wh.handle])
             .expect("Failed to write result handle");
 
         // The linear_handles module should return a single result message (without handles), its
         // body a string containing "OK".
         let mut buf = Vec::new();
         let mut handles = Vec::new();
-        oak::wait_on_channels(&[result_rh]).expect("Channel did not become readable");
-        oak::channel_read(result_rh, &mut buf, &mut handles).expect("Failed to read response");
+        oak::wait_on_channels(&[&result_rh]).expect("Channel did not become readable");
+        oak::channel_read(&result_rh, &mut buf, &mut handles).expect("Failed to read response");
         let msg = String::from_utf8(buf).expect("Response message is not valid UTF8");
         // "OK" if all tests passed, the error message otherwise.
         expect_eq!(msg, "OK");
-
-        expect_eq!(Ok(()), oak::channel_close(init_wh.handle));
-        expect_eq!(Ok(()), oak::channel_close(init_rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(result_wh.handle));
-        expect_eq!(Ok(()), oak::channel_close(result_rh.handle));
 
         Ok(())
     }
@@ -1002,7 +991,7 @@ impl FrontendNode {
         let mut handles = Vec::with_capacity(1);
         expect_eq!(
             Err(OakStatus::ErrChannelEmpty),
-            oak::channel_read(in_channel, &mut buffer, &mut handles)
+            oak::channel_read(&in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(0, buffer.len());
         expect_eq!(0, handles.len());
@@ -1012,17 +1001,17 @@ impl FrontendNode {
         let mut nonempty_handles = vec![out_channel.handle];
         expect_eq!(
             Err(OakStatus::ErrChannelEmpty),
-            oak::channel_read(in_channel, &mut nonempty_buffer, &mut nonempty_handles)
+            oak::channel_read(&in_channel, &mut nonempty_buffer, &mut nonempty_handles)
         );
         expect_eq!(0, nonempty_buffer.len());
         expect_eq!(0, nonempty_handles.len());
 
         // Single message.
         let data = vec![0x01, 0x02, 0x03];
-        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_channel, &data, &[]));
         expect_eq!(
             Ok(()),
-            oak::channel_read(in_channel, &mut buffer, &mut handles)
+            oak::channel_read(&in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(3, buffer.len());
         expect_eq!(0, handles.len());
@@ -1030,7 +1019,7 @@ impl FrontendNode {
         // Reading again zeroes the vector length.
         expect_eq!(
             Err(OakStatus::ErrChannelEmpty),
-            oak::channel_read(in_channel, &mut buffer, &mut handles)
+            oak::channel_read(&in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(0, buffer.len());
         expect_eq!(0, handles.len());
@@ -1038,10 +1027,10 @@ impl FrontendNode {
 
         // Now send and receive a bigger message.
         let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_channel, &data, &[]));
         expect_eq!(
             Ok(()),
-            oak::channel_read(in_channel, &mut buffer, &mut handles)
+            oak::channel_read(&in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(8, buffer.len());
         expect_eq!(0, handles.len());
@@ -1051,7 +1040,7 @@ impl FrontendNode {
         let bogus_channel = oak::ReadHandle { handle: 99999 };
         expect_eq!(
             Err(OakStatus::ErrBadHandle),
-            oak::channel_read(bogus_channel, &mut buffer, &mut handles)
+            oak::channel_read(&bogus_channel, &mut buffer, &mut handles)
         );
 
         // Send and receive lots of handles.
@@ -1059,7 +1048,7 @@ impl FrontendNode {
         expect_eq!(
             Ok(()),
             oak::channel_write(
-                out_channel,
+                &out_channel,
                 &data,
                 &[
                     out_channel.handle,
@@ -1071,7 +1060,7 @@ impl FrontendNode {
         );
         expect_eq!(
             Ok(()),
-            oak::channel_read(in_channel, &mut buffer, &mut handles)
+            oak::channel_read(&in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(3, buffer.len());
         expect_eq!(4, handles.len());
@@ -1082,7 +1071,7 @@ impl FrontendNode {
         // Reading again clears the buffer and the handles.
         expect_eq!(
             Err(OakStatus::ErrChannelEmpty),
-            oak::channel_read(in_channel, &mut buffer, &mut handles)
+            oak::channel_read(&in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(0, buffer.len());
         expect_eq!(0, handles.len());
@@ -1098,7 +1087,7 @@ impl FrontendNode {
 
         // Write a message to the channel.
         let buf = vec![0x01];
-        expect_eq!(Ok(()), oak::channel_write(out_channel, &buf, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_channel, &buf, &[]));
 
         // Drop the only write handle for this channel.
         expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
@@ -1109,7 +1098,7 @@ impl FrontendNode {
         let mut handles = Vec::with_capacity(5);
         expect_eq!(
             Ok(()),
-            oak::channel_read(in_channel, &mut buffer, &mut handles)
+            oak::channel_read(&in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(1, buffer.len());
         expect_eq!(0, handles.len());
@@ -1120,7 +1109,7 @@ impl FrontendNode {
         let mut handles = Vec::with_capacity(5);
         expect_eq!(
             Err(OakStatus::ErrChannelClosed),
-            oak::channel_read(in_channel, &mut buffer, &mut handles)
+            oak::channel_read(&in_channel, &mut buffer, &mut handles)
         );
 
         expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
@@ -1136,10 +1125,11 @@ impl FrontendNode {
                 .expect("could not create channel");
 
         // Test that [`oak::channel_read_with_downgrade`] is successful.
-        oak::channel_write(public_out_channel, &test_msg, &[]).expect("could not write to channel");
+        oak::channel_write(&public_out_channel, &test_msg, &[])
+            .expect("could not write to channel");
         expect_eq!(
             Ok(()),
-            oak::channel_read_with_downgrade(public_in_channel, &mut buffer, &mut vec![])
+            oak::channel_read_with_downgrade(&public_in_channel, &mut buffer, &mut vec![])
         );
         expect_eq!(Ok(()), oak::channel_close(public_out_channel.handle));
         expect_eq!(Ok(()), oak::channel_close(public_in_channel.handle));
@@ -1150,11 +1140,11 @@ impl FrontendNode {
 
         // Test that [`oak::channel_read_with_downgrade`] returns
         // [`OakStatus::ErrPermissionDenied`].
-        oak::channel_write(private_out_channel, &test_msg, &[])
+        oak::channel_write(&private_out_channel, &test_msg, &[])
             .expect("could not write to channel");
         expect_eq!(
             Err(OakStatus::ErrPermissionDenied),
-            oak::channel_read_with_downgrade(private_in_channel, &mut buffer, &mut vec![])
+            oak::channel_read_with_downgrade(&private_in_channel, &mut buffer, &mut vec![])
         );
         expect_eq!(Ok(()), oak::channel_close(private_out_channel.handle));
         expect_eq!(Ok(()), oak::channel_close(private_in_channel.handle));
@@ -1206,21 +1196,21 @@ impl FrontendNode {
 
         // Empty message.
         let empty = vec![];
-        expect_eq!(Ok(()), oak::channel_write(out_channel, &empty, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_channel, &empty, &[]));
 
         // Single message.
         let data = vec![0x01, 0x02, 0x03];
-        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_channel, &data, &[]));
 
         // Now send a bigger message.
         let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_channel, &data, &[]));
 
         // Writing to an invalid handle gives an error.
         let bogus_channel = oak::WriteHandle { handle: 99999 };
         expect_eq!(
             Err(OakStatus::ErrBadHandle),
-            oak::channel_write(bogus_channel, &data, &[])
+            oak::channel_write(&bogus_channel, &data, &[])
         );
 
         expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
@@ -1236,14 +1226,14 @@ impl FrontendNode {
         let empty = vec![];
         expect_eq!(
             Ok(()),
-            oak::channel_write(out_channel, &empty, &[in_channel.handle])
+            oak::channel_write(&out_channel, &empty, &[in_channel.handle])
         );
 
         let mut buffer = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(1);
         expect_eq!(
             Ok(()),
-            oak::channel_read(in_channel, &mut buffer, &mut handles)
+            oak::channel_read(&in_channel, &mut buffer, &mut handles)
         );
         expect_eq!(0, buffer.len());
         expect_eq!(1, handles.len());
@@ -1267,7 +1257,7 @@ impl FrontendNode {
         let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
         expect_eq!(
             Err(OakStatus::ErrChannelClosed),
-            oak::channel_write(out_channel, &data, &[])
+            oak::channel_write(&out_channel, &data, &[])
         );
         expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
 
@@ -1280,15 +1270,15 @@ impl FrontendNode {
 
         // Ensure that there are messages pending on the channel.
         let data = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
-        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
-        expect_eq!(Ok(()), oak::channel_write(out_channel, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_channel, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_channel, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_channel, &data, &[]));
 
         // Once there's no way to read from the channel, writing fails.
         expect_eq!(Ok(()), oak::channel_close(in_channel.handle));
         expect_eq!(
             Err(OakStatus::ErrChannelClosed),
-            oak::channel_write(out_channel, &data, &[])
+            oak::channel_write(&out_channel, &data, &[])
         );
         expect_eq!(Ok(()), oak::channel_close(out_channel.handle));
         Ok(())
@@ -1298,14 +1288,14 @@ impl FrontendNode {
         // Set up a channel with a message in it.
         let (lost_wh, lost_rh) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         let data = vec![0x08, 0x0c];
-        expect_eq!(Ok(()), oak::channel_write(lost_wh, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&lost_wh, &data, &[]));
 
         // Put a message with handle to the first channel into a second channel.
         let (holder_wh, holder_rh) =
             oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         expect_eq!(
             Ok(()),
-            oak::channel_write(holder_wh, &[], &[lost_rh.handle])
+            oak::channel_write(&holder_wh, &[], &[lost_rh.handle])
         );
         expect_eq!(Ok(()), oak::channel_close(holder_wh.handle));
 
@@ -1320,7 +1310,7 @@ impl FrontendNode {
         let mut handles = Vec::with_capacity(1);
         expect_eq!(
             Ok(()),
-            oak::channel_read(holder_rh, &mut buffer, &mut handles)
+            oak::channel_read(&holder_rh, &mut buffer, &mut handles)
         );
         expect_eq!(0, buffer.len());
         expect_eq!(1, handles.len());
@@ -1330,7 +1320,7 @@ impl FrontendNode {
         expect_eq!(
             Ok(()),
             oak::channel_read(
-                oak::ReadHandle {
+                &oak::ReadHandle {
                     handle: recovered_rh
                 },
                 &mut buffer,
@@ -1342,8 +1332,6 @@ impl FrontendNode {
         expect_eq!(8, buffer[0]);
         expect_eq!(0xC, buffer[1]);
 
-        expect_eq!(Ok(()), oak::channel_close(recovered_rh));
-        expect_eq!(Ok(()), oak::channel_close(holder_rh.handle));
         Ok(())
     }
 
@@ -1372,7 +1360,7 @@ impl FrontendNode {
             let mut handles = Vec::with_capacity(1);
             expect_eq!(
                 Ok(()),
-                oak::channel_read(outer_rh, &mut buffer, &mut handles)
+                oak::channel_read(&outer_rh, &mut buffer, &mut handles)
             );
             expect_eq!(0, buffer.len());
             expect_eq!(1, handles.len());
@@ -1386,7 +1374,7 @@ impl FrontendNode {
         let mut handles = Vec::with_capacity(1);
         expect_eq!(
             Ok(()),
-            oak::channel_read(innermost_rh, &mut buffer, &mut handles)
+            oak::channel_read(&innermost_rh, &mut buffer, &mut handles)
         );
         expect_eq!(0, handles.len());
         expect_eq!(2, buffer.len());
@@ -1544,64 +1532,62 @@ impl FrontendNode {
         let (out2, in2) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
 
         // Waiting on (just) non-read channel handles should fail immediately.
+        let write_as_read_handle = oak::ReadHandle {
+            handle: out1.handle,
+        };
         expect_eq!(
             vec![
                 ChannelReadStatus::InvalidChannel,
                 ChannelReadStatus::InvalidChannel
             ],
             status_convert(oak::wait_on_channels(&[
-                oak::ReadHandle {
-                    handle: out1.handle
-                },
-                oak::ReadHandle { handle: 9_999_999 }
+                &write_as_read_handle,
+                &oak::ReadHandle { handle: 9_999_999 }
             ]))?
         );
 
         // Set up first channel with a pending message.
         let data = vec![0x01, 0x02, 0x03];
-        expect_eq!(Ok(()), oak::channel_write(out1, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out1, &data, &[]));
 
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::NotReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[&in1, &in2]))?
         );
         // No read so still ready (level triggered not edge triggered).
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::NotReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[&in1, &in2]))?
         );
 
-        expect_eq!(Ok(()), oak::channel_write(out2, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out2, &data, &[]));
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[&in1, &in2]))?
         );
 
         let mut buffer = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(5);
-        expect_eq!(Ok(()), oak::channel_read(in1, &mut buffer, &mut handles));
+        expect_eq!(Ok(()), oak::channel_read(&in1, &mut buffer, &mut handles));
         expect_eq!(3, buffer.len());
         expect_eq!(0, handles.len());
 
         expect_eq!(
             vec![ChannelReadStatus::NotReady, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[&in1, &in2]))?
         );
 
         // Write channels and nonsense handles are ignored.
+        let write_as_read_handle = oak::ReadHandle {
+            handle: out1.handle,
+        };
         expect_eq!(
             vec![
                 ChannelReadStatus::NotReady,
                 ChannelReadStatus::ReadReady,
                 ChannelReadStatus::InvalidChannel
             ],
-            status_convert(oak::wait_on_channels(&[
-                in1,
-                in2,
-                oak::ReadHandle {
-                    handle: out1.handle
-                }
-            ]))?
+            status_convert(oak::wait_on_channels(&[&in1, &in2, &write_as_read_handle,]))?
         );
         expect_eq!(
             vec![
@@ -1610,9 +1596,9 @@ impl FrontendNode {
                 ChannelReadStatus::InvalidChannel
             ],
             status_convert(oak::wait_on_channels(&[
-                in1,
-                in2,
-                oak::ReadHandle { handle: 9_999_999 }
+                &in1,
+                &in2,
+                &oak::ReadHandle { handle: 9_999_999 }
             ]))?
         );
 
@@ -1623,7 +1609,7 @@ impl FrontendNode {
         // the channel is closed.
         expect_eq!(
             vec![ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in2]))?
+            status_convert(oak::wait_on_channels(&[&in2]))?
         );
 
         expect_eq!(Ok(()), oak::channel_close(in1.handle));
@@ -1639,11 +1625,11 @@ impl FrontendNode {
 
         // Set up pending messages so each channel is read-ready.
         let data = vec![0x01, 0x02, 0x03];
-        expect_eq!(Ok(()), oak::channel_write(out1, &data, &[]));
-        expect_eq!(Ok(()), oak::channel_write(out2, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out1, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out2, &data, &[]));
         expect_eq!(
             vec![ChannelReadStatus::ReadReady, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[&in1, &in2]))?
         );
 
         // Close the only write handle to channel 1.
@@ -1652,25 +1638,22 @@ impl FrontendNode {
         // Channel is still read-ready because there's a queued message.
         expect_eq!(
             vec![ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1]))?
+            status_convert(oak::wait_on_channels(&[&in1]))?
         );
 
         // Consume the only message on channel 1.
         let mut buffer = Vec::<u8>::with_capacity(5);
         let mut handles = Vec::with_capacity(5);
-        expect_eq!(Ok(()), oak::channel_read(in1, &mut buffer, &mut handles));
+        expect_eq!(Ok(()), oak::channel_read(&in1, &mut buffer, &mut handles));
         expect_eq!(3, buffer.len());
         expect_eq!(0, handles.len());
 
         // Now expect the channel status to be orphaned.
         expect_eq!(
             vec![ChannelReadStatus::Orphaned, ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels(&[in1, in2]))?
+            status_convert(oak::wait_on_channels(&[&in1, &in2]))?
         );
 
-        expect_eq!(Ok(()), oak::channel_close(in1.handle));
-        expect_eq!(Ok(()), oak::channel_close(in2.handle));
-        expect_eq!(Ok(()), oak::channel_close(out2.handle));
         Ok(())
     }
 
@@ -1683,13 +1666,12 @@ impl FrontendNode {
 
         // Test that [`oak::wait_on_channels_with_downgrade`] is successful and returns
         // [`ChannelReadStatus::ReadReady`].
-        oak::channel_write(public_out_channel, &test_msg, &[]).expect("could not write to channel");
+        oak::channel_write(&public_out_channel, &test_msg, &[])
+            .expect("could not write to channel");
         expect_eq!(
             vec![ChannelReadStatus::ReadReady],
-            status_convert(oak::wait_on_channels_with_downgrade(&[public_in_channel]))?
+            status_convert(oak::wait_on_channels_with_downgrade(&[&public_in_channel]))?
         );
-        expect_eq!(Ok(()), oak::channel_close(public_out_channel.handle));
-        expect_eq!(Ok(()), oak::channel_close(public_in_channel.handle));
 
         let (private_out_channel, private_in_channel) =
             oak::channel_create("Private test channel", &confidentiality_label(top()))
@@ -1697,14 +1679,12 @@ impl FrontendNode {
 
         // Test that [`oak::wait_on_channels_with_downgrade`] returns
         // [`ChannelReadStatus::PermissionDenied`].
-        oak::channel_write(private_out_channel, &test_msg, &[])
+        oak::channel_write(&private_out_channel, &test_msg, &[])
             .expect("could not write to channel");
         expect_eq!(
             vec![ChannelReadStatus::PermissionDenied],
-            status_convert(oak::wait_on_channels_with_downgrade(&[private_in_channel]))?
+            status_convert(oak::wait_on_channels_with_downgrade(&[&private_in_channel]))?
         );
-        expect_eq!(Ok(()), oak::channel_close(private_out_channel.handle));
-        expect_eq!(Ok(()), oak::channel_close(private_in_channel.handle));
 
         // TODO(#1819): Check the case where results are different from the `wait_on_channels` once
         // the ABI tests can support wasm hash labels.
@@ -1859,7 +1839,7 @@ impl FrontendNode {
                 "Non-existent",
                 &oak::node_config::wasm("no_such_module", BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
-                self.backend_in[0]
+                self.backend_in[0].clone(),
             )
         );
         expect_eq!(
@@ -1868,7 +1848,7 @@ impl FrontendNode {
                 "No entrypoint",
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, "no_such_entrypoint"),
                 &Label::public_untrusted(),
-                self.backend_in[0]
+                self.backend_in[0].clone(),
             )
         );
         expect_eq!(
@@ -1880,7 +1860,7 @@ impl FrontendNode {
                     "backend_fake_main" /* exists but wrong signature */
                 ),
                 &Label::public_untrusted(),
-                self.backend_in[0]
+                self.backend_in[0].clone(),
             )
         );
         expect_eq!(
@@ -1894,15 +1874,14 @@ impl FrontendNode {
                 }
             )
         );
-        let (out_handle, in_handle) =
-            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
+        let (_, in_handle) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         expect_eq!(
             Ok(()),
             oak::node_create(
                 "Valid",
                 &oak::node_config::wasm(BACKEND_MODULE_NAME, BACKEND_ENTRYPOINT_NAME),
                 &Label::public_untrusted(),
-                in_handle
+                in_handle.clone(),
             )
         );
         expect_eq!(
@@ -1915,8 +1894,6 @@ impl FrontendNode {
             )
         );
 
-        expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
-        expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
         Ok(())
     }
 
@@ -2090,8 +2067,7 @@ impl FrontendNode {
     }
 
     fn test_node_panic(&mut self) -> TestResult {
-        let (out_handle, in_handle) =
-            oak::channel_create("Test", &Label::public_untrusted()).unwrap();
+        let (_, in_handle) = oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         // Create a Node that panics. We can't see the panic, but the rest
         // of the Application should continue.
         expect_eq!(
@@ -2104,8 +2080,6 @@ impl FrontendNode {
             )
         );
 
-        expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
-        expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
         Ok(())
     }
 
@@ -2142,7 +2116,7 @@ impl FrontendNode {
         let (out_handle, in_handle) =
             oak::channel_create("Test", &Label::public_untrusted()).unwrap();
         let data = vec![0x01, 0x02, 0x03];
-        expect_eq!(Ok(()), oak::channel_write(out_handle, &data, &[]));
+        expect_eq!(Ok(()), oak::channel_write(&out_handle, &data, &[]));
 
         // Read from an invalid handle.
         let mut buffer = Vec::<u8>::with_capacity(5);
@@ -2150,7 +2124,7 @@ impl FrontendNode {
         expect_eq!(
             Err(OakStatus::ErrBadHandle),
             oak::channel_read(
-                oak::ReadHandle { handle: 9_987_123 },
+                &oak::ReadHandle { handle: 9_987_123 },
                 &mut buffer,
                 &mut handles
             )
@@ -2168,8 +2142,6 @@ impl FrontendNode {
         expect_eq!(Err(OakStatus::ErrBadHandle), oak::channel_close(9_987_123));
         expect_eq!(Err(OakStatus::ErrBadHandle), oak::channel_close(9_987_321));
 
-        expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
-        expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
         Ok(())
     }
 
@@ -2195,14 +2167,13 @@ impl FrontendNode {
             read_handle,
         )
         .expect("could not create node");
-        oak::channel_close(read_handle.handle).expect("could not close channel");
 
         expect!(is_valid(logging_handle.handle));
         let (out_handle, in_handle) = oak::channel_create("Test", &Label::public_untrusted())
             .expect("could not create channel");
 
         oak::channel_write(
-            logging_handle,
+            &logging_handle,
             "Malformed message sent direct to logging channel!".as_bytes(),
             &[in_handle.handle, out_handle.handle],
         )
@@ -2219,15 +2190,12 @@ impl FrontendNode {
         .unwrap();
 
         oak::channel_write(
-            logging_handle,
+            &logging_handle,
             bytes.as_ref(),
             &[in_handle.handle, out_handle.handle],
         )
         .expect("could not write to channel");
 
-        expect_eq!(Ok(()), oak::channel_close(out_handle.handle));
-        expect_eq!(Ok(()), oak::channel_close(in_handle.handle));
-        expect_eq!(Ok(()), oak::channel_close(logging_handle.handle));
         Ok(())
     }
 
@@ -2241,16 +2209,14 @@ impl FrontendNode {
             let (new_write, new_read) =
                 oak::channel_create("Test", &Label::public_untrusted()).unwrap();
             write_handles.push(new_write);
-            read_handles.push(new_read.handle);
+            read_handles.push(new_read);
         }
         for j in 0..BACKEND_COUNT {
+            let raw_read_handles: Vec<_> = read_handles.iter().map(|h| h.handle).collect();
             expect_eq!(
                 Ok(()),
-                oak::channel_write(self.backend_out[j], &[], &read_handles)
+                oak::channel_write(&self.backend_out[j], &[], &raw_read_handles)
             );
-        }
-        for new_read in read_handles.iter() {
-            oak::channel_close(*new_read).expect("could not close channel");
         }
 
         // Ask the backend node to transmute something by writing a serialized
@@ -2264,7 +2230,7 @@ impl FrontendNode {
                 "sending message to new channel {:?}: {:?}",
                 new_write.handle, internal_req,
             );
-            let new_channel = oak::io::Sender::new(*new_write);
+            let new_channel = oak::io::Sender::new(new_write.clone());
             new_channel
                 .send(&internal_req)
                 .expect("could not send request over channel");
@@ -2285,7 +2251,7 @@ impl FrontendNode {
                     let mut handles = Vec::with_capacity(1);
                     expect_eq!(
                         Ok(()),
-                        oak::channel_read(self.backend_in[j], &mut buffer, &mut handles)
+                        oak::channel_read(&self.backend_in[j], &mut buffer, &mut handles)
                     );
                     new_in_channel.handle = handles[0];
                 }
@@ -2295,7 +2261,7 @@ impl FrontendNode {
             // Read the actual transmuted message from this new channel.
             expect_eq!(
                 Ok(()),
-                oak::channel_read(new_in_channel, &mut buffer, &mut vec![])
+                oak::channel_read(&new_in_channel, &mut buffer, &mut vec![])
             );
             let serialized_rsp = String::from_utf8(buffer).unwrap();
             let internal_rsp: InternalMessage = serde_json::from_str(&serialized_rsp)?;
@@ -2310,7 +2276,7 @@ impl FrontendNode {
         for j in 0..BACKEND_COUNT {
             expect_eq!(
                 Ok(()),
-                oak::channel_write(self.backend_out[j], &[0x00], &[])
+                oak::channel_write(&self.backend_out[j], &[0x00], &[])
             );
         }
         Ok(())
@@ -2415,9 +2381,7 @@ impl FrontendNode {
             Ok(()),
             oak::node_create("grpc_server", &config, &Label::public_untrusted(), rh)
         );
-        oak::channel_write(wh, &[0x01, 0x02], &[]).expect("could not write to channel");
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        oak::channel_write(&wh, &[0x01, 0x02], &[]).expect("could not write to channel");
         Ok(())
     }
     fn test_grpc_server_fail_read_handle(&mut self) -> TestResult {
@@ -2430,11 +2394,14 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create("grpc_server", &config, &Label::public_untrusted(), rh)
+            oak::node_create(
+                "grpc_server",
+                &config,
+                &Label::public_untrusted(),
+                rh.clone()
+            )
         );
-        oak::channel_write(wh, &[], &[rh.handle]).expect("could not write to channel");
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        oak::channel_write(&wh, &[], &[rh.handle]).expect("could not write to channel");
         Ok(())
     }
     fn test_grpc_server_fail_two_handles(&mut self) -> TestResult {
@@ -2447,11 +2414,14 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create("grpc_server", &config, &Label::public_untrusted(), rh)
+            oak::node_create(
+                "grpc_server",
+                &config,
+                &Label::public_untrusted(),
+                rh.clone()
+            )
         );
-        oak::channel_write(wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        oak::channel_write(&wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
         Ok(())
     }
     fn test_grpc_client_unary_method(&mut self) -> TestResult {
@@ -2669,9 +2639,7 @@ impl FrontendNode {
             Ok(()),
             oak::node_create("http_server", &config, &Label::public_untrusted(), rh)
         );
-        oak::channel_write(wh, &[0x01, 0x02], &[]).expect("could not write to channel");
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        oak::channel_write(&wh, &[0x01, 0x02], &[]).expect("could not write to channel");
         Ok(())
     }
     fn test_http_server_fail_read_handle(&mut self) -> TestResult {
@@ -2684,11 +2652,14 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create("http_server", &config, &Label::public_untrusted(), rh)
+            oak::node_create(
+                "http_server",
+                &config,
+                &Label::public_untrusted(),
+                rh.clone()
+            )
         );
-        oak::channel_write(wh, &[], &[rh.handle]).expect("could not write to channel");
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        oak::channel_write(&wh, &[], &[rh.handle]).expect("could not write to channel");
         Ok(())
     }
     fn test_http_server_fail_two_handles(&mut self) -> TestResult {
@@ -2701,11 +2672,14 @@ impl FrontendNode {
             .expect("could not create channel");
         expect_eq!(
             Ok(()),
-            oak::node_create("http_server", &config, &Label::public_untrusted(), rh)
+            oak::node_create(
+                "http_server",
+                &config,
+                &Label::public_untrusted(),
+                rh.clone()
+            )
         );
-        oak::channel_write(wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
+        oak::channel_write(&wh, &[], &[wh.handle, rh.handle]).expect("could not write to channel");
         Ok(())
     }
 
@@ -3038,13 +3012,11 @@ impl FrontendNode {
         // lowered to be the top of the user sub-lattice, rather than the global top.
         let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
         let config = oak::node_config::grpc_server(ADDITIONAL_TEST_GRPC_SERVER_ADDR_2);
-        let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
+        let (_, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
         expect_eq!(
             Ok(()),
             oak::node_create("grpc_server", &config, &top_label, rh)
         );
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())
     }
 
@@ -3054,13 +3026,11 @@ impl FrontendNode {
         // lowered to be the top of the user sub-lattice, rather than the global top.
         let top_label = oak_abi::label::confidentiality_label(oak_abi::label::top());
         let config = oak::node_config::http_server(ADDITIONAL_TEST_HTTP_SERVER_ADDR_2);
-        let (wh, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
+        let (_, rh) = oak::channel_create("Test", &top_label).expect("could not create channel");
         expect_eq!(
             Ok(()),
             oak::node_create("http_server", &config, &top_label, rh)
         );
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())
     }
 
@@ -3077,10 +3047,8 @@ impl FrontendNode {
                     .as_str(),
             ));
             let config = oak::node_config::grpc_client(GRPC_CLIENT_ADDRESS);
-            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            let (_, rh) = oak::channel_create("Test", &label).expect("could not create channel");
             expect_eq!(Ok(()), oak::node_create("grpc_client", &config, &label, rh));
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
         }
 
         // gRPC client pseudo node can not be created with non-matching TLS endpoint
@@ -3090,13 +3058,11 @@ impl FrontendNode {
                 "google.com",
             ));
             let config = oak::node_config::grpc_client(GRPC_CLIENT_ADDRESS);
-            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            let (_, rh) = oak::channel_create("Test", &label).expect("could not create channel");
             expect_eq!(
                 Err(OakStatus::ErrPermissionDenied),
                 oak::node_create("grpc_client", &config, &label, rh)
             );
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
         }
         Ok(())
     }
@@ -3106,10 +3072,8 @@ impl FrontendNode {
         {
             let label = Label::public_untrusted();
             let config = oak::node_config::http_client("");
-            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            let (_, rh) = oak::channel_create("Test", &label).expect("could not create channel");
             expect_eq!(Ok(()), oak::node_create("http_client", &config, &label, rh));
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
         }
 
         let uri = HTTP_CLIENT_ADDRESS.parse::<Uri>().unwrap();
@@ -3121,10 +3085,8 @@ impl FrontendNode {
             let label =
                 oak_abi::label::confidentiality_label(oak_abi::label::tls_endpoint_tag(authority));
             let config = oak::node_config::http_client(authority);
-            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            let (_, rh) = oak::channel_create("Test", &label).expect("could not create channel");
             expect_eq!(Ok(()), oak::node_create("http_client", &config, &label, rh));
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
         }
 
         // HTTP client pseudo node can not be created with non-matching TLS endpoint
@@ -3134,13 +3096,11 @@ impl FrontendNode {
                 "google.com",
             ));
             let config = oak::node_config::http_client(authority);
-            let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+            let (_, rh) = oak::channel_create("Test", &label).expect("could not create channel");
             expect_eq!(
                 Err(OakStatus::ErrPermissionDenied),
                 oak::node_create("http_client", &config, &label, rh)
             );
-            expect_eq!(Ok(()), oak::channel_close(rh.handle));
-            expect_eq!(Ok(()), oak::channel_close(wh.handle));
         }
         Ok(())
     }
@@ -3162,13 +3122,11 @@ impl FrontendNode {
                 },
             )),
         };
-        let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+        let (_, rh) = oak::channel_create("Test", &label).expect("could not create channel");
         expect_eq!(
             Err(OakStatus::ErrPermissionDenied),
             oak::node_create("roughtime_client", &config, &label, rh)
         );
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())
     }
 
@@ -3187,13 +3145,11 @@ impl FrontendNode {
                 address: STORAGE_PROXY_ADDRESS.to_string(),
             })),
         };
-        let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+        let (_, rh) = oak::channel_create("Test", &label).expect("could not create channel");
         expect_eq!(
             Err(OakStatus::ErrPermissionDenied),
             oak::node_create("storage", &config, &label, rh)
         );
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())
     }
 
@@ -3209,10 +3165,8 @@ impl FrontendNode {
                 .as_str(),
         ));
         let config = oak::node_config::log();
-        let (wh, rh) = oak::channel_create("Test", &label).expect("could not create channel");
+        let (_, rh) = oak::channel_create("Test", &label).expect("could not create channel");
         expect_eq!(Ok(()), oak::node_create("logger", &config, &label, rh));
-        expect_eq!(Ok(()), oak::channel_close(rh.handle));
-        expect_eq!(Ok(()), oak::channel_close(wh.handle));
         Ok(())
     }
 }
@@ -3229,7 +3183,7 @@ fn lose_channels() {
     // Create a channel holding a message that holds references to itself.
     let (wh, rh) = oak::channel_create("Closed-self-ref", &Label::public_untrusted()).unwrap();
     let data = vec![0x01, 0x02, 0x03];
-    oak::channel_write(wh, &data, &[wh.handle, rh.handle]).unwrap();
+    oak::channel_write(&wh, &data, &[wh.handle, rh.handle]).unwrap();
     // Close both handles so this channel is immediately lost.
     oak::channel_close(wh.handle).unwrap();
     oak::channel_close(rh.handle).unwrap();
@@ -3237,7 +3191,7 @@ fn lose_channels() {
     // Create a channel holding a message that holds references to itself.
     let (wh, rh) = oak::channel_create("Lost-self-ref", &Label::public_untrusted()).unwrap();
     let data = vec![0x01, 0x02, 0x03];
-    oak::channel_write(wh, &data, &[wh.handle, rh.handle]).unwrap();
+    oak::channel_write(&wh, &data, &[wh.handle, rh.handle]).unwrap();
     // Keep the write handle open, so this channel will be lost when
     // the Node exits
     oak::channel_close(rh.handle).unwrap();
@@ -3247,8 +3201,8 @@ fn lose_channels() {
         oak::channel_create("Closed-cross-ref-channel-a", &Label::public_untrusted()).unwrap();
     let (wh_b, rh_b) =
         oak::channel_create("Closed-cross-ref-channel-b", &Label::public_untrusted()).unwrap();
-    oak::channel_write(wh_a, &data, &[wh_b.handle, rh_b.handle]).unwrap();
-    oak::channel_write(wh_b, &data, &[wh_a.handle, rh_a.handle]).unwrap();
+    oak::channel_write(&wh_a, &data, &[wh_b.handle, rh_b.handle]).unwrap();
+    oak::channel_write(&wh_b, &data, &[wh_a.handle, rh_a.handle]).unwrap();
     // Close all handles so these channels are immediately lost.
     oak::channel_close(wh_a.handle).unwrap();
     oak::channel_close(wh_b.handle).unwrap();
@@ -3260,8 +3214,8 @@ fn lose_channels() {
         oak::channel_create("Lost-cross-ref-channel-a", &Label::public_untrusted()).unwrap();
     let (wh_b, rh_b) =
         oak::channel_create("Lost-cross-ref-channel-b", &Label::public_untrusted()).unwrap();
-    oak::channel_write(wh_a, &data, &[wh_b.handle, rh_b.handle]).unwrap();
-    oak::channel_write(wh_b, &data, &[wh_a.handle, rh_a.handle]).unwrap();
+    oak::channel_write(&wh_a, &data, &[wh_b.handle, rh_b.handle]).unwrap();
+    oak::channel_write(&wh_b, &data, &[wh_a.handle, rh_a.handle]).unwrap();
     // Keep the write handles open.
     oak::channel_close(rh_a.handle).unwrap();
     oak::channel_close(rh_b.handle).unwrap();
@@ -3311,7 +3265,7 @@ fn new_channel_chain(nest_count: u32) -> Result<oak::ReadHandle, Box<dyn std::er
     let (innermost_wh, innermost_rh) =
         oak::channel_create("Innermost", &Label::public_untrusted()).unwrap();
     let data = vec![0x08, 0x0c];
-    expect_eq!(Ok(()), oak::channel_write(innermost_wh, &data, &[]));
+    expect_eq!(Ok(()), oak::channel_write(&innermost_wh, &data, &[]));
     expect_eq!(Ok(()), oak::channel_close(innermost_wh.handle));
 
     let mut inner_rh = innermost_rh;
@@ -3321,7 +3275,7 @@ fn new_channel_chain(nest_count: u32) -> Result<oak::ReadHandle, Box<dyn std::er
             oak::channel_create("Outer", &Label::public_untrusted()).unwrap();
         expect_eq!(
             Ok(()),
-            oak::channel_write(outer_wh, &[], &[inner_rh.handle])
+            oak::channel_write(&outer_wh, &[], &[inner_rh.handle])
         );
         expect_eq!(Ok(()), oak::channel_close(inner_rh.handle));
         expect_eq!(Ok(()), oak::channel_close(outer_wh.handle));
