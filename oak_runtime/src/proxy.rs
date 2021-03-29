@@ -642,7 +642,7 @@ impl RuntimeProxy {
     /// Binds this instance to the current thread.
     ///
     /// This function should be invoked immediately after creating a new thread that may `Clone` or
-    /// `Drop` handle types, such as [`Sender`]s or [`Receiver`]s.
+    /// `Drop` handle types, such as `Sender`s or `Receiver`s.
     ///
     /// In particular, make sure to call this when a new node is created.
     pub fn set_as_current(&self) {
