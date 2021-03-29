@@ -139,6 +139,15 @@
 <span id="136">136</span>
 <span id="137">137</span>
 <span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -185,6 +194,7 @@
     <span class="doccomment">/// Closes the channels used by the sender and receiver fields.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Any errors while trying to close the sender or receive are logged, but otherwise ignored.</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>))]</span>
     <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">receiver</span>() {
             <span class="prelude-val">Some</span>(<span class="ident">receiver</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -204,6 +214,14 @@
             }
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;No sender on invocation.&quot;</span>),
         };
+    }
+
+    <span class="doccomment">/// This function does nothing if the `linear-handles` feature is enabled, sender and receiver</span>
+    <span class="doccomment">/// are `Drop`ed automatically. We only include this definition to keep the same trait</span>
+    <span class="doccomment">/// definition with or without `linear-handles` enabled.</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;linear-handles&quot;</span>)]</span>
+    <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) {
+        <span class="comment">// Do nothing</span>
     }
 
     <span class="kw">fn</span> <span class="ident">receive_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Request</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {

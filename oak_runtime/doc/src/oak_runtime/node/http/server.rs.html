@@ -591,6 +591,10 @@
 <span id="588">588</span>
 <span id="589">589</span>
 <span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -837,7 +841,7 @@
 
         <span class="comment">// Build a service to process all incoming HTTP requests.</span>
         <span class="kw">let</span> <span class="ident">generic_handler</span> <span class="op">=</span> <span class="ident">HttpRequestHandler</span> {
-            <span class="ident">runtime</span>,
+            <span class="ident">runtime</span>: <span class="ident">runtime</span>.<span class="ident">clone</span>(),
             <span class="ident">invocation_channel</span>,
         };
         <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">make_server</span>(<span class="ident">generic_handler</span>, <span class="ident">notify_receiver</span>);
@@ -845,7 +849,7 @@
         <span class="comment">// Create an Async runtime for executing futures.</span>
         <span class="comment">// https://docs.rs/tokio/</span>
         <span class="comment">// TODO(#1280): Use a single shared tokio runtime, instead of creating a new one here.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">async_runtime</span> <span class="op">=</span> <span class="ident">create_async_runtime</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">async_runtime</span> <span class="op">=</span> <span class="ident">create_async_runtime</span>(<span class="ident">runtime</span>);
 
         <span class="comment">// Start the HTTP server.</span>
         <span class="macro">info</span><span class="macro">!</span>(
@@ -865,7 +869,7 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">WriteHandle</span>, <span class="ident">OakError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">startup_receiver</span> <span class="op">=</span> <span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">HttpInvocationSender</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">startup_handle</span>);
     <span class="kw">let</span> <span class="ident">invocation_channel</span> <span class="op">=</span> <span class="ident">startup_receiver</span>.<span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>)<span class="question-mark">?</span>;
-    <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">invocation_channel</span>.<span class="ident">sender</span> {
+    <span class="kw">match</span> <span class="ident">invocation_channel</span>.<span class="ident">sender</span> {
         <span class="prelude-val">Some</span>(<span class="ident">invocation_sender</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="macro">info</span><span class="macro">!</span>(
                 <span class="string">&quot;Invocation channel write handle received: {}&quot;</span>,
@@ -880,7 +884,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">create_async_runtime</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span> {
+<span class="kw">fn</span> <span class="ident">create_async_runtime</span>(<span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span> {
     <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
         <span class="comment">// Use simple scheduler that runs all tasks on the current-thread.</span>
         <span class="comment">// https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler</span>
@@ -891,6 +895,7 @@
         <span class="comment">// Enables the time driver.</span>
         <span class="comment">// Necessary for creating a Tokio Runtime.</span>
         .<span class="ident">enable_time</span>()
+        .<span class="ident">on_thread_start</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="ident">runtime</span>.<span class="ident">set_as_current</span>())
         .<span class="ident">build</span>()
         .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create Async runtime&quot;</span>)
 }
@@ -956,7 +961,10 @@
         <span class="ident">pipe</span>.<span class="ident">insert_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">runtime</span>, <span class="ident">request</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Send an invocation message (with attached handles) to the Oak Node.</span>
-        <span class="ident">pipe</span>.<span class="ident">send_invocation</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">runtime</span>, <span class="self">self</span>.<span class="ident">invocation_channel</span>)<span class="question-mark">?</span>;
+        <span class="ident">pipe</span>.<span class="ident">send_invocation</span>(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">runtime</span>,
+            <span class="kw">crate</span>::<span class="ident">node</span>::<span class="ident">copy_or_clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">invocation_channel</span>),
+        )<span class="question-mark">?</span>;
 
         <span class="comment">// Close all local handles except for the one that allows reading responses.</span>
         <span class="ident">pipe</span>.<span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">runtime</span>);

@@ -716,6 +716,9 @@
 <span id="713">713</span>
 <span id="714">714</span>
 <span id="715">715</span>
+<span id="716">716</span>
+<span id="717">717</span>
+<span id="718">718</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -827,7 +830,7 @@
             <span class="ident">handle</span>: <span class="ident">startup_handle</span>,
         });
         <span class="kw">let</span> <span class="ident">invocation_channel</span> <span class="op">=</span> <span class="ident">startup_receiver</span>.<span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>)<span class="question-mark">?</span>;
-        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">invocation_channel</span>.<span class="ident">sender</span> {
+        <span class="kw">match</span> <span class="ident">invocation_channel</span>.<span class="ident">sender</span> {
             <span class="prelude-val">Some</span>(<span class="ident">invocation_sender</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">info</span><span class="macro">!</span>(
                     <span class="string">&quot;Invocation channel write handle received: {}&quot;</span>,
@@ -888,7 +891,7 @@
 
         <span class="comment">// Build a service to process all other incoming HTTP/2 requests.</span>
         <span class="kw">let</span> <span class="ident">generic_handler</span> <span class="op">=</span> <span class="ident">HttpRequestHandler</span> {
-            <span class="ident">runtime</span>,
+            <span class="ident">runtime</span>: <span class="ident">runtime</span>.<span class="ident">clone</span>(),
             <span class="ident">invocation_channel</span>,
         };
 
@@ -918,6 +921,7 @@
             <span class="comment">// Enables the time driver.</span>
             <span class="comment">// Necessary for creating a Tokio Runtime.</span>
             .<span class="ident">enable_time</span>()
+            .<span class="ident">on_thread_start</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="ident">runtime</span>.<span class="ident">set_as_current</span>())
             .<span class="ident">build</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create Async runtime&quot;</span>);
 
@@ -969,7 +973,7 @@
     <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">http</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">hyper</span>::<span class="ident">Body</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
         <span class="kw">let</span> <span class="ident">grpc_handler</span> <span class="op">=</span> <span class="ident">GrpcInvocationHandler</span>::<span class="ident">new</span>(
             <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>(),
-            <span class="ident">Sender</span>::<span class="op">&lt;</span><span class="ident">GrpcInvocation</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">invocation_channel</span>),
+            <span class="ident">Sender</span>::<span class="op">&lt;</span><span class="ident">GrpcInvocation</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="kw">crate</span>::<span class="ident">node</span>::<span class="ident">copy_or_clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">invocation_channel</span>)),
             <span class="ident">request</span>.<span class="ident">uri</span>().<span class="ident">path</span>().<span class="ident">to_string</span>(),
         );
 
@@ -1142,6 +1146,7 @@
     <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
         <span class="kw">let</span> <span class="ident">handler</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">metrics_data</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">metrics_data</span>();
+        <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">clone</span>();
         <span class="comment">// Build a future of type `Future&lt;Output = Result&lt;SerializedResponseStream, tonic::Status&gt;&gt;`</span>
         <span class="kw">let</span> <span class="ident">future</span> <span class="op">=</span> <span class="ident">async</span> <span class="kw">move</span> {
             <span class="ident">metrics_data</span>
@@ -1180,6 +1185,7 @@
             <span class="comment">// TODO(#1376): make wait_on_channels() better integrated with `async` so we don&#39;t</span>
             <span class="comment">// have to mix threads and async.</span>
             <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
+                <span class="ident">runtime</span>.<span class="ident">set_as_current</span>();
                 <span class="kw">for</span> <span class="ident">response</span> <span class="kw">in</span> <span class="ident">response_iter</span> {
                     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Returning gRPC response: {:?}&quot;</span>, <span class="ident">response</span>);
                     <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">response</span>.<span class="ident">status</span> {

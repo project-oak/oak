@@ -1534,6 +1534,7 @@
 <span id="1531">1531</span>
 <span id="1532">1532</span>
 <span id="1533">1533</span>
+<span id="1534">1534</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -2982,6 +2983,7 @@
         <span class="kw">let</span> <span class="ident">node_join_handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
             .<span class="ident">name</span>(<span class="ident">node_name</span>.<span class="ident">to_string</span>())
             .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
+                <span class="ident">node_proxy</span>.<span class="ident">set_as_current</span>();
                 <span class="ident">node_instance</span>.<span class="ident">run</span>(<span class="ident">node_proxy</span>, <span class="ident">initial_handle</span>, <span class="ident">node_notify_receiver</span>);
                 <span class="comment">// It&#39;s now safe to remove the state for this Node, as there&#39;s nothing left</span>
                 <span class="comment">// that can invoke `Runtime` functionality for it.</span>
