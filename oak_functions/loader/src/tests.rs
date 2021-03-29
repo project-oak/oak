@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::server::{WasmHandler, WasmServer};
+use crate::server::{create_and_start_server, WasmHandler};
 use hyper::client::Client;
 
 use std::fs;
@@ -29,10 +29,8 @@ async fn test_server() {
 
     let wasm_module_bytes =
         fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
-    let server =
-        WasmServer::create(&address, &wasm_module_bytes).expect("Couldn't create the server");
 
-    let server_fut = server.start(notify_receiver);
+    let server_fut = create_and_start_server(&address, &wasm_module_bytes, notify_receiver);
     let client_fut = start_client(port, notify_sender);
 
     let (res, _) = tokio::join!(server_fut, client_fut);
@@ -67,7 +65,7 @@ use test::Bencher;
 fn bench_wasm_handler(b: &mut Bencher) {
     let wasm_module_bytes =
         fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
-    let wasm_handler = WasmHandler::new(&wasm_module_bytes).expect("Couldn't create the server");
+    let wasm_handler = WasmHandler::create(&wasm_module_bytes).expect("Couldn't create the server");
     let request = hyper::Request::builder()
         .method(http::Method::GET)
         .uri("http://localhost:8080")

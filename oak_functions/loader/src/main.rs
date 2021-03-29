@@ -23,7 +23,7 @@ use structopt::StructOpt;
 
 mod server;
 
-use crate::server::WasmServer;
+use crate::server::create_and_start_server;
 
 #[cfg(test)]
 mod tests;
@@ -63,7 +63,5 @@ async fn main() -> anyhow::Result<()> {
 
     // Start HTTP server.
     let address = format!("[::]:{}", &opt.http_listen_port);
-    WasmServer::create(&address, &wasm_module_bytes)?
-        .start(notify_receiver)
-        .await
+    create_and_start_server(&address, &wasm_module_bytes, notify_receiver).await
 }

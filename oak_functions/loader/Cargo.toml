@@ -16,7 +16,7 @@ default = []
 anyhow = "*"
 env_logger = "*"
 http = "*"
-hyper = { version = "*", features = ["client", "http1", "server", "runtime"] }
+hyper = { version = "*", features = ["http1", "server", "runtime"] }
 log = "*"
 structopt = "*"
 tokio = { version = "*", features = [
@@ -26,3 +26,6 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 wasmi = "*"
+
+[dev-dependencies]
+hyper = { version = "*", features = ["client"] }

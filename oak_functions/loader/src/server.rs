@@ -20,19 +20,20 @@ use hyper::{
     Body, Server, StatusCode,
 };
 use log::info;
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 const MAIN_FUNCTION_NAME: &str = "main";
 
 // An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
 pub(crate) struct WasmHandler {
-    // Wasm module to be served on each invocation.
+    // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
+    // cloneable.
     module: Arc<wasmi::Module>,
 }
 
 impl WasmHandler {
-    pub(crate) fn new(wasm_module_bytes: &[u8]) -> anyhow::Result<Self> {
+    pub(crate) fn create(wasm_module_bytes: &[u8]) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
         Ok(WasmHandler {
             module: Arc::new(module),
@@ -62,60 +63,44 @@ impl WasmHandler {
     }
 }
 
-/// An HTTP server that serves the `main` function of a Wasm module on each invocation.
-pub struct WasmServer {
-    /// Server address to listen for client requests on.
-    address: SocketAddr,
-    /// The Wasm handler that runs the given Wasm module per incoming request.
-    wasm_handler: WasmHandler,
-}
+/// Starts an HTTP server on the given address, serving the main function of the given Wasm module.
+pub async fn create_and_start_server(
+    address: &str,
+    wasm_module_bytes: &[u8],
+    notify_receiver: tokio::sync::oneshot::Receiver<()>,
+) -> anyhow::Result<()> {
+    let wasm_handler = WasmHandler::create(wasm_module_bytes)?;
 
-impl WasmServer {
-    /// Creates a [`WasmServer`] instance listening on the given port, serving the given Wasm
-    /// module.
-    pub fn create(address: &str, wasm_module_bytes: &[u8]) -> anyhow::Result<Self> {
-        Ok(WasmServer {
-            address: address.parse()?,
-            wasm_handler: WasmHandler::new(wasm_module_bytes)?,
-        })
-    }
+    // A `Service` is needed for every connection. Here we create a service using
+    // the`wasm_handler`.
+    let service = make_service_fn(move |_conn| {
+        let wasm_handler = wasm_handler.clone();
+        async move {
+            Ok::<_, hyper::Error>(service_fn(move |req| {
+                let wasm_handler = wasm_handler.clone();
+                async move { async { wasm_handler.handle_request(&req) }.await }
+            }))
+        }
+    });
 
-    /// Start the server, serving the Wasm module function.
-    pub async fn start(
-        &self,
-        notify_receiver: tokio::sync::oneshot::Receiver<()>,
-    ) -> anyhow::Result<()> {
-        // A `Service` is needed for every connection. Here we create a service using
-        // the`wasm_handler`.
-        let service = make_service_fn(move |_conn| {
-            let wasm_handler = self.wasm_handler.clone();
-            async move {
-                Ok::<_, hyper::Error>(service_fn(move |req| {
-                    let wasm_handler = wasm_handler.clone();
-                    async move { async { wasm_handler.handle_request(&req) }.await }
-                }))
-            }
-        });
+    let server = Server::bind(&address.parse()?).serve(service);
 
-        let server = Server::bind(&self.address).serve(service);
+    let graceful_server = server.with_graceful_shutdown(async {
+        // Treat notification failure the same as a notification.
+        let _ = notify_receiver.await;
+    });
 
-        let graceful_server = server.with_graceful_shutdown(async {
-            // Treat notification failure the same as a notification.
-            let _ = notify_receiver.await;
-        });
+    info!(
+        "{:?}: Started HTTP server on {:?}",
+        std::thread::current().id(),
+        &address
+    );
 
-        info!(
-            "{:?}: Started HTTP server on {:?}",
-            std::thread::current().id(),
-            &self.address
-        );
-
-        // Run until asked to terminate...
-        let result = graceful_server.await;
-        info!(
-            "HTTP server on addr {:?} terminated with {:?}",
-            self.address, result
-        );
-        Ok(())
-    }
+    // Run until asked to terminate...
+    let result = graceful_server.await;
+    info!(
+        "HTTP server on addr {} terminated with {:?}",
+        &address, result
+    );
+    Ok(())
 }
