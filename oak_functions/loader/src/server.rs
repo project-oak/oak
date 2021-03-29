@@ -26,13 +26,19 @@ const MAIN_FUNCTION_NAME: &str = "main";
 
 // An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
-struct WasmHandler {
+pub(crate) struct WasmHandler {
     // Wasm module to be served on each invocation.
     module: Arc<wasmi::Module>,
 }
 
 impl WasmHandler {
-    async fn handle_request(&self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
+    pub(crate) fn new(wasm_module_bytes: &[u8]) -> anyhow::Result<Self> {
+        let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
+        Ok(WasmHandler {
+            module: Arc::new(module),
+        })
+    }
+    pub(crate) fn handle_request(&self, req: &Request<Body>) -> anyhow::Result<Response<Body>> {
         // TODO(#1919): Make request available to the Wasm module via ABI functions.
         info!("The request is: {:?}", req);
 
@@ -68,12 +74,9 @@ impl WasmServer {
     /// Creates a [`WasmServer`] instance listening on the given port, serving the given Wasm
     /// module.
     pub fn create(address: &str, wasm_module_bytes: &[u8]) -> anyhow::Result<Self> {
-        let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
         Ok(WasmServer {
             address: address.parse()?,
-            wasm_handler: WasmHandler {
-                module: Arc::new(module),
-            },
+            wasm_handler: WasmHandler::new(wasm_module_bytes)?,
         })
     }
 
@@ -89,7 +92,7 @@ impl WasmServer {
             async move {
                 Ok::<_, hyper::Error>(service_fn(move |req| {
                     let wasm_handler = wasm_handler.clone();
-                    async move { wasm_handler.handle_request(req).await }
+                    async move { async { wasm_handler.handle_request(&req) }.await }
                 }))
             }
         });

@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+// Required for enabling benchmark tests.
+#![feature(test)]
+
 use anyhow::Context;
 use std::fs;
 use structopt::StructOpt;

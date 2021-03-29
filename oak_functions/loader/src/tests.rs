@@ -13,8 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::server::WasmServer;
+use crate::server::{WasmHandler, WasmServer};
 use hyper::client::Client;
+
 use std::fs;
 
 const TEST_WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
@@ -55,4 +56,23 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
     notify_sender
         .send(())
         .expect("Couldn't send completion signal.");
+}
+
+extern crate test;
+use test::Bencher;
+
+// Currently there is no support for running benchmark tests in the runner.
+// Run this with: `cargo bench --manifest-path=oak_functions/loader/Cargo.toml`
+#[bench]
+fn bench_wasm_handler(b: &mut Bencher) {
+    let wasm_module_bytes =
+        fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
+    let wasm_handler = WasmHandler::new(&wasm_module_bytes).expect("Couldn't create the server");
+    let request = hyper::Request::builder()
+        .method(http::Method::GET)
+        .uri("http://localhost:8080")
+        .body(hyper::Body::empty())
+        .unwrap();
+
+    b.iter(|| wasm_handler.handle_request(&request));
 }
