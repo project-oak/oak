@@ -15,6 +15,7 @@
 
 use crate::server::WasmServer;
 use hyper::client::Client;
+use std::fs;
 
 const TEST_WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
 
@@ -25,17 +26,19 @@ async fn test_server() {
     let address = format!("[::]:{}", port);
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
+    let wasm_module_bytes =
+        fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
     let server =
-        WasmServer::create(&address, TEST_WASM_MODULE_PATH).expect("Couldn't create the server");
+        WasmServer::create(&address, &wasm_module_bytes).expect("Couldn't create the server");
 
     let server_fut = server.start(notify_receiver);
-    let client_fut = create_client(port, notify_sender);
+    let client_fut = start_client(port, notify_sender);
 
     let (res, _) = tokio::join!(server_fut, client_fut);
     assert!(res.is_ok());
 }
 
-async fn create_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>) {
+async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>) {
     let client = Client::new();
     let request = hyper::Request::builder()
         .method(http::Method::GET)

@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use anyhow::Context;
+use std::fs;
 use structopt::StructOpt;
 
 mod server;
@@ -27,11 +29,15 @@ mod tests;
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(about = "Oak Functions Loader")]
 pub struct Opt {
-    #[structopt(long, default_value = "8080", help = "Server Port number.")]
-    server_port: u16,
     #[structopt(
         long,
-        help = "Path to a wasm file to be loaded and executed per invocation. The wasm module must export a function named `main`."
+        default_value = "8080",
+        help = "Port number that the server listens on."
+    )]
+    http_listen_port: u16,
+    #[structopt(
+        long,
+        help = "Path to a Wasm file to be loaded and executed per invocation. The Wasm module must export a function named `main`."
     )]
     wasm_path: String,
 }
@@ -49,9 +55,12 @@ async fn main() -> anyhow::Result<()> {
     // For now the server runs in the same thread, so `notify_sender` is not really needed.
     let (_notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
+    let wasm_module_bytes = fs::read(&opt.wasm_path)
+        .with_context(|| format!("Couldn't read file {}", &opt.wasm_path))?;
+
     // Start HTTP server.
-    let address = format!("[::]:{}", &opt.server_port);
-    WasmServer::create(&address, &opt.wasm_path)?
+    let address = format!("[::]:{}", &opt.http_listen_port);
+    WasmServer::create(&address, &wasm_module_bytes)?
         .start(notify_receiver)
         .await
 }

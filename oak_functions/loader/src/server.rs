@@ -20,42 +20,35 @@ use hyper::{
     Body, Server, StatusCode,
 };
 use log::info;
-use std::{fs, net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 
 const MAIN_FUNCTION_NAME: &str = "main";
 
-/// An HTTP server that serves the `main` function of a wasm module on each invocation.
-pub struct WasmServer {
-    /// Server address to listen for client requests on.
-    address: SocketAddr,
-    /// The wasm engine that runs the given wasm module per incoming request.
-    wasm_engine: WasmEngine,
-}
-
+// An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
-struct WasmEngine {
-    // wasm module to be served on each invocation.
+struct WasmHandler {
+    // Wasm module to be served on each invocation.
     module: Arc<wasmi::Module>,
 }
 
-impl WasmEngine {
+impl WasmHandler {
     async fn handle_request(&self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
-        // TODO(#1919): Make request available to the wasm module via ABI functions.
+        // TODO(#1919): Make request available to the Wasm module via ABI functions.
         info!("The request is: {:?}", req);
 
         let instance = wasmi::ModuleInstance::new(&self.module, &wasmi::ImportsBuilder::default())
-            .expect("failed to instantiate wasm module")
+            .context("failed to instantiate Wasm module")?
             .assert_no_start();
 
         let result = instance.invoke_export(MAIN_FUNCTION_NAME, &[], &mut wasmi::NopExternals);
 
         info!(
-            "{:?}: Running wasm module completed with result: {:?}",
+            "{:?}: Running Wasm module completed with result: {:?}",
             std::thread::current().id(),
             result
         );
 
-        // TODO(#1919): Get the actual response from the wasm module via ABI functions.
+        // TODO(#1919): Get the actual response from the Wasm module via ABI functions.
         http::response::Builder::new()
             .status(StatusCode::BAD_REQUEST)
             .body(Body::from("Not implemented yet.\n"))
@@ -63,33 +56,40 @@ impl WasmEngine {
     }
 }
 
+/// An HTTP server that serves the `main` function of a Wasm module on each invocation.
+pub struct WasmServer {
+    /// Server address to listen for client requests on.
+    address: SocketAddr,
+    /// The Wasm handler that runs the given Wasm module per incoming request.
+    wasm_handler: WasmHandler,
+}
+
 impl WasmServer {
-    /// Create a WasmServer to listen on the given port, serving the given wasm module.
-    pub fn create(address: &str, wasm_path: &str) -> anyhow::Result<Self> {
-        let wasm_module_bytes =
-            fs::read(&wasm_path).with_context(|| format!("Couldn't read file {}", wasm_path))?;
+    /// Creates a [`WasmServer`] instance listening on the given port, serving the given Wasm
+    /// module.
+    pub fn create(address: &str, wasm_module_bytes: &[u8]) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
         Ok(WasmServer {
             address: address.parse()?,
-            wasm_engine: WasmEngine {
+            wasm_handler: WasmHandler {
                 module: Arc::new(module),
             },
         })
     }
 
-    /// Start the server, serving the wasm module function.
+    /// Start the server, serving the Wasm module function.
     pub async fn start(
         &self,
         notify_receiver: tokio::sync::oneshot::Receiver<()>,
     ) -> anyhow::Result<()> {
-        // A `Service` is needed for every connection. Here we create a service using the
-        // `wasm_engine`.
+        // A `Service` is needed for every connection. Here we create a service using
+        // the`wasm_handler`.
         let service = make_service_fn(move |_conn| {
-            let wasm_engine = self.wasm_engine.clone();
+            let wasm_handler = self.wasm_handler.clone();
             async move {
                 Ok::<_, hyper::Error>(service_fn(move |req| {
-                    let wasm_engine = wasm_engine.clone();
-                    async move { wasm_engine.handle_request(req).await }
+                    let wasm_handler = wasm_handler.clone();
+                    async move { wasm_handler.handle_request(req).await }
                 }))
             }
         });

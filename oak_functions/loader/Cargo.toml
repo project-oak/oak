@@ -16,7 +16,7 @@ default = []
 anyhow = "*"
 env_logger = "*"
 http = "*"
-hyper = { version = "*", features = ["full"] }
+hyper = { version = "*", features = ["client", "http1", "server", "runtime"] }
 log = "*"
 structopt = "*"
 tokio = { version = "*", features = [
