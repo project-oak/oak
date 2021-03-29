@@ -18,6 +18,9 @@ use hyper::client::Client;
 
 use std::fs;
 
+extern crate test;
+use test::Bencher;
+
 const TEST_WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
 
 #[tokio::test]
@@ -56,21 +59,32 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
         .expect("Couldn't send completion signal.");
 }
 
-extern crate test;
-use test::Bencher;
-
-// Currently there is no support for running benchmark tests in the runner.
+// TODO(#1933): Currently there is no support for running benchmark tests in the runner.
 // Run this with: `cargo bench --manifest-path=oak_functions/loader/Cargo.toml`
 #[bench]
-fn bench_wasm_handler(b: &mut Bencher) {
-    let wasm_module_bytes =
-        fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes).expect("Couldn't create the server");
-    let request = hyper::Request::builder()
-        .method(http::Method::GET)
-        .uri("http://localhost:8080")
-        .body(hyper::Body::empty())
-        .unwrap();
+fn bench_wasm_handler(bencher: &mut Bencher) {
+    let summary = bencher.bench(|bencher| {
+        let wasm_module_bytes =
+            fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
+        let wasm_handler =
+            WasmHandler::create(&wasm_module_bytes).expect("Couldn't create the server");
+        let request = hyper::Request::builder()
+            .method(http::Method::GET)
+            // We don't really send the request. So the URI can be anything. It is only needed for
+            // building a valid request.
+            .uri("example.com")
+            .body(hyper::Body::empty())
+            .unwrap();
+        bencher.iter(|| wasm_handler.handle_request(&request));
+    });
 
-    b.iter(|| wasm_handler.handle_request(&request));
+    // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
+    // in that case. So, here we first check that `summary` is not empty.
+    if let Some(summary) = summary {
+        // We expect the `mean` time for loading the test Wasm module and running its main function
+        // to be less than 50ms.
+        // Note: `summary.mean` is in nano seconds, even though it is not explicitly documented in
+        // https://doc.rust-lang.org/test/stats/struct.Summary.html.
+        assert!(summary.mean < 50_000.0);
+    }
 }
