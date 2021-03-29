@@ -297,3 +297,17 @@ pub trait NodeFactory<T> {
         node_configuration: &T,
     ) -> Result<CreatedNode, ConfigurationError>;
 }
+
+// the `linear-handles` feature makes [`Sender`] and [`Receiver`] non-`Copy`, so we must use `Clone`
+// with the feature turned on. But doing so with the feature off will make clippy complain, so we
+// have this simple function that always uses the appropriate impl for copying these types.
+// TODO(#1854): Remove this once linear-handles are the default.
+#[cfg(not(feature = "linear-handles"))]
+pub(crate) fn copy_or_clone<T: Copy>(t: &T) -> T {
+    *t
+}
+
+#[cfg(feature = "linear-handles")]
+pub(crate) fn copy_or_clone<T: Clone>(t: &T) -> T {
+    t.clone()
+}

@@ -108,7 +108,7 @@ impl GrpcServerNode {
             handle: startup_handle,
         });
         let invocation_channel = startup_receiver.receive(&runtime)?;
-        match &invocation_channel.sender {
+        match invocation_channel.sender {
             Some(invocation_sender) => {
                 info!(
                     "Invocation channel write handle received: {}",
@@ -169,7 +169,7 @@ impl Node for GrpcServerNode {
 
         // Build a service to process all other incoming HTTP/2 requests.
         let generic_handler = HttpRequestHandler {
-            runtime,
+            runtime: runtime.clone(),
             invocation_channel,
         };
 
@@ -199,6 +199,7 @@ impl Node for GrpcServerNode {
             // Enables the time driver.
             // Necessary for creating a Tokio Runtime.
             .enable_time()
+            .on_thread_start(move || runtime.set_as_current())
             .build()
             .expect("Couldn't create Async runtime");
 
@@ -250,7 +251,7 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
     fn call(&mut self, request: http::Request<hyper::Body>) -> Self::Future {
         let grpc_handler = GrpcInvocationHandler::new(
             self.runtime.clone(),
-            Sender::<GrpcInvocation>::new(self.invocation_channel),
+            Sender::<GrpcInvocation>::new(crate::node::copy_or_clone(&self.invocation_channel)),
             request.uri().path().to_string(),
         );
 
@@ -423,6 +424,7 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
     fn call(&mut self, request: tonic::Request<Vec<u8>>) -> Self::Future {
         let handler = self.clone();
         let metrics_data = self.runtime.metrics_data();
+        let runtime = self.runtime.clone();
         // Build a future of type `Future<Output = Result<SerializedResponseStream, tonic::Status>>`
         let future = async move {
             metrics_data
@@ -461,6 +463,7 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
             // TODO(#1376): make wait_on_channels() better integrated with `async` so we don't
             // have to mix threads and async.
             std::thread::spawn(move || {
+                runtime.set_as_current();
                 for response in response_iter {
                     debug!("Returning gRPC response: {:?}", response);
                     let result = match response.status {

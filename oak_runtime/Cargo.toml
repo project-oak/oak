@@ -15,6 +15,7 @@ oak-unsafe = ["regex"]
 oak-introspection-client = ["oak-unsafe"]
 awskms = ["tink-awskms"]
 gcpkms = ["tink-gcpkms"]
+linear-handles = ["oak_io/linear-handles"]
 default = []
 
 [dependencies]

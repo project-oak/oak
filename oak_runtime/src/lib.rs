@@ -1445,6 +1445,7 @@ impl Runtime {
         let node_join_handle = thread::Builder::new()
             .name(node_name.to_string())
             .spawn(move || {
+                node_proxy.set_as_current();
                 node_instance.run(node_proxy, initial_handle, node_notify_receiver);
                 // It's now safe to remove the state for this Node, as there's nothing left
                 // that can invoke `Runtime` functionality for it.

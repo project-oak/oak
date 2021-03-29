@@ -43,6 +43,7 @@ pub trait InvocationExt {
     /// Closes the channels used by the sender and receiver fields.
     ///
     /// Any errors while trying to close the sender or receive are logged, but otherwise ignored.
+    #[cfg(not(feature = "linear-handles"))]
     fn close(&self, runtime: &RuntimeProxy) {
         match self.receiver() {
             Some(receiver) => {
@@ -62,6 +63,14 @@ pub trait InvocationExt {
             }
             None => error!("No sender on invocation."),
         };
+    }
+
+    /// This function does nothing if the `linear-handles` feature is enabled, sender and receiver
+    /// are `Drop`ed automatically. We only include this definition to keep the same trait
+    /// definition with or without `linear-handles` enabled.
+    #[cfg(feature = "linear-handles")]
+    fn close(&self, _runtime: &RuntimeProxy) {
+        // Do nothing
     }
 
     fn receive_request(&self, runtime: &RuntimeProxy) -> Result<Self::Request, OakError> {
