@@ -89,7 +89,7 @@ message RemoteHandle {
 }
 
 // A gRPC service for interacting with a remote Oak Runtime.
-service RemoteRuntime {
+service RemoteService {
   // Add the given address to the list of remote runtimes. Returns the `runtime_uuid` of the runtime
   // serving the request in the response, so that the caller can as well add the runtime to the list
   // of its remotes.

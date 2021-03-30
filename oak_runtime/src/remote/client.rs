@@ -16,7 +16,7 @@
 
 //! Functionality for remote runtime clients.
 
-use crate::proto::oak::remote::remote_runtime_client::RemoteRuntimeClient;
+use crate::proto::oak::remote::remote_service_client::RemoteServiceClient;
 use std::collections::HashSet;
 use tonic::transport::Channel;
 
@@ -35,12 +35,12 @@ impl RemoteClients {
     pub async fn get_client(
         &self,
         remote_addr: String,
-    ) -> anyhow::Result<RemoteRuntimeClient<Channel>> {
+    ) -> anyhow::Result<RemoteServiceClient<Channel>> {
         if self.clients.contains(&remote_addr) {
             let channel = Channel::from_shared(remote_addr.to_owned())?
                 .connect()
                 .await?;
-            Ok(RemoteRuntimeClient::new(channel))
+            Ok(RemoteServiceClient::new(channel))
         } else {
             Err(anyhow::anyhow!("Could not find remote with the given id"))
         }

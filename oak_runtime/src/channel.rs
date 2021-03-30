@@ -103,7 +103,8 @@ impl std::fmt::Debug for Channel {
     }
 }
 
-// TODO: Is a special cloning logic needed, for creating handles?
+/// Represents a channel on a remote Runtime. Together with `ChannelVariant` it allows nodes to use
+/// remote channels the same way they use local channels.
 #[derive(Clone, Debug)]
 pub struct RemoteChannel {
     id: ChannelId,
@@ -137,7 +138,8 @@ impl ChannelHalf {
     }
 
     pub fn new_remote(channel: RemoteChannel, direction: ChannelHalfDirection) -> Self {
-        // TODO: inc writer/reader count
+        // We don't need to keep the counts for remote channels. However, the corresponding channel
+        // on the remote Runtime should include the remote channels in its reader and writer counts.
         ChannelHalf {
             channel: ChannelVariant::Remote(channel),
             direction,
@@ -147,27 +149,22 @@ impl ChannelHalf {
     /// Get the ID of the underlying channel.  For debugging/introspection
     /// purposes.
     pub fn get_channel_id(&self) -> ChannelId {
-        match &self.channel {
-            ChannelVariant::Local(channel) => channel.id,
-            ChannelVariant::Remote(channel) => channel.id,
-        }
+        self.channel.id()
     }
 
     /// Returns a unique debug_id used to identify the channel in debug output.
     pub fn get_channel_debug_id(&self) -> String {
-        match &self.channel {
-            ChannelVariant::Local(channel) => channel.get_debug_id(),
-            ChannelVariant::Remote(channel) => format!("Remote_{}", channel.id),
-        }
+        self.channel.get_debug_id()
     }
 
     /// Get read-only access to the channel's messages.  For debugging/introspection
     /// purposes.
-    pub fn get_messages(&self) -> Option<RwLockReadGuard<Messages>> {
+    pub fn get_messages(&self) -> RwLockReadGuard<Messages> {
         match &self.channel {
-            ChannelVariant::Local(channel) => Some(channel.messages.read().unwrap()),
-            // TODO: Make sure we never get here.
-            ChannelVariant::Remote(_channel) => None,
+            ChannelVariant::Local(channel) => channel.messages.read().unwrap(),
+            ChannelVariant::Remote(_channel) => {
+                panic!("get_messages: The channel is remote, something is very wrong!")
+            }
         }
     }
 
@@ -181,11 +178,10 @@ impl ChannelHalf {
         if visitor(self) {
             let mut to_visit = Vec::new();
             {
-                if let Some(messages) = self.get_messages() {
-                    for msg in messages.iter() {
-                        for half in &msg.channels {
-                            to_visit.push(half.clone())
-                        }
+                let messages = self.get_messages();
+                for msg in messages.iter() {
+                    for half in &msg.channels {
+                        to_visit.push(half.clone())
                     }
                 }
             }
@@ -200,11 +196,10 @@ impl ChannelHalf {
     pub fn wake_waiters(&self) {
         match &self.channel {
             ChannelVariant::Local(channel) => channel.wake_waiters(),
-            // TODO: Any remote wakers?
-            ChannelVariant::Remote(channel) => panic!(
-                "Cannot wake waiters remotely for remote channel {}",
-                channel.id
-            ),
+            // Remote channels do not have any waiters.
+            ChannelVariant::Remote(_channel) => {
+                panic!("wake_waiters: The channel is remote, something is very wrong!")
+            }
         }
     }
 }
@@ -216,11 +211,7 @@ impl Clone for ChannelHalf {
         match &self.channel {
             ChannelVariant::Local(channel) => ChannelHalf::new(channel.clone(), self.direction),
             ChannelVariant::Remote(channel) => {
-                // TODO: update read and write counts
-                ChannelHalf {
-                    channel: ChannelVariant::Remote(channel.clone()),
-                    direction: self.direction,
-                }
+                ChannelHalf::new_remote(channel.clone(), self.direction)
             }
         }
     }
@@ -230,18 +221,23 @@ impl Clone for ChannelHalf {
 /// sync.
 impl Drop for ChannelHalf {
     fn drop(&mut self) {
-        match self.direction {
-            ChannelHalfDirection::Write => self.channel.dec_writer_count(),
-            ChannelHalfDirection::Read => self.channel.dec_reader_count(),
-        };
-        if self.direction == ChannelHalfDirection::Write && !self.channel.has_writers() {
-            // This was the last writer to the channel: wake any waiters so they
-            // can be aware that the channel is orphaned.
-            debug!(
-                "last writer for channel {} gone, wake waiters",
-                self.channel.id()
-            );
-            self.wake_waiters();
+        match &self.channel {
+            ChannelVariant::Local(channel) => {
+                match self.direction {
+                    ChannelHalfDirection::Write => channel.dec_writer_count(),
+                    ChannelHalfDirection::Read => channel.dec_reader_count(),
+                };
+                if self.direction == ChannelHalfDirection::Write && !channel.has_writers() {
+                    // This was the last writer to the channel: wake any waiters so they
+                    // can be aware that the channel is orphaned.
+                    debug!(
+                        "last writer for channel {} gone, wake waiters",
+                        self.channel.id()
+                    );
+                    self.wake_waiters();
+                }
+            }
+            ChannelVariant::Remote(_) => (),
         }
     }
 }
@@ -287,9 +283,9 @@ fn with_channel<U, F: FnOnce(Arc<Channel>) -> Result<U, OakStatus>>(
 ) -> Result<U, OakStatus> {
     match &half.channel {
         ChannelVariant::Local(channel) => f(channel.clone()),
-        // TODO: It is probably not needed; keep panic, or return an error.
+        // with_channel is not relevant for remote channels
         ChannelVariant::Remote(_channel) => {
-            panic!("with_channel is not implemented for remote channels.")
+            panic!("with_channel: The channel is remote, something is very wrong!")
         }
     }
 }
@@ -393,7 +389,7 @@ impl Channel {
     /// Decrement the [`Channel`] writer counter.
     fn dec_writer_count(&self) {
         if self.writer_count.fetch_sub(1, SeqCst) == 0 {
-            panic!("remove_reader: Writer count was already 0, something is very wrong!")
+            panic!("remove_writer: Writer count was already 0, something is very wrong!")
         }
     }
 
@@ -434,7 +430,7 @@ impl Channel {
         //
         // If a thread is woken and finds no message it will take the `waiting_threads` lock and
         // add itself again. Note that since that lock is currently held, the woken thread will add
-        // itself to waiting_threads *after* we call clear below as we release the lock implicilty
+        // itself to waiting_threads *after* we call clear below as we release the lock implicitly
         // on leaving this function.
         let mut waiting_threads = self.waiting_threads.lock().unwrap();
         for thread in waiting_threads.values() {
@@ -447,36 +443,18 @@ impl Channel {
 }
 
 impl ChannelVariant {
-    fn dec_writer_count(&self) {
-        match self {
-            ChannelVariant::Local(channel) => channel.dec_writer_count(),
-            ChannelVariant::Remote(_channel) => {
-                panic!("dec_writer_count is not implemented for remote channels")
-            }
-        }
-    }
-
-    fn dec_reader_count(&self) {
-        match self {
-            ChannelVariant::Local(channel) => channel.dec_reader_count(),
-            ChannelVariant::Remote(_channel) => {
-                panic!("dec_reader_count is not implemented for remote channels")
-            }
-        }
-    }
-
-    fn has_writers(&self) -> bool {
-        match self {
-            ChannelVariant::Local(channel) => channel.has_writers(),
-            ChannelVariant::Remote(_channel) => {
-                panic!("has_writer is not implemented for remote channels")
-            }
-        }
-    }
     fn id(&self) -> ChannelId {
         match self {
             ChannelVariant::Local(channel) => channel.id,
             ChannelVariant::Remote(channel) => channel.id,
+        }
+    }
+
+    /// Returns a unique debug_id that identifies the channel and its type in debug output.
+    fn get_debug_id(&self) -> String {
+        match self {
+            ChannelVariant::Local(channel) => channel.get_debug_id(),
+            ChannelVariant::Remote(channel) => format!("Remote:{}", channel.id),
         }
     }
 }

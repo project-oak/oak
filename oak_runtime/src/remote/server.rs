@@ -19,7 +19,7 @@
 use super::client::RemoteClients;
 use crate::{
     proto::oak::remote::{
-        remote_runtime_server::RemoteRuntime, AddRemoteRequest, AddRemoteResponse,
+        remote_service_server::RemoteService, AddRemoteRequest, AddRemoteResponse,
         ChannelReadRequest, ChannelReadResponse, ChannelWriteRequest, ChannelWriteResponse,
         NodeCreateRequest, NodeCreateResponse,
     },
@@ -37,7 +37,7 @@ pub struct RemoteRuntimeHandler {
 
 // TODO: Consider implementing RemoteRuntime for the Runtime or RuntimeProxy.
 #[tonic::async_trait]
-impl RemoteRuntime for RemoteRuntimeHandler {
+impl RemoteService for RemoteRuntimeHandler {
     async fn add_remote(
         &self,
         req: Request<AddRemoteRequest>,

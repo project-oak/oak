@@ -373,7 +373,7 @@ pub enum LabelReadStatus {
 /// Indicator whether an operation is executed using the Node's label-downgrading privilege or
 /// without it.
 #[derive(Clone, Copy, Debug)]
-enum Downgrading {
+pub enum Downgrading {
     No,
     Yes,
 }
