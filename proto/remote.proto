@@ -88,7 +88,7 @@ message RemoteHandle {
   string runtime_id = 2;
 }
 
-// As seen in https://grpc.io/docs/guides/concepts/.
+// A gRPC service for interacting with a remote Oak Runtime.
 service RemoteRuntime {
   // Add the given address to the list of remote runtimes. Returns the `runtime_uuid` of the runtime
   // serving the request in the response, so that the caller can as well add the runtime to the list
