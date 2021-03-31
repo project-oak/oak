@@ -1385,34 +1385,27 @@ fn run_cargo_test(cleanup: bool) -> Step {
         steps: crate_manifest_files()
             .map(to_string)
             .map(|entry| {
-                if cleanup {
+                let test_run_step = |name| Step::Single {
+                    name,
+                    command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
+                };
+                let target_path = &entry.replace("Cargo.toml", "target");
+
+                // If `cleanup` is enabled, add a cleanup step to remove the generated files. Do
+                // this only if `target_path` is a non-empty, valid target path.
+                if cleanup && !target_path.ends_with("/target") {
                     Step::Multiple {
                         name: entry.clone(),
                         steps: vec![
-                            Step::Single {
-                                name: "run".to_string(),
-                                command: Cmd::new(
-                                    "cargo",
-                                    &["test", &format!("--manifest-path={}", &entry)],
-                                ),
-                            },
+                            test_run_step("run".to_string()),
                             Step::Single {
                                 name: "cleanup".to_string(),
-                                command: Cmd::new(
-                                    "rm",
-                                    &["-rf", &entry.replace("Cargo.toml", "target")],
-                                ),
+                                command: Cmd::new("rm", &["-rf", target_path]),
                             },
                         ],
                     }
                 } else {
-                    Step::Single {
-                        name: entry.clone(),
-                        command: Cmd::new(
-                            "cargo",
-                            &["test", &format!("--manifest-path={}", &entry)],
-                        ),
-                    }
+                    test_run_step(entry.clone())
                 }
             })
             .collect(),
