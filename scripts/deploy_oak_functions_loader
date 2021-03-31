@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# shellcheck source=scripts/gcp_common
+source "$SCRIPTS_DIR/gcp_common"
+
+readonly FUNCTIONS_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-functions'
+
+# TODO(#1943): Remove when #1943 is submitted.
+cargo build --target=x86_64-unknown-linux-musl --manifest-path=./oak_functions/loader/Cargo.toml --release
+
+docker build \
+  --tag="${FUNCTIONS_DOCKER_IMAGE_NAME}:latest" \
+  ./oak_functions
+
+docker push "${FUNCTIONS_DOCKER_IMAGE_NAME}:latest"
+
+readonly FUNCTIONS_INSTANCE_NAME=oak-functions-example
+
+gcloud auth activate-service-account \
+  --project="${GCP_PROJECT_ID}" \
+  --key-file="${GCP_ACCOUNT_FILE}"
+
+gcloud run deploy ${FUNCTIONS_INSTANCE_NAME} \
+  --region=europe-west2 \
+  --image=${FUNCTIONS_DOCKER_IMAGE_NAME} \
+  --allow-unauthenticated \
+  --platform=managed
