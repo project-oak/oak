@@ -521,6 +521,7 @@ impl Runtime {
         node_id: NodeId,
         handle: oak_abi::Handle,
     ) -> Result<ChannelHalf, OakStatus> {
+        // TODO: extend this to work with remote handles too
         let node_infos = self.node_infos.read().unwrap();
         let node_info = node_infos.get(&node_id).expect("Invalid node_id");
         let half = node_info

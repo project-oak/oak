@@ -33,6 +33,7 @@ pub mod grpc;
 pub mod http;
 mod invocation;
 mod logger;
+mod remote;
 mod roughtime;
 mod storage;
 mod wasm;
