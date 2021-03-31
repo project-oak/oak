@@ -86,7 +86,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::RunExamples(ref opt) => run_examples(&opt),
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::RunTests => run_tests(),
-            Command::RunCargoTests => run_cargo_tests(),
+            Command::RunCargoTests(ref opt) => run_cargo_tests(opt.cleanup),
             Command::RunBazelTests => run_bazel_tests(),
             Command::RunTestsTsan => run_tests_tsan(),
             Command::Format => format(),
@@ -351,14 +351,14 @@ fn build_server(opt: &BuildServer) -> Step {
 fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
-        steps: vec![run_cargo_tests(), run_bazel_tests()],
+        steps: vec![run_cargo_tests(false), run_bazel_tests()],
     }
 }
 
-fn run_cargo_tests() -> Step {
+fn run_cargo_tests(cleanup: bool) -> Step {
     Step::Multiple {
         name: "cargo tests".to_string(),
-        steps: vec![run_cargo_clippy(), run_cargo_test(), run_cargo_doc()],
+        steps: vec![run_cargo_clippy(), run_cargo_test(cleanup), run_cargo_doc()],
     }
 }
 
@@ -1379,14 +1379,41 @@ fn run_cargo_fmt(mode: FormatMode) -> Step {
     }
 }
 
-fn run_cargo_test() -> Step {
+fn run_cargo_test(cleanup: bool) -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
+            .map(|entry| {
+                if cleanup {
+                    Step::Multiple {
+                        name: entry.clone(),
+                        steps: vec![
+                            Step::Single {
+                                name: "run".to_string(),
+                                command: Cmd::new(
+                                    "cargo",
+                                    &["test", &format!("--manifest-path={}", &entry)],
+                                ),
+                            },
+                            Step::Single {
+                                name: "cleanup".to_string(),
+                                command: Cmd::new(
+                                    "rm",
+                                    &["-rf", &entry.replace("Cargo.toml", "target")],
+                                ),
+                            },
+                        ],
+                    }
+                } else {
+                    Step::Single {
+                        name: entry.clone(),
+                        command: Cmd::new(
+                            "cargo",
+                            &["test", &format!("--manifest-path={}", &entry)],
+                        ),
+                    }
+                }
             })
             .collect(),
     }

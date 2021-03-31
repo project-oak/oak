@@ -46,7 +46,7 @@ pub enum Command {
     Format,
     CheckFormat,
     RunTests,
-    RunCargoTests,
+    RunCargoTests(CleanupOpt),
     RunBazelTests,
     RunTestsTsan,
     RunCargoDeny,
@@ -156,6 +156,15 @@ pub struct BuildServer {
         help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     )]
     pub server_rust_target: Option<String>,
+}
+
+#[derive(StructOpt, Clone)]
+pub struct CleanupOpt {
+    #[structopt(
+        long,
+        help = "remove generated files after running tests for each crate"
+    )]
+    pub cleanup: bool,
 }
 
 /// A construct to keep track of the status of the execution. It only cares about the top-level
