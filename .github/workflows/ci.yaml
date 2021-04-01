@@ -22,7 +22,7 @@ jobs:
           - build-server --server-variant=unsafe
           - build-server --server-variant=base
           - build-server --server-variant=experimental
-          - run-cargo-tests
+          - run-cargo-tests --cleanup
           - run-bazel-tests
           - run-tests-tsan
           - run-examples --application-variant=rust
