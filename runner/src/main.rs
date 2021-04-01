@@ -292,15 +292,8 @@ fn build_server(opt: &BuildServer) -> Step {
                 _ => vec![]
             },
             vec![
-                build_server_step("oak_loader", &opt.server_rust_toolchain, opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET), match opt.server_variant {
-                    ServerVariant::Base => "",
-                    ServerVariant::NoIntrospectionClient => "oak-unsafe",
-                    ServerVariant::Unsafe => "oak-unsafe,oak-introspection-client",
-                    // If building in coverage mode, use the default target from the host, and build
-                    // in unsafe (debug) mode.
-                    ServerVariant::Coverage => "oak-unsafe,oak-introspection-client",
-                    ServerVariant::Experimental => "oak-attestation,awskms,gcpkms,oak-unsafe,oak-introspection-client",
-                }, &if opt.server_variant == ServerVariant::Coverage {
+                build_rust_binary("oak_loader", opt, 
+                &if opt.server_variant == ServerVariant::Coverage {
                     hashmap! {
                         // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
                         "CARGO_INCREMENTAL".to_string() => "0".to_string(),
@@ -329,26 +322,7 @@ fn build_functions_server(opt: &BuildFunctionsServer) -> Step {
                     vec!["-p".to_string(), "oak_functions/loader/bin".to_string()],
                 ),
             }],
-            vec![match opt.server_variant {
-                FunctionsServerVariant::Unsafe => build_server_step(
-                    "oak_functions/loader",
-                    &opt.server_rust_toolchain,
-                    opt.server_rust_target
-                        .as_deref()
-                        .unwrap_or(DEFAULT_SERVER_RUST_TARGET),
-                    "oak-unsafe",
-                    &hashmap! {},
-                ),
-                FunctionsServerVariant::Base => build_server_step(
-                    "oak_functions/loader",
-                    &opt.server_rust_toolchain,
-                    opt.server_rust_target
-                        .as_deref()
-                        .unwrap_or(DEFAULT_SERVER_RUST_TARGET),
-                    "",
-                    &hashmap! {},
-                ),
-            }],
+            vec![build_rust_binary("oak_functions/loader", opt, &hashmap! {})],
         ]
         .into_iter()
         .flatten()
@@ -356,19 +330,17 @@ fn build_functions_server(opt: &BuildFunctionsServer) -> Step {
     }
 }
 
-fn build_server_step(
+fn build_rust_binary<T: RustBinaryOptions>(
     manifest_dir: &str,
-    server_rust_toolchain: &Option<String>,
-    server_rust_target: &str,
-    features: &str,
+    opt: &T,
     env: &HashMap<String, String>,
 ) -> Step {
     Step::Single {
-        name: "build server".to_string(),
+        name: "build rust binary".to_string(),
         command: Cmd::new_with_env(
             "cargo",
             spread![
-                ...match server_rust_toolchain {
+                ...match opt.server_rust_toolchain() {
                     // This overrides the toolchain used by `rustup` to invoke the actual
                     // `cargo` binary.
                     // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
@@ -380,12 +352,14 @@ fn build_server_step(
                 format!("--out-dir={}/bin", manifest_dir),
                 // `--out-dir` is unstable and requires `-Zunstable-options`.
                 "-Zunstable-options".to_string(),
-                ...if !features.is_empty() {
-                    vec![format!("--features={}", features),
-                        format!("--target={}", server_rust_target), "--release".to_string(),
-                    ]}else {
-                    vec![format!("--target={}", server_rust_target), "--release".to_string(), ]
-                    }
+                ...if !opt.features().is_empty() {
+                    vec![format!("--features={}", opt.features())]
+                } else {
+                    vec![]
+                },
+                ...if opt.build_release() {
+                    vec![format!("--target={}", opt.server_rust_target().as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                    "--release".to_string() ]} else {vec![]},
             ],
             env,
         ),
