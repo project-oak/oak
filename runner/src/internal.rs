@@ -551,6 +551,8 @@ impl Runnable for Cmd {
         // Rust compilation variables.
         env_passthru(&mut cmd, "RUSTUP_HOME");
         env_passthru(&mut cmd, "CARGO_HOME");
+        env_passthru(&mut cmd, "CARGO_INCREMENTAL");
+        env_passthru(&mut cmd, "RUSTC_WRAPPER");
 
         // Rust runtime variables.
         cmd.env(
