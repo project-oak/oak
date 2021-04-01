@@ -294,9 +294,10 @@ RUN mkdir --parents ${sccache_dir} \
 ENV SCCACHE_GCS_BUCKET sccache-1
 ENV SCCACHE_GCS_KEY_PATH /workspaces/oak/.oak_remote_cache_key.json
 ENV SCCACHE_GCS_RW_MODE READ_WRITE
-ENV RUSTC_WRAPPER sccache
+# TODO(#1940): Re-enable sccache when hash differences are better understood.
+# ENV RUSTC_WRAPPER sccache
 # Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
-ENV CARGO_INCREMENTAL false
+# ENV CARGO_INCREMENTAL false
 
 # We use the `docker` user in order to maintain library paths on different
 # machines and to make Wasm modules reproducible.
