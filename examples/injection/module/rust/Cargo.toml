@@ -11,14 +11,11 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = "*"
 log = "*"
+oak = { version = "=0.1.0", features = ["linear-handles"] }
 oak_abi = "=0.1.0"
 oak_io = "=0.1.0"
 oak_services = "=0.1.0"
 prost = "*"
-
-[dependencies.oak]
-version = "=0.1.0"
-features = ["linear-handles"]
 
 [build-dependencies]
 oak_utils = "*"
