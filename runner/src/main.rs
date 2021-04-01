@@ -291,58 +291,27 @@ fn build_server(opt: &BuildServer) -> Step {
                 }],
                 _ => vec![]
             },
-            vec![Step::Single {
-                name: format!("build server ({:?})", opt.server_variant),
-                command: Cmd::new_with_env(
-                    "cargo",
-                    spread![
-                        ...match &opt.server_rust_toolchain {
-                            // This overrides the toolchain used by `rustup` to invoke the actual
-                            // `cargo` binary.
-                            // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
-                            Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
-                            None => vec![],
-                        },
-                        "build".to_string(),
-                        "--manifest-path=oak_loader/Cargo.toml".to_string(),
-                        "--out-dir=oak_loader/bin".to_string(),
-                        // `--out-dir` is unstable and requires `-Zunstable-options`.
-                        "-Zunstable-options".to_string(),
-                        ...match opt.server_variant {
-                            ServerVariant::Base => vec![
-                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                                "--release".to_string(),
-                            ],
-                            ServerVariant::NoIntrospectionClient => vec!["--features=oak-unsafe".to_string(),
-                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                                "--release".to_string(),
-                            ],
-                            ServerVariant::Unsafe => vec!["--features=oak-unsafe,oak-introspection-client".to_string(),
-                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                                "--release".to_string(),
-                            ],
-                            // If building in coverage mode, use the default target from the host, and build
-                            // in unsafe (debug) mode.
-                            ServerVariant::Coverage => vec!["--features=oak-unsafe,oak-introspection-client".to_string()],
-                            ServerVariant::Experimental => vec!["--features=oak-attestation,awskms,gcpkms,oak-unsafe,oak-introspection-client".to_string(),
-                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                                "--release".to_string(),
-                            ],
-                        },
-                    ],
-                    &if opt.server_variant == ServerVariant::Coverage {
-                        hashmap! {
-                            // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
-                            "CARGO_INCREMENTAL".to_string() => "0".to_string(),
-                            "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
-                            // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
-                            "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
-                        }
-                    } else {
-                        hashmap! {}
-                    },
-                ),
-            }],
+            vec![
+                build_server_step("oak_loader", &opt.server_rust_toolchain, opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET), match opt.server_variant {
+                    ServerVariant::Base => "",
+                    ServerVariant::NoIntrospectionClient => "oak-unsafe",
+                    ServerVariant::Unsafe => "oak-unsafe,oak-introspection-client",
+                    // If building in coverage mode, use the default target from the host, and build
+                    // in unsafe (debug) mode.
+                    ServerVariant::Coverage => "oak-unsafe,oak-introspection-client",
+                    ServerVariant::Experimental => "oak-attestation,awskms,gcpkms,oak-unsafe,oak-introspection-client",
+                }, &if opt.server_variant == ServerVariant::Coverage {
+                    hashmap! {
+                        // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
+                        "CARGO_INCREMENTAL".to_string() => "0".to_string(),
+                        "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
+                        // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
+                        "RUSTFLAGS".to_string() => "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
+                    }
+                } else {
+                    hashmap! {}
+                },)
+            ],
         ].into_iter()
             .flatten()
             .collect::<Vec<_>>()
@@ -360,41 +329,66 @@ fn build_functions_server(opt: &BuildFunctionsServer) -> Step {
                     vec!["-p".to_string(), "oak_functions/loader/bin".to_string()],
                 ),
             }],
-            vec![Step::Single {
-                name: "build functions server".to_string(),
-                command: Cmd::new_with_env(
-                    "cargo",
-                    spread![
-                        ...match &opt.server_rust_toolchain {
-                            // This overrides the toolchain used by `rustup` to invoke the actual
-                            // `cargo` binary.
-                            // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
-                            Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
-                            None => vec![],
-                        },
-                        "build".to_string(),
-                        "--manifest-path=oak_functions/loader/Cargo.toml".to_string(),
-                        "--out-dir=oak_functions/loader/bin".to_string(),
-                        // `--out-dir` is unstable and requires `-Zunstable-options`.
-                        "-Zunstable-options".to_string(),
-                        ...match opt.server_variant {
-                            FunctionsServerVariant::Unsafe => vec!["--features=oak-unsafe".to_string(),
-                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                                "--release".to_string(),
-                            ],
-                        FunctionsServerVariant::Base => 
-                            vec![
-                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
-                                "--release".to_string(),
-                            ]
-                        },
-                    ],
-                    &hashmap! {}
+            vec![match opt.server_variant {
+                FunctionsServerVariant::Unsafe => build_server_step(
+                    "oak_functions/loader",
+                    &opt.server_rust_toolchain,
+                    opt.server_rust_target
+                        .as_deref()
+                        .unwrap_or(DEFAULT_SERVER_RUST_TARGET),
+                    "oak-unsafe",
+                    &hashmap! {},
+                ),
+                FunctionsServerVariant::Base => build_server_step(
+                    "oak_functions/loader",
+                    &opt.server_rust_toolchain,
+                    opt.server_rust_target
+                        .as_deref()
+                        .unwrap_or(DEFAULT_SERVER_RUST_TARGET),
+                    "",
+                    &hashmap! {},
                 ),
             }],
-        ].into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>(),
+    }
+}
+
+fn build_server_step(
+    manifest_dir: &str,
+    server_rust_toolchain: &Option<String>,
+    server_rust_target: &str,
+    features: &str,
+    env: &HashMap<String, String>,
+) -> Step {
+    Step::Single {
+        name: "build server".to_string(),
+        command: Cmd::new_with_env(
+            "cargo",
+            spread![
+                ...match server_rust_toolchain {
+                    // This overrides the toolchain used by `rustup` to invoke the actual
+                    // `cargo` binary.
+                    // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
+                    Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
+                    None => vec![],
+                },
+                "build".to_string(),
+                format!("--manifest-path={}/Cargo.toml", manifest_dir),
+                format!("--out-dir={}/bin", manifest_dir),
+                // `--out-dir` is unstable and requires `-Zunstable-options`.
+                "-Zunstable-options".to_string(),
+                ...if !features.is_empty() {
+                    vec![format!("--features={}", features),
+                        format!("--target={}", server_rust_target), "--release".to_string(),
+                    ]}else {
+                    vec![format!("--target={}", server_rust_target), "--release".to_string(), ]
+                    }
+            ],
+            env,
+        ),
     }
 }
 
