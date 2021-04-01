@@ -85,6 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let steps = match opt.cmd {
             Command::RunExamples(ref opt) => run_examples(&opt),
             Command::BuildServer(ref opt) => build_server(&opt),
+            Command::BuildFunctionsServer(ref opt) => build_functions_server(opt),
             Command::RunTests => run_tests(),
             Command::RunCargoTests(ref opt) => run_cargo_tests(opt.cleanup),
             Command::RunBazelTests => run_bazel_tests(),
@@ -340,6 +341,55 @@ fn build_server(opt: &BuildServer) -> Step {
                     } else {
                         hashmap! {}
                     },
+                ),
+            }],
+        ].into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+    }
+}
+
+fn build_functions_server(opt: &BuildFunctionsServer) -> Step {
+    Step::Multiple {
+        name: "server".to_string(),
+        steps: vec![
+            vec![Step::Single {
+                name: "create bin folder".to_string(),
+                command: Cmd::new(
+                    "mkdir",
+                    vec!["-p".to_string(), "oak_functions/loader/bin".to_string()],
+                ),
+            }],
+            vec![Step::Single {
+                name: "build functions server".to_string(),
+                command: Cmd::new_with_env(
+                    "cargo",
+                    spread![
+                        ...match &opt.server_rust_toolchain {
+                            // This overrides the toolchain used by `rustup` to invoke the actual
+                            // `cargo` binary.
+                            // See https://github.com/rust-lang/rustup#toolchain-override-shorthand
+                            Some(server_rust_toolchain) => vec![format!("+{}", server_rust_toolchain)],
+                            None => vec![],
+                        },
+                        "build".to_string(),
+                        "--manifest-path=oak_functions/loader/Cargo.toml".to_string(),
+                        "--out-dir=oak_functions/loader/bin".to_string(),
+                        // `--out-dir` is unstable and requires `-Zunstable-options`.
+                        "-Zunstable-options".to_string(),
+                        ...match opt.server_variant {
+                            FunctionsServerVariant::Unsafe => vec!["--features=oak-unsafe".to_string(),
+                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                                "--release".to_string(),
+                            ],
+                        FunctionsServerVariant::Base => 
+                            vec![
+                                format!("--target={}", opt.server_rust_target.as_deref().unwrap_or(DEFAULT_SERVER_RUST_TARGET)),
+                                "--release".to_string(),
+                            ]
+                        },
+                    ],
+                    &hashmap! {}
                 ),
             }],
         ].into_iter()

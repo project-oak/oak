@@ -22,6 +22,8 @@ jobs:
           - build-server --server-variant=unsafe
           - build-server --server-variant=base
           - build-server --server-variant=experimental
+          - build-functions-server --server-variant=unsafe
+          - build-functions-server --server-variant=base
           - run-cargo-tests --cleanup
           - run-bazel-tests
           - run-tests-tsan

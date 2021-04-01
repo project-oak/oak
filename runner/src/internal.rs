@@ -43,6 +43,7 @@ pub struct Opt {
 pub enum Command {
     RunExamples(RunExamples),
     BuildServer(BuildServer),
+    BuildFunctionsServer(BuildFunctionsServer),
     Format,
     CheckFormat,
     RunTests,
@@ -146,6 +147,41 @@ pub struct BuildServer {
         default_value = "experimental"
     )]
     pub server_variant: ServerVariant,
+    #[structopt(
+        long,
+        help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
+    )]
+    pub server_rust_toolchain: Option<String>,
+    #[structopt(
+        long,
+        help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
+    )]
+    pub server_rust_target: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum FunctionsServerVariant {
+    /// Production-like server variant, without any of the features enabled
+    Base,
+    /// Debug server with logging enabled
+    Unsafe,
+}
+
+impl std::str::FromStr for FunctionsServerVariant {
+    type Err = String;
+    fn from_str(variant: &str) -> Result<Self, Self::Err> {
+        match variant {
+            "base" => Ok(FunctionsServerVariant::Base),
+            "unsafe" => Ok(FunctionsServerVariant::Unsafe),
+            _ => Err(format!("Failed to parse server variant {}", variant)),
+        }
+    }
+}
+
+#[derive(StructOpt, Clone)]
+pub struct BuildFunctionsServer {
+    #[structopt(long, help = "server variant: [base, unsafe]", default_value = "base")]
+    pub server_variant: FunctionsServerVariant,
     #[structopt(
         long,
         help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
