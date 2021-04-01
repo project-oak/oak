@@ -801,6 +801,8 @@
 <span id="798">798</span>
 <span id="799">799</span>
 <span id="800">800</span>
+<span id="801">801</span>
+<span id="802">802</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1355,6 +1357,8 @@
         <span class="comment">// Rust compilation variables.</span>
         <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;RUSTUP_HOME&quot;</span>);
         <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;CARGO_HOME&quot;</span>);
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;CARGO_INCREMENTAL&quot;</span>);
+        <span class="ident">env_passthru</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cmd</span>, <span class="string">&quot;RUSTC_WRAPPER&quot;</span>);
 
         <span class="comment">// Rust runtime variables.</span>
         <span class="ident">cmd</span>.<span class="ident">env</span>(
