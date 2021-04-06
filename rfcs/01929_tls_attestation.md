@@ -118,7 +118,9 @@ for any given [assertion](#assertions) type.
 ##### Parameters
 
 Because Token derivation involves a TLS session master secret, TLS server should
-guarantee **Perfect Forward Secrecy**, which is defined as follows:
+guarantee
+[Perfect Forward Secrecy](https://link.springer.com/content/pdf/10.1007/3-540-46885-4_5.pdf#page=7),
+which is defined as follows:
 
 | TLS master key will not be compromised even if long-term secrets used in its exchange are compromised |
 | ----------------------------------------------------------------------------------------------------- |
@@ -126,7 +128,8 @@ guarantee **Perfect Forward Secrecy**, which is defined as follows:
 This means that if Token parameters are leaked, an attacker would still need the
 TLS session master secret, so they won’t be able to reconstruct the Token.
 
-In order to guarantee _Perfect Forward Secrecy_ the server needs to:
+In order to guarantee _Perfect Forward Secrecy_ the server needs to
+[[RFC8446](https://tools.ietf.org/html/rfc8446#section-2.2)]:
 
 - Use at least [TLS 1.3](https://tools.ietf.org/html/rfc8446)
 - Use one of the following
@@ -159,8 +162,8 @@ The main parts of the Label value include:
 ##### Context
 
 **Context** is a parameter used to derive separate Tokens for different
-[assertion](#assertions) types provided by the firmware. Context value is
-represented by an assertion type, for which a Token is derived.
+[assertion](#assertions) types provided by the firmware. Context value is equal
+to the assertion type, for which a Token is derived.
 
 ##### Length
 
@@ -200,9 +203,6 @@ Currently we are using the following assertion types:
 - `vtpm_public_key`
 - `eddsa_public_key`
 
-Assertion types that represent TEE reports also include _Trusted Computing base
-(TCB)_ versions.
-
 #### Assertion Generation
 
 The _Generate Assertion_ procedure in the workflow is described as follows in
@@ -219,8 +219,8 @@ the case of TEE-based remote attestation:
    1. The signed **TEE report** also gives clients information about the TEE
       itself (its version and etc.) and about the code that is running inside
       the TEE
-1. Combine the hardware generated **TEE report** with a certificate signed by
-   the **Provider**’s root key
+1. [_Optional_] Combine the firmware generated **TEE report** with a certificate
+   signed by the **Provider**’s root key
    1. This is required for checking the validity of **TEE reports** and TEE
       platform keys that were used to sign them
 
