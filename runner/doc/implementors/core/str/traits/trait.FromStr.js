@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["runner"] = [{"text":"impl FromStr for ServerVariant","synthetic":false,"types":[]}];
+implementors["runner"] = [{"text":"impl FromStr for ServerVariant","synthetic":false,"types":[]},{"text":"impl FromStr for FunctionsServerVariant","synthetic":false,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
