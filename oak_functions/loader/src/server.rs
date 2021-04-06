@@ -58,7 +58,7 @@ impl WasmHandler {
         // TODO(#1919): Get the actual response from the Wasm module via ABI functions.
         http::response::Builder::new()
             .status(StatusCode::BAD_REQUEST)
-            .body(Body::from("Not implemented yet.\n"))
+            .body(Body::from("Welcome to Oak Functions!\n"))
             .context("Couldn't create response")
     }
 }

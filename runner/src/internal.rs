@@ -43,6 +43,7 @@ pub struct Opt {
 pub enum Command {
     RunExamples(RunExamples),
     BuildServer(BuildServer),
+    BuildFunctionsServer(BuildFunctionsServer),
     Format,
     CheckFormat,
     RunTests,
@@ -158,6 +159,41 @@ pub struct BuildServer {
     pub server_rust_target: Option<String>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum FunctionsServerVariant {
+    /// Production-like server variant, without any of the features enabled
+    Base,
+    /// Debug server with logging enabled
+    Unsafe,
+}
+
+impl std::str::FromStr for FunctionsServerVariant {
+    type Err = String;
+    fn from_str(variant: &str) -> Result<Self, Self::Err> {
+        match variant {
+            "base" => Ok(FunctionsServerVariant::Base),
+            "unsafe" => Ok(FunctionsServerVariant::Unsafe),
+            _ => Err(format!("Failed to parse server variant {}", variant)),
+        }
+    }
+}
+
+#[derive(StructOpt, Clone)]
+pub struct BuildFunctionsServer {
+    #[structopt(long, help = "server variant: [base, unsafe]", default_value = "base")]
+    pub server_variant: FunctionsServerVariant,
+    #[structopt(
+        long,
+        help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
+    )]
+    pub server_rust_toolchain: Option<String>,
+    #[structopt(
+        long,
+        help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
+    )]
+    pub server_rust_target: Option<String>,
+}
+
 #[derive(StructOpt, Clone)]
 pub struct CleanupOpt {
     #[structopt(
@@ -165,6 +201,65 @@ pub struct CleanupOpt {
         help = "remove generated files after running tests for each crate"
     )]
     pub cleanup: bool,
+}
+
+pub trait RustBinaryOptions {
+    fn features(&self) -> String;
+    fn server_rust_toolchain(&self) -> &Option<String>;
+    fn server_rust_target(&self) -> &Option<String>;
+    fn build_release(&self) -> bool;
+}
+
+impl RustBinaryOptions for BuildFunctionsServer {
+    fn features(&self) -> String {
+        match self.server_variant {
+            FunctionsServerVariant::Unsafe => "oak-unsafe".to_string(),
+            FunctionsServerVariant::Base => "".to_string(),
+        }
+    }
+    fn server_rust_toolchain(&self) -> &Option<String> {
+        &self.server_rust_toolchain
+    }
+    fn server_rust_target(&self) -> &Option<String> {
+        &self.server_rust_target
+    }
+    fn build_release(&self) -> bool {
+        true
+    }
+}
+
+impl RustBinaryOptions for BuildServer {
+    fn features(&self) -> String {
+        let features = match self.server_variant {
+            ServerVariant::Base => "",
+            ServerVariant::NoIntrospectionClient => "oak-unsafe",
+            ServerVariant::Unsafe => "oak-unsafe,oak-introspection-client",
+            // If building in coverage mode, use the default target from the host, and build
+            // in unsafe (debug) mode.
+            ServerVariant::Coverage => "oak-unsafe,oak-introspection-client",
+            ServerVariant::Experimental => {
+                "oak-attestation,awskms,gcpkms,oak-unsafe,oak-introspection-client"
+            }
+        };
+        features.to_string()
+    }
+    fn server_rust_toolchain(&self) -> &Option<String> {
+        &self.server_rust_toolchain
+    }
+    fn server_rust_target(&self) -> &Option<String> {
+        match self.server_variant {
+            ServerVariant::Coverage => &None,
+            _ => &self.server_rust_target,
+        }
+    }
+    fn build_release(&self) -> bool {
+        match self.server_variant {
+            // For the coverage server variant, build debug artifacts
+            ServerVariant::Coverage => false,
+            // For all other server variants build the release artifacts
+            _ => true,
+        }
+    }
 }
 
 /// A construct to keep track of the status of the execution. It only cares about the top-level
