@@ -29,7 +29,7 @@ fn main() {
 
     generate_grpc_code(
         "..",
-        &["proto/remote.proto"],
+        &["proto/remote_service.proto"],
         CodegenOptions {
             build_client: true,
             build_server: true,
@@ -42,6 +42,7 @@ fn main() {
             "../oak_services/proto/grpc_invocation.proto",
             "../oak_services/proto/http_invocation.proto",
             "../proto/introspection_events.proto",
+            "../proto/remote.proto",
         ],
         &[".."],
         ProtoOptions {

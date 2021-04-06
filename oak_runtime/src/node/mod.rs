@@ -268,6 +268,10 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                     privilege: http::client::get_privilege(&config.authority),
                 })
             }
+            Some(ConfigType::ExternalConnectionConfig(config)) => Ok(CreatedNode {
+                instance: Box::new(remote::ExternalConnectionNode::new(node_name, config)?),
+                privilege: NodePrivilege::top_privilege(),
+            }),
             None => Err(ConfigurationError::InvalidNodeConfiguration),
         }
     }

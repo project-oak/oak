@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak.remote;
+package oak.remote.encap;
 
 import "google/protobuf/descriptor.proto";
 import "oak_abi/proto/label.proto";
@@ -40,69 +40,39 @@ message NodeCreateRequest {
   // Name of the node
   string name = 1;
   // Node configuration
-  oak.application.NodeConfiguration node_configuration = 2;
+  //oak.application.NodeConfiguration node_configuration = 2;
   // Label of the node
   oak.label.Label label = 3;
   // The initial handle is a handle to a channel on the remote runtime
-  RemoteHandle initial_handle = 4;
+  fixed64 initial_handle = 4;
 }
 
 message NodeCreateResponse {
   fixed64 remote_node_id = 1;
-}
-
-message ChannelReadRequest {
-  // Both runtimes must have the node_info about the node requesting the read, although only one runtime actually holds the node. 
-  fixed64 node_id = 1;
-  // Handle to a channel on the runtime serving this request
-  RemoteHandle read_handle = 2;
-  // Whether or not to use downgrading privilege when reading from the channel. 
-  bool downgrade = 3;
-}
-
-message ChannelReadResponse {
-  bytes data = 1;
-  repeated RemoteHandle handles = 2;
+  // A mapping that maps the read handles on the local (sender) Runtime to their corresponding write
+  // handles on the remote (server) Runtime. The mapping only involves the handles that have been in
+  // the init_message in the request, as well as the node's startup handle.
+  map<fixed64, fixed64> handles_map = 2;
 }
 
 message ChannelWriteRequest {
-  // Both runtimes must have the node_info about the node requesting the read, although only one runtime actually holds the node. 
-  fixed64 node_id = 1;
-  RemoteHandle write_handle = 2;
-  // Whether or not to use downgrading privilege when writing to the channel. 
-  bool downgrade = 3;
+  fixed64 write_handle = 1;
   // Bytes content of the message
-  bytes data = 4;
-  // Handles content of the message. Handles may be on any of the runtimes in the whole system.
-  repeated RemoteHandle handles = 5;
+  bytes data = 2;
+  // Handles content of the message. Handles may be on any of the runtime instances in the whole system.
+  repeated RemoteHandle handles = 3;
 }
 
 message ChannelWriteResponse {
-  // empty response
+  // A mapping that maps the read handles on the local (sender) Runtime to their corresponding write
+  // handles on the remote (server) Runtime. The mapping only involves the handles that have been in
+  // the message in the ChannelWriteRequest.
+  map<fixed64, fixed64> handles_map = 1;
 }
 
-// Represents a handle, on a potentially remote runtime. 
+// Represents a handle, on a potentially remote runtime.
 message RemoteHandle {
   fixed64 raw_handle = 1;
-  // In the first step, this can be the ID of a remote runtime.
-  string runtime_id = 2;
-}
-
-// A gRPC service for interacting with a remote Oak Runtime.
-service RemoteService {
-  // Add the given address to the list of remote runtimes. Returns the `runtime_uuid` of the runtime
-  // serving the request in the response, so that the caller can as well add the runtime to the list
-  // of its remotes.
-  rpc AddRemote(AddRemoteRequest) returns (AddRemoteResponse);
-
-  // Request matching a call to the `node_create` function in the runtime. Returns the `node_id` of
-  // the newly created node.
-  rpc NodeCreate(NodeCreateRequest) returns (NodeCreateResponse);
-
-  // Request matching a call to the `channel_read` function in the runtime. Returns the message
-  // (composed of bytes and handles) if read is successful.
-  rpc ChannelRead(ChannelReadRequest) returns (ChannelReadResponse);
-
-  // Request matching a call to the `channel_write` function in the runtime.
-  rpc ChannelWrite(ChannelWriteRequest) returns (ChannelWriteResponse);
+  // The address of the remote runtime that owns the corresponding channel half.
+  string runtime_addr = 2;
 }

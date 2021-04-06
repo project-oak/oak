@@ -73,6 +73,7 @@ message NodeConfiguration {
     HttpServerConfiguration http_server_config = 7;
     HttpClientConfiguration http_client_config = 8;
     CryptoConfiguration crypto_config = 9;
+    ExternalConnectionConfiguration external_connection_config = 10;
   }
 }
 
@@ -157,6 +158,15 @@ message HttpClientConfiguration {
 // CryptoConfiguration describes the configuration of a cryptographic
 // pseudo-Node (which is provided by the Oak Runtime).
 message CryptoConfiguration {}
+
+// ExternalConnectionConfiguration describes the configuration of an external connections
+// pseudo-Node for connecting to a remote Runtime.
+message ExternalConnectionConfiguration {
+  // URI for connecting to the remote Runtime
+  string remote_addr = 1;
+  // URI of the local Runtime to be used for creating handle URIs
+  string local_addr = 2;
+}
 
 // Information to identify a particular Roughtime server.
 // Only UDP and Ed25519 public keys are currently supported.

@@ -36,7 +36,6 @@ use std::{
     sync::{Arc, Mutex, RwLock},
 };
 
-#[cfg(test)]
 use crate::node::CreatedNode;
 
 /// A proxy object that binds together a reference to the underlying [`Runtime`] with a single
@@ -240,8 +239,7 @@ impl RuntimeProxy {
         result
     }
 
-    /// See [`Runtime::node_register`]. This is exposed to facilitate testing.
-    #[cfg(test)]
+    /// See [`Runtime::node_register`].
     pub fn node_register(
         &self,
         created_node: CreatedNode,

@@ -19,25 +19,29 @@
 use super::client::RemoteClients;
 use crate::{
     proto::oak::remote::{
-        remote_service_server::RemoteService, AddRemoteRequest, AddRemoteResponse,
-        ChannelReadRequest, ChannelReadResponse, ChannelWriteRequest, ChannelWriteResponse,
-        NodeCreateRequest, NodeCreateResponse,
+        encap::{
+            AddRemoteRequest, AddRemoteResponse, ChannelWriteRequest, ChannelWriteResponse,
+            NodeCreateRequest, NodeCreateResponse,
+        },
+        remote_runtime_server::RemoteRuntime,
     },
-    Downgrading, NodeId, Runtime,
+    RuntimeProxy,
 };
+use maplit::hashmap;
 use oak_io::Message;
 use std::sync::Mutex;
 use tonic::{Request, Response, Status};
 
 pub struct RemoteRuntimeHandler {
-    runtime: Runtime,
+    runtime: RuntimeProxy,
     runtime_uuid: String,
+    // List of clients for remote Runtime instances that are connected to this Runtime.
     remotes: Mutex<RemoteClients>,
 }
 
 // TODO: Consider implementing RemoteRuntime for the Runtime or RuntimeProxy.
 #[tonic::async_trait]
-impl RemoteService for RemoteRuntimeHandler {
+impl RemoteRuntime for RemoteRuntimeHandler {
     async fn add_remote(
         &self,
         req: Request<AddRemoteRequest>,
@@ -57,21 +61,16 @@ impl RemoteService for RemoteRuntimeHandler {
         _req: Request<NodeCreateRequest>,
     ) -> Result<Response<NodeCreateResponse>, Status> {
         // TODO
-        // register remote channel with the node.
-        // on success remote runtime should increase reader counts on the channel.
+        // Create a channel with read/write handles. The read handle should be used as the
+        // startup_handle to the node. The write handle should be registered here as the send/write
+        // end for the init_handle in the request. This mapping is then used in
+        // `remote_channel_write` to write the message to the correct channel.
+        // For each of the senders and receivers in the initial message create channels and
+        // DummySender nodes as needed.
         log::info!("Processing the node_create request");
-        Ok(Response::new(NodeCreateResponse { remote_node_id: 0 }))
-    }
-
-    async fn channel_read(
-        &self,
-        _req: Request<ChannelReadRequest>,
-    ) -> Result<Response<ChannelReadResponse>, Status> {
-        // TODO
-        log::info!("Processing the channel_read request");
-        Ok(Response::new(ChannelReadResponse {
-            data: vec![],
-            handles: vec![],
+        Ok(Response::new(NodeCreateResponse {
+            remote_node_id: 0,
+            handles_map: hashmap! {},
         }))
     }
 
@@ -83,25 +82,27 @@ impl RemoteService for RemoteRuntimeHandler {
         let request = req.into_inner();
         let msg = Message {
             bytes: request.data,
-            // TODO: replace handles in Message with the one in the remote.proto, with remote
-            // runtime ID.
+            // TODO: For each handle create a channel. For sender handles, in addition create a
+            // DummySender node with the receiver handle in it. The receiver handles should have a
+            // DummySender on the other side. Create a mapping between (remote) receiver handles,
+            // and local sender ends. Return the mapping in the response to the remote.
             handles: request
                 .handles
                 .into_iter()
                 .map(|handle| handle.raw_handle)
                 .collect(),
         };
-        let downgrading = if request.downgrade {
-            Downgrading::Yes
-        } else {
-            Downgrading::No
-        };
-        // TODO: fetch the actual channel half corresponding to `request.write_handle` from the
-        // runtime
-        let handle = 0;
+
+        // The `request.write_handle.raw_handle` should refer to a valid write handle on this
+        // Runtime.
+        //
+        // TODO: what about its label, and the label of the node that is writing into it?
+        let handle = request.write_handle;
         self.runtime
-            .channel_write(NodeId(request.node_id), handle, msg, downgrading)
+            .channel_write(handle, msg)
             .map_err(|err| Status::internal(format!("{}", err)))?;
-        Ok(Response::new(ChannelWriteResponse {}))
+        Ok(Response::new(ChannelWriteResponse {
+            handles_map: hashmap! {},
+        }))
     }
 }

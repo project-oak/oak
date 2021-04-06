@@ -30,6 +30,9 @@ pub mod oak {
     }
 
     pub mod remote {
+        pub mod encap {
+            include!(concat!(env!("OUT_DIR"), "/oak.remote.encap.rs"));
+        }
         include!(concat!(env!("OUT_DIR"), "/oak.remote.rs"));
     }
 
