@@ -20,9 +20,9 @@ cryptographically binding **TLS sessions** to the TEE platform.
 
 In order to allow applications to use TLS for remote attestation, we propose to
 cryptographically bind assertions to a TLS session, by deriving
-[Exported Keying Material](https://tools.ietf.org/html/rfc5705) from the TLS
-session and producing an assertion based on it, e.g. signing it with a TEE
-platform key.
+[Exported Keying Material](https://tools.ietf.org/html/rfc5705) from an already
+established TLS session and producing an assertion based on it, e.g. signing it
+with a TEE platform key.
 
 Exported Keying Material is a **pseudo-random string** that may be uniquely
 derived for an individual TLS session. It is derived from the TLS session master
@@ -104,15 +104,16 @@ deterministic algorithm. Thus if both client and server negotiate corresponding
 parameters (or they are constant), they can derive equal Exported Keying
 Material values.
 
-Exported Keying Material is prefixed with the purpose string
-`“TLSAttestationV1”`. This purpose string is used to disambiguate the proper use
-of the Exported Keying Material, i.e. helps mitigate confusion where Exported
-Keying Material that is generated for one purpose is misused for another.
+Prior to being used Exported Keying Material must be prefixed with the purpose
+string `TLSAttestationV1`. This purpose string is used to disambiguate the
+proper use of the Exported Keying Material, i.e. helps mitigate confusion where
+Exported Keying Material that is generated for one purpose is misused for
+another.
 
 Exported Keying Material that was derived with a specific set of parameters and
 prefixed with the purpose string will be called a **Token** throughout this
 document. Such Token is derived separately with a different set of parameters
-for any given [assertion](#assertions) type provided by the firmware.
+for any given [assertion](#assertions) type.
 
 ##### Parameters
 
