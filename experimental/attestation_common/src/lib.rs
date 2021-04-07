@@ -15,6 +15,7 @@
 //
 
 pub mod certificate;
+pub mod keying_material;
 pub mod report;
 #[cfg(test)]
 mod tests;

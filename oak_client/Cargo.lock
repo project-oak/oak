@@ -693,6 +693,7 @@ dependencies = [
  "anyhow",
  "log",
  "openssl",
+ "rustls",
  "serde",
  "serde_json",
  "sha2",

@@ -1,0 +1,36 @@
+[package]
+name = "https_attestation_client"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+base64 = "*"
+env_logger = "*"
+http = "*"
+hyper = { version = "*", features = ["client"] }
+hyper-rustls = { version = "*", default-features = false, features = [
+  "webpki-tokio"
+] }
+log = "*"
+oak_abi = "=0.1.0"
+oak_attestation_common = "*"
+oak_client = { version = "=0.1.0", features = ["oak-attestation"] }
+prost = "*"
+rustls = "*"
+serde_json = "*"
+structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }
+tonic = { version = "*", features = ["tls"] }
+regex = { version = "*" }
+# `dangerous_configuration` feature is required to set a custom X.509 certificate verifier.
+tokio-rustls = { version = "*", features = ["dangerous_configuration"] }
+x509-parser = "*"
+webpki = { version = "*" }

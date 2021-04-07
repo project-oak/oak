@@ -1262,6 +1262,7 @@ dependencies = [
  "assert_matches",
  "log",
  "openssl",
+ "rustls",
  "serde",
  "serde_json",
  "sha2",
@@ -1289,6 +1290,31 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "oak_https_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "env_logger",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "hex",
+ "http",
+ "hyper",
+ "log",
+ "oak_attestation_common",
+ "openssl",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha2",
+ "structopt",
+ "tokio",
+ "tokio-rustls",
 ]
 
 [[package]]
@@ -1331,7 +1357,7 @@ name = "oak_runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.12.3",
+ "base64 0.13.0",
  "byteorder",
  "bytes 1.0.1",
  "chrono",
@@ -2002,7 +2028,7 @@ dependencies = [
 name = "roughenough"
 version = "1.1.8"
 dependencies = [
- "base64 0.12.3",
+ "base64 0.13.0",
  "byteorder",
  "hex",
  "ring",

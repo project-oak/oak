@@ -17,6 +17,8 @@ members = [
   "hello_world/module/rust",
   "http_server/module",
   "http_server/client/rust",
+  "https_attestation/backend",
+  "https_attestation/client",
   "injection/module/rust",
   "trusted_database/client/rust",
   "trusted_database/module/rust",
@@ -42,6 +44,7 @@ members = [
 # Oak.
 oak = { path = "../sdk/rust/oak" }
 oak_abi = { path = "../oak_abi" }
+oak_attestation_common = { path = "../experimental/attestation_common" }
 oak_client = { path = "../oak_client" }
 oak_derive = { path = "../oak_derive" }
 oak_io = { path = "../oak_io" }
