@@ -1,3 +1,3 @@
-FROM gcr.io/oak-ci/oak-functions@sha256:98fe36d3538ebff72d809ef6f5d1c38e9b8835569de45c1d1540ba65486a6c0f
+FROM gcr.io/oak-ci/oak-functions@sha256:20c723af98f46847f10ab493826d18e2ebfe0950a0327de3eb8ac8f3181b85c5
 
 COPY ./non-oak-minimal.wasm ./module.wasm

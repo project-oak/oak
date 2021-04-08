@@ -37,13 +37,25 @@ gcloud auth activate-service-account \
   --key-file="${GCP_ACCOUNT_FILE}"
 
 # Deploy the example application to Cloud Run.
+#
+# Keep at least one instance alive all the time, even if there is no traffic to serve, since it may
+# take a while for it to start up.
 
 gcloud run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --region=europe-west2 \
   --image="${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest" \
   --allow-unauthenticated \
+  --concurrency=20 \
+  --min-instances=1 \
+  --max-instances=10 \
   --platform=managed
 
 # Attempt to communicate with the newly deployed application.
+#
+# The URL parameter at the end is just to let curl perform multiple consecutive requests, but it is
+# ignored by the server. See https://serverfault.com/a/358464.
 
-curl "https://${FUNCTIONS_INSTANCE_NAME}-62sa4xcfia-nw.a.run.app"
+curl \
+  --include \
+  --fail-early \
+  "https://${FUNCTIONS_INSTANCE_NAME}-62sa4xcfia-nw.a.run.app?n=[0-63]"
