@@ -40,7 +40,7 @@ message NodeCreateRequest {
   // Name of the node
   string name = 1;
   // Node configuration
-  //oak.application.NodeConfiguration node_configuration = 2;
+  oak.application.NodeConfiguration node_configuration = 2;
   // Label of the node
   oak.label.Label label = 3;
   // The initial handle is a handle to a channel on the remote runtime

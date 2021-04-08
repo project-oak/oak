@@ -407,7 +407,7 @@ pub fn node_create(
     let name_bytes = name.as_bytes();
     let label_bytes = label.serialize();
     let mut config_bytes = Vec::new();
-    config.encode(&mut config_bytes).map_err(|err| {
+    Message::encode(config, &mut config_bytes).map_err(|err| {
         warn!("Could not encode node configuration: {:?}", err);
         OakStatus::ErrInvalidArgs
     })?;
@@ -436,7 +436,7 @@ pub fn node_create_with_downgrade(
     let name_bytes = name.as_bytes();
     let label_bytes = label.serialize();
     let mut config_bytes = Vec::new();
-    config.encode(&mut config_bytes).map_err(|err| {
+    Message::encode(config, &mut config_bytes).map_err(|err| {
         warn!("Could not encode node configuration: {:?}", err);
         OakStatus::ErrInvalidArgs
     })?;

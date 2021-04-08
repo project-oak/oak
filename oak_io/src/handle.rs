@@ -278,6 +278,7 @@ handle_visit_blanket_impl!(prost_types::Any, prost_types::Timestamp);
 // It does not contain handles, so a blanket impl is sufficient.
 handle_visit_blanket_impl!(
     oak_abi::proto::oak::application::ConfigMap,
+    oak_abi::proto::oak::application::NodeConfiguration,
     oak_abi::proto::oak::label::Label
 );
 
