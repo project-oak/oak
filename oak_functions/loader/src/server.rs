@@ -39,10 +39,20 @@ impl WasmHandler {
             module: Arc::new(module),
         })
     }
-    pub(crate) fn handle_request(&self, req: &Request<Body>) -> anyhow::Result<Response<Body>> {
-        // TODO(#1919): Make request available to the Wasm module via ABI functions.
-        info!("The request is: {:?}", req);
 
+    pub(crate) fn handle_request(&self, req: &Request<Body>) -> anyhow::Result<Response<Body>> {
+        info!("The request is: {:?}", req);
+        match (req.method(), req.uri().path()) {
+            (&hyper::Method::POST, "/invoke") => self.handle_invoke(req),
+            (method, path) => http::response::Builder::new()
+                .status(StatusCode::BAD_REQUEST)
+                .body(format!("Invalid request: {} {}\n", method, path).into())
+                .context("Couldn't create response"),
+        }
+    }
+
+    fn handle_invoke(&self, _req: &Request<Body>) -> anyhow::Result<Response<Body>> {
+        // TODO(#1919): Make request body available to the Wasm module via ABI functions.
         let instance = wasmi::ModuleInstance::new(&self.module, &wasmi::ImportsBuilder::default())
             .context("failed to instantiate Wasm module")?
             .assert_no_start();
