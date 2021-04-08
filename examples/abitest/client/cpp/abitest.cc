@@ -37,7 +37,7 @@
 #include "oak/server/storage/storage_service.h"
 
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
-ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, ca_cert_path, "", "Path to the PEM-encoded CA root certificate");
 ABSL_FLAG(std::string, private_key, "", "Path to the private key");
 ABSL_FLAG(std::string, cert_chain, "", "Path to the PEM-encoded certificate chain");
 ABSL_FLAG(int, storage_port, 7867,
@@ -264,12 +264,12 @@ void run_grpc_test_server(int grpc_test_port, grpc::Server** grpc_test_server,
 
 }  // namespace
 
-std::shared_ptr<grpc::ServerCredentials> CreateGrpcCredentialsOrDie(const std::string& private_key,
-                                                                    const std::string& cert_chain,
-                                                                    const std::string& ca_cert) {
+std::shared_ptr<grpc::ServerCredentials> CreateGrpcCredentialsOrDie(
+    const std::string& private_key, const std::string& cert_chain,
+    const std::string& ca_cert_path) {
   grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert_pair = {private_key, cert_chain};
   grpc::SslServerCredentialsOptions options;
-  options.pem_root_certs = ca_cert;
+  options.pem_root_certs = ca_cert_path;
   options.pem_key_cert_pairs.push_back(key_cert_pair);
   return grpc::SslServerCredentials(options);
 }
@@ -285,7 +285,8 @@ int main(int argc, char** argv) {
         absl::make_unique<std::thread>(run_storage_server, storage_port, &storage_server);
   }
 
-  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
+  std::string ca_cert_path =
+      oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert_path));
 
   int grpc_test_port = absl::GetFlag(FLAGS_grpc_test_port);
   std::unique_ptr<std::thread> grpc_test_thread;
@@ -304,7 +305,7 @@ int main(int argc, char** argv) {
     std::string cert_chain = oak::utils::read_file(cert_chain_path);
 
     std::shared_ptr<grpc::ServerCredentials> grpc_credentials =
-        CreateGrpcCredentialsOrDie(private_key, cert_chain, ca_cert);
+        CreateGrpcCredentialsOrDie(private_key, cert_chain, ca_cert_path);
     grpc_test_thread = absl::make_unique<std::thread>(run_grpc_test_server, grpc_test_port,
                                                       &grpc_test_server, grpc_credentials);
   }
@@ -320,7 +321,7 @@ int main(int argc, char** argv) {
   oak::label::Label label = oak::PublicUntrustedLabel();
   // Connect to the Oak Application.
   auto stub = OakABITestService::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert_path), label));
   if (stub == nullptr) {
     LOG(FATAL) << "Failed to create application stub";
   }

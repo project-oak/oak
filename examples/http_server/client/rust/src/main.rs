@@ -26,7 +26,7 @@ pub struct Opt {
         help = "Path to the PEM-encoded CA root certificate.",
         default_value = "../../certs/local/ca.pem"
     )]
-    ca_cert: String,
+    ca_cert_path: String,
 }
 
 #[tokio::main]
@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
         public_key: key_pair.public_key_der()?,
     };
 
-    let path = &opt.ca_cert;
+    let path = &opt.ca_cert_path;
     let ca_file = fs::File::open(path).unwrap_or_else(|e| panic!("failed to open {}: {}", path, e));
     let mut ca = io::BufReader::new(ca_file);
 

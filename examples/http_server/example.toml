@@ -11,6 +11,6 @@ module = { Cargo = { cargo_manifest = "examples/http_server/module/Cargo.toml" }
 
 [clients]
 rust = { Cargo = { cargo_manifest = "examples/http_server/client/rust/Cargo.toml" }, additional_args = [
-  "--ca-cert=./examples/certs/local/ca.pem"
+  "--ca-cert-path=./examples/certs/local/ca.pem"
 ] }
 shell = { Shell = { script = "examples/http_server/client/client" } }

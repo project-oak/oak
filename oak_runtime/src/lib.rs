@@ -381,7 +381,7 @@ enum Downgrading {
 pub struct AuxServer {
     pub name: String,
     pub join_handle: Option<JoinHandle<()>>,
-    pub termination_notificiation_sender: Option<tokio::sync::oneshot::Sender<()>>,
+    pub termination_notification_sender: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
 impl AuxServer {
@@ -392,17 +392,17 @@ impl AuxServer {
         runtime: Arc<Runtime>,
         f: F,
     ) -> Self {
-        let (termination_notificiation_sender, termination_notificiation_receiver) =
+        let (termination_notification_sender, termination_notification_receiver) =
             tokio::sync::oneshot::channel::<()>();
         info!("spawning {} server on new thread", name);
         let join_handle = thread::Builder::new()
             .name(format!("{}-server", name))
-            .spawn(move || f(port, runtime, termination_notificiation_receiver))
+            .spawn(move || f(port, runtime, termination_notification_receiver))
             .expect("failed to spawn introspection thread");
         AuxServer {
             name: name.to_string(),
             join_handle: Some(join_handle),
-            termination_notificiation_sender: Some(termination_notificiation_sender),
+            termination_notification_sender: Some(termination_notification_sender),
         }
     }
 }
@@ -412,12 +412,12 @@ impl Drop for AuxServer {
     /// then joining its thread.
     fn drop(&mut self) {
         let join_handle = self.join_handle.take();
-        let termination_notificiation_sender = self.termination_notificiation_sender.take();
-        if let Some(termination_notificiation_sender) = termination_notificiation_sender {
+        let termination_notification_sender = self.termination_notification_sender.take();
+        if let Some(termination_notification_sender) = termination_notification_sender {
             info!("stopping {} server", self.name);
             // The auxiliary server may already have stopped, so ignore
             // errors when sending the stop notification.
-            let _ = termination_notificiation_sender.send(());
+            let _ = termination_notification_sender.send(());
         }
         if let Some(join_handle) = join_handle {
             let result = join_handle.join();

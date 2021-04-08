@@ -924,7 +924,7 @@ fn run(
                 },
                 "--".to_string(),
                 bazel_target.to_string(),
-                "--ca_cert=../../../../../../../../../examples/certs/local/ca.pem".to_string(),
+                "--ca_cert_path=../../../../../../../../../examples/certs/local/ca.pem".to_string(),
                 ...executable.additional_args.clone(),
                 ...additional_args,
             ],

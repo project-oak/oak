@@ -33,10 +33,10 @@
 
 ABSL_FLAG(bool, test, false, "Run a non-interactive version of chat application for testing");
 ABSL_FLAG(std::string, address, "localhost:8080", "Address of the Oak application to connect to");
-ABSL_FLAG(std::string, room_secret, "",
+ABSL_FLAG(std::string, room_secret_path, "",
           "Path to a PEM file containing the private key for joining the room");
 ABSL_FLAG(std::string, handle, "", "User handle to display");
-ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, ca_cert_path, "", "Path to the PEM-encoded CA root certificate");
 
 using ::oak::examples::chat::Chat;
 using ::oak::examples::chat::Message;
@@ -136,12 +136,13 @@ void Chat(Chat::Stub* stub, const std::string& user_handle) {
 // Create a gRPC stub for an application, with the provided signed challenge, which will be used for
 // adding a confidentiality label to any messages sent, and also to authenticate to the application
 // in order to read messages sent by other clients.
-std::unique_ptr<Chat::Stub> create_stub(std::string address, std::string ca_cert,
+std::unique_ptr<Chat::Stub> create_stub(std::string address, std::string ca_cert_path,
                                         oak::identity::SignedChallenge signed_challenge) {
   oak::label::Label label = oak::PublicKeyIdentityLabel(signed_challenge.public_key());
   // Connect to the Oak Application.
   auto stub = Chat::NewStub(oak::ApplicationClient::CreatePrivateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label, signed_challenge));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert_path), label,
+      signed_challenge));
   if (stub == nullptr) {
     LOG(FATAL) << "Failed to create application stub";
   }
@@ -152,21 +153,22 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
-  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
+  std::string ca_cert_path =
+      oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert_path));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
-  std::string room_secret = absl::GetFlag(FLAGS_room_secret);
+  std::string room_secret_path = absl::GetFlag(FLAGS_room_secret_path);
   std::unique_ptr<oak::KeyPair> key_pair;
 
   // TODO(#1905): A secure mechanism for sharing and retrieving the private key is needed. In the
   // meantime, we use `room_secret` to pass in a file containing the private key. If no room secret
   // is provided, we create a fresh private/public key pair, and store the private key in a file for
   // later use.
-  if (room_secret.empty()) {
+  if (room_secret_path.empty()) {
     key_pair = oak::KeyPair::Generate();
     oak::ApplicationClient::StoreKeyPair(key_pair, "chat-room.key");
   } else {
-    key_pair = oak::ApplicationClient::LoadKeyPair(room_secret);
+    key_pair = oak::ApplicationClient::LoadKeyPair(room_secret_path);
   }
 
   // Use the room's secret to sign the challenge required for authenticating the client.
@@ -174,7 +176,7 @@ int main(int argc, char** argv) {
       oak::ApplicationClient::SignChallenge(key_pair, oak::kOakChallenge);
 
   std::unique_ptr<Chat::Stub> stub;
-  stub = create_stub(address, ca_cert, signed_challenge);
+  stub = create_stub(address, ca_cert_path, signed_challenge);
 
   if (absl::GetFlag(FLAGS_test)) {
     // Disable interactive behaviour, and just attempt to send a pre-defined message.
