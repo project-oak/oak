@@ -1,0 +1,19 @@
+// We define 2 data types:
+.decl edge(n: symbol, m: symbol)
+.decl reachable(n: symbol, m: symbol)
+
+// We indicate we are interested in "reachable" facts.
+// NOTE: If you forget to add outputs, the souffle compiler will
+//       try to be smart and remove most generated code!
+.output reachable
+
+// We write down some pre-defined facts on the datalog side.
+edge("a", "b").
+edge("b", "c").
+edge("c", "e").
+edge("e", "f").
+edge("c", "d").
+
+// And we tell datalog how to check if 1 point is reachable from another.
+reachable(x, y) :- edge(x, y).                  // base rule
+reachable(x, z) :- edge(x, y), reachable(y, z). // inductive rule
