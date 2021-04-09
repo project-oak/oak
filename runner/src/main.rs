@@ -157,7 +157,6 @@ fn run_examples(opt: &RunExamples) -> Step {
             })
         })
         .collect();
-    eprintln!("parsed examples manifest files: {:?}", examples);
     Step::Multiple {
         name: "examples".to_string(),
         /// TODO(#396): Check that all the example folders are covered by an entry here, or
