@@ -32,7 +32,7 @@ ABSL_FLAG(std::string, bucket, "", "Bucket under which to aggregate samples");
 ABSL_FLAG(
     std::vector<std::string>, data, std::vector<std::string>{},
     "A comma-separated list of `index:value` entries that represent a single sparse vector sample");
-ABSL_FLAG(std::string, ca_cert, "", "Path to the PEM-encoded CA root certificate");
+ABSL_FLAG(std::string, ca_cert_path, "", "Path to the PEM-encoded CA root certificate");
 
 using ::oak::examples::aggregator::Aggregator;
 using ::oak::examples::aggregator::Sample;
@@ -67,7 +67,8 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   std::string address = absl::GetFlag(FLAGS_address);
-  std::string ca_cert = oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert));
+  std::string ca_cert_path =
+      oak::ApplicationClient::LoadRootCert(absl::GetFlag(FLAGS_ca_cert_path));
   LOG(INFO) << "Connecting to Oak Application: " << address;
 
   // Label corresponding to the hash of the WebAssembly module that implements the aggregator logic.
@@ -84,10 +85,10 @@ int main(int argc, char** argv) {
   //
   // TODO(#1674): Add appropriate TLS endpoint tag to the label as well.
   oak::label::Label label = oak::WebAssemblyModuleHashLabel(
-      absl::HexStringToBytes("441733ff08c2536c78cd1f1ba46e831c42aa51fab58f7b27dc5bf014b3e52f3b"));
+      absl::HexStringToBytes("8757bbf4c470b1c33c830a37fb9ce95feb56fe9b2b1a7003d3150ef21a9ea31a"));
   // Connect to the Oak Application.
   auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(
-      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert), label));
+      address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert_path), label));
   if (stub == nullptr) {
     LOG(FATAL) << "Failed to create application stub";
   }
