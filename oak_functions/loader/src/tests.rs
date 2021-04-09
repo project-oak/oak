@@ -43,16 +43,20 @@ async fn test_server() {
 async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>) {
     let client = Client::new();
     let request = hyper::Request::builder()
-        .method(http::Method::GET)
-        .uri(format!("http://localhost:{}", port))
+        .method(http::Method::POST)
+        .uri(format!("http://localhost:{}/invoke", port))
         .body(hyper::Body::empty())
         .unwrap();
-    let _resp = client
+    let resp = client
         .request(request)
         .await
         .expect("Error while awaiting response");
 
-    // TODO(#1919): Check the response.
+    assert_eq!(resp.status(), hyper::StatusCode::OK);
+    assert_eq!(
+        hyper::body::to_bytes(resp.into_body()).await.unwrap(),
+        "Welcome to Oak Functions\n"
+    );
 
     notify_sender
         .send(())
@@ -68,23 +72,27 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
         let wasm_handler =
             WasmHandler::create(&wasm_module_bytes).expect("Couldn't create the server");
-        let request = hyper::Request::builder()
-            .method(http::Method::GET)
-            // We don't really send the request. So the URI can be anything. It is only needed for
-            // building a valid request.
-            .uri("example.com")
-            .body(hyper::Body::empty())
-            .unwrap();
-        bencher.iter(|| wasm_handler.handle_request(&request));
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        bencher.iter(|| {
+            let request = hyper::Request::builder()
+                .method(http::Method::POST)
+                // We don't really send the request. So the hostname can be anything. It is only
+                // needed for building a valid request.
+                .uri("http://example.com/invoke")
+                .body(hyper::Body::empty())
+                .unwrap();
+            let resp = rt.block_on(wasm_handler.handle_request(request)).unwrap();
+            assert_eq!(resp.status(), hyper::StatusCode::OK);
+        });
     });
 
     // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
     // in that case. So, here we first check that `summary` is not empty.
     if let Some(summary) = summary {
         // We expect the `mean` time for loading the test Wasm module and running its main function
-        // to be less than 50ms.
-        // Note: `summary.mean` is in nano seconds, even though it is not explicitly documented in
+        // to be less than a fixed threshold.
+        // Note: `summary.mean` is in nanoseconds, even though it is not explicitly documented in
         // https://doc.rust-lang.org/test/stats/struct.Summary.html.
-        assert!(summary.mean < 50_000.0);
+        assert!(summary.mean < 50_000.0, "elapsed time: {}ns", summary.mean);
     }
 }
