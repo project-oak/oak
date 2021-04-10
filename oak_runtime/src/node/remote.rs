@@ -15,27 +15,32 @@
 //
 
 //! Functionality for communication with a remote Runtime.
+// TODO: improve documentation
 
 use crate::{
     node::{ConfigurationError, Node},
     proto::oak::remote::{
         encap::{
-            ChannelWriteRequest, ChannelWriteResponse, NodeCreateRequest, NodeCreateResponse,
-            RemoteHandle,
+            ChannelWriteRequest, ChannelWriteResponse, Direction, NodeCreateRequest,
+            NodeCreateResponse, RemoteHandle,
         },
         remote_runtime_client::RemoteRuntimeClient,
+        remote_runtime_server::RemoteRuntime,
     },
-    CreatedNode, NodePrivilege, RuntimeProxy,
+    ChannelHalfDirection, CreatedNode, NodePrivilege, RuntimeProxy,
 };
 use anyhow::Context;
 use log::{error, info, warn};
-use oak_abi::{label::Label, ChannelReadStatus, OakStatus};
+use oak_abi::{ChannelReadStatus, OakStatus};
 use oak_io::{handle::ReadHandle, OakError};
 use tokio::sync::oneshot;
 use tonic::transport::Channel;
 
 use crate::io::{Receiver, ReceiverExt};
+use maplit::hashmap;
 use oak_abi::proto::oak::application::ExternalConnectionConfiguration;
+use oak_io::Message;
+use tonic::{Request, Response, Status};
 
 /// ExternalConnection node that can serve as a stub for a remote Runtime.
 pub struct ExternalConnectionNode {
@@ -79,25 +84,31 @@ impl Node for ExternalConnectionNode {
             match receiver.receive(&runtime) {
                 Ok(req) => {
                     let initial_handle = req.initial_handle;
-                    let label = req.label.clone().unwrap_or_else(Label::public_untrusted);
+
+                    let label = req
+                        .label
+                        .clone()
+                        .expect("No label in NodeCreateRequest from the SDK");
+
                     // Send the node_create request to the remote, and await response
                     let response = async_runtime
                         .block_on(send_node_create_request(&self.remote_addr, req))
-                        .expect("Couldn't get response from the remote.")
+                        .expect("Couldn't get response from the remote")
                         .into_inner();
 
                     // Create a DummySender nodes for the receiver (init-handle) in the request.
                     let remote_write_half = *response
                         .handles_map
                         .get(&initial_handle)
-                        .expect("Couldn't find remote_write_half in the handles_map");
+                        .expect("Couldn't find the matching remote write_half for `initial_handle` in the handles_map");
                     let sender = DummySender {
                         remote_write_half,
                         remote_addr: self.remote_addr.clone(),
                         local_addr: self.local_addr.clone(),
                     };
+
                     // Register the DummySender node
-                    let res = runtime.node_register(
+                    let result = runtime.node_register(
                         CreatedNode {
                             instance: Box::new(sender),
                             privilege: NodePrivilege::default(),
@@ -106,7 +117,7 @@ impl Node for ExternalConnectionNode {
                         &label,
                         initial_handle,
                     );
-                    if res.is_err() {
+                    if result.is_err() {
                         warn!("Couldn't register sender node");
                     }
                 }
@@ -134,12 +145,127 @@ impl Node for ExternalConnectionNode {
     }
 }
 
+pub struct RemoteRuntimeHandler {
+    runtime: RuntimeProxy,
+    local_addr: String,
+}
+
+#[tonic::async_trait]
+impl RemoteRuntime for RemoteRuntimeHandler {
+    async fn node_create(
+        &self,
+        req: Request<NodeCreateRequest>,
+    ) -> Result<Response<NodeCreateResponse>, Status> {
+        log::info!("Processing the node_create request");
+        let req = req.into_inner();
+
+        let label = req
+            .label
+            .ok_or_else(|| Status::internal("No label in the NodeCreateRequest"))?;
+
+        let config = req
+            .node_configuration
+            .ok_or_else(|| Status::internal("No NodeConfiguration in the NodeCreateRequest"))?;
+
+        // Create a local channel representing the initial channel to the node.
+        let (write_handle, read_handle) = self
+            .runtime
+            .channel_create(&format!("remote-{}", req.name), &label)
+            .map_err(|err| Status::internal(format!("channel_create error: {}", err)))?;
+
+        // Create a node with the given name, config, and label, and the read handle to the local
+        // channel.
+        self.runtime
+            .node_create(&req.name, &config, &label, read_handle)
+            .map_err(|err| Status::internal(format!("node_create error: {}", err)))?;
+
+        // TODO(#??): Add handles to a local handles_map too.
+
+        // Return the mapping between the remote `initial_handle` and the local write handle. The
+        // DummySender on the remote will then send `channel_write` requests whenever something
+        // must be written to the channel attached to `write_handle`.
+        let handles_map = hashmap! {req.initial_handle => write_handle};
+        Ok(Response::new(NodeCreateResponse { handles_map }))
+    }
+
+    async fn channel_write(
+        &self,
+        req: Request<ChannelWriteRequest>,
+    ) -> Result<Response<ChannelWriteResponse>, Status> {
+        log::info!("Processing the channel_write request");
+        let request = req.into_inner();
+
+        let mut handles_map = hashmap! {};
+        let mut handles = vec![];
+        for handle in request.handles.into_iter() {
+            let label = handle
+                .label
+                .ok_or_else(|| Status::internal("No label in the RemoteHandle"))?;
+
+            // Create a local channel for `handle`
+            let (write_handle, read_handle) = self
+                .runtime
+                .channel_create(
+                    &format!("Remote-{}:{}", &handle.runtime_addr, handle.raw_handle),
+                    &label,
+                )
+                .map_err(|err| Status::internal(format!("channel_create error: {}", err)))?;
+
+            match Direction::from_i32(handle.direction) {
+                Some(Direction::Read) => {
+                    // The receiver handles should have a `DummySender` on the other side. Create a
+                    // mapping between (remote) receiver handle and the local sender half.
+                    handles.push(read_handle);
+                    handles_map.insert(handle.raw_handle, write_handle);
+                }
+                Some(Direction::Write) => {
+                    // For sender handles, create a `DummySender`.
+                    handles.push(write_handle);
+                    let sender = DummySender {
+                        remote_write_half: handle.raw_handle,
+                        remote_addr: handle.runtime_addr.clone(),
+                        local_addr: self.local_addr.clone(),
+                    };
+                    // Register the DummySender node
+                    let result = self.runtime.node_register(
+                        CreatedNode {
+                            instance: Box::new(sender),
+                            privilege: NodePrivilege::default(),
+                        },
+                        &format!("DummySender-{}:{}", handle.runtime_addr, handle.raw_handle),
+                        &label,
+                        read_handle,
+                    );
+                    if result.is_err() {
+                        warn!("Couldn't register sender node");
+                    }
+                }
+                _ => panic!("Got invalid handle direction from the remote."),
+            }
+        }
+
+        let msg = Message {
+            bytes: request.data,
+            handles,
+        };
+
+        // The `request.write_handle` should refer to a valid write handle on this Runtime.
+        let handle = request.write_handle;
+        self.runtime
+            .channel_write(handle, msg)
+            .map_err(|err| Status::internal(format!("{}", err)))?;
+
+        //Return `handles_map` in the response.
+        Ok(Response::new(ChannelWriteResponse { handles_map }))
+    }
+}
+
 /// A node that enables sending messages to a channel on a remote Runtime. Tries to read from its
 /// read_half in a loop. Whenever there is a message available, this node sends a
 /// `remote_channel_write` to the remote. The remote Runtime then writes the message on the
 /// corresponding write handle.
-/// TODO: Can this be merged with ExternalConnection node? We have wait_on_channels that waits on
-/// multiple channels. Do we have channels_read too to read from multiple channels?
+/// TODO(#??): Can this be merged with `ExternalConnection`? We have wait_on_channels that waits
+/// on multiple channels.
 struct DummySender {
     // Remote handle, to be included in the messages sent to the remote.
     remote_write_half: oak_abi::Handle,
@@ -190,14 +316,30 @@ impl Node for DummySender {
                         // the remote without any modification, apart from replacing the handle with
                         // RemoteHandles, with Runtime addresses.
 
-                        // TODO: An additional lookup in a local map is needed to replace local
-                        // handles that represent remote channels with URIs of the original handles.
+                        // TODO(#??): Currently we are not distinguishing between handles that are
+                        // originated locally, and the ones that represent remote channels. To make
+                        // this distinction, a local map in this pseudo-node is needed to keep track
+                        // of the origin of the handles. An additional lookup in that local map is
+                        // then needed to replace local handles that represent remote channels with
+                        // the original RemoteHandle.
                         Ok(msg) => {
                             let handles = msg
                                 .handles
                                 .into_iter()
                                 .map(|handle| RemoteHandle {
                                     raw_handle: handle,
+                                    direction: match runtime
+                                        .channel_direction(handle)
+                                        .expect("Couldn't get channel direction")
+                                    {
+                                        ChannelHalfDirection::Read => Direction::Read as i32,
+                                        ChannelHalfDirection::Write => Direction::Write as i32,
+                                    },
+                                    label: Some(
+                                        runtime
+                                            .get_channel_label(handle)
+                                            .expect("Couldn't get channel label"),
+                                    ),
                                     runtime_addr: self.local_addr.clone(),
                                 })
                                 .collect();
@@ -212,7 +354,7 @@ impl Node for DummySender {
                                 .block_on(send_channel_write_request(&self.remote_addr, req))
                                 .expect("Couldn't get response from the remote.")
                                 .into_inner();
-                            // TODO: Copy the handle map to internal handles_map
+                            // TODO(#??): Copy the handle map to internal handles_map
                             info!("Size of handles_map: {}", response.handles_map.len());
                         }
                         Err(err) => error!("Channel read error {:?}", err),
@@ -220,7 +362,7 @@ impl Node for DummySender {
                 }
                 ChannelReadStatus::Orphaned => {
                     info!("Channel closed {:?}", handle);
-                    // TODO: send remote_channel_close
+                    // TODO(#??): send channel_close
                     break;
                 }
                 status => {

@@ -22,19 +22,6 @@ import "google/protobuf/descriptor.proto";
 import "oak_abi/proto/label.proto";
 import "oak_abi/proto/application.proto";
 
-message AddRemoteRequest {
-  // TODO: Why is this needed?
-  string remote_uuid = 1;
-  // IP address and port number for a remote Runtime. This could be retrieved from the request, but
-  // tonic does not fully support that currently.
-  string remote_address = 2;
-}
-
-message AddRemoteResponse {
-  // TODO: Why is this needed?
-  string runtime_uuid = 1;
-}
-
 // Request matching a call to the `node_create` function in the runtime.
 message NodeCreateRequest {
   // Name of the node
@@ -48,11 +35,10 @@ message NodeCreateRequest {
 }
 
 message NodeCreateResponse {
-  fixed64 remote_node_id = 1;
   // A mapping that maps the read handles on the local (sender) Runtime to their corresponding write
   // handles on the remote (server) Runtime. The mapping only involves the handles that have been in
   // the init_message in the request, as well as the node's startup handle.
-  map<fixed64, fixed64> handles_map = 2;
+  map<fixed64, fixed64> handles_map = 1;
 }
 
 message ChannelWriteRequest {
@@ -73,6 +59,17 @@ message ChannelWriteResponse {
 // Represents a handle, on a potentially remote runtime.
 message RemoteHandle {
   fixed64 raw_handle = 1;
+  // Direction of the channel half associated with this handle.
+  Direction direction = 2;
+  // label of the corresponding channel
+  oak.label.Label label = 3;
   // The address of the remote runtime that owns the corresponding channel half.
-  string runtime_addr = 2;
+  string runtime_addr = 4;
+}
+
+// Direction of a channel half
+enum Direction {
+    DIRECTION_UNSPECIFIED = 0;
+    READ = 1;
+    WRITE = 2;
 }

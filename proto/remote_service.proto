@@ -24,11 +24,6 @@ import "proto/remote.proto";
 
 // A gRPC service for interacting with a remote Oak Runtime.
 service RemoteRuntime {
-  // Add the given address to the list of remote runtime instances. Returns the `runtime_uuid` of the 
-  // runtime serving the request in the response, so that the caller can as well add the runtime to
-  // the list of its remotes.
-  rpc AddRemote(oak.remote.encap.AddRemoteRequest) returns (oak.remote.encap.AddRemoteResponse);
-
   // Request matching a call to the `node_create` function in the runtime. Returns the `node_id` of
   // the newly created node.
   rpc NodeCreate(oak.remote.encap.NodeCreateRequest) returns (oak.remote.encap.NodeCreateResponse);
