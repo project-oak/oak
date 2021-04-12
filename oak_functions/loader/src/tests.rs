@@ -56,10 +56,7 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
         .expect("Error while awaiting response");
 
     assert_eq!(resp.status(), hyper::StatusCode::OK);
-    assert_eq!(
-        hyper::body::to_bytes(resp.into_body()).await.unwrap(),
-        "Welcome to Oak Functions\n"
-    );
+    assert_eq!(hyper::body::to_bytes(resp.into_body()).await.unwrap(), "");
 
     notify_sender
         .send(())

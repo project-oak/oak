@@ -14,15 +14,210 @@
 // limitations under the License.
 
 use anyhow::Context;
+use byteorder::{ByteOrder, LittleEndian};
 use http::{request::Request, response::Response};
 use hyper::{
     service::{make_service_fn, service_fn},
     Body, Server, StatusCode,
 };
-use log::info;
+use log::{error, info};
 use std::sync::Arc;
+use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
+
+/// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
+/// exposed to the Wasm client.  See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
+const READ_REQUEST: usize = 0;
+const WRITE_RESPONSE: usize = 1;
+
+// Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
+// of Wasm would use different types.
+type AbiPointer = u32;
+type AbiPointerOffset = u32;
+/// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
+/// Wasm would use a different value.
+const ABI_USIZE: ValueType = ValueType::I32;
+
+// Status values exchanged as i32 values across the WasmInterface.
+// TODO: Use oak_abi::OakStatus instead?
+enum OakStatus {
+    // Success.
+    Ok,
+    // Arguments invalid.
+    ErrInvalidArgs,
+    // Provided buffer was too small for operation (an output value will indicate required size).
+    ErrBufferTooSmall,
+}
+
+/// `WasmInterface` holds runtime values for a particular execution instance of Wasm, handling a
+/// single user request. The methods here correspond to the ABI host functions that allow the Wasm
+/// module to exchange the request and the response with the Oak functions server. These functions
+/// translate values between Wasm linear memory and Rust types.
+struct WasmInterface {
+    request_bytes: Vec<u8>,
+    response_bytes: Vec<u8>,
+    memory: Option<wasmi::MemoryRef>,
+}
+
+impl WasmInterface {
+    pub fn new(request_bytes: Vec<u8>) -> WasmInterface {
+        WasmInterface {
+            request_bytes,
+            response_bytes: vec![],
+            memory: None,
+        }
+    }
+
+    /// Helper function to get memory.
+    fn get_memory(&self) -> &wasmi::MemoryRef {
+        self.memory
+            .as_ref()
+            .expect("WasmInterface memory not attached!?")
+    }
+
+    /// Validates whether a given address range falls within the currently allocated range of guest
+    /// memory.
+    fn validate_ptr(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
+        let byte_size: wasmi::memory_units::Bytes = self.get_memory().current_size().into();
+
+        if byte_size < wasmi::memory_units::Bytes((addr as usize) + (offset as usize)) {
+            return Err(OakStatus::ErrInvalidArgs);
+        }
+
+        Ok(())
+    }
+
+    /// Corresponds to the host ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
+    pub fn read_request(
+        &self,
+        dest: AbiPointer,
+        dest_capacity: AbiPointerOffset,
+        actual_length_addr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        self.validate_ptr(dest, dest_capacity)?;
+
+        let raw_writer = &mut [0; 4];
+        LittleEndian::write_u32(raw_writer, self.request_bytes.len() as u32);
+        self.get_memory()
+            .set(actual_length_addr, raw_writer)
+            .map_err(|err| {
+                error!(
+                    "read_request(): Unable to write actual length into guest memory: {:?}",
+                    err
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+
+        if dest_capacity >= self.request_bytes.len() as u32 {
+            self.get_memory().set(dest, &self.request_bytes).map_err(|err| {
+                    error!(
+                        "read_request(): Unable to write destination buffer into guest memory: {:?}",err
+                    );
+                    OakStatus::ErrInvalidArgs
+                })?;
+        } else {
+            return Err(OakStatus::ErrBufferTooSmall);
+        }
+
+        Ok(())
+    }
+
+    /// Corresponds to the host ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
+    pub fn write_response(
+        &mut self,
+        source: AbiPointer,
+        source_length: AbiPointerOffset,
+    ) -> Result<(), OakStatus> {
+        let response = self
+            .get_memory()
+            .get(source, source_length as usize)
+            .map_err(|err| {
+                error!(
+                    "write_response(): Unable to read name from guest memory: {:?}",
+                    err
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+        self.response_bytes = response;
+        Ok(())
+    }
+}
+
+impl wasmi::Externals for WasmInterface {
+    /// Invocation of a host function specified by its registered index. Acts as a wrapper for
+    /// the relevant native function, just:
+    /// - checking argument types (which should be correct as `wasmi` will only pass through those
+    ///   types that were specified when the host function was registered with `resolv_func`).
+    /// - mapping resulting return/error values.
+    fn invoke_index(
+        &mut self,
+        index: usize,
+        args: wasmi::RuntimeArgs,
+    ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
+        match index {
+            READ_REQUEST => map_host_errors(self.read_request(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+            )),
+            WRITE_RESPONSE => {
+                map_host_errors(self.write_response(args.nth_checked(0)?, args.nth_checked(1)?))
+            }
+            _ => panic!("Unimplemented function at {}", index),
+        }
+    }
+}
+
+impl wasmi::ModuleImportResolver for WasmInterface {
+    fn resolve_func(
+        &self,
+        field_name: &str,
+        signature: &wasmi::Signature,
+    ) -> Result<wasmi::FuncRef, wasmi::Error> {
+        oak_resolve_func(field_name, signature)
+    }
+}
+/// Encapsulates the state of a Wasm invocation for a single user request.
+struct WasmState {
+    instance: wasmi::ModuleRef,
+    abi: WasmInterface,
+}
+
+impl WasmState {
+    fn new(module: &wasmi::Module, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
+        let mut abi = WasmInterface::new(request_bytes);
+        let instance = wasmi::ModuleInstance::new(
+            module,
+            &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
+        )
+        .context("failed to instantiate Wasm module")?
+        .assert_no_start();
+
+        abi.memory = instance
+            .export_by_name("memory")
+            .context("could not find Wasm `memory` export")?
+            .as_memory()
+            .cloned();
+
+        Ok(WasmState { instance, abi })
+    }
+
+    fn invoke(&mut self) {
+        let result = self
+            .instance
+            .invoke_export(MAIN_FUNCTION_NAME, &[], &mut self.abi);
+        info!(
+            "{:?}: Running Wasm module completed with result: {:?}",
+            std::thread::current().id(),
+            result
+        );
+    }
+
+    fn get_response_bytes(&self) -> Vec<u8> {
+        self.abi.response_bytes.clone()
+    }
+}
 
 // An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
@@ -30,49 +225,6 @@ pub(crate) struct WasmHandler {
     // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
     // cloneable.
     module: Arc<wasmi::Module>,
-}
-
-/// Encapsulates the state of a Wasm invocation for a single user request.
-struct WasmState {
-    instance: wasmi::ModuleRef,
-    #[allow(dead_code)]
-    memory: wasmi::MemoryRef,
-    #[allow(dead_code)]
-    request_bytes: Vec<u8>,
-    response_bytes: Vec<u8>,
-}
-
-impl WasmState {
-    fn new(module: &wasmi::Module, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
-        // TODO(#1919): Make request body available to the Wasm module via ABI functions.
-        // TODO(#1919): Get the actual response from the Wasm module via ABI functions.
-        let instance = wasmi::ModuleInstance::new(module, &wasmi::ImportsBuilder::default())
-            .context("failed to instantiate Wasm module")?
-            .assert_no_start();
-        let memory = instance
-            .export_by_name("memory")
-            .context("could not find Wasm `memory` export")?
-            .as_memory()
-            .cloned()
-            .context("could not interpret Wasm `memory` export as memory")?;
-        Ok(WasmState {
-            instance,
-            memory,
-            request_bytes,
-            response_bytes: "Welcome to Oak Functions\n".as_bytes().to_vec(),
-        })
-    }
-
-    fn invoke(&mut self) {
-        let result = self
-            .instance
-            .invoke_export(MAIN_FUNCTION_NAME, &[], &mut wasmi::NopExternals);
-        info!(
-            "{:?}: Running Wasm module completed with result: {:?}",
-            std::thread::current().id(),
-            result
-        );
-    }
 }
 
 impl WasmHandler {
@@ -103,7 +255,7 @@ impl WasmHandler {
         wasm_state.invoke();
         http::response::Builder::new()
             .status(StatusCode::OK)
-            .body(Body::from(wasm_state.response_bytes))
+            .body(Body::from(wasm_state.get_response_bytes()))
             .context("Couldn't create response")
     }
 }
@@ -148,4 +300,64 @@ pub async fn create_and_start_server(
         &address, result
     );
     Ok(())
+}
+
+/// A resolver function, mapping Oak host function names to an index and a type signature.
+fn oak_resolve_func(
+    field_name: &str,
+    signature: &wasmi::Signature,
+) -> Result<wasmi::FuncRef, wasmi::Error> {
+    // The types in the signatures correspond to the parameters from
+    // oak_functions/abi/src/lib.rs
+    let (index, sig) = match field_name {
+        "read_request" => (
+            READ_REQUEST,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // dest
+                    ABI_USIZE, // dest_capacity
+                    ABI_USIZE, // actual_length_addr (out)
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "write_response" => (
+            WRITE_RESPONSE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // source
+                    ABI_USIZE, // source_length
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        _ => {
+            return Err(wasmi::Error::Instantiation(format!(
+                "Export {} not found",
+                field_name
+            )))
+        }
+    };
+
+    if &sig != signature {
+        return Err(wasmi::Error::Instantiation(format!(
+            "Export `{}` doesn't match expected type {:?}",
+            field_name, signature
+        )));
+    }
+
+    Ok(wasmi::FuncInstance::alloc_host(sig, index))
+}
+
+/// A helper function to move between our specific result type `Result<(), OakStatus>` and the
+/// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
+/// - `Ok(())` to `Ok(Some(OakStatus::Ok))`
+/// - `Err(x)` to `Ok(Some(x))`
+fn map_host_errors(
+    result: Result<(), OakStatus>,
+) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
+    Ok(Some(wasmi::RuntimeValue::I32(result.map_or_else(
+        |x: OakStatus| x as i32,
+        |_| OakStatus::Ok as i32,
+    ))))
 }
