@@ -402,6 +402,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_abi"
+version = "0.1.0"
+
+[[package]]
 name = "oak_functions_loader"
 version = "0.1.0"
 dependencies = [
@@ -414,6 +418,7 @@ dependencies = [
  "log",
  "prost",
  "prost-build",
+ "oak_functions_abi",
  "structopt",
  "tempfile",
  "tokio",

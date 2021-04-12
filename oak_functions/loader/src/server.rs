@@ -21,6 +21,7 @@ use hyper::{
     Body, Server, StatusCode,
 };
 use log::{error, info};
+use oak_functions_abi::OakStatus;
 use std::sync::Arc;
 use wasmi::ValueType;
 
@@ -38,17 +39,6 @@ type AbiPointerOffset = u32;
 /// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
 /// Wasm would use a different value.
 const ABI_USIZE: ValueType = ValueType::I32;
-
-// Status values exchanged as i32 values across the WasmInterface.
-// TODO: Use oak_abi::OakStatus instead?
-enum OakStatus {
-    // Success.
-    Ok,
-    // Arguments invalid.
-    ErrInvalidArgs,
-    // Provided buffer was too small for operation (an output value will indicate required size).
-    ErrBufferTooSmall,
-}
 
 /// `WasmInterface` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
