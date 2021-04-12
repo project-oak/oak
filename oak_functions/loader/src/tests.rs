@@ -15,8 +15,11 @@
 
 use crate::server::{create_and_start_server, WasmHandler};
 use hyper::client::Client;
-
-use std::fs;
+use prost::Message;
+use std::{
+    fs,
+    io::{Seek, Write},
+};
 
 extern crate test;
 use test::Bencher;
@@ -95,4 +98,139 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         // https://doc.rust-lang.org/test/stats/struct.Summary.html.
         assert!(summary.mean < 50_000.0, "elapsed time: {}ns", summary.mean);
     }
+}
+
+#[test]
+fn load_lookup_entries_empty() {
+    let _ = env_logger::builder().is_test(true).try_init();
+    let empty = vec![];
+    let entries = crate::load_lookup_entries(empty.as_ref()).unwrap();
+    assert!(entries.is_empty());
+}
+
+// Fix the serialized representation for testing by manually annotating individual bytes.
+//
+// See https://developers.google.com/protocol-buffers/docs/encoding#structure.
+const ENTRY_0_LENGTH_DELIMITED: &[u8] = &[
+    8,  // Message total length.
+    10, // Field 1 key: (1<<3) | 2
+    2,  // Field 1 length.
+    14, 12, // Field 1 value.
+    18, // Field 2 key: (2<<3) | 2
+    2,  // Field 2 length.
+    19, 88, // Field 2 value.
+];
+
+const ENTRY_1_LENGTH_DELIMITED: &[u8] = &[
+    15, // Message total length.
+    10, // Field 1 key: (1<<3) | 2
+    5,  // Field 1 length.
+    b'H', b'a', b'r', b'r', b'y', // Field 1 value.
+    18,   // Field 2 key: (2<<3) | 2
+    6,    // Field 2 length.
+    b'P', b'o', b't', b't', b'e', b'r', // Field 2 value.
+];
+
+// Ensure that the serialized representation is correct.
+#[test]
+fn check_serialized_lookup_entries() {
+    {
+        let mut buf = vec![];
+        let entry = crate::proto::Entry {
+            key: vec![14, 12],
+            value: vec![19, 88],
+        };
+        entry.encode_length_delimited(&mut buf).unwrap();
+        assert_eq!(buf, ENTRY_0_LENGTH_DELIMITED);
+    }
+    {
+        let mut buf = vec![];
+        let entry = crate::proto::Entry {
+            key: b"Harry".to_vec(),
+            value: b"Potter".to_vec(),
+        };
+        entry.encode_length_delimited(&mut buf).unwrap();
+        assert_eq!(buf, ENTRY_1_LENGTH_DELIMITED);
+    }
+}
+
+#[test]
+fn load_lookup_entries_multiple_entries() {
+    let _ = env_logger::builder().is_test(true).try_init();
+    let mut buf = vec![];
+    buf.append(&mut ENTRY_0_LENGTH_DELIMITED.to_vec());
+    buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
+    let entries = crate::load_lookup_entries(buf.as_ref()).unwrap();
+    assert_eq!(entries.len(), 2);
+    assert_eq!(entries.get(&[14, 12].to_vec()), Some(&vec![19, 88]));
+    assert_eq!(entries.get(&b"Harry".to_vec()), Some(&b"Potter".to_vec()));
+}
+
+#[test]
+fn load_lookup_entries_multiple_entries_trailing() {
+    let _ = env_logger::builder().is_test(true).try_init();
+    let mut buf = vec![];
+    buf.append(&mut ENTRY_0_LENGTH_DELIMITED.to_vec());
+    buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
+    // Add invalid trailing bytes.
+    buf.append(&mut vec![1, 2, 3]);
+    let res = crate::load_lookup_entries(buf.as_ref());
+    assert!(res.is_err());
+}
+
+#[test]
+fn load_lookup_entries_invalid() {
+    let _ = env_logger::builder().is_test(true).try_init();
+    // Invalid bytes.
+    let buf = vec![1, 2, 3];
+    let res = crate::load_lookup_entries(buf.as_ref());
+    assert!(res.is_err());
+}
+
+/// Truncates the provided file and resets the cursor to the beginning of the file.
+fn truncate(file: &mut std::fs::File) {
+    file.set_len(0).unwrap();
+    file.seek(std::io::SeekFrom::Start(0)).unwrap();
+}
+
+#[test]
+fn lookup_data_refresh() {
+    let mut file = tempfile::NamedTempFile::new().unwrap();
+    let file_path = file.path().to_str().unwrap();
+    let lookup_data = crate::LookupData::new_empty(file_path);
+    assert_eq!(lookup_data.len(), 0);
+
+    // Initially empty file, no entries.
+    lookup_data.refresh().unwrap();
+    assert_eq!(lookup_data.len(), 0);
+
+    // Single entry.
+    truncate(file.as_file_mut());
+    file.write_all(ENTRY_0_LENGTH_DELIMITED).unwrap();
+    lookup_data.refresh().unwrap();
+    assert_eq!(lookup_data.len(), 1);
+    assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
+    assert_eq!(lookup_data.get(b"Harry"), None);
+
+    // Empty file again.
+    truncate(file.as_file_mut());
+    lookup_data.refresh().unwrap();
+    assert_eq!(lookup_data.len(), 0);
+
+    // A different entry.
+    truncate(file.as_file_mut());
+    file.write_all(ENTRY_1_LENGTH_DELIMITED).unwrap();
+    lookup_data.refresh().unwrap();
+    assert_eq!(lookup_data.len(), 1);
+    assert_eq!(lookup_data.get(&[14, 12]), None);
+    assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
+
+    // Two entries.
+    truncate(file.as_file_mut());
+    file.write_all(ENTRY_0_LENGTH_DELIMITED).unwrap();
+    file.write_all(ENTRY_1_LENGTH_DELIMITED).unwrap();
+    lookup_data.refresh().unwrap();
+    assert_eq!(lookup_data.len(), 2);
+    assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
+    assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
 }

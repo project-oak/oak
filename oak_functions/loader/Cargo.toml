@@ -14,10 +14,12 @@ default = []
 
 [dependencies]
 anyhow = "*"
+bytes = "*"
 env_logger = "*"
 http = "*"
 hyper = { version = "*", features = ["http1", "server", "runtime"] }
 log = "*"
+prost = "*"
 structopt = "*"
 tokio = { version = "*", features = [
   "fs",
@@ -29,3 +31,7 @@ wasmi = "*"
 
 [dev-dependencies]
 hyper = { version = "*", features = ["client"] }
+tempfile = "*"
+
+[build-dependencies]
+prost-build = "*"
