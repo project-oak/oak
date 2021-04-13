@@ -275,7 +275,7 @@ pub async fn create_and_start_server(
         }
     });
 
-    let server = Server::bind(&address).serve(service);
+    let server = Server::bind(address).serve(service);
 
     let graceful_server = server.with_graceful_shutdown(async {
         // Treat notification failure the same as a notification.

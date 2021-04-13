@@ -14,19 +14,25 @@
 // limitations under the License.
 
 use crate::server::{create_and_start_server, WasmHandler};
-use hyper::client::Client;
+use hyper::{
+    client::Client,
+    service::{make_service_fn, service_fn},
+    Body, Response,
+};
 use prost::Message;
 use std::{
+    convert::Infallible,
     fs,
-    io::{Seek, Write},
+    net::{Ipv6Addr, SocketAddr},
+    sync::{Arc, Mutex},
 };
 
 extern crate test;
-use std::net::{Ipv6Addr, SocketAddr};
 use test::Bencher;
 
 const TEST_WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
 const OAK_FUNCTIONS_SERVER_PORT: u16 = 9001;
+const STATIC_SERVER_PORT: u16 = 9002;
 
 #[tokio::test]
 async fn test_server() {
@@ -49,7 +55,7 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
     let request = hyper::Request::builder()
         .method(http::Method::POST)
         .uri(format!("http://localhost:{}/invoke", port))
-        .body(hyper::Body::empty())
+        .body(Body::empty())
         .unwrap();
     let resp = client
         .request(request)
@@ -80,7 +86,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
                 // We don't really send the request. So the hostname can be anything. It is only
                 // needed for building a valid request.
                 .uri("http://example.com/invoke")
-                .body(hyper::Body::empty())
+                .body(Body::empty())
                 .unwrap();
             let resp = rt.block_on(wasm_handler.handle_request(request)).unwrap();
             assert_eq!(resp.status(), hyper::StatusCode::OK);
@@ -185,49 +191,84 @@ fn load_lookup_entries_invalid() {
     assert!(res.is_err());
 }
 
-/// Truncates the provided file and resets the cursor to the beginning of the file.
-fn truncate(file: &mut std::fs::File) {
-    file.set_len(0).unwrap();
-    file.seek(std::io::SeekFrom::Start(0)).unwrap();
+/// A mock implementation of a static server that always returns the same configurable response for
+/// any incoming HTTP request.
+#[derive(Default)]
+struct MockStaticServer {
+    response_body: Arc<Mutex<Vec<u8>>>,
 }
 
-#[test]
-fn lookup_data_refresh() {
-    let mut file = tempfile::NamedTempFile::new().unwrap();
-    let file_path = file.path().to_str().unwrap();
-    let lookup_data = crate::LookupData::new_empty(file_path);
+impl MockStaticServer {
+    /// Sets the content of the response body to return for any request.
+    fn set_response_body(&self, response_body: Vec<u8>) {
+        *self
+            .response_body
+            .lock()
+            .expect("could not lock response body mutex") = response_body;
+    }
+
+    /// Starts serving, listening on the provided port.
+    async fn serve(&self, port: u16) {
+        let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, port));
+        let response_body = self.response_body.clone();
+        let server = hyper::Server::bind(&address).serve(make_service_fn(|_conn| {
+            let response_body = response_body.clone();
+            async {
+                Ok::<_, Infallible>(service_fn(move |_req| {
+                    let response_body = response_body.clone();
+                    async move {
+                        let response_body: Vec<u8> = response_body
+                            .lock()
+                            .expect("could not lock response body mutex")
+                            .clone();
+                        Ok::<_, Infallible>(Response::new(Body::from(response_body)))
+                    }
+                }))
+            }
+        }));
+        server.await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn lookup_data_refresh() {
+    let mock_static_server = Arc::new(MockStaticServer::default());
+
+    let mock_static_server_clone = mock_static_server.clone();
+    tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
+
+    let lookup_data =
+        crate::LookupData::new_empty(&format!("http://localhost:{}", STATIC_SERVER_PORT));
     assert_eq!(lookup_data.len(), 0);
 
     // Initially empty file, no entries.
-    lookup_data.refresh().unwrap();
+    lookup_data.refresh().await.unwrap();
     assert_eq!(lookup_data.len(), 0);
 
     // Single entry.
-    truncate(file.as_file_mut());
-    file.write_all(ENTRY_0_LENGTH_DELIMITED).unwrap();
-    lookup_data.refresh().unwrap();
+    mock_static_server.set_response_body(ENTRY_0_LENGTH_DELIMITED.to_vec());
+    lookup_data.refresh().await.unwrap();
     assert_eq!(lookup_data.len(), 1);
     assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
     assert_eq!(lookup_data.get(b"Harry"), None);
 
     // Empty file again.
-    truncate(file.as_file_mut());
-    lookup_data.refresh().unwrap();
+    mock_static_server.set_response_body(vec![]);
+    lookup_data.refresh().await.unwrap();
     assert_eq!(lookup_data.len(), 0);
 
     // A different entry.
-    truncate(file.as_file_mut());
-    file.write_all(ENTRY_1_LENGTH_DELIMITED).unwrap();
-    lookup_data.refresh().unwrap();
+    mock_static_server.set_response_body(ENTRY_1_LENGTH_DELIMITED.to_vec());
+    lookup_data.refresh().await.unwrap();
     assert_eq!(lookup_data.len(), 1);
     assert_eq!(lookup_data.get(&[14, 12]), None);
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
 
     // Two entries.
-    truncate(file.as_file_mut());
-    file.write_all(ENTRY_0_LENGTH_DELIMITED).unwrap();
-    file.write_all(ENTRY_1_LENGTH_DELIMITED).unwrap();
-    lookup_data.refresh().unwrap();
+    let mut buf = ENTRY_0_LENGTH_DELIMITED.to_vec();
+    buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
+    mock_static_server.set_response_body(buf);
+    lookup_data.refresh().await.unwrap();
     assert_eq!(lookup_data.len(), 2);
     assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));

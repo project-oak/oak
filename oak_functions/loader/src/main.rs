@@ -19,13 +19,16 @@
 
 use anyhow::Context;
 use prost::Message;
-use std::{collections::HashMap, fs, sync::RwLock};
+use std::{
+    collections::HashMap,
+    fs,
+    net::{Ipv6Addr, SocketAddr},
+    sync::RwLock,
+};
 use structopt::StructOpt;
 
 mod server;
-
 use crate::server::create_and_start_server;
-use std::net::{Ipv6Addr, SocketAddr};
 
 #[cfg(test)]
 mod tests;
@@ -49,37 +52,36 @@ pub struct Opt {
         help = "Path to a Wasm file to be loaded and executed per invocation. The Wasm module must export a function named `main`."
     )]
     wasm_path: String,
-    // TODO(#1930): Support downloading lookup data from a URL instead of a local file.
     // TODO(#1930): Support periodically re-downloading lookup data at a given time interval.
     #[structopt(
         long,
-        help = "Path to a file to load for data lookups, containing key / value entries in protobuf binary format."
+        help = "URL to a file to GET over HTTP containing key / value entries in protobuf binary format for lookup. If not provided, no data is available for lookup."
     )]
-    lookup_data_path: String,
+    lookup_data_url: Option<String>,
 }
 
 struct LookupData {
-    lookup_data_path: String,
+    lookup_data_url: String,
     entries: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
 }
 
 impl LookupData {
     /// Creates a new [`LookupData`] instance that can refresh its internal entries from the
-    /// provided data file path.
+    /// provided data file URL.
     ///
     /// Entries in the data file path must be consecutive binary encoded and length delimited
     /// protobuf messages according to the definition in `/oak_functions/proto/lookup_data.proto`.
     ///
     /// The returned instance is empty, and must be populated by calling the [`LookupData::refresh`]
     /// method at least once.
-    fn new_empty(lookup_data_path: &str) -> LookupData {
+    fn new_empty(lookup_data_url: &str) -> LookupData {
         LookupData {
-            lookup_data_path: lookup_data_path.to_string(),
+            lookup_data_url: lookup_data_url.to_string(),
             entries: RwLock::new(HashMap::new()),
         }
     }
 
-    /// Refreshes the internal entries of this struct from the data file path provided at
+    /// Refreshes the internal entries of this struct from the data file URL provided at
     /// construction time.
     ///
     /// If successful, entries are completely replaced (i.e. not merged).
@@ -87,10 +89,20 @@ impl LookupData {
     /// If there is any error while reading or parsing the data, an error is returned by this
     /// method, and existing entries are left untouched. The caller may retry the refresh operation
     /// at a future time.
-    fn refresh(&self) -> anyhow::Result<()> {
+    async fn refresh(&self) -> anyhow::Result<()> {
         // TODO(#1930): Avoid loading the entire file in memory for parsing.
-        let lookup_data_buf =
-            fs::read(&self.lookup_data_path).context("could not read lookup data file")?;
+        let client = hyper::Client::new();
+        let res = client
+            .get(
+                self.lookup_data_url
+                    .parse()
+                    .context("could not parse lookup data URL")?,
+            )
+            .await
+            .context("could not fetch lookup data")?;
+        let lookup_data_buf = hyper::body::to_bytes(res.into_body())
+            .await
+            .context("could not read lookup data response body")?;
         let entries = load_lookup_entries(&mut lookup_data_buf.as_ref())
             .context("could not parse lookup data")?;
         log::info!("loaded {} entries of lookup data", entries.len());
@@ -156,10 +168,12 @@ async fn main() -> anyhow::Result<()> {
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
-    let lookup_data = LookupData::new_empty(&opt.lookup_data_path);
-    if !opt.lookup_data_path.is_empty() {
+    let lookup_data =
+        LookupData::new_empty(opt.lookup_data_url.as_ref().unwrap_or(&"".to_string()));
+    if opt.lookup_data_url.is_some() {
         lookup_data
             .refresh()
+            .await
             .context("could not load lookup data")?;
     }
 
