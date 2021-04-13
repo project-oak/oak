@@ -22,18 +22,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions"
-version = "0.1.0"
-dependencies = [
- "log",
- "oak_functions_abi",
-]
-
-[[package]]
-name = "oak_functions_abi"
-version = "0.1.0"
-
-[[package]]
 name = "test_utils"
 version = "0.1.0"
 dependencies = [

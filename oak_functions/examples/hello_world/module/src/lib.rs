@@ -43,7 +43,10 @@
 //! curl --include --fail-early --request POST --data 'request-body' localhost:8080/invoke
 //! ```
 
-use oak_functions_sdk as sdk;
+use oak_functions as sdk;
+
+#[cfg(test)]
+mod tests;
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {

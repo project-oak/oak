@@ -8,4 +8,7 @@ members = ["hello_world/module"]
 # > explicit about the dependency relationships between the crates.
 [patch.crates-io]
 # oak_functions
-oak_functions_sdk = { path = "../sdk" }
+oak_functions = { path = "../sdk/oak_functions" }
+oak_functions_abi = { path = "../abi" }
+oak_functions_loader = { path = "../loader" }
+test_utils = { path = "../sdk/test_utils" }

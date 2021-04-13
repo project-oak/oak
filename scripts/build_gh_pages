@@ -53,7 +53,7 @@ declare -ar TARGET_SUBDIRS=(
   'oak_client'
   'oak_derive'
   'oak_functions_loader'
-  'oak_functions_sdk'
+  'oak_functions'
   'oak_io'
   'oak_loader'
   'oak_runtime'

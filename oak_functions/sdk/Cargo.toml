@@ -1,13 +1,11 @@
 [workspace]
+members = ["oak_functions", "test_utils"]
 
-[package]
-name = "oak_functions_sdk"
-version = "0.1.0"
-authors = ["Razieh Behjati <razieh@google.com>"]
-edition = "2018"
-license = "Apache-2.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[dependencies]
-oak_functions_abi = { version = "0.1.0", path = "../abi" }
-log = "*"
+# Patch dependencies on oak crates so that they refer to the versions within this same repository.
+#
+# From https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html :
+# > Cargo doesn’t assume that crates in a workspace will depend on each other, so we need to be
+# > explicit about the dependency relationships between the crates.
+[patch.crates-io]
+# Oak Functions.
+oak_functions_abi = { path = "../abi" }

@@ -10,4 +10,17 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 log = "*"
-oak_functions_sdk = "0.1.0"
+oak_functions = "0.1.0"
+
+[dev-dependencies]
+env_logger = "*"
+oak_functions_loader = "0.1.0"
+http = "*"
+hyper = { version = "*", features = ["client"] }
+test_utils = "0.1.0"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }
