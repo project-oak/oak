@@ -20,14 +20,16 @@
 use log::{debug, error};
 use oak_functions_abi::OakStatus;
 
-// Read and return the user request.
+// Reads and returns the user request.
 pub fn read_request_body() -> Result<Vec<u8>, OakStatus> {
     let mut buf = Vec::with_capacity(1024);
     read_request(&mut buf)?;
     Ok(buf)
 }
 
-/// Read the user request into the buffer.
+/// Reads the user request into the buffer.
+/// If the buffer does not have enough capacity, it will be reallocated with extra space so that it
+/// can hold the entire request.
 fn read_request(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
     // Try reading the request twice: first with provided vectors, making
     // use of their available capacity, then with vectors whose capacity has
@@ -43,16 +45,15 @@ fn read_request(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
             Some(status) => match status {
                 OakStatus::Ok => {
                     unsafe {
-                        // The read operation succeeded, and overwrote some fraction
-                        // of the vectors' available capacity with returned data (possibly
-                        // zero).  As the data is already present in the vectors, set
-                        // their length to match what's available.
+                        // The read operation succeeded, and overwrote some fraction of the vector's
+                        // available capacity with returned data (possibly zero). As the data is
+                        // already present in the vector, set its length to match what's available.
                         buf.set_len(actual_size as usize);
                     }
                     return Ok(());
                 }
                 OakStatus::ErrBufferTooSmall if !(*resized) => {
-                    // Extend the vectors to be large enough for the message
+                    // Extend the vector to be large enough for the message
                     debug!(
                         "Got space for {} bytes, need {}",
                         buf.capacity(),
@@ -91,8 +92,8 @@ fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
 ///
 /// The status is interpreted as an int representing an `OakStatus` enum value.
 ///
-/// If the status is `OK` then return the provided value as `Result::Ok`, otherwise return the
-/// status as `Result::Err`.
+/// If the status is [`OakStatus::Ok`] then returns the provided value as [`Result::Ok`], otherwise
+/// returns the status as [`Result::Err`].
 ///
 /// Note that host function calls usually return an `u32` because of limitations of the Wasm type
 /// system, so these values would usually be converted (via a cast) to `i32` by callers.
@@ -106,7 +107,7 @@ pub fn result_from_status<T>(status: i32, val: T) -> Result<T, OakStatus> {
 
 /// Install a panic hook that logs [panic information].
 ///
-/// Logs panic infomation to the logging channel, if one is set.
+/// Logs panic information to the logging channel, if one is set.
 ///
 /// [panic information]: std::panic::PanicInfo
 // This is copied from oak sdk: sdk/rust/oak/src/lib.rs

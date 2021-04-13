@@ -21,19 +21,18 @@ provides more convenient (and safer) wrappers around this functionality.
 
 ## Exported Function
 
-Each Oak functions WebAssembly module must expose at least one **exported
+Each Oak functions WebAssembly module must expose exactly one **exported
 function** as a
 [WebAssembly export](https://webassembly.github.io/spec/core/syntax/modules.html#exports),
-with signature `fn(u64) -> ()`. This function is invoked when the Oak Manager
-executes the workload to serve a user request. Currently, this entrypoint
-function must be named `main`.
+with signature `fn() -> ()` and name `main`. This function is invoked when the
+Oak Manager executes the workload to serve a user request.
 
 ## Host Functions
 
 Each Oak Module may also optionally rely on zero or more of the following **host
 functions** as
 [WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports)
-(all of them defined in the `oak` module):
+(all of them defined in the `oak_functions` module):
 
 ### `read_request`
 

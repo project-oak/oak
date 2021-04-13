@@ -50,7 +50,7 @@ impl OakStatus {
 // See https://rustwasm.github.io/book/reference/js-ffi.html
 #[link(wasm_import_module = "oak_functions")]
 extern "C" {
-    /// Read the user request.
+    /// Reads the user request.
     ///
     /// Stores the user request into `buf`. The size of the request data is stored into
     /// `actual_size`.
@@ -66,7 +66,7 @@ extern "C" {
     /// [`OakStatus`]: crate::OakStatus
     pub fn read_request(buf: *mut u8, size: usize, actual_size: *mut u32) -> u32;
 
-    /// Write the response.
+    /// Writes the response.
     ///
     /// Stores `size` bytes of data from `buf` into the WebAssembly interface. This can then be
     /// returned to the user as the response.

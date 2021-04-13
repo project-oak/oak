@@ -14,58 +14,24 @@
 // limitations under the License.
 //
 
-//! Oak functions hello world example.
-//!
-//! To build and run manually:
-//!
-//! 1. Build the wasm module:
-//! ```shell
-//!     cargo -Zunstable-options build --release \
-//!         --target=wasm32-unknown-unknown \
-//!         --manifest-path=oak_functions/examples/hello_world/module/Cargo.toml \
-//!         --out-dir=oak_functions/examples/hello_world/bin
-//! ```
-//!
-//! 2. Build loader with debugging enabled if needed:
-//!```shell
-//!     cargo build --manifest-path=./oak_functions/loader/Cargo.toml \
-//!         --release
-//!         --features=oak-unsafe
-//! ```
-//!
-//! 3. Run the loader:
-//!```shell
-//!     ./oak_functions/loader/target/release/oak_functions_loader_bin \
-//!         --wasm-path=oak_functions/examples/hello_world/bin/hello_world.wasm
-//! ```
-//!
-//! 4. Invoke with:
-//!```shell
-//!     curl --include --fail-early --request POST --data 'request-body' localhost:8080/invoke
-//! ```
+//! Oak functions hello world example. Responds with `Hello $request_body!` to every request.
 
-use oak_functions as sdk;
+use oak_functions;
 
 #[cfg(test)]
 mod tests;
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
-    // A panic in the Rust module code cannot safely pass through the FFI
-    // boundary, so catch any panics here and drop them.
-    // https://doc.rust-lang.org/nomicon/ffi.html#ffi-and-panics
-    let _ = ::std::panic::catch_unwind(|| {
-        sdk::set_panic_hook();
+    // Read the request
+    let request_body = oak_functions::read_request_body().expect("Couldn't read request body.");
 
-        // Read the request
-        let request_body = sdk::read_request_body().expect("Couldn't read request body.");
+    // Create response body
+    let response_body = format!(
+        "Hello {}!\n",
+        std::str::from_utf8(&request_body).expect("Couldn't convert bytes to string")
+    );
 
-        // Write the response
-        let response_body = format!(
-            "Welcome to Oak functions!\nRequest length: {}.\n",
-            request_body.len()
-        );
-
-        let _res = sdk::write_response_body(&response_body);
-    });
+    // Write the response body
+    oak_functions::write_response_body(&response_body).expect("Couldn't write the response body.");
 }
