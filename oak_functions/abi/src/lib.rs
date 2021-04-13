@@ -20,23 +20,25 @@
 // Status values exchanged as i32 values across the WasmInterface.
 #[derive(Debug)]
 pub enum OakStatus {
-    Unspecified,
+    Unspecified = 0,
     // Success.
-    Ok,
+    Ok = 1,
     // Arguments invalid.
-    ErrInvalidArgs,
+    ErrInvalidArgs = 2,
     // Provided buffer was too small for operation (an output value will indicate required size).
-    ErrBufferTooSmall,
+    ErrBufferTooSmall = 3,
     // Internal error.
-    ErrInternal,
+    ErrInternal = 4,
 }
 
 impl OakStatus {
     pub fn from_i32(status: i32) -> Option<Self> {
         match status {
+            0 => Some(OakStatus::Unspecified),
             1 => Some(OakStatus::Ok),
             2 => Some(OakStatus::ErrInvalidArgs),
             3 => Some(OakStatus::ErrBufferTooSmall),
+            4 => Some(OakStatus::ErrInternal),
             _ => None,
         }
     }

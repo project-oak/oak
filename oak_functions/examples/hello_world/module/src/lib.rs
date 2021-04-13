@@ -17,30 +17,31 @@
 //! Oak functions hello world example.
 //!
 //! To build and run manually:
+//!
 //! 1. Build the wasm module:
 //! ```shell
-//! cargo -Zunstable-options build --release \
-//!   --target=wasm32-unknown-unknown \
-//!   --manifest-path=oak_functions/examples/hello_world/module/Cargo.toml \
-//!   --out-dir=oak_functions/examples/hello_world/bin
+//!     cargo -Zunstable-options build --release \
+//!         --target=wasm32-unknown-unknown \
+//!         --manifest-path=oak_functions/examples/hello_world/module/Cargo.toml \
+//!         --out-dir=oak_functions/examples/hello_world/bin
 //! ```
 //!
 //! 2. Build loader with debugging enabled if needed:
 //!```shell
-//! cargo build --manifest-path=./oak_functions/loader/Cargo.toml \
-//!   --release
-//!   --features=oak-unsafe
+//!     cargo build --manifest-path=./oak_functions/loader/Cargo.toml \
+//!         --release
+//!         --features=oak-unsafe
 //! ```
 //!
 //! 3. Run the loader:
 //!```shell
-//! /oak_functions/loader/target/release/oak_functions_loader \
-//!   --wasm-path=oak_functions/examples/hello_world/bin/hello_world.wasm
+//!     ./oak_functions/loader/target/release/oak_functions_loader \
+//!         --wasm-path=oak_functions/examples/hello_world/bin/hello_world.wasm
 //! ```
 //!
-//! 4. Invoke:
+//! 4. Invoke with:
 //!```shell
-//! curl --include --fail-early --request POST --data 'request-body' localhost:8080/invoke
+//!     curl --include --fail-early --request POST --data 'request-body' localhost:8080/invoke
 //! ```
 
 use oak_functions as sdk;
