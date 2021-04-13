@@ -14,7 +14,7 @@ source "$SCRIPTS_DIR/common"
 readonly REPRODUCIBLE_ARTIFACTS=(
   ./examples/*/bin/*.wasm
   ./oak_loader/bin/oak_loader
-  ./oak_functions/loader/bin/oak_functions_loader
+  ./oak_functions/loader/bin/oak_functions_loader_bin
 )
 
 # Index file containing hashes of the reproducible artifacts, alongside their file names.

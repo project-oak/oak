@@ -35,7 +35,7 @@
 //!
 //! 3. Run the loader:
 //!```shell
-//!     ./oak_functions/loader/target/release/oak_functions_loader \
+//!     ./oak_functions/loader/target/release/oak_functions_loader_bin \
 //!         --wasm-path=oak_functions/examples/hello_world/bin/hello_world.wasm
 //! ```
 //!
