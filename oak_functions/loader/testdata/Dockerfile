@@ -1,3 +1,6 @@
-FROM gcr.io/oak-ci/oak-functions@sha256:2acd77d705f74c612de2d61ed16835c446988e0a9dbe82b7f18d8de461c9d678
+# Allow deploying the latest version for development.
+# hadolint ignore=DL3007
+FROM gcr.io/oak-ci/oak-functions:latest
 
-COPY ./non-oak-minimal.wasm ./module.wasm
+COPY ./non-oak-minimal.wasm /module.wasm
+COPY ./config.toml /config.toml

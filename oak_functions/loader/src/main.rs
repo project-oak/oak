@@ -19,6 +19,7 @@
 
 use anyhow::Context;
 use prost::Message;
+use serde_derive::Deserialize;
 use std::{
     collections::HashMap,
     fs,
@@ -37,7 +38,22 @@ pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+struct Config {
+    /// URL of a file to GET over HTTP containing key / value entries in protobuf binary format for
+    /// lookup. If empty or not provided, no data is available for lookup.
+    // TODO(#1930): Support downloading lookup data from a URL instead of a local file.
+    // TODO(#1930): Support periodically re-downloading lookup data at a given time interval.
+    #[serde(default)]
+    lookup_data_url: String,
+}
+
 /// Command line options for the Oak loader.
+///
+/// In general, when adding new configuration parameters, they should go in the `Config` struct
+/// instead of here, and provided as part of the config TOML file by the developer, who would
+/// normally bundle it with the Docker image of the Oak Functions Loader.
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(about = "Oak Functions Loader")]
 pub struct Opt {
@@ -52,12 +68,11 @@ pub struct Opt {
         help = "Path to a Wasm file to be loaded and executed per invocation. The Wasm module must export a function named `main`."
     )]
     wasm_path: String,
-    // TODO(#1930): Support periodically re-downloading lookup data at a given time interval.
     #[structopt(
         long,
-        help = "URL to a file to GET over HTTP containing key / value entries in protobuf binary format for lookup. If not provided, no data is available for lookup."
+        help = "Path to a file containing configuration parameters in TOML format."
     )]
-    lookup_data_url: Option<String>,
+    config_path: String,
 }
 
 struct LookupData {
@@ -162,15 +177,20 @@ async fn main() -> anyhow::Result<()> {
     }
     let opt = Opt::from_args();
 
+    let config_file_bytes = fs::read(&opt.config_path)
+        .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
+    let config: Config =
+        toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
+    eprintln!("parsed config file:\n{:#?}", config);
+
     // For now the server runs in the same thread, so `notify_sender` is not really needed.
     let (_notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
-    let lookup_data =
-        LookupData::new_empty(opt.lookup_data_url.as_ref().unwrap_or(&"".to_string()));
-    if opt.lookup_data_url.is_some() {
+    let lookup_data = LookupData::new_empty(&config.lookup_data_url);
+    if !config.lookup_data_url.is_empty() {
         lookup_data
             .refresh()
             .await
