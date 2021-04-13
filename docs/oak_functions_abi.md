@@ -16,8 +16,8 @@ returning a response.
 Note also that the Oak ABI interactions are quite low-level; for example, they
 involve manual management of linear memory. WebAssembly workloads will typically
 use the higher-level
-[Oak Functions SDK](https://project-oak.github.io/oak/oak_functions/sdk/)
-which provides more convenient (and safer) wrappers around this functionality.
+[Oak Functions SDK](https://project-oak.github.io/oak/oak_functions/sdk/) which
+provides more convenient (and safer) wrappers around this functionality.
 
 ## Exported Function
 

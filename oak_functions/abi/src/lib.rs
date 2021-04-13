@@ -18,6 +18,7 @@
 //! binary interface (ABI).
 
 // Status values exchanged as i32 values across the WasmInterface.
+#[derive(Debug)]
 pub enum OakStatus {
     Unspecified,
     // Success.

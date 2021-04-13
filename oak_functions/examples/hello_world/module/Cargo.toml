@@ -1,0 +1,13 @@
+[package]
+name = "hello_world"
+version = "0.1.0"
+authors = ["Razieh Behjati <razieh@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+log = "*"
+oak_functions_sdk = "0.1.0"
