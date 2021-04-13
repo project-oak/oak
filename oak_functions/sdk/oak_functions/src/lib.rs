@@ -20,7 +20,9 @@
 use log::{debug, error};
 use oak_functions_abi::OakStatus;
 
-// Reads and returns the user request.
+/// Reads and returns the user request.
+///
+/// This function is idempotent. Multiple call to this function all return the same value.
 pub fn read_request_body() -> Result<Vec<u8>, OakStatus> {
     let mut buf = Vec::with_capacity(1024);
     read_request(&mut buf)?;
@@ -79,6 +81,9 @@ fn read_request(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
 }
 
 /// Write the response body.
+///
+/// Multiple calls to this function will replace the earlier responses. Only the last response that
+/// is written will be kept and returned to the user.
 pub fn write_response_body(response_body: &str) -> Result<(), OakStatus> {
     write_response(response_body.as_bytes())
 }
