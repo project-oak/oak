@@ -28,7 +28,7 @@ use wasmi::ValueType;
 const MAIN_FUNCTION_NAME: &str = "main";
 
 /// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
-/// exposed to the Wasm client.  See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
+/// exposed to the Wasm client. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 
@@ -165,7 +165,7 @@ impl wasmi::ModuleImportResolver for WasmInterface {
         field_name: &str,
         signature: &wasmi::Signature,
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
-        oak_resolve_func(field_name, signature)
+        oak_functions_resolve_func(field_name, signature)
     }
 }
 /// Encapsulates the state of a Wasm invocation for a single user request.
@@ -297,8 +297,9 @@ pub async fn create_and_start_server(
     Ok(())
 }
 
-/// A resolver function, mapping Oak host function names to an index and a type signature.
-fn oak_resolve_func(
+/// A resolver function, mapping `oak_functions` host function names to an index and a type
+/// signature.
+fn oak_functions_resolve_func(
     field_name: &str,
     signature: &wasmi::Signature,
 ) -> Result<wasmi::FuncRef, wasmi::Error> {

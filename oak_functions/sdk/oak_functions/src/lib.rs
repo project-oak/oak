@@ -23,16 +23,17 @@ use oak_functions_abi::OakStatus;
 /// Reads and returns the user request.
 ///
 /// This function is idempotent. Multiple call to this function all return the same value.
-pub fn read_request_body() -> Result<Vec<u8>, OakStatus> {
+pub fn read_request() -> Result<Vec<u8>, OakStatus> {
     let mut buf = Vec::with_capacity(1024);
-    read_request(&mut buf)?;
+    read_request_util(&mut buf)?;
     Ok(buf)
 }
 
 /// Reads the user request into the buffer.
+///
 /// If the buffer does not have enough capacity, it will be reallocated with extra space so that it
 /// can hold the entire request.
-fn read_request(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
+fn read_request_util(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
     // Try reading the request twice: first with the provided vector, making
     // use of its available capacity, then with a vector whose capacity has
     // been extended to meet size requirements.

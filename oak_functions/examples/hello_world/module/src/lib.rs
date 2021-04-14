@@ -22,7 +22,7 @@ mod tests;
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     // Read the request
-    let request_body = oak_functions::read_request_body().expect("Couldn't read request body.");
+    let request_body = oak_functions::read_request().expect("Couldn't read request body.");
 
     // Create response body
     let response_body = format!(

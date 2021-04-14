@@ -17,17 +17,17 @@
 //! Type, constant and Wasm host function definitions for the Oak-Functions application
 //! binary interface (ABI).
 
-// Status values exchanged as i32 values across the WasmInterface.
+/// Status values exchanged as i32 values across the WasmInterface.
 #[derive(Debug)]
 pub enum OakStatus {
     Unspecified = 0,
-    // Success.
+    /// Success.
     Ok = 1,
-    // Arguments invalid.
+    /// Arguments invalid.
     ErrInvalidArgs = 2,
-    // Provided buffer was too small for operation (an output value will indicate required size).
+    /// Provided buffer was too small for operation (an output value will indicate required size).
     ErrBufferTooSmall = 3,
-    // Internal error.
+    /// Internal error.
     ErrInternal = 4,
 }
 
