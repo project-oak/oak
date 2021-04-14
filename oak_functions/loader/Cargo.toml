@@ -19,6 +19,7 @@ byteorder = { version = "*", default-features = false }
 env_logger = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
+humantime-serde = "*"
 log = "*"
 oak_functions_abi = { path = "../abi" }
 prost = "*"
