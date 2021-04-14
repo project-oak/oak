@@ -25,6 +25,7 @@ use std::{
     fs,
     net::{Ipv6Addr, SocketAddr},
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 extern crate test;
@@ -96,11 +97,16 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
     // in that case. So, here we first check that `summary` is not empty.
     if let Some(summary) = summary {
+        // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
+        // https://doc.rust-lang.org/test/stats/struct.Summary.html.
+        let elapsed = Duration::from_nanos(summary.mean as u64);
         // We expect the `mean` time for loading the test Wasm module and running its main function
         // to be less than a fixed threshold.
-        // Note: `summary.mean` is in nanoseconds, even though it is not explicitly documented in
-        // https://doc.rust-lang.org/test/stats/struct.Summary.html.
-        assert!(summary.mean < 50_000.0, "elapsed time: {}ns", summary.mean);
+        assert!(
+            elapsed < Duration::from_millis(1),
+            "elapsed time: {:?}",
+            elapsed
+        );
     }
 }
 
