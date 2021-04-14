@@ -181,6 +181,7 @@ async fn main() -> anyhow::Result<()> {
         .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
     let config: Config =
         toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
+    // Print the parsed config to STDERR regardless of whether the logger is initialized.
     eprintln!("parsed config file:\n{:#?}", config);
 
     // For now the server runs in the same thread, so `notify_sender` is not really needed.

@@ -17,5 +17,5 @@ ENTRYPOINT [ \
     "--config-path=/config.toml" \
 ]
 
-# Individual applications must copy their own Wasm module to /module.wasm and their config file to
-# /config.toml .
+# Individual applications must copy their own Wasm module to `/module.wasm` and their config file to
+# `/config.toml`.
