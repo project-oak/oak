@@ -10,14 +10,14 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 log = "*"
-oak_functions = "=0.1.0"
+oak_functions = { path = "../../../sdk/oak_functions" }
 
 [dev-dependencies]
 env_logger = "*"
-oak_functions_loader = "=0.1.0"
+oak_functions_loader = { path = "../../../loader" }
 http = "*"
 hyper = { version = "*", features = ["client"] }
-test_utils = "=0.1.0"
+test_utils = { path = "../../../sdk/test_utils" }
 tokio = { version = "*", features = [
   "fs",
   "macros",

@@ -1,11 +1,2 @@
 [workspace]
 members = ["oak_functions", "test_utils"]
-
-# Patch dependencies on oak crates so that they refer to the versions within this same repository.
-#
-# From https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html :
-# > Cargo doesn’t assume that crates in a workspace will depend on each other, so we need to be
-# > explicit about the dependency relationships between the crates.
-[patch.crates-io]
-# Oak Functions.
-oak_functions_abi = { path = "../abi" }

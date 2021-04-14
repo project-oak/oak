@@ -6,5 +6,5 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-oak_functions_abi = "=0.1.0"
+oak_functions_abi = { path = "../../abi" }
 log = "*"
