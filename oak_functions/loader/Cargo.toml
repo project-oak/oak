@@ -8,7 +8,8 @@ edition = "2018"
 license = "Apache-2.0"
 
 [features]
-# Feature that allows logging. Should be use only for debugging purposes.
+# Feature that allows logging of potentially sensitive content.
+# Should only be used for debugging purposes.
 oak-unsafe = []
 default = []
 
@@ -16,11 +17,12 @@ default = []
 anyhow = "*"
 bytes = "*"
 byteorder = { version = "*", default-features = false }
-env_logger = "*"
+chrono = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 humantime-serde = "*"
-log = "*"
+# Logging via the log crate is disabled and only available using our own custom logger.
+log = { version = "*", features = ["max_level_off", "release_max_level_off"] }
 oak_functions_abi = { path = "../abi" }
 prost = "*"
 serde = "*"

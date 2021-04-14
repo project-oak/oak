@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::server::{create_and_start_server, WasmHandler};
+use crate::{
+    logger::Logger,
+    server::{create_and_start_server, WasmHandler},
+};
 use hyper::{
     client::Client,
     service::{make_service_fn, service_fn},
@@ -40,14 +43,18 @@ const STATIC_SERVER_PORT: u16 = 9002;
 
 #[tokio::test]
 async fn test_server() {
-    let _ = env_logger::builder().is_test(true).try_init();
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, OAK_FUNCTIONS_SERVER_PORT));
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     let wasm_module_bytes =
         fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
 
-    let server_fut = create_and_start_server(&address, &wasm_module_bytes, notify_receiver);
+    let server_fut = create_and_start_server(
+        &address,
+        &wasm_module_bytes,
+        notify_receiver,
+        Logger::default(),
+    );
     let client_fut = start_client(OAK_FUNCTIONS_SERVER_PORT, notify_sender);
 
     let (res, _) = tokio::join!(server_fut, client_fut);
@@ -89,8 +96,8 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     .expect("Couldn't read Wasm module");
 
     let summary = bencher.bench(|bencher| {
-        let wasm_handler =
-            WasmHandler::create(&wasm_module_bytes).expect("Couldn't create the server");
+        let wasm_handler = WasmHandler::create(&wasm_module_bytes, Logger::default())
+            .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
         bencher.iter(|| {
             let request = hyper::Request::builder()
@@ -123,7 +130,6 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 
 #[test]
 fn parse_lookup_entries_empty() {
-    let _ = env_logger::builder().is_test(true).try_init();
     let empty = vec![];
     let entries = crate::parse_lookup_entries(empty.as_ref()).unwrap();
     assert!(entries.is_empty());
@@ -177,7 +183,6 @@ fn check_serialized_lookup_entries() {
 
 #[test]
 fn parse_lookup_entries_multiple_entries() {
-    let _ = env_logger::builder().is_test(true).try_init();
     let mut buf = vec![];
     buf.append(&mut ENTRY_0_LENGTH_DELIMITED.to_vec());
     buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
@@ -189,7 +194,6 @@ fn parse_lookup_entries_multiple_entries() {
 
 #[test]
 fn parse_lookup_entries_multiple_entries_trailing() {
-    let _ = env_logger::builder().is_test(true).try_init();
     let mut buf = vec![];
     buf.append(&mut ENTRY_0_LENGTH_DELIMITED.to_vec());
     buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
@@ -201,7 +205,6 @@ fn parse_lookup_entries_multiple_entries_trailing() {
 
 #[test]
 fn parse_lookup_entries_invalid() {
-    let _ = env_logger::builder().is_test(true).try_init();
     // Invalid bytes.
     let buf = vec![1, 2, 3];
     let res = crate::parse_lookup_entries(buf.as_ref());
@@ -254,8 +257,10 @@ async fn lookup_data_refresh() {
     let mock_static_server_clone = mock_static_server.clone();
     tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
 
-    let lookup_data =
-        crate::LookupData::new_empty(&format!("http://localhost:{}", STATIC_SERVER_PORT));
+    let lookup_data = crate::LookupData::new_empty(
+        &format!("http://localhost:{}", STATIC_SERVER_PORT),
+        Logger::default(),
+    );
     assert_eq!(lookup_data.len(), 0);
 
     // Initially empty file, no entries.

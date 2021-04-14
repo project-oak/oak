@@ -9,11 +9,9 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-log = "*"
 oak_functions = { path = "../../../sdk/oak_functions" }
 
 [dev-dependencies]
-env_logger = "*"
 oak_functions_loader = { path = "../../../loader" }
 http = "*"
 hyper = { version = "*", features = ["client"] }
