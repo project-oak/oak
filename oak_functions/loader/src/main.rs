@@ -33,11 +33,6 @@ use crate::server::create_and_start_server;
 
 #[cfg(test)]
 mod tests;
-
-pub mod proto {
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
-}
-
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Config {
@@ -160,8 +155,9 @@ fn load_lookup_entries<B: bytes::Buf>(
     let mut lookup_data_buffer = lookup_data_buffer;
     let mut entries = HashMap::new();
     while lookup_data_buffer.has_remaining() {
-        let entry = proto::Entry::decode_length_delimited(&mut lookup_data_buffer)
-            .context("could not decode entry")?;
+        let entry =
+            oak_functions_abi::proto::Entry::decode_length_delimited(&mut lookup_data_buffer)
+                .context("could not decode entry")?;
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)

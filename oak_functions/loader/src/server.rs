@@ -21,7 +21,7 @@ use hyper::{
     Body, Server, StatusCode,
 };
 use log::{error, info};
-use oak_functions_abi::OakStatus;
+use oak_functions_abi::proto::OakStatus;
 use std::{net::SocketAddr, sync::Arc};
 use wasmi::ValueType;
 

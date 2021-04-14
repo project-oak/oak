@@ -18,7 +18,7 @@
 //! underlying Oak functions platform functionality.
 
 use log::{debug, error};
-use oak_functions_abi::OakStatus;
+use oak_functions_abi::proto::OakStatus;
 
 /// Reads and returns the user request.
 ///
