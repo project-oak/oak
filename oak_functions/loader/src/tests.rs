@@ -22,22 +22,23 @@ use std::{
 };
 
 extern crate test;
+use std::net::{Ipv6Addr, SocketAddr};
 use test::Bencher;
 
 const TEST_WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
+const OAK_FUNCTIONS_SERVER_PORT: u16 = 9001;
 
 #[tokio::test]
 async fn test_server() {
     let _ = env_logger::builder().is_test(true).try_init();
-    let port = 9999;
-    let address = format!("[::]:{}", port);
+    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, OAK_FUNCTIONS_SERVER_PORT));
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     let wasm_module_bytes =
         fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
 
     let server_fut = create_and_start_server(&address, &wasm_module_bytes, notify_receiver);
-    let client_fut = start_client(port, notify_sender);
+    let client_fut = start_client(OAK_FUNCTIONS_SERVER_PORT, notify_sender);
 
     let (res, _) = tokio::join!(server_fut, client_fut);
     assert!(res.is_ok());
@@ -56,10 +57,7 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
         .expect("Error while awaiting response");
 
     assert_eq!(resp.status(), hyper::StatusCode::OK);
-    assert_eq!(
-        hyper::body::to_bytes(resp.into_body()).await.unwrap(),
-        "Welcome to Oak Functions\n"
-    );
+    assert_eq!(hyper::body::to_bytes(resp.into_body()).await.unwrap(), "");
 
     notify_sender
         .send(())

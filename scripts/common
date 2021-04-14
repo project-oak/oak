@@ -25,6 +25,7 @@ declare -ar ALL_CRATES=(
   oak_client
   oak_derive
   oak_functions/loader
+  oak_functions/sdk
   oak_io
   oak_loader
   oak_runtime

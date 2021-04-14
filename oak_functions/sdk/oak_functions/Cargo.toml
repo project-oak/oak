@@ -1,0 +1,10 @@
+[package]
+name = "oak_functions"
+version = "0.1.0"
+authors = ["Razieh Behjati <razieh@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+oak_functions_abi = { path = "../../abi" }
+log = "*"

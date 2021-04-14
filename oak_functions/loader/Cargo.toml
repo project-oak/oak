@@ -15,11 +15,13 @@ default = []
 [dependencies]
 anyhow = "*"
 bytes = "*"
+byteorder = { version = "*", default-features = false }
 env_logger = "*"
 http = "*"
 hyper = { version = "*", features = ["http1", "server", "runtime"] }
 log = "*"
 prost = "*"
+oak_functions_abi = { version = "0.1.0", path = "../abi" }
 structopt = "*"
 tokio = { version = "*", features = [
   "fs",

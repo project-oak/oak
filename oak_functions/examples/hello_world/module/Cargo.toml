@@ -1,0 +1,26 @@
+[package]
+name = "hello_world"
+version = "0.1.0"
+authors = ["Razieh Behjati <razieh@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+log = "*"
+oak_functions = { path = "../../../sdk/oak_functions" }
+
+[dev-dependencies]
+env_logger = "*"
+oak_functions_loader = { path = "../../../loader" }
+http = "*"
+hyper = { version = "*", features = ["client"] }
+test_utils = { path = "../../../sdk/test_utils" }
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }
