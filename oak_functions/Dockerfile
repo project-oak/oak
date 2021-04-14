@@ -10,6 +10,12 @@ COPY ./loader/target/x86_64-unknown-linux-musl/release/oak_functions_loader ${oa
 # Normally we would use the $PORT env variable here, but since we do not have a shell available in
 # the Docker image, we hardcode its default value (8080) here.
 # https://cloud.google.com/run/docs/reference/container-contract#port
-ENTRYPOINT ["/oak_functions_loader", "--http-listen-port=8080", "--wasm-path=/module.wasm"]
+ENTRYPOINT [ \
+    "/oak_functions_loader", \
+    "--http-listen-port=8080", \
+    "--wasm-path=/module.wasm", \
+    "--config-path=/config.toml" \
+]
 
-# Individual applications must copy their own Wasm module to /module.wasm.
+# Individual applications must copy their own Wasm module to `/module.wasm` and their config file to
+# `/config.toml`.

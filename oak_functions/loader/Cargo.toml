@@ -20,8 +20,10 @@ env_logger = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 log = "*"
+oak_functions_abi = { path = "../abi" }
 prost = "*"
-oak_functions_abi = { version = "0.1.0", path = "../abi" }
+serde = "*"
+serde_derive = "*"
 structopt = "*"
 tokio = { version = "*", features = [
   "fs",
@@ -29,6 +31,7 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
+toml = "*"
 wasmi = "*"
 
 [dev-dependencies]
