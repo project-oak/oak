@@ -115,7 +115,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         // to be less than a fixed threshold.
         assert!(
             elapsed < Duration::from_millis(1),
-            "elapsed time: {:?}",
+            "elapsed time: {:?}ms",
             elapsed
         );
     }
