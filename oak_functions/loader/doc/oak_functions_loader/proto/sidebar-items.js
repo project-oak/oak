@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Entry","An individual entry to be made available for lookup to an Oak Function."]]});

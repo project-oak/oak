@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["MAIN_FUNCTION_NAME",""]],"fn":[["create_and_start_server","Starts an HTTP server on the given address, serving the main function of the given Wasm module."]],"struct":[["WasmHandler",""],["WasmState","Encapsulates the state of a Wasm invocation for a single user request."]]});
+initSidebarItems({"fn":[["create_and_start_server","Starts an HTTP server on the given address, serving the main function of the given Wasm module."]]});

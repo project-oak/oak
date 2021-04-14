@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["compile_rust_wasm","Uses cargo to compile a Rust manifest to Wasm bytes."]]});
