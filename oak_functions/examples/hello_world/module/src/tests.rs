@@ -18,7 +18,7 @@ use oak_functions_loader::server::create_and_start_server;
 use std::net::{Ipv6Addr, SocketAddr};
 
 const WASM_MODULE_NAME: &str = "hello_world.wasm";
-const EXPECTED_RESPONSE: &str = "Hello Harry Potter!\n";
+const EXPECTED_RESPONSE: &str = "Hello World!\n";
 const OAK_FUNCTIONS_SERVER_PORT: u16 = 9001;
 
 #[tokio::test]
@@ -48,7 +48,7 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
     let request = hyper::Request::builder()
         .method(http::Method::POST)
         .uri(format!("http://localhost:{}/invoke", port))
-        .body(hyper::Body::from("Harry Potter"))
+        .body(hyper::Body::from("World"))
         .unwrap();
     let resp = client
         .request(request)

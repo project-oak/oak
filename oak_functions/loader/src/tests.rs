@@ -32,6 +32,9 @@ extern crate test;
 use test::Bencher;
 
 const TEST_WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
+const MANIFEST_PATH: &str = "examples/hello_world/module/Cargo.toml";
+const WASM_MODULE_PATH: &str = "hello_world.wasm";
+
 const OAK_FUNCTIONS_SERVER_PORT: u16 = 9001;
 const STATIC_SERVER_PORT: u16 = 9002;
 
@@ -75,9 +78,17 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
 // Run this with: `cargo bench --manifest-path=oak_functions/loader/Cargo.toml`
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
+    let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.pop();
+    manifest_path.push(MANIFEST_PATH);
+
+    let wasm_module_bytes = test_utils::compile_rust_wasm(
+        manifest_path.to_str().expect("Invalid target dir"),
+        WASM_MODULE_PATH,
+    )
+    .expect("Couldn't read Wasm module");
+
     let summary = bencher.bench(|bencher| {
-        let wasm_module_bytes =
-            fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
         let wasm_handler =
             WasmHandler::create(&wasm_module_bytes).expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
@@ -87,7 +98,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
                 // We don't really send the request. So the hostname can be anything. It is only
                 // needed for building a valid request.
                 .uri("http://example.com/invoke")
-                .body(Body::empty())
+                .body(hyper::Body::from("World"))
                 .unwrap();
             let resp = rt.block_on(wasm_handler.handle_request(request)).unwrap();
             assert_eq!(resp.status(), hyper::StatusCode::OK);
