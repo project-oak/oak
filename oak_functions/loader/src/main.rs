@@ -25,6 +25,7 @@ use structopt::StructOpt;
 mod server;
 
 use crate::server::create_and_start_server;
+use std::net::{Ipv6Addr, SocketAddr};
 
 #[cfg(test)]
 mod tests;
@@ -165,6 +166,6 @@ async fn main() -> anyhow::Result<()> {
     // TODO(#1930): Pass lookup data to the server instance.
 
     // Start HTTP server.
-    let address = format!("[::]:{}", &opt.http_listen_port);
+    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     create_and_start_server(&address, &wasm_module_bytes, notify_receiver).await
 }

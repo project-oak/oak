@@ -22,7 +22,7 @@ use hyper::{
 };
 use log::{error, info};
 use oak_functions_abi::OakStatus;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -184,11 +184,16 @@ impl WasmState {
         .context("failed to instantiate Wasm module")?
         .assert_no_start();
 
-        abi.memory = instance
-            .export_by_name("memory")
-            .context("could not find Wasm `memory` export")?
-            .as_memory()
-            .cloned();
+        // Make sure that non-empty `memory` is attached to the WasmInterface. Fail early if
+        // `memory` is not available.
+        abi.memory = Some(
+            instance
+                .export_by_name("memory")
+                .context("could not find Wasm `memory` export")?
+                .as_memory()
+                .cloned()
+                .context("could not interpret Wasm `memory` export as memory")?,
+        );
 
         Ok(WasmState { instance, abi })
     }
@@ -252,7 +257,7 @@ impl WasmHandler {
 
 /// Starts an HTTP server on the given address, serving the main function of the given Wasm module.
 pub async fn create_and_start_server(
-    address: &str,
+    address: &SocketAddr,
     wasm_module_bytes: &[u8],
     notify_receiver: tokio::sync::oneshot::Receiver<()>,
 ) -> anyhow::Result<()> {
@@ -270,7 +275,7 @@ pub async fn create_and_start_server(
         }
     });
 
-    let server = Server::bind(&address.parse()?).serve(service);
+    let server = Server::bind(&address).serve(service);
 
     let graceful_server = server.with_graceful_shutdown(async {
         // Treat notification failure the same as a notification.

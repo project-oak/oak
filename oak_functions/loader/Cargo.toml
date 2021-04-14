@@ -7,14 +7,6 @@ authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
-[lib]
-name = "oak_functions_loader"
-path = "src/lib.rs"
-
-[[bin]]
-name = "oak_functions_loader_bin"
-path = "src/main.rs"
-
 [features]
 # Feature that allows logging. Should be use only for debugging purposes.
 oak-unsafe = []

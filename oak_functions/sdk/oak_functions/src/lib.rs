@@ -1,5 +1,5 @@
 //
-// Copyright 2019 The Project Oak Authors
+// Copyright 2021 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ pub fn read_request_body() -> Result<Vec<u8>, OakStatus> {
 /// If the buffer does not have enough capacity, it will be reallocated with extra space so that it
 /// can hold the entire request.
 fn read_request(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
-    // Try reading the request twice: first with provided vectors, making
-    // use of their available capacity, then with vectors whose capacity has
+    // Try reading the request twice: first with the provided vector, making
+    // use of its available capacity, then with a vector whose capacity has
     // been extended to meet size requirements.
     for resized in &[false, true] {
         let mut actual_size: u32 = 0;
@@ -84,11 +84,7 @@ fn read_request(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
 ///
 /// Multiple calls to this function will replace the earlier responses. Only the last response that
 /// is written will be kept and returned to the user.
-pub fn write_response_body(response_body: &str) -> Result<(), OakStatus> {
-    write_response(response_body.as_bytes())
-}
-
-fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
+pub fn write_response_body(buf: &[u8]) -> Result<(), OakStatus> {
     let status = unsafe { oak_functions_abi::write_response(buf.as_ptr(), buf.len()) };
     result_from_status(status as i32, ())
 }
@@ -108,34 +104,4 @@ pub fn result_from_status<T>(status: i32, val: T) -> Result<T, OakStatus> {
         Some(status) => Err(status),
         None => Err(OakStatus::Unspecified),
     }
-}
-
-/// Install a panic hook that logs [panic information].
-///
-/// Logs panic information to the logging channel, if one is set.
-///
-/// [panic information]: std::panic::PanicInfo
-// This is copied from oak sdk: sdk/rust/oak/src/lib.rs
-pub fn set_panic_hook() {
-    std::panic::set_hook(Box::new(|panic_info| {
-        let payload = panic_info.payload();
-        // The payload can be a static string slice or a string, depending on how panic was called.
-        // Code for extracting the message is inspired by the rust default panic hook:
-        // https://github.com/rust-lang/rust/blob/master/src/libstd/panicking.rs#L188-L194
-        let msg = match payload.downcast_ref::<&'static str>() {
-            Some(content) => *content,
-            None => match payload.downcast_ref::<String>() {
-                Some(content) => content.as_ref(),
-                None => "<UNKNOWN MESSAGE>",
-            },
-        };
-        let (file, line) = match panic_info.location() {
-            Some(location) => (location.file(), location.line()),
-            None => ("<UNKNOWN FILE>", 0),
-        };
-        error!(
-            "panic occurred in file '{}' at line {}: {}",
-            file, line, msg
-        );
-    }));
 }

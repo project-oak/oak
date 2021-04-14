@@ -44,6 +44,8 @@ impl OakStatus {
     }
 }
 
+// TODO(#1963): Add tests, in an example.
+
 // The Oak-Functions ABI primarily consists of a collection of Wasm host functions in the
 // "oak_functions" module that are made available to WebAssembly modules running as Oak-Functions
 // workloads.
@@ -62,6 +64,8 @@ extern "C" {
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.
     ///
+    /// Multiple calls all result in the same values in the `buf`, and return the same status.
+    ///
     /// [`ErrBufferTooSmall`]: crate::OakStatus::ErrBufferTooSmall
     /// [`OakStatus`]: crate::OakStatus
     pub fn read_request(buf: *mut u8, size: usize, actual_size: *mut u32) -> u32;
@@ -72,6 +76,8 @@ extern "C" {
     /// returned to the user as the response.
     ///
     /// Returns the status of the operation, as an [`OakStatus`] value.
+    ///
+    /// Multiple calls overwrite the response bytes in the Wasm memory.
     ///
     /// [`OakStatus`]: crate::OakStatus
     pub fn write_response(buf: *const u8, size: usize) -> u32;

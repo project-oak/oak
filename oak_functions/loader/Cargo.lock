@@ -410,15 +410,15 @@ name = "oak_functions_loader"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bytes",
  "byteorder",
+ "bytes",
  "env_logger",
  "http",
  "hyper",
  "log",
+ "oak_functions_abi",
  "prost",
  "prost-build",
- "oak_functions_abi",
  "structopt",
  "tempfile",
  "tokio",

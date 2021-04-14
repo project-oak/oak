@@ -16,8 +16,6 @@
 
 //! Oak functions hello world example. Responds with `Hello $request_body!` to every request.
 
-use oak_functions;
-
 #[cfg(test)]
 mod tests;
 
@@ -33,5 +31,6 @@ pub extern "C" fn main() {
     );
 
     // Write the response body
-    oak_functions::write_response_body(&response_body).expect("Couldn't write the response body.");
+    oak_functions::write_response_body(&response_body.as_bytes())
+        .expect("Couldn't write the response body.");
 }

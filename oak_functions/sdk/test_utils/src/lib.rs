@@ -1,5 +1,5 @@
 //
-// Copyright 2019 The Project Oak Authors
+// Copyright 2021 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ use log::info;
 
 use std::{path::PathBuf, process::Command};
 
+// TODO(#1965): Move this and the similar function in `oak/sdk` to a common crate.
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
 pub fn compile_rust_wasm(
     manifest_path: &str,
