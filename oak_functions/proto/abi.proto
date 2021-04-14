@@ -14,9 +14,19 @@
 // limitations under the License.
 //
 
-extern crate prost_build;
+syntax = "proto3";
 
-fn main() {
-    prost_build::compile_protos(&["../proto/lookup_data.proto"], &["../proto/"])
-        .expect("Proto compilation failed");
+package oak.functions.abi;
+
+// Status values exchanged as i32 values across the Node Wasm interface.
+enum OakStatus {
+  UNSPECIFIED = 0;
+  // Success.
+  OK = 1;
+  // Arguments invalid.
+  ERR_INVALID_ARGS = 2;
+  // Provided buffer was too small for operation (an output value will indicate required size).
+  ERR_BUFFER_TOO_SMALL = 3;
+  // Internal error.
+  ERR_INTERNAL = 4;
 }

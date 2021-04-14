@@ -140,7 +140,7 @@ const ENTRY_1_LENGTH_DELIMITED: &[u8] = &[
 fn check_serialized_lookup_entries() {
     {
         let mut buf = vec![];
-        let entry = crate::proto::Entry {
+        let entry = oak_functions_abi::proto::Entry {
             key: vec![14, 12],
             value: vec![19, 88],
         };
@@ -149,7 +149,7 @@ fn check_serialized_lookup_entries() {
     }
     {
         let mut buf = vec![];
-        let entry = crate::proto::Entry {
+        let entry = oak_functions_abi::proto::Entry {
             key: b"Harry".to_vec(),
             value: b"Potter".to_vec(),
         };
