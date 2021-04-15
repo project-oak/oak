@@ -26,9 +26,9 @@ cc_library(
     hdrs = ["hmac.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//third_party/asylo:statusor",
         "@boringssl//:crypto",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 

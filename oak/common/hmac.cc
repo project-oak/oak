@@ -20,12 +20,11 @@
 #include <openssl/sha.h>
 
 #include "absl/status/status.h"
-#include "third_party/asylo/statusor.h"
 
 namespace oak {
 namespace utils {
 
-oak::StatusOr<std::string> hmac_sha256(const std::string& key, const std::string& message) {
+absl::StatusOr<std::string> hmac_sha256(const std::string& key, const std::string& message) {
   const EVP_MD* digest = EVP_sha256();
   uint8_t mac[SHA256_DIGEST_LENGTH];
   unsigned int out_size;
