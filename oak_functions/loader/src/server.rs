@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::logger::Logger;
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use http::{request::Request, response::Response};
@@ -20,7 +21,7 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Server, StatusCode,
 };
-use log::{error, info};
+use log::Level;
 use oak_functions_abi::proto::OakStatus;
 use std::{net::SocketAddr, sync::Arc};
 use wasmi::ValueType;
@@ -48,14 +49,16 @@ struct WasmInterface {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
     memory: Option<wasmi::MemoryRef>,
+    logger: Logger,
 }
 
 impl WasmInterface {
-    pub fn new(request_bytes: Vec<u8>) -> WasmInterface {
+    pub fn new(request_bytes: Vec<u8>, logger: Logger) -> WasmInterface {
         WasmInterface {
             request_bytes,
             response_bytes: vec![],
             memory: None,
+            logger,
         }
     }
 
@@ -92,17 +95,24 @@ impl WasmInterface {
         self.get_memory()
             .set(actual_length_addr, raw_writer)
             .map_err(|err| {
-                error!(
-                    "read_request(): Unable to write actual length into guest memory: {:?}",
-                    err
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!(
+                        "read_request(): Unable to write actual length into guest memory: {:?}",
+                        err
+                    ),
                 );
                 OakStatus::ErrInvalidArgs
             })?;
 
         if dest_capacity >= self.request_bytes.len() as u32 {
             self.get_memory().set(dest, &self.request_bytes).map_err(|err| {
-                    error!(
-                        "read_request(): Unable to write destination buffer into guest memory: {:?}",err
+                    self.logger.log_sensitive(
+                        Level::Error,
+                        &format!(
+                            "read_request(): Unable to write destination buffer into guest memory: {:?}",
+                            err
+                        ),
                     );
                     OakStatus::ErrInvalidArgs
                 })?;
@@ -123,9 +133,12 @@ impl WasmInterface {
             .get_memory()
             .get(source, source_length as usize)
             .map_err(|err| {
-                error!(
-                    "write_response(): Unable to read name from guest memory: {:?}",
-                    err
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!(
+                        "write_response(): Unable to read name from guest memory: {:?}",
+                        err
+                    ),
                 );
                 OakStatus::ErrInvalidArgs
             })?;
@@ -172,11 +185,16 @@ impl wasmi::ModuleImportResolver for WasmInterface {
 struct WasmState {
     instance: wasmi::ModuleRef,
     abi: WasmInterface,
+    logger: Logger,
 }
 
 impl WasmState {
-    fn new(module: &wasmi::Module, request_bytes: Vec<u8>) -> anyhow::Result<WasmState> {
-        let mut abi = WasmInterface::new(request_bytes);
+    fn new(
+        module: &wasmi::Module,
+        request_bytes: Vec<u8>,
+        logger: Logger,
+    ) -> anyhow::Result<WasmState> {
+        let mut abi = WasmInterface::new(request_bytes, logger.clone());
         let instance = wasmi::ModuleInstance::new(
             module,
             &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
@@ -195,17 +213,24 @@ impl WasmState {
                 .context("could not interpret Wasm `memory` export as memory")?,
         );
 
-        Ok(WasmState { instance, abi })
+        Ok(WasmState {
+            instance,
+            abi,
+            logger,
+        })
     }
 
     fn invoke(&mut self) {
         let result = self
             .instance
             .invoke_export(MAIN_FUNCTION_NAME, &[], &mut self.abi);
-        info!(
-            "{:?}: Running Wasm module completed with result: {:?}",
-            std::thread::current().id(),
-            result
+        self.logger.log_sensitive(
+            Level::Info,
+            &format!(
+                "{:?}: Running Wasm module completed with result: {:?}",
+                std::thread::current().id(),
+                result
+            ),
         );
     }
 
@@ -220,13 +245,15 @@ pub(crate) struct WasmHandler {
     // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
     // cloneable.
     module: Arc<wasmi::Module>,
+    logger: Logger,
 }
 
 impl WasmHandler {
-    pub(crate) fn create(wasm_module_bytes: &[u8]) -> anyhow::Result<Self> {
+    pub(crate) fn create(wasm_module_bytes: &[u8], logger: Logger) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
         Ok(WasmHandler {
             module: Arc::new(module),
+            logger,
         })
     }
 
@@ -234,7 +261,8 @@ impl WasmHandler {
         &self,
         req: Request<Body>,
     ) -> anyhow::Result<Response<Body>> {
-        info!("The request is: {:?}", req);
+        self.logger
+            .log_sensitive(Level::Info, &format!("The request is: {:?}", req));
         match (req.method(), req.uri().path()) {
             (&hyper::Method::POST, "/invoke") => self.handle_invoke(req).await,
             (method, path) => http::response::Builder::new()
@@ -246,7 +274,8 @@ impl WasmHandler {
 
     async fn handle_invoke(&self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
         let request_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
-        let mut wasm_state = WasmState::new(&self.module, request_bytes.to_vec())?;
+        let mut wasm_state =
+            WasmState::new(&self.module, request_bytes.to_vec(), self.logger.clone())?;
         wasm_state.invoke();
         http::response::Builder::new()
             .status(StatusCode::OK)
@@ -260,8 +289,9 @@ pub async fn create_and_start_server(
     address: &SocketAddr,
     wasm_module_bytes: &[u8],
     notify_receiver: tokio::sync::oneshot::Receiver<()>,
+    logger: Logger,
 ) -> anyhow::Result<()> {
-    let wasm_handler = WasmHandler::create(wasm_module_bytes)?;
+    let wasm_handler = WasmHandler::create(wasm_module_bytes, logger.clone())?;
 
     // A `Service` is needed for every connection. Here we create a service using
     // the`wasm_handler`.
@@ -282,17 +312,24 @@ pub async fn create_and_start_server(
         let _ = notify_receiver.await;
     });
 
-    info!(
-        "{:?}: Started HTTP server on {:?}",
-        std::thread::current().id(),
-        &address
+    logger.log_public(
+        Level::Info,
+        &format!(
+            "{:?}: Started HTTP server on {:?}",
+            std::thread::current().id(),
+            &address
+        ),
     );
 
     // Run until asked to terminate...
     let result = graceful_server.await;
-    info!(
-        "HTTP server on addr {} terminated with {:?}",
-        &address, result
+
+    logger.log_public(
+        Level::Info,
+        &format!(
+            "HTTP server on addr {} terminated with {:?}",
+            &address, result
+        ),
     );
     Ok(())
 }

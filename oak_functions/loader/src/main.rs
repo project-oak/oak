@@ -18,6 +18,7 @@
 #![feature(test)]
 
 use anyhow::Context;
+use log::Level;
 use prost::Message;
 use serde_derive::Deserialize;
 use std::{
@@ -29,8 +30,9 @@ use std::{
 };
 use structopt::StructOpt;
 
+mod logger;
 mod server;
-use crate::server::create_and_start_server;
+use crate::{logger::Logger, server::create_and_start_server};
 
 #[cfg(test)]
 mod tests;
@@ -75,6 +77,7 @@ pub struct Opt {
 struct LookupData {
     lookup_data_url: String,
     entries: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
+    logger: Logger,
 }
 
 impl LookupData {
@@ -86,10 +89,11 @@ impl LookupData {
     ///
     /// The returned instance is empty, and must be populated by calling the [`LookupData::refresh`]
     /// method at least once.
-    fn new_empty(lookup_data_url: &str) -> LookupData {
+    fn new_empty(lookup_data_url: &str, logger: Logger) -> LookupData {
         LookupData {
             lookup_data_url: lookup_data_url.to_string(),
             entries: RwLock::new(HashMap::new()),
+            logger,
         }
     }
 
@@ -122,7 +126,11 @@ impl LookupData {
         let start = Instant::now();
         let entries = parse_lookup_entries(&mut lookup_data_buf.as_ref())
             .context("could not parse lookup data")?;
-        log::info!("loaded {} entries of lookup data", entries.len());
+
+        self.logger.log_public(
+            Level::Info,
+            &format!("loaded {} entries of lookup data", entries.len()),
+        );
         eprintln!("lookup data parsing time: {:?}", start.elapsed());
 
         // This block is here to emphasize and ensure that the write lock is only held for a very
@@ -192,11 +200,6 @@ async fn background_refresh_lookup_data(lookup_data: &LookupData, period: Durati
 /// Main execution point for the Oak Functions Loader.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    if cfg!(feature = "oak-unsafe") {
-        env_logger::init();
-    } else {
-        eprintln!("No debugging output configured at build time");
-    }
     let opt = Opt::from_args();
 
     let config_file_bytes = fs::read(&opt.config_path)
@@ -209,10 +212,16 @@ async fn main() -> anyhow::Result<()> {
     // For now the server runs in the same thread, so `notify_sender` is not really needed.
     let (_notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
+    // TODO(#1971): Make maximum log level configurable.
+    let logger = Logger::default();
+
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
-    let lookup_data = Arc::new(LookupData::new_empty(&config.lookup_data_url));
+    let lookup_data = Arc::new(LookupData::new_empty(
+        &config.lookup_data_url,
+        logger.clone(),
+    ));
     if !config.lookup_data_url.is_empty() {
         // First load the lookup data upfront in a blocking fashion.
         // TODO(#1930): Retry the initial lookup a few times if it fails.
@@ -233,5 +242,5 @@ async fn main() -> anyhow::Result<()> {
 
     // Start HTTP server.
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
-    create_and_start_server(&address, &wasm_module_bytes, notify_receiver).await
+    create_and_start_server(&address, &wasm_module_bytes, notify_receiver, logger).await
 }
