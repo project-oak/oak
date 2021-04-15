@@ -34,6 +34,7 @@ jobs:
             --build-docker
           - run-examples --server-variant=base --application-variant=rust
             --example-name=hello_world --build-docker
+          - run-functions-examples --application-variant=rust
 
     steps:
       - name: Checkout branch
