@@ -81,11 +81,11 @@ fn read_request_util(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
     Err(OakStatus::ErrInternal)
 }
 
-/// Write the response body.
+/// Write the response.
 ///
 /// Multiple calls to this function will replace the earlier responses. Only the last response that
 /// is written will be kept and returned to the user.
-pub fn write_response_body(buf: &[u8]) -> Result<(), OakStatus> {
+pub fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
     let status = unsafe { oak_functions_abi::write_response(buf.as_ptr(), buf.len()) };
     result_from_status(status as i32, ())
 }

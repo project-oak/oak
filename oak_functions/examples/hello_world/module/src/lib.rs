@@ -31,6 +31,6 @@ pub extern "C" fn main() {
     );
 
     // Write the response body
-    oak_functions::write_response_body(&response_body.as_bytes())
+    oak_functions::write_response(&response_body.as_bytes())
         .expect("Couldn't write the response body.");
 }
