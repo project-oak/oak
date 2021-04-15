@@ -1,4 +1,4 @@
 name = "trusted_database"
 
 [modules]
-app = { path = "examples/trusted_database/bin/trusted_database.wasm" }
+app = { path = "examples/bin/trusted_database.wasm" }

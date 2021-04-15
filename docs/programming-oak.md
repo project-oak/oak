@@ -797,7 +797,7 @@ async fn test_translate() {
         ..Default::default()
     };
 
-    let runtime = oak_tests::run_single_module_default(MODULE_WASM_FILE_NAME, permissions)
+    let runtime = oak_tests::run_single_module_default(permissions)
         .expect("Unable to configure runtime with test wasm!");
 
     let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
@@ -856,8 +856,8 @@ async fn test_say_hello() {
     };
     let runtime_config = oak_tests::runtime_config_wasm(
         hashmap! {
-            MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_WASM_FILE_NAME, oak_tests::Profile::Release).expect("Couldn't compile main module"),
-            TRANSLATOR_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(TRANSLATOR_MODULE_MANIFEST, TRANSLATOR_MODULE_WASM_FILE_NAME, oak_tests::Profile::Release).expect("Couldn't compile translator module"),
+            MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, oak_tests::Profile::Release).expect("Couldn't compile main module"),
+            TRANSLATOR_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(TRANSLATOR_MODULE_MANIFEST, oak_tests::Profile::Release).expect("Couldn't compile translator module"),
         },
         MAIN_MODULE_NAME,
         MAIN_ENTRYPOINT_NAME,

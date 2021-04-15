@@ -185,37 +185,30 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
         Target::Cargo {
             cargo_manifest,
             additional_build_args,
-        } => Step::Single {
-            name: format!("wasm:{}:{}", name, cargo_manifest.to_string()),
-            command: Cmd::new(
-                "cargo",
-                spread![
-                    // `--out-dir` is unstable and requires `-Zunstable-options`.
-                    "-Zunstable-options".to_string(),
-                    "build".to_string(),
-                    "--release".to_string(),
-                    "--target=wasm32-unknown-unknown".to_string(),
-                    format!("--manifest-path={}", cargo_manifest),
-                    // Use a fixed target directory, because `--target-dir` influences SHA256 hash
-                    // of Wasm module.  Target directory should also be synchronized with
-                    // `--target-dir` used in [`oak_tests::compile_rust_wasm`] in order to have
-                    // same SHA256 hashes.
-                    //
-                    // This directory is separate from `examples/target` because it is used by
-                    // `cargo test`, which also executes [`oak_tests::compile_rust_wasm`] and thus
-                    // runs `cargo build` inside it. It may lead to errors, since dependencies may
-                    // be recompiled by `cargo build` and `cargo test` will fail to continue.
-                    format!("--target-dir={}", {
-                        let mut target_dir = PathBuf::from(cargo_manifest);
-                        target_dir.pop();
-                        target_dir.push("target");
-                        target_dir.to_str().expect("Invalid target dir").to_string()
-                    }),
-                    format!("--out-dir=examples/{}/bin", example_name),
-                    ...additional_build_args
-                ],
-            ),
-        },
+        } => {
+            let metadata = cargo_metadata::MetadataCommand::new()
+                .manifest_path(cargo_manifest)
+                .exec()
+                .unwrap();
+            Step::Single {
+                name: format!("wasm:{}:{}", name, cargo_manifest.to_string()),
+                command: Cmd::new(
+                    "cargo",
+                    // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
+                    spread![
+                        // `--out-dir` is unstable and requires `-Zunstable-options`.
+                        "-Zunstable-options".to_string(),
+                        "build".to_string(),
+                        "--target=wasm32-unknown-unknown".to_string(),
+                        format!("--target-dir={}/wasm", metadata.target_directory),
+                        format!("--manifest-path={}", cargo_manifest),
+                        format!("--out-dir={}/bin", metadata.workspace_root),
+                        "--release".to_string(),
+                        ...additional_build_args
+                    ],
+                ),
+            }
+        }
         Target::Bazel {
             bazel_target,
             config,
@@ -291,7 +284,7 @@ fn build_server(opt: &BuildServer) -> Step {
                 _ => vec![]
             },
             vec![
-                build_rust_binary("oak_loader", opt, 
+                build_rust_binary("oak_loader", opt,
                 &if opt.server_variant == ServerVariant::Coverage {
                     hashmap! {
                         // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov

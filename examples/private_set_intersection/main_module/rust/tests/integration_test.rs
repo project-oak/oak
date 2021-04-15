@@ -34,9 +34,6 @@ use std::{
 // Base64 encoded Ed25519 private key corresponding to Wasm module signature.
 const PRIVATE_KEY_FILE: &str = "../../../keys/ed25519/test.key";
 
-const MAIN_MODULE_FILE_NAME: &str = "private_set_intersection.wasm";
-const HANDLER_MODULE_FILE_NAME: &str = "private_set_intersection_handler.wasm";
-
 const MAIN_MODULE_MANIFEST: &str = "../../main_module/rust/Cargo.toml";
 const HANDLER_MODULE_MANIFEST: &str = "../../handler_module/rust/Cargo.toml";
 
@@ -48,8 +45,8 @@ const TEST_SET_ID: &str = "test";
 
 fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
     Ok(hashmap! {
-        MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_FILE_NAME, oak_tests::Profile::Release).context("Couldn't compile main module")?,
-        HANDLER_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(HANDLER_MODULE_MANIFEST, HANDLER_MODULE_FILE_NAME, oak_tests::Profile::Release).context("Couldn't compile handler module")?,
+        MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, oak_tests::Profile::Release).context("Couldn't compile main module")?,
+        HANDLER_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(HANDLER_MODULE_MANIFEST, oak_tests::Profile::Release).context("Couldn't compile handler module")?,
     })
 }
 

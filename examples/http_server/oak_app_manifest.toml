@@ -1,4 +1,4 @@
 name = "http_server"
 
 [modules]
-app = { path = "examples/http_server/bin/http_server.wasm" }
+app = { path = "examples/bin/http_server.wasm" }

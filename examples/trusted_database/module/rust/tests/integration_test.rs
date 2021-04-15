@@ -27,7 +27,6 @@ use trusted_database_client::proto::{
 const MAIN_MODULE_NAME: &str = "app";
 const MAIN_ENTRYPOINT_NAME: &str = "oak_main";
 const MAIN_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";
-const MAIN_MODULE_WASM_FILE_NAME: &str = "trusted_database.wasm";
 
 const XML_DATABASE: &str = r#"<?xml version="1.0" encoding="utf-8"?><stations lastUpdate="1590775020879" version="2.0">
     <station>
@@ -94,7 +93,7 @@ const XML_DATABASE: &str = r#"<?xml version="1.0" encoding="utf-8"?><stations la
 
 fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
     Ok(hashmap! {
-        MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_WASM_FILE_NAME, oak_tests::Profile::Release).context("Couldn't compile main module")?,
+        MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, oak_tests::Profile::Release).context("Couldn't compile main module")?,
     })
 }
 

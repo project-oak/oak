@@ -1,9 +1,9 @@
 name = "abitest"
 
 [modules]
-frontend_module = { path = "examples/abitest/bin/abitest_0_frontend.wasm" }
-backend_module = { path = "examples/abitest/bin/abitest_1_backend.wasm" }
-linear_handles_module = { path = "examples/abitest/bin/abitest_linear_handles.wasm" }
+frontend_module = { path = "examples/bin/abitest_0_frontend.wasm" }
+backend_module = { path = "examples/bin/abitest_1_backend.wasm" }
+linear_handles_module = { path = "examples/bin/abitest_linear_handles.wasm" }
 
 [initial_node_configuration]
 wasm_module_name = "frontend_module"

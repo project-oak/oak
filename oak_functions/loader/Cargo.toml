@@ -39,5 +39,4 @@ wasmi = "*"
 
 [dev-dependencies]
 hyper = { version = "*", features = ["client"] }
-tempfile = "*"
 test_utils = { path = "../sdk/test_utils" }

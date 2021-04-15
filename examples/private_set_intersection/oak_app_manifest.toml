@@ -4,5 +4,5 @@ signature_manifests = [
 ]
 
 [modules]
-app = { path = "examples/private_set_intersection/bin/private_set_intersection.wasm" }
-handler = { path = "examples/private_set_intersection/bin/private_set_intersection_handler.wasm" }
+app = { path = "examples/bin/private_set_intersection.wasm" }
+handler = { path = "examples/bin/private_set_intersection_handler.wasm" }
