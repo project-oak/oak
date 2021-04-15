@@ -17,7 +17,7 @@
 #ifndef OAK_COMMON_HMAC_H_
 #define OAK_COMMON_HMAC_H_
 
-#include "third_party/asylo/statusor.h"
+#include "absl/status/statusor.h"
 
 namespace oak {
 namespace utils {
@@ -25,7 +25,7 @@ namespace utils {
 // Computes a HMAC-SHA256 with the provided key over the provided message.
 //
 // See https://en.wikipedia.org/wiki/HMAC.
-::oak::StatusOr<std::string> hmac_sha256(const std::string& key, const std::string& message);
+absl::StatusOr<std::string> hmac_sha256(const std::string& key, const std::string& message);
 
 }  // namespace utils
 }  // namespace oak
