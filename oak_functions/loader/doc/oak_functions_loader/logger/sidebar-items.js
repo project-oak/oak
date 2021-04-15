@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Logger","A simple logger that splits logging between writing logs that contain only public, non-sensitive content and writing logs that could potentially contain sensitive content."]]});
