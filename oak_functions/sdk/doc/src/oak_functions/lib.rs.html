@@ -193,11 +193,11 @@
     <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInternal</span>)
 }
 
-<span class="doccomment">/// Write the response body.</span>
+<span class="doccomment">/// Write the response.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Multiple calls to this function will replace the earlier responses. Only the last response that</span>
 <span class="doccomment">/// is written will be kept and returned to the user.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_response_body</span>(<span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_response</span>(<span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">oak_functions_abi</span>::<span class="ident">write_response</span>(<span class="ident">buf</span>.<span class="ident">as_ptr</span>(), <span class="ident">buf</span>.<span class="ident">len</span>()) };
     <span class="ident">result_from_status</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">i32</span>, ())
 }
