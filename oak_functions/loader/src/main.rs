@@ -24,7 +24,8 @@ use std::{
     collections::HashMap,
     fs,
     net::{Ipv6Addr, SocketAddr},
-    sync::RwLock,
+    sync::{Arc, RwLock},
+    time::{Duration, Instant},
 };
 use structopt::StructOpt;
 
@@ -38,10 +39,11 @@ mod tests;
 struct Config {
     /// URL of a file to GET over HTTP containing key / value entries in protobuf binary format for
     /// lookup. If empty or not provided, no data is available for lookup.
-    // TODO(#1930): Support downloading lookup data from a URL instead of a local file.
-    // TODO(#1930): Support periodically re-downloading lookup data at a given time interval.
     #[serde(default)]
     lookup_data_url: String,
+    /// How often to refresh the lookup data. If not provided, data is only loaded once at startup.
+    #[serde(with = "humantime_serde")]
+    lookup_data_download_period: Option<Duration>,
 }
 
 /// Command line options for the Oak loader.
@@ -110,21 +112,32 @@ impl LookupData {
             )
             .await
             .context("could not fetch lookup data")?;
+
+        let start = Instant::now();
         let lookup_data_buf = hyper::body::to_bytes(res.into_body())
             .await
             .context("could not read lookup data response body")?;
-        let entries = load_lookup_entries(&mut lookup_data_buf.as_ref())
+        eprintln!("lookup data download time: {:?}", start.elapsed());
+
+        let start = Instant::now();
+        let entries = parse_lookup_entries(&mut lookup_data_buf.as_ref())
             .context("could not parse lookup data")?;
         log::info!("loaded {} entries of lookup data", entries.len());
+        eprintln!("lookup data parsing time: {:?}", start.elapsed());
 
         // This block is here to emphasize and ensure that the write lock is only held for a very
         // short time.
+        let start = Instant::now();
         {
             *self
                 .entries
                 .write()
                 .expect("could not lock entries for write") = entries;
         }
+        eprintln!(
+            "lookup data write lock acquisition time: {:?}",
+            start.elapsed()
+        );
 
         Ok(())
     }
@@ -149,7 +162,7 @@ impl LookupData {
     }
 }
 
-fn load_lookup_entries<B: bytes::Buf>(
+fn parse_lookup_entries<B: bytes::Buf>(
     lookup_data_buffer: B,
 ) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
     let mut lookup_data_buffer = lookup_data_buffer;
@@ -161,6 +174,19 @@ fn load_lookup_entries<B: bytes::Buf>(
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)
+}
+
+async fn background_refresh_lookup_data(lookup_data: &LookupData, period: Duration) {
+    // Create an interval that starts after `period`, since the data was already refreshed
+    // initially.
+    let mut interval = tokio::time::interval_at(tokio::time::Instant::now() + period, period);
+    loop {
+        interval.tick().await;
+        // If there is an error, we skip the current refresh and wait for the next tick.
+        if let Err(err) = lookup_data.refresh().await {
+            eprintln!("error refreshing lookup data: {}", err);
+        }
+    }
 }
 
 /// Main execution point for the Oak Functions Loader.
@@ -186,12 +212,21 @@ async fn main() -> anyhow::Result<()> {
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
-    let lookup_data = LookupData::new_empty(&config.lookup_data_url);
+    let lookup_data = Arc::new(LookupData::new_empty(&config.lookup_data_url));
     if !config.lookup_data_url.is_empty() {
+        // First load the lookup data upfront in a blocking fashion.
+        // TODO(#1930): Retry the initial lookup a few times if it fails.
         lookup_data
             .refresh()
             .await
-            .context("could not load lookup data")?;
+            .context("Couldn't perform initial load of lookup data")?;
+        if let Some(lookup_data_download_period) = config.lookup_data_download_period {
+            // Create background task to periodically refresh the lookup data.
+            let lookup_data = lookup_data.clone();
+            tokio::spawn(async move {
+                background_refresh_lookup_data(&lookup_data, lookup_data_download_period).await
+            });
+        };
     }
 
     // TODO(#1930): Pass lookup data to the server instance.

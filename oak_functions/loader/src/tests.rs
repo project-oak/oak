@@ -122,10 +122,10 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 }
 
 #[test]
-fn load_lookup_entries_empty() {
+fn parse_lookup_entries_empty() {
     let _ = env_logger::builder().is_test(true).try_init();
     let empty = vec![];
-    let entries = crate::load_lookup_entries(empty.as_ref()).unwrap();
+    let entries = crate::parse_lookup_entries(empty.as_ref()).unwrap();
     assert!(entries.is_empty());
 }
 
@@ -176,35 +176,35 @@ fn check_serialized_lookup_entries() {
 }
 
 #[test]
-fn load_lookup_entries_multiple_entries() {
+fn parse_lookup_entries_multiple_entries() {
     let _ = env_logger::builder().is_test(true).try_init();
     let mut buf = vec![];
     buf.append(&mut ENTRY_0_LENGTH_DELIMITED.to_vec());
     buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
-    let entries = crate::load_lookup_entries(buf.as_ref()).unwrap();
+    let entries = crate::parse_lookup_entries(buf.as_ref()).unwrap();
     assert_eq!(entries.len(), 2);
     assert_eq!(entries.get(&[14, 12].to_vec()), Some(&vec![19, 88]));
     assert_eq!(entries.get(&b"Harry".to_vec()), Some(&b"Potter".to_vec()));
 }
 
 #[test]
-fn load_lookup_entries_multiple_entries_trailing() {
+fn parse_lookup_entries_multiple_entries_trailing() {
     let _ = env_logger::builder().is_test(true).try_init();
     let mut buf = vec![];
     buf.append(&mut ENTRY_0_LENGTH_DELIMITED.to_vec());
     buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
     // Add invalid trailing bytes.
     buf.append(&mut vec![1, 2, 3]);
-    let res = crate::load_lookup_entries(buf.as_ref());
+    let res = crate::parse_lookup_entries(buf.as_ref());
     assert!(res.is_err());
 }
 
 #[test]
-fn load_lookup_entries_invalid() {
+fn parse_lookup_entries_invalid() {
     let _ = env_logger::builder().is_test(true).try_init();
     // Invalid bytes.
     let buf = vec![1, 2, 3];
-    let res = crate::load_lookup_entries(buf.as_ref());
+    let res = crate::parse_lookup_entries(buf.as_ref());
     assert!(res.is_err());
 }
 
