@@ -24,7 +24,7 @@ namespace utils {
 // Reference:
 // https://gchq.github.io/CyberChef/#recipe=HMAC(%7B'option':'UTF8','string':''%7D,'SHA256')From_Hex('None')To_Hex('%5C%5Cx')
 TEST(Hmac, EmptyKeyEmptyMessage) {
-  auto out = hmac_sha256("", "").ValueOrDie();
+  auto out = hmac_sha256("", "").value_or("");
   ASSERT_EQ(
       "\xb6\x13\x67\x9a\b\x14\xd9\xec\x77\x2f\x95\xd7\x78\xc3\x5f\xc5\xff\x16\x97\xc4\x93\x71\x56"
       "\x53\xc6\xc7\x12\x14\x42\x92\xc5\xad",
@@ -34,7 +34,7 @@ TEST(Hmac, EmptyKeyEmptyMessage) {
 // Reference:
 // https://gchq.github.io/CyberChef/#recipe=HMAC(%7B'option':'UTF8','string':''%7D,'SHA256')From_Hex('None')To_Hex('%5C%5Cx')&input=dGVzdC1tZXNzYWdl
 TEST(Hmac, EmptyKeyNonemptyMessage) {
-  auto out = hmac_sha256("", "test-message").ValueOrDie();
+  auto out = hmac_sha256("", "test-message").value_or("");
   ASSERT_EQ(
       "\x88\xf9\xb4\x1c\xe3\x7a\x83\x87\xcd\x42\x5b\x46\x1a\x79\x59\xf3\x28\x3d\xb8\x49\x4a\x61\xdb"
       "\x44\xb3\x41\x18\x9d\xd7\xd2\x35\x96",
@@ -44,7 +44,7 @@ TEST(Hmac, EmptyKeyNonemptyMessage) {
 // Reference:
 // https://gchq.github.io/CyberChef/#recipe=HMAC(%7B'option':'UTF8','string':'test-key'%7D,'SHA256')From_Hex('None')To_Hex('%5C%5Cx')
 TEST(Hmac, NonemptyKeyEmptyMessage) {
-  auto out = hmac_sha256("test-key", "").ValueOrDie();
+  auto out = hmac_sha256("test-key", "").value_or("");
   ASSERT_EQ(
       "\x27\x11\xcc\x23\xe9\xab\x1b\x8a\x9b\xc0\xfe\x99\x12\x38\xda\x92\x67\x16\x24\xa9\xeb\xda\xf1"
       "\xc1\xab\xec\x06\xe7\xe9\xa1\x4f\x9b",
@@ -54,7 +54,7 @@ TEST(Hmac, NonemptyKeyEmptyMessage) {
 // Reference:
 // https://gchq.github.io/CyberChef/#recipe=HMAC(%7B'option':'UTF8','string':'test-key'%7D,'SHA256')From_Hex('None')To_Hex('%5C%5Cx')&input=dGVzdC1tZXNzYWdl
 TEST(Hmac, NonemptyKeyNonemptyMessage) {
-  auto out = hmac_sha256("test-key", "test-message").ValueOrDie();
+  auto out = hmac_sha256("test-key", "test-message").value_or("");
   ASSERT_EQ(
       "\xf8\xc2\xbb\x87\xc1\x76\x08\xc9\x03\x8e\xab\x4e\x92\xef\x27\x75\xe4\x26\x29\xc9\x39\xd6\xfd"
       "\x33\x90\xd4\x2f\x80\xaf\x6b\xb7\x12",

@@ -21,7 +21,6 @@
 
 #include "absl/status/status.h"
 
-
 namespace oak {
 namespace utils {
 
