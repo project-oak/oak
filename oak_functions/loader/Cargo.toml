@@ -20,7 +20,14 @@ byteorder = { version = "*", default-features = false }
 chrono = "*"
 futures = "*"
 http = "*"
-hyper = { version = "*", features = ["client", "http2", "runtime", "server"] }
+hyper = { version = "*", features = [
+  "client",
+  "http1",
+  "http2",
+  "runtime",
+  "server"
+] }
+hyper-rustls = { version = "*" }
 humantime-serde = "*"
 # Logging via the log crate is disabled and only available using our own custom logger.
 log = { version = "*", features = ["max_level_off", "release_max_level_off"] }
