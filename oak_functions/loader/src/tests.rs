@@ -53,7 +53,7 @@ async fn test_server() {
         &address,
         &wasm_module_bytes,
         notify_receiver,
-        Logger::default(),
+        Logger::for_test(),
     );
     let client_fut = start_client(OAK_FUNCTIONS_SERVER_PORT, notify_sender);
 
@@ -96,7 +96,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     .expect("Couldn't read Wasm module");
 
     let summary = bencher.bench(|bencher| {
-        let wasm_handler = WasmHandler::create(&wasm_module_bytes, Logger::default())
+        let wasm_handler = WasmHandler::create(&wasm_module_bytes, Logger::for_test())
             .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
         bencher.iter(|| {
@@ -259,7 +259,7 @@ async fn lookup_data_refresh() {
 
     let lookup_data = crate::LookupData::new_empty(
         &format!("http://localhost:{}", STATIC_SERVER_PORT),
-        Logger::default(),
+        Logger::for_test(),
     );
     assert_eq!(lookup_data.len(), 0);
 

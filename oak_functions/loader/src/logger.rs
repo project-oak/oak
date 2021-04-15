@@ -33,6 +33,11 @@ impl Logger {
         Self { max_level }
     }
 
+    /// Creates a new logger for testing using the debug `LevelFilter`.
+    pub fn for_test() -> Self {
+        Self::new(LevelFilter::Debug)
+    }
+
     /// Logs the message at the specified `Level`, but only if the "oak-unsafe" feature is
     /// enabled.
     #[allow(unused_variables)]
