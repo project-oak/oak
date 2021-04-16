@@ -200,6 +200,14 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                         "-Zunstable-options".to_string(),
                         "build".to_string(),
                         "--target=wasm32-unknown-unknown".to_string(),
+                        // Use a fixed `--target-dir`, because it influences the SHA256 hash of the
+                        // Wasm module.
+                        //
+                        // This directory is separate from `examples/target` because it is used by
+                        // `cargo test`, which also executes [`oak_tests::compile_rust_wasm`] and
+                        // thus runs `cargo build` inside it. It may lead to errors, since
+                        // dependencies may be recompiled by `cargo build` and `cargo test` will
+                        // fail to continue.
                         format!("--target-dir={}/wasm", metadata.target_directory),
                         format!("--manifest-path={}", cargo_manifest),
                         format!("--out-dir={}/bin", metadata.workspace_root),
