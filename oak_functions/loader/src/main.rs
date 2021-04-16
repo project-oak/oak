@@ -121,7 +121,10 @@ impl LookupData {
         let lookup_data_buf = hyper::body::to_bytes(res.into_body())
             .await
             .context("could not read lookup data response body")?;
-        eprintln!("lookup data download time: {:?}", start.elapsed());
+        self.logger.log_public(
+            Level::Debug,
+            &format!("lookup data download time: {:?}", start.elapsed()),
+        );
 
         let start = Instant::now();
         let entries = parse_lookup_entries(&mut lookup_data_buf.as_ref())
@@ -131,7 +134,10 @@ impl LookupData {
             Level::Info,
             &format!("loaded {} entries of lookup data", entries.len()),
         );
-        eprintln!("lookup data parsing time: {:?}", start.elapsed());
+        self.logger.log_public(
+            Level::Debug,
+            &format!("lookup data parsing time: {:?}", start.elapsed()),
+        );
 
         // This block is here to emphasize and ensure that the write lock is only held for a very
         // short time.
@@ -142,9 +148,12 @@ impl LookupData {
                 .write()
                 .expect("could not lock entries for write") = entries;
         }
-        eprintln!(
-            "lookup data write lock acquisition time: {:?}",
-            start.elapsed()
+        self.logger.log_public(
+            Level::Debug,
+            &format!(
+                "lookup data write lock acquisition time: {:?}",
+                start.elapsed()
+            ),
         );
 
         Ok(())
@@ -192,7 +201,10 @@ async fn background_refresh_lookup_data(lookup_data: &LookupData, period: Durati
         interval.tick().await;
         // If there is an error, we skip the current refresh and wait for the next tick.
         if let Err(err) = lookup_data.refresh().await {
-            eprintln!("error refreshing lookup data: {}", err);
+            lookup_data.logger.log_public(
+                Level::Error,
+                &format!("error refreshing lookup data: {}", err),
+            );
         }
     }
 }
@@ -207,13 +219,14 @@ async fn main() -> anyhow::Result<()> {
     let config: Config =
         toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
     // Print the parsed config to STDERR regardless of whether the logger is initialized.
-    eprintln!("parsed config file:\n{:#?}", config);
-
-    // For now the server runs in the same thread, so `notify_sender` is not really needed.
-    let (_notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     // TODO(#1971): Make maximum log level configurable.
     let logger = Logger::default();
+
+    logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
+
+    // For now the server runs in the same thread, so `notify_sender` is not really needed.
+    let (_notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
