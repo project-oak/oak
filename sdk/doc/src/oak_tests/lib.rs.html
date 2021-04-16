@@ -280,25 +280,6 @@
 <span id="277">277</span>
 <span id="278">278</span>
 <span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
@@ -330,7 +311,7 @@
 <span class="kw">use</span> <span class="ident">oak_client</span>::<span class="ident">interceptors</span>::{
     <span class="self">self</span>, <span class="ident">auth</span>::<span class="ident">AuthInterceptor</span>, <span class="ident">label</span>::<span class="ident">LabelInterceptor</span>, <span class="ident">CombinedInterceptor</span>,
 };
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">process</span>::<span class="ident">Command</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">process</span>::<span class="ident">Command</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Certificate</span>, <span class="ident">Channel</span>, <span class="ident">ClientTlsConfig</span>, <span class="ident">Identity</span>};
 
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Profile</span> {
@@ -340,33 +321,34 @@
 
 <span class="comment">// TODO(#544): re-enable unit tests of SDK functionality</span>
 
-<span class="doccomment">/// Uses cargo to compile a Rust manifest to Wasm bytes.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_rust_wasm</span>(
-    <span class="ident">manifest_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">profile</span>: <span class="ident">Profile</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="comment">// Use a fixed target directory, because `--target-dir` influences SHA256 hash of Wasm module.</span>
-    <span class="comment">// Directory should end with `target` so that it gets automatically ignored by our `.gitignore`.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">target_dir</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">manifest_path</span>);
-    <span class="ident">target_dir</span>.<span class="ident">pop</span>();
-    <span class="ident">target_dir</span>.<span class="ident">push</span>(<span class="string">&quot;target&quot;</span>);
+<span class="doccomment">/// Returns the path to the Wasm file produced by compiling the provided `Cargo.toml` file.</span>
+<span class="kw">fn</span> <span class="ident">build_wasm_module_path</span>(<span class="ident">metadata</span>: <span class="kw-2">&amp;</span><span class="ident">cargo_metadata</span>::<span class="ident">Metadata</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="kw">let</span> <span class="ident">package_name</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">metadata</span>.<span class="ident">root_package</span>().<span class="ident">unwrap</span>().<span class="ident">name</span>;
+    <span class="comment">// Keep this in sync with `/runner/src/main.rs`.</span>
+    <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/bin/{}.wasm&quot;</span>, <span class="ident">metadata</span>.<span class="ident">workspace_root</span>, <span class="ident">package_name</span>)
+}
 
+<span class="doccomment">/// Uses cargo to compile a Rust manifest to Wasm bytes.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_rust_wasm</span>(<span class="ident">manifest_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">profile</span>: <span class="ident">Profile</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">cargo_metadata</span>::<span class="ident">MetadataCommand</span>::<span class="ident">new</span>()
+        .<span class="ident">manifest_path</span>(<span class="ident">manifest_path</span>)
+        .<span class="ident">exec</span>()
+        .<span class="ident">unwrap</span>();
+    <span class="comment">// Keep this in sync with `/runner/src/main.rs`.</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">args</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
+        <span class="comment">// `--out-dir` is unstable and requires `-Zunstable-options`.</span>
+        <span class="string">&quot;-Zunstable-options&quot;</span>.<span class="ident">to_string</span>(),
         <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;--target-dir={}&quot;</span>,
-            <span class="ident">target_dir</span>.<span class="ident">to_str</span>().<span class="ident">expect</span>(<span class="string">&quot;Invalid target dir&quot;</span>)
-        ),
         <span class="string">&quot;--target=wasm32-unknown-unknown&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--target-dir={}/wasm&quot;</span>, <span class="ident">metadata</span>.<span class="ident">target_directory</span>),
+        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--out-dir={}/bin&quot;</span>, <span class="ident">metadata</span>.<span class="ident">workspace_root</span>),
         <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">manifest_path</span>),
     ];
-    <span class="kw">let</span> <span class="ident">profile_str</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">profile</span> {
+    <span class="kw">match</span> <span class="ident">profile</span> {
         <span class="ident">Profile</span>::<span class="ident">Release</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">args</span>.<span class="ident">push</span>(<span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>());
-            <span class="string">&quot;release&quot;</span>.<span class="ident">to_string</span>()
         }
-        <span class="ident">Profile</span>::<span class="ident">Debug</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;debug&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="ident">Profile</span>::<span class="ident">Debug</span> <span class="op">=</span><span class="op">&gt;</span> {}
     };
 
     <span class="ident">Command</span>::<span class="ident">new</span>(<span class="string">&quot;cargo&quot;</span>)
@@ -377,10 +359,7 @@
         .<span class="ident">wait</span>()
         .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t wait for cargo build to finish&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">module_path</span> <span class="op">=</span> <span class="ident">target_dir</span>;
-    <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;wasm32-unknown-unknown/{}&quot;</span>, <span class="ident">profile_str</span>));
-    <span class="ident">module_path</span>.<span class="ident">push</span>(<span class="ident">module_wasm_file_name</span>);
-
+    <span class="kw">let</span> <span class="ident">module_path</span> <span class="op">=</span> <span class="ident">build_wasm_module_path</span>(<span class="kw-2">&amp;</span><span class="ident">metadata</span>);
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Compiled Wasm module path: {:?}&quot;</span>, <span class="ident">module_path</span>);
 
     <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="ident">module_path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read compiled module&quot;</span>)
@@ -399,64 +378,47 @@
 <span class="kw">const</span> <span class="ident">RETRY_COUNT</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">600</span>;
 <span class="kw">const</span> <span class="ident">RETRY_INTERVAL</span>: <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">800</span>);
 
-<span class="doccomment">/// Convenience helper to build and run a single-Node Application with the given module name, using</span>
-<span class="doccomment">/// the default name &quot;oak_main&quot; for its entrypoint.</span>
+<span class="doccomment">/// Convenience helper to build and run a single-Node Application using the default name &quot;oak_main&quot;</span>
+<span class="doccomment">/// for its entrypoint.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module_default</span>(
-    <span class="ident">module_config_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">permissions</span>: <span class="ident">oak_runtime</span>::<span class="ident">permissions</span>::<span class="ident">PermissionsConfiguration</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakError</span><span class="op">&gt;</span> {
-    <span class="ident">run_single_module</span>(<span class="ident">module_config_name</span>, <span class="ident">DEFAULT_ENTRYPOINT_NAME</span>, <span class="ident">permissions</span>)
+    <span class="ident">run_single_module</span>(<span class="ident">DEFAULT_ENTRYPOINT_NAME</span>, <span class="ident">permissions</span>)
 }
 
-<span class="doccomment">/// Convenience helper to build and run a single-Node application with the given Wasm module file</span>
-<span class="doccomment">/// name, using the provided entrypoint name.</span>
+<span class="doccomment">/// Convenience helper to build and run a single-Node application with the provided entrypoint name.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module</span>(
-    <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">permissions</span>: <span class="ident">oak_runtime</span>::<span class="ident">permissions</span>::<span class="ident">PermissionsConfiguration</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakError</span><span class="op">&gt;</span> {
-    <span class="ident">run_single_module_with_config</span>(
-        <span class="ident">module_wasm_file_name</span>,
-        <span class="ident">entrypoint_name</span>,
-        <span class="ident">ConfigMap</span>::<span class="ident">default</span>(),
-        <span class="ident">permissions</span>,
-    )
+    <span class="ident">run_single_module_with_config</span>(<span class="ident">entrypoint_name</span>, <span class="ident">ConfigMap</span>::<span class="ident">default</span>(), <span class="ident">permissions</span>)
 }
 
-<span class="doccomment">/// Convenience helper to build and run a single-Node application with the given Wasm module file</span>
-<span class="doccomment">/// name, using the provided entrypoint name, passing in the provided `ConfigMap` at start-of-day.</span>
+<span class="doccomment">/// Convenience helper to build and run a single-Node application with the provided entrypoint name,</span>
+<span class="doccomment">/// passing in the provided `ConfigMap` at start-of-day.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_single_module_with_config</span>(
-    <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">config_map</span>: <span class="ident">ConfigMap</span>,
     <span class="ident">permissions</span>: <span class="ident">oak_runtime</span>::<span class="ident">permissions</span>::<span class="ident">PermissionsConfiguration</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">oak_runtime</span>::<span class="ident">Runtime</span><span class="op">&gt;</span>, <span class="ident">oak</span>::<span class="ident">OakError</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span> <span class="ident">runtime_config</span>(
-        <span class="ident">module_wasm_file_name</span>,
-        <span class="ident">entrypoint_name</span>,
-        <span class="ident">config_map</span>,
-        <span class="ident">permissions</span>,
-    );
+    <span class="kw">let</span> <span class="ident">combined_config</span> <span class="op">=</span> <span class="ident">runtime_config</span>(<span class="ident">entrypoint_name</span>, <span class="ident">config_map</span>, <span class="ident">permissions</span>);
     <span class="ident">oak_runtime</span>::<span class="ident">configure_and_run</span>(<span class="ident">combined_config</span>)
 }
 
 <span class="doccomment">/// Build the configuration needed to launch a test Runtime instance that runs a single-Node</span>
-<span class="doccomment">/// application with the given Wasm module file name and entrypoint.</span>
-<span class="doccomment">/// Wasm module compiled with [`Profile::Release`] in order to keep its SHA256 hash.</span>
+<span class="doccomment">/// application with the provided entrypoint name.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// The Wasm module is compiled with [`Profile::Release`] in order to maintain its SHA256 hash</span>
+<span class="doccomment">/// consistent.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">runtime_config</span>(
-    <span class="ident">module_wasm_file_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">entrypoint_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">config_map</span>: <span class="ident">ConfigMap</span>,
     <span class="ident">permissions</span>: <span class="ident">oak_runtime</span>::<span class="ident">permissions</span>::<span class="ident">PermissionsConfiguration</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">oak_runtime</span>::<span class="ident">RuntimeConfiguration</span> {
     <span class="kw">let</span> <span class="ident">wasm</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> [(
         <span class="ident">DEFAULT_MODULE_NAME</span>.<span class="ident">to_string</span>(),
-        <span class="ident">compile_rust_wasm</span>(
-            <span class="ident">DEFAULT_MODULE_MANIFEST</span>,
-            <span class="ident">module_wasm_file_name</span>,
-            <span class="ident">Profile</span>::<span class="ident">Release</span>,
-        )
-        .<span class="ident">expect</span>(<span class="string">&quot;failed to build wasm module&quot;</span>),
+        <span class="ident">compile_rust_wasm</span>(<span class="ident">DEFAULT_MODULE_MANIFEST</span>, <span class="ident">Profile</span>::<span class="ident">Release</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;failed to build wasm module&quot;</span>),
     )]
     .<span class="ident">iter</span>()
     .<span class="ident">cloned</span>()

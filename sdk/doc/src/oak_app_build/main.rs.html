@@ -307,6 +307,10 @@
 <span id="304">304</span>
 <span id="305">305</span>
 <span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -436,7 +440,7 @@
 }
 
 <span class="doccomment">/// Get path for the output application file in [`OUTPUT_DIRECTORY`].</span>
-<span class="kw">fn</span> <span class="ident">get_output_path</span>(<span class="ident">manifest_dir</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">app_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PathBuf</span> {
+<span class="kw">fn</span> <span class="ident">get_output_file_path</span>(<span class="ident">manifest_dir</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">app_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PathBuf</span> {
     <span class="ident">manifest_dir</span>
         .<span class="ident">join</span>(<span class="ident">OUTPUT_DIRECTORY</span>)
         .<span class="ident">join</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.oak&quot;</span>, <span class="ident">app_name</span>))
@@ -607,10 +611,14 @@
         <span class="ident">module_signatures</span>: <span class="ident">signatures</span>,
     };
 
-    <span class="kw">let</span> <span class="ident">output_file</span> <span class="op">=</span> <span class="ident">get_output_path</span>(<span class="kw-2">&amp;</span><span class="ident">manifest_dir</span>, <span class="kw-2">&amp;</span><span class="ident">manifest</span>.<span class="ident">name</span>);
+    <span class="kw">let</span> <span class="ident">output_file_path</span> <span class="op">=</span> <span class="ident">get_output_file_path</span>(<span class="kw-2">&amp;</span><span class="ident">manifest_dir</span>, <span class="kw-2">&amp;</span><span class="ident">manifest</span>.<span class="ident">name</span>);
+
+    <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="ident">output_file_path</span>.<span class="ident">parent</span>().<span class="ident">unwrap</span>())
+        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create output dir&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Serialize application.</span>
-    <span class="ident">write_config_to_file</span>(<span class="kw-2">&amp;</span><span class="ident">app_config</span>, <span class="kw-2">&amp;</span><span class="ident">output_file</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t write serialized config&quot;</span>)<span class="question-mark">?</span>;
+    <span class="ident">write_config_to_file</span>(<span class="kw-2">&amp;</span><span class="ident">app_config</span>, <span class="kw-2">&amp;</span><span class="ident">output_file_path</span>)
+        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t write serialized config&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }
