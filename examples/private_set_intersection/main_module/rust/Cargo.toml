@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 anyhow = "*"
 base64 = "*"
 log = "*"
-oak = "=0.1.0"
+oak = { version = "=0.1.0", features = ["linear-handles"] }
 oak_abi = "=0.1.0"
 oak_io = "=0.1.0"
 oak_services = "=0.1.0"
@@ -26,7 +26,7 @@ env_logger = "*"
 hex = "*"
 log = "*"
 maplit = "*"
-oak_runtime = "=0.1.0"
+oak_runtime = { version = "=0.1.0", features = ["linear-handles"] }
 oak_sign = "=0.1.0"
 oak_tests = "=0.1.0"
 private_set_intersection_grpc = "=0.1.0"
