@@ -291,7 +291,7 @@ fn build_server(opt: &BuildServer) -> Step {
                 _ => vec![]
             },
             vec![
-                build_rust_binary("oak_loader", opt, 
+                build_rust_binary("oak_loader", opt,
                 &if opt.server_variant == ServerVariant::Coverage {
                     hashmap! {
                         // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
@@ -1058,7 +1058,7 @@ fn is_toml_file(path: &PathBuf) -> bool {
 
 fn is_yaml_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    filename.ends_with(".yaml")
+    filename.ends_with(".yaml") || filename.ends_with(".yml")
 }
 
 fn is_html_file(path: &PathBuf) -> bool {
