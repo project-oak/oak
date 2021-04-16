@@ -11,9 +11,9 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 log = "*"
 abitest_common = { path = "../../abitest_common" }
-oak = "=0.1.0"
-oak_abi = "=0.1.0"
-oak_io = "=0.1.0"
+oak = { path = "../../../../sdk/rust/oak" }
+oak_abi = { path = "../../../../oak_abi" }
+oak_io = { path = "../../../../oak_io" }
 prost = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"

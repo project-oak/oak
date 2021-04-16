@@ -20,10 +20,10 @@ hex = "*"
 http = "*"
 http_server = { path = "../../../http_server/module" }
 log = "*"
-oak = "=0.1.0"
-oak_abi = "=0.1.0"
-oak_io = "=0.1.0"
-oak_services = "=0.1.0"
+oak = { path = "../../../../sdk/rust/oak" }
+oak_abi = { path = "../../../../oak_abi" }
+oak_io = { path = "../../../../oak_io" }
+oak_services = { path = "../../../../oak_services" }
 prost = "*"
 rand_core = "*"
 rand = "*"
@@ -33,7 +33,7 @@ serde_json = "*"
 tink-proto = "^0.1"
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../../oak_utils" }
 
 [dev-dependencies]
 anyhow = "*"
@@ -42,8 +42,8 @@ assert_matches = "*"
 env_logger = "*"
 log = "*"
 maplit = "*"
-oak_runtime = "=0.1.0"
-oak_tests = "=0.1.0"
+oak_runtime = { path = "../../../../oak_runtime" }
+oak_tests = { path = "../../../../sdk/rust/oak_tests" }
 tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
 tonic = { version = "*", features = ["tls"] }
 serial_test = "*"

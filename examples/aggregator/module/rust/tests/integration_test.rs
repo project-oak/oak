@@ -29,7 +29,6 @@ use std::{
     convert::{From, TryFrom},
 };
 
-const WASM_MODULE_FILE_NAME: &str = "aggregator.wasm";
 const WASM_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";
 const MODULE_NAME: &str = "app";
 const ENTRYPOINT_NAME: &str = "oak_main";
@@ -52,12 +51,9 @@ async fn submit_sample(
 async fn test_aggregator() {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let wasm_module = oak_tests::compile_rust_wasm(
-        WASM_MODULE_MANIFEST,
-        WASM_MODULE_FILE_NAME,
-        oak_tests::Profile::Release,
-    )
-    .expect("Couldn't compile Wasm module");
+    let wasm_module =
+        oak_tests::compile_rust_wasm(WASM_MODULE_MANIFEST, oak_tests::Profile::Release)
+            .expect("Couldn't compile Wasm module");
     let wasm_module_hash = get_sha256(&wasm_module);
 
     let module_config = format!(

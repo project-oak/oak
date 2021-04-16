@@ -421,7 +421,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "structopt",
- "tempfile",
  "test_utils",
  "tokio",
  "toml",

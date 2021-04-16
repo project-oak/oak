@@ -13,14 +13,14 @@ anyhow = "*"
 byteorder = "*"
 http = "*"
 log = { version = "*", features = ["std"] }
-oak_abi = "=0.1.0"
+oak_abi = { path = "../../../oak_abi" }
 oak_derive = { path = "../../../oak_derive" }
-oak_io = { version = "=0.1.0" }
-oak_services = "=0.1.0"
+oak_io = { path = "../../../oak_io" }
+oak_services = { path = "../../../oak_services" }
 prost = "*"
 prost-types = "*"
 rand_core = { version = "*", features = ["std"] }
 tink-proto = "^0.1"
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../oak_utils" }

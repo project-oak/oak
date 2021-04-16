@@ -28,7 +28,7 @@ use oak_abi::{
 use oak_client::interceptors::{
     self, auth::AuthInterceptor, label::LabelInterceptor, CombinedInterceptor,
 };
-use std::{collections::HashMap, path::PathBuf, process::Command, sync::Arc};
+use std::{collections::HashMap, process::Command, sync::Arc};
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity};
 
 pub enum Profile {
@@ -38,33 +38,34 @@ pub enum Profile {
 
 // TODO(#544): re-enable unit tests of SDK functionality
 
-/// Uses cargo to compile a Rust manifest to Wasm bytes.
-pub fn compile_rust_wasm(
-    manifest_path: &str,
-    module_wasm_file_name: &str,
-    profile: Profile,
-) -> anyhow::Result<Vec<u8>> {
-    // Use a fixed target directory, because `--target-dir` influences SHA256 hash of Wasm module.
-    // Directory should end with `target` so that it gets automatically ignored by our `.gitignore`.
-    let mut target_dir = PathBuf::from(manifest_path);
-    target_dir.pop();
-    target_dir.push("target");
+/// Returns the path to the Wasm file produced by compiling the provided `Cargo.toml` file.
+fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
+    let package_name = &metadata.root_package().unwrap().name;
+    // Keep this in sync with `/runner/src/main.rs`.
+    format!("{}/bin/{}.wasm", metadata.workspace_root, package_name)
+}
 
+/// Uses cargo to compile a Rust manifest to Wasm bytes.
+pub fn compile_rust_wasm(manifest_path: &str, profile: Profile) -> anyhow::Result<Vec<u8>> {
+    let metadata = cargo_metadata::MetadataCommand::new()
+        .manifest_path(manifest_path)
+        .exec()
+        .unwrap();
+    // Keep this in sync with `/runner/src/main.rs`.
     let mut args = vec![
+        // `--out-dir` is unstable and requires `-Zunstable-options`.
+        "-Zunstable-options".to_string(),
         "build".to_string(),
-        format!(
-            "--target-dir={}",
-            target_dir.to_str().expect("Invalid target dir")
-        ),
         "--target=wasm32-unknown-unknown".to_string(),
+        format!("--target-dir={}/wasm", metadata.target_directory),
+        format!("--out-dir={}/bin", metadata.workspace_root),
         format!("--manifest-path={}", manifest_path),
     ];
-    let profile_str = match profile {
+    match profile {
         Profile::Release => {
             args.push("--release".to_string());
-            "release".to_string()
         }
-        Profile::Debug => "debug".to_string(),
+        Profile::Debug => {}
     };
 
     Command::new("cargo")
@@ -75,10 +76,7 @@ pub fn compile_rust_wasm(
         .wait()
         .context("Couldn't wait for cargo build to finish")?;
 
-    let mut module_path = target_dir;
-    module_path.push(format!("wasm32-unknown-unknown/{}", profile_str));
-    module_path.push(module_wasm_file_name);
-
+    let module_path = build_wasm_module_path(&metadata);
     info!("Compiled Wasm module path: {:?}", module_path);
 
     std::fs::read(module_path).context("Couldn't read compiled module")
@@ -97,64 +95,47 @@ const DEFAULT_MODULE_MANIFEST: &str = "Cargo.toml";
 const RETRY_COUNT: u32 = 600;
 const RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(800);
 
-/// Convenience helper to build and run a single-Node Application with the given module name, using
-/// the default name "oak_main" for its entrypoint.
+/// Convenience helper to build and run a single-Node Application using the default name "oak_main"
+/// for its entrypoint.
 pub fn run_single_module_default(
-    module_config_name: &str,
     permissions: oak_runtime::permissions::PermissionsConfiguration,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakError> {
-    run_single_module(module_config_name, DEFAULT_ENTRYPOINT_NAME, permissions)
+    run_single_module(DEFAULT_ENTRYPOINT_NAME, permissions)
 }
 
-/// Convenience helper to build and run a single-Node application with the given Wasm module file
-/// name, using the provided entrypoint name.
+/// Convenience helper to build and run a single-Node application with the provided entrypoint name.
 pub fn run_single_module(
-    module_wasm_file_name: &str,
     entrypoint_name: &str,
     permissions: oak_runtime::permissions::PermissionsConfiguration,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakError> {
-    run_single_module_with_config(
-        module_wasm_file_name,
-        entrypoint_name,
-        ConfigMap::default(),
-        permissions,
-    )
+    run_single_module_with_config(entrypoint_name, ConfigMap::default(), permissions)
 }
 
-/// Convenience helper to build and run a single-Node application with the given Wasm module file
-/// name, using the provided entrypoint name, passing in the provided `ConfigMap` at start-of-day.
+/// Convenience helper to build and run a single-Node application with the provided entrypoint name,
+/// passing in the provided `ConfigMap` at start-of-day.
 pub fn run_single_module_with_config(
-    module_wasm_file_name: &str,
     entrypoint_name: &str,
     config_map: ConfigMap,
     permissions: oak_runtime::permissions::PermissionsConfiguration,
 ) -> Result<Arc<oak_runtime::Runtime>, oak::OakError> {
-    let combined_config = runtime_config(
-        module_wasm_file_name,
-        entrypoint_name,
-        config_map,
-        permissions,
-    );
+    let combined_config = runtime_config(entrypoint_name, config_map, permissions);
     oak_runtime::configure_and_run(combined_config)
 }
 
 /// Build the configuration needed to launch a test Runtime instance that runs a single-Node
-/// application with the given Wasm module file name and entrypoint.
-/// Wasm module compiled with [`Profile::Release`] in order to keep its SHA256 hash.
+/// application with the provided entrypoint name.
+///
+/// The Wasm module is compiled with [`Profile::Release`] in order to maintain its SHA256 hash
+/// consistent.
 pub fn runtime_config(
-    module_wasm_file_name: &str,
     entrypoint_name: &str,
     config_map: ConfigMap,
     permissions: oak_runtime::permissions::PermissionsConfiguration,
 ) -> oak_runtime::RuntimeConfiguration {
     let wasm: HashMap<String, Vec<u8>> = [(
         DEFAULT_MODULE_NAME.to_string(),
-        compile_rust_wasm(
-            DEFAULT_MODULE_MANIFEST,
-            module_wasm_file_name,
-            Profile::Release,
-        )
-        .expect("failed to build wasm module"),
+        compile_rust_wasm(DEFAULT_MODULE_MANIFEST, Profile::Release)
+            .expect("failed to build wasm module"),
     )]
     .iter()
     .cloned()

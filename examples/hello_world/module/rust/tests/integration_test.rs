@@ -24,11 +24,9 @@ use tokio::stream::StreamExt;
 const MAIN_MODULE_NAME: &str = "app";
 const MAIN_ENTRYPOINT_NAME: &str = "oak_main";
 const MAIN_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";
-const MAIN_MODULE_WASM_FILE_NAME: &str = "hello_world.wasm";
 
 const TRANSLATOR_MODULE_NAME: &str = "translator";
 const TRANSLATOR_MODULE_MANIFEST: &str = "../../../translator/module/rust/Cargo.toml";
-const TRANSLATOR_MODULE_WASM_FILE_NAME: &str = "translator.wasm";
 
 // Test invoking the SayHello Node service method via the Oak runtime.
 #[tokio::test(core_threads = 2)]
@@ -41,8 +39,8 @@ async fn test_say_hello() {
     };
     let runtime_config = oak_tests::runtime_config_wasm(
         hashmap! {
-            MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, MAIN_MODULE_WASM_FILE_NAME, oak_tests::Profile::Release).expect("Couldn't compile main module"),
-            TRANSLATOR_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(TRANSLATOR_MODULE_MANIFEST, TRANSLATOR_MODULE_WASM_FILE_NAME, oak_tests::Profile::Release).expect("Couldn't compile translator module"),
+            MAIN_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(MAIN_MODULE_MANIFEST, oak_tests::Profile::Release).expect("Couldn't compile main module"),
+            TRANSLATOR_MODULE_NAME.to_owned() => oak_tests::compile_rust_wasm(TRANSLATOR_MODULE_MANIFEST, oak_tests::Profile::Release).expect("Couldn't compile translator module"),
         },
         MAIN_MODULE_NAME,
         MAIN_ENTRYPOINT_NAME,

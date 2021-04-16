@@ -20,8 +20,6 @@ use log::info;
 use serial_test::serial;
 use std::time::Duration;
 
-const MODULE_WASM_FILE_NAME: &str = "chat.wasm";
-
 #[tokio::test(core_threads = 4)]
 #[serial]
 async fn test_chat() {
@@ -32,7 +30,7 @@ async fn test_chat() {
         ..Default::default()
     };
 
-    let runtime = oak_tests::run_single_module(MODULE_WASM_FILE_NAME, "main", permissions)
+    let runtime = oak_tests::run_single_module("main", permissions)
         .expect("could not configure runtime with test Wasm file");
 
     let room_0_key_pair = oak_sign::KeyPair::generate().expect("could not generate room key pair");
