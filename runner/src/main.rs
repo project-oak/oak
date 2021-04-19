@@ -658,13 +658,12 @@ struct Example {
 
 impl Example {
     fn get_application(&self, application_variant: &str) -> &Application {
-        self
-                .applications
-                .get(application_variant)
-                .unwrap_or_else(|| panic!(
-                    "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
-                    application_variant)
-                )
+        self.applications
+            .get(application_variant)
+            .unwrap_or_else(|| panic!(
+                "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
+                application_variant)
+            )
     }
 
     fn construct_backend_build_steps(&self, build_client: &BuildClient) -> Vec<Step> {
@@ -716,14 +715,11 @@ impl Default for ExampleType {
 #[serde(deny_unknown_fields)]
 struct Application {
     // In case of classic Oak applications, this is the path to a manifest file.
-    // In case of Oak functions applications, this is the path to the Cargo.toml file.
+    // In case of Oak functions applications, this is an empty string.
     manifest: String,
     // In case of classic Oak applications, this is the path to the `.oak` application file.
     // In case of Oak functions applications, this is the path to the Wasm module.
     out: String,
-    // In case of classic Oak applications, this contains all the modules.
-    // In case of Oak functions applications, this map is empty, since the information about the
-    // only module is provided in `manifest` and `out` fields.
     modules: HashMap<String, Target>,
 }
 
@@ -928,18 +924,23 @@ fn run_functions_example(opt: &RunFunctionsExamples, example: &Example) -> Step 
                 vec![]
             } else {
                 let application = example.get_application(opt.application_variant.as_ref());
-                let target = Target::Cargo {
-                    cargo_manifest: application.manifest.clone(),
-                    // TODO: perhaps actually use module
-                    additional_build_args: vec![],
-                };
                 let mut out_dir = PathBuf::from(&application.out);
                 out_dir.pop();
-                vec![build_wasm_module(
-                    &example.name,
-                    &target,
-                    out_dir.to_str().expect("Invalid out dir"),
-                )]
+                vec![Step::Multiple {
+                    name: "build wasm modules".to_string(),
+                    steps: application
+                        .modules
+                        .iter()
+                        .map(|(name, target)| {
+                            build_wasm_module(
+                                name,
+                                target,
+                                // We expect only one module in `oak_functions` applications.
+                                out_dir.to_str().expect("Invalid out dir"),
+                            )
+                        })
+                        .collect(),
+                }]
             },
             if opt.run_server.unwrap_or(true) {
                 // Build the server first so that when running it in the next step it will start up

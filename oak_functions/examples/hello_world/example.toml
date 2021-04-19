@@ -4,10 +4,11 @@ example_type = "OakFunctions"
 [applications]
 
 [applications.rust]
-manifest = "oak_functions/examples/hello_world/module/Cargo.toml"
-out = "oak_functions/examples/hello_world/bin/hello_world.wasm"
+manifest = ""
+out = "oak_functions/examples/bin/hello_world.wasm"
 
 [applications.rust.modules]
+module = { Cargo = { cargo_manifest = "oak_functions/examples/hello_world/module/Cargo.toml" } }
 
 [server]
 additional_args = [
