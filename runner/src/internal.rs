@@ -58,7 +58,7 @@ pub enum Command {
     Completion,
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct RunExamples {
     #[structopt(
         long,
@@ -120,7 +120,7 @@ pub struct RunFunctionsExamples {
     pub build_docker: bool,
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct BuildClient {
     #[structopt(
         long,
@@ -168,7 +168,7 @@ impl std::str::FromStr for ServerVariant {
     }
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct BuildServer {
     #[structopt(
         long,
