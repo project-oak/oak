@@ -4,7 +4,7 @@ codecov:
 coverage:
   precision: 2
   round: down
-  range: "70...100"
+  range: '70...100'
 
 parsers:
   gcov:
@@ -17,8 +17,8 @@ parsers:
 comment: false
 
 ignore:
-  - "examples/"    # Just track Rust->host compiled code
-  - "third_party/" # Ignore local forks
-  - "**/build.rs"  # Ignore build scripts
-  - "**/tests/"
-  - "**/tests.rs"
+  - 'examples/' # Just track Rust->host compiled code
+  - 'third_party/' # Ignore local forks
+  - '**/build.rs' # Ignore build scripts
+  - '**/tests/'
+  - '**/tests.rs'

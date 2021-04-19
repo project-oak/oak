@@ -1059,7 +1059,7 @@ fn is_toml_file(path: &PathBuf) -> bool {
 
 fn is_yaml_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    filename.ends_with(".yaml")
+    filename.ends_with(".yaml") || filename.ends_with(".yml")
 }
 
 fn is_html_file(path: &PathBuf) -> bool {
