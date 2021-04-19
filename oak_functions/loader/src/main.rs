@@ -122,8 +122,12 @@ impl LookupData {
             .await
             .context("could not read lookup data response body")?;
         self.logger.log_public(
-            Level::Debug,
-            &format!("lookup data download time: {:?}", start.elapsed()),
+            Level::Info,
+            &format!(
+                "downloaded {} bytes of lookup data in {:.0?}",
+                lookup_data_buf.len(),
+                start.elapsed()
+            ),
         );
 
         let start = Instant::now();
@@ -132,11 +136,11 @@ impl LookupData {
 
         self.logger.log_public(
             Level::Info,
-            &format!("loaded {} entries of lookup data", entries.len()),
-        );
-        self.logger.log_public(
-            Level::Debug,
-            &format!("lookup data parsing time: {:?}", start.elapsed()),
+            &format!(
+                "parsed {} entries of lookup data in {:.0?}",
+                entries.len(),
+                start.elapsed()
+            ),
         );
 
         // This block is here to emphasize and ensure that the write lock is only held for a very
@@ -151,7 +155,7 @@ impl LookupData {
         self.logger.log_public(
             Level::Debug,
             &format!(
-                "lookup data write lock acquisition time: {:?}",
+                "lookup data write lock acquisition time: {:.0?}",
                 start.elapsed()
             ),
         );
