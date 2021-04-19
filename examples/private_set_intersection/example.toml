@@ -2,11 +2,11 @@ name = "private_set_intersection"
 
 [applications]
 
-[applications.rust]
+[applications.classic.applications.rust]
 manifest = "examples/private_set_intersection/oak_app_manifest.toml"
 out = "examples/private_set_intersection/bin/private_set_intersection.oak"
 
-[applications.rust.modules]
+[applications.classic.applications.rust.modules]
 main_module = { Cargo = { cargo_manifest = "examples/private_set_intersection/main_module/rust/Cargo.toml" } }
 handler_module = { Cargo = { cargo_manifest = "examples/private_set_intersection/handler_module/rust/Cargo.toml" } }
 
