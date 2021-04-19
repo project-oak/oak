@@ -30,33 +30,18 @@ pub mod proto {
 // See https://rustwasm.github.io/book/reference/js-ffi.html
 #[link(wasm_import_module = "oak_functions")]
 extern "C" {
-    /// Reads the user request.
-    ///
-    /// Stores the user request into `buf`. The size of the request data is stored into
-    /// `actual_size`.
-    ///
-    /// If the provided space for data (`buf` plus `size`) is not large enough for the read
-    /// operation, then no data will be written into `buf` and [`ErrBufferTooSmall`] will be
-    /// returned. In this case, the size of the required space will be returned in the space
-    /// provided by `actual_size`.
-    ///
-    /// Returns the status of the operation, as an [`OakStatus`] value.
-    ///
-    /// Multiple calls all result in the same values in the `buf`, and return the same status.
-    ///
-    /// [`ErrBufferTooSmall`]: crate::OakStatus::ErrBufferTooSmall
-    /// [`OakStatus`]: crate::OakStatus
+    /// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
     pub fn read_request(buf: *mut u8, size: usize, actual_size: *mut u32) -> u32;
 
-    /// Writes the response.
-    ///
-    /// Stores `size` bytes of data from `buf` into the WebAssembly interface. This can then be
-    /// returned to the user as the response.
-    ///
-    /// Returns the status of the operation, as an [`OakStatus`] value.
-    ///
-    /// Multiple calls overwrite the response bytes in the Wasm memory.
-    ///
-    /// [`OakStatus`]: crate::OakStatus
+    /// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
     pub fn write_response(buf: *const u8, size: usize) -> u32;
+
+    /// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
+    pub fn storage_get_item(
+        key_buf: *const u8,
+        key_size: usize,
+        value_buf: *mut u8,
+        value_size: usize,
+        value_actual_size: *mut u32,
+    ) -> u32;
 }

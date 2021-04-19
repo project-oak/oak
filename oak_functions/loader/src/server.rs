@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::logger::Logger;
+use crate::{logger::Logger, lookup::LookupData};
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use http::{request::Request, response::Response};
@@ -32,6 +32,7 @@ const MAIN_FUNCTION_NAME: &str = "main";
 /// exposed to the Wasm client. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
+const STORAGE_GET_ITEM: usize = 2;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -48,15 +49,21 @@ const ABI_USIZE: ValueType = ValueType::I32;
 struct WasmInterface {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
+    lookup_data: Arc<LookupData>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
 }
 
 impl WasmInterface {
-    pub fn new(request_bytes: Vec<u8>, logger: Logger) -> WasmInterface {
+    pub fn new(
+        request_bytes: Vec<u8>,
+        lookup_data: Arc<LookupData>,
+        logger: Logger,
+    ) -> WasmInterface {
         WasmInterface {
             request_bytes,
             response_bytes: vec![],
+            lookup_data,
             memory: None,
             logger,
         }
@@ -69,16 +76,48 @@ impl WasmInterface {
             .expect("WasmInterface memory not attached!?")
     }
 
-    /// Validates whether a given address range falls within the currently allocated range of guest
-    /// memory.
-    fn validate_ptr(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
-        let byte_size: wasmi::memory_units::Bytes = self.get_memory().current_size().into();
-
-        if byte_size < wasmi::memory_units::Bytes((addr as usize) + (offset as usize)) {
-            return Err(OakStatus::ErrInvalidArgs);
+    /// Validates whether a given address range (inclusive) falls within the currently allocated
+    /// range of guest memory.
+    fn validate_range(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
+        let memory_size: wasmi::memory_units::Bytes = self.get_memory().current_size().into();
+        // Check whether the end address is below or equal to the size of the guest memory.
+        if wasmi::memory_units::Bytes((addr as usize) + (offset as usize)) <= memory_size {
+            Ok(())
+        } else {
+            Err(OakStatus::ErrInvalidArgs)
         }
+    }
 
-        Ok(())
+    fn write_buffer_to_wasm_memory(
+        &self,
+        source: &[u8],
+        dest: AbiPointer,
+        dest_capacity: AbiPointerOffset,
+    ) -> Result<(), OakStatus> {
+        self.validate_range(dest, dest_capacity)?;
+        if source.len() as u32 <= dest_capacity {
+            self.get_memory().set(dest, source).map_err(|err| {
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!("Unable to write buffer into guest memory: {:?}", err),
+                );
+                OakStatus::ErrInvalidArgs
+            })
+        } else {
+            Err(OakStatus::ErrBufferTooSmall)
+        }
+    }
+
+    fn write_u32_to_wasm_memory(&self, value: u32, address: AbiPointer) -> Result<(), OakStatus> {
+        let value_bytes = &mut [0; 4];
+        LittleEndian::write_u32(value_bytes, value);
+        self.get_memory().set(address, value_bytes).map_err(|err| {
+            self.logger.log_sensitive(
+                Level::Error,
+                &format!("Unable to write u32 value into guest memory: {:?}", err),
+            );
+            OakStatus::ErrInvalidArgs
+        })
     }
 
     /// Corresponds to the host ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
@@ -88,39 +127,8 @@ impl WasmInterface {
         dest_capacity: AbiPointerOffset,
         actual_length_addr: AbiPointer,
     ) -> Result<(), OakStatus> {
-        self.validate_ptr(dest, dest_capacity)?;
-
-        let raw_writer = &mut [0; 4];
-        LittleEndian::write_u32(raw_writer, self.request_bytes.len() as u32);
-        self.get_memory()
-            .set(actual_length_addr, raw_writer)
-            .map_err(|err| {
-                self.logger.log_sensitive(
-                    Level::Error,
-                    &format!(
-                        "read_request(): Unable to write actual length into guest memory: {:?}",
-                        err
-                    ),
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-
-        if dest_capacity >= self.request_bytes.len() as u32 {
-            self.get_memory().set(dest, &self.request_bytes).map_err(|err| {
-                    self.logger.log_sensitive(
-                        Level::Error,
-                        &format!(
-                            "read_request(): Unable to write destination buffer into guest memory: {:?}",
-                            err
-                        ),
-                    );
-                    OakStatus::ErrInvalidArgs
-                })?;
-        } else {
-            return Err(OakStatus::ErrBufferTooSmall);
-        }
-
-        Ok(())
+        self.write_u32_to_wasm_memory(self.request_bytes.len() as u32, actual_length_addr)?;
+        self.write_buffer_to_wasm_memory(&self.request_bytes, dest, dest_capacity)
     }
 
     /// Corresponds to the host ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
@@ -145,6 +153,37 @@ impl WasmInterface {
         self.response_bytes = response;
         Ok(())
     }
+
+    /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
+    pub fn storage_get_item(
+        &mut self,
+        key_buf: AbiPointer,
+        key_size: AbiPointerOffset,
+        value_buf: AbiPointer,
+        value_size: AbiPointerOffset,
+        value_actual_size: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        let key = self
+            .get_memory()
+            .get(key_buf, key_size as usize)
+            .map_err(|err| {
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!(
+                        "storage_get_item(): Unable to read key from guest memory: {:?}",
+                        err
+                    ),
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+        match self.lookup_data.get(&key) {
+            Some(value) => {
+                self.write_u32_to_wasm_memory(value.len() as u32, value_actual_size)?;
+                self.write_buffer_to_wasm_memory(&value, value_buf, value_size)
+            }
+            None => Err(OakStatus::ErrStorageItemNotFound),
+        }
+    }
 }
 
 impl wasmi::Externals for WasmInterface {
@@ -167,6 +206,13 @@ impl wasmi::Externals for WasmInterface {
             WRITE_RESPONSE => {
                 map_host_errors(self.write_response(args.nth_checked(0)?, args.nth_checked(1)?))
             }
+            STORAGE_GET_ITEM => map_host_errors(self.storage_get_item(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+                args.nth_checked(4)?,
+            )),
             _ => panic!("Unimplemented function at {}", index),
         }
     }
@@ -192,9 +238,10 @@ impl WasmState {
     fn new(
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
+        lookup_data: Arc<LookupData>,
         logger: Logger,
     ) -> anyhow::Result<WasmState> {
-        let mut abi = WasmInterface::new(request_bytes, logger.clone());
+        let mut abi = WasmInterface::new(request_bytes, lookup_data, logger.clone());
         let instance = wasmi::ModuleInstance::new(
             module,
             &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
@@ -241,26 +288,29 @@ impl WasmState {
 
 // An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
-pub(crate) struct WasmHandler {
+pub struct WasmHandler {
     // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
     // cloneable.
     module: Arc<wasmi::Module>,
+    lookup_data: Arc<LookupData>,
     logger: Logger,
 }
 
 impl WasmHandler {
-    pub(crate) fn create(wasm_module_bytes: &[u8], logger: Logger) -> anyhow::Result<Self> {
+    pub fn create(
+        wasm_module_bytes: &[u8],
+        lookup_data: Arc<LookupData>,
+        logger: Logger,
+    ) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
         Ok(WasmHandler {
             module: Arc::new(module),
+            lookup_data,
             logger,
         })
     }
 
-    pub(crate) async fn handle_request(
-        &self,
-        req: Request<Body>,
-    ) -> anyhow::Result<Response<Body>> {
+    pub async fn handle_request(&self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
         self.logger
             .log_sensitive(Level::Info, &format!("The request is: {:?}", req));
         match (req.method(), req.uri().path()) {
@@ -274,8 +324,12 @@ impl WasmHandler {
 
     async fn handle_invoke(&self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
         let request_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
-        let mut wasm_state =
-            WasmState::new(&self.module, request_bytes.to_vec(), self.logger.clone())?;
+        let mut wasm_state = WasmState::new(
+            &self.module,
+            request_bytes.to_vec(),
+            self.lookup_data.clone(),
+            self.logger.clone(),
+        )?;
         wasm_state.invoke();
         http::response::Builder::new()
             .status(StatusCode::OK)
@@ -288,13 +342,14 @@ impl WasmHandler {
 pub async fn create_and_start_server(
     address: &SocketAddr,
     wasm_module_bytes: &[u8],
+    lookup_data: Arc<LookupData>,
     notify_receiver: tokio::sync::oneshot::Receiver<()>,
     logger: Logger,
 ) -> anyhow::Result<()> {
-    let wasm_handler = WasmHandler::create(wasm_module_bytes, logger.clone())?;
+    let wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, logger.clone())?;
 
-    // A `Service` is needed for every connection. Here we create a service using
-    // the`wasm_handler`.
+    // A `Service` is needed for every connection. Here we create a service using the
+    // `wasm_handler`.
     let service = make_service_fn(move |_conn| {
         let wasm_handler = wasm_handler.clone();
         async move {
@@ -360,6 +415,19 @@ fn oak_functions_resolve_func(
                 &[
                     ABI_USIZE, // source
                     ABI_USIZE, // source_length
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "storage_get_item" => (
+            STORAGE_GET_ITEM,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // key_buf
+                    ABI_USIZE, // key_size
+                    ABI_USIZE, // value_buf
+                    ABI_USIZE, // value_size
+                    ABI_USIZE, // value_actual_size
                 ][..],
                 Some(ValueType::I32),
             ),

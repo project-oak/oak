@@ -15,6 +15,7 @@ oak_functions = { path = "../../../sdk/oak_functions" }
 oak_functions_loader = { path = "../../../loader" }
 http = "*"
 hyper = { version = "*", features = ["client"] }
+maplit = "*"
 test_utils = { path = "../../../sdk/test_utils" }
 tokio = { version = "*", features = [
   "fs",

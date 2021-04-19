@@ -34,6 +34,8 @@ pub fn read_request() -> Result<Vec<u8>, OakStatus> {
 /// If the buffer does not have enough capacity, it will be reallocated with extra space so that it
 /// can hold the entire request.
 fn read_request_util(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
+    // TODO(#1989): Share this logic with other similar methods.
+
     // Try reading the request twice: first with the provided vector, making
     // use of its available capacity, then with a vector whose capacity has
     // been extended to meet size requirements.
@@ -88,6 +90,76 @@ fn read_request_util(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
 pub fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
     let status = unsafe { oak_functions_abi::write_response(buf.as_ptr(), buf.len()) };
     result_from_status(status as i32, ())
+}
+
+/// Looks up an item from the in-memory lookup store.
+///
+/// If an entry is not found, returns `Ok(None)` for convenience, instead of
+/// `Err(OakStatus::ErrStorageItemNotFound)`.
+///
+/// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
+pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
+    // TODO(#1989): Share this logic with other similar methods.
+
+    // It is possible that the item for a given key changes or gets deleted entirely between the two
+    // iterations below if the lookup data is refreshed in between, which may cause weird errors.
+
+    let mut buf = Vec::with_capacity(1024);
+
+    // Try invoking the ABI method twice: first with the provided vector, making
+    // use of its available capacity, then with a vector whose capacity has
+    // been extended to meet size requirements.
+    for resized in &[false, true] {
+        let mut actual_size: u32 = 0;
+        let status_code = unsafe {
+            oak_functions_abi::storage_get_item(
+                key.as_ptr(),
+                key.len(),
+                buf.as_mut_ptr(),
+                buf.capacity(),
+                &mut actual_size,
+            )
+        };
+
+        let status = OakStatus::from_i32(status_code as i32);
+        match status {
+            Some(status) => match status {
+                OakStatus::Ok => {
+                    unsafe {
+                        // The read operation succeeded, and overwrote some fraction of the vector's
+                        // available capacity with returned data (possibly zero). As the data is
+                        // already present in the vector, set its length to match what's available.
+                        buf.set_len(actual_size as usize);
+                    }
+                    return Ok(Some(buf));
+                }
+                OakStatus::ErrStorageItemNotFound => {
+                    return Ok(None);
+                }
+                OakStatus::ErrBufferTooSmall if !(*resized) => {
+                    // Extend the vector to be large enough for the message
+                    debug!(
+                        "Got space for {} bytes, need {}",
+                        buf.capacity(),
+                        actual_size
+                    );
+                    if (actual_size as usize) > buf.capacity() {
+                        let extra = (actual_size as usize) - buf.len();
+                        buf.reserve(extra);
+                    }
+
+                    // Try again with a buffer resized to cope with expected size of data.
+                    continue;
+                }
+                status => {
+                    return Err(status);
+                }
+            },
+            None => return Err(OakStatus::ErrInternal),
+        }
+    }
+    error!("unreachable code reached");
+    Err(OakStatus::ErrInternal)
 }
 
 /// Convert a status returned from a host function call to a `Result`.

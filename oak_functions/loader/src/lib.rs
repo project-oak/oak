@@ -15,4 +15,5 @@
 //
 
 pub mod logger;
+pub mod lookup;
 pub mod server;
