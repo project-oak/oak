@@ -38,7 +38,7 @@ fn read_request_util(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
     // use of its available capacity, then with a vector whose capacity has
     // been extended to meet size requirements.
     for resized in &[false, true] {
-        let mut actual_size: u32 = 0;
+        let mut actual_size: usize = 0;
         let status_code = unsafe {
             oak_functions_abi::read_request(buf.as_mut_ptr(), buf.capacity(), &mut actual_size)
         };

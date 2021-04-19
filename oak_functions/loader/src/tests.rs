@@ -15,6 +15,7 @@
 
 use crate::{
     logger::Logger,
+    lookup::{parse_lookup_entries, LookupData},
     server::{create_and_start_server, WasmHandler},
 };
 use hyper::{
@@ -49,11 +50,16 @@ async fn test_server() {
     let wasm_module_bytes =
         fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
 
+    let logger = Logger::for_test();
+
+    let lookup_data = Arc::new(LookupData::new_empty("", logger.clone()));
+
     let server_fut = create_and_start_server(
         &address,
         &wasm_module_bytes,
+        lookup_data,
         notify_receiver,
-        Logger::for_test(),
+        logger,
     );
     let client_fut = start_client(OAK_FUNCTIONS_SERVER_PORT, notify_sender);
 
@@ -96,7 +102,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     .expect("Couldn't read Wasm module");
 
     let summary = bencher.bench(|bencher| {
-        let wasm_handler = WasmHandler::create(&wasm_module_bytes, Logger::for_test())
+        let logger = Logger::for_test();
+        let lookup_data = Arc::new(LookupData::new_empty("", logger.clone()));
+        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, logger)
             .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
         bencher.iter(|| {
@@ -131,7 +139,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 #[test]
 fn parse_lookup_entries_empty() {
     let empty = vec![];
-    let entries = crate::parse_lookup_entries(empty.as_ref()).unwrap();
+    let entries = parse_lookup_entries(empty.as_ref()).unwrap();
     assert!(entries.is_empty());
 }
 
@@ -186,7 +194,7 @@ fn parse_lookup_entries_multiple_entries() {
     let mut buf = vec![];
     buf.append(&mut ENTRY_0_LENGTH_DELIMITED.to_vec());
     buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
-    let entries = crate::parse_lookup_entries(buf.as_ref()).unwrap();
+    let entries = parse_lookup_entries(buf.as_ref()).unwrap();
     assert_eq!(entries.len(), 2);
     assert_eq!(entries.get(&[14, 12].to_vec()), Some(&vec![19, 88]));
     assert_eq!(entries.get(&b"Harry".to_vec()), Some(&b"Potter".to_vec()));
@@ -199,7 +207,7 @@ fn parse_lookup_entries_multiple_entries_trailing() {
     buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
     // Add invalid trailing bytes.
     buf.append(&mut vec![1, 2, 3]);
-    let res = crate::parse_lookup_entries(buf.as_ref());
+    let res = parse_lookup_entries(buf.as_ref());
     assert!(res.is_err());
 }
 
@@ -207,7 +215,7 @@ fn parse_lookup_entries_multiple_entries_trailing() {
 fn parse_lookup_entries_invalid() {
     // Invalid bytes.
     let buf = vec![1, 2, 3];
-    let res = crate::parse_lookup_entries(buf.as_ref());
+    let res = parse_lookup_entries(buf.as_ref());
     assert!(res.is_err());
 }
 

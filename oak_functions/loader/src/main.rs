@@ -19,20 +19,19 @@
 
 use anyhow::Context;
 use log::Level;
-use prost::Message;
 use serde_derive::Deserialize;
 use std::{
-    collections::HashMap,
     fs,
     net::{Ipv6Addr, SocketAddr},
-    sync::{Arc, RwLock},
-    time::{Duration, Instant},
+    sync::Arc,
+    time::Duration,
 };
 use structopt::StructOpt;
 
 mod logger;
+mod lookup;
 mod server;
-use crate::{logger::Logger, server::create_and_start_server};
+use crate::{logger::Logger, lookup::LookupData, server::create_and_start_server};
 
 #[cfg(test)]
 mod tests;
@@ -74,126 +73,11 @@ pub struct Opt {
     config_path: String,
 }
 
-struct LookupData {
-    lookup_data_url: String,
-    entries: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
-    logger: Logger,
-}
-
-impl LookupData {
-    /// Creates a new [`LookupData`] instance that can refresh its internal entries from the
-    /// provided data file URL.
-    ///
-    /// Entries in the data file path must be consecutive binary encoded and length delimited
-    /// protobuf messages according to the definition in `/oak_functions/proto/lookup_data.proto`.
-    ///
-    /// The returned instance is empty, and must be populated by calling the [`LookupData::refresh`]
-    /// method at least once.
-    fn new_empty(lookup_data_url: &str, logger: Logger) -> LookupData {
-        LookupData {
-            lookup_data_url: lookup_data_url.to_string(),
-            entries: RwLock::new(HashMap::new()),
-            logger,
-        }
-    }
-
-    /// Refreshes the internal entries of this struct from the data file URL provided at
-    /// construction time.
-    ///
-    /// If successful, entries are completely replaced (i.e. not merged).
-    ///
-    /// If there is any error while reading or parsing the data, an error is returned by this
-    /// method, and existing entries are left untouched. The caller may retry the refresh operation
-    /// at a future time.
-    async fn refresh(&self) -> anyhow::Result<()> {
-        // TODO(#1930): Avoid loading the entire file in memory for parsing.
-        let client = hyper::Client::new();
-        let res = client
-            .get(
-                self.lookup_data_url
-                    .parse()
-                    .context("could not parse lookup data URL")?,
-            )
-            .await
-            .context("could not fetch lookup data")?;
-
-        let start = Instant::now();
-        let lookup_data_buf = hyper::body::to_bytes(res.into_body())
-            .await
-            .context("could not read lookup data response body")?;
-        self.logger.log_public(
-            Level::Debug,
-            &format!("lookup data download time: {:?}", start.elapsed()),
-        );
-
-        let start = Instant::now();
-        let entries = parse_lookup_entries(&mut lookup_data_buf.as_ref())
-            .context("could not parse lookup data")?;
-
-        self.logger.log_public(
-            Level::Info,
-            &format!("loaded {} entries of lookup data", entries.len()),
-        );
-        self.logger.log_public(
-            Level::Debug,
-            &format!("lookup data parsing time: {:?}", start.elapsed()),
-        );
-
-        // This block is here to emphasize and ensure that the write lock is only held for a very
-        // short time.
-        let start = Instant::now();
-        {
-            *self
-                .entries
-                .write()
-                .expect("could not lock entries for write") = entries;
-        }
-        self.logger.log_public(
-            Level::Debug,
-            &format!(
-                "lookup data write lock acquisition time: {:?}",
-                start.elapsed()
-            ),
-        );
-
-        Ok(())
-    }
-
-    /// Convenience getter for an individual entry that reduces lock contention by cloning the
-    /// resulting value as quickly as possible and returning it instead of a reference.
-    #[allow(dead_code)]
-    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.entries
-            .read()
-            .expect("could not lock entries for read")
-            .get(key)
-            .cloned()
-    }
-
-    #[allow(dead_code)]
-    fn len(&self) -> usize {
-        self.entries
-            .read()
-            .expect("could not lock entries for read")
-            .len()
-    }
-}
-
-fn parse_lookup_entries<B: bytes::Buf>(
-    lookup_data_buffer: B,
-) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
-    let mut lookup_data_buffer = lookup_data_buffer;
-    let mut entries = HashMap::new();
-    while lookup_data_buffer.has_remaining() {
-        let entry =
-            oak_functions_abi::proto::Entry::decode_length_delimited(&mut lookup_data_buffer)
-                .context("could not decode entry")?;
-        entries.insert(entry.key, entry.value);
-    }
-    Ok(entries)
-}
-
-async fn background_refresh_lookup_data(lookup_data: &LookupData, period: Duration) {
+async fn background_refresh_lookup_data(
+    lookup_data: &LookupData,
+    period: Duration,
+    logger: &Logger,
+) {
     // Create an interval that starts after `period`, since the data was already refreshed
     // initially.
     let mut interval = tokio::time::interval_at(tokio::time::Instant::now() + period, period);
@@ -201,7 +85,7 @@ async fn background_refresh_lookup_data(lookup_data: &LookupData, period: Durati
         interval.tick().await;
         // If there is an error, we skip the current refresh and wait for the next tick.
         if let Err(err) = lookup_data.refresh().await {
-            lookup_data.logger.log_public(
+            logger.log_public(
                 Level::Error,
                 &format!("error refreshing lookup data: {}", err),
             );
@@ -245,8 +129,10 @@ async fn main() -> anyhow::Result<()> {
         if let Some(lookup_data_download_period) = config.lookup_data_download_period {
             // Create background task to periodically refresh the lookup data.
             let lookup_data = lookup_data.clone();
+            let logger = logger.clone();
             tokio::spawn(async move {
-                background_refresh_lookup_data(&lookup_data, lookup_data_download_period).await
+                background_refresh_lookup_data(&lookup_data, lookup_data_download_period, &logger)
+                    .await
             });
         };
     }
@@ -255,5 +141,12 @@ async fn main() -> anyhow::Result<()> {
 
     // Start HTTP server.
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
-    create_and_start_server(&address, &wasm_module_bytes, notify_receiver, logger).await
+    create_and_start_server(
+        &address,
+        &wasm_module_bytes,
+        lookup_data,
+        notify_receiver,
+        logger,
+    )
+    .await
 }

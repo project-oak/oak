@@ -46,7 +46,7 @@ extern "C" {
     ///
     /// [`ErrBufferTooSmall`]: crate::OakStatus::ErrBufferTooSmall
     /// [`OakStatus`]: crate::OakStatus
-    pub fn read_request(buf: *mut u8, size: usize, actual_size: *mut u32) -> u32;
+    pub fn read_request(buf: *mut u8, size: usize, actual_size: *mut usize) -> u32;
 
     /// Writes the response.
     ///
@@ -59,4 +59,13 @@ extern "C" {
     ///
     /// [`OakStatus`]: crate::OakStatus
     pub fn write_response(buf: *const u8, size: usize) -> u32;
+
+    /// Retrieves a single item from the lookup data in-memory store.
+    pub fn storage_get_item(
+        key_buf: *const u8,
+        key_size: usize,
+        value_buf: *mut u8,
+        value_size: usize,
+        value_actual_size: *mut usize,
+    ) -> u32;
 }

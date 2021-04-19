@@ -14,14 +14,11 @@
 // limitations under the License.
 //
 
+use crate::logger::Logger;
 use anyhow::Context;
 use log::Level;
-use logger::Logger;
 use prost::Message;
 use std::{collections::HashMap, sync::RwLock, time::Instant};
-
-pub mod logger;
-pub mod server;
 
 pub struct LookupData {
     lookup_data_url: String,
@@ -128,7 +125,7 @@ impl LookupData {
     }
 }
 
-fn parse_lookup_entries<B: bytes::Buf>(
+pub fn parse_lookup_entries<B: bytes::Buf>(
     lookup_data_buffer: B,
 ) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
     let mut lookup_data_buffer = lookup_data_buffer;
