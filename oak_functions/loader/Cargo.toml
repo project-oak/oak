@@ -36,6 +36,7 @@ tokio = { version = "*", features = [
 ] }
 toml = "*"
 wasmi = "*"
+signal-hook = "*"
 
 [dev-dependencies]
 hyper = { version = "*", features = ["client"] }
