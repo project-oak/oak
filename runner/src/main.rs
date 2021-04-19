@@ -676,7 +676,7 @@ impl Example {
             .collect()
     }
 
-    // Recursively constructs backend steps.
+    /// Recursively constructs backend steps.
     fn construct_backend_run_steps(
         &self,
         run_server_clients: Step,
@@ -823,7 +823,6 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 }
             }
         };
-        // Recursively construct backend steps.
         example.construct_backend_run_steps(run_server_clients, &opt.build_client)
     } else {
         run_clients
@@ -911,7 +910,6 @@ fn run_functions_example(opt: &RunFunctionsExamples, example: &Example) -> Step 
                 }
             }
         };
-        // Recursively construct backend steps.
         example.construct_backend_run_steps(run_server_clients, &opt.build_client)
     } else {
         run_clients
