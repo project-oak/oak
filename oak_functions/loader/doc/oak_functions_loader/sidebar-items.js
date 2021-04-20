@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["logger",""],["server",""]]});
+initSidebarItems({"mod":[["logger",""],["lookup",""],["server",""]]});

@@ -397,6 +397,74 @@
 <span id="394">394</span>
 <span id="395">395</span>
 <span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -413,7 +481,7 @@
 <span class="comment">// See the License for the specific language governing permissions and</span>
 <span class="comment">// limitations under the License.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">logger</span>::<span class="ident">Logger</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">logger</span>::<span class="ident">Logger</span>, <span class="ident">lookup</span>::<span class="ident">LookupData</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
 <span class="kw">use</span> <span class="ident">http</span>::{<span class="ident">request</span>::<span class="ident">Request</span>, <span class="ident">response</span>::<span class="ident">Response</span>};
@@ -432,6 +500,7 @@
 <span class="doccomment">/// exposed to the Wasm client. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html</span>
 <span class="kw">const</span> <span class="ident">READ_REQUEST</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
 <span class="kw">const</span> <span class="ident">WRITE_RESPONSE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="kw">const</span> <span class="ident">STORAGE_GET_ITEM</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">2</span>;
 
 <span class="comment">// Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version</span>
 <span class="comment">// of Wasm would use different types.</span>
@@ -448,15 +517,21 @@
 <span class="kw">struct</span> <span class="ident">WasmInterface</span> {
     <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">response_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
     <span class="ident">memory</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">MemoryRef</span><span class="op">&gt;</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WasmInterface</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">logger</span>: <span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">WasmInterface</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+        <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
+        <span class="ident">logger</span>: <span class="ident">Logger</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">WasmInterface</span> {
         <span class="ident">WasmInterface</span> {
             <span class="ident">request_bytes</span>,
             <span class="ident">response_bytes</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">lookup_data</span>,
             <span class="ident">memory</span>: <span class="prelude-val">None</span>,
             <span class="ident">logger</span>,
         }
@@ -469,16 +544,48 @@
             .<span class="ident">expect</span>(<span class="string">&quot;WasmInterface memory not attached!?&quot;</span>)
     }
 
-    <span class="doccomment">/// Validates whether a given address range falls within the currently allocated range of guest</span>
-    <span class="doccomment">/// memory.</span>
-    <span class="kw">fn</span> <span class="ident">validate_ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">AbiPointer</span>, <span class="ident">offset</span>: <span class="ident">AbiPointerOffset</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">byte_size</span>: <span class="ident">wasmi</span>::<span class="ident">memory_units</span>::<span class="ident">Bytes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">current_size</span>().<span class="ident">into</span>();
-
-        <span class="kw">if</span> <span class="ident">byte_size</span> <span class="op">&lt;</span> <span class="ident">wasmi</span>::<span class="ident">memory_units</span>::<span class="ident">Bytes</span>((<span class="ident">addr</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="op">+</span> (<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>)) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>);
+    <span class="doccomment">/// Validates whether a given address range (inclusive) falls within the currently allocated</span>
+    <span class="doccomment">/// range of guest memory.</span>
+    <span class="kw">fn</span> <span class="ident">validate_range</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">AbiPointer</span>, <span class="ident">offset</span>: <span class="ident">AbiPointerOffset</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">memory_size</span>: <span class="ident">wasmi</span>::<span class="ident">memory_units</span>::<span class="ident">Bytes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">current_size</span>().<span class="ident">into</span>();
+        <span class="comment">// Check whether the end address is below or equal to the size of the guest memory.</span>
+        <span class="kw">if</span> <span class="ident">wasmi</span>::<span class="ident">memory_units</span>::<span class="ident">Bytes</span>((<span class="ident">addr</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="op">+</span> (<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>)) <span class="op">&lt;</span><span class="op">=</span> <span class="ident">memory_size</span> {
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>)
         }
+    }
 
-        <span class="prelude-val">Ok</span>(())
+    <span class="kw">fn</span> <span class="ident">write_buffer_to_wasm_memory</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">source</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+        <span class="ident">dest</span>: <span class="ident">AbiPointer</span>,
+        <span class="ident">dest_capacity</span>: <span class="ident">AbiPointerOffset</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">validate_range</span>(<span class="ident">dest</span>, <span class="ident">dest_capacity</span>)<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="ident">source</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">dest_capacity</span> {
+            <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">set</span>(<span class="ident">dest</span>, <span class="ident">source</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
+                    <span class="ident">Level</span>::<span class="ident">Error</span>,
+                    <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Unable to write buffer into guest memory: {:?}&quot;</span>, <span class="ident">err</span>),
+                );
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
+            })
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBufferTooSmall</span>)
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">write_u32_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">value</span>: <span class="ident">u32</span>, <span class="ident">address</span>: <span class="ident">AbiPointer</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">value_bytes</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="number">0</span>; <span class="number">4</span>];
+        <span class="ident">LittleEndian</span>::<span class="ident">write_u32</span>(<span class="ident">value_bytes</span>, <span class="ident">value</span>);
+        <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">set</span>(<span class="ident">address</span>, <span class="ident">value_bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+            <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
+                <span class="ident">Level</span>::<span class="ident">Error</span>,
+                <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Unable to write u32 value into guest memory: {:?}&quot;</span>, <span class="ident">err</span>),
+            );
+            <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
+        })
     }
 
     <span class="doccomment">/// Corresponds to the host ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).</span>
@@ -488,39 +595,8 @@
         <span class="ident">dest_capacity</span>: <span class="ident">AbiPointerOffset</span>,
         <span class="ident">actual_length_addr</span>: <span class="ident">AbiPointer</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">validate_ptr</span>(<span class="ident">dest</span>, <span class="ident">dest_capacity</span>)<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">raw_writer</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="number">0</span>; <span class="number">4</span>];
-        <span class="ident">LittleEndian</span>::<span class="ident">write_u32</span>(<span class="ident">raw_writer</span>, <span class="self">self</span>.<span class="ident">request_bytes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
-        <span class="self">self</span>.<span class="ident">get_memory</span>()
-            .<span class="ident">set</span>(<span class="ident">actual_length_addr</span>, <span class="ident">raw_writer</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                    <span class="ident">Level</span>::<span class="ident">Error</span>,
-                    <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(
-                        <span class="string">&quot;read_request(): Unable to write actual length into guest memory: {:?}&quot;</span>,
-                        <span class="ident">err</span>
-                    ),
-                );
-                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-            })<span class="question-mark">?</span>;
-
-        <span class="kw">if</span> <span class="ident">dest_capacity</span> <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">request_bytes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span> {
-            <span class="self">self</span>.<span class="ident">get_memory</span>().<span class="ident">set</span>(<span class="ident">dest</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">request_bytes</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                    <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                        <span class="ident">Level</span>::<span class="ident">Error</span>,
-                        <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(
-                            <span class="string">&quot;read_request(): Unable to write destination buffer into guest memory: {:?}&quot;</span>,
-                            <span class="ident">err</span>
-                        ),
-                    );
-                    <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-                })<span class="question-mark">?</span>;
-        } <span class="kw">else</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrBufferTooSmall</span>);
-        }
-
-        <span class="prelude-val">Ok</span>(())
+        <span class="self">self</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="self">self</span>.<span class="ident">request_bytes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>, <span class="ident">actual_length_addr</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">request_bytes</span>, <span class="ident">dest</span>, <span class="ident">dest_capacity</span>)
     }
 
     <span class="doccomment">/// Corresponds to the host ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).</span>
@@ -545,6 +621,37 @@
         <span class="self">self</span>.<span class="ident">response_bytes</span> <span class="op">=</span> <span class="ident">response</span>;
         <span class="prelude-val">Ok</span>(())
     }
+
+    <span class="doccomment">/// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">storage_get_item</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">key_buf</span>: <span class="ident">AbiPointer</span>,
+        <span class="ident">key_size</span>: <span class="ident">AbiPointerOffset</span>,
+        <span class="ident">value_buf</span>: <span class="ident">AbiPointer</span>,
+        <span class="ident">value_size</span>: <span class="ident">AbiPointerOffset</span>,
+        <span class="ident">value_actual_size</span>: <span class="ident">AbiPointer</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">get_memory</span>()
+            .<span class="ident">get</span>(<span class="ident">key_buf</span>, <span class="ident">key_size</span> <span class="kw">as</span> <span class="ident">usize</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
+                    <span class="ident">Level</span>::<span class="ident">Error</span>,
+                    <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(
+                        <span class="string">&quot;storage_get_item(): Unable to read key from guest memory: {:?}&quot;</span>,
+                        <span class="ident">err</span>
+                    ),
+                );
+                <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
+            })<span class="question-mark">?</span>;
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">lookup_data</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) {
+            <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="self">self</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">value</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>, <span class="ident">value_actual_size</span>)<span class="question-mark">?</span>;
+                <span class="self">self</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>, <span class="ident">value_buf</span>, <span class="ident">value_size</span>)
+            }
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrStorageItemNotFound</span>),
+        }
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">wasmi</span>::<span class="ident">Externals</span> <span class="kw">for</span> <span class="ident">WasmInterface</span> {
@@ -567,6 +674,13 @@
             <span class="ident">WRITE_RESPONSE</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">map_host_errors</span>(<span class="self">self</span>.<span class="ident">write_response</span>(<span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>, <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>))
             }
+            <span class="ident">STORAGE_GET_ITEM</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">map_host_errors</span>(<span class="self">self</span>.<span class="ident">storage_get_item</span>(
+                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>,
+                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>,
+                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>,
+                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>,
+                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">4</span>)<span class="question-mark">?</span>,
+            )),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Unimplemented function at {}&quot;</span>, <span class="ident">index</span>),
         }
     }
@@ -592,9 +706,10 @@
     <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">Module</span>,
         <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+        <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
         <span class="ident">logger</span>: <span class="ident">Logger</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">WasmState</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmInterface</span>::<span class="ident">new</span>(<span class="ident">request_bytes</span>, <span class="ident">logger</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmInterface</span>::<span class="ident">new</span>(<span class="ident">request_bytes</span>, <span class="ident">lookup_data</span>, <span class="ident">logger</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">ModuleInstance</span>::<span class="ident">new</span>(
             <span class="ident">module</span>,
             <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">ImportsBuilder</span>::<span class="ident">new</span>().<span class="ident">with_resolver</span>(<span class="string">&quot;oak_functions&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">abi</span>),
@@ -641,26 +756,29 @@
 
 <span class="comment">// An ephemeral request handler with a Wasm module for handling the requests.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">WasmHandler</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WasmHandler</span> {
     <span class="comment">// Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`</span>
     <span class="comment">// cloneable.</span>
     <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>,
+    <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WasmHandler</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">logger</span>: <span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
+        <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+        <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
+        <span class="ident">logger</span>: <span class="ident">Logger</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">Module</span>::<span class="ident">from_buffer</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">WasmHandler</span> {
             <span class="ident">module</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">module</span>),
+            <span class="ident">lookup_data</span>,
             <span class="ident">logger</span>,
         })
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">req</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">logger</span>
             .<span class="ident">log_sensitive</span>(<span class="ident">Level</span>::<span class="ident">Info</span>, <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;The request is: {:?}&quot;</span>, <span class="ident">req</span>));
         <span class="kw">match</span> (<span class="ident">req</span>.<span class="ident">method</span>(), <span class="ident">req</span>.<span class="ident">uri</span>().<span class="ident">path</span>()) {
@@ -674,8 +792,12 @@
 
     <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">request_bytes</span> <span class="op">=</span> <span class="ident">hyper</span>::<span class="ident">body</span>::<span class="ident">to_bytes</span>(<span class="ident">req</span>.<span class="ident">into_body</span>()).<span class="ident">await</span>.<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span>
-            <span class="ident">WasmState</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>, <span class="ident">request_bytes</span>.<span class="ident">to_vec</span>(), <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">WasmState</span>::<span class="ident">new</span>(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>,
+            <span class="ident">request_bytes</span>.<span class="ident">to_vec</span>(),
+            <span class="self">self</span>.<span class="ident">lookup_data</span>.<span class="ident">clone</span>(),
+            <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>(),
+        )<span class="question-mark">?</span>;
         <span class="ident">wasm_state</span>.<span class="ident">invoke</span>();
         <span class="ident">http</span>::<span class="ident">response</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
             .<span class="ident">status</span>(<span class="ident">StatusCode</span>::<span class="ident">OK</span>)
@@ -688,13 +810,14 @@
 <span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">create_and_start_server</span>(
     <span class="ident">address</span>: <span class="kw-2">&amp;</span><span class="ident">SocketAddr</span>,
     <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
     <span class="ident">notify_receiver</span>: <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">WasmHandler</span>::<span class="ident">create</span>(<span class="ident">wasm_module_bytes</span>, <span class="ident">logger</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">WasmHandler</span>::<span class="ident">create</span>(<span class="ident">wasm_module_bytes</span>, <span class="ident">lookup_data</span>, <span class="ident">logger</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
 
-    <span class="comment">// A `Service` is needed for every connection. Here we create a service using</span>
-    <span class="comment">// the`wasm_handler`.</span>
+    <span class="comment">// A `Service` is needed for every connection. Here we create a service using the</span>
+    <span class="comment">// `wasm_handler`.</span>
     <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="ident">make_service_fn</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">_conn</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">wasm_handler</span>.<span class="ident">clone</span>();
         <span class="ident">async</span> <span class="kw">move</span> {
@@ -760,6 +883,19 @@
                 <span class="kw-2">&amp;</span>[
                     <span class="ident">ABI_USIZE</span>, <span class="comment">// source</span>
                     <span class="ident">ABI_USIZE</span>, <span class="comment">// source_length</span>
+                ][..],
+                <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
+            ),
+        ),
+        <span class="string">&quot;storage_get_item&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
+            <span class="ident">STORAGE_GET_ITEM</span>,
+            <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
+                <span class="kw-2">&amp;</span>[
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// key_buf</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// key_size</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// value_buf</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// value_size</span>
+                    <span class="ident">ABI_USIZE</span>, <span class="comment">// value_actual_size</span>
                 ][..],
                 <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
             ),
