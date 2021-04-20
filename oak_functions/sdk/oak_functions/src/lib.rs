@@ -23,6 +23,8 @@ use oak_functions_abi::proto::OakStatus;
 /// Reads and returns the user request.
 ///
 /// This function is idempotent. Multiple call to this function all return the same value.
+///
+/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
 pub fn read_request() -> Result<Vec<u8>, OakStatus> {
     let mut buf = Vec::with_capacity(1024);
     read_request_util(&mut buf)?;
@@ -87,6 +89,8 @@ fn read_request_util(buf: &mut Vec<u8>) -> Result<(), OakStatus> {
 ///
 /// Multiple calls to this function will replace the earlier responses. Only the last response that
 /// is written will be kept and returned to the user.
+///
+/// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
 pub fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
     let status = unsafe { oak_functions_abi::write_response(buf.as_ptr(), buf.len()) };
     result_from_status(status as i32, ())
@@ -103,6 +107,7 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
 
     // It is possible that the item for a given key changes or gets deleted entirely between the two
     // iterations below if the lookup data is refreshed in between, which may cause weird errors.
+    // TODO(#754): Consider a different allocation strategy to avoid this problem.
 
     let mut buf = Vec::with_capacity(1024);
 

@@ -86,9 +86,9 @@ The in-memory store may be periodically refreshed, so multiple calls to this
 function, even with identical arguments, may result in different outcomes,
 including flipping from success to error or vice versa. In particular, retrying
 calling this method after re-allocating the destination buffer based on the
-`value_actual_size` reported size may still fail, for instance if the entry was
-changed to have a larger value in the meanwhile; in fact, the entry may even
-have been deleted entirely between calls.
+`param[4]` reported size may still fail, for instance if the entry was changed
+to have a larger value in the meanwhile; in fact, the entry may even have been
+deleted entirely between calls.
 
 - `param[0]: usize`: Source buffer address holding key
 - `param[1]: usize`: Source buffer size in bytes

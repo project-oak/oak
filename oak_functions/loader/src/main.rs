@@ -112,7 +112,7 @@ async fn main() -> anyhow::Result<()> {
 
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
-    let _lookup_data = load_lookup_data(&config, logger.clone()).await?;
+    let lookup_data = load_lookup_data(&config, logger.clone()).await?;
 
     // TODO(#1930): Pass lookup data to the server instance.
 
@@ -158,7 +158,10 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc<LookupData>> {
-    let lookup_data = Arc::new(LookupData::new_empty(&config.lookup_data_url, logger));
+    let lookup_data = Arc::new(LookupData::new_empty(
+        &config.lookup_data_url,
+        logger.clone(),
+    ));
     if !config.lookup_data_url.is_empty() {
         // First load the lookup data upfront in a blocking fashion.
         // TODO(#1930): Retry the initial lookup a few times if it fails.

@@ -64,7 +64,7 @@ async fn test_server() {
             &wasm_module_bytes,
             lookup_data,
             notify_receiver,
-            Logger::default(),
+            logger,
         )
         .await
     });
