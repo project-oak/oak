@@ -174,9 +174,10 @@ fn run_examples(opt: &RunExamples) -> Step {
                 None => true,
             })
             .filter(|example| {
-                example
-                    .applications
-                    .empty_or_has_application_variant(opt.application_variant.as_ref())
+                example.applications.is_empty()
+                    || example
+                        .applications
+                        .has_application(opt.application_variant.as_ref())
             })
             .map(|example| run_example(opt, example))
             .collect(),
@@ -710,8 +711,8 @@ impl Example {
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Applications {
-    classic: Option<ApplicationsList<ApplicationClassic>>,
-    functions: Option<ApplicationsList<ApplicationFunctions>>,
+    classic: Option<HashMap<String, ApplicationClassic>>,
+    functions: Option<HashMap<String, ApplicationFunctions>>,
 }
 
 impl Applications {
@@ -723,14 +724,18 @@ impl Applications {
         }
     }
 
-    fn empty_or_has_application_variant(&self, application_variant: &str) -> bool {
+    fn is_empty(&self) -> bool {
         match (&self.classic, &self.functions) {
-            (Some(applications), None) => {
-                applications.empty_or_has_application_variant(application_variant)
-            }
-            (None, Some(applications)) => {
-                applications.empty_or_has_application_variant(application_variant)
-            }
+            (Some(applications), None) => applications.is_empty(),
+            (None, Some(applications)) => applications.is_empty(),
+            _ => panic!(INVALID_APP_COMBO_ERR),
+        }
+    }
+
+    fn has_application(&self, application_variant: &str) -> bool {
+        match (&self.classic, &self.functions) {
+            (Some(applications), None) => applications.get(application_variant).is_some(),
+            (None, Some(applications)) => applications.get(application_variant).is_some(),
             _ => panic!(INVALID_APP_COMBO_ERR),
         }
     }
@@ -745,7 +750,10 @@ impl Applications {
                 if applications.is_empty() {
                     vec![]
                 } else {
-                    let application = applications.get_application(application_variant);
+                    let application = applications.get(application_variant).unwrap_or_else(|| panic!(
+                        "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
+                        application_variant)
+                    );
                     application.construct_application_build_steps(example_name)
                 }
             }
@@ -753,7 +761,10 @@ impl Applications {
                 if applications.is_empty() {
                     vec![]
                 } else {
-                    let application = applications.get_application(application_variant);
+                    let application = applications.get(application_variant).unwrap_or_else(|| panic!(
+                        "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
+                        application_variant)
+                    );
                     application.construct_application_build_steps(example_name)
                 }
             }
@@ -776,8 +787,10 @@ impl Applications {
                         .left()
                         .expect("Oak Classic application run with RunExamples options.");
 
-                    let application =
-                        applications.get_application(opt.application_variant.as_ref());
+                    let application = applications.get(opt.application_variant.as_str()).unwrap_or_else(|| panic!(
+                        "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
+                        opt.application_variant.as_str())
+                    );
                     application.construct_example_server_run_step(opt, example, run_clients)
                 }
             }
@@ -789,8 +802,10 @@ impl Applications {
                         .right()
                         .expect("Oak Function application run with RunFunctionsExamples options.");
 
-                    let application =
-                        applications.get_application(opt.application_variant.as_ref());
+                    let application = applications.get(opt.application_variant.as_str()).unwrap_or_else(|| panic!(
+                        "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
+                        opt.application_variant.as_str())
+                    );
                     application.construct_example_server_run_step(opt, example, run_clients)
                 }
             }
@@ -886,31 +901,6 @@ impl ApplicationFunctions {
                 foreground: Box::new(run_clients),
             }
         }
-    }
-}
-
-#[derive(serde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-struct ApplicationsList<T> {
-    applications: HashMap<String, T>,
-}
-
-impl<T> ApplicationsList<T> {
-    fn is_empty(&self) -> bool {
-        self.applications.is_empty()
-    }
-
-    fn get_application(&self, application_variant: &str) -> &T {
-        self.applications
-        .get(application_variant)
-        .unwrap_or_else(|| panic!(
-            "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
-            application_variant)
-        )
-    }
-
-    fn empty_or_has_application_variant(&self, application_variant: &str) -> bool {
-        self.is_empty() || self.applications.get(application_variant).is_some()
     }
 }
 

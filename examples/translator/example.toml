@@ -2,11 +2,11 @@ name = "translator"
 
 [applications]
 
-[applications.classic.applications.rust]
+[applications.classic.rust]
 manifest = "examples/translator/oak_app_manifest.toml"
 out = "examples/translator/bin/translator.oak"
 
-[applications.classic.applications.rust.modules]
+[applications.classic.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/translator/module/rust/Cargo.toml" } }
 
 [clients]
