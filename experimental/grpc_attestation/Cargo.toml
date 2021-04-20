@@ -20,7 +20,6 @@ env_logger = "*"
 futures = "*"
 futures-core = "*"
 futures-util = "*"
-hex = "*"
 http = "*"
 hyper = { version = "*", features = [
   "client",

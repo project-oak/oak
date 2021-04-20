@@ -1303,7 +1303,6 @@ dependencies = [
  "futures",
  "futures-core",
  "futures-util",
- "hex",
  "http",
  "hyper",
  "log",
