@@ -29,4 +29,6 @@ enum OakStatus {
   ERR_BUFFER_TOO_SMALL = 3;
   // Internal error.
   ERR_INTERNAL = 4;
+  // Lookup storage item not found.
+  ERR_STORAGE_ITEM_NOT_FOUND = 5;
 }

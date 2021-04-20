@@ -14,12 +14,16 @@
 // limitations under the License.
 
 use hyper::client::Client;
-use oak_functions_loader::{logger::Logger, server::create_and_start_server};
-use std::net::{Ipv6Addr, SocketAddr};
+use maplit::hashmap;
+use oak_functions_loader::{logger::Logger, lookup::LookupData, server::create_and_start_server};
+use std::{
+    net::{Ipv6Addr, SocketAddr},
+    sync::Arc,
+};
 
 const WASM_MODULE_NAME: &str = "hello_world.wasm";
-const EXPECTED_RESPONSE: &str = "Hello World!\n";
 const OAK_FUNCTIONS_SERVER_PORT: u16 = 9001;
+const STATIC_SERVER_PORT: u16 = 9002;
 
 #[tokio::test]
 async fn test_server() {
@@ -35,24 +39,67 @@ async fn test_server() {
     )
     .expect("Couldn't read Wasm module");
 
-    let server_fut = create_and_start_server(
-        &address,
-        &wasm_module_bytes,
-        notify_receiver,
-        Logger::default(),
-    );
-    let client_fut = start_client(OAK_FUNCTIONS_SERVER_PORT, notify_sender);
+    let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
 
-    let (res, _) = tokio::join!(server_fut, client_fut);
+    let mock_static_server_clone = mock_static_server.clone();
+    tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
+
+    mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
+        b"Harry".to_vec() => b"Potter".to_vec(),
+        b"Sirius".to_vec() => b"Black".to_vec(),
+        b"Ron".to_vec() => b"Weasley".to_vec(),
+    }));
+
+    let logger = Logger::for_test();
+
+    let lookup_data = Arc::new(LookupData::new_empty(
+        &format!("http://localhost:{}", STATIC_SERVER_PORT),
+        logger.clone(),
+    ));
+    lookup_data.refresh().await.unwrap();
+
+    let server_join_handle = tokio::spawn(async move {
+        create_and_start_server(
+            &address,
+            &wasm_module_bytes,
+            lookup_data,
+            notify_receiver,
+            logger,
+        )
+        .await
+    });
+
+    {
+        // No lookup match.
+        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, b"World").await;
+        assert_eq!(
+            "Hello World!\n",
+            std::str::from_utf8(response_fut.as_slice()).unwrap()
+        );
+    }
+    {
+        // Lookup match.
+        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, b"Harry").await;
+        assert_eq!(
+            "Hello Harry Potter!\n",
+            std::str::from_utf8(response_fut.as_slice()).unwrap()
+        );
+    }
+
+    notify_sender
+        .send(())
+        .expect("Couldn't send completion signal.");
+
+    let res = server_join_handle.await.unwrap();
     assert!(res.is_ok());
 }
 
-async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>) {
+async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
     let client = Client::new();
     let request = hyper::Request::builder()
         .method(http::Method::POST)
         .uri(format!("http://localhost:{}/invoke", port))
-        .body(hyper::Body::from("World"))
+        .body(hyper::Body::from(request_body.to_vec()))
         .unwrap();
     let resp = client
         .request(request)
@@ -60,12 +107,8 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
         .expect("Error while awaiting response");
 
     assert_eq!(resp.status(), hyper::StatusCode::OK);
-    assert_eq!(
-        hyper::body::to_bytes(resp.into_body()).await.unwrap(),
-        EXPECTED_RESPONSE
-    );
-
-    notify_sender
-        .send(())
-        .expect("Couldn't send completion signal.");
+    hyper::body::to_bytes(resp.into_body())
+        .await
+        .unwrap()
+        .to_vec()
 }

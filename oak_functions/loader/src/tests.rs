@@ -15,19 +15,15 @@
 
 use crate::{
     logger::Logger,
+    lookup::{parse_lookup_entries, LookupData},
     server::{create_and_start_server, WasmHandler},
 };
-use hyper::{
-    client::Client,
-    service::{make_service_fn, service_fn},
-    Body, Response,
-};
+use hyper::{client::Client, Body};
 use prost::Message;
 use std::{
-    convert::Infallible,
     fs,
     net::{Ipv6Addr, SocketAddr},
-    sync::{Arc, Mutex},
+    sync::Arc,
     time::Duration,
 };
 
@@ -49,11 +45,16 @@ async fn test_server() {
     let wasm_module_bytes =
         fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
 
+    let logger = Logger::for_test();
+
+    let lookup_data = Arc::new(LookupData::new_empty("", logger.clone()));
+
     let server_fut = create_and_start_server(
         &address,
         &wasm_module_bytes,
+        lookup_data,
         notify_receiver,
-        Logger::for_test(),
+        logger,
     );
     let client_fut = start_client(OAK_FUNCTIONS_SERVER_PORT, notify_sender);
 
@@ -96,7 +97,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     .expect("Couldn't read Wasm module");
 
     let summary = bencher.bench(|bencher| {
-        let wasm_handler = WasmHandler::create(&wasm_module_bytes, Logger::for_test())
+        let logger = Logger::for_test();
+        let lookup_data = Arc::new(LookupData::new_empty("", logger.clone()));
+        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, logger)
             .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
         bencher.iter(|| {
@@ -122,7 +125,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         // to be less than a fixed threshold.
         assert!(
             elapsed < Duration::from_millis(1),
-            "elapsed time: {:?}ms",
+            "elapsed time: {:.0?}",
             elapsed
         );
     }
@@ -131,7 +134,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 #[test]
 fn parse_lookup_entries_empty() {
     let empty = vec![];
-    let entries = crate::parse_lookup_entries(empty.as_ref()).unwrap();
+    let entries = parse_lookup_entries(empty.as_ref()).unwrap();
     assert!(entries.is_empty());
 }
 
@@ -186,7 +189,7 @@ fn parse_lookup_entries_multiple_entries() {
     let mut buf = vec![];
     buf.append(&mut ENTRY_0_LENGTH_DELIMITED.to_vec());
     buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
-    let entries = crate::parse_lookup_entries(buf.as_ref()).unwrap();
+    let entries = parse_lookup_entries(buf.as_ref()).unwrap();
     assert_eq!(entries.len(), 2);
     assert_eq!(entries.get(&[14, 12].to_vec()), Some(&vec![19, 88]));
     assert_eq!(entries.get(&b"Harry".to_vec()), Some(&b"Potter".to_vec()));
@@ -199,7 +202,7 @@ fn parse_lookup_entries_multiple_entries_trailing() {
     buf.append(&mut ENTRY_1_LENGTH_DELIMITED.to_vec());
     // Add invalid trailing bytes.
     buf.append(&mut vec![1, 2, 3]);
-    let res = crate::parse_lookup_entries(buf.as_ref());
+    let res = parse_lookup_entries(buf.as_ref());
     assert!(res.is_err());
 }
 
@@ -207,52 +210,13 @@ fn parse_lookup_entries_multiple_entries_trailing() {
 fn parse_lookup_entries_invalid() {
     // Invalid bytes.
     let buf = vec![1, 2, 3];
-    let res = crate::parse_lookup_entries(buf.as_ref());
+    let res = parse_lookup_entries(buf.as_ref());
     assert!(res.is_err());
-}
-
-/// A mock implementation of a static server that always returns the same configurable response for
-/// any incoming HTTP request.
-#[derive(Default)]
-struct MockStaticServer {
-    response_body: Arc<Mutex<Vec<u8>>>,
-}
-
-impl MockStaticServer {
-    /// Sets the content of the response body to return for any request.
-    fn set_response_body(&self, response_body: Vec<u8>) {
-        *self
-            .response_body
-            .lock()
-            .expect("could not lock response body mutex") = response_body;
-    }
-
-    /// Starts serving, listening on the provided port.
-    async fn serve(&self, port: u16) {
-        let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, port));
-        let response_body = self.response_body.clone();
-        let server = hyper::Server::bind(&address).serve(make_service_fn(|_conn| {
-            let response_body = response_body.clone();
-            async {
-                Ok::<_, Infallible>(service_fn(move |_req| {
-                    let response_body = response_body.clone();
-                    async move {
-                        let response_body: Vec<u8> = response_body
-                            .lock()
-                            .expect("could not lock response body mutex")
-                            .clone();
-                        Ok::<_, Infallible>(Response::new(Body::from(response_body)))
-                    }
-                }))
-            }
-        }));
-        server.await.unwrap();
-    }
 }
 
 #[tokio::test]
 async fn lookup_data_refresh() {
-    let mock_static_server = Arc::new(MockStaticServer::default());
+    let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
 
     let mock_static_server_clone = mock_static_server.clone();
     tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
@@ -261,11 +225,11 @@ async fn lookup_data_refresh() {
         &format!("http://localhost:{}", STATIC_SERVER_PORT),
         Logger::for_test(),
     );
-    assert_eq!(lookup_data.len(), 0);
+    assert!(lookup_data.is_empty());
 
     // Initially empty file, no entries.
     lookup_data.refresh().await.unwrap();
-    assert_eq!(lookup_data.len(), 0);
+    assert!(lookup_data.is_empty());
 
     // Single entry.
     mock_static_server.set_response_body(ENTRY_0_LENGTH_DELIMITED.to_vec());
@@ -277,7 +241,7 @@ async fn lookup_data_refresh() {
     // Empty file again.
     mock_static_server.set_response_body(vec![]);
     lookup_data.refresh().await.unwrap();
-    assert_eq!(lookup_data.len(), 0);
+    assert!(lookup_data.is_empty());
 
     // A different entry.
     mock_static_server.set_response_body(ENTRY_1_LENGTH_DELIMITED.to_vec());

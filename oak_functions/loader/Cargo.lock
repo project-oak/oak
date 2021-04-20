@@ -742,7 +742,10 @@ name = "test_utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hyper",
  "log",
+ "oak_functions_abi",
+ "prost",
 ]
 
 [[package]]

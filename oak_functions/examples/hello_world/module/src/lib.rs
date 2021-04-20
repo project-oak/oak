@@ -24,10 +24,20 @@ pub extern "C" fn main() {
     // Read the request
     let request_body = oak_functions::read_request().expect("Couldn't read request body.");
 
+    // Try to look up the name in the storage data, and if found use the result as surname in the
+    // response message.
+    let surname = oak_functions::storage_get_item(&request_body).expect("Couldn't look up surname");
+
     // Create response body
     let response_body = format!(
-        "Hello {}!\n",
-        std::str::from_utf8(&request_body).expect("Couldn't convert bytes to string")
+        "Hello {}{}!\n",
+        std::str::from_utf8(&request_body).expect("Couldn't convert bytes to string"),
+        surname
+            .map(|v| std::str::from_utf8(&v)
+                .expect("Couldn't convert bytes to string")
+                .to_string())
+            .map(|v| format!(" {}", v))
+            .unwrap_or_default()
     );
 
     // Write the response body
