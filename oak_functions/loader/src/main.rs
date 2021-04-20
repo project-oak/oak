@@ -30,6 +30,8 @@ use std::{
 };
 use structopt::StructOpt;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 mod logger;
 mod server;
 use crate::{logger::Logger, server::create_and_start_server};
@@ -216,29 +218,61 @@ async fn background_refresh_lookup_data(lookup_data: &LookupData, period: Durati
 /// Main execution point for the Oak Functions Loader.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // TODO(#1971): Make maximum log level configurable.
+    let logger = Logger::default();
+
     let opt = Opt::from_args();
 
     let config_file_bytes = fs::read(&opt.config_path)
         .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
     let config: Config =
         toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
-    // Print the parsed config to STDERR regardless of whether the logger is initialized.
-
-    // TODO(#1971): Make maximum log level configurable.
-    let logger = Logger::default();
 
     logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
 
-    // For now the server runs in the same thread, so `notify_sender` is not really needed.
-    let (_notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
+    let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
+    let _lookup_data = load_lookup_data(&config, logger.clone()).await?;
+
+    // TODO(#1930): Pass lookup data to the server instance.
+
+    // Start HTTP server.
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
-    let lookup_data = Arc::new(LookupData::new_empty(
-        &config.lookup_data_url,
-        logger.clone(),
-    ));
+    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
+    let server_handle = tokio::spawn(async move {
+        create_and_start_server(&address, &wasm_module_bytes, notify_receiver, logger)
+            .await
+            .context("error while waiting for the server to terminate")
+    });
+
+    // Wait for the termination signal.
+    let done = Arc::new(AtomicBool::new(false));
+    signal_hook::flag::register(signal_hook::consts::signal::SIGINT, Arc::clone(&done))
+        .context("could not register signal handler")?;
+
+    // The server is started in its own thread, so just block the current thread until a signal
+    // arrives. This is needed for getting the correct status code when running with `runner`.
+    while !done.load(Ordering::Relaxed) {
+        // There are few synchronization mechanisms that are allowed to be used in a signal
+        // handler context, so use a primitive sleep loop to watch for the termination
+        // notification (rather than something more accurate like `std::sync::Condvar`).
+        // See e.g.: http://man7.org/linux/man-pages/man7/signal-safety.7.html
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
+    notify_sender
+        .send(())
+        .expect("Couldn't send completion signal.");
+
+    server_handle
+        .await
+        .context("error while waiting for the server to terminate")?
+}
+
+async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc<LookupData>> {
+    let lookup_data = Arc::new(LookupData::new_empty(&config.lookup_data_url, logger));
     if !config.lookup_data_url.is_empty() {
         // First load the lookup data upfront in a blocking fashion.
         // TODO(#1930): Retry the initial lookup a few times if it fails.
@@ -254,10 +288,5 @@ async fn main() -> anyhow::Result<()> {
             });
         };
     }
-
-    // TODO(#1930): Pass lookup data to the server instance.
-
-    // Start HTTP server.
-    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
-    create_and_start_server(&address, &wasm_module_bytes, notify_receiver, logger).await
+    Ok(lookup_data)
 }

@@ -42,6 +42,7 @@ pub struct Opt {
 #[derive(StructOpt, Clone)]
 pub enum Command {
     RunExamples(RunExamples),
+    RunFunctionsExamples(RunFunctionsExamples),
     BuildServer(BuildServer),
     BuildFunctionsServer(BuildFunctionsServer),
     Format,
@@ -57,7 +58,7 @@ pub enum Command {
     Completion,
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct RunExamples {
     #[structopt(
         long,
@@ -92,6 +93,34 @@ pub struct RunExamples {
 }
 
 #[derive(StructOpt, Clone)]
+pub struct RunFunctionsExamples {
+    #[structopt(
+        long,
+        help = "application variant: [rust, cpp]",
+        default_value = "rust"
+    )]
+    pub application_variant: String,
+    // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
+    #[structopt(
+        long,
+        help = "name of a single example to run; if unset, run all the examples"
+    )]
+    pub example_name: Option<String>,
+    #[structopt(flatten)]
+    pub build_client: BuildClient,
+    #[structopt(flatten)]
+    pub build_server: BuildFunctionsServer,
+    #[structopt(long, help = "run server [default: true]")]
+    pub run_server: Option<bool>,
+    #[structopt(long, help = "additional arguments to pass to clients")]
+    pub client_additional_args: Vec<String>,
+    #[structopt(long, help = "additional arguments to pass to server")]
+    pub server_additional_args: Vec<String>,
+    #[structopt(long, help = "build a Docker image for the examples")]
+    pub build_docker: bool,
+}
+
+#[derive(StructOpt, Clone, Debug)]
 pub struct BuildClient {
     #[structopt(
         long,
@@ -139,7 +168,7 @@ impl std::str::FromStr for ServerVariant {
     }
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt, Clone, Debug)]
 pub struct BuildServer {
     #[structopt(
         long,

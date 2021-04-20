@@ -2,11 +2,11 @@ name = "tensorflow"
 
 [applications]
 
-[applications.cpp]
+[applications.classic.cpp]
 manifest = "examples/tensorflow/oak_app_manifest.toml"
 out = "examples/tensorflow/bin/tensorflow.oak"
 
-[applications.cpp.modules]
+[applications.classic.cpp.modules]
 module = { Bazel = { bazel_target = "//examples/tensorflow/module/cpp:tensorflow_micro.wasm", config = "emscripten" } }
 
 [clients]

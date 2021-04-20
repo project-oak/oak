@@ -1,0 +1,15 @@
+name = "hello_world"
+
+[applications]
+
+[applications.functions.rust]
+wasm_path = "oak_functions/examples/bin/hello_world.wasm"
+target = { Cargo = { cargo_manifest = "oak_functions/examples/hello_world/module/Cargo.toml" } }
+
+[server]
+additional_args = [
+  "--config-path=./oak_functions/examples/hello_world/config.toml"
+]
+
+[clients]
+shell = { Shell = { script = "oak_functions/examples/hello_world/client/client" } }
