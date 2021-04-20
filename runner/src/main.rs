@@ -221,6 +221,7 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                 name: format!("wasm:{}:{}", name, cargo_manifest.to_string()),
                 command: Cmd::new(
                     "cargo",
+                    // Keep this in sync with `/oak_functions/sdk/test/utils/src/lib.rs`.
                     // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
                     spread![
                         // `--out-dir` is unstable and requires `-Zunstable-options`.
@@ -703,7 +704,7 @@ impl Example {
     }
 }
 
-/// A construct representing either an Oak Classic or an Oak Functions application.  
+/// A construct representing either an Oak Classic or an Oak Functions application.
 ///
 /// The condition that only one of `classic` or `functions` should be non-empty is
 /// checked in each operation of this struct. If neither or both are empty, the

@@ -21,7 +21,6 @@ use std::{
     sync::Arc,
 };
 
-const WASM_MODULE_NAME: &str = "hello_world.wasm";
 const OAK_FUNCTIONS_SERVER_PORT: u16 = 9001;
 const STATIC_SERVER_PORT: u16 = 9002;
 
@@ -33,11 +32,9 @@ async fn test_server() {
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.push("Cargo.toml");
 
-    let wasm_module_bytes = test_utils::compile_rust_wasm(
-        manifest_path.to_str().expect("Invalid target dir"),
-        WASM_MODULE_NAME,
-    )
-    .expect("Couldn't read Wasm module");
+    let wasm_module_bytes =
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+            .expect("Couldn't read Wasm module");
 
     let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
 
