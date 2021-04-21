@@ -10,6 +10,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 oak_functions = { path = "../../../sdk/oak_functions" }
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
 
 [dev-dependencies]
 oak_functions_loader = { path = "../../../loader" }

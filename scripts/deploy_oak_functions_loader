@@ -66,5 +66,5 @@ curl \
   --fail \
   --fail-early \
   --request POST \
-  --data 'world' \
+  --data '{"lat":51,"lon":0}' \
   "https://${FUNCTIONS_INSTANCE_NAME}-62sa4xcfia-nw.a.run.app/invoke?n=[0-15]"

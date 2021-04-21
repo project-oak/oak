@@ -40,4 +40,5 @@ signal-hook = "*"
 
 [dev-dependencies]
 hyper = { version = "*", features = ["client"] }
+maplit = "*"
 test_utils = { path = "../sdk/test_utils" }
