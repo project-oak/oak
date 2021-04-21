@@ -31,9 +31,6 @@ const DEFAULT_EXAMPLE_BACKEND_RUST_TARGET: &str = "x86_64-unknown-linux-gnu";
 pub const ALL_CLIENTS: &str = "all";
 pub const NO_CLIENTS: &str = "none";
 
-/// Error message related to `Applications`
-const INVALID_APP_COMBO_ERR: &str = "Invalid application combination: either classic or functions";
-
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Example {
@@ -46,159 +43,70 @@ pub struct Example {
     clients: HashMap<String, Executable>,
 }
 
-impl Example {
-    fn construct_application_build_steps(&self, application_variant: &str) -> Vec<Step> {
-        self.applications
-            .construct_application_build_steps(application_variant, &self.name)
-    }
-
-    fn construct_example_server_run_step(
-        &self,
-        opt: either::Either<&RunExamples, &RunFunctionsExamples>,
-        run_clients: Step,
-    ) -> Step {
-        self.applications
-            .construct_example_server_run_step(opt, &self, run_clients)
-    }
-
-    fn construct_backend_build_steps(&self, build_client: &BuildClient) -> Vec<Step> {
-        self.backends
-            .iter()
-            .map(move |(name, backend)| Step::Single {
-                name: name.to_string(),
-                command: build(&backend.target, build_client),
-            })
-            .collect()
-    }
-
-    /// Recursively constructs backend steps.
-    fn construct_backend_run_steps(
-        &self,
-        run_server_clients: Step,
-        build_client: &BuildClient,
-    ) -> Step {
-        self.backends
-            .iter()
-            // First iteration includes `run_server_clients` as a foreground step.
-            .fold(run_server_clients, |backend_steps, (name, backend)| {
-                Step::WithBackground {
-                    name: name.to_string(),
-                    // Each `backend` is included as background step.
-                    background: run(&backend, &build_client, Vec::new()),
-                    foreground: Box::new(backend_steps),
-                }
-            })
-    }
-}
-
 /// A construct representing either an Oak Classic or an Oak Functions application.
 ///
 /// The condition that only one of `classic` or `functions` should be non-empty is
 /// checked in each operation of this struct. If neither or both are empty, the
 /// operation panics with an error message.
-#[derive(serde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-struct Applications {
-    classic: Option<HashMap<String, ApplicationClassic>>,
-    functions: Option<HashMap<String, ApplicationFunctions>>,
+#[derive(Debug)]
+enum Applications {
+    Classic(HashMap<String, ApplicationClassic>),
+    Functions(HashMap<String, ApplicationFunctions>),
 }
 
 impl Applications {
     fn is_classic(&self) -> bool {
-        match (&self.classic, &self.functions) {
-            (Some(_applications), None) => true,
-            (None, Some(_applications)) => false,
-            _ => panic!(INVALID_APP_COMBO_ERR),
+        match self {
+            Applications::Classic(_) => true,
+            Applications::Functions(_) => false,
         }
     }
 
     fn is_empty(&self) -> bool {
-        match (&self.classic, &self.functions) {
-            (Some(applications), None) => applications.is_empty(),
-            (None, Some(applications)) => applications.is_empty(),
-            _ => panic!(INVALID_APP_COMBO_ERR),
+        match self {
+            Applications::Classic(applications) => applications.is_empty(),
+            Applications::Functions(applications) => applications.is_empty(),
         }
     }
 
     fn has_application(&self, application_variant: &str) -> bool {
-        match (&self.classic, &self.functions) {
-            (Some(applications), None) => applications.get(application_variant).is_some(),
-            (None, Some(applications)) => applications.get(application_variant).is_some(),
-            _ => panic!(INVALID_APP_COMBO_ERR),
+        match self {
+            Applications::Classic(applications) => applications.get(application_variant).is_some(),
+            Applications::Functions(applications) => {
+                applications.get(application_variant).is_some()
+            }
         }
     }
+}
 
-    fn construct_application_build_steps(
-        &self,
-        application_variant: &str,
-        example_name: &str,
-    ) -> Vec<Step> {
-        match (&self.classic, &self.functions) {
-            (Some(applications), None) => {
-                if applications.is_empty() {
-                    vec![]
-                } else {
-                    let application = applications.get(application_variant).unwrap_or_else(|| panic!(
-                        "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
-                        application_variant)
-                    );
-                    application.construct_application_build_steps(example_name)
-                }
-            }
-            (None, Some(applications)) => {
-                if applications.is_empty() {
-                    vec![]
-                } else {
-                    let application = applications.get(application_variant).unwrap_or_else(|| panic!(
-                        "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
-                        application_variant)
-                    );
-                    application.construct_application_build_steps(example_name)
-                }
-            }
-            _ => panic!(INVALID_APP_COMBO_ERR),
-        }
+struct ApplicationsVisitor;
+
+impl<'de> serde::de::Visitor<'de> for ApplicationsVisitor {
+    type Value = Applications;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("classic or functions")
     }
 
-    fn construct_example_server_run_step(
-        &self,
-        opt: either::Either<&RunExamples, &RunFunctionsExamples>,
-        example: &Example,
-        run_clients: Step,
-    ) -> Step {
-        match (&self.classic, &self.functions) {
-            (Some(applications), None) => {
-                if applications.is_empty() {
-                    run_clients
-                } else {
-                    let opt = opt
-                        .left()
-                        .expect("Oak Classic application run with RunExamples options.");
-
-                    let application = applications.get(opt.application_variant.as_str()).unwrap_or_else(|| panic!(
-                        "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
-                        opt.application_variant.as_str())
-                    );
-                    application.construct_example_server_run_step(opt, example, run_clients)
-                }
-            }
-            (None, Some(applications)) => {
-                if applications.is_empty() {
-                    run_clients
-                } else {
-                    let opt = opt
-                        .right()
-                        .expect("Oak Function application run with RunFunctionsExamples options.");
-
-                    let application = applications.get(opt.application_variant.as_str()).unwrap_or_else(|| panic!(
-                        "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
-                        opt.application_variant.as_str())
-                    );
-                    application.construct_example_server_run_step(opt, example, run_clients)
-                }
-            }
-            _ => panic!(INVALID_APP_COMBO_ERR),
+    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::MapAccess<'de>,
+    {
+        let mut map = map;
+        match map.next_key()? {
+            Some("classic") => Ok(Applications::Classic(map.next_value()?)),
+            Some("functions") => Ok(Applications::Functions(map.next_value()?)),
+            _ => Err(serde::de::Error::custom("expect classic or functions")),
         }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Applications {
+    fn deserialize<D>(deserializer: D) -> Result<Applications, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_map(ApplicationsVisitor)
     }
 }
 
@@ -210,86 +118,11 @@ pub struct ApplicationClassic {
     modules: HashMap<String, Target>,
 }
 
-impl ApplicationClassic {
-    fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
-        vec![
-            Step::Multiple {
-                name: "build wasm modules".to_string(),
-                steps: self
-                    .modules
-                    .iter()
-                    .map(|(name, target)| build_wasm_module(name, target, example_name))
-                    .collect(),
-            },
-            Step::Single {
-                name: "build application".to_string(),
-                command: build_application(&self),
-            },
-        ]
-    }
-
-    fn construct_example_server_run_step(
-        &self,
-        opt: &RunExamples,
-        example: &Example,
-        run_clients: Step,
-    ) -> Step {
-        let run_server = run_example_server(
-            &opt.build_server,
-            &example.server,
-            opt.server_additional_args.clone(),
-            &self.out,
-            &opt.permissions_file,
-        );
-
-        if opt.build_client.client_variant == NO_CLIENTS {
-            Step::Single {
-                name: "run server".to_string(),
-                command: run_server,
-            }
-        } else {
-            Step::WithBackground {
-                name: "background server".to_string(),
-                background: run_server,
-                foreground: Box::new(run_clients),
-            }
-        }
-    }
-}
-
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct ApplicationFunctions {
     wasm_path: String,
     target: Target,
-}
-
-impl ApplicationFunctions {
-    fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
-        vec![build_wasm_module(example_name, &self.target, example_name)]
-    }
-
-    fn construct_example_server_run_step(
-        &self,
-        opt: &RunFunctionsExamples,
-        example: &Example,
-        run_clients: Step,
-    ) -> Step {
-        let run_server = run_functions_example_server(&example.server, &self);
-
-        if opt.build_client.client_variant == NO_CLIENTS {
-            Step::Single {
-                name: "run server".to_string(),
-                command: run_server,
-            }
-        } else {
-            Step::WithBackground {
-                name: "background server".to_string(),
-                background: run_server,
-                foreground: Box::new(run_clients),
-            }
-        }
-    }
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
@@ -329,6 +162,230 @@ struct Executable {
     additional_args: Vec<String>,
 }
 
+trait OakApplication<'a> {
+    type Example;
+
+    fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step>;
+
+    fn construct_example_server_run_step(&self, example: &Self::Example, run_clients: Step)
+        -> Step;
+}
+
+impl<'a> OakApplication<'a> for ApplicationClassic {
+    type Example = ClassicExample<'a>;
+
+    fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
+        vec![
+            Step::Multiple {
+                name: "build wasm modules".to_string(),
+                steps: self
+                    .modules
+                    .iter()
+                    .map(|(name, target)| build_wasm_module(name, target, example_name))
+                    .collect(),
+            },
+            Step::Single {
+                name: "build application".to_string(),
+                command: build_application(&self),
+            },
+        ]
+    }
+
+    fn construct_example_server_run_step(
+        &self,
+        example: &Self::Example,
+        run_clients: Step,
+    ) -> Step {
+        let opt = &example.options;
+
+        let run_server = run_example_server(
+            &opt.build_server,
+            &example.example.server,
+            opt.server_additional_args.clone(),
+            &self.out,
+            &opt.permissions_file,
+        );
+
+        if opt.build_client.client_variant == NO_CLIENTS {
+            Step::Single {
+                name: "run server".to_string(),
+                command: run_server,
+            }
+        } else {
+            Step::WithBackground {
+                name: "background server".to_string(),
+                background: run_server,
+                foreground: Box::new(run_clients),
+            }
+        }
+    }
+}
+
+impl<'a> OakApplication<'a> for ApplicationFunctions {
+    type Example = FunctionsExample<'a>;
+
+    fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
+        vec![build_wasm_module(example_name, &self.target, example_name)]
+    }
+
+    fn construct_example_server_run_step(
+        &self,
+        example: &Self::Example,
+        run_clients: Step,
+    ) -> Step {
+        let opt = &example.options;
+        let run_server = run_functions_example_server(&example.example.server, &self);
+
+        if opt.build_client.client_variant == NO_CLIENTS {
+            Step::Single {
+                name: "run server".to_string(),
+                command: run_server,
+            }
+        } else {
+            Step::WithBackground {
+                name: "background server".to_string(),
+                background: run_server,
+                foreground: Box::new(run_clients),
+            }
+        }
+    }
+}
+
+trait OakExample {
+    fn get_backends(&self) -> &HashMap<String, Executable>;
+
+    fn get_build_client(&self) -> &BuildClient;
+
+    /// Constructs application build steps.
+    fn construct_application_build_steps(&self) -> Vec<Step>;
+
+    /// Constructs run step for the example server.
+    fn construct_example_server_run_step(&self, run_clients: Step) -> Step;
+
+    /// Constructs build steps for the backends.
+    fn construct_backend_build_steps(&self) -> Vec<Step> {
+        self.get_backends()
+            .iter()
+            .map(move |(name, backend)| Step::Single {
+                name: name.to_string(),
+                command: build(&backend.target, &self.get_build_client()),
+            })
+            .collect()
+    }
+
+    /// Recursively constructs run steps for the backends.
+    fn construct_backend_run_steps(&self, run_server_clients: Step) -> Step {
+        self.get_backends()
+            .iter()
+            // First iteration includes `run_server_clients` as a foreground step.
+            .fold(run_server_clients, |backend_steps, (name, backend)| {
+                Step::WithBackground {
+                    name: name.to_string(),
+                    // Each `backend` is included as background step.
+                    background: run(&backend, &self.get_build_client(), Vec::new()),
+                    foreground: Box::new(backend_steps),
+                }
+            })
+    }
+}
+pub struct ClassicExample<'a> {
+    example: &'a Example,
+    applications: &'a HashMap<String, ApplicationClassic>,
+    options: RunExamples,
+}
+
+impl<'a> ClassicExample<'a> {
+    fn new(example: &'a Example, options: RunExamples) -> Self {
+        let applications = match &example.applications {
+            Applications::Classic(ref app) => app,
+            Applications::Functions(_app) => panic!("Need classic example"),
+        };
+
+        ClassicExample {
+            example,
+            applications,
+            options,
+        }
+    }
+
+    fn get_application(&self) -> &dyn OakApplication<'a, Example = Self> {
+        let app_variant = self.options.application_variant.as_str();
+        self.applications.get(app_variant).unwrap_or_else(|| panic!(
+            "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
+            app_variant)
+        )
+    }
+}
+
+impl OakExample for ClassicExample<'_> {
+    fn get_backends(&self) -> &HashMap<String, Executable> {
+        &self.example.backends
+    }
+
+    fn get_build_client(&self) -> &BuildClient {
+        &self.options.build_client
+    }
+
+    fn construct_application_build_steps(&self) -> Vec<Step> {
+        self.get_application()
+            .construct_application_build_steps(&self.example.name)
+    }
+
+    fn construct_example_server_run_step(&self, run_clients: Step) -> Step {
+        self.get_application()
+            .construct_example_server_run_step(&self, run_clients)
+    }
+}
+
+pub struct FunctionsExample<'a> {
+    example: &'a Example,
+    applications: &'a HashMap<String, ApplicationFunctions>,
+    options: RunFunctionsExamples,
+}
+
+impl<'a> FunctionsExample<'a> {
+    fn new(example: &'a Example, options: RunFunctionsExamples) -> Self {
+        let applications = match &example.applications {
+            Applications::Classic(_app) => panic!("Need functions example"),
+            Applications::Functions(ref app) => app,
+        };
+
+        FunctionsExample {
+            example,
+            applications,
+            options,
+        }
+    }
+
+    fn get_application(&self) -> &dyn OakApplication<'a, Example = Self> {
+        let app_variant = self.options.application_variant.as_str();
+        self.applications.get(app_variant).unwrap_or_else(|| panic!(
+            "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
+            app_variant)
+        )
+    }
+}
+
+impl OakExample for FunctionsExample<'_> {
+    fn get_backends(&self) -> &HashMap<String, Executable> {
+        &self.example.backends
+    }
+
+    fn get_build_client(&self) -> &BuildClient {
+        &self.options.build_client
+    }
+
+    fn construct_application_build_steps(&self) -> Vec<Step> {
+        self.get_application()
+            .construct_application_build_steps(&self.example.name)
+    }
+
+    fn construct_example_server_run_step(&self, run_clients: Step) -> Step {
+        self.get_application()
+            .construct_example_server_run_step(&self, run_clients)
+    }
+}
+
 pub fn run_examples(opt: &RunExamples) -> Step {
     let examples: Vec<Example> = example_toml_files()
         .map(|path| {
@@ -355,7 +412,8 @@ pub fn run_examples(opt: &RunExamples) -> Step {
                         .applications
                         .has_application(opt.application_variant.as_ref())
             })
-            .map(|example| run_example(opt, example))
+            .map(|example| ClassicExample::new(example, opt.clone()))
+            .map(|example| run_example(&example))
             .collect(),
     }
 }
@@ -378,7 +436,8 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples) -> Step {
                 Some(example_name) => &example.name == example_name,
                 None => true,
             })
-            .map(|example| run_functions_example(opt, example))
+            .map(|example| FunctionsExample::new(example, opt.clone()))
+            .map(|example| run_functions_example(&example))
             .collect(),
     }
 }
@@ -446,9 +505,11 @@ pub fn build_functions_server(opt: &BuildFunctionsServer) -> Step {
     }
 }
 
-fn run_example(opt: &RunExamples, example: &Example) -> Step {
+fn run_example(example: &ClassicExample) -> Step {
+    let opt = &example.options;
+
     let run_clients = run_clients(
-        example,
+        &example.example,
         &opt.build_client,
         opt.client_additional_args.clone(),
     );
@@ -462,17 +523,16 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     // clients in the foreground.
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
-        let run_server_clients =
-            example.construct_example_server_run_step(either::Left(opt), run_clients);
-        example.construct_backend_run_steps(run_server_clients, &opt.build_client)
+        let run_server_clients = example.construct_example_server_run_step(run_clients);
+        example.construct_backend_run_steps(run_server_clients)
     } else {
         run_clients
     };
 
     Step::Multiple {
-        name: example.name.to_string(),
+        name: example.example.name.to_string(),
         steps: vec![
-            example.construct_application_build_steps(opt.application_variant.as_ref()),
+            example.construct_application_build_steps(),
             if opt.run_server.unwrap_or(true) {
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
@@ -481,11 +541,11 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
                 vec![]
             },
             if opt.build_docker {
-                vec![build_docker(&example)]
+                vec![build_docker(&example.example)]
             } else {
                 vec![]
             },
-            example.construct_backend_build_steps(&opt.build_client),
+            example.construct_backend_build_steps(),
             vec![Step::Multiple {
                 name: "run".to_string(),
                 steps: vec![run_backend_server_clients],
@@ -497,27 +557,28 @@ fn run_example(opt: &RunExamples, example: &Example) -> Step {
     }
 }
 
-fn run_functions_example(opt: &RunFunctionsExamples, example: &Example) -> Step {
+fn run_functions_example(example: &FunctionsExample) -> Step {
+    let opt = &example.options;
+
     // build any backend server
     let run_clients = run_clients(
-        example,
+        &example.example,
         &opt.build_client,
         opt.client_additional_args.clone(),
     );
 
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
-        let run_server_clients =
-            example.construct_example_server_run_step(either::Right(opt), run_clients);
-        example.construct_backend_run_steps(run_server_clients, &opt.build_client)
+        let run_server_clients = example.construct_example_server_run_step(run_clients);
+        example.construct_backend_run_steps(run_server_clients)
     } else {
         run_clients
     };
 
     Step::Multiple {
-        name: example.name.to_string(),
+        name: example.example.name.to_string(),
         steps: vec![
-            example.construct_application_build_steps(opt.application_variant.as_ref()),
+            example.construct_application_build_steps(),
             if opt.run_server.unwrap_or(true) {
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
@@ -526,11 +587,11 @@ fn run_functions_example(opt: &RunFunctionsExamples, example: &Example) -> Step 
                 vec![]
             },
             if opt.build_docker {
-                vec![build_docker(&example)]
+                vec![build_docker(&example.example)]
             } else {
                 vec![]
             },
-            example.construct_backend_build_steps(&opt.build_client),
+            example.construct_backend_build_steps(),
             vec![Step::Multiple {
                 name: "run".to_string(),
                 steps: vec![run_backend_server_clients],
