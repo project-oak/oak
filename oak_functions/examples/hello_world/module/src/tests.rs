@@ -57,7 +57,15 @@ async fn test_server() {
     lookup_data.refresh().await.unwrap();
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_server(&address, &wasm_module_bytes, lookup_data, term, logger).await
+        create_and_start_server(
+            &address,
+            &wasm_module_bytes,
+            lookup_data,
+            None,
+            term,
+            logger,
+        )
+        .await
     });
 
     {

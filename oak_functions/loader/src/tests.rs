@@ -68,7 +68,15 @@ async fn test_server() {
     lookup_data.refresh().await.unwrap();
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_server(&address, &wasm_module_bytes, lookup_data, term, logger).await
+        create_and_start_server(
+            &address,
+            &wasm_module_bytes,
+            lookup_data,
+            None,
+            term,
+            logger,
+        )
+        .await
     });
     let client_fut = start_client(server_port);
 
@@ -149,7 +157,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
                 .uri("http://example.com/invoke")
                 .body(Body::from(r#"{"lat":52,"lon":0}"#))
                 .unwrap();
-            let resp = rt.block_on(wasm_handler.handle_request(request)).unwrap();
+            let resp = rt
+                .block_on(wasm_handler.clone().handle_request(request))
+                .unwrap();
             assert_eq!(resp.status(), hyper::StatusCode::OK);
             let body = rt
                 .block_on(hyper::body::to_bytes(resp.into_body()))

@@ -18,12 +18,20 @@ use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use http::{request::Request, response::Response};
 use hyper::{
+    body::HttpBody,
     service::{make_service_fn, service_fn},
     Body, Server, StatusCode,
 };
 use log::Level;
 use oak_functions_abi::proto::OakStatus;
-use std::{future::Future, net::SocketAddr, sync::Arc};
+use serde::Deserialize;
+use std::{
+    cmp::Ordering,
+    future::Future,
+    net::SocketAddr,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -42,6 +50,92 @@ type AbiPointerOffset = u32;
 /// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
 /// Wasm would use a different value.
 const ABI_USIZE: ValueType = ValueType::I32;
+
+/// Specific header used for padding the response to match the expected response bytes
+const POLICY_PADDING_HEADER: &str = "oak-policy-padding";
+
+/// Minimum size of constant response bytes
+const MIN_RESPONSE_SIZE: u32 = 45;
+
+/// A policy describing limits on the size of the response and response processing time to avoid
+/// side-channel leaks.
+#[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct Policy {
+    /// A fixed size for responses returned by the trusted runtime.
+    ///
+    /// If the response computed by the feature code is smaller than this amount, it is padded with
+    /// additional data before encryption in order to make the payload size exactly this size. If
+    /// the response is larger than this amount, the trusted runtime discards the response and
+    /// instead sends a message of exactly this size to the client, containing an error code
+    /// indicating the failure.
+    constant_response_size_bytes: u32,
+    /// A fixed response time, in milliseconds, for returning the responses by the trusted runtime.
+    ///
+    /// Similar to the previous one, but controls the amount of time the function is allowed to run
+    /// for. If the function finishes before this time, the response is not sent back until the
+    /// time is elapsed. If the function does not finish within this deadline, the trusted runtime
+    /// sends a message to the client containing an error code indicating the failure, of the size
+    /// specified by the previous  parameter.
+    constant_process_time_millis: u64,
+}
+
+impl Policy {
+    pub fn validate(&self) -> bool {
+        self.constant_response_size_bytes >= MIN_RESPONSE_SIZE
+    }
+
+    fn get_error_response(&self, reason: &str) -> anyhow::Result<Response<Body>> {
+        // We include the `POLICY_PADDING_HEADER` in all responses. So first measure the size of the
+        // body and the header name. The diff between this size and
+        // `self.constant_response_size_bytes` gives the required padding.
+        let body = format!("Reason: {}\n", reason);
+        let header_body_content = format!("{}{}", POLICY_PADDING_HEADER, body);
+        let required_padding =
+            self.constant_response_size_bytes as i32 - header_body_content.len() as i32;
+
+        if required_padding < 0 {
+            Err(anyhow::anyhow!(
+                "constant_response_size_bytes specified by the policy is too small."
+            ))
+        } else {
+            let padding_bytes: Vec<u8> = (0..required_padding).map(|_| b'0').collect();
+            http::response::Builder::new()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .header(POLICY_PADDING_HEADER, std::str::from_utf8(&padding_bytes)?)
+                .body(body.into())
+                .context("Couldn't create response")
+        }
+    }
+
+    /// Pads the response by adding a number of zeros, to make the total size equal to
+    /// `self.constant_response_size_bytes`
+    ///
+    /// The zeros are added as the header value for header `oak-policy-padding`.
+    /// It will return an error if the size of the input `response` is larger than or equal to
+    /// `self.constant_response_size_bytes`.
+    fn pad_response(&self, response: http::Response<Body>) -> anyhow::Result<Response<Body>> {
+        let body_size = response.body().size_hint();
+        let header_body_size = body_size
+            .exact()
+            .ok_or_else(|| anyhow::anyhow!("Body does not have exact size"))?
+            + POLICY_PADDING_HEADER.len() as u64;
+
+        let required_padding = self.constant_response_size_bytes as i32 - header_body_size as i32;
+        if required_padding < 0 {
+            panic!(
+                "Something is very wrong. Only call pad_response with responses that require padding."
+            )
+        } else {
+            let padding_bytes: Vec<u8> = (0..required_padding).map(|_| b'0').collect();
+            http::response::Builder::new()
+                .status(response.status())
+                .header(POLICY_PADDING_HEADER, std::str::from_utf8(&padding_bytes)?)
+                .body(response.into_body())
+                .context("Couldn't create response")
+        }
+    }
+}
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
@@ -335,6 +429,60 @@ fn check_export_function_signature(
     }
 }
 
+pub async fn apply_policy<F, S>(
+    policy: Option<Policy>,
+    function: F,
+) -> anyhow::Result<Response<Body>>
+where
+    F: std::marker::Send + 'static + FnOnce() -> S,
+    S: std::future::Future<Output = anyhow::Result<Response<Body>>> + std::marker::Send,
+{
+    match policy {
+        None => function().await,
+        Some(policy) => {
+            let sleep =
+                tokio::time::sleep(Duration::from_millis(policy.constant_process_time_millis));
+            tokio::pin!(sleep);
+
+            let start = Instant::now();
+            let response = tokio::select! {
+                _ = &mut sleep => Err(anyhow::anyhow!("timeout!")),
+                rsp = function() => rsp
+            };
+            let elapsed = start.elapsed().as_millis();
+
+            if elapsed < policy.constant_process_time_millis as u128 {
+                let diff = policy.constant_process_time_millis as u128 - elapsed;
+                tokio::time::sleep(std::time::Duration::from_millis(diff as u64)).await;
+                match response {
+                    Err(err) => policy.get_error_response(format!("{}", err).as_str()),
+                    Ok(rsp) => {
+                        // All responses from Oak-Functions have an additional
+                        // `POLICY_PADDING_HEADER` header.
+
+                        let size = get_size(&rsp)?;
+                        match size.cmp(&(policy.constant_response_size_bytes as i64)) {
+                            Ordering::Greater => policy.get_error_response("response too large"),
+                            Ordering::Less => policy.pad_response(rsp),
+                            Ordering::Equal => Ok(rsp),
+                        }
+                    }
+                }
+            } else {
+                policy.get_error_response("response not available")
+            }
+        }
+    }
+}
+
+fn get_size(response: &hyper::Response<Body>) -> anyhow::Result<i64> {
+    let body_size = response.body().size_hint();
+    Ok(body_size
+        .exact()
+        .ok_or_else(|| anyhow::anyhow!("Body does not have exact size"))? as i64
+        + POLICY_PADDING_HEADER.len() as i64)
+}
+
 // An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
 pub struct WasmHandler {
@@ -359,7 +507,7 @@ impl WasmHandler {
         })
     }
 
-    pub async fn handle_request(&self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
+    pub async fn handle_request(self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
         self.logger
             .log_sensitive(Level::Info, &format!("The request is: {:?}", req));
         match (req.method(), req.uri().path()) {
@@ -392,6 +540,7 @@ pub async fn create_and_start_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,
+    policy: Option<Policy>,
     terminate: F,
     logger: Logger,
 ) -> anyhow::Result<()> {
@@ -401,10 +550,13 @@ pub async fn create_and_start_server<F: Future<Output = ()>>(
     // `wasm_handler`.
     let service = make_service_fn(move |_conn| {
         let wasm_handler = wasm_handler.clone();
+        let policy = policy.clone();
         async move {
             Ok::<_, hyper::Error>(service_fn(move |req| {
                 let wasm_handler = wasm_handler.clone();
-                async move { wasm_handler.handle_request(req).await }
+                let policy = policy.clone();
+                let func = move || wasm_handler.handle_request(req);
+                async move { apply_policy(policy, func).await }
             }))
         }
     });

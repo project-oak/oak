@@ -34,6 +34,7 @@ mod logger;
 mod lookup;
 mod server;
 use crate::{logger::Logger, lookup::LookupData, server::create_and_start_server};
+use server::Policy;
 
 #[cfg(test)]
 mod tests;
@@ -47,8 +48,9 @@ struct Config {
     /// How often to refresh the lookup data. If not provided, data is only loaded once at startup.
     #[serde(with = "humantime_serde")]
     lookup_data_download_period: Option<Duration>,
+    /// Privacy policy guaranteed by the server.
+    policy: Option<Policy>,
 }
-
 /// Command line options for the Oak loader.
 ///
 /// In general, when adding new configuration parameters, they should go in the `Config` struct
@@ -120,12 +122,21 @@ async fn main() -> anyhow::Result<()> {
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
+    // Make sure that policy is specified and is valid
+    config
+        .policy
+        .as_ref()
+        .map(|policy| policy.validate())
+        .filter(|b| *b)
+        .ok_or_else(|| anyhow::anyhow!("a valid policy must be provided"))?;
+
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let server_handle = tokio::spawn(async move {
         create_and_start_server(
             &address,
             &wasm_module_bytes,
             lookup_data,
+            config.policy,
             async { notify_receiver.await.unwrap() },
             logger,
         )
