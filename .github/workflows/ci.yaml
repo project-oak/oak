@@ -66,6 +66,32 @@ jobs:
           docker build --pull --cache-from=gcr.io/oak-ci/oak:latest --tag=gcr.io/oak-ci/oak:latest .
           df --human-readable
 
+      - name: Rust cache
+        uses: actions/cache@v2
+        env:
+          cache-name: rust-cache-2
+        with:
+          path: |
+            ./examples/target
+            ./experimental/target
+            ./oak_abi/target
+            ./oak_client/target
+            ./oak_derive/target
+            ./oak_experimental/target
+            ./oak_functions/target
+            ./oak_loader/target
+            ./oak_io/target
+            ./oak_services/target
+            ./oak_sign/target
+            ./oak_utils/target
+            ./runner/target
+            ./sdk/target
+          key: |
+            cache-${{ env.cache-name }}-${{ matrix.cmd }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cache-${{ env.cache-name }}-${{ matrix.cmd }}-
+            cache-${{ env.cache-name }}-
+
       - name: Run command
         run: |
           ./scripts/docker_run ./scripts/runner --commands ${{ matrix.cmd }}
