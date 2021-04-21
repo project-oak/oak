@@ -1828,6 +1828,7 @@
 <span id="1825">1825</span>
 <span id="1826">1826</span>
 <span id="1827">1827</span>
+<span id="1828">1828</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -2052,6 +2053,7 @@
                 <span class="ident">name</span>: <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;wasm:{}:{}&quot;</span>, <span class="ident">name</span>, <span class="ident">cargo_manifest</span>.<span class="ident">to_string</span>()),
                 <span class="ident">command</span>: <span class="ident">Cmd</span>::<span class="ident">new</span>(
                     <span class="string">&quot;cargo&quot;</span>,
+                    <span class="comment">// Keep this in sync with `/oak_functions/sdk/test/utils/src/lib.rs`.</span>
                     <span class="comment">// Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.</span>
                     <span class="macro">spread</span><span class="macro">!</span>[
                         <span class="comment">// `--out-dir` is unstable and requires `-Zunstable-options`.</span>
@@ -2534,7 +2536,7 @@
     }
 }
 
-<span class="doccomment">/// A construct representing either an Oak Classic or an Oak Functions application.  </span>
+<span class="doccomment">/// A construct representing either an Oak Classic or an Oak Functions application.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// The condition that only one of `classic` or `functions` should be non-empty is</span>
 <span class="doccomment">/// checked in each operation of this struct. If neither or both are empty, the</span>
