@@ -25,10 +25,8 @@ enum OakStatus {
   OK = 1;
   // Arguments invalid.
   ERR_INVALID_ARGS = 2;
-  // Provided buffer was too small for operation (an output value will indicate required size).
-  ERR_BUFFER_TOO_SMALL = 3;
   // Internal error.
-  ERR_INTERNAL = 4;
+  ERR_INTERNAL = 3;
   // Lookup storage item not found.
-  ERR_STORAGE_ITEM_NOT_FOUND = 5;
+  ERR_STORAGE_ITEM_NOT_FOUND = 4;
 }

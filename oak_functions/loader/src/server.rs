@@ -27,6 +27,7 @@ use std::{net::SocketAddr, sync::Arc};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
+const ALLOC_FUNCTION_NAME: &str = "alloc";
 
 /// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
 /// exposed to the Wasm client. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
@@ -50,6 +51,7 @@ struct WasmInterface {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
     lookup_data: Arc<LookupData>,
+    instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
 }
@@ -64,6 +66,7 @@ impl WasmInterface {
             request_bytes,
             response_bytes: vec![],
             lookup_data,
+            instance: None,
             memory: None,
             logger,
         }
@@ -92,20 +95,15 @@ impl WasmInterface {
         &self,
         source: &[u8],
         dest: AbiPointer,
-        dest_capacity: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
-        self.validate_range(dest, dest_capacity)?;
-        if source.len() as u32 <= dest_capacity {
-            self.get_memory().set(dest, source).map_err(|err| {
-                self.logger.log_sensitive(
-                    Level::Error,
-                    &format!("Unable to write buffer into guest memory: {:?}", err),
-                );
-                OakStatus::ErrInvalidArgs
-            })
-        } else {
-            Err(OakStatus::ErrBufferTooSmall)
-        }
+        self.validate_range(dest, source.len() as u32)?;
+        self.get_memory().set(dest, source).map_err(|err| {
+            self.logger.log_sensitive(
+                Level::Error,
+                &format!("Unable to write buffer into guest memory: {:?}", err),
+            );
+            OakStatus::ErrInvalidArgs
+        })
     }
 
     fn write_u32_to_wasm_memory(&self, value: u32, address: AbiPointer) -> Result<(), OakStatus> {
@@ -122,24 +120,26 @@ impl WasmInterface {
 
     /// Corresponds to the host ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
     pub fn read_request(
-        &self,
-        dest: AbiPointer,
-        dest_capacity: AbiPointerOffset,
-        actual_length_addr: AbiPointer,
+        &mut self,
+        dest_ptr_ptr: AbiPointer,
+        dest_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
-        self.write_u32_to_wasm_memory(self.request_bytes.len() as u32, actual_length_addr)?;
-        self.write_buffer_to_wasm_memory(&self.request_bytes, dest, dest_capacity)
+        let dest_ptr = self.alloc(self.request_bytes.len() as u32);
+        self.write_buffer_to_wasm_memory(&self.request_bytes, dest_ptr)?;
+        self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
+        self.write_u32_to_wasm_memory(self.request_bytes.len() as u32, dest_len_ptr)?;
+        Ok(())
     }
 
     /// Corresponds to the host ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
     pub fn write_response(
         &mut self,
-        source: AbiPointer,
-        source_length: AbiPointerOffset,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
     ) -> Result<(), OakStatus> {
         let response = self
             .get_memory()
-            .get(source, source_length as usize)
+            .get(buf_ptr, buf_len as usize)
             .map_err(|err| {
                 self.logger.log_sensitive(
                     Level::Error,
@@ -157,15 +157,14 @@ impl WasmInterface {
     /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(
         &mut self,
-        key_buf: AbiPointer,
-        key_size: AbiPointerOffset,
-        value_buf: AbiPointer,
-        value_size: AbiPointerOffset,
-        value_actual_size: AbiPointer,
+        key_ptr: AbiPointer,
+        key_len: AbiPointerOffset,
+        value_ptr_ptr: AbiPointer,
+        value_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
         let key = self
             .get_memory()
-            .get(key_buf, key_size as usize)
+            .get(key_ptr, key_len as usize)
             .map_err(|err| {
                 self.logger.log_sensitive(
                     Level::Error,
@@ -176,12 +175,47 @@ impl WasmInterface {
                 );
                 OakStatus::ErrInvalidArgs
             })?;
+        self.logger.log_sensitive(
+            Level::Debug,
+            &format!("storage_get_item(): key: {:?}", std::str::from_utf8(&key)),
+        );
         match self.lookup_data.get(&key) {
             Some(value) => {
-                self.write_u32_to_wasm_memory(value.len() as u32, value_actual_size)?;
-                self.write_buffer_to_wasm_memory(&value, value_buf, value_size)
+                self.logger.log_sensitive(
+                    Level::Debug,
+                    &format!(
+                        "storage_get_item(): value: {:?}",
+                        std::str::from_utf8(&value)
+                    ),
+                );
+                let dest_ptr = self.alloc(value.len() as u32);
+                self.write_buffer_to_wasm_memory(&value, dest_ptr)?;
+                self.write_u32_to_wasm_memory(dest_ptr, value_ptr_ptr)?;
+                self.write_u32_to_wasm_memory(value.len() as u32, value_len_ptr)?;
+                Ok(())
             }
-            None => Err(OakStatus::ErrStorageItemNotFound),
+            None => {
+                self.logger
+                    .log_sensitive(Level::Debug, "storage_get_item(): value not found");
+                Err(OakStatus::ErrStorageItemNotFound)
+            }
+        }
+    }
+
+    pub fn alloc(&mut self, len: u32) -> AbiPointer {
+        let result = self.instance.as_ref().unwrap().invoke_export(
+            ALLOC_FUNCTION_NAME,
+            &[wasmi::RuntimeValue::I32(len as i32)],
+            // When calling back into `alloc` we don't need to expose any of the rest of the ABI
+            // methods.
+            &mut wasmi::NopExternals,
+        );
+        let result_value = result
+            .expect("`alloc` call failed")
+            .expect("no value returned from `alloc`");
+        match result_value {
+            wasmi::RuntimeValue::I32(v) => v as u32,
+            _ => panic!("invalid value type returned from `alloc`"),
         }
     }
 }
@@ -198,11 +232,9 @@ impl wasmi::Externals for WasmInterface {
         args: wasmi::RuntimeArgs,
     ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
         match index {
-            READ_REQUEST => map_host_errors(self.read_request(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-            )),
+            READ_REQUEST => {
+                map_host_errors(self.read_request(args.nth_checked(0)?, args.nth_checked(1)?))
+            }
             WRITE_RESPONSE => {
                 map_host_errors(self.write_response(args.nth_checked(0)?, args.nth_checked(1)?))
             }
@@ -211,7 +243,6 @@ impl wasmi::Externals for WasmInterface {
                 args.nth_checked(1)?,
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
-                args.nth_checked(4)?,
             )),
             _ => panic!("Unimplemented function at {}", index),
         }
@@ -249,6 +280,22 @@ impl WasmState {
         .context("failed to instantiate Wasm module")?
         .assert_no_start();
 
+        let alloc = instance
+            .export_by_name(ALLOC_FUNCTION_NAME)
+            .context("could not find Wasm `alloc` export")?
+            .as_func()
+            .cloned()
+            .context("could not interpret Wasm `alloc` export as function")?;
+        let expected_signature = wasmi::Signature::new(&[ValueType::I32][..], Some(ValueType::I32));
+        if alloc.signature() != &expected_signature {
+            anyhow::bail!(
+                "invalid signature for `alloc` export: {:?}, expected: {:?}",
+                alloc.signature(),
+                expected_signature
+            );
+        }
+
+        abi.instance = Some(instance.clone());
         // Make sure that non-empty `memory` is attached to the WasmInterface. Fail early if
         // `memory` is not available.
         abi.memory = Some(
@@ -397,14 +444,13 @@ fn oak_functions_resolve_func(
 ) -> Result<wasmi::FuncRef, wasmi::Error> {
     // The types in the signatures correspond to the parameters from
     // oak_functions/abi/src/lib.rs
-    let (index, sig) = match field_name {
+    let (index, expected_signature) = match field_name {
         "read_request" => (
             READ_REQUEST,
             wasmi::Signature::new(
                 &[
-                    ABI_USIZE, // dest
-                    ABI_USIZE, // dest_capacity
-                    ABI_USIZE, // actual_length_addr (out)
+                    ABI_USIZE, // buf_ptr_ptr
+                    ABI_USIZE, // buf_len_ptr
                 ][..],
                 Some(ValueType::I32),
             ),
@@ -413,8 +459,8 @@ fn oak_functions_resolve_func(
             WRITE_RESPONSE,
             wasmi::Signature::new(
                 &[
-                    ABI_USIZE, // source
-                    ABI_USIZE, // source_length
+                    ABI_USIZE, // buf_ptr
+                    ABI_USIZE, // buf_len
                 ][..],
                 Some(ValueType::I32),
             ),
@@ -423,11 +469,10 @@ fn oak_functions_resolve_func(
             STORAGE_GET_ITEM,
             wasmi::Signature::new(
                 &[
-                    ABI_USIZE, // key_buf
-                    ABI_USIZE, // key_size
-                    ABI_USIZE, // value_buf
-                    ABI_USIZE, // value_size
-                    ABI_USIZE, // value_actual_size
+                    ABI_USIZE, // key_ptr
+                    ABI_USIZE, // key_len
+                    ABI_USIZE, // value_ptr_ptr
+                    ABI_USIZE, // value_len_ptr
                 ][..],
                 Some(ValueType::I32),
             ),
@@ -440,14 +485,14 @@ fn oak_functions_resolve_func(
         }
     };
 
-    if &sig != signature {
+    if signature != &expected_signature {
         return Err(wasmi::Error::Instantiation(format!(
-            "Export `{}` doesn't match expected type {:?}",
-            field_name, signature
+            "Export `{}` doesn't match expected type {:?}, expected: {:?}",
+            field_name, signature, expected_signature
         )));
     }
 
-    Ok(wasmi::FuncInstance::alloc_host(sig, index))
+    Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
 }
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the

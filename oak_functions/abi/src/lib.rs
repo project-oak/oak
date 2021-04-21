@@ -31,17 +31,16 @@ pub mod proto {
 #[link(wasm_import_module = "oak_functions")]
 extern "C" {
     /// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
-    pub fn read_request(buf: *mut u8, size: usize, actual_size: *mut u32) -> u32;
+    pub fn read_request(buf_ptr_ptr: *mut *mut u8, buf_len_ptr: *mut usize) -> u32;
 
     /// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
-    pub fn write_response(buf: *const u8, size: usize) -> u32;
+    pub fn write_response(buf_ptr: *const u8, buf_len: usize) -> u32;
 
     /// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(
-        key_buf: *const u8,
-        key_size: usize,
-        value_buf: *mut u8,
-        value_size: usize,
-        value_actual_size: *mut u32,
+        key_ptr: *const u8,
+        key_len: usize,
+        value_ptr_ptr: *mut *mut u8,
+        value_len_ptr: *mut usize,
     ) -> u32;
 }

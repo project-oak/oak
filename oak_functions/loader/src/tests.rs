@@ -21,7 +21,6 @@ use crate::{
 use hyper::{client::Client, Body};
 use prost::Message;
 use std::{
-    fs,
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
     time::Duration,
@@ -30,9 +29,7 @@ use std::{
 extern crate test;
 use test::Bencher;
 
-const TEST_WASM_MODULE_PATH: &str = "testdata/non-oak-minimal.wasm";
 const MANIFEST_PATH: &str = "examples/hello_world/module/Cargo.toml";
-const WASM_MODULE_PATH: &str = "hello_world.wasm";
 
 const OAK_FUNCTIONS_SERVER_PORT: u16 = 9001;
 const STATIC_SERVER_PORT: u16 = 9002;
@@ -42,8 +39,12 @@ async fn test_server() {
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, OAK_FUNCTIONS_SERVER_PORT));
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
+    let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.pop();
+    manifest_path.push(MANIFEST_PATH);
     let wasm_module_bytes =
-        fs::read(TEST_WASM_MODULE_PATH).expect("Couldn't read test Wasm module");
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+            .expect("Couldn't read Wasm module");
 
     let logger = Logger::for_test();
 
@@ -67,7 +68,7 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
     let request = hyper::Request::builder()
         .method(http::Method::POST)
         .uri(format!("http://localhost:{}/invoke", port))
-        .body(Body::empty())
+        .body(Body::from("World"))
         .unwrap();
     let resp = client
         .request(request)
@@ -75,7 +76,10 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
         .expect("Error while awaiting response");
 
     assert_eq!(resp.status(), hyper::StatusCode::OK);
-    assert_eq!(hyper::body::to_bytes(resp.into_body()).await.unwrap(), "");
+    assert_eq!(
+        hyper::body::to_bytes(resp.into_body()).await.unwrap(),
+        "Hello World!\n"
+    );
 
     notify_sender
         .send(())
@@ -89,12 +93,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.pop();
     manifest_path.push(MANIFEST_PATH);
-
-    let wasm_module_bytes = test_utils::compile_rust_wasm(
-        manifest_path.to_str().expect("Invalid target dir"),
-        WASM_MODULE_PATH,
-    )
-    .expect("Couldn't read Wasm module");
+    let wasm_module_bytes =
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+            .expect("Couldn't read Wasm module");
 
     let summary = bencher.bench(|bencher| {
         let logger = Logger::for_test();
