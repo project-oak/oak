@@ -162,18 +162,7 @@ struct Executable {
     additional_args: Vec<String>,
 }
 
-trait OakApplication<'a> {
-    type Example;
-
-    fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step>;
-
-    fn construct_example_server_run_step(&self, example: &Self::Example, run_clients: Step)
-        -> Step;
-}
-
-impl<'a> OakApplication<'a> for ApplicationClassic {
-    type Example = ClassicExample<'a>;
-
+impl ApplicationClassic {
     fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
         vec![
             Step::Multiple {
@@ -193,7 +182,7 @@ impl<'a> OakApplication<'a> for ApplicationClassic {
 
     fn construct_example_server_run_step(
         &self,
-        example: &Self::Example,
+        example: &ClassicExample,
         run_clients: Step,
     ) -> Step {
         let opt = &example.options;
@@ -221,16 +210,14 @@ impl<'a> OakApplication<'a> for ApplicationClassic {
     }
 }
 
-impl<'a> OakApplication<'a> for ApplicationFunctions {
-    type Example = FunctionsExample<'a>;
-
+impl ApplicationFunctions {
     fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
         vec![build_wasm_module(example_name, &self.target, example_name)]
     }
 
     fn construct_example_server_run_step(
         &self,
-        example: &Self::Example,
+        example: &FunctionsExample,
         run_clients: Step,
     ) -> Step {
         let opt = &example.options;
@@ -308,7 +295,7 @@ impl<'a> ClassicExample<'a> {
         }
     }
 
-    fn get_application(&self) -> &dyn OakApplication<'a, Example = Self> {
+    fn get_application(&self) -> &ApplicationClassic {
         let app_variant = self.options.application_variant.as_str();
         self.applications.get(app_variant).unwrap_or_else(|| panic!(
             "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
@@ -357,7 +344,7 @@ impl<'a> FunctionsExample<'a> {
         }
     }
 
-    fn get_application(&self) -> &dyn OakApplication<'a, Example = Self> {
+    fn get_application(&self) -> &ApplicationFunctions {
         let app_variant = self.options.application_variant.as_str();
         self.applications.get(app_variant).unwrap_or_else(|| panic!(
             "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
