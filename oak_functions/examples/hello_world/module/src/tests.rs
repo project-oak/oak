@@ -42,9 +42,8 @@ async fn test_server() {
     tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
 
     mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
-        b"Harry".to_vec() => b"Potter".to_vec(),
-        b"Sirius".to_vec() => b"Black".to_vec(),
-        b"Ron".to_vec() => b"Weasley".to_vec(),
+        b"52,0".to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
+        b"14,12".to_vec() => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
     }));
 
     let logger = Logger::for_test();
@@ -67,18 +66,26 @@ async fn test_server() {
     });
 
     {
-        // No lookup match.
-        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, b"World").await;
+        // Lookup match.
+        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, br#"{"lat":52,"lon":0}"#).await;
         assert_eq!(
-            "Hello World!\n",
+            r#"{"temperature_degrees_celsius":10}"#,
             std::str::from_utf8(response_fut.as_slice()).unwrap()
         );
     }
     {
-        // Lookup match.
-        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, b"Harry").await;
+        // Valid location but no lookup match.
+        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, br#"{"lat":19,"lon":88}"#).await;
         assert_eq!(
-            "Hello Harry Potter!\n",
+            r#"weather not found for location"#,
+            std::str::from_utf8(response_fut.as_slice()).unwrap()
+        );
+    }
+    {
+        // Malformed request.
+        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, b"invalid - JSON").await;
+        assert_eq!(
+            "could not deserialize request as JSON",
             std::str::from_utf8(response_fut.as_slice()).unwrap()
         );
     }

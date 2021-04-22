@@ -19,6 +19,7 @@ use crate::{
     server::{create_and_start_server, WasmHandler},
 };
 use hyper::{client::Client, Body};
+use maplit::hashmap;
 use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -48,7 +49,21 @@ async fn test_server() {
 
     let logger = Logger::for_test();
 
-    let lookup_data = Arc::new(LookupData::new_empty("", logger.clone()));
+    let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
+
+    let mock_static_server_clone = mock_static_server.clone();
+    tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
+
+    mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
+        b"52,0".to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
+        b"14,12".to_vec() => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
+    }));
+
+    let lookup_data = Arc::new(LookupData::new_empty(
+        &format!("http://localhost:{}", STATIC_SERVER_PORT),
+        logger.clone(),
+    ));
+    lookup_data.refresh().await.unwrap();
 
     let server_fut = create_and_start_server(
         &address,
@@ -68,7 +83,7 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
     let request = hyper::Request::builder()
         .method(http::Method::POST)
         .uri(format!("http://localhost:{}/invoke", port))
-        .body(Body::from("World"))
+        .body(Body::from(r#"{"lat":52,"lon":0}"#))
         .unwrap();
     let resp = client
         .request(request)
@@ -78,7 +93,7 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
     assert_eq!(resp.status(), hyper::StatusCode::OK);
     assert_eq!(
         hyper::body::to_bytes(resp.into_body()).await.unwrap(),
-        "Hello World!\n"
+        r#"{"temperature_degrees_celsius":10}"#,
     );
 
     notify_sender
@@ -99,20 +114,44 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 
     let summary = bencher.bench(|bencher| {
         let logger = Logger::for_test();
-        let lookup_data = Arc::new(LookupData::new_empty("", logger.clone()));
-        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, logger)
+        let lookup_data = Arc::new(LookupData::new_empty(
+            &format!("http://localhost:{}", STATIC_SERVER_PORT),
+            logger.clone(),
+        ));
+        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data.clone(), logger)
             .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
+
+            let mock_static_server_clone = mock_static_server.clone();
+            tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
+
+            mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
+                b"52,0".to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
+                b"14,12".to_vec() => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
+            }));
+
+            lookup_data.refresh().await.unwrap();
+        });
         bencher.iter(|| {
             let request = hyper::Request::builder()
                 .method(http::Method::POST)
                 // We don't really send the request. So the hostname can be anything. It is only
                 // needed for building a valid request.
                 .uri("http://example.com/invoke")
-                .body(hyper::Body::from("World"))
+                .body(Body::from(r#"{"lat":52,"lon":0}"#))
                 .unwrap();
             let resp = rt.block_on(wasm_handler.handle_request(request)).unwrap();
             assert_eq!(resp.status(), hyper::StatusCode::OK);
+            let body = rt
+                .block_on(hyper::body::to_bytes(resp.into_body()))
+                .unwrap()
+                .to_vec();
+            assert_eq!(
+                std::str::from_utf8(&body).unwrap(),
+                r#"{"temperature_degrees_celsius":10}"#
+            );
         });
     });
 
@@ -125,7 +164,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         // We expect the `mean` time for loading the test Wasm module and running its main function
         // to be less than a fixed threshold.
         assert!(
-            elapsed < Duration::from_millis(1),
+            elapsed < Duration::from_millis(3),
             "elapsed time: {:.0?}",
             elapsed
         );

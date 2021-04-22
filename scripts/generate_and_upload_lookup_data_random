@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# shellcheck source=scripts/gcp_common
+source "$SCRIPTS_DIR/gcp_common"
+
+cargo run --manifest-path=./oak_functions/lookup_data_generator/Cargo.toml -- \
+  --out-file-path=/tmp/lookup_data \
+  random \
+  --key-size-bytes=20 \
+  --value-size-bytes=1000 \
+  --entries=100000
+
+# Once uploaded, this file is publicly available at the following URL:
+# https://storage.googleapis.com/oak_lookup_data/lookup_data
+gsutil cp /tmp/lookup_data gs://oak_lookup_data/lookup_data

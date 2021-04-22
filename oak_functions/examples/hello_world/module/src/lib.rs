@@ -16,31 +16,47 @@
 
 //! Oak functions hello world example. Responds with `Hello $request_body!` to every request.
 
+#![feature(try_blocks)]
+
+use serde::Deserialize;
+
 #[cfg(test)]
 mod tests;
 
+#[derive(Deserialize)]
+struct Location {
+    #[serde(rename = "lat")]
+    latitude_degrees: i32,
+    #[serde(rename = "lon")]
+    longitude_degrees: i32,
+}
+
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
-    // Read the request
-    let request_body = oak_functions::read_request().expect("Couldn't read request body.");
+    // Produce a result which is either a successful response (as raw bytes), or an error message to
+    // return to the client (as a human-readable string).
+    let result: Result<Vec<u8>, &str> = try {
+        // Read the request.
+        let request_body =
+            oak_functions::read_request().map_err(|_err| "Couldn't read request body.")?;
+        // Parse the request as a `Location` JSON object.
+        let location: Location = serde_json::from_slice(&request_body)
+            .map_err(|_err| "could not deserialize request as JSON")?;
+        // Format the location as `lat,lon` in order to perform a lookup.
+        let key = format!(
+            "{},{}",
+            location.latitude_degrees, location.longitude_degrees
+        );
+        // Try to look up the location in the storage data, and if found use the result as the
+        // response message.
+        let response = oak_functions::storage_get_item(key.as_bytes())
+            .map_err(|_err| "Couldn't look up weather")?
+            .ok_or("weather not found for location")?;
+        response
+    };
 
-    // Try to look up the name in the storage data, and if found use the result as surname in the
-    // response message.
-    let surname = oak_functions::storage_get_item(&request_body).expect("Couldn't look up surname");
+    let response = result.unwrap_or_else(|err| err.as_bytes().to_vec());
 
-    // Create response body
-    let response_body = format!(
-        "Hello {}{}!\n",
-        std::str::from_utf8(&request_body).expect("Couldn't convert bytes to string"),
-        surname
-            .map(|v| std::str::from_utf8(&v)
-                .expect("Couldn't convert bytes to string")
-                .to_string())
-            .map(|v| format!(" {}", v))
-            .unwrap_or_default()
-    );
-
-    // Write the response body
-    oak_functions::write_response(&response_body.as_bytes())
-        .expect("Couldn't write the response body.");
+    // Write the response.
+    oak_functions::write_response(&response).expect("Couldn't write the response body.");
 }

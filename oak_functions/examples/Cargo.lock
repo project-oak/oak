@@ -222,6 +222,8 @@ dependencies = [
  "maplit",
  "oak_functions",
  "oak_functions_loader",
+ "serde",
+ "serde_json",
  "test_utils",
  "tokio",
 ]
