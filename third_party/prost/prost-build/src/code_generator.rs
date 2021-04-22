@@ -26,6 +26,21 @@ enum Syntax {
     Proto3,
 }
 
+#[derive(PartialEq)]
+enum BytesTy {
+    Vec,
+    Bytes,
+}
+
+impl BytesTy {
+    fn as_str(&self) -> &'static str {
+        match self {
+            BytesTy::Vec => "\"vec\"",
+            BytesTy::Bytes => "\"bytes\"",
+        }
+    }
+}
+
 pub struct CodeGenerator<'a> {
     config: &'a mut Config,
     package: String,
@@ -161,16 +176,16 @@ impl<'a> CodeGenerator<'a> {
             .into_iter()
             .enumerate()
             .partition_map(|(idx, field)| {
-                if let Some(oneof_index) = field.oneof_index {
+                if field.proto3_optional.unwrap_or(false) {
+                    Either::Left((field, idx))
+                } else if let Some(oneof_index) = field.oneof_index {
                     Either::Right((oneof_index, (field, idx)))
                 } else {
                     Either::Left((field, idx))
                 }
             });
 
-        assert_eq!(oneof_fields.len(), message.oneof_decl.len());
-
-        self.append_doc();
+        self.append_doc(&fq_message_name, None);
         self.append_type_attributes(&fq_message_name);
         self.push_indent();
         self.buf
@@ -201,13 +216,14 @@ impl<'a> CodeGenerator<'a> {
         self.path.push(8);
         for (idx, oneof) in message.oneof_decl.iter().enumerate() {
             let idx = idx as i32;
+
+            let fields = match oneof_fields.get_vec(&idx) {
+                Some(fields) => fields,
+                None => continue,
+            };
+
             self.path.push(idx);
-            self.append_oneof_field(
-                &message_name,
-                &fq_message_name,
-                oneof,
-                oneof_fields.get_vec(&idx).unwrap(),
-            );
+            self.append_oneof_field(&message_name, &fq_message_name, oneof, fields);
             self.path.pop();
         }
         self.path.pop();
@@ -248,11 +264,11 @@ impl<'a> CodeGenerator<'a> {
         }
     }
 
-    fn append_type_attributes(&mut self, msg_name: &str) {
-        assert_eq!(b'.', msg_name.as_bytes()[0]);
+    fn append_type_attributes(&mut self, fq_message_name: &str) {
+        assert_eq!(b'.', fq_message_name.as_bytes()[0]);
         // TODO: this clone is dirty, but expedious.
         for (matcher, attribute) in self.config.type_attributes.clone() {
-            if match_ident(&matcher, msg_name, None) {
+            if match_ident(&matcher, fq_message_name, None) {
                 self.push_indent();
                 self.buf.push_str(&attribute);
                 self.buf.push('\n');
@@ -260,11 +276,11 @@ impl<'a> CodeGenerator<'a> {
         }
     }
 
-    fn append_field_attributes(&mut self, msg_name: &str, field_name: &str) {
-        assert_eq!(b'.', msg_name.as_bytes()[0]);
+    fn append_field_attributes(&mut self, fq_message_name: &str, field_name: &str) {
+        assert_eq!(b'.', fq_message_name.as_bytes()[0]);
         // TODO: this clone is dirty, but expedious.
         for (matcher, attribute) in self.config.field_attributes.clone() {
-            if match_ident(&matcher, msg_name, Some(field_name)) {
+            if match_ident(&matcher, fq_message_name, Some(field_name)) {
                 self.push_indent();
                 self.buf.push_str(&attribute);
                 self.buf.push('\n');
@@ -272,16 +288,18 @@ impl<'a> CodeGenerator<'a> {
         }
     }
 
-    fn append_field(&mut self, msg_name: &str, field: FieldDescriptorProto) {
+    fn append_field(&mut self, fq_message_name: &str, field: FieldDescriptorProto) {
         let type_ = field.r#type();
         let repeated = field.label == Some(Label::Repeated as i32);
         let deprecated = self.deprecated(&field);
         let optional = self.optional(&field);
-        let ty = self.resolve_type(&field);
+        let ty = self.resolve_type(&field, fq_message_name);
 
         let boxed = !repeated
             && (type_ == Type::Message || type_ == Type::Group)
-            && self.message_graph.is_nested(field.type_name(), msg_name);
+            && self
+                .message_graph
+                .is_nested(field.type_name(), fq_message_name);
 
         debug!(
             "    field: {:?}, type: {:?}, boxed: {}",
@@ -290,7 +308,7 @@ impl<'a> CodeGenerator<'a> {
             boxed
         );
 
-        self.append_doc();
+        self.append_doc(fq_message_name, Some(field.name()));
 
         if deprecated {
             self.push_indent();
@@ -301,6 +319,12 @@ impl<'a> CodeGenerator<'a> {
         self.buf.push_str("#[prost(");
         let type_tag = self.field_type_tag(&field);
         self.buf.push_str(&type_tag);
+
+        if type_ == Type::Bytes {
+            self.buf.push_str("=");
+            self.buf
+                .push_str(self.bytes_backing_type(&field, fq_message_name).as_str());
+        }
 
         match field.label() {
             Label::Optional => {
@@ -364,7 +388,7 @@ impl<'a> CodeGenerator<'a> {
         }
 
         self.buf.push_str("\")]\n");
-        self.append_field_attributes(msg_name, field.name());
+        self.append_field_attributes(fq_message_name, field.name());
         self.push_indent();
         self.buf.push_str("pub ");
         self.buf.push_str(&to_snake(field.name()));
@@ -379,23 +403,23 @@ impl<'a> CodeGenerator<'a> {
         }
         self.buf.push_str(&ty);
         if boxed {
-            self.buf.push('>');
+            self.buf.push_str(">");
         }
         if repeated || optional {
-            self.buf.push('>');
+            self.buf.push_str(">");
         }
         self.buf.push_str(",\n");
     }
 
     fn append_map_field(
         &mut self,
-        msg_name: &str,
+        fq_message_name: &str,
         field: FieldDescriptorProto,
         key: &FieldDescriptorProto,
         value: &FieldDescriptorProto,
     ) {
-        let key_ty = self.resolve_type(key);
-        let value_ty = self.resolve_type(value);
+        let key_ty = self.resolve_type(key, fq_message_name);
+        let value_ty = self.resolve_type(value, fq_message_name);
 
         debug!(
             "    map field: {:?}, key type: {:?}, value type: {:?}",
@@ -404,14 +428,14 @@ impl<'a> CodeGenerator<'a> {
             value_ty
         );
 
-        self.append_doc();
+        self.append_doc(fq_message_name, Some(field.name()));
         self.push_indent();
 
         let btree_map = self
             .config
             .btree_map
             .iter()
-            .any(|matcher| match_ident(matcher, msg_name, Some(field.name())));
+            .any(|matcher| match_ident(matcher, fq_message_name, Some(field.name())));
         let (annotation_ty, lib_name, rust_ty) = if btree_map {
             ("btree_map", "::prost::alloc::collections", "BTreeMap")
         } else {
@@ -420,6 +444,7 @@ impl<'a> CodeGenerator<'a> {
 
         let key_tag = self.field_type_tag(key);
         let value_tag = self.map_value_type_tag(value);
+
         self.buf.push_str(&format!(
             "#[prost({}=\"{}, {}\", tag=\"{}\")]\n",
             annotation_ty,
@@ -427,7 +452,7 @@ impl<'a> CodeGenerator<'a> {
             value_tag,
             field.number()
         ));
-        self.append_field_attributes(msg_name, field.name());
+        self.append_field_attributes(fq_message_name, field.name());
         self.push_indent();
         self.buf.push_str(&format!(
             "pub {}: {}::{}<{}, {}>,\n",
@@ -451,7 +476,7 @@ impl<'a> CodeGenerator<'a> {
             to_snake(message_name),
             to_upper_camel(oneof.name())
         );
-        self.append_doc();
+        self.append_doc(fq_message_name, None);
         self.push_indent();
         self.buf.push_str(&format!(
             "#[prost(oneof=\"{}\", tags=\"{}\")]\n",
@@ -472,18 +497,18 @@ impl<'a> CodeGenerator<'a> {
 
     fn append_oneof(
         &mut self,
-        msg_name: &str,
+        fq_message_name: &str,
         oneof: OneofDescriptorProto,
         idx: i32,
         fields: Vec<(FieldDescriptorProto, usize)>,
     ) {
         self.path.push(8);
         self.path.push(idx);
-        self.append_doc();
+        self.append_doc(fq_message_name, None);
         self.path.pop();
         self.path.pop();
 
-        let oneof_name = format!("{}.{}", msg_name, oneof.name());
+        let oneof_name = format!("{}.{}", fq_message_name, oneof.name());
         self.append_type_attributes(&oneof_name);
         self.push_indent();
         self.buf
@@ -499,7 +524,7 @@ impl<'a> CodeGenerator<'a> {
             let type_ = field.r#type();
 
             self.path.push(idx as i32);
-            self.append_doc();
+            self.append_doc(fq_message_name, Some(field.name()));
             self.path.pop();
 
             self.push_indent();
@@ -512,10 +537,12 @@ impl<'a> CodeGenerator<'a> {
             self.append_field_attributes(&oneof_name, field.name());
 
             self.push_indent();
-            let ty = self.resolve_type(&field);
+            let ty = self.resolve_type(&field, fq_message_name);
 
             let boxed = (type_ == Type::Message || type_ == Type::Group)
-                && self.message_graph.is_nested(field.type_name(), msg_name);
+                && self
+                    .message_graph
+                    .is_nested(field.type_name(), fq_message_name);
 
             debug!(
                 "    oneof: {:?}, type: {:?}, boxed: {}",
@@ -552,8 +579,15 @@ impl<'a> CodeGenerator<'a> {
         &self.source_info.location[idx]
     }
 
-    fn append_doc(&mut self) {
-        Comments::from_location(self.location()).append_with_indent(self.depth, &mut self.buf);
+    fn append_doc(&mut self, fq_name: &str, field_name: Option<&str>) {
+        if !self
+            .config
+            .disable_comments
+            .iter()
+            .any(|matcher| match_ident(matcher, fq_name, field_name))
+        {
+            Comments::from_location(self.location()).append_with_indent(self.depth, &mut self.buf)
+        }
     }
 
     fn append_enum(&mut self, desc: EnumDescriptorProto) {
@@ -567,7 +601,7 @@ impl<'a> CodeGenerator<'a> {
             return;
         }
 
-        self.append_doc();
+        self.append_doc(&fq_enum_name, None);
         self.append_type_attributes(&fq_enum_name);
         self.push_indent();
         self.buf.push_str(
@@ -613,7 +647,7 @@ impl<'a> CodeGenerator<'a> {
         value: &EnumValueDescriptorProto,
         prefix_to_strip: Option<String>,
     ) {
-        self.append_doc();
+        self.append_doc(fq_enum_name, Some(value.name()));
         self.append_field_attributes(fq_enum_name, &value.name());
         self.push_indent();
         let name = to_upper_camel(value.name());
@@ -699,7 +733,7 @@ impl<'a> CodeGenerator<'a> {
         self.buf.push_str(&to_snake(module));
         self.buf.push_str(" {\n");
 
-        self.package.push('.');
+        self.package.push_str(".");
         self.package.push_str(module);
 
         self.depth += 1;
@@ -715,20 +749,7 @@ impl<'a> CodeGenerator<'a> {
         self.buf.push_str("}\n");
     }
 
-    fn resolve_message_type(&self, field: &FieldDescriptorProto) -> Option<String> {
-        let message_type = self.resolve_ident(&field.options.as_ref()?.message_type.as_ref()?);
-        let direction = match field.type_name() {
-            ".oak.handle.Sender" => Some("Sender"),
-            ".oak.handle.Receiver" => Some("Receiver"),
-            _ => None,
-        }?;
-        Some(format!("::oak_io::{}<{}>", direction, message_type))
-    }
-
-    fn resolve_type(&self, field: &FieldDescriptorProto) -> String {
-        if let Some(ty) = self.resolve_message_type(field) {
-            return ty;
-        }
+    fn resolve_type(&self, field: &FieldDescriptorProto, fq_message_name: &str) -> String {
         match field.r#type() {
             Type::Float => String::from("f32"),
             Type::Double => String::from("f64"),
@@ -738,7 +759,10 @@ impl<'a> CodeGenerator<'a> {
             Type::Int64 | Type::Sfixed64 | Type::Sint64 => String::from("i64"),
             Type::Bool => String::from("bool"),
             Type::String => String::from("::prost::alloc::string::String"),
-            Type::Bytes => String::from("::prost::alloc::vec::Vec<u8>"),
+            Type::Bytes => match self.bytes_backing_type(field, fq_message_name) {
+                BytesTy::Bytes => String::from("::prost::bytes::Bytes"),
+                BytesTy::Vec => String::from("::prost::alloc::vec::Vec<u8>"),
+            },
             Type::Group | Type::Message => self.resolve_ident(field.type_name()),
         }
     }
@@ -807,6 +831,10 @@ impl<'a> CodeGenerator<'a> {
     }
 
     fn optional(&self, field: &FieldDescriptorProto) -> bool {
+        if field.proto3_optional.unwrap_or(false) {
+            return true;
+        }
+
         if field.label() != Label::Optional {
             return false;
         }
@@ -814,6 +842,19 @@ impl<'a> CodeGenerator<'a> {
         match field.r#type() {
             Type::Message => true,
             _ => self.syntax == Syntax::Proto2,
+        }
+    }
+
+    fn bytes_backing_type(&self, field: &FieldDescriptorProto, fq_message_name: &str) -> BytesTy {
+        let bytes = self
+            .config
+            .bytes
+            .iter()
+            .any(|matcher| match_ident(matcher, fq_message_name, Some(field.name())));
+        if bytes {
+            BytesTy::Bytes
+        } else {
+            BytesTy::Vec
         }
     }
 
@@ -961,8 +1002,8 @@ fn unescape_c_escape_string(s: &str) -> Vec<u8> {
 /// It also tries to handle cases where the stripped name would be
 /// invalid - for example, if it were to begin with a number.
 fn strip_enum_prefix<'a>(prefix: &str, name: &'a str) -> &'a str {
-    let stripped = if let Some(stripped) = name.strip_prefix(prefix) {
-        stripped
+    let stripped = if name.starts_with(prefix) {
+        &name[prefix.len()..]
     } else {
         name
     };
