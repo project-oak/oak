@@ -511,15 +511,6 @@ dependencies = [
 
 [[package]]
 name = "ct-logs"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c8e13110a84b6315df212c045be706af261fd364791cad863285439ebba672e"
-dependencies = [
- "sct",
-]
-
-[[package]]
-name = "ct-logs"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1a816186fa68d9e426e3cb4ae4dff1fcd8e4a2c34b781bf7a822574a0d0aac8"
@@ -1121,7 +1112,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37743cc83e8ee85eacfce90f2f4102030d9ff0a95244098d781e9bee4a90abb6"
 dependencies = [
  "bytes 0.5.6",
- "ct-logs 0.7.0",
  "futures-util",
  "hyper 0.13.9",
  "log",
@@ -1129,7 +1119,6 @@ dependencies = [
  "tokio 0.2.23",
  "tokio-rustls 0.14.1",
  "webpki",
- "webpki-roots",
 ]
 
 [[package]]
@@ -1138,7 +1127,7 @@ version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f9f7a97316d44c0af9b0301e65010573a853a9fc97046d7331d7f6bc0fd5a64"
 dependencies = [
- "ct-logs 0.8.0",
+ "ct-logs",
  "futures-util",
  "hyper 0.14.4",
  "log",
@@ -1147,6 +1136,7 @@ dependencies = [
  "tokio 1.2.0",
  "tokio-rustls 0.22.0",
  "webpki",
+ "webpki-roots 0.21.1",
 ]
 
 [[package]]
@@ -1641,8 +1631,8 @@ dependencies = [
  "futures-util",
  "hex",
  "http",
- "hyper 0.13.9",
- "hyper-rustls 0.21.0",
+ "hyper 0.14.4",
+ "hyper-rustls 0.22.1",
  "itertools",
  "jsonwebtoken",
  "lazy_static",
@@ -1661,7 +1651,7 @@ dependencies = [
  "regex",
  "reqwest",
  "roughenough",
- "rustls 0.18.1",
+ "rustls 0.19.0",
  "serde",
  "serde_json",
  "sha2",
@@ -1675,7 +1665,7 @@ dependencies = [
  "tink-proto",
  "tink-signature",
  "tokio 0.2.23",
- "tokio-rustls 0.14.1",
+ "tokio-rustls 0.22.0",
  "tonic",
  "wasmi",
 ]
@@ -2229,7 +2219,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
- "webpki-roots",
+ "webpki-roots 0.20.0",
  "winreg",
 ]
 
@@ -3715,11 +3705,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "which"
-version = "3.1.1"
+name = "webpki-roots"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d011071ae14a2f6671d0b74080ae0cd8ebf3a6f8c9589a2cd45f23126fe29724"
+checksum = "aabe153544e473b775453675851ecc86863d2a81d786d741f6b76778f2a48940"
 dependencies = [
+ "webpki",
+]
+
+[[package]]
+name = "which"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b55551e42cbdf2ce2bedd2203d0cc08dba002c27510f86dab6d0ce304cba3dfe"
+dependencies = [
+ "either",
  "libc",
 ]
 
