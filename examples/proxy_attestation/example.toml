@@ -5,6 +5,7 @@ backend = { Cargo = { cargo_manifest = "experimental/proxy_attestation/Cargo.tom
   "--grpc-listen-address=[::]:8888",
   "--grpc-tls-private-key=./examples/certs/local/local.key",
   "--grpc-tls-certificate=./examples/certs/local/local.pem",
+  "--tee-certificate=./examples/certs/local/ca.pem",
 ] }
 
 [applications]

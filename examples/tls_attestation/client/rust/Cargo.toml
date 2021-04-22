@@ -1,17 +1,9 @@
 [package]
-name = "proxy_attestation_client"
+name = "tls_attestation_client"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
-
-[lib]
-name = "proxy_attestation_client"
-path = "src/lib.rs"
-
-[[bin]]
-name = "proxy_attestation_client_bin"
-path = "src/main.rs"
 
 [dependencies]
 anyhow = "*"
@@ -19,17 +11,21 @@ assert_matches = "*"
 base64 = "*"
 env_logger = "*"
 http = "*"
+hyper = "*"
+hyper-rustls = { version = "*", default-features = false, features = [
+  "webpki-tokio"
+] }
 log = "*"
 oak_abi = "=0.1.0"
 oak_client = { version = "=0.1.0", features = ["oak-attestation"] }
-oak_proxy_attestation = "*"
-oak_sign = "=0.1.0"
-pem = "*"
 prost = "*"
+rustls = "*"
+serde_json = "*"
 structopt = "*"
 # Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
 tokio = { version = "0.2", features = ["fs", "macros", "sync", "stream"] }
 tonic = { version = "*", features = ["tls"] }
-
-[build-dependencies]
-oak_utils = "*"
+regex = { version = "*" }
+tokio-rustls = { version = "*", features = ["dangerous_configuration"] }
+x509-parser = "*"
+webpki = { version = "*" }

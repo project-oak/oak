@@ -14,24 +14,27 @@
 // limitations under the License.
 //
 
-use crate::Report;
+use crate::report::{AttestationInfo, Report};
 use assert_matches::assert_matches;
 
-const TEST_TEE_MEASUREMENT: &str = "Measurement";
 const TEST_TEE_DATA: &str = "Data";
-const TEST_REPORT: &str = r#"{"version":0,"svn":0,"platform_version":0,"report_data":[68,97,116,97],"measurement":[77,101,97,115,117,114,101,109,101,110,116],"signature":[]}"#;
+const TEST_CERTIFICATE: &str = "Certificate";
+const TEST_ATTESTATION_INFO: &str = r#"{"report":{"version":0,"svn":0,"platform_version":0,"data":[68,97,116,97],"measurement":[84,101,115,116,32,84,69,69,32,109,101,97,115,117,114,101,109,101,110,116],"signature":[]},"certificate":[67,101,114,116,105,102,105,99,97,116,101]}"#;
 
 #[test]
-fn test_report_serialization() {
-    let report = Report::new(TEST_TEE_MEASUREMENT.as_bytes(), TEST_TEE_DATA.as_bytes());
+fn test_attestation_info_serialization() {
+    let attestation_info = AttestationInfo {
+        report: Report::new(TEST_TEE_DATA.as_bytes()),
+        certificate: TEST_CERTIFICATE.as_bytes().to_vec(),
+    };
 
-    let serialized_report_result = report.to_string();
-    assert_matches!(serialized_report_result, Ok(_));
-    let serialized_report = serialized_report_result.unwrap();
-    assert_eq!(serialized_report, TEST_REPORT);
+    let serialized_attestation_info_result = attestation_info.to_string();
+    assert_matches!(serialized_attestation_info_result, Ok(_));
+    let serialized_attestation_info = serialized_attestation_info_result.unwrap();
+    assert_eq!(serialized_attestation_info, TEST_ATTESTATION_INFO);
 
-    let deserialized_report_result = Report::from_string(TEST_REPORT);
-    assert_matches!(deserialized_report_result, Ok(_));
-    let deserialized_report = deserialized_report_result.unwrap();
-    assert_eq!(deserialized_report, report);
+    let deserialized_attestation_info_result = AttestationInfo::from_string(TEST_ATTESTATION_INFO);
+    assert_matches!(deserialized_attestation_info_result, Ok(_));
+    let deserialized_attestation_info = deserialized_attestation_info_result.unwrap();
+    assert_eq!(deserialized_attestation_info, attestation_info);
 }

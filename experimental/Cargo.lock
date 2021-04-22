@@ -1366,6 +1366,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
+ "log",
  "openssl",
  "serde",
  "serde_json",
@@ -1531,6 +1532,28 @@ dependencies = [
  "rand",
  "rustls",
  "tonic",
+]
+
+[[package]]
+name = "oak_tls_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "env_logger 0.7.1",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "http",
+ "hyper",
+ "log",
+ "oak_attestation_common",
+ "openssl",
+ "rustls",
+ "sha2",
+ "structopt",
+ "tokio 0.2.23",
+ "tokio-rustls",
 ]
 
 [[package]]

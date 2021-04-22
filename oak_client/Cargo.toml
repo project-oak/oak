@@ -9,7 +9,9 @@ license = "Apache-2.0"
 
 [features]
 oak-attestation = [
+  "hyper-rustls",
   "oak_attestation_common",
+  "openssl",
   "regex",
   "tokio-rustls",
   "x509-parser",
@@ -20,10 +22,14 @@ oak-attestation = [
 anyhow = "*"
 http = "*"
 hyper = "*"
+hyper-rustls = { version = "*", default-features = false, features = [
+  "webpki-tokio"
+], optional = true }
 log = "*"
 oak_abi = { path = "../oak_abi" }
 oak_attestation_common = { path = "../experimental/attestation_common", optional = true }
 oak_sign = { path = "../oak_sign" }
+openssl = { version = "*", optional = true }
 prost = "*"
 regex = { version = "*", optional = true }
 tokio-rustls = { version = "*", features = [

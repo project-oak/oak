@@ -1551,6 +1551,7 @@ name = "oak_attestation_common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "log",
  "openssl",
  "serde",
  "serde_json",

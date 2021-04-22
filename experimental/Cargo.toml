@@ -7,6 +7,7 @@ members = [
   "benchmark",
   "attestation_common",
   "proxy_attestation",
+  "tls_attestation",
 ]
 
 [patch.crates-io]
