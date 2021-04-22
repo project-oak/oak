@@ -37,13 +37,7 @@ oak_client = { version = "=0.1.0", optional = true }
 oak_sign = { version = "=0.1.0", optional = true }
 anyhow = { version = "*", optional = true }
 env_logger = { version = "*", optional = true }
-# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
-tokio = { version = "0.2", features = [
-  "fs",
-  "macros",
-  "sync",
-  "stream"
-], optional = true }
+tokio = { version = "*", features = ["fs", "macros", "sync"], optional = true }
 
 [build-dependencies]
 oak_utils = "*"

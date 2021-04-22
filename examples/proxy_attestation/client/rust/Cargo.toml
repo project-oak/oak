@@ -27,8 +27,7 @@ oak_sign = "=0.1.0"
 pem = "*"
 prost = "*"
 structopt = "*"
-# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
-tokio = { version = "0.2", features = ["fs", "macros", "sync", "stream"] }
+tokio = { version = "*", features = ["fs", "macros", "sync"] }
 tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]

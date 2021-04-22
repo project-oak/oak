@@ -44,6 +44,6 @@ log = "*"
 maplit = "*"
 oak_runtime = { path = "../../../../oak_runtime" }
 oak_tests = { path = "../../../../sdk/rust/oak_tests" }
-tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 tonic = { version = "*", features = ["tls"] }
 serial_test = "*"

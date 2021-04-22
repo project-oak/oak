@@ -32,12 +32,7 @@ oak_sign = "=0.1.0"
 oak_tests = "=0.1.0"
 serial_test = "*"
 tonic = "*"
-tokio = { version = "*", features = [
-  "macros",
-  "rt-threaded",
-  "stream",
-  "sync"
-] }
+tokio = { version = "*", features = ["macros", "rt-multi-thread", "sync"] }
 
 [build-dependencies]
 oak_utils = "*"

@@ -63,15 +63,13 @@ tink-mac = "^0.1"
 tink-prf = "^0.1"
 tink-proto = "^0.1"
 tink-signature = "^0.1"
-# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
-tokio = { version = "0.2", features = [
-  "dns",
-  "io-driver",
+tokio = { version = "*", features = [
   "io-util",
+  "io-std",
   "macros",
-  "rt-core",
-  "time",
-  "udp"
+  "net",
+  "rt",
+  "time"
 ] }
 tokio-rustls = "*"
 tonic = { version = "*", features = ["tls"] }

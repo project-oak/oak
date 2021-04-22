@@ -18,8 +18,7 @@ tokio = { version = "*", features = [
   "fs",
   "macros",
   "rt-multi-thread",
-  "sync",
-  "stream"
+  "sync"
 ] }
 tonic = { version = "*", features = ["tls"] }
 url = "*"
