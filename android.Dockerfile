@@ -86,3 +86,7 @@ RUN mkdir --parents ${ANDROID_NDK_HOME} \
     && unzip android_ndk.zip -d ${ANDROID_NDK_HOME} \
     && mv ${ANDROID_NDK_HOME}/android-ndk-${android_ndk_version}/* ${ANDROID_NDK_HOME} \
     && rm --recursive --force android_ndk.zip
+
+# Bazel requires HOME variable to be set.
+# https://github.com/bazelbuild/bazel/issues/471
+ENV HOME /workspaces/oak
