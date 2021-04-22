@@ -60,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
     info!("started Runtime");
 
     let done = Arc::new(AtomicBool::new(false));
-    signal_hook::flag::register(signal_hook::SIGINT, Arc::clone(&done))
+    signal_hook::flag::register(signal_hook::consts::signal::SIGINT, Arc::clone(&done))
         .context("could not register signal handler")?;
 
     // The Runtime kicks off its own threads for the initial Node and any subsequently created

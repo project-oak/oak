@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use prost::bytes::Buf;
 use std::io::copy;
 use tonic::codec::{Codec, DecodeBuf, Decoder, EncodeBuf, Encoder};
 

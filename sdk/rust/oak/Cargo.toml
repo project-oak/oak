@@ -19,8 +19,9 @@ oak_io = { path = "../../../oak_io" }
 oak_services = { path = "../../../oak_services" }
 prost = "*"
 prost-types = "*"
-rand_core = { version = "*", features = ["std"] }
-tink-proto = "^0.1"
+# Pin version 0.5 to avoid conflicts in examples.
+rand_core = { version = "0.5", features = ["std"] }
+tink-proto = "*"
 
 [build-dependencies]
 oak_utils = { path = "../../../oak_utils" }

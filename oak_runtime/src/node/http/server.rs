@@ -49,6 +49,7 @@ use tokio::{
     sync::oneshot,
 };
 use tokio_rustls::server::TlsStream;
+use tokio_stream::wrappers::TcpListenerStream;
 
 use anyhow::{anyhow, Context};
 use futures_util::{
@@ -149,7 +150,7 @@ impl HttpServerNode {
         });
 
         // Low-level server creation is needed, to be able to validate TLS streams.
-        let mut tcp = match TcpListener::bind(&self.address).await {
+        let tcp = match TcpListener::bind(&self.address).await {
             Ok(tcp) => tcp,
             Err(e) => {
                 error!(
@@ -160,7 +161,7 @@ impl HttpServerNode {
                 return;
             }
         };
-        let tls_server = self.build_tls_server(&mut tcp);
+        let tls_server = self.build_tls_server(tcp);
         let server = Server::builder(tls_server).serve(service);
 
         let graceful_server = server.with_graceful_shutdown(async {
@@ -182,15 +183,11 @@ impl HttpServerNode {
     }
 
     /// Build a server that checks incoming TCP connections for TLS handshake.
-    fn build_tls_server<'a>(&'a self, tcp: &'a mut TcpListener) -> TlsServer<'a> {
+    fn build_tls_server<'a>(&'a self, tcp: TcpListener) -> TlsServer<'a> {
         let tls_cfg = crate::tls::to_server_config(self.tls_config.clone());
         let tls_acceptor = TlsAcceptor::from(tls_cfg);
 
-        let incoming_tls_stream = tcp
-            .incoming()
-            .map_err(|err| {
-                io::Error::new(io::ErrorKind::Other, format!("Incoming failed: {:?}", err))
-            })
+        let incoming_tls_stream = TcpListenerStream::new(tcp)
             .and_then(move |stream| {
                 debug!("Received incoming TLS stream: {:?}", stream);
                 tls_acceptor.accept(stream).map_err(|err| {
@@ -251,7 +248,7 @@ impl Node for HttpServerNode {
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
         // TODO(#1280): Use a single shared tokio runtime, instead of creating a new one here.
-        let mut async_runtime = create_async_runtime(runtime);
+        let async_runtime = create_async_runtime(runtime);
 
         // Start the HTTP server.
         info!(
@@ -287,10 +284,9 @@ fn get_invocation_channel(
 }
 
 fn create_async_runtime(runtime: RuntimeProxy) -> tokio::runtime::Runtime {
-    tokio::runtime::Builder::new()
-        // Use simple scheduler that runs all tasks on the current-thread.
-        // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
-        .basic_scheduler()
+    // Use simple scheduler that runs all tasks on the current-thread.
+    // https://docs.rs/tokio/1.5.0/tokio/runtime/index.html#current-thread-scheduler
+    tokio::runtime::Builder::new_current_thread()
         // Enables the I/O driver.
         // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
         .enable_io()

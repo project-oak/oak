@@ -21,4 +21,9 @@ prost = "*"
 rustls = "*"
 serde_json = "*"
 structopt = "*"
-tokio = { version = "*", features = ["fs", "macros", "sync"] }
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }

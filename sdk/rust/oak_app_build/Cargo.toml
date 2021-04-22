@@ -17,5 +17,5 @@ reqwest = "*"
 serde = "*"
 sha2 = "*"
 structopt = "*"
-tokio = { version = "*", features = ["macros"] }
+tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 toml = "*"

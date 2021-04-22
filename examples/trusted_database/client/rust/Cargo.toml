@@ -37,7 +37,12 @@ oak_client = { version = "=0.1.0", optional = true }
 oak_sign = { version = "=0.1.0", optional = true }
 anyhow = { version = "*", optional = true }
 env_logger = { version = "*", optional = true }
-tokio = { version = "*", features = ["fs", "macros", "sync"], optional = true }
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+], optional = true }
 
 [build-dependencies]
 oak_utils = "*"

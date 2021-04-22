@@ -106,7 +106,7 @@ impl RoughtimeClient {
     /// It is calculated as the midpoint of the first `min_overlapping_intervals` overlap between
     /// the intervals returned from the servers.
     pub fn get_roughtime(&self) -> Result<MicrosSinceEpoch, RoughtimeError> {
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         let intervals = runtime.block_on(self.get_intervals_from_all_servers());
         let result = self.find_overlap(&intervals)?;
         info!("Roughtime interval: min={}, max={}", result.min, result.max);
@@ -256,7 +256,7 @@ impl RoughtimeServer {
         }
         .parse()
         .unwrap();
-        let mut socket = UdpSocket::bind(local_address).await?;
+        let socket = UdpSocket::bind(local_address).await?;
         socket.connect(&remote_addr).await?;
         match timeout(Duration::from_secs(timeout_seconds), socket.send(request)).await {
             Err(error) => {

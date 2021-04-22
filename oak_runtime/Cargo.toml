@@ -54,23 +54,25 @@ rustls = "*"
 serde = "*"
 serde_json = "*"
 sha2 = "^0.9.1"
-tink-core = { version = "^0.1", features = ["json"] }
-tink-aead = "^0.1"
-tink-awskms = { version = "^0.1", optional = true }
-tink-daead = "^0.1"
-tink-gcpkms = { version = "^0.1.1", optional = true }
-tink-mac = "^0.1"
-tink-prf = "^0.1"
-tink-proto = "^0.1"
-tink-signature = "^0.1"
+tink-core = { version = "*", features = ["json"] }
+tink-aead = "*"
+tink-awskms = { version = "*", optional = true }
+tink-daead = "*"
+tink-gcpkms = { version = "*", optional = true }
+tink-mac = "*"
+tink-prf = "*"
+tink-proto = "*"
+tink-signature = "*"
 tokio = { version = "*", features = [
   "io-util",
   "io-std",
   "macros",
   "net",
   "rt",
+  "rt-multi-thread",
   "time"
 ] }
+tokio-stream = { version = "*", features = ["net"] }
 tokio-rustls = "*"
 tonic = { version = "*", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }
