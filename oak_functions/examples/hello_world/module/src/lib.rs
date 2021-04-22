@@ -57,6 +57,6 @@ pub extern "C" fn main() {
 
     let response = result.unwrap_or_else(|err| err.as_bytes().to_vec());
 
-    // Write the response body
+    // Write the response.
     oak_functions::write_response(&response).expect("Couldn't write the response body.");
 }

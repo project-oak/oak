@@ -43,7 +43,7 @@ pub enum Command {
         #[structopt(long, default_value = "100")]
         entries: usize,
     },
-    #[structopt(about = "Generate entries for the weather lookup example")]
+    #[structopt(about = "Generate entries for the weather lookup example with random values")]
     Weather {},
 }
 
@@ -53,10 +53,31 @@ fn create_bytes<R: Rng>(rng: &mut R, size_bytes: usize) -> Vec<u8> {
     buf
 }
 
-fn create_entry<R: Rng>(rng: &mut R, key_size_bytes: usize, value_size_bytes: usize) -> Entry {
+fn create_random_entry<R: Rng>(
+    rng: &mut R,
+    key_size_bytes: usize,
+    value_size_bytes: usize,
+) -> Entry {
     Entry {
         key: create_bytes(rng, key_size_bytes),
         value: create_bytes(rng, value_size_bytes),
+    }
+}
+
+fn create_weather_entry<R: Rng>(rng: &mut R, lat: i32, lon: i32) -> Entry {
+    #[derive(Serialize)]
+    struct WeatherValue {
+        temperature_degrees_celsius: i32,
+    }
+    let dist = rand::distributions::Uniform::new(-30, 40);
+    let key = format!("{},{}", lat, lon);
+    let value = serde_json::to_string(&WeatherValue {
+        temperature_degrees_celsius: rng.sample(dist),
+    })
+    .unwrap();
+    Entry {
+        key: key.as_bytes().to_vec(),
+        value: value.as_bytes().to_vec(),
     }
 }
 
@@ -71,29 +92,16 @@ fn main() -> anyhow::Result<()> {
             entries,
         } => {
             for _ in 0..entries {
-                let entry = create_entry(&mut rng, key_size_bytes, value_size_bytes);
+                let entry = create_random_entry(&mut rng, key_size_bytes, value_size_bytes);
                 entry
                     .encode_length_delimited(&mut buf)
                     .context("could not encode entry")?;
             }
         }
         Command::Weather {} => {
-            #[derive(Serialize)]
-            struct WeatherValue {
-                temperature_degrees_celsius: i32,
-            }
-            let dist = rand::distributions::Uniform::new(-30, 40);
             for lat in -90..=90 {
                 for lon in -180..=180 {
-                    let key = format!("{},{}", lat, lon);
-                    let value = serde_json::to_string(&WeatherValue {
-                        temperature_degrees_celsius: rng.sample(dist),
-                    })
-                    .unwrap();
-                    let entry = Entry {
-                        key: key.as_bytes().to_vec(),
-                        value: value.as_bytes().to_vec(),
-                    };
+                    let entry = create_weather_entry(&mut rng, lat, lon);
                     entry
                         .encode_length_delimited(&mut buf)
                         .context("could not encode entry")?;
