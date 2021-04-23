@@ -51,7 +51,10 @@ use crate::{
     database::Database,
 };
 use log::{error, info};
-use std::time::{Duration, Instant};
+use std::{
+    ops::Range,
+    time::{Duration, Instant},
+};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -77,7 +80,13 @@ async fn measure_request_time(
 
     let request_start = Instant::now();
     for _ in 0..REQUEST_NUMBER {
-        let id = format!("{}", rng.gen_range(0, database_size));
+        let id = format!(
+            "{}",
+            rng.gen_range(Range {
+                start: 0,
+                end: database_size
+            })
+        );
         let _ = client.send_request(&id).await.map_err(|error| {
             error!("Couldn't send request: {}", error);
         });
