@@ -2236,6 +2236,7 @@ dependencies = [
  "futures",
  "log",
  "tokio",
+ "tokio-stream",
 ]
 
 [[package]]

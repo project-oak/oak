@@ -19,7 +19,7 @@ use hello_world_grpc::proto::{hello_world_client::HelloWorldClient, HelloRequest
 use log::info;
 use maplit::hashmap;
 use oak::proto::oak::application::ConfigMap;
-use tokio::stream::StreamExt;
+use tokio_stream::StreamExt;
 
 const MAIN_MODULE_NAME: &str = "app";
 const MAIN_ENTRYPOINT_NAME: &str = "oak_main";
