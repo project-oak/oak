@@ -10,6 +10,9 @@ jobs:
   upload_coverage:
     runs-on: ubuntu-20.04
 
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
