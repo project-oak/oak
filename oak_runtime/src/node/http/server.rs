@@ -183,7 +183,7 @@ impl HttpServerNode {
     }
 
     /// Build a server that checks incoming TCP connections for TLS handshake.
-    fn build_tls_server<'a>(&'a self, tcp: TcpListener) -> TlsServer<'a> {
+    fn build_tls_server(&self, tcp: TcpListener) -> TlsServer {
         let tls_cfg = crate::tls::to_server_config(self.tls_config.clone());
         let tls_acceptor = TlsAcceptor::from(tls_cfg);
 

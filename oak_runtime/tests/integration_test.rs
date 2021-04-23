@@ -78,7 +78,7 @@ mod common {
         })
     }
 
-    pub async fn read_metrics() -> Result<String, hyper::error::Error> {
+    pub async fn read_metrics() -> Result<String, hyper::Error> {
         info!("Reading the metrics.");
         let client = Client::new();
 
@@ -108,7 +108,7 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
     // Start the Runtime, including a metrics server.
     let runtime = common::start_runtime().expect("Starting the Runtime failed!");
 
-    let mut rt = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
+    let rt = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
     let res = rt
         .block_on(common::read_metrics())
         .expect("Reading the metrics failed.");
