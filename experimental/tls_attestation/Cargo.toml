@@ -20,5 +20,11 @@ openssl = "*"
 rustls = "*"
 sha2 = "*"
 structopt = "*"
-tokio = { version = "*", features = ["fs", "macros", "signal", "sync"] }
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "signal",
+  "sync",
+  "rt-multi-thread"
+] }
 tokio-rustls = "*"
