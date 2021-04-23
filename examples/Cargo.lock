@@ -25,8 +25,7 @@ dependencies = [
  "oak_tests",
  "oak_utils",
  "prost",
- "rand 0.8.3",
- "rand_core 0.6.2",
+ "rand 0.7.3",
  "regex",
  "serde",
  "serde_json",
@@ -483,7 +482,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "base64 0.12.3",
+ "base64 0.13.0",
  "chat_grpc",
  "env_logger",
  "log",
@@ -497,7 +496,7 @@ dependencies = [
  "oak_tests",
  "oak_utils",
  "prost",
- "rand 0.8.3",
+ "rand 0.7.3",
  "rand_core 0.6.2",
  "serde",
  "serial_test",
@@ -1143,7 +1142,7 @@ name = "https_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.12.3",
+ "base64 0.13.0",
  "env_logger",
  "http",
  "hyper",
@@ -1606,7 +1605,7 @@ name = "oak_runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.12.3",
+ "base64 0.13.0",
  "byteorder",
  "bytes",
  "chrono",
@@ -1943,7 +1942,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "base64 0.12.3",
+ "base64 0.13.0",
  "env_logger",
  "hex",
  "log",
@@ -1967,7 +1966,7 @@ name = "private_set_intersection_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.12.3",
+ "base64 0.13.0",
  "env_logger",
  "http",
  "log",
@@ -2115,7 +2114,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "base64 0.12.3",
+ "base64 0.13.0",
  "env_logger",
  "http",
  "log",
@@ -2348,7 +2347,7 @@ dependencies = [
 name = "roughenough"
 version = "1.1.8"
 dependencies = [
- "base64 0.12.3",
+ "base64 0.13.0",
  "byteorder",
  "hex",
  "ring",
@@ -2863,7 +2862,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "base64 0.12.3",
+ "base64 0.13.0",
  "env_logger",
  "http",
  "hyper",
