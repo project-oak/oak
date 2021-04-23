@@ -788,7 +788,7 @@ framework via the Oak Runtime:
 <!-- prettier-ignore-start -->
 [embedmd]:# (../examples/translator/module/rust/tests/integration_test.rs Rust /#\[tokio/ /^}$/)
 ```Rust
-#[tokio::test(core_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_translate() {
     let _ = env_logger::builder().is_test(true).try_init();
     let permissions = oak_runtime::permissions::PermissionsConfiguration {
@@ -846,7 +846,7 @@ like in the following example:
 [embedmd]:# (../examples/hello_world/module/rust/tests/integration_test.rs Rust /^.*Test invoking the SayHello Node service method via the Oak runtime.*/ /^}$/)
 ```Rust
 // Test invoking the SayHello Node service method via the Oak runtime.
-#[tokio::test(core_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_say_hello() {
     let _ = env_logger::builder().is_test(true).try_init();
     let permissions = oak_runtime::permissions::PermissionsConfiguration {

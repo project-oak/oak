@@ -20,7 +20,7 @@ use log::info;
 use serial_test::serial;
 use std::time::Duration;
 
-#[tokio::test(core_threads = 4)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[serial]
 async fn test_chat() {
     let _ = env_logger::builder().is_test(true).try_init();

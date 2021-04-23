@@ -18,7 +18,7 @@ use assert_matches::assert_matches;
 use log::info;
 use translator_grpc::proto::{translator_client::TranslatorClient, TranslateRequest};
 
-#[tokio::test(core_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_translate() {
     let _ = env_logger::builder().is_test(true).try_init();
     let permissions = oak_runtime::permissions::PermissionsConfiguration {

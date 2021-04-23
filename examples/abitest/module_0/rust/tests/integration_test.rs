@@ -73,7 +73,7 @@ async fn setup() -> (
     (runtime, client)
 }
 
-#[tokio::test(core_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[serial]
 async fn test_abi() {
     let (runtime, mut client) = setup().await;
@@ -117,7 +117,7 @@ async fn test_abi() {
     runtime.stop();
 }
 
-#[tokio::test(core_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[serial]
 async fn test_leaks() {
     let (runtime, mut client) = setup().await;

@@ -85,7 +85,7 @@ async fn measure_request_time(
     request_start.elapsed().div_f32(REQUEST_NUMBER as f32)
 }
 
-#[tokio::main(core_threads = 4)]
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() -> anyhow::Result<()> {
     // Set current dir to create `oak_tests` in the `experimental/benchmark` directory.
     std::env::set_current_dir("./experimental/benchmark")?;
