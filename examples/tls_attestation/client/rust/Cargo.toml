@@ -11,7 +11,7 @@ assert_matches = "*"
 base64 = "*"
 env_logger = "*"
 http = "*"
-hyper = "*"
+hyper = { version = "*", features = ["client"] }
 hyper-rustls = { version = "*", default-features = false, features = [
   "webpki-tokio"
 ] }

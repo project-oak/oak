@@ -13,7 +13,13 @@ futures = "*"
 futures-core = "*"
 futures-util = "*"
 http = "*"
-hyper = "*"
+hyper = { version = "*", features = [
+  "client",
+  "http1",
+  "http2",
+  "runtime",
+  "server"
+] }
 log = "*"
 oak_attestation_common = { version = "*", path = "../attestation_common" }
 openssl = "*"

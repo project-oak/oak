@@ -9,7 +9,7 @@ license = "Apache-2.0"
 [dependencies]
 env_logger = "*"
 futures-util = { version = "*", default-features = false }
-hyper = "*"
+hyper = { version = "*", features = ["client"] }
 log = "*"
 open = "*"
 prost = "*"

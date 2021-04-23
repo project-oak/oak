@@ -28,7 +28,7 @@ futures-core = "*"
 futures-util = "*"
 hex = "*"
 http = "*"
-hyper = "*"
+hyper = { version = "*", features = ["http1", "http2", "runtime", "server"] }
 hyper-rustls = { version = "*", default-features = false, features = [
   "webpki-tokio"
 ] }
