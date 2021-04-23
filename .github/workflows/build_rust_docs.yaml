@@ -10,6 +10,9 @@ jobs:
   build_rust_docs:
     runs-on: ubuntu-20.04
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
