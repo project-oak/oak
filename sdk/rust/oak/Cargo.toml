@@ -20,6 +20,7 @@ oak_services = { path = "../../../oak_services" }
 prost = "*"
 prost-types = "*"
 # Pin version 0.5 to avoid conflicts in examples.
+# TODO(#2006): Unpin once "std" feature is no longer needed.
 rand_core = { version = "0.5", features = ["std"] }
 tink-proto = "*"
 

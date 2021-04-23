@@ -497,7 +497,7 @@ dependencies = [
  "oak_utils",
  "prost",
  "rand 0.7.3",
- "rand_core 0.6.2",
+ "rand_core 0.5.1",
  "serde",
  "serial_test",
  "tokio",

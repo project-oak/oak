@@ -26,6 +26,7 @@ oak_io = { path = "../../../../oak_io" }
 oak_services = { path = "../../../../oak_services" }
 prost = "*"
 # Pin version 0.7 to allow using "std" feature of rand_core.
+# TODO(#2006): Unpin once "std" feature is no longer needed.
 rand = "0.7"
 regex = "*"
 serde = { version = "*", features = ["derive"] }

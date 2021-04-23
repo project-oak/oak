@@ -31,7 +31,11 @@ oak_runtime = { version = "=0.1.0", features = ["linear-handles"] }
 oak_sign = "=0.1.0"
 oak_tests = "=0.1.0"
 # Pin version 0.7 to allow using "std" feature of rand_core.
+# TODO(#2006): Unpin once "std" feature is no longer needed.
 rand = "0.7"
+# Pin version 0.5 to allow using "std" feature of rand_core.
+# TODO(#2006): Unpin once "std" feature is no longer needed.
+rand_core = "0.5"
 serial_test = "*"
 tonic = "*"
 tokio = { version = "*", features = ["macros", "rt-multi-thread", "sync"] }
