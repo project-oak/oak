@@ -1,7 +1,7 @@
 From 8349db8443d46ad1692e3cfb26bfd0dccb210c1c Mon Sep 17 00:00:00 2001
 From: Conrad Grobler <grobler@google.com>
 Date: Thu, 22 Apr 2021 11:26:39 +0100
-Subject: [PATCH 1/2] Apply patch 1
+Subject: [PATCH] Patch prost to generate typesafe Sender and Receiver.
 
 ---
  prost-build/src/code_generator.rs | 13 +++++++++++++

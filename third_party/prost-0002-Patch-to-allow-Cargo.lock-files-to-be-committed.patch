@@ -1,7 +1,7 @@
 From f46f3f81d610d80d90141e74f1c386f40da0afbc Mon Sep 17 00:00:00 2001
 From: Conrad Grobler <grobler@google.com>
 Date: Thu, 22 Apr 2021 11:27:17 +0100
-Subject: [PATCH 2/2] Apply patch 2
+Subject: [PATCH] Patch prost to allow Cargo.lock files to be committed
 
 ---
  .gitignore | 1 -
