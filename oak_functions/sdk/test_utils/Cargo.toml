@@ -11,4 +11,5 @@ cargo_metadata = "*"
 log = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 oak_functions_abi = { path = "../../abi" }
+port_check = "*"
 prost = "*"

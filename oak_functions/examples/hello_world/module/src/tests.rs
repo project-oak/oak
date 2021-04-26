@@ -21,13 +21,13 @@ use std::{
     sync::Arc,
 };
 
-const OAK_FUNCTIONS_SERVER_PORT: u16 = 9001;
-const STATIC_SERVER_PORT: u16 = 9002;
-
 #[tokio::test]
 async fn test_server() {
-    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, OAK_FUNCTIONS_SERVER_PORT));
-    let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
+    let server_port = test_utils::free_port();
+    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
+    let (terminate_server_tx, terminate_server_rx) = tokio::sync::oneshot::channel::<()>();
+    let (terminate_static_server_tx, terminate_static_server_rx) =
+        tokio::sync::oneshot::channel::<()>();
 
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.push("Cargo.toml");
@@ -39,7 +39,14 @@ async fn test_server() {
     let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
 
     let mock_static_server_clone = mock_static_server.clone();
-    tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
+    let static_server_port = test_utils::free_port();
+    let static_server_join_handle = tokio::spawn(async move {
+        mock_static_server_clone
+            .serve(static_server_port, async {
+                terminate_static_server_rx.await.unwrap()
+            })
+            .await
+    });
 
     mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
         b"52,0".to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
@@ -49,7 +56,7 @@ async fn test_server() {
     let logger = Logger::for_test();
 
     let lookup_data = Arc::new(LookupData::new_empty(
-        &format!("http://localhost:{}", STATIC_SERVER_PORT),
+        &format!("http://localhost:{}", static_server_port),
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();
@@ -59,7 +66,7 @@ async fn test_server() {
             &address,
             &wasm_module_bytes,
             lookup_data,
-            notify_receiver,
+            terminate_server_rx,
             logger,
         )
         .await
@@ -67,7 +74,7 @@ async fn test_server() {
 
     {
         // Lookup match.
-        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, br#"{"lat":52,"lon":0}"#).await;
+        let response_fut = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
         assert_eq!(
             r#"{"temperature_degrees_celsius":10}"#,
             std::str::from_utf8(response_fut.as_slice()).unwrap()
@@ -75,7 +82,7 @@ async fn test_server() {
     }
     {
         // Valid location but no lookup match.
-        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, br#"{"lat":19,"lon":88}"#).await;
+        let response_fut = make_request(server_port, br#"{"lat":19,"lon":88}"#).await;
         assert_eq!(
             r#"weather not found for location"#,
             std::str::from_utf8(response_fut.as_slice()).unwrap()
@@ -83,19 +90,22 @@ async fn test_server() {
     }
     {
         // Malformed request.
-        let response_fut = make_request(OAK_FUNCTIONS_SERVER_PORT, b"invalid - JSON").await;
+        let response_fut = make_request(server_port, b"invalid - JSON").await;
         assert_eq!(
             "could not deserialize request as JSON",
             std::str::from_utf8(response_fut.as_slice()).unwrap()
         );
     }
 
-    notify_sender
+    terminate_server_tx
         .send(())
         .expect("Couldn't send completion signal.");
 
     let res = server_join_handle.await.unwrap();
     assert!(res.is_ok());
+
+    terminate_static_server_tx.send(()).unwrap();
+    static_server_join_handle.await.unwrap();
 }
 
 async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {

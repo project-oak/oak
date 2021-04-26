@@ -48,6 +48,10 @@ being invoked, and the caller is responsible for freeing it if and when
 necessary. The Oak Functions Loader never directly frees any previously
 allocated memory.
 
+A canonical implementation of this function is already
+[provided in the Oak Functions Rust SDK](/oak_functions/sdk/oak_functions/src/lib.rs),
+so if using that, there is no need to implement it manually.
+
 - `param[0]: len: i32`: Number of bytes to allocate.
 
 - `result[0]: i32`: Address of the newly allocated buffer.
