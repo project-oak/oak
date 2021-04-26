@@ -32,13 +32,13 @@ use test::Bencher;
 
 const MANIFEST_PATH: &str = "examples/hello_world/module/Cargo.toml";
 
-const OAK_FUNCTIONS_SERVER_PORT: u16 = 9001;
-const STATIC_SERVER_PORT: u16 = 9002;
-
 #[tokio::test]
 async fn test_server() {
-    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, OAK_FUNCTIONS_SERVER_PORT));
-    let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
+    let server_port = test_utils::free_port();
+    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
+    let (terminate_server_tx, terminate_server_rx) = tokio::sync::oneshot::channel::<()>();
+    let (terminate_static_server_tx, terminate_static_server_rx) =
+        tokio::sync::oneshot::channel::<()>();
 
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.pop();
@@ -52,7 +52,14 @@ async fn test_server() {
     let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
 
     let mock_static_server_clone = mock_static_server.clone();
-    tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
+    let static_server_port = test_utils::free_port();
+    let static_server_join_handle = tokio::spawn(async move {
+        mock_static_server_clone
+            .serve(static_server_port, async {
+                terminate_static_server_rx.await.unwrap()
+            })
+            .await
+    });
 
     mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
         b"52,0".to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
@@ -60,25 +67,33 @@ async fn test_server() {
     }));
 
     let lookup_data = Arc::new(LookupData::new_empty(
-        &format!("http://localhost:{}", STATIC_SERVER_PORT),
+        &format!("http://localhost:{}", static_server_port),
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();
 
-    let server_fut = create_and_start_server(
-        &address,
-        &wasm_module_bytes,
-        lookup_data,
-        notify_receiver,
-        logger,
-    );
-    let client_fut = start_client(OAK_FUNCTIONS_SERVER_PORT, notify_sender);
+    let server_join_handle = tokio::spawn(async move {
+        create_and_start_server(
+            &address,
+            &wasm_module_bytes,
+            lookup_data,
+            terminate_server_rx,
+            logger,
+        )
+        .await
+    });
+    let client_fut = start_client(server_port);
 
-    let (res, _) = tokio::join!(server_fut, client_fut);
+    client_fut.await;
+    terminate_server_tx.send(()).unwrap();
+    let res = server_join_handle.await.unwrap();
     assert!(res.is_ok());
+
+    terminate_static_server_tx.send(()).unwrap();
+    static_server_join_handle.await.unwrap();
 }
 
-async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>) {
+async fn start_client(port: u16) {
     let client = Client::new();
     let request = hyper::Request::builder()
         .method(http::Method::POST)
@@ -95,10 +110,6 @@ async fn start_client(port: u16, notify_sender: tokio::sync::oneshot::Sender<()>
         hyper::body::to_bytes(resp.into_body()).await.unwrap(),
         r#"{"temperature_degrees_celsius":10}"#,
     );
-
-    notify_sender
-        .send(())
-        .expect("Couldn't send completion signal.");
 }
 
 // TODO(#1933): Currently there is no support for running benchmark tests in the runner.
@@ -114,18 +125,26 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 
     let summary = bencher.bench(|bencher| {
         let logger = Logger::for_test();
+        let static_server_port = test_utils::free_port();
         let lookup_data = Arc::new(LookupData::new_empty(
-            &format!("http://localhost:{}", STATIC_SERVER_PORT),
+            &format!("http://localhost:{}", static_server_port),
             logger.clone(),
         ));
         let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data.clone(), logger)
             .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
+            let (terminate_static_server_tx, terminate_static_server_rx) =
+                tokio::sync::oneshot::channel::<()>();
             let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
-
             let mock_static_server_clone = mock_static_server.clone();
-            tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
+            let static_server_join_handle = tokio::spawn(async move {
+                mock_static_server_clone
+                    .serve(static_server_port, async {
+                        terminate_static_server_rx.await.unwrap()
+                    })
+                    .await
+            });
 
             mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
                 b"52,0".to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
@@ -133,6 +152,8 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             }));
 
             lookup_data.refresh().await.unwrap();
+            terminate_static_server_tx.send(()).unwrap();
+            static_server_join_handle.await.unwrap();
         });
         bencher.iter(|| {
             let request = hyper::Request::builder()
@@ -258,11 +279,21 @@ fn parse_lookup_entries_invalid() {
 async fn lookup_data_refresh() {
     let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
 
+    let (terminate_static_server_tx, terminate_static_server_rx) =
+        tokio::sync::oneshot::channel::<()>();
+
+    let static_server_port = test_utils::free_port();
     let mock_static_server_clone = mock_static_server.clone();
-    tokio::spawn(async move { mock_static_server_clone.serve(STATIC_SERVER_PORT).await });
+    let static_server_join_handle = tokio::spawn(async move {
+        mock_static_server_clone
+            .serve(static_server_port, async {
+                terminate_static_server_rx.await.unwrap()
+            })
+            .await
+    });
 
     let lookup_data = crate::LookupData::new_empty(
-        &format!("http://localhost:{}", STATIC_SERVER_PORT),
+        &format!("http://localhost:{}", static_server_port),
         Logger::for_test(),
     );
     assert!(lookup_data.is_empty());
@@ -298,4 +329,7 @@ async fn lookup_data_refresh() {
     assert_eq!(lookup_data.len(), 2);
     assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
+
+    terminate_static_server_tx.send(()).unwrap();
+    static_server_join_handle.await.unwrap();
 }

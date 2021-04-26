@@ -280,20 +280,18 @@ impl WasmState {
         .context("failed to instantiate Wasm module")?
         .assert_no_start();
 
-        let alloc = instance
-            .export_by_name(ALLOC_FUNCTION_NAME)
-            .context("could not find Wasm `alloc` export")?
-            .as_func()
-            .cloned()
-            .context("could not interpret Wasm `alloc` export as function")?;
-        let expected_signature = wasmi::Signature::new(&[ValueType::I32][..], Some(ValueType::I32));
-        if alloc.signature() != &expected_signature {
-            anyhow::bail!(
-                "invalid signature for `alloc` export: {:?}, expected: {:?}",
-                alloc.signature(),
-                expected_signature
-            );
-        }
+        check_export_function_signature(
+            &instance,
+            MAIN_FUNCTION_NAME,
+            &wasmi::Signature::new(&[][..], None),
+        )
+        .context("could not validate `main` export")?;
+        check_export_function_signature(
+            &instance,
+            ALLOC_FUNCTION_NAME,
+            &wasmi::Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
+        )
+        .context(" could not validate `alloc` export")?;
 
         abi.instance = Some(instance.clone());
         // Make sure that non-empty `memory` is attached to the WasmInterface. Fail early if
@@ -330,6 +328,28 @@ impl WasmState {
 
     fn get_response_bytes(&self) -> Vec<u8> {
         self.abi.response_bytes.clone()
+    }
+}
+
+fn check_export_function_signature(
+    instance: &wasmi::ModuleInstance,
+    export_name: &str,
+    expected_signature: &wasmi::Signature,
+) -> anyhow::Result<()> {
+    let export_function = instance
+        .export_by_name(export_name)
+        .context("could not find Wasm export")?
+        .as_func()
+        .cloned()
+        .context("could not interpret Wasm export as function")?;
+    if export_function.signature() != expected_signature {
+        anyhow::bail!(
+            "invalid signature for export: {:?}, expected: {:?}",
+            export_function.signature(),
+            expected_signature
+        );
+    } else {
+        Ok(())
     }
 }
 
@@ -487,7 +507,7 @@ fn oak_functions_resolve_func(
 
     if signature != &expected_signature {
         return Err(wasmi::Error::Instantiation(format!(
-            "Export `{}` doesn't match expected type {:?}, expected: {:?}",
+            "Export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
             field_name, signature, expected_signature
         )));
     }

@@ -26,6 +26,7 @@ use prost::Message;
 use std::{
     collections::HashMap,
     convert::Infallible,
+    future::Future,
     net::{Ipv6Addr, SocketAddr},
     process::Command,
     sync::{Arc, Mutex},
@@ -88,24 +89,26 @@ impl MockStaticServer {
     }
 
     /// Starts serving, listening on the provided port.
-    pub async fn serve(&self, port: u16) {
+    pub async fn serve<F: Future<Output = ()>>(&self, port: u16, terminate: F) {
         let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, port));
         let response_body = self.response_body.clone();
-        let server = hyper::Server::bind(&address).serve(make_service_fn(|_conn| {
-            let response_body = response_body.clone();
-            async {
-                Ok::<_, Infallible>(service_fn(move |_req| {
-                    let response_body = response_body.clone();
-                    async move {
-                        let response_body: Vec<u8> = response_body
-                            .lock()
-                            .expect("could not lock response body mutex")
-                            .clone();
-                        Ok::<_, Infallible>(Response::new(Body::from(response_body)))
-                    }
-                }))
-            }
-        }));
+        let server = hyper::Server::bind(&address)
+            .serve(make_service_fn(|_conn| {
+                let response_body = response_body.clone();
+                async {
+                    Ok::<_, Infallible>(service_fn(move |_req| {
+                        let response_body = response_body.clone();
+                        async move {
+                            let response_body: Vec<u8> = response_body
+                                .lock()
+                                .expect("could not lock response body mutex")
+                                .clone();
+                            Ok::<_, Infallible>(Response::new(Body::from(response_body)))
+                        }
+                    }))
+                }
+            }))
+            .with_graceful_shutdown(terminate);
         server.await.unwrap();
     }
 }
@@ -121,4 +124,8 @@ pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
             .expect("could not encode entry as length delimited");
     }
     buf
+}
+
+pub fn free_port() -> u16 {
+    port_check::free_local_port().expect("could not pick free local port")
 }
