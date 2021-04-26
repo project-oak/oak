@@ -7,4 +7,3 @@ license = "Apache-2.0"
 
 [dependencies]
 oak_functions_abi = { path = "../../abi" }
-log = "*"
