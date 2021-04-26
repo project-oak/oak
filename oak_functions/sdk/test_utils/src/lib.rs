@@ -28,9 +28,12 @@ use std::{
     convert::Infallible,
     future::Future,
     net::{Ipv6Addr, SocketAddr},
+    pin::Pin,
     process::Command,
     sync::{Arc, Mutex},
+    task::Poll,
 };
+use tokio::{sync::oneshot, task::JoinHandle};
 
 /// Returns the path to the Wasm file produced by compiling the provided `Cargo.toml` file.
 fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
@@ -128,4 +131,67 @@ pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
 
 pub fn free_port() -> u16 {
     port_check::free_local_port().expect("could not pick free local port")
+}
+
+/// Wrapper around a termination signal [`oneshot::Sender`] and the [`JoinHandle`] of the associated
+/// background task, created by [`background`].
+pub struct Background<T> {
+    term_tx: oneshot::Sender<()>,
+    join_handle: JoinHandle<T>,
+}
+
+impl<T> Background<T> {
+    /// Sends the termination signal to the background task and awaits for it to gracefully
+    /// terminate.
+    ///
+    /// This does not guarantee that the background task terminates (e.g. if it ignores the
+    /// termination signal), it requires the cooperation of the task in order to work correctly.
+    pub async fn terminate_and_join(self) -> T {
+        self.term_tx
+            .send(())
+            .expect("could not send signal on termination channel");
+        self.join_handle
+            .await
+            .expect("could not wait for background task to terminate")
+    }
+}
+
+/// Executes the provided closure passing to it a [`Term`] instance signalling when to terminate,
+/// and spawns the resulting [`Future`] in the background, returning a [`Background`] instance.
+pub fn background<Out, F>(f: F) -> Background<Out::Output>
+where
+    Out: Future + Send + 'static,
+    Out::Output: Send + 'static,
+    F: FnOnce(Term) -> Out,
+{
+    let (term_tx, term_rx) = oneshot::channel::<()>();
+    let term = Term { rx: term_rx };
+    let join_handle = tokio::spawn(f(term));
+    Background {
+        term_tx,
+        join_handle,
+    }
+}
+
+/// A wrapper around a termination signal [`oneshot::Receiver`].
+///
+/// This type manually implements [`Future`] in order to be able to be passed to a closure as part
+/// of [`background`].
+pub struct Term {
+    rx: oneshot::Receiver<()>,
+}
+
+impl Future for Term {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, c: &mut std::task::Context) -> Poll<()> {
+        let rx = &mut self.get_mut().rx;
+        tokio::pin!(rx);
+        match rx.poll(c) {
+            Poll::Ready(v) => {
+                v.unwrap();
+                Poll::Ready(())
+            }
+            Poll::Pending => Poll::Pending,
+        }
+    }
 }

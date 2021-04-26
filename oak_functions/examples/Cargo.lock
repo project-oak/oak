@@ -862,6 +862,7 @@ dependencies = [
  "oak_functions_abi",
  "port_check",
  "prost",
+ "tokio",
 ]
 
 [[package]]

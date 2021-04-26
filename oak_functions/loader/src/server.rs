@@ -23,7 +23,7 @@ use hyper::{
 };
 use log::Level;
 use oak_functions_abi::proto::OakStatus;
-use std::{net::SocketAddr, sync::Arc};
+use std::{future::Future, net::SocketAddr, sync::Arc};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -406,11 +406,11 @@ impl WasmHandler {
 }
 
 /// Starts an HTTP server on the given address, serving the main function of the given Wasm module.
-pub async fn create_and_start_server(
+pub async fn create_and_start_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,
-    notify_receiver: tokio::sync::oneshot::Receiver<()>,
+    terminate: F,
     logger: Logger,
 ) -> anyhow::Result<()> {
     let wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, logger.clone())?;
@@ -427,12 +427,9 @@ pub async fn create_and_start_server(
         }
     });
 
-    let server = Server::bind(address).serve(service);
-
-    let graceful_server = server.with_graceful_shutdown(async {
-        // Treat notification failure the same as a notification.
-        let _ = notify_receiver.await;
-    });
+    let server = Server::bind(address)
+        .serve(service)
+        .with_graceful_shutdown(terminate);
 
     logger.log_public(
         Level::Info,
@@ -444,7 +441,7 @@ pub async fn create_and_start_server(
     );
 
     // Run until asked to terminate...
-    let result = graceful_server.await;
+    let result = server.await;
 
     logger.log_public(
         Level::Info,
