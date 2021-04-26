@@ -1,0 +1,54 @@
+static_resources:
+  listeners:
+    # Listens for HTTP streams and unwraps TCP streams from them.
+    - name: server_listener
+      address:
+        # Server proxy address to listen on.
+        socket_address:
+          protocol: TCP
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: local_service
+                      domains:
+                        - '*'
+                      routes:
+                        - match:
+                            prefix: '/'
+                            headers:
+                              - name: ':method'
+                                exact_match: 'POST'
+                          route:
+                            cluster: server_cluster
+                            upgrade_configs:
+                              - upgrade_type: CONNECT
+                                connect_config:
+                                  allow_post: true
+                http_filters:
+                  - name: envoy.filters.http.router
+                http2_protocol_options:
+                  allow_connect: true
+
+  clusters:
+    # Forward TCP stream to the server application.
+    - name: server_cluster
+      connect_timeout: 2s
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: server_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    # Server application address.
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 8081
