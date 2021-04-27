@@ -1,7 +1,8 @@
 # Envoy Proxy Experiment
 
-This experiment shows how to create a persistent connection to a Docker container in Cloud Run.
-It is done by using [TCP tunneling over HTTP](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/upgrades#tunneling-tcp-over-http)
+This experiment shows how to create a persistent connection to a Docker
+container in Cloud Run. It is done by using
+[TCP tunneling over HTTP](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/upgrades#tunneling-tcp-over-http)
 in Envoy proxy.
 
 The experiment consists of 2 Envoy proxies: _client side_ and _server side_.
@@ -52,7 +53,8 @@ docker run -it --network='host' 'gcr.io/oak-ci/envoy-proxy-example-client' local
 
 ### Running in Cloud Run
 
-Export environment variables (the corresponding JSON key can be created in [GCP console](https://pantheon.corp.google.com/iam-admin/serviceaccounts/details/107443053308787082748/keys?project=oak-ci)):
+Export environment variables (the corresponding JSON key can be created in
+[GCP console](https://pantheon.corp.google.com/iam-admin/serviceaccounts/details/107443053308787082748/keys?project=oak-ci)):
 
 ```bash
 export GCP_PROJECT_ID=oak-ci
