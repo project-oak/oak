@@ -58,18 +58,53 @@ struct WasmInterface {
 
 impl WasmInterface {
     pub fn new(
+        module: &wasmi::Module,
         request_bytes: Vec<u8>,
         lookup_data: Arc<LookupData>,
         logger: Logger,
-    ) -> WasmInterface {
-        WasmInterface {
+    ) -> anyhow::Result<WasmInterface> {
+        let mut abi = WasmInterface {
             request_bytes,
             response_bytes: vec![],
             lookup_data,
             instance: None,
             memory: None,
             logger,
-        }
+        };
+
+        let instance = wasmi::ModuleInstance::new(
+            module,
+            &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
+        )
+        .context("failed to instantiate Wasm module")?
+        .assert_no_start();
+
+        check_export_function_signature(
+            &instance,
+            MAIN_FUNCTION_NAME,
+            &wasmi::Signature::new(&[][..], None),
+        )
+        .context("could not validate `main` export")?;
+        check_export_function_signature(
+            &instance,
+            ALLOC_FUNCTION_NAME,
+            &wasmi::Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
+        )
+        .context(" could not validate `alloc` export")?;
+
+        abi.instance = Some(instance.clone());
+        // Make sure that non-empty `memory` is attached to the WasmInterface. Fail early if
+        // `memory` is not available.
+        abi.memory = Some(
+            instance
+                .export_by_name("memory")
+                .context("could not find Wasm `memory` export")?
+                .as_memory()
+                .cloned()
+                .context("could not interpret Wasm `memory` export as memory")?,
+        );
+
+        Ok(abi)
     }
 
     /// Helper function to get memory.
@@ -258,58 +293,11 @@ impl wasmi::ModuleImportResolver for WasmInterface {
         oak_functions_resolve_func(field_name, signature)
     }
 }
-/// Encapsulates the state of a Wasm invocation for a single user request.
-struct WasmState {
-    abi: WasmInterface,
-    logger: Logger,
-}
 
-impl WasmState {
-    fn new(
-        module: &wasmi::Module,
-        request_bytes: Vec<u8>,
-        lookup_data: Arc<LookupData>,
-        logger: Logger,
-    ) -> anyhow::Result<WasmState> {
-        let mut abi = WasmInterface::new(request_bytes, lookup_data, logger.clone());
-        let instance = wasmi::ModuleInstance::new(
-            module,
-            &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
-        )
-        .context("failed to instantiate Wasm module")?
-        .assert_no_start();
-
-        check_export_function_signature(
-            &instance,
-            MAIN_FUNCTION_NAME,
-            &wasmi::Signature::new(&[][..], None),
-        )
-        .context("could not validate `main` export")?;
-        check_export_function_signature(
-            &instance,
-            ALLOC_FUNCTION_NAME,
-            &wasmi::Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
-        )
-        .context(" could not validate `alloc` export")?;
-
-        abi.instance = Some(instance.clone());
-        // Make sure that non-empty `memory` is attached to the WasmInterface. Fail early if
-        // `memory` is not available.
-        abi.memory = Some(
-            instance
-                .export_by_name("memory")
-                .context("could not find Wasm `memory` export")?
-                .as_memory()
-                .cloned()
-                .context("could not interpret Wasm `memory` export as memory")?,
-        );
-
-        Ok(WasmState { abi, logger })
-    }
-
+impl WasmInterface {
     fn invoke(&mut self) {
-        let instance = self.abi.instance.as_ref().expect("no instance").clone();
-        let result = instance.invoke_export(MAIN_FUNCTION_NAME, &[], &mut self.abi);
+        let instance = self.instance.as_ref().expect("no instance").clone();
+        let result = instance.invoke_export(MAIN_FUNCTION_NAME, &[], self);
         self.logger.log_sensitive(
             Level::Info,
             &format!(
@@ -321,7 +309,7 @@ impl WasmState {
     }
 
     fn get_response_bytes(&self) -> Vec<u8> {
-        self.abi.response_bytes.clone()
+        self.response_bytes.clone()
     }
 }
 
@@ -385,7 +373,7 @@ impl WasmHandler {
 
     async fn handle_invoke(&self, req: Request<Body>) -> anyhow::Result<Response<Body>> {
         let request_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
-        let mut wasm_state = WasmState::new(
+        let mut wasm_state = WasmInterface::new(
             &self.module,
             request_bytes.to_vec(),
             self.lookup_data.clone(),
