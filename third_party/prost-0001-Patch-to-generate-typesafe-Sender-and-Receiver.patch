@@ -1,6 +1,6 @@
-From df8d3e37563d373ac38cc90f75f97416ba766b61 Mon Sep 17 00:00:00 2001
-From: Daan de Graaf <daagra@google.com>
-Date: Fri, 27 Mar 2020 14:34:20 +0000
+From 8349db8443d46ad1692e3cfb26bfd0dccb210c1c Mon Sep 17 00:00:00 2001
+From: Conrad Grobler <grobler@google.com>
+Date: Thu, 22 Apr 2021 11:26:39 +0100
 Subject: [PATCH] Patch prost to generate typesafe Sender and Receiver.
 
 ---
@@ -9,10 +9,10 @@ Subject: [PATCH] Patch prost to generate typesafe Sender and Receiver.
  2 files changed, 16 insertions(+)
 
 diff --git a/prost-build/src/code_generator.rs b/prost-build/src/code_generator.rs
-index 7323eb6..9e2614b 100644
+index ba960b0..c2a6f2e 100644
 --- a/prost-build/src/code_generator.rs
 +++ b/prost-build/src/code_generator.rs
-@@ -715,7 +715,20 @@ impl<'a> CodeGenerator<'a> {
+@@ -749,7 +749,20 @@ impl<'a> CodeGenerator<'a> {
          self.buf.push_str("}\n");
      }
 
@@ -26,7 +26,7 @@ index 7323eb6..9e2614b 100644
 +        Some(format!("::oak_io::{}<{}>", direction, message_type))
 +    }
 +
-     fn resolve_type(&self, field: &FieldDescriptorProto) -> String {
+     fn resolve_type(&self, field: &FieldDescriptorProto, fq_message_name: &str) -> String {
 +        if let Some(ty) = self.resolve_message_type(field) {
 +            return ty;
 +        }
@@ -34,10 +34,10 @@ index 7323eb6..9e2614b 100644
              Type::Float => String::from("f32"),
              Type::Double => String::from("f64"),
 diff --git a/prost-types/src/protobuf.rs b/prost-types/src/protobuf.rs
-index 6649f76..0e2edbf 100644
+index 7530b78..2078f02 100644
 --- a/prost-types/src/protobuf.rs
 +++ b/prost-types/src/protobuf.rs
-@@ -567,6 +567,9 @@ pub struct FieldOptions {
+@@ -590,6 +590,9 @@ pub struct FieldOptions {
      /// The parser stores options it doesn't recognize here. See above.
      #[prost(message, repeated, tag="999")]
      pub uninterpreted_option: ::prost::alloc::vec::Vec<UninterpretedOption>,
@@ -48,4 +48,5 @@ index 6649f76..0e2edbf 100644
  /// Nested message and enum types in `FieldOptions`.
  pub mod field_options {
 --
-2.20.1
+2.31.1
+

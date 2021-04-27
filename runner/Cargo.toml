@@ -28,7 +28,6 @@ tokio = { version = "*", features = [
   "process",
   "rt-multi-thread",
   "signal",
-  "stream",
   "sync",
 ] }
 toml = "*"

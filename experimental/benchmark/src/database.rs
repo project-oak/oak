@@ -69,8 +69,8 @@ impl Database {
         let mut entries = HashMap::new();
         for id in 0..size {
             let name: u16 = rng.gen();
-            let latitude_degrees: f32 = rng.gen_range(-90.0, 90.0);
-            let longitude_degrees: f32 = rng.gen_range(-180.0, 180.0);
+            let latitude_degrees: f32 = rng.gen_range(-90.0..90.0);
+            let longitude_degrees: f32 = rng.gen_range(-180.0..180.0);
             let entry = PointOfInterest {
                 name: format!("{}", name),
                 location: Some(Location {

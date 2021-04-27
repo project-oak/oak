@@ -56,7 +56,7 @@ fn sign(input: &[u8]) -> anyhow::Result<SignatureBundle> {
     SignatureBundle::create(input, &key_pair)
 }
 
-#[tokio::test(core_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_set_intersection() {
     let _ = env_logger::builder().is_test(true).try_init();
 

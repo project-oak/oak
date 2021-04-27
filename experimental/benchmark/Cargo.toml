@@ -24,7 +24,7 @@ prost = "*"
 rand = "*"
 serde = "*"
 structopt = "*"
-tokio = { version = "*", features = ["fs", "macros", "rt-threaded", "stream"] }
+tokio = { version = "*", features = ["fs", "macros", "rt-multi-thread"] }
 tonic = { version = "*", features = ["tls"] }
 trusted_database_client = "*"
 quick-xml = { version = "*", features = ["serialize"] }

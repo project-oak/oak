@@ -47,7 +47,7 @@ async fn submit_sample(
     client.submit_sample(req).await
 }
 
-#[tokio::test(core_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_aggregator() {
     let _ = env_logger::builder().is_test(true).try_init();
 

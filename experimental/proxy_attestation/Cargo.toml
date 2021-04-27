@@ -25,13 +25,12 @@ oak_attestation_common = { version = "*", path = "../attestation_common" }
 openssl = "*"
 prost = "*"
 structopt = "*"
-# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
-tokio = { version = "0.2", features = [
+tokio = { version = "*", features = [
   "fs",
   "macros",
   "signal",
   "sync",
-  "stream"
+  "rt-multi-thread"
 ] }
 tonic = { version = "*", features = ["tls"] }
 

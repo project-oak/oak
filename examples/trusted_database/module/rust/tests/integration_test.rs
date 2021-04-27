@@ -111,7 +111,7 @@ async fn list_points_of_interest(
     client.list_points_of_interest(request).await
 }
 
-#[tokio::test(core_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_trusted_database() {
     env_logger::init();
 

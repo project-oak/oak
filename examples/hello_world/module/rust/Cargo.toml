@@ -27,8 +27,9 @@ log = "*"
 maplit = "*"
 oak_runtime = { version = "=0.1.0", features = ["linear-handles"] }
 oak_tests = "=0.1.0"
-tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 tonic = "*"
+tokio-stream = "*"
 
 [build-dependencies]
 oak_utils = "*"

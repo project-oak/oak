@@ -63,7 +63,7 @@ pub async fn run_server(
 
     // Create a TCP listener.
     let address: std::net::SocketAddr = address.parse().context("Couldn't parse address")?;
-    let mut tcp = TcpListener::bind(&address)
+    let tcp = TcpListener::bind(&address)
         .await
         .map_err(|error| anyhow!("Couldn't bind address: {:?}", error))?;
 

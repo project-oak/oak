@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
   //
   // TODO(#1674): Add appropriate TLS endpoint tag to the label as well.
   oak::label::Label label = oak::WebAssemblyModuleHashLabel(
-      absl::HexStringToBytes("8757bbf4c470b1c33c830a37fb9ce95feb56fe9b2b1a7003d3150ef21a9ea31a"));
+      absl::HexStringToBytes("2012fc26013b5e785bd7a1d553f0b534f822829df7f97e44b779b9d6f8e38894"));
   // Connect to the Oak Application.
   auto stub = Aggregator::NewStub(oak::ApplicationClient::CreateChannel(
       address, oak::ApplicationClient::GetTlsChannelCredentials(ca_cert_path), label));

@@ -116,7 +116,7 @@ pub fn start_metrics_server(
     runtime: Arc<Runtime>,
     termination_notificiation_receiver: tokio::sync::oneshot::Receiver<()>,
 ) {
-    let mut tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
+    let tokio_runtime = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
     tokio_runtime.block_on(make_server(
         port,
         runtime,

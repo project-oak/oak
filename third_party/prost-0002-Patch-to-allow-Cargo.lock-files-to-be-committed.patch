@@ -1,6 +1,6 @@
-From 46f1d392274af17337232f0b0347303966c8a033 Mon Sep 17 00:00:00 2001
-From: David Drysdale <drysdale@google.com>
-Date: Fri, 26 Jun 2020 11:54:14 +0100
+From f46f3f81d610d80d90141e74f1c386f40da0afbc Mon Sep 17 00:00:00 2001
+From: Conrad Grobler <grobler@google.com>
+Date: Thu, 22 Apr 2021 11:27:17 +0100
 Subject: [PATCH] Patch prost to allow Cargo.lock files to be committed
 
 ---
@@ -8,11 +8,11 @@ Subject: [PATCH] Patch prost to allow Cargo.lock files to be committed
  1 file changed, 1 deletion(-)
 
 diff --git a/.gitignore b/.gitignore
-index a9d37c560c6a..eb5a316cbd19 100644
+index a9d37c5..eb5a316 100644
 --- a/.gitignore
 +++ b/.gitignore
-@@ -1,2 +1,1 @@
+@@ -1,2 +1 @@
  target
 -Cargo.lock
 --
-2.26.2
+2.31.1

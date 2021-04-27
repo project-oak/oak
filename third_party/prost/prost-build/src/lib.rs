@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/prost-build/0.6.1")]
+#![doc(html_root_url = "https://docs.rs/prost-build/0.7.0")]
 #![allow(clippy::option_as_ref_deref)]
 
 //! `prost-build` compiles `.proto` files into Rust.
@@ -97,14 +97,17 @@
 //! PROTOC_INCLUDE=/usr/include
 //! ```
 //!
-//! If `PROTOC` is not found in the environment, then a pre-compiled `protoc` binary bundled in
-//! the prost-build crate is used. Pre-compiled `protoc` binaries exist for Linux, macOS, and
-//! Windows systems. If no pre-compiled `protoc` is available for the host platform, then the
+//! If `PROTOC` is not found in the environment, then a pre-compiled `protoc` binary bundled in the
+//! prost-build crate is used. Pre-compiled `protoc` binaries exist for Linux (non-musl), macOS,
+//! and Windows systems. If no pre-compiled `protoc` is available for the host platform, then the
 //! `protoc` or `protoc.exe` binary on the `PATH` is used. If `protoc` is not available in any of
 //! these fallback locations, then the build fails.
 //!
-//! If `PROTOC_INCLUDE` is not found in the environment, then the Protobuf include directory bundled
-//! in the prost-build crate is be used.
+//! If `PROTOC_INCLUDE` is not found in the environment, then the Protobuf include directory
+//! bundled in the prost-build crate is be used.
+//!
+//! To force `prost-build` to use the `protoc` on the `PATH`, add `PROTOC=protoc` to the
+//! environment.
 
 mod ast;
 mod code_generator;
@@ -115,6 +118,7 @@ mod message_graph;
 use std::collections::HashMap;
 use std::default;
 use std::env;
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs;
 use std::io::{Error, ErrorKind, Result};
@@ -182,14 +186,18 @@ pub trait ServiceGenerator {
 ///
 /// This configuration builder can be used to set non-default code generation options.
 pub struct Config {
+    file_descriptor_set_path: Option<PathBuf>,
     service_generator: Option<Box<dyn ServiceGenerator>>,
     btree_map: Vec<String>,
+    bytes: Vec<String>,
     type_attributes: Vec<(String, String)>,
     field_attributes: Vec<(String, String)>,
     prost_types: bool,
     strip_enum_prefix: bool,
     out_dir: Option<PathBuf>,
     extern_paths: Vec<(String, String)>,
+    protoc_args: Vec<OsString>,
+    disable_comments: Vec<String>,
 }
 
 impl Config {
@@ -252,6 +260,63 @@ impl Config {
         S: AsRef<str>,
     {
         self.btree_map = paths.into_iter().map(|s| s.as_ref().to_string()).collect();
+        self
+    }
+
+    /// Configure the code generator to generate Rust [`bytes::Bytes`][1] fields for Protobuf
+    /// [`bytes`][2] type fields.
+    ///
+    /// # Arguments
+    ///
+    /// **`paths`** - paths to specific fields, messages, or packages which should use a Rust
+    /// `Bytes` for Protobuf `bytes` fields. Paths are specified in terms of the Protobuf type
+    /// name (not the generated Rust type name). Paths with a leading `.` are treated as fully
+    /// qualified names. Paths without a leading `.` are treated as relative, and are suffix
+    /// matched on the fully qualified field name. If a Protobuf map field matches any of the
+    /// paths, a Rust `Bytes` field is generated instead of the default [`Vec<u8>`][3].
+    ///
+    /// The matching is done on the Protobuf names, before converting to Rust-friendly casing
+    /// standards.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # let mut config = prost_build::Config::new();
+    /// // Match a specific field in a message type.
+    /// config.bytes(&[".my_messages.MyMessageType.my_bytes_field"]);
+    ///
+    /// // Match all bytes fields in a message type.
+    /// config.bytes(&[".my_messages.MyMessageType"]);
+    ///
+    /// // Match all bytes fields in a package.
+    /// config.bytes(&[".my_messages"]);
+    ///
+    /// // Match all bytes fields. Expecially useful in `no_std` contexts.
+    /// config.bytes(&["."]);
+    ///
+    /// // Match all bytes fields in a nested message.
+    /// config.bytes(&[".my_messages.MyMessageType.MyNestedMessageType"]);
+    ///
+    /// // Match all fields named 'my_bytes_field'.
+    /// config.bytes(&["my_bytes_field"]);
+    ///
+    /// // Match all fields named 'my_bytes_field' in messages named 'MyMessageType', regardless of
+    /// // package or nesting.
+    /// config.bytes(&["MyMessageType.my_bytes_field"]);
+    ///
+    /// // Match all fields named 'my_bytes_field', and all fields in the 'foo.bar' package.
+    /// config.bytes(&["my_bytes_field", ".foo.bar"]);
+    /// ```
+    ///
+    /// [1]: https://docs.rs/bytes/latest/bytes/struct.Bytes.html
+    /// [2]: https://developers.google.com/protocol-buffers/docs/proto3#scalar
+    /// [3]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+    pub fn bytes<I, S>(&mut self, paths: I) -> &mut Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        self.bytes = paths.into_iter().map(|s| s.as_ref().to_string()).collect();
         self
     }
 
@@ -347,6 +412,35 @@ impl Config {
     /// types, and instead generate Protobuf well-known types from their `.proto` definitions.
     pub fn compile_well_known_types(&mut self) -> &mut Self {
         self.prost_types = false;
+        self
+    }
+
+    /// Configures the code generator to omit documentation comments on generated Protobuf types.
+    ///
+    /// # Example
+    ///
+    /// Occasionally `.proto` files contain code blocks which are not valid Rust. To avoid doctest
+    /// failures, annotate the invalid code blocks with an [`ignore` or `no_run` attribute][1], or
+    /// disable doctests for the crate with a [Cargo.toml entry][2]. If neither of these options
+    /// are possible, then omit comments on generated code during doctest builds:
+    ///
+    /// ```rust,ignore
+    /// let mut config = prost_build::Config::new();
+    /// config.disable_comments(".");
+    /// config.compile_protos(&["src/frontend.proto", "src/backend.proto"], &["src"])?;
+    /// ```
+    ///
+    /// As with other options which take a set of paths, comments can be disabled on a per-package
+    /// or per-symbol basis.
+    ///
+    /// [1]: https://doc.rust-lang.org/rustdoc/documentation-tests.html#attributes
+    /// [2]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target
+    pub fn disable_comments<I, S>(&mut self, paths: I) -> &mut Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        self.disable_comments = paths.into_iter().map(|s| s.as_ref().to_string()).collect();
         self
     }
 
@@ -462,6 +556,38 @@ impl Config {
         self
     }
 
+    /// When set, the `FileDescriptorSet` generated by `protoc` is written to the provided path.
+    ///
+    /// This option can be used in conjunction with the `include_bytes!` macro and the types in the
+    /// `prost-types` crate for implementing reflection capabilities, among other things.
+    ///
+    /// ## Example
+    ///
+    /// In `build.rs`:
+    ///
+    /// ```rust
+    /// # use std::env;
+    /// # use std::path::PathBuf;
+    /// # let mut config = prost_build::Config::new();
+    /// config.file_descriptor_set_path(
+    ///     PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR environment variable not set"))
+    ///         .join("file_descriptor_set.bin"));
+    /// ```
+    ///
+    /// In `lib.rs`:
+    ///
+    /// ```rust,ignore
+    /// let file_descriptor_set_bytes = include_bytes!(concat!(env!("OUT_DIR"), "/file_descriptor_set.bin"));
+    /// let file_descriptor_set = prost_types::FileDescriptorSet::decode(&file_descriptor_set_bytes[..]).unwrap();
+    /// ```
+    pub fn file_descriptor_set_path<P>(&mut self, path: P) -> &mut Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.file_descriptor_set_path = Some(path.into());
+        self
+    }
+
     /// Configures the code generator to not strip the enum name from variant names.
     ///
     /// Protobuf enum definitions commonly include the enum name as a prefix of every variant name.
@@ -482,6 +608,28 @@ impl Config {
         P: Into<PathBuf>,
     {
         self.out_dir = Some(path.into());
+        self
+    }
+
+    /// Add an argument to the `protoc` protobuf compilation invocation.
+    ///
+    /// # Example `build.rs`
+    ///
+    /// ```rust,no_run
+    /// # use std::io::Result;
+    /// fn main() -> Result<()> {
+    ///   let mut prost_build = prost_build::Config::new();
+    ///   // Enable a protoc experimental feature.
+    ///   prost_build.protoc_arg("--experimental_allow_proto3_optional");
+    ///   prost_build.compile_protos(&["src/frontend.proto", "src/backend.proto"], &["src"])?;
+    ///   Ok(())
+    /// }
+    /// ```
+    pub fn protoc_arg<S>(&mut self, arg: S) -> &mut Self
+    where
+        S: AsRef<OsStr>,
+    {
+        self.protoc_args.push(arg.as_ref().to_owned());
         self
     }
 
@@ -521,14 +669,20 @@ impl Config {
         // this figured out.
         // [1]: http://doc.crates.io/build-script.html#outputs-of-the-build-script
 
-        let tmp = tempfile::Builder::new().prefix("prost-build").tempdir()?;
-        let descriptor_set = tmp.path().join("prost-descriptor-set");
+        let tmp;
+        let file_descriptor_set_path = match self.file_descriptor_set_path.clone() {
+            Some(file_descriptor_set_path) => file_descriptor_set_path,
+            None => {
+                tmp = tempfile::Builder::new().prefix("prost-build").tempdir()?;
+                tmp.path().join("prost-descriptor-set")
+            }
+        };
 
         let mut cmd = Command::new(protoc());
         cmd.arg("--include_imports")
             .arg("--include_source_info")
             .arg("-o")
-            .arg(&descriptor_set);
+            .arg(&file_descriptor_set_path);
 
         for include in includes {
             cmd.arg("-I").arg(include.as_ref());
@@ -538,11 +692,21 @@ impl Config {
         // override one of the built-in .protos.
         cmd.arg("-I").arg(protoc_include());
 
+        for arg in &self.protoc_args {
+            cmd.arg(arg);
+        }
+
         for proto in protos {
             cmd.arg(proto.as_ref());
         }
 
-        let output = cmd.output()?;
+        let output = cmd.output().map_err(|error| {
+            Error::new(
+                error.kind(),
+                format!("failed to invoke protoc (hint: https://docs.rs/prost-build/#sourcing-protoc): {}", error),
+            )
+        })?;
+
         if !output.status.success() {
             return Err(Error::new(
                 ErrorKind::Other,
@@ -550,15 +714,15 @@ impl Config {
             ));
         }
 
-        let buf = fs::read(descriptor_set)?;
-        let descriptor_set = FileDescriptorSet::decode(&*buf).map_err(|error| {
+        let buf = fs::read(file_descriptor_set_path)?;
+        let file_descriptor_set = FileDescriptorSet::decode(&*buf).map_err(|error| {
             Error::new(
                 ErrorKind::InvalidInput,
                 format!("invalid FileDescriptorSet: {}", error.to_string()),
             )
         })?;
 
-        let modules = self.generate(descriptor_set.file)?;
+        let modules = self.generate(file_descriptor_set.file)?;
         for (module, content) in modules {
             let mut filename = module.join(".");
             filename.push_str(".rs");
@@ -624,14 +788,18 @@ impl Config {
 impl default::Default for Config {
     fn default() -> Config {
         Config {
+            file_descriptor_set_path: None,
             service_generator: None,
             btree_map: Vec::new(),
+            bytes: Vec::new(),
             type_attributes: Vec::new(),
             field_attributes: Vec::new(),
             prost_types: true,
             strip_enum_prefix: true,
             out_dir: None,
             extern_paths: Vec::new(),
+            protoc_args: Vec::new(),
+            disable_comments: Vec::new(),
         }
     }
 }

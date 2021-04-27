@@ -19,7 +19,7 @@ use hello_world_grpc::proto::{hello_world_client::HelloWorldClient, HelloRequest
 use log::info;
 use maplit::hashmap;
 use oak::proto::oak::application::ConfigMap;
-use tokio::stream::StreamExt;
+use tokio_stream::StreamExt;
 
 const MAIN_MODULE_NAME: &str = "app";
 const MAIN_ENTRYPOINT_NAME: &str = "oak_main";
@@ -29,7 +29,7 @@ const TRANSLATOR_MODULE_NAME: &str = "translator";
 const TRANSLATOR_MODULE_MANIFEST: &str = "../../../translator/module/rust/Cargo.toml";
 
 // Test invoking the SayHello Node service method via the Oak runtime.
-#[tokio::test(core_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_say_hello() {
     let _ = env_logger::builder().is_test(true).try_init();
     let permissions = oak_runtime::permissions::PermissionsConfiguration {

@@ -372,10 +372,9 @@ impl Node for GrpcClientNode {
     ) {
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
-        let mut async_runtime = tokio::runtime::Builder::new()
-            // Use simple scheduler that runs all tasks on the current-thread.
-            // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
-            .basic_scheduler()
+        // Use simple scheduler that runs all tasks on the current-thread.
+        // https://docs.rs/tokio/1.5.0/tokio/runtime/index.html#current-thread-scheduler
+        let async_runtime = tokio::runtime::Builder::new_current_thread()
             // Enables the I/O driver.
             // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
             .enable_io()

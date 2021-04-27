@@ -21,7 +21,7 @@ oak-attestation = [
 [dependencies]
 anyhow = "*"
 http = "*"
-hyper = "*"
+hyper = { version = "*", features = ["client"] }
 hyper-rustls = { version = "*", default-features = false, features = [
   "webpki-tokio"
 ], optional = true }

@@ -28,7 +28,7 @@ futures-core = "*"
 futures-util = "*"
 hex = "*"
 http = "*"
-hyper = "*"
+hyper = { version = "*", features = ["http1", "http2", "runtime", "server"] }
 hyper-rustls = { version = "*", default-features = false, features = [
   "webpki-tokio"
 ] }
@@ -54,25 +54,25 @@ rustls = "*"
 serde = "*"
 serde_json = "*"
 sha2 = "^0.9.1"
-tink-core = { version = "^0.1", features = ["json"] }
-tink-aead = "^0.1"
-tink-awskms = { version = "^0.1", optional = true }
-tink-daead = "^0.1"
-tink-gcpkms = { version = "^0.1.1", optional = true }
-tink-mac = "^0.1"
-tink-prf = "^0.1"
-tink-proto = "^0.1"
-tink-signature = "^0.1"
-# Pinned to 0.2 because of tonic: https://github.com/hyperium/tonic/blob/master/tonic/Cargo.toml
-tokio = { version = "0.2", features = [
-  "dns",
-  "io-driver",
+tink-core = { version = "*", features = ["json"] }
+tink-aead = "*"
+tink-awskms = { version = "*", optional = true }
+tink-daead = "*"
+tink-gcpkms = { version = "*", optional = true }
+tink-mac = "*"
+tink-prf = "*"
+tink-proto = "*"
+tink-signature = "*"
+tokio = { version = "*", features = [
   "io-util",
+  "io-std",
   "macros",
-  "rt-core",
-  "time",
-  "udp"
+  "net",
+  "rt",
+  "rt-multi-thread",
+  "time"
 ] }
+tokio-stream = { version = "*", features = ["net"] }
 tokio-rustls = "*"
 tonic = { version = "*", features = ["tls"] }
 wasmi = { version = "*", default-features = false, features = ["core"] }

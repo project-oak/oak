@@ -48,6 +48,7 @@ use std::{
     task::{Context, Poll},
 };
 use tokio::sync::{mpsc, oneshot};
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use tonic::{
     codegen::BoxFuture,
     metadata::MetadataMap,
@@ -189,10 +190,9 @@ impl Node for GrpcServerNode {
 
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
-        let mut async_runtime = tokio::runtime::Builder::new()
-            // Use simple scheduler that runs all tasks on the current-thread.
-            // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
-            .basic_scheduler()
+        // Use simple scheduler that runs all tasks on the current-thread.
+        // https://docs.rs/tokio/1.5.0/tokio/runtime/index.html#current-thread-scheduler
+        let async_runtime = tokio::runtime::Builder::new_current_thread()
             // Enables the I/O driver.
             // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
             .enable_io()
@@ -414,7 +414,7 @@ struct GrpcInvocationHandler {
     method_name: String,
 }
 
-type SerializedResponseStream = mpsc::UnboundedReceiver<Result<Vec<u8>, tonic::Status>>;
+type SerializedResponseStream = UnboundedReceiverStream<Result<Vec<u8>, tonic::Status>>;
 
 impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
     type Response = Vec<u8>;
@@ -477,7 +477,7 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
                     }
                 }
             });
-            Ok(tonic::Response::new(rx))
+            Ok(tonic::Response::new(UnboundedReceiverStream::new(rx)))
         };
 
         Box::pin(future)

@@ -21,7 +21,10 @@ use oak_attestation_common::{
     get_sha256,
     report::{AttestationInfo, TEE_EXTENSION_OID},
 };
-use tokio_rustls::rustls::{self, ServerCertVerifier};
+use tokio_rustls::{
+    rustls::{self, ServerCertVerifier},
+    webpki::DNSNameRef,
+};
 use tonic::transport::{Channel, ClientTlsConfig};
 use x509_parser::{der_parser::der::parse_der, parse_x509_certificate};
 
@@ -121,7 +124,7 @@ impl rustls::ServerCertVerifier for RemoteAttestationVerifier {
         &self,
         root_certificates: &rustls::RootCertStore,
         certificates: &[rustls::Certificate],
-        hostname: webpki::DNSNameRef,
+        hostname: DNSNameRef,
         ocsp: &[u8],
     ) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
         // Client expects a single certificate corresponding to remote attestation.
@@ -153,7 +156,7 @@ impl rustls::ServerCertVerifier for RemoteAttestationVerifier {
 fn verify_certificate(
     certificate: &rustls::Certificate,
     root_certificates: &rustls::RootCertStore,
-    hostname: webpki::DNSNameRef,
+    hostname: DNSNameRef,
     ocsp: &[u8],
 ) -> anyhow::Result<()> {
     // This check is required since [`rustls::DangerousClientConfig::set_certificate_verifier`]

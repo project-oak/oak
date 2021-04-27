@@ -25,12 +25,13 @@ oak_abi = { path = "../../../../oak_abi" }
 oak_io = { path = "../../../../oak_io" }
 oak_services = { path = "../../../../oak_services" }
 prost = "*"
-rand_core = "*"
-rand = "*"
+# Pin version 0.7 to allow using "std" feature of rand_core.
+# TODO(#2006): Unpin once "std" feature is no longer needed.
+rand = "0.7"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
-tink-proto = "^0.1"
+tink-proto = "*"
 
 [build-dependencies]
 oak_utils = { path = "../../../../oak_utils" }
@@ -44,6 +45,6 @@ log = "*"
 maplit = "*"
 oak_runtime = { path = "../../../../oak_runtime" }
 oak_tests = { path = "../../../../sdk/rust/oak_tests" }
-tokio = { version = "*", features = ["macros", "rt-threaded", "stream"] }
+tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 tonic = { version = "*", features = ["tls"] }
 serial_test = "*"

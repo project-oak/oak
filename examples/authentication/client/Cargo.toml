@@ -9,7 +9,7 @@ license = "Apache-2.0"
 [dependencies]
 env_logger = "*"
 futures-util = { version = "*", default-features = false }
-hyper = "*"
+hyper = { version = "*", features = ["client"] }
 log = "*"
 open = "*"
 prost = "*"
@@ -18,8 +18,7 @@ tokio = { version = "*", features = [
   "fs",
   "macros",
   "rt-multi-thread",
-  "sync",
-  "stream"
+  "sync"
 ] }
 tonic = { version = "*", features = ["tls"] }
 url = "*"

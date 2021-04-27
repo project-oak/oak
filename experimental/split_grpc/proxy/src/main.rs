@@ -21,6 +21,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
     spawn,
 };
+use tokio_stream::wrappers::TcpListenerStream;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -28,11 +29,11 @@ async fn main() -> io::Result<()> {
     let in_address = "[::1]:50051";
     let listener = TcpListener::bind(in_address).await?;
     info!("Proxy listening on {:?}", in_address);
-    proxy(listener).await?;
+    proxy(TcpListenerStream::new(listener)).await?;
     Ok(())
 }
 
-async fn proxy(mut listener: TcpListener) -> io::Result<()> {
+async fn proxy(mut listener: TcpListenerStream) -> io::Result<()> {
     while let Some(connection_in) = listener.next().await {
         match connection_in {
             Err(e) => error!("Accept incoming failed: {:?}", e),

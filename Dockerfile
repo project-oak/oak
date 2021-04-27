@@ -294,7 +294,10 @@ RUN mkdir --parents ${sccache_dir} \
 ENV SCCACHE_GCS_BUCKET sccache-1
 ENV SCCACHE_GCS_KEY_PATH /workspaces/oak/.oak_remote_cache_key.json
 ENV SCCACHE_GCS_RW_MODE READ_WRITE
-ENV RUSTC_WRAPPER sccache
+
+# TODO(#2014): Re-enable sccache once runner runs backend binaries directly rather than using `cargo run`.
+# ENV RUSTC_WRAPPER sccache
+
 # Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
 ENV CARGO_INCREMENTAL false
 

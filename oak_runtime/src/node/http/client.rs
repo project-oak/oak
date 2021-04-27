@@ -64,7 +64,7 @@ impl Node for HttpClientNode {
         // Create an Async runtime for executing futures.
         // https://docs.rs/tokio/
         // TODO(#1280): Use a single shared tokio runtime, instead of creating a new one here.
-        let mut async_runtime = create_async_runtime();
+        let async_runtime = create_async_runtime();
 
         // Listen to incoming HTTP invocations.
         info!(
@@ -282,10 +282,9 @@ impl<'a> ResponseHandler<'a> {
 }
 
 fn create_async_runtime() -> tokio::runtime::Runtime {
-    tokio::runtime::Builder::new()
-        // Use simple scheduler that runs all tasks on the current-thread.
-        // https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler
-        .basic_scheduler()
+    // Use simple scheduler that runs all tasks on the current-thread.
+    // https://docs.rs/tokio/1.5.0/tokio/runtime/index.html#current-thread-scheduler
+    tokio::runtime::Builder::new_current_thread()
         // Enables the I/O driver.
         // Necessary for using net, process, signal, and I/O types on the Tokio runtime.
         .enable_io()
