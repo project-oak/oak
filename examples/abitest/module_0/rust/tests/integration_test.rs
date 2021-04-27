@@ -22,6 +22,7 @@ use maplit::hashmap;
 use oak_abi::proto::oak::application::ConfigMap;
 use serial_test::serial;
 use std::{collections::HashMap, sync::Arc};
+use tokio::time::{sleep, Duration};
 
 // Constants for Node config names that should match those in the textproto
 // config held in ../../../config.
@@ -142,12 +143,6 @@ async fn test_leaks() {
         assert_matches!(result, Ok(_));
         let results = result.unwrap().into_inner().results;
 
-        let (after_nodes, after_channels) = runtime.object_counts();
-        info!(
-            "Counts change from test: Nodes={} => {}, Channels={} => {}",
-            before_nodes, after_nodes, before_channels, after_channels
-        );
-
         // Calculate the expected change in Node and channel counts for
         // these tests.
         let mut want_nodes = before_nodes;
@@ -160,6 +155,23 @@ async fn test_leaks() {
             want_nodes += result.node_change;
             want_channels += result.channel_change;
         }
+
+        let (after_nodes, after_channels) = runtime.object_counts();
+        // If the values don't match the expected values it could be due to a race condition where a
+        // backend node closed its orphaned channeal a bit later than expected, so we wait 5 seconds
+        // and calculate the values again.
+        let (after_nodes, after_channels) =
+            if after_nodes != want_nodes || after_channels != want_channels {
+                sleep(Duration::from_secs(5)).await;
+                runtime.object_counts()
+            } else {
+                (after_nodes, after_channels)
+            };
+
+        info!(
+            "Counts change from test: Nodes={} => {}, Channels={} => {}",
+            before_nodes, after_nodes, before_channels, after_channels
+        );
 
         if after_nodes != want_nodes || after_channels != want_channels {
             error!(
