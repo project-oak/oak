@@ -1286,7 +1286,14 @@ fn source_files() -> impl Iterator<Item = PathBuf> {
 fn crate_manifest_files() -> impl Iterator<Item = PathBuf> {
     source_files()
         .filter(is_cargo_toml_file)
-        .filter(|p| !is_cargo_workspace_file(p))
+        .filter(|p| is_cargo_package_file(p))
+}
+
+/// Return an iterator of all known Cargo Manifest files that define workspaces.
+fn workspace_manifest_files() -> impl Iterator<Item = PathBuf> {
+    source_files()
+        .filter(is_cargo_toml_file)
+        .filter(|p| is_cargo_workspace_file(p))
 }
 
 /// Return whether the provided path refers to a source file in a programming language.
@@ -1380,11 +1387,19 @@ fn read_file(path: &PathBuf) -> String {
 /// Return whether the provided path refers to a workspace-level `Cargo.toml` file, by looking at
 /// the contents of the file.
 fn is_cargo_workspace_file(path: &PathBuf) -> bool {
-    // We naively look for the `[workspace]` string to appear in the contents of the file. Only the
-    // files that contain `[workspace]` but not `[package]` should be considered a workspace
-    // file. A better alternative would be to actually parse the file as `toml` and figure out
-    // whether it has a `workspace` section, but it seems overkill for now.
-    file_contains(path, "[workspace]") && !file_contains(path, "[package]")
+    // We naively look for the `[workspace]` string to appear in the contents of the file. A better
+    // alternative would be to actually parse the file as `toml` and figure out whether it has a
+    // `workspace` section, but it seems overkill for now.
+    file_contains(path, "[workspace]")
+}
+
+/// Return whether the provided path refers to a `Cargo.toml` file that defines a crate, by looking
+/// at the contents of the file.
+fn is_cargo_package_file(path: &PathBuf) -> bool {
+    // We naively look for the `[package]` string to appear in the contents of the file. A better
+    // alternative would be to actually parse the file as `toml` and figure out whether it has a
+    // `package` section, but it seems overkill for now.
+    file_contains(path, "[package]")
 }
 
 fn file_contains(path: &PathBuf, pattern: &str) -> bool {
@@ -1776,7 +1791,7 @@ fn run_cargo_clippy() -> Step {
 fn run_cargo_deny() -> Step {
     Step::Multiple {
         name: "cargo deny".to_string(),
-        steps: crate_manifest_files()
+        steps: workspace_manifest_files()
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
