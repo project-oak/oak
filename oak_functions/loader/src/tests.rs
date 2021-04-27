@@ -36,9 +36,6 @@ const MANIFEST_PATH: &str = "examples/hello_world/module/Cargo.toml";
 async fn test_server() {
     let server_port = test_utils::free_port();
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
-    let (terminate_server_tx, terminate_server_rx) = tokio::sync::oneshot::channel::<()>();
-    let (terminate_static_server_tx, terminate_static_server_rx) =
-        tokio::sync::oneshot::channel::<()>();
 
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.pop();
@@ -53,11 +50,9 @@ async fn test_server() {
 
     let mock_static_server_clone = mock_static_server.clone();
     let static_server_port = test_utils::free_port();
-    let static_server_join_handle = tokio::spawn(async move {
+    let mock_static_server_background = test_utils::background(|term| async move {
         mock_static_server_clone
-            .serve(static_server_port, async {
-                terminate_static_server_rx.await.unwrap()
-            })
+            .serve(static_server_port, term)
             .await
     });
 
@@ -72,25 +67,16 @@ async fn test_server() {
     ));
     lookup_data.refresh().await.unwrap();
 
-    let server_join_handle = tokio::spawn(async move {
-        create_and_start_server(
-            &address,
-            &wasm_module_bytes,
-            lookup_data,
-            terminate_server_rx,
-            logger,
-        )
-        .await
+    let server_background = test_utils::background(|term| async move {
+        create_and_start_server(&address, &wasm_module_bytes, lookup_data, term, logger).await
     });
     let client_fut = start_client(server_port);
 
     client_fut.await;
-    terminate_server_tx.send(()).unwrap();
-    let res = server_join_handle.await.unwrap();
+    let res = server_background.terminate_and_join().await;
     assert!(res.is_ok());
 
-    terminate_static_server_tx.send(()).unwrap();
-    static_server_join_handle.await.unwrap();
+    mock_static_server_background.terminate_and_join().await;
 }
 
 async fn start_client(port: u16) {
@@ -279,16 +265,11 @@ fn parse_lookup_entries_invalid() {
 async fn lookup_data_refresh() {
     let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
 
-    let (terminate_static_server_tx, terminate_static_server_rx) =
-        tokio::sync::oneshot::channel::<()>();
-
     let static_server_port = test_utils::free_port();
     let mock_static_server_clone = mock_static_server.clone();
-    let static_server_join_handle = tokio::spawn(async move {
+    let mock_static_server_background = test_utils::background(|term| async move {
         mock_static_server_clone
-            .serve(static_server_port, async {
-                terminate_static_server_rx.await.unwrap()
-            })
+            .serve(static_server_port, term)
             .await
     });
 
@@ -330,6 +311,5 @@ async fn lookup_data_refresh() {
     assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
 
-    terminate_static_server_tx.send(()).unwrap();
-    static_server_join_handle.await.unwrap();
+    mock_static_server_background.terminate_and_join().await;
 }

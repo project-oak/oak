@@ -25,9 +25,6 @@ use std::{
 async fn test_server() {
     let server_port = test_utils::free_port();
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
-    let (terminate_server_tx, terminate_server_rx) = tokio::sync::oneshot::channel::<()>();
-    let (terminate_static_server_tx, terminate_static_server_rx) =
-        tokio::sync::oneshot::channel::<()>();
 
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.push("Cargo.toml");
@@ -40,11 +37,9 @@ async fn test_server() {
 
     let mock_static_server_clone = mock_static_server.clone();
     let static_server_port = test_utils::free_port();
-    let static_server_join_handle = tokio::spawn(async move {
+    let mock_static_server_background = test_utils::background(|term| async move {
         mock_static_server_clone
-            .serve(static_server_port, async {
-                terminate_static_server_rx.await.unwrap()
-            })
+            .serve(static_server_port, term)
             .await
     });
 
@@ -61,15 +56,8 @@ async fn test_server() {
     ));
     lookup_data.refresh().await.unwrap();
 
-    let server_join_handle = tokio::spawn(async move {
-        create_and_start_server(
-            &address,
-            &wasm_module_bytes,
-            lookup_data,
-            terminate_server_rx,
-            logger,
-        )
-        .await
+    let server_background = test_utils::background(|term| async move {
+        create_and_start_server(&address, &wasm_module_bytes, lookup_data, term, logger).await
     });
 
     {
@@ -97,15 +85,10 @@ async fn test_server() {
         );
     }
 
-    terminate_server_tx
-        .send(())
-        .expect("Couldn't send completion signal.");
-
-    let res = server_join_handle.await.unwrap();
+    let res = server_background.terminate_and_join().await;
     assert!(res.is_ok());
 
-    terminate_static_server_tx.send(()).unwrap();
-    static_server_join_handle.await.unwrap();
+    mock_static_server_background.terminate_and_join().await;
 }
 
 async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {

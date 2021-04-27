@@ -126,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
             &address,
             &wasm_module_bytes,
             lookup_data,
-            notify_receiver,
+            async { notify_receiver.await.unwrap() },
             logger,
         )
         .await
