@@ -591,10 +591,6 @@
 <span id="588">588</span>
 <span id="589">589</span>
 <span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -647,6 +643,7 @@
     <span class="ident">sync</span>::<span class="ident">oneshot</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio_rustls</span>::<span class="ident">server</span>::<span class="ident">TlsStream</span>;
+<span class="kw">use</span> <span class="ident">tokio_stream</span>::<span class="ident">wrappers</span>::<span class="ident">TcpListenerStream</span>;
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">futures_util</span>::{
@@ -747,7 +744,7 @@
         });
 
         <span class="comment">// Low-level server creation is needed, to be able to validate TLS streams.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tcp</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">TcpListener</span>::<span class="ident">bind</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">address</span>).<span class="ident">await</span> {
+        <span class="kw">let</span> <span class="ident">tcp</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">TcpListener</span>::<span class="ident">bind</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">address</span>).<span class="ident">await</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">tcp</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">tcp</span>,
             <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">error</span><span class="macro">!</span>(
@@ -758,7 +755,7 @@
                 <span class="kw">return</span>;
             }
         };
-        <span class="kw">let</span> <span class="ident">tls_server</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_tls_server</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tcp</span>);
+        <span class="kw">let</span> <span class="ident">tls_server</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_tls_server</span>(<span class="ident">tcp</span>);
         <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server</span>::<span class="ident">builder</span>(<span class="ident">tls_server</span>).<span class="ident">serve</span>(<span class="ident">service</span>);
 
         <span class="kw">let</span> <span class="ident">graceful_server</span> <span class="op">=</span> <span class="ident">server</span>.<span class="ident">with_graceful_shutdown</span>(<span class="ident">async</span> {
@@ -780,15 +777,11 @@
     }
 
     <span class="doccomment">/// Build a server that checks incoming TCP connections for TLS handshake.</span>
-    <span class="kw">fn</span> <span class="ident">build_tls_server</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">tcp</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">TcpListener</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TlsServer</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">build_tls_server</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tcp</span>: <span class="ident">TcpListener</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TlsServer</span> {
         <span class="kw">let</span> <span class="ident">tls_cfg</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">to_server_config</span>(<span class="self">self</span>.<span class="ident">tls_config</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="ident">tls_acceptor</span> <span class="op">=</span> <span class="ident">TlsAcceptor</span>::<span class="ident">from</span>(<span class="ident">tls_cfg</span>);
 
-        <span class="kw">let</span> <span class="ident">incoming_tls_stream</span> <span class="op">=</span> <span class="ident">tcp</span>
-            .<span class="ident">incoming</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Incoming failed: {:?}&quot;</span>, <span class="ident">err</span>))
-            })
+        <span class="kw">let</span> <span class="ident">incoming_tls_stream</span> <span class="op">=</span> <span class="ident">TcpListenerStream</span>::<span class="ident">new</span>(<span class="ident">tcp</span>)
             .<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">stream</span><span class="op">|</span> {
                 <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Received incoming TLS stream: {:?}&quot;</span>, <span class="ident">stream</span>);
                 <span class="ident">tls_acceptor</span>.<span class="ident">accept</span>(<span class="ident">stream</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
@@ -849,7 +842,7 @@
         <span class="comment">// Create an Async runtime for executing futures.</span>
         <span class="comment">// https://docs.rs/tokio/</span>
         <span class="comment">// TODO(#1280): Use a single shared tokio runtime, instead of creating a new one here.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">async_runtime</span> <span class="op">=</span> <span class="ident">create_async_runtime</span>(<span class="ident">runtime</span>);
+        <span class="kw">let</span> <span class="ident">async_runtime</span> <span class="op">=</span> <span class="ident">create_async_runtime</span>(<span class="ident">runtime</span>);
 
         <span class="comment">// Start the HTTP server.</span>
         <span class="macro">info</span><span class="macro">!</span>(
@@ -885,10 +878,9 @@
 }
 
 <span class="kw">fn</span> <span class="ident">create_async_runtime</span>(<span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span> {
-    <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
-        <span class="comment">// Use simple scheduler that runs all tasks on the current-thread.</span>
-        <span class="comment">// https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler</span>
-        .<span class="ident">basic_scheduler</span>()
+    <span class="comment">// Use simple scheduler that runs all tasks on the current-thread.</span>
+    <span class="comment">// https://docs.rs/tokio/1.5.0/tokio/runtime/index.html#current-thread-scheduler</span>
+    <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Builder</span>::<span class="ident">new_current_thread</span>()
         <span class="comment">// Enables the I/O driver.</span>
         <span class="comment">// Necessary for using net, process, signal, and I/O types on the Tokio runtime.</span>
         .<span class="ident">enable_io</span>()

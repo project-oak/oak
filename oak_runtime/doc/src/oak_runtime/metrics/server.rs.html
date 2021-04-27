@@ -245,7 +245,7 @@
     <span class="ident">runtime</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
     <span class="ident">termination_notificiation_receiver</span>: <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
 ) {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tokio_runtime</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>::<span class="ident">new</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create Tokio runtime&quot;</span>);
+    <span class="kw">let</span> <span class="ident">tokio_runtime</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>::<span class="ident">new</span>().<span class="ident">expect</span>(<span class="string">&quot;Couldn&#39;t create Tokio runtime&quot;</span>);
     <span class="ident">tokio_runtime</span>.<span class="ident">block_on</span>(<span class="ident">make_server</span>(
         <span class="ident">port</span>,
         <span class="ident">runtime</span>,

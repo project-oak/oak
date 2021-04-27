@@ -497,7 +497,7 @@
     <span class="doccomment">/// It is calculated as the midpoint of the first `min_overlapping_intervals` overlap between</span>
     <span class="doccomment">/// the intervals returned from the servers.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_roughtime</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MicrosSinceEpoch</span>, <span class="ident">RoughtimeError</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Runtime</span>::<span class="ident">new</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Runtime</span>::<span class="ident">new</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">intervals</span> <span class="op">=</span> <span class="ident">runtime</span>.<span class="ident">block_on</span>(<span class="self">self</span>.<span class="ident">get_intervals_from_all_servers</span>());
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">find_overlap</span>(<span class="kw-2">&amp;</span><span class="ident">intervals</span>)<span class="question-mark">?</span>;
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Roughtime interval: min={}, max={}&quot;</span>, <span class="ident">result</span>.<span class="ident">min</span>, <span class="ident">result</span>.<span class="ident">max</span>);
@@ -647,7 +647,7 @@
         }
         .<span class="ident">parse</span>()
         .<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">UdpSocket</span>::<span class="ident">bind</span>(<span class="ident">local_address</span>).<span class="ident">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">UdpSocket</span>::<span class="ident">bind</span>(<span class="ident">local_address</span>).<span class="ident">await</span><span class="question-mark">?</span>;
         <span class="ident">socket</span>.<span class="ident">connect</span>(<span class="kw-2">&amp;</span><span class="ident">remote_addr</span>).<span class="ident">await</span><span class="question-mark">?</span>;
         <span class="kw">match</span> <span class="ident">timeout</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">timeout_seconds</span>), <span class="ident">socket</span>.<span class="ident">send</span>(<span class="ident">request</span>)).<span class="ident">await</span> {
             <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> {

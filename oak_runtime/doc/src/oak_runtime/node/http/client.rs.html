@@ -317,7 +317,6 @@
 <span id="314">314</span>
 <span id="315">315</span>
 <span id="316">316</span>
-<span id="317">317</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -385,7 +384,7 @@
         <span class="comment">// Create an Async runtime for executing futures.</span>
         <span class="comment">// https://docs.rs/tokio/</span>
         <span class="comment">// TODO(#1280): Use a single shared tokio runtime, instead of creating a new one here.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">async_runtime</span> <span class="op">=</span> <span class="ident">create_async_runtime</span>();
+        <span class="kw">let</span> <span class="ident">async_runtime</span> <span class="op">=</span> <span class="ident">create_async_runtime</span>();
 
         <span class="comment">// Listen to incoming HTTP invocations.</span>
         <span class="macro">info</span><span class="macro">!</span>(
@@ -603,10 +602,9 @@
 }
 
 <span class="kw">fn</span> <span class="ident">create_async_runtime</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span> {
-    <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
-        <span class="comment">// Use simple scheduler that runs all tasks on the current-thread.</span>
-        <span class="comment">// https://docs.rs/tokio/0.2.16/tokio/runtime/index.html#basic-scheduler</span>
-        .<span class="ident">basic_scheduler</span>()
+    <span class="comment">// Use simple scheduler that runs all tasks on the current-thread.</span>
+    <span class="comment">// https://docs.rs/tokio/1.5.0/tokio/runtime/index.html#current-thread-scheduler</span>
+    <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Builder</span>::<span class="ident">new_current_thread</span>()
         <span class="comment">// Enables the I/O driver.</span>
         <span class="comment">// Necessary for using net, process, signal, and I/O types on the Tokio runtime.</span>
         .<span class="ident">enable_io</span>()
