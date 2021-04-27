@@ -16,7 +16,7 @@
 use crate::{
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData},
-    server::{create_and_start_server, WasmHandler},
+    server::{create_and_start_server, Policy, WasmHandler},
 };
 use hyper::{client::Client, Body};
 use maplit::hashmap;
@@ -32,8 +32,89 @@ use test::Bencher;
 
 const MANIFEST_PATH: &str = "examples/hello_world/module/Cargo.toml";
 
+struct TestResult {
+    elapsed: u128,
+    status_code: hyper::StatusCode,
+    body: Vec<u8>,
+}
+
 #[tokio::test]
-async fn test_server() {
+async fn test_server_without_policy() {
+    let scenario = |server_port: u16| async move {
+        let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
+        assert_eq!(result.status_code, hyper::StatusCode::OK);
+        assert_eq!(
+            std::str::from_utf8(result.body.as_slice()).unwrap(),
+            r#"{"temperature_degrees_celsius":10}"#
+        );
+    };
+
+    run_scenario_with_policy(scenario, None).await;
+}
+
+#[tokio::test]
+async fn test_valid_policy() {
+    // Policy values are large enough to allow successful serving of the request, and responding
+    // with the actual response from the Wasm module.
+    let constant_process_time_millis = 100;
+    let policy = Policy {
+        constant_response_size_bytes: 100,
+        constant_process_time_millis,
+    };
+
+    let scenario = |server_port: u16| async move {
+        let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
+        // Check that the processing time is within a reasonable range of
+        // `constant_process_time_millis` specified in the policy.
+        assert!(result.elapsed > constant_process_time_millis as u128);
+        assert!(
+            (result.elapsed as f64) < 1.05 * constant_process_time_millis as f64,
+            format!("elapsed time is: {}ms", result.elapsed)
+        );
+
+        assert_eq!(result.status_code, hyper::StatusCode::OK);
+        assert_eq!(
+            std::str::from_utf8(result.body.as_slice()).unwrap(),
+            r#"{"temperature_degrees_celsius":10}"#
+        );
+    };
+
+    run_scenario_with_policy(scenario, Some(policy)).await;
+}
+
+#[tokio::test]
+async fn test_long_response_time() {
+    // The `constant_process_time_millis` is too low.
+    let constant_process_time_millis = 10;
+    let policy = Policy {
+        constant_response_size_bytes: 100,
+        constant_process_time_millis,
+    };
+
+    // So we expect the request to fail, with `response not available error`.
+    let scenario = |server_port: u16| async move {
+        let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
+        // TODO(#1987): Check elapsed time
+        assert_eq!(result.status_code, hyper::StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            std::str::from_utf8(result.body.as_slice()).unwrap(),
+            "Reason: response not available\n"
+        );
+    };
+
+    run_scenario_with_policy(scenario, Some(policy)).await;
+}
+
+/// Starts the server with the given policy, and runs the given test scenario.
+///
+/// A normal test scenario makes any number of requests and checks the responses. It has to be an
+/// async function, with a single `u16` input argument as the `server_port`, and returning the unit
+/// type (`()`).
+async fn run_scenario_with_policy<F, S>(test_scenario: F, policy: Option<Policy>)
+where
+    F: FnOnce(u16) -> S,
+    S: std::future::Future<Output = ()>,
+{
     let server_port = test_utils::free_port();
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
 
@@ -72,38 +153,47 @@ async fn test_server() {
             &address,
             &wasm_module_bytes,
             lookup_data,
-            None,
+            policy,
             term,
             logger,
         )
         .await
     });
-    let client_fut = start_client(server_port);
 
-    client_fut.await;
+    // Yield to the Tokio runtime’s scheduler, to allow the server thread to make progress before
+    // starting the client. This is needed for a more accurate measurement of the processing time.
+    tokio::task::yield_now().await;
+
+    test_scenario(server_port).await;
+
     let res = server_background.terminate_and_join().await;
     assert!(res.is_ok());
 
     mock_static_server_background.terminate_and_join().await;
 }
 
-async fn start_client(port: u16) {
+async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let client = Client::new();
     let request = hyper::Request::builder()
         .method(http::Method::POST)
         .uri(format!("http://localhost:{}/invoke", port))
-        .body(Body::from(r#"{"lat":52,"lon":0}"#))
+        .body(hyper::Body::from(request_body.to_vec()))
         .unwrap();
+    let start = std::time::Instant::now();
+
     let resp = client
         .request(request)
         .await
         .expect("Error while awaiting response");
-
-    assert_eq!(resp.status(), hyper::StatusCode::OK);
-    assert_eq!(
-        hyper::body::to_bytes(resp.into_body()).await.unwrap(),
-        r#"{"temperature_degrees_celsius":10}"#,
-    );
+    let elapsed = start.elapsed().as_millis();
+    TestResult {
+        elapsed,
+        status_code: resp.status(),
+        body: hyper::body::to_bytes(resp.into_body())
+            .await
+            .unwrap()
+            .to_vec(),
+    }
 }
 
 // TODO(#1933): Currently there is no support for running benchmark tests in the runner.

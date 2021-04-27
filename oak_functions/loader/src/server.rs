@@ -54,8 +54,9 @@ const ABI_USIZE: ValueType = ValueType::I32;
 /// Specific header used for padding the response to match the expected response bytes
 const POLICY_PADDING_HEADER: &str = "oak-policy-padding";
 
-/// Minimum size of constant response bytes
-const MIN_RESPONSE_SIZE: u32 = 45;
+/// Minimum size of constant response bytes. It is large enough to fit an error response, in case
+/// the policy is failed.
+const MIN_RESPONSE_SIZE: u32 = 90;
 
 /// A policy describing limits on the size of the response and response processing time to avoid
 /// side-channel leaks.
@@ -64,20 +65,20 @@ const MIN_RESPONSE_SIZE: u32 = 45;
 pub struct Policy {
     /// A fixed size for responses returned by the trusted runtime.
     ///
-    /// If the response computed by the feature code is smaller than this amount, it is padded with
+    /// If the response computed by the Wasm module is smaller than this amount, it is padded with
     /// additional data before encryption in order to make the payload size exactly this size. If
     /// the response is larger than this amount, the trusted runtime discards the response and
-    /// instead sends a message of exactly this size to the client, containing an error code
+    /// instead sends a response of exactly this size to the client, containing an error message
     /// indicating the failure.
-    constant_response_size_bytes: u32,
-    /// A fixed response time, in milliseconds, for returning the responses by the trusted runtime.
+    pub constant_response_size_bytes: u32,
+    /// A fixed response time, in milliseconds.
     ///
     /// Similar to the previous one, but controls the amount of time the function is allowed to run
     /// for. If the function finishes before this time, the response is not sent back until the
     /// time is elapsed. If the function does not finish within this deadline, the trusted runtime
-    /// sends a message to the client containing an error code indicating the failure, of the size
-    /// specified by the previous  parameter.
-    constant_process_time_millis: u64,
+    /// sends a response to the client containing an error message indicating the failure. The size
+    /// of this response is equal to the size specified by the previous parameter.
+    pub constant_process_time_millis: u64,
 }
 
 impl Policy {
@@ -86,13 +87,13 @@ impl Policy {
     }
 
     fn get_error_response(&self, reason: &str) -> anyhow::Result<Response<Body>> {
-        // We include the `POLICY_PADDING_HEADER` in all responses. So first measure the size of the
-        // body and the header name. The diff between this size and
-        // `self.constant_response_size_bytes` gives the required padding.
+        // We include the `oak-policy-padding` in all responses. So first estimate the size of
+        // the response including this header name. The diff between this size and
+        // `self.constant_response_size_bytes` gives the required padding, that will be added as the
+        // value of the header.
         let body = format!("Reason: {}\n", reason);
-        let header_body_content = format!("{}{}", POLICY_PADDING_HEADER, body);
-        let required_padding =
-            self.constant_response_size_bytes as i32 - header_body_content.len() as i32;
+        let estimates_size = estimate_error_response_size(body.clone())?;
+        let required_padding = self.constant_response_size_bytes as i64 - estimates_size;
 
         if required_padding < 0 {
             Err(anyhow::anyhow!(
@@ -104,27 +105,22 @@ impl Policy {
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
                 .header(POLICY_PADDING_HEADER, std::str::from_utf8(&padding_bytes)?)
                 .body(body.into())
-                .context("Couldn't create response")
+                .context("couldn't create response")
         }
     }
 
-    /// Pads the response by adding a number of zeros, to make the total size equal to
-    /// `self.constant_response_size_bytes`
+    /// Pads the response by adding a number of zeros, to make the total size of the response equal
+    /// to `self.constant_response_size_bytes`
     ///
     /// The zeros are added as the header value for header `oak-policy-padding`.
-    /// It will return an error if the size of the input `response` is larger than or equal to
-    /// `self.constant_response_size_bytes`.
+    /// This function will return an error if the size of the input `response` is larger than or
+    /// equal to `self.constant_response_size_bytes`.
     fn pad_response(&self, response: http::Response<Body>) -> anyhow::Result<Response<Body>> {
-        let body_size = response.body().size_hint();
-        let header_body_size = body_size
-            .exact()
-            .ok_or_else(|| anyhow::anyhow!("Body does not have exact size"))?
-            + POLICY_PADDING_HEADER.len() as u64;
-
-        let required_padding = self.constant_response_size_bytes as i32 - header_body_size as i32;
+        let response_size = estimate_size(&response)?;
+        let required_padding = self.constant_response_size_bytes as i64 - response_size;
         if required_padding < 0 {
             panic!(
-                "Something is very wrong. Only call pad_response with responses that require padding."
+                "Something is very wrong. Only call `pad_response` with responses that require padding."
             )
         } else {
             let padding_bytes: Vec<u8> = (0..required_padding).map(|_| b'0').collect();
@@ -132,7 +128,7 @@ impl Policy {
                 .status(response.status())
                 .header(POLICY_PADDING_HEADER, std::str::from_utf8(&padding_bytes)?)
                 .body(response.into_body())
-                .context("Couldn't create response")
+                .context("couldn't create response")
         }
     }
 }
@@ -440,14 +436,20 @@ where
     match policy {
         None => function().await,
         Some(policy) => {
-            let sleep =
-                tokio::time::sleep(Duration::from_millis(policy.constant_process_time_millis));
-            tokio::pin!(sleep);
+            // Use tokio::spawn to actually run the tasks in parallel, for more accurate measurement
+            // of time.
+            let duration = policy.constant_process_time_millis;
+            let timer = tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(duration)).await;
+            });
+            let task = tokio::spawn(async move { function().await });
 
+            // Run the function and the timer tasks in parallel, and measure the time that it
+            // takes for the first task to complete.
             let start = Instant::now();
             let response = tokio::select! {
-                _ = &mut sleep => Err(anyhow::anyhow!("timeout!")),
-                rsp = function() => rsp
+                _ = timer => Err(anyhow::anyhow!("timeout!")),
+                rsp = task => rsp.unwrap()
             };
             let elapsed = start.elapsed().as_millis();
 
@@ -458,9 +460,8 @@ where
                     Err(err) => policy.get_error_response(format!("{}", err).as_str()),
                     Ok(rsp) => {
                         // All responses from Oak-Functions have an additional
-                        // `POLICY_PADDING_HEADER` header.
-
-                        let size = get_size(&rsp)?;
+                        // `oak-policy-padding` header.
+                        let size = estimate_size(&rsp)?;
                         match size.cmp(&(policy.constant_response_size_bytes as i64)) {
                             Ordering::Greater => policy.get_error_response("response too large"),
                             Ordering::Less => policy.pad_response(rsp),
@@ -475,12 +476,45 @@ where
     }
 }
 
-fn get_size(response: &hyper::Response<Body>) -> anyhow::Result<i64> {
-    let body_size = response.body().size_hint();
-    Ok(body_size
+/// Estimates the size of the given response.
+///
+/// Measures the size of the response when formatted according to
+/// [RFC-2616](https://tools.ietf.org/html/rfc2616#section-6).
+/// The only relevant parts of the response are the status code and the response body. We also add
+/// the `oak-policy-padding` header to all responses. This header name is therefore also included
+/// when estimating the size.
+fn estimate_size(response: &hyper::Response<Body>) -> anyhow::Result<i64> {
+    // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
+    let status_line = format!(
+        "HTTP/1.1 {} {}\r\n",
+        response.status().as_u16(),
+        response.status().canonical_reason().unwrap()
+    );
+
+    // The header value will be the required padding. For the now, we leave it empty.
+    let response_header = format!("{} : {}\r\n", POLICY_PADDING_HEADER, "");
+
+    // Encoding the entire response including the body requires consuming the response. To avoid
+    // that, we format the response without the body, then add the body size separately.
+    let encoded_response = format!("{}{}\r\n", status_line, response_header);
+
+    // Get body size
+    let body_size = response
+        .body()
+        .size_hint()
         .exact()
-        .ok_or_else(|| anyhow::anyhow!("Body does not have exact size"))? as i64
-        + POLICY_PADDING_HEADER.len() as i64)
+        .ok_or_else(|| anyhow::anyhow!("Body does not have exact size"))?;
+
+    Ok(encoded_response.len() as i64 + body_size as i64)
+}
+
+fn estimate_error_response_size(body: String) -> anyhow::Result<i64> {
+    estimate_size(
+        &http::response::Builder::new()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(body.into())
+            .context("couldn't create response")?,
+    )
 }
 
 // An ephemeral request handler with a Wasm module for handling the requests.

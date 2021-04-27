@@ -48,7 +48,7 @@ struct Config {
     /// How often to refresh the lookup data. If not provided, data is only loaded once at startup.
     #[serde(with = "humantime_serde")]
     lookup_data_download_period: Option<Duration>,
-    /// Privacy policy guaranteed by the server.
+    /// Security policy guaranteed by the server.
     policy: Option<Policy>,
 }
 /// Command line options for the Oak loader.
@@ -122,7 +122,7 @@ async fn main() -> anyhow::Result<()> {
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
-    // Make sure that policy is specified and is valid
+    // Make sure that a policy is specified and is valid
     config
         .policy
         .as_ref()
