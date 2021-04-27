@@ -260,7 +260,6 @@ impl wasmi::ModuleImportResolver for WasmInterface {
 }
 /// Encapsulates the state of a Wasm invocation for a single user request.
 struct WasmState {
-    instance: wasmi::ModuleRef,
     abi: WasmInterface,
     logger: Logger,
 }
@@ -305,17 +304,12 @@ impl WasmState {
                 .context("could not interpret Wasm `memory` export as memory")?,
         );
 
-        Ok(WasmState {
-            instance,
-            abi,
-            logger,
-        })
+        Ok(WasmState { abi, logger })
     }
 
     fn invoke(&mut self) {
-        let result = self
-            .instance
-            .invoke_export(MAIN_FUNCTION_NAME, &[], &mut self.abi);
+        let instance = self.abi.instance.as_ref().expect("no instance").clone();
+        let result = instance.invoke_export(MAIN_FUNCTION_NAME, &[], &mut self.abi);
         self.logger.log_sensitive(
             Level::Info,
             &format!(
