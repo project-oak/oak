@@ -1403,7 +1403,7 @@ name = "oak_runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.12.3",
+ "base64 0.13.0",
  "byteorder",
  "bytes",
  "chrono",
@@ -1427,7 +1427,7 @@ dependencies = [
  "prost",
  "prost-build",
  "prost-types",
- "rand 0.7.3",
+ "rand 0.8.3",
  "regex",
  "reqwest",
  "roughenough",
@@ -2036,9 +2036,9 @@ dependencies = [
 
 [[package]]
 name = "ring"
-version = "0.16.17"
+version = "0.16.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5911690c9b773bab7e657471afc207f3827b249a657241327e3544d79bcabdd"
+checksum = "3053cf52e236a3ed746dfc745aa9cacf1b791d846bdaf412f60a8d7d6e17c8fc"
 dependencies = [
  "cc",
  "libc",
@@ -2053,7 +2053,7 @@ dependencies = [
 name = "roughenough"
 version = "1.1.8"
 dependencies = [
- "base64 0.12.3",
+ "base64 0.13.0",
  "byteorder",
  "hex",
  "ring",
