@@ -10,12 +10,6 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = [
-  # TODO(#1267): Remove when mio no longer depends on net2.
-  "RUSTSEC-2020-0016",
-  # TODO(#1874): Remove when tonic and hyper versions are updated.
-  "RUSTSEC-2021-0020",
-]
 
 # Deny multiple versions unless explicitly skipped.
 [bans]
