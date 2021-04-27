@@ -2,11 +2,12 @@ name = "abitest"
 
 [applications]
 
-[applications.classic.rust]
+[applications.rust]
+type = "Classic"
 manifest = "examples/abitest/oak_app_manifest.toml"
 out = "examples/abitest/bin/abitest.oak"
 
-[applications.classic.rust.modules]
+[applications.rust.modules]
 module_0 = { Cargo = { cargo_manifest = "examples/abitest/module_0/rust/Cargo.toml" } }
 module_1 = { Cargo = { cargo_manifest = "examples/abitest/module_1/rust/Cargo.toml" } }
 module_linear_handles = { Cargo = { cargo_manifest = "examples/abitest/module_linear_handles/rust/Cargo.toml" } }

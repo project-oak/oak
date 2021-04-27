@@ -2,19 +2,21 @@ name = "hello_world"
 
 [applications]
 
-[applications.classic.rust]
+[applications.rust]
+type = "Classic"
 manifest = "examples/hello_world/oak_app_manifest.toml"
 out = "examples/hello_world/bin/hello_world.oak"
 
-[applications.classic.rust.modules]
+[applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/hello_world/module/rust/Cargo.toml" } }
 translator = { Cargo = { cargo_manifest = "examples/translator/module/rust/Cargo.toml" } }
 
-[applications.classic.cpp]
+[applications.cpp]
+type = "Classic"
 manifest = "examples/hello_world/oak_app_manifest_cpp.toml"
 out = "examples/hello_world/bin/hello_world_cpp.oak"
 
-[applications.classic.cpp.modules]
+[applications.cpp.modules]
 module = { Bazel = { bazel_target = "//examples/hello_world/module/cpp:hello_world_cpp.wasm", config = "wasm32" } }
 translator = { Cargo = { cargo_manifest = "examples/translator/module/rust/Cargo.toml" } }
 

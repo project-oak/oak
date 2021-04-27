@@ -39,8 +39,24 @@ pub struct Example {
     server: ExampleServer,
     #[serde(default)]
     backends: HashMap<String, Executable>,
-    applications: Applications,
+    applications: HashMap<String, Application>,
     clients: HashMap<String, Executable>,
+}
+
+impl Example {
+    fn has_classic_app(&self) -> bool {
+        self.applications.values().any(|app| match app {
+            Application::Classic(_) => true,
+            Application::Functions(_) => false,
+        })
+    }
+
+    fn has_functions_app(&self) -> bool {
+        self.applications.values().any(|app| match app {
+            Application::Classic(_) => false,
+            Application::Functions(_) => true,
+        })
+    }
 }
 
 /// A construct representing either an Oak Classic or an Oak Functions application.
@@ -48,66 +64,12 @@ pub struct Example {
 /// The condition that only one of `classic` or `functions` should be non-empty is
 /// checked in each operation of this struct. If neither or both are empty, the
 /// operation panics with an error message.
-#[derive(Debug)]
-enum Applications {
-    Classic(HashMap<String, ApplicationClassic>),
-    Functions(HashMap<String, ApplicationFunctions>),
-}
-
-impl Applications {
-    fn is_classic(&self) -> bool {
-        match self {
-            Applications::Classic(_) => true,
-            Applications::Functions(_) => false,
-        }
-    }
-
-    fn is_empty(&self) -> bool {
-        match self {
-            Applications::Classic(applications) => applications.is_empty(),
-            Applications::Functions(applications) => applications.is_empty(),
-        }
-    }
-
-    fn has_application(&self, application_variant: &str) -> bool {
-        match self {
-            Applications::Classic(applications) => applications.get(application_variant).is_some(),
-            Applications::Functions(applications) => {
-                applications.get(application_variant).is_some()
-            }
-        }
-    }
-}
-
-struct ApplicationsVisitor;
-
-impl<'de> serde::de::Visitor<'de> for ApplicationsVisitor {
-    type Value = Applications;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("classic or functions")
-    }
-
-    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
-    where
-        A: serde::de::MapAccess<'de>,
-    {
-        let mut map = map;
-        match map.next_key()? {
-            Some("classic") => Ok(Applications::Classic(map.next_value()?)),
-            Some("functions") => Ok(Applications::Functions(map.next_value()?)),
-            _ => Err(serde::de::Error::custom("expect classic or functions")),
-        }
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for Applications {
-    fn deserialize<D>(deserializer: D) -> Result<Applications, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_map(ApplicationsVisitor)
-    }
+#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+#[serde(tag = "type")]
+enum Application {
+    Classic(ApplicationClassic),
+    Functions(ApplicationFunctions),
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -277,30 +239,28 @@ trait OakExample {
 }
 pub struct ClassicExample<'a> {
     example: &'a Example,
-    applications: &'a HashMap<String, ApplicationClassic>,
+    applications: Box<HashMap<String, &'a ApplicationClassic>>,
     options: RunExamples,
 }
 
 impl<'a> ClassicExample<'a> {
     fn new(example: &'a Example, options: RunExamples) -> Self {
-        let applications = match &example.applications {
-            Applications::Classic(ref app) => app,
-            Applications::Functions(_app) => panic!("Need classic example"),
-        };
+        let applications = Box::new(example.applications.iter().fold(
+            hashmap! {},
+            |mut apps, app| match app {
+                (name, Application::Classic(ref app)) => {
+                    apps.insert(name.clone(), app);
+                    apps
+                }
+                (_name, Application::Functions(_app)) => apps,
+            },
+        ));
 
         ClassicExample {
             example,
             applications,
             options,
         }
-    }
-
-    fn get_application(&self) -> &ApplicationClassic {
-        let app_variant = self.options.application_variant.as_str();
-        self.applications.get(app_variant).unwrap_or_else(|| panic!(
-            "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
-            app_variant)
-        )
     }
 }
 
@@ -314,42 +274,46 @@ impl OakExample for ClassicExample<'_> {
     }
 
     fn construct_application_build_steps(&self) -> Vec<Step> {
-        self.get_application()
-            .construct_application_build_steps(&self.example.name)
+        let app_variant = self.options.application_variant.as_str();
+        match self.applications.get(app_variant) {
+            None => vec![],
+            Some(app) => app.construct_application_build_steps(&self.example.name),
+        }
     }
 
     fn construct_example_server_run_step(&self, run_clients: Step) -> Step {
-        self.get_application()
-            .construct_example_server_run_step(&self, run_clients)
+        let app_variant = self.options.application_variant.as_str();
+        match self.applications.get(app_variant) {
+            None => run_clients,
+            Some(app) => app.construct_example_server_run_step(&self, run_clients),
+        }
     }
 }
 
 pub struct FunctionsExample<'a> {
     example: &'a Example,
-    applications: &'a HashMap<String, ApplicationFunctions>,
+    applications: Box<HashMap<String, &'a ApplicationFunctions>>,
     options: RunFunctionsExamples,
 }
 
 impl<'a> FunctionsExample<'a> {
     fn new(example: &'a Example, options: RunFunctionsExamples) -> Self {
-        let applications = match &example.applications {
-            Applications::Classic(_app) => panic!("Need functions example"),
-            Applications::Functions(ref app) => app,
-        };
+        let applications = Box::new(example.applications.iter().fold(
+            hashmap! {},
+            |mut apps, app| match app {
+                (_name, Application::Classic(_app)) => apps,
+                (name, Application::Functions(ref app)) => {
+                    apps.insert(name.clone(), app);
+                    apps
+                }
+            },
+        ));
 
         FunctionsExample {
             example,
             applications,
             options,
         }
-    }
-
-    fn get_application(&self) -> &ApplicationFunctions {
-        let app_variant = self.options.application_variant.as_str();
-        self.applications.get(app_variant).unwrap_or_else(|| panic!(
-            "Unsupported application variant: {} (supported variants include: all, rust, cpp, go, nodejs, none)",
-            app_variant)
-        )
     }
 }
 
@@ -363,13 +327,19 @@ impl OakExample for FunctionsExample<'_> {
     }
 
     fn construct_application_build_steps(&self) -> Vec<Step> {
-        self.get_application()
-            .construct_application_build_steps(&self.example.name)
+        let app_variant = self.options.application_variant.as_str();
+        match self.applications.get(app_variant) {
+            None => vec![],
+            Some(app) => app.construct_application_build_steps(&self.example.name),
+        }
     }
 
     fn construct_example_server_run_step(&self, run_clients: Step) -> Step {
-        self.get_application()
-            .construct_example_server_run_step(&self, run_clients)
+        let app_variant = self.options.application_variant.as_str();
+        match self.applications.get(app_variant) {
+            None => run_clients,
+            Some(app) => app.construct_example_server_run_step(&self, run_clients),
+        }
     }
 }
 
@@ -380,7 +350,7 @@ pub fn run_examples(opt: &RunExamples) -> Step {
                 panic!("could not parse example manifest file {:?}: {}", path, err)
             })
         })
-        .filter(|example: &Example| example.applications.is_classic())
+        .filter(|example: &Example| !example.has_functions_app())
         .collect();
     Step::Multiple {
         name: "examples".to_string(),
@@ -395,9 +365,7 @@ pub fn run_examples(opt: &RunExamples) -> Step {
             })
             .filter(|example| {
                 example.applications.is_empty()
-                    || example
-                        .applications
-                        .has_application(opt.application_variant.as_ref())
+                    || example.applications.get(&opt.application_variant).is_some()
             })
             .map(|example| ClassicExample::new(example, opt.clone()))
             .map(|example| run_example(&example))
@@ -412,7 +380,7 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples) -> Step {
                 panic!("could not parse example manifest file {:?}: {}", path, err)
             })
         })
-        .filter(|example: &Example| !example.applications.is_classic())
+        .filter(|example: &Example| !example.has_classic_app())
         .collect();
 
     Step::Multiple {
@@ -605,6 +573,7 @@ fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
                 command: Cmd::new(
                     "cargo",
                     // Keep this in sync with `/oak_functions/sdk/test/utils/src/lib.rs`.
+                    // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
                     spread![
                         // `--out-dir` is unstable and requires `-Zunstable-options`.
                         "-Zunstable-options".to_string(),

@@ -2,11 +2,12 @@ name = "trusted_database"
 
 [applications]
 
-[applications.classic.rust]
+[applications.rust]
+type = "Classic"
 manifest = "examples/trusted_database/oak_app_manifest.toml"
 out = "examples/trusted_database/bin/trusted_database.oak"
 
-[applications.classic.rust.modules]
+[applications.rust.modules]
 module = { Cargo = { cargo_manifest = "examples/trusted_database/module/rust/Cargo.toml" } }
 
 [server]
