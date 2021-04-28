@@ -43,11 +43,11 @@ type AbiPointerOffset = u32;
 /// Wasm would use a different value.
 const ABI_USIZE: ValueType = ValueType::I32;
 
-/// `WasmInterface` holds runtime values for a particular execution instance of Wasm, handling a
+/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
 /// module to exchange the request and the response with the Oak functions server. These functions
 /// translate values between Wasm linear memory and Rust types.
-struct WasmInterface {
+struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
     lookup_data: Arc<LookupData>,
@@ -56,27 +56,12 @@ struct WasmInterface {
     logger: Logger,
 }
 
-impl WasmInterface {
-    pub fn new(
-        request_bytes: Vec<u8>,
-        lookup_data: Arc<LookupData>,
-        logger: Logger,
-    ) -> WasmInterface {
-        WasmInterface {
-            request_bytes,
-            response_bytes: vec![],
-            lookup_data,
-            instance: None,
-            memory: None,
-            logger,
-        }
-    }
-
+impl WasmState {
     /// Helper function to get memory.
     fn get_memory(&self) -> &wasmi::MemoryRef {
         self.memory
             .as_ref()
-            .expect("WasmInterface memory not attached!?")
+            .expect("WasmState memory not attached!?")
     }
 
     /// Validates whether a given address range (inclusive) falls within the currently allocated
@@ -220,7 +205,7 @@ impl WasmInterface {
     }
 }
 
-impl wasmi::Externals for WasmInterface {
+impl wasmi::Externals for WasmState {
     /// Invocation of a host function specified by its registered index. Acts as a wrapper for
     /// the relevant native function, just:
     /// - checking argument types (which should be correct as `wasmi` will only pass through those
@@ -249,7 +234,7 @@ impl wasmi::Externals for WasmInterface {
     }
 }
 
-impl wasmi::ModuleImportResolver for WasmInterface {
+impl wasmi::ModuleImportResolver for WasmState {
     fn resolve_func(
         &self,
         field_name: &str,
@@ -257,12 +242,6 @@ impl wasmi::ModuleImportResolver for WasmInterface {
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
         oak_functions_resolve_func(field_name, signature)
     }
-}
-/// Encapsulates the state of a Wasm invocation for a single user request.
-struct WasmState {
-    instance: wasmi::ModuleRef,
-    abi: WasmInterface,
-    logger: Logger,
 }
 
 impl WasmState {
@@ -272,7 +251,15 @@ impl WasmState {
         lookup_data: Arc<LookupData>,
         logger: Logger,
     ) -> anyhow::Result<WasmState> {
-        let mut abi = WasmInterface::new(request_bytes, lookup_data, logger.clone());
+        let mut abi = WasmState {
+            request_bytes,
+            response_bytes: vec![],
+            lookup_data,
+            instance: None,
+            memory: None,
+            logger,
+        };
+
         let instance = wasmi::ModuleInstance::new(
             module,
             &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
@@ -294,7 +281,7 @@ impl WasmState {
         .context(" could not validate `alloc` export")?;
 
         abi.instance = Some(instance.clone());
-        // Make sure that non-empty `memory` is attached to the WasmInterface. Fail early if
+        // Make sure that non-empty `memory` is attached to the WasmState. Fail early if
         // `memory` is not available.
         abi.memory = Some(
             instance
@@ -305,17 +292,12 @@ impl WasmState {
                 .context("could not interpret Wasm `memory` export as memory")?,
         );
 
-        Ok(WasmState {
-            instance,
-            abi,
-            logger,
-        })
+        Ok(abi)
     }
 
     fn invoke(&mut self) {
-        let result = self
-            .instance
-            .invoke_export(MAIN_FUNCTION_NAME, &[], &mut self.abi);
+        let instance = self.instance.as_ref().expect("no instance").clone();
+        let result = instance.invoke_export(MAIN_FUNCTION_NAME, &[], self);
         self.logger.log_sensitive(
             Level::Info,
             &format!(
@@ -327,7 +309,7 @@ impl WasmState {
     }
 
     fn get_response_bytes(&self) -> Vec<u8> {
-        self.abi.response_bytes.clone()
+        self.response_bytes.clone()
     }
 }
 
