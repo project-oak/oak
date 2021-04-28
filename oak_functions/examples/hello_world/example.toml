@@ -2,7 +2,8 @@ name = "hello_world"
 
 [applications]
 
-[applications.functions.rust]
+[applications.rust]
+type = "Functions"
 wasm_path = "oak_functions/examples/bin/hello_world.wasm"
 target = { Cargo = { cargo_manifest = "oak_functions/examples/hello_world/module/Cargo.toml" } }
 

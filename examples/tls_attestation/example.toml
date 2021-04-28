@@ -1,6 +1,6 @@
 name = "tls_attestation"
 
-[applications.classic]
+[applications]
 
 [backends]
 proxy = { Cargo = { cargo_manifest = "experimental/tls_attestation/Cargo.toml" }, additional_args = [
