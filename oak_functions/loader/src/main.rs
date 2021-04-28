@@ -126,9 +126,8 @@ async fn main() -> anyhow::Result<()> {
     config
         .policy
         .as_ref()
-        .map(|policy| policy.validate())
-        .filter(|b| *b)
-        .ok_or_else(|| anyhow::anyhow!("a valid policy must be provided"))?;
+        .ok_or_else(|| anyhow::anyhow!("a valid policy must be provided"))
+        .and_then(|policy| policy.validate())?;
 
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let server_handle = tokio::spawn(async move {

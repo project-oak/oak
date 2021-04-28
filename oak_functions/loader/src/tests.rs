@@ -33,7 +33,7 @@ use test::Bencher;
 const MANIFEST_PATH: &str = "examples/hello_world/module/Cargo.toml";
 
 struct TestResult {
-    elapsed: u128,
+    elapsed: Duration,
     status_code: hyper::StatusCode,
     body: Vec<u8>,
 }
@@ -56,20 +56,21 @@ async fn test_server_without_policy() {
 async fn test_valid_policy() {
     // Policy values are large enough to allow successful serving of the request, and responding
     // with the actual response from the Wasm module.
-    let constant_process_time_millis = 100;
+    let constant_processing_time = Duration::from_millis(100);
     let policy = Policy {
         constant_response_size_bytes: 100,
-        constant_process_time_millis,
+        constant_processing_time,
     };
 
     let scenario = |server_port: u16| async move {
         let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
         // Check that the processing time is within a reasonable range of
-        // `constant_process_time_millis` specified in the policy.
-        assert!(result.elapsed > constant_process_time_millis as u128);
+        // `constant_processing_time` specified in the policy.
+        assert!(result.elapsed > constant_processing_time);
         assert!(
-            (result.elapsed as f64) < 1.05 * constant_process_time_millis as f64,
-            format!("elapsed time is: {}ms", result.elapsed)
+            (result.elapsed.as_millis() as f64)
+                < 1.05 * constant_processing_time.as_millis() as f64,
+            format!("elapsed time is: {:?}", result.elapsed)
         );
 
         assert_eq!(result.status_code, hyper::StatusCode::OK);
@@ -84,17 +85,18 @@ async fn test_valid_policy() {
 
 #[tokio::test]
 async fn test_long_response_time() {
-    // The `constant_process_time_millis` is too low.
-    let constant_process_time_millis = 10;
+    // The `constant_processing_time` is too low.
+    let constant_processing_time = Duration::from_millis(10);
     let policy = Policy {
         constant_response_size_bytes: 100,
-        constant_process_time_millis,
+        constant_processing_time,
     };
 
     // So we expect the request to fail, with `response not available error`.
     let scenario = |server_port: u16| async move {
         let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
         // TODO(#1987): Check elapsed time
+        println!("elapsed: {:?}", result.elapsed);
         assert_eq!(result.status_code, hyper::StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(
             std::str::from_utf8(result.body.as_slice()).unwrap(),
@@ -185,7 +187,7 @@ async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
         .request(request)
         .await
         .expect("Error while awaiting response");
-    let elapsed = start.elapsed().as_millis();
+    let elapsed = start.elapsed();
     TestResult {
         elapsed,
         status_code: resp.status(),
