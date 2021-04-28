@@ -37,10 +37,30 @@ mod common {
     use wat::parse_str;
 
     pub fn start_runtime() -> Result<Arc<Runtime>, OakError> {
+        // Loop 100 000 times in the main function to make sure the Wasm node is alive for a while
+        // before exiting. This is needed to avoid a race condition causing
+        // `test_metrics_gives_the_correct_number_of_nodes` to sometimes fail. If the Wasm node has
+        // finished execution before the metrics count is requested the reported node count will be
+        // incorrect.
+        //
+        // TODO(#2026): Change to infinite loop once the runtime can interrupt the Wasm node's
+        // execution.
         let wat = r#"
         (module
             (type (;0;) (func (param i64)))
-            (func $oak_main (type 0))
+            (func $oak_main (type 0)
+                (local i64)             ;; Declare local variable.
+                i64.const 100000
+                local.set 1             ;; Set local variable to 100 000.
+                (block                  ;; Outer block.
+                    (loop               ;; Inner block for loop.
+                        local.get 1     ;; Load local variable.
+                        i64.const -1
+                        i64.add         ;; Add -1.
+                        local.tee 1     ;; Store local variable, but keep value for comaprison.
+                        i64.eqz
+                        br_if 1         ;; Jump back to outer block if local variable is 0.
+                        br 0)))         ;; Jump back to start of loop inner block.
             (memory (;0;) 18)
             (export "memory" (memory 0))
             (export "oak_main" (func $oak_main)))
