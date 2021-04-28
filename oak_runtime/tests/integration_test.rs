@@ -38,7 +38,11 @@ mod common {
 
     pub fn start_runtime() -> Result<Arc<Runtime>, OakError> {
         // Loop 100 000 times in the main function to make sure the Wasm node is alive for a while
-        // before exiting.
+        // before exiting. This is needed to avoid a race condition causing
+        // `test_metrics_gives_the_correct_number_of_nodes` to sometimes fail. If the Wasm node has
+        // finished execution before the metrics count is requested the reported node count will be
+        // incorrect.
+        //
         // TODO(#2026): Change to infinite loop once the runtime can interrupt the Wasm node's
         // execution.
         let wat = r#"
