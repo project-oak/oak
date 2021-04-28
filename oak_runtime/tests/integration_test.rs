@@ -39,6 +39,8 @@ mod common {
     pub fn start_runtime() -> Result<Arc<Runtime>, OakError> {
         // Loop 100 000 times in the main function to make sure the Wasm node is alive for a while
         // before exiting.
+        // TODO(#2026): Change to infinite loop once the runtime can interrupt the Wasm node's
+        // execution.
         let wat = r#"
         (module
             (type (;0;) (func (param i64)))
