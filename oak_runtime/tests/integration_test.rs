@@ -43,18 +43,18 @@ mod common {
         (module
             (type (;0;) (func (param i64)))
             (func $oak_main (type 0)
-                (local i64)
+                (local i64)             ;; Declare local variable.
                 i64.const 100000
-                local.set 1
-                (block
-                    (loop
-                        local.get 1
+                local.set 1             ;; Set local variable to 100 000.
+                (block                  ;; Outer block.
+                    (loop               ;; Inner block for loop.
+                        local.get 1     ;; Load local variable.
                         i64.const -1
-                        i64.add
-                        local.tee 1
+                        i64.add         ;; Add -1.
+                        local.tee 1     ;; Store local variable, but keep value for comaprison.
                         i64.eqz
-                        br_if 1
-                        br 0)))
+                        br_if 1         ;; Jump back to outer block if local variable is 0.
+                        br 0)))         ;; Jump back to start of loop inner block.
             (memory (;0;) 18)
             (export "memory" (memory 0))
             (export "oak_main" (func $oak_main)))
