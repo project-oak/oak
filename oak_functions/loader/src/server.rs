@@ -16,6 +16,7 @@
 use crate::{logger::Logger, lookup::LookupData};
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
+use futures::future::FutureExt;
 use http::{request::Request, response::Response};
 use hyper::{
     service::{make_service_fn, service_fn},
@@ -443,8 +444,6 @@ fn check_export_function_signature(
     }
 }
 
-use futures::future::FutureExt;
-
 /// Runs the given function and applies the given policy to the execution and result of the
 /// function.
 ///
@@ -494,6 +493,7 @@ where
     }
 }
 
+// TODO(#2032): Use custom body, to avoid the need for this estimation.
 /// Estimates the size of the given response.
 ///
 /// Measures the size of the response when formatted according to
@@ -501,6 +501,8 @@ where
 /// The only relevant parts of the response are the status code and the response body. We also add
 /// the `oak-policy-padding` header to all responses. This header name is therefore also included
 /// when estimating the size.
+/// The final response send to the client, will in addition contain `date` and `content-length`
+/// headers. Those add constant size and are omitted from this calculation.
 fn estimate_size(response: &FunctionsResponse) -> anyhow::Result<i64> {
     // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
     let status_line = format!(
