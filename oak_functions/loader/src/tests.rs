@@ -83,6 +83,8 @@ async fn test_valid_policy() {
     run_scenario_with_policy(scenario, Some(policy)).await;
 }
 
+// TODO(#2026): Remove `ignore` when we can interrupt execution in Wasm
+#[ignore]
 #[tokio::test]
 async fn test_long_response_time() {
     // The `constant_processing_time` is too low.
@@ -252,13 +254,10 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             let resp = rt
                 .block_on(wasm_handler.clone().handle_request(request))
                 .unwrap();
-            assert_eq!(resp.status(), hyper::StatusCode::OK);
-            let body = rt
-                .block_on(hyper::body::to_bytes(resp.into_body()))
-                .unwrap()
-                .to_vec();
+            assert_eq!(resp.status_code, hyper::StatusCode::OK);
+            assert!(resp.body.is_some());
             assert_eq!(
-                std::str::from_utf8(&body).unwrap(),
+                std::str::from_utf8(&resp.body.unwrap()).unwrap(),
                 r#"{"temperature_degrees_celsius":10}"#
             );
         });
