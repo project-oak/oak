@@ -15,11 +15,19 @@ default = []
 
 [dependencies]
 anyhow = "*"
+async-stream = "*"
 bytes = "*"
 byteorder = { version = "*", default-features = false }
 chrono = "*"
+futures-core = "*"
 http = "*"
-hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
+hyper = { version = "*", features = [
+  "client",
+  "http1",
+  "runtime",
+  "server",
+  "stream"
+] }
 humantime-serde = "*"
 # Logging via the log crate is disabled and only available using our own custom logger.
 log = { version = "*", features = ["max_level_off", "release_max_level_off"] }
@@ -34,6 +42,7 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
+tokio-stream = "*"
 toml = "*"
 wasmi = "*"
 signal-hook = "*"

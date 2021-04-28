@@ -15,6 +15,7 @@
 
 use crate::{logger::Logger, lookup::LookupData};
 use anyhow::Context;
+use async_stream::stream;
 use byteorder::{ByteOrder, LittleEndian};
 use http::{request::Request, response::Response};
 use hyper::{
@@ -24,6 +25,7 @@ use hyper::{
 use log::Level;
 use oak_functions_abi::proto::OakStatus;
 use std::{future::Future, net::SocketAddr, sync::Arc};
+use tokio_stream::StreamExt;
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -345,6 +347,38 @@ pub struct WasmHandler {
     logger: Logger,
 }
 
+fn t() -> impl futures_core::Stream<
+    Item = Result<bytes::Bytes, Box<dyn std::error::Error + Send + Sync + 'static>>,
+> {
+    stream! {
+        yield Ok::<_, Box<_>>(bytes::Bytes::from("Hello world"));
+    }
+}
+
+fn u() -> impl futures_core::Stream<
+    Item = Result<bytes::Bytes, Box<dyn std::error::Error + Send + Sync + 'static>>,
+> {
+    let (tx, rx) = tokio::sync::mpsc::channel(10);
+    let s = tokio_stream::wrappers::ReceiverStream::new(rx);
+    s
+}
+
+fn s(
+    mut r: hyper::Body,
+) -> Box<
+    (dyn futures_core::Stream<
+        Item = Result<bytes::Bytes, Box<dyn std::error::Error + Send + Sync + 'static>>,
+    > + Send
+         + 'static),
+> {
+    Box::new(stream! {
+        let _m0 = r.next().await;
+        yield Ok("Hello world".into());
+        let _m1 = r.next().await;
+        yield Ok("Hello world".into());
+    })
+}
+
 impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
@@ -364,6 +398,9 @@ impl WasmHandler {
             .log_sensitive(Level::Info, &format!("The request is: {:?}", req));
         match (req.method(), req.uri().path()) {
             (&hyper::Method::POST, "/invoke") => self.handle_invoke(req).await,
+            (&hyper::Method::POST, "/test") => Ok(http::response::Builder::new()
+                .body(s(req.into_body()).into())
+                .unwrap()),
             (method, path) => http::response::Builder::new()
                 .status(StatusCode::BAD_REQUEST)
                 .body(format!("Invalid request: {} {}\n", method, path).into())
