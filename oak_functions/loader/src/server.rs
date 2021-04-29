@@ -23,7 +23,8 @@ use hyper::{
     Body, Server, StatusCode,
 };
 use log::Level;
-use oak_functions_abi::proto::OakStatus;
+use oak_functions_abi::proto::{Level as LogLevel, LogMessage, OakStatus};
+use prost::Message;
 use serde::Deserialize;
 use std::{
     cmp::Ordering, convert::TryFrom, future::Future, net::SocketAddr, sync::Arc, time::Duration,
@@ -38,6 +39,7 @@ const ALLOC_FUNCTION_NAME: &str = "alloc";
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
+const WRITE_LOG_MESSAGE: usize = 3;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -248,6 +250,41 @@ impl WasmState {
         Ok(())
     }
 
+    /// Corresponds to the host ABI function [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
+    pub fn write_log_message(
+        &mut self,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -> Result<(), OakStatus> {
+        let raw_log = self
+            .get_memory()
+            .get(buf_ptr, buf_len as usize)
+            .map_err(|err| {
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!(
+                        "write_log_message(): Unable to read name from guest memory: {:?}",
+                        err
+                    ),
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+        let log_message = LogMessage::decode(raw_log.as_slice()).map_err(|err| {
+            self.logger.log_sensitive(
+                Level::Warn,
+                &format!(
+                    "write_log_message(): Unable to decode bytes as a log message: {:?}\nContent: {:?}",
+                    err,
+                    raw_log
+                ),
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
+        self.logger
+            .log_sensitive(map_level(log_message.level), &log_message.message);
+        Ok(())
+    }
+
     /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(
         &mut self,
@@ -331,6 +368,9 @@ impl wasmi::Externals for WasmState {
             }
             WRITE_RESPONSE => {
                 map_host_errors(self.write_response(args.nth_checked(0)?, args.nth_checked(1)?))
+            }
+            WRITE_LOG_MESSAGE => {
+                map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
             }
             STORAGE_GET_ITEM => map_host_errors(self.storage_get_item(
                 args.nth_checked(0)?,
@@ -671,6 +711,16 @@ fn oak_functions_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
+        "write_log_message" => (
+            WRITE_LOG_MESSAGE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // buf_ptr
+                    ABI_USIZE, // buf_len
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
         "storage_get_item" => (
             STORAGE_GET_ITEM,
             wasmi::Signature::new(
@@ -712,4 +762,15 @@ fn map_host_errors(
         |x: OakStatus| x as i32,
         |_| OakStatus::Ok as i32,
     ))))
+}
+
+fn map_level(level: i32) -> Level {
+    match LogLevel::from_i32(level).unwrap_or(LogLevel::UnknownLevel) {
+        LogLevel::UnknownLevel => Level::Trace,
+        LogLevel::Error => Level::Error,
+        LogLevel::Warn => Level::Warn,
+        LogLevel::Info => Level::Info,
+        LogLevel::Debugging => Level::Debug,
+        LogLevel::Trace => Level::Trace,
+    }
 }

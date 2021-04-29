@@ -14,16 +14,27 @@
 // limitations under the License.
 //
 
-extern crate prost_build;
+syntax = "proto3";
 
-fn main() {
-    prost_build::compile_protos(
-        &[
-            "../proto/abi.proto",
-            "../proto/log.proto",
-            "../proto/lookup_data.proto",
-        ],
-        &["../proto"],
-    )
-    .expect("Proto compilation failed");
+package oak.functions.log;
+
+// This message defines the structure of a log message that is written via the ABI function
+// `write_log_message`.
+message LogMessage {
+  // The verbosity level of the message.
+  Level level = 1;
+
+  // The message body.
+  string message = 2;
+}
+
+// Logging levels as defined in https://docs.rs/log/0.4.14/log/enum.Level.html.
+// UNKNOWN_LEVEL is added as the default value.
+enum Level {
+  UNKNOWN_LEVEL = 0;
+  ERROR = 1;
+  WARN = 2;
+  INFO = 3;
+  DEBUGGING = 4;
+  TRACE = 5;
 }
