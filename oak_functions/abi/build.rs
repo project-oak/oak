@@ -18,11 +18,7 @@ extern crate prost_build;
 
 fn main() {
     prost_build::compile_protos(
-        &[
-            "../proto/abi.proto",
-            "../proto/log.proto",
-            "../proto/lookup_data.proto",
-        ],
+        &["../proto/abi.proto", "../proto/lookup_data.proto"],
         &["../proto"],
     )
     .expect("Proto compilation failed");

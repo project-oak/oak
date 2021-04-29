@@ -23,11 +23,11 @@ use hyper::{
     Body, Server, StatusCode,
 };
 use log::Level;
-use oak_functions_abi::proto::{Level as LogLevel, LogMessage, OakStatus};
-use prost::Message;
+use oak_functions_abi::proto::OakStatus;
 use serde::Deserialize;
 use std::{
-    cmp::Ordering, convert::TryFrom, future::Future, net::SocketAddr, sync::Arc, time::Duration,
+    cmp::Ordering, convert::TryFrom, future::Future, net::SocketAddr, str, sync::Arc,
+    time::Duration,
 };
 use wasmi::ValueType;
 
@@ -269,19 +269,17 @@ impl WasmState {
                 );
                 OakStatus::ErrInvalidArgs
             })?;
-        let log_message = LogMessage::decode(raw_log.as_slice()).map_err(|err| {
+        let log_message = str::from_utf8(raw_log.as_slice()).map_err(|err| {
             self.logger.log_sensitive(
                 Level::Warn,
                 &format!(
-                    "write_log_message(): Unable to decode bytes as a log message: {:?}\nContent: {:?}",
-                    err,
-                    raw_log
+                    "write_log_message(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
+                    err, raw_log
                 ),
             );
             OakStatus::ErrInvalidArgs
         })?;
-        self.logger
-            .log_sensitive(map_level(log_message.level), &log_message.message);
+        self.logger.log_sensitive(Level::Debug, log_message);
         Ok(())
     }
 
@@ -762,15 +760,4 @@ fn map_host_errors(
         |x: OakStatus| x as i32,
         |_| OakStatus::Ok as i32,
     ))))
-}
-
-fn map_level(level: i32) -> Level {
-    match LogLevel::from_i32(level).unwrap_or(LogLevel::UnknownLevel) {
-        LogLevel::UnknownLevel => Level::Trace,
-        LogLevel::Error => Level::Error,
-        LogLevel::Warn => Level::Warn,
-        LogLevel::Info => Level::Info,
-        LogLevel::Debugging => Level::Debug,
-        LogLevel::Trace => Level::Trace,
-    }
 }

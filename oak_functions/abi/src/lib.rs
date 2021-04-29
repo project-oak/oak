@@ -19,7 +19,6 @@
 
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.log.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
 }
 
