@@ -51,6 +51,7 @@ pub enum Command {
     RunCargoTests(CleanupOpt),
     RunBazelTests,
     RunTestsTsan,
+    RunBench(CleanupOpt),
     RunCargoDeny,
     RunCargoUdeps,
     RunCi,

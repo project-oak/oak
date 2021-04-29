@@ -85,6 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::RunCargoTests(ref opt) => run_cargo_tests(opt.cleanup),
             Command::RunBazelTests => run_bazel_tests(),
             Command::RunTestsTsan => run_tests_tsan(),
+            Command::RunBench(ref opt) => run_benchmarks(opt.cleanup),
             Command::Format => format(),
             Command::CheckFormat => check_format(),
             Command::RunCi => run_ci(),
@@ -155,6 +156,39 @@ fn run_cargo_tests(cleanup: bool) -> Step {
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![run_cargo_clippy(), run_cargo_test(cleanup), run_cargo_doc()],
+    }
+}
+
+fn run_benchmarks(cleanup: bool) -> Step {
+    Step::Multiple {
+        name: "cargo bench".to_string(),
+        steps: crate_manifest_files()
+            .map(to_string)
+            .map(|entry| {
+                let test_run_step = |name| Step::Single {
+                    name,
+                    command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
+                };
+                let target_path = &entry.replace("Cargo.toml", "target");
+
+                // If `cleanup` is enabled, add a cleanup step to remove the generated files. Do
+                // this only if `target_path` is a non-empty, valid target path.
+                if cleanup && !target_path.ends_with("/target") {
+                    Step::Multiple {
+                        name: entry.clone(),
+                        steps: vec![
+                            test_run_step("run".to_string()),
+                            Step::Single {
+                                name: "cleanup".to_string(),
+                                command: Cmd::new("rm", &["-rf", target_path]),
+                            },
+                        ],
+                    }
+                } else {
+                    test_run_step(entry.clone())
+                }
+            })
+            .collect(),
     }
 }
 

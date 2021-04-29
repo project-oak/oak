@@ -28,6 +28,7 @@ jobs:
           - run-cargo-tests --cleanup
           - run-bazel-tests
           - run-tests-tsan
+          - run-bench --cleanup
           - run-examples --application-variant=rust
           - run-examples --application-variant=cpp
           - run-examples --application-variant=rust --example-name=abitest
