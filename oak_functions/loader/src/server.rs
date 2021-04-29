@@ -263,7 +263,7 @@ impl WasmState {
                 self.logger.log_sensitive(
                     Level::Error,
                     &format!(
-                        "write_log_message(): Unable to read name from guest memory: {:?}",
+                        "write_log_message(): Unable to read message from guest memory: {:?}",
                         err
                     ),
                 );

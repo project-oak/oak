@@ -102,16 +102,16 @@ client.
 
 ### `write_log_message`
 
-Writes a log message. This message will be considered sensitive, so will only be
-logged if the `oak_unsafe` feature is enabled.
+Writes a log message. This message is considered sensitive, so is only logged if
+the `oak_unsafe` feature is enabled.
 
-The low-level operation involves reading the response from the WebAssembly
-module's memory. The system will attempt to interpret the bytes as a UTF-8
-encoded string. If the decoding is successful, the string will be logged as a
-debug message. If the bytes are not a valid UTF-8 string a warning message
-containing the UTF-8 decoding error and the raw bytes will be logged.
+The low-level operation involves reading the message from the WebAssembly
+module's memory. The system attempts to interpret the bytes as a UTF-8 encoded
+string. If the decoding is successful, the string is logged as a debug message.
+If the bytes are not a valid UTF-8 string a warning message containing the UTF-8
+decoding error and the raw bytes is logged.
 
-Multiple calls will each be treated as a different log message.
+Multiple calls are each treated as a different log message.
 
 - `param[0]: buf_ptr: i32`: Address of the log message buffer.
 - `param[1]: buf_len: i32`: Number of bytes of the log message buffer.
