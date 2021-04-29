@@ -20,22 +20,22 @@ docker build \
 
 docker push "${FUNCTIONS_DOCKER_IMAGE_NAME}:latest"
 
-# Build and push the `hello_world` example application built on Oak Functions.
+# Build and push the `weather_lookup` example application built on Oak Functions.
 
 cargo -Zunstable-options build --release \
   --target=wasm32-unknown-unknown \
-  --manifest-path=./oak_functions/examples/hello_world/module/Cargo.toml \
-  --out-dir=./oak_functions/examples/hello_world/bin
+  --manifest-path=./oak_functions/examples/weather_lookup/module/Cargo.toml \
+  --out-dir=./oak_functions/examples/weather_lookup/bin
 
-readonly FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-functions-hello-world'
+readonly FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-functions-weather-lookup'
 
 docker build \
   --tag="${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest" \
-  ./oak_functions/examples/hello_world
+  ./oak_functions/examples/weather_lookup
 
 docker push "${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest"
 
-readonly FUNCTIONS_INSTANCE_NAME=oak-functions-hello-world
+readonly FUNCTIONS_INSTANCE_NAME=oak-functions-weather-lookup
 
 gcloud auth activate-service-account \
   --project="${GCP_PROJECT_ID}" \

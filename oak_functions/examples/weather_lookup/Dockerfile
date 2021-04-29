@@ -2,5 +2,5 @@
 # hadolint ignore=DL3007
 FROM gcr.io/oak-ci/oak-functions:latest
 
-COPY ./bin/hello_world.wasm /module.wasm
+COPY ./bin/weather_lookup.wasm /module.wasm
 COPY ./config.toml /config.toml

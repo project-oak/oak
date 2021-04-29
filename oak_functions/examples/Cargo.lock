@@ -271,21 +271,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hello_world"
-version = "0.1.0"
-dependencies = [
- "http",
- "hyper",
- "maplit",
- "oak_functions",
- "oak_functions_loader",
- "serde",
- "serde_json",
- "test_utils",
- "tokio",
-]
-
-[[package]]
 name = "hermit-abi"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1115,6 +1100,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea78c597064ba73596099281e2f4cfc019075122a65cdda3205af94f0b264d93"
 dependencies = [
  "parity-wasm",
+]
+
+[[package]]
+name = "weather_lookup"
+version = "0.1.0"
+dependencies = [
+ "http",
+ "hyper",
+ "maplit",
+ "oak_functions",
+ "oak_functions_loader",
+ "serde",
+ "serde_json",
+ "test_utils",
+ "tokio",
 ]
 
 [[package]]

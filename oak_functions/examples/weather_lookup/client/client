@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -o xtrace
+
+curl --include --fail-early --request POST --data '{"lat":1,"lon":2}' localhost:8080/invoke

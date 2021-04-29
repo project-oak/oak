@@ -1,0 +1,16 @@
+name = "weather_lookup"
+
+[applications]
+
+[applications.rust]
+type = "Functions"
+wasm_path = "oak_functions/examples/bin/weather_lookup.wasm"
+target = { Cargo = { cargo_manifest = "oak_functions/examples/weather_lookup/module/Cargo.toml" } }
+
+[server]
+additional_args = [
+  "--config-path=./oak_functions/examples/weather_lookup/config.toml"
+]
+
+[clients]
+shell = { Shell = { script = "oak_functions/examples/weather_lookup/client/client" } }
