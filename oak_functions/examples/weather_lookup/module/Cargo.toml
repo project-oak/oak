@@ -16,7 +16,7 @@ serde_json = "*"
 [dev-dependencies]
 oak_functions_loader = { path = "../../../loader" }
 http = "*"
-hyper = { version = "*", features = ["client"] }
+hyper = { version = "*", features = ["client", "http2"] }
 maplit = "*"
 test_utils = { path = "../../../sdk/test_utils" }
 tokio = { version = "*", features = [

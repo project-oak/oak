@@ -56,7 +56,7 @@ async fn test_server_without_policy() {
 async fn test_valid_policy() {
     // Policy values are large enough to allow successful serving of the request, and responding
     // with the actual response from the Wasm module.
-    let constant_processing_time = Duration::from_millis(100);
+    let constant_processing_time = Duration::from_millis(200);
     let policy = Policy {
         constant_response_size_bytes: 100,
         constant_processing_time,
@@ -177,7 +177,7 @@ where
 }
 
 async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
-    let client = Client::new();
+    let client = Client::builder().http2_only(true).build_http();
     let request = hyper::Request::builder()
         .method(http::Method::POST)
         .uri(format!("http://localhost:{}/invoke", port))

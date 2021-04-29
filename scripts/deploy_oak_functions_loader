@@ -45,11 +45,14 @@ gcloud auth activate-service-account \
 #
 # Keep at least one instance alive all the time, even if there is no traffic to serve, since it may
 # take a while for it to start up.
+#
+# Use beta channel of Cloud Run in order to support HTTP2 until it is generally available.
 
-gcloud run deploy "${FUNCTIONS_INSTANCE_NAME}" \
+gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --region=europe-west2 \
   --image="${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest" \
   --allow-unauthenticated \
+  --use-http2 \
   --concurrency=20 \
   --memory=8G \
   --cpu=4 \
@@ -65,6 +68,8 @@ gcloud run deploy "${FUNCTIONS_INSTANCE_NAME}" \
 curl \
   --fail \
   --fail-early \
+  --http2 \
+  --http2-prior-knowledge \
   --request POST \
   --data '{"lat":51,"lon":0}' \
   "https://${FUNCTIONS_INSTANCE_NAME}-62sa4xcfia-nw.a.run.app/invoke?n=[0-15]"
