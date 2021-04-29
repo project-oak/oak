@@ -716,6 +716,7 @@
 <span id="713">713</span>
 <span id="714">714</span>
 <span id="715">715</span>
+<span id="716">716</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -1336,6 +1337,7 @@
     });
 
     <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Server</span>::<span class="ident">bind</span>(<span class="ident">address</span>)
+        .<span class="ident">http2_only</span>(<span class="bool-val">true</span>)
         .<span class="ident">serve</span>(<span class="ident">service</span>)
         .<span class="ident">with_graceful_shutdown</span>(<span class="ident">terminate</span>);
 
