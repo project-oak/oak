@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Oak functions hello world example. Responds with `Hello $request_body!` to every request.
+//! Oak Functions weather lookup example.
 
 #![feature(try_blocks)]
 

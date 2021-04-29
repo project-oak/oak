@@ -30,7 +30,7 @@ use std::{
 extern crate test;
 use test::Bencher;
 
-const MANIFEST_PATH: &str = "examples/hello_world/module/Cargo.toml";
+const MANIFEST_PATH: &str = "examples/weather_lookup/module/Cargo.toml";
 
 struct TestResult {
     elapsed: Duration,

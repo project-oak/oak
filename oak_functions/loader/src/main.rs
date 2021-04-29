@@ -50,6 +50,16 @@ struct Config {
     lookup_data_download_period: Option<Duration>,
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
+    /// Number of worker threads available to the async runtime.
+    ///
+    /// Defaults to 4 if unset.
+    ///
+    /// Note that the CPU core detection logic does not seem to work reliably on Google Cloud Run,
+    /// so it is advisable to set this value to the number of cores available on the Cloud Run
+    /// instance.
+    ///
+    /// See https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads.
+    worker_threads: Option<usize>,
 }
 /// Command line options for the Oak loader.
 ///
@@ -97,32 +107,33 @@ async fn background_refresh_lookup_data(
     }
 }
 
-/// Main execution point for the Oak Functions Loader.
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // TODO(#1971): Make maximum log level configurable.
-    let logger = Logger::default();
-
+fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
-
     let config_file_bytes = fs::read(&opt.config_path)
         .with_context(|| format!("Couldn't read config file {}", &opt.config_path))?;
     let config: Config =
         toml::from_slice(&config_file_bytes).context("Couldn't parse config file")?;
-
+    // TODO(#1971): Make maximum log level configurable.
+    let logger = Logger::default();
     logger.log_public(Level::Info, &format!("parsed config file:\n{:#?}", config));
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(config.worker_threads.unwrap_or(4))
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async_main(opt, config, logger))
+}
 
+/// Main execution point for the Oak Functions Loader.
+async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<()> {
     let (notify_sender, notify_receiver) = tokio::sync::oneshot::channel::<()>();
 
     let lookup_data = load_lookup_data(&config, logger.clone()).await?;
 
-    // TODO(#1930): Pass lookup data to the server instance.
-
-    // Start HTTP server.
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
-    // Make sure that a policy is specified and is valid
+    // Make sure that a policy is specified and is valid.
     config
         .policy
         .as_ref()
@@ -130,6 +141,7 @@ async fn main() -> anyhow::Result<()> {
         .and_then(|policy| policy.validate())?;
 
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
+    // Start HTTP server.
     let server_handle = tokio::spawn(async move {
         create_and_start_server(
             &address,
