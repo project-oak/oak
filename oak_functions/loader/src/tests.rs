@@ -20,6 +20,7 @@ use crate::{
 };
 use hyper::{client::Client, Body};
 use maplit::hashmap;
+use oak_functions_abi::proto::{FunctionsResponse, FunctionsStatusCode};
 use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -43,8 +44,10 @@ async fn test_server_without_policy() {
     let scenario = |server_port: u16| async move {
         let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
         assert_eq!(result.status_code, hyper::StatusCode::OK);
+        let response = FunctionsResponse::decode(result.body.as_ref()).unwrap();
+        assert_eq!(FunctionsStatusCode::Success as i32, response.status,);
         assert_eq!(
-            std::str::from_utf8(result.body.as_slice()).unwrap(),
+            std::str::from_utf8(response.body.as_slice()).unwrap(),
             r#"{"temperature_degrees_celsius":10}"#
         );
     };
@@ -74,8 +77,10 @@ async fn test_valid_policy() {
         );
 
         assert_eq!(result.status_code, hyper::StatusCode::OK);
+        let response = FunctionsResponse::decode(result.body.as_ref()).unwrap();
+        assert_eq!(FunctionsStatusCode::Success as i32, response.status,);
         assert_eq!(
-            std::str::from_utf8(result.body.as_slice()).unwrap(),
+            std::str::from_utf8(response.body.as_slice()).unwrap(),
             r#"{"temperature_degrees_celsius":10}"#
         );
     };
@@ -254,10 +259,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             let resp = rt
                 .block_on(wasm_handler.clone().handle_request(request))
                 .unwrap();
-            assert_eq!(resp.status_code, hyper::StatusCode::OK);
-            assert!(resp.body.is_some());
+            assert_eq!(resp.status, FunctionsStatusCode::Success as i32);
             assert_eq!(
-                std::str::from_utf8(&resp.body.unwrap()).unwrap(),
+                std::str::from_utf8(&resp.body).unwrap(),
                 r#"{"temperature_degrees_celsius":10}"#
             );
         });

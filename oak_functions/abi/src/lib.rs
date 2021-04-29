@@ -20,6 +20,7 @@
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
+    include!(concat!(env!("OUT_DIR"), "/oak.functions.response.rs"));
 }
 
 // TODO(#1963): Add tests, in an example.
