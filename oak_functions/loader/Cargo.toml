@@ -20,7 +20,7 @@ byteorder = { version = "*", default-features = false }
 chrono = "*"
 futures = "*"
 http = "*"
-hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
+hyper = { version = "*", features = ["client", "http2", "runtime", "server"] }
 humantime-serde = "*"
 # Logging via the log crate is disabled and only available using our own custom logger.
 log = { version = "*", features = ["max_level_off", "release_max_level_off"] }
@@ -40,6 +40,6 @@ wasmi = "*"
 signal-hook = "*"
 
 [dev-dependencies]
-hyper = { version = "*", features = ["client"] }
+hyper = { version = "*", features = ["client", "http2"] }
 maplit = "*"
 test_utils = { path = "../sdk/test_utils" }

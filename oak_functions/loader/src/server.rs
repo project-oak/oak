@@ -617,6 +617,7 @@ pub async fn create_and_start_server<F: Future<Output = ()>>(
     });
 
     let server = Server::bind(address)
+        .http2_only(true)
         .serve(service)
         .with_graceful_shutdown(terminate);
 

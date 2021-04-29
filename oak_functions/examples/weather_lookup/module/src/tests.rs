@@ -100,7 +100,7 @@ async fn test_server() {
 }
 
 async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
-    let client = Client::new();
+    let client = Client::builder().http2_only(true).build_http();
     let request = hyper::Request::builder()
         .method(http::Method::POST)
         .uri(format!("http://localhost:{}/invoke", port))
