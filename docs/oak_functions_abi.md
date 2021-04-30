@@ -100,6 +100,25 @@ client.
 - `result[0]: i32`: Status of operation as
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
 
+### `write_log_message`
+
+Writes a log message. This message is considered sensitive, so is only logged if
+the `oak_unsafe` feature is enabled.
+
+The low-level operation involves reading the message from the WebAssembly
+module's memory. The system attempts to interpret the bytes as a UTF-8 encoded
+string. If the decoding is successful, the string is logged as a debug message.
+If the bytes are not a valid UTF-8 string a warning message containing the UTF-8
+decoding error and the raw bytes is logged.
+
+Multiple calls are each treated as a different log message.
+
+- `param[0]: buf_ptr: i32`: Address of the log message buffer.
+- `param[1]: buf_len: i32`: Number of bytes of the log message buffer.
+
+- `result[0]: i32`: Status of operation as
+  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
+
 ### `storage_get_item`
 
 Retrieves a single item by key from the lookup data in-memory store.

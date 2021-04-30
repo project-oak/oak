@@ -26,7 +26,8 @@ use log::Level;
 use oak_functions_abi::proto::OakStatus;
 use serde::Deserialize;
 use std::{
-    cmp::Ordering, convert::TryFrom, future::Future, net::SocketAddr, sync::Arc, time::Duration,
+    cmp::Ordering, convert::TryFrom, future::Future, net::SocketAddr, str, sync::Arc,
+    time::Duration,
 };
 use wasmi::ValueType;
 
@@ -38,6 +39,7 @@ const ALLOC_FUNCTION_NAME: &str = "alloc";
 const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
+const WRITE_LOG_MESSAGE: usize = 3;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -248,6 +250,39 @@ impl WasmState {
         Ok(())
     }
 
+    /// Corresponds to the host ABI function [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
+    pub fn write_log_message(
+        &mut self,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -> Result<(), OakStatus> {
+        let raw_log = self
+            .get_memory()
+            .get(buf_ptr, buf_len as usize)
+            .map_err(|err| {
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!(
+                        "write_log_message(): Unable to read message from guest memory: {:?}",
+                        err
+                    ),
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+        let log_message = str::from_utf8(raw_log.as_slice()).map_err(|err| {
+            self.logger.log_sensitive(
+                Level::Warn,
+                &format!(
+                    "write_log_message(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
+                    err, raw_log
+                ),
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
+        self.logger.log_sensitive(Level::Debug, log_message);
+        Ok(())
+    }
+
     /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(
         &mut self,
@@ -331,6 +366,9 @@ impl wasmi::Externals for WasmState {
             }
             WRITE_RESPONSE => {
                 map_host_errors(self.write_response(args.nth_checked(0)?, args.nth_checked(1)?))
+            }
+            WRITE_LOG_MESSAGE => {
+                map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
             }
             STORAGE_GET_ITEM => map_host_errors(self.storage_get_item(
                 args.nth_checked(0)?,
@@ -664,6 +702,16 @@ fn oak_functions_resolve_func(
         ),
         "write_response" => (
             WRITE_RESPONSE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // buf_ptr
+                    ABI_USIZE, // buf_len
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "write_log_message" => (
+            WRITE_LOG_MESSAGE,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // buf_ptr
