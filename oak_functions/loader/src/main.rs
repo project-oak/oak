@@ -35,6 +35,9 @@ use std::{
 };
 use structopt::StructOpt;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Config {

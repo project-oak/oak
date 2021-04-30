@@ -13,15 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
+extern crate test;
+
+use maplit::hashmap;
+use oak_functions_abi::proto::{Request, Response, StatusCode};
+use oak_functions_loader::{
     grpc::create_and_start_grpc_server,
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData},
-    server::{apply_policy, Policy, WasmHandler},
+    server::{apply_policy, try_from_utf8, Policy, WasmHandler},
 };
-use oak_functions_abi::proto::{Request, Response, StatusCode};
-
-use maplit::hashmap;
 use prost::Message;
 use std::{
     convert::TryInto,
@@ -29,15 +30,10 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use test::Bencher;
 use test_utils::make_request;
 
-#[cfg(test)]
-mod tests;
-
-extern crate test;
-use test::Bencher;
-
-const MANIFEST_PATH: &str = "examples/weather_lookup/module/Cargo.toml";
+const MANIFEST_PATH: &str = "examples/key_value_lookup/module/Cargo.toml";
 
 #[tokio::test]
 async fn test_valid_policy() {
@@ -50,7 +46,7 @@ async fn test_valid_policy() {
     };
 
     let scenario = |server_port: u16| async move {
-        let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
+        let result = make_request(server_port, br#"key_1"#).await;
         // Check that the processing time is within a reasonable range of
         // `constant_processing_time` specified in the policy.
         assert!(result.elapsed > constant_processing_time);
@@ -64,7 +60,7 @@ async fn test_valid_policy() {
         assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
             std::str::from_utf8(response.body().unwrap()).unwrap(),
-            r#"{"temperature_degrees_celsius":10}"#
+            r#"value_1"#
         );
     };
 
@@ -82,7 +78,7 @@ async fn test_long_response_time() {
 
     // So we expect the request to fail, with `response not available error`.
     let scenario = |server_port: u16| async move {
-        let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
+        let result = make_request(server_port, br#"key_1"#).await;
         // Check the elapsed time, allowing a margin of 10ms.
         let margin = Duration::from_millis(10);
         assert!(
@@ -135,8 +131,9 @@ where
     });
 
     mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
-        b"52,0".to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
-        b"14,12".to_vec() => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
+        b"key_0".to_vec() => br#"value_0"#.to_vec(),
+        b"key_1".to_vec() => br#"value_1"#.to_vec(),
+        b"key_2".to_vec() => br#"value_2"#.to_vec(),
     }));
 
     let lookup_data = Arc::new(LookupData::new_empty(
@@ -205,8 +202,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             });
 
             mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
-                b"52,0".to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
-                b"14,12".to_vec() => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
+                b"key_0".to_vec() => br#"value_0"#.to_vec(),
+                b"key_1".to_vec() => br#"value_1"#.to_vec(),
+                b"key_2".to_vec() => br#"value_2"#.to_vec(),
             }));
 
             lookup_data.refresh().await.unwrap();
@@ -215,16 +213,13 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         });
         bencher.iter(|| {
             let request = Request {
-                body: br#"{"lat":52,"lon":0}"#.to_vec(),
+                body: br#"key_1"#.to_vec(),
             };
             let resp = rt
                 .block_on(wasm_handler.clone().handle_invoke(request))
                 .unwrap();
             assert_eq!(resp.status, StatusCode::Success as i32);
-            assert_eq!(
-                std::str::from_utf8(&resp.body).unwrap(),
-                r#"{"temperature_degrees_celsius":10}"#
-            );
+            assert_eq!(std::str::from_utf8(&resp.body).unwrap(), r#"value_1"#);
         });
     });
 
@@ -412,4 +407,11 @@ async fn test_apply_policy() {
         assert_eq!(response.status, StatusCode::PolicySizeViolation as i32);
         assert_eq!(response.body.len(), policy.constant_response_size_bytes);
     }
+}
+
+#[test]
+fn test_try_from_utf8() {
+    assert_eq!("🚀oak⭐", try_from_utf8("🚀oak⭐".as_bytes()));
+    // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
+    assert_eq!("[0, 159, 146, 150]", try_from_utf8(&[0, 159, 146, 150]));
 }
