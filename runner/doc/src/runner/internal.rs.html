@@ -936,6 +936,8 @@
 <span id="933">933</span>
 <span id="934">934</span>
 <span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -987,7 +989,7 @@
     <span class="ident">Format</span>,
     <span class="ident">CheckFormat</span>,
     <span class="ident">RunTests</span>,
-    <span class="ident">RunCargoTests</span>(<span class="ident">CleanupOpt</span>),
+    <span class="ident">RunCargoTests</span>(<span class="ident">RunTestsOpt</span>),
     <span class="ident">RunBazelTests</span>,
     <span class="ident">RunTestsTsan</span>,
     <span class="ident">RunCargoDeny</span>,
@@ -1163,12 +1165,14 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CleanupOpt</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunTestsOpt</span> {
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
         <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;remove generated files after running tests for each crate&quot;</span>
     )]</span>
     <span class="kw">pub</span> <span class="ident">cleanup</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;run benchmarks&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">benches</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">RustBinaryOptions</span> {
