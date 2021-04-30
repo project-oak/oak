@@ -17,19 +17,16 @@ use crate::{logger::Logger, lookup::LookupData};
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
-use http::{request::Request, response::Response};
+use http::request::Request;
 use hyper::{
     service::{make_service_fn, service_fn},
-    Body, Server, StatusCode,
+    Body, Server,
 };
 use log::Level;
-use oak_functions_abi::proto::{FunctionsResponse, FunctionsStatusCode, OakStatus};
+use oak_functions_abi::proto::{OakStatus, Response, StatusCode};
 use prost::Message;
 use serde::Deserialize;
-use std::{
-    cmp::Ordering, convert::TryFrom, future::Future, net::SocketAddr, str, sync::Arc,
-    time::Duration,
-};
+use std::{convert::TryFrom, future::Future, net::SocketAddr, str, sync::Arc, time::Duration};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -55,7 +52,7 @@ const POLICY_PADDING_HEADER: &str = "oak-policy-padding";
 
 /// Minimum size of constant response bytes. It is large enough to fit an error response, in case
 /// the policy is failed.
-const MIN_RESPONSE_SIZE: u32 = 90;
+const MIN_RESPONSE_SIZE: u32 = 50;
 
 /// A policy describing limits on the size of the response and response processing time to avoid
 /// side-channel leaks.
@@ -89,44 +86,76 @@ impl Policy {
         );
         Ok(())
     }
+}
 
-    /// Creates an HTTP response, with status `OK`, the input `response` as its body.
-    ///
-    /// To conform to the security policy, the response is padded by adding a number of unspecified
-    /// characters, to make the total size of the response equal to
-    /// `self.constant_response_size_bytes`. The padding is added as the value of the
-    /// `oak-policy-padding` header. If the size of the input `response` is larger than
-    /// `self.constant_response_size_bytes` and the response is not already indicating policy
-    /// violation, then the `response` is discarded and an HTTP response indicating the policy
-    /// violation is returned. If `self.constant_response_size_bytes` is too small even for the
-    /// policy violation response, or the response already indicates a policy violation, an error is
-    /// returned.
-    fn create_http_response(&self, response: FunctionsResponse) -> anyhow::Result<Response<Body>> {
-        // deserialize response and get its size.
-        let mut encoded = vec![];
-        response
-            .encode(&mut encoded)
-            .context("couldn't encode response")?;
-        let padding_length = self.constant_response_size_bytes as i64 - encoded.len() as i64;
-        if padding_length < 0 {
-            match FunctionsStatusCode::from_i32(response.status) {
-                None => anyhow::bail!("invalid status code"),
-                Some(FunctionsStatusCode::PolicyViolation) => anyhow::bail!(
-                    "constant_response_size_bytes specified by the policy is too small."
-                ),
-                _ => self.create_http_response(FunctionsResponse {
-                    status: FunctionsStatusCode::PolicyViolation as i32,
-                    body: "Reason: the response is too long".as_bytes().to_vec(),
-                }),
-            }
-        } else {
-            let padding_bytes = vec![b'0'; padding_length as usize];
-            http::response::Builder::new()
-                .status(StatusCode::OK)
-                .header(POLICY_PADDING_HEADER, std::str::from_utf8(&padding_bytes)?)
-                .body(Body::from(encoded))
-                .context("couldn't create response")
-        }
+/// Creates an HTTP response, with status `OK`, and the protobuf-encoded `response` as its body.
+///
+/// To conform to the given security policy, the generated response is padded by adding a number of
+/// unspecified characters, to make the total size of the response equal to
+/// `policy.constant_response_size_bytes`. The padding is added as the value of the
+/// `oak-policy-padding` header. If the size of the input `response`, encoded as a protobuf message,
+/// is larger than `policy.constant_response_size_bytes` and the response is not already indicating
+/// policy violation, then the `response` is discarded and an HTTP response indicating the policy
+/// violation is returned. If `policy.constant_response_size_bytes` is too small even for the
+/// policy-violation response, or the response already indicates a policy violation, this function
+/// is recursively called to generate and return a response, where the protobuf-encoded body
+/// encapsulates `StatusCode::PolicyViolationInError` and an empty inner body. The recursion is
+/// guaranteed to terminate for a valid policy. If the policy is not valid, the function returns
+/// early with an error.
+fn create_response_and_apply_policy(
+    response: Response,
+    policy: &Policy,
+) -> anyhow::Result<http::response::Response<Body>> {
+    // check that the policy is valid
+    policy.validate()?;
+
+    // Serialize the response and get its size.
+    let mut encoded = vec![];
+    response
+        .encode(&mut encoded)
+        .context("couldn't encode response")?;
+    let padding_length =
+        i64::from(policy.constant_response_size_bytes) - i64::try_from(encoded.len()).unwrap();
+
+    if padding_length < 0 {
+        let rsp = match StatusCode::from_i32(response.status) {
+            // This match arm is not reachable, but is included to guarantee returning a
+            // policy-conforming response, in case of a potential future breaking change.
+            None => Response {
+                status: StatusCode::InternalServerError as i32,
+                body: "Reason: Invalid status code".as_bytes().to_vec(),
+            },
+            // If the `PolicySizeViolation` response itself is too large, return an error response
+            // with the inner status code `PolicyViolationInError`. No more recursive calls will
+            // happen after this point, since the size of the protobuf-encoded body is minimal in
+            // this case, and is guaranteed to fit within the size specified by any valid policy.
+            Some(StatusCode::PolicySizeViolation) => Response {
+                status: StatusCode::PolicyViolationInError as i32,
+                body: vec![],
+            },
+            // For all other status codes, return a `PolicySizeViolation`. Note that this may result
+            // in one more recursive call, if the size of the response generated here is too large.
+            _ => Response {
+                status: StatusCode::PolicySizeViolation as i32,
+                body: "Reason: the response is too long".as_bytes().to_vec(),
+            },
+        };
+        // The match arms above guarantee that a termination condition will be met after a finite
+        // number of recursive calls.
+        create_response_and_apply_policy(rsp, policy)
+    } else {
+        let padding_length = usize::try_from(padding_length).unwrap();
+        let padding_bytes = vec![b'0'; padding_length];
+
+        // If `padding_length` is zero, the `oak-policy-padding` header is still added, but with
+        // an empty string as the header value. The final encoding of the header in this case is
+        // `oak-policy-padding: ` including the whitespace at the end. This guarantees that the
+        // total size of the transmitted response remains constant.
+        http::response::Builder::new()
+            .status(hyper::StatusCode::OK)
+            .header(POLICY_PADDING_HEADER, std::str::from_utf8(&padding_bytes)?)
+            .body(Body::from(encoded))
+            .context("couldn't create response")
     }
 }
 
@@ -134,12 +163,12 @@ impl Policy {
 ///
 /// Encodes the given `response` as protobuf, and sets that as the body of the response.
 /// This function is used when no security policy is provided.
-fn create_http_response(rsp: FunctionsResponse) -> anyhow::Result<Response<Body>> {
+fn create_http_response(rsp: Response) -> anyhow::Result<http::response::Response<Body>> {
     let mut encoded = vec![];
     rsp.encode(&mut encoded)
         .context("couldn't encode the response")?;
-    Response::builder()
-        .status(StatusCode::OK)
+    http::response::Response::builder()
+        .status(hyper::StatusCode::OK)
         .body(Body::from(encoded))
         .context("couldn't create the response")
 }
@@ -480,10 +509,13 @@ fn check_export_function_signature(
 /// if allowed by the policy. If the execution of the function takes longer than allowed by the
 /// policy, or the resulting response is larger than allowed by the policy, an error response
 /// generated by the policy is returned instead of the actual response.
-async fn apply_policy<F, S>(policy: Option<Policy>, function: F) -> anyhow::Result<Response<Body>>
+async fn apply_policy<F, S>(
+    policy: Option<Policy>,
+    function: F,
+) -> anyhow::Result<http::response::Response<Body>>
 where
     F: std::marker::Send + 'static + FnOnce() -> S,
-    S: std::future::Future<Output = anyhow::Result<FunctionsResponse>> + std::marker::Send,
+    S: std::future::Future<Output = anyhow::Result<Response>> + std::marker::Send,
 {
     match policy {
         None => create_http_response(function().await?),
@@ -493,29 +525,30 @@ where
             let task = tokio::spawn(async move { function().await });
             tokio::time::sleep(policy.constant_processing_time).await;
 
-            let response = task.now_or_never();
+            let function_response = task.now_or_never();
 
-            match response {
-                None => policy.create_http_response(FunctionsResponse {
-                    status: FunctionsStatusCode::PolicyViolation as i32,
+            let response = match function_response {
+                None => Response {
+                    status: StatusCode::PolicyTimeViolation as i32,
                     body: "Reason: response not available".as_bytes().to_vec(),
-                }),
+                },
                 Some(response) => match response {
                     // Error when getting the response from the tokio task
-                    Err(err) => policy.create_http_response(FunctionsResponse {
-                        status: FunctionsStatusCode::InternalServerError as i32,
+                    Err(err) => Response {
+                        status: StatusCode::InternalServerError as i32,
                         body: format!("{}", err).as_bytes().to_vec(),
-                    }),
+                    },
                     Ok(response) => match response {
                         // Error generated by `function`
-                        Err(err) => policy.create_http_response(FunctionsResponse {
-                            status: FunctionsStatusCode::InternalServerError as i32,
+                        Err(err) => Response {
+                            status: StatusCode::InternalServerError as i32,
                             body: format!("{}", err).as_bytes().to_vec(),
-                        }),
-                        Ok(rsp) => policy.create_http_response(rsp),
+                        },
+                        Ok(rsp) => rsp,
                     },
                 },
-            }
+            };
+            create_response_and_apply_policy(response, &policy)
         }
     }
 }
@@ -544,13 +577,13 @@ impl WasmHandler {
         })
     }
 
-    pub async fn handle_request(self, req: Request<Body>) -> anyhow::Result<FunctionsResponse> {
+    pub async fn handle_request(self, req: Request<Body>) -> anyhow::Result<Response> {
         self.logger
             .log_sensitive(Level::Info, &format!("The request is: {:?}", req));
         match (req.method(), req.uri().path()) {
             (&hyper::Method::POST, "/invoke") => self.handle_invoke(req).await,
-            (method, path) => Ok(FunctionsResponse {
-                status: FunctionsStatusCode::BadRequest as i32,
+            (method, path) => Ok(Response {
+                status: StatusCode::BadRequest as i32,
                 body: format!("Invalid request: {} {}\n", method, path)
                     .as_bytes()
                     .to_vec(),
@@ -558,7 +591,7 @@ impl WasmHandler {
         }
     }
 
-    async fn handle_invoke(&self, req: Request<Body>) -> anyhow::Result<FunctionsResponse> {
+    async fn handle_invoke(&self, req: Request<Body>) -> anyhow::Result<Response> {
         let request_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
         let mut wasm_state = WasmState::new(
             &self.module,
@@ -567,8 +600,8 @@ impl WasmHandler {
             self.logger.clone(),
         )?;
         wasm_state.invoke();
-        Ok(FunctionsResponse {
-            status: FunctionsStatusCode::Success as i32,
+        Ok(Response {
+            status: StatusCode::Success as i32,
             body: wasm_state.get_response_bytes(),
         })
     }

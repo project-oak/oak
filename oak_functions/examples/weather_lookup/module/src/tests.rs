@@ -15,7 +15,7 @@
 
 use hyper::client::Client;
 use maplit::hashmap;
-use oak_functions_abi::proto::{FunctionsResponse, FunctionsStatusCode};
+use oak_functions_abi::proto::{Response, StatusCode};
 use oak_functions_loader::{logger::Logger, lookup::LookupData, server::create_and_start_server};
 use prost::Message;
 use std::{
@@ -72,9 +72,9 @@ async fn test_server() {
 
     {
         // Lookup match.
-        let response_fut = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
-        let response = FunctionsResponse::decode(response_fut.as_ref()).unwrap();
-        assert_eq!(FunctionsStatusCode::Success as i32, response.status,);
+        let response = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
+        let response = Response::decode(response.as_ref()).unwrap();
+        assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             r#"{"temperature_degrees_celsius":10}"#,
             std::str::from_utf8(response.body.as_slice()).unwrap()
@@ -82,9 +82,9 @@ async fn test_server() {
     }
     {
         // Valid location but no lookup match.
-        let response_fut = make_request(server_port, br#"{"lat":19,"lon":88}"#).await;
-        let response = FunctionsResponse::decode(response_fut.as_ref()).unwrap();
-        assert_eq!(FunctionsStatusCode::Success as i32, response.status,);
+        let response = make_request(server_port, br#"{"lat":19,"lon":88}"#).await;
+        let response = Response::decode(response.as_ref()).unwrap();
+        assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             r#"weather not found for location"#,
             std::str::from_utf8(response.body.as_slice()).unwrap()
@@ -92,9 +92,9 @@ async fn test_server() {
     }
     {
         // Malformed request.
-        let response_fut = make_request(server_port, b"invalid - JSON").await;
-        let response = FunctionsResponse::decode(response_fut.as_ref()).unwrap();
-        assert_eq!(FunctionsStatusCode::Success as i32, response.status,);
+        let response = make_request(server_port, b"invalid - JSON").await;
+        let response = Response::decode(response.as_ref()).unwrap();
+        assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             "could not deserialize request as JSON",
             std::str::from_utf8(response.body.as_slice()).unwrap()
