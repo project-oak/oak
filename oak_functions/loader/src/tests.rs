@@ -200,8 +200,6 @@ async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     }
 }
 
-// TODO(#1933): Currently there is no support for running benchmark tests in the runner.
-// Run this with: `cargo bench --manifest-path=oak_functions/loader/Cargo.toml`
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
     let mut manifest_path = std::env::current_dir().unwrap();

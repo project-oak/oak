@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::BuildFunctionsServer(ref opt) => build_functions_server(opt),
             Command::RunTests => run_tests(),
-            Command::RunCargoTests(ref opt) => run_cargo_tests(opt.cleanup),
+            Command::RunCargoTests(ref opt) => run_cargo_tests(opt.cleanup, opt.benches),
             Command::RunBazelTests => run_bazel_tests(),
             Command::RunTestsTsan => run_tests_tsan(),
             Command::Format => format(),
@@ -147,14 +147,18 @@ fn cleanup() {
 fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
-        steps: vec![run_cargo_tests(false), run_bazel_tests()],
+        steps: vec![run_cargo_tests(false, true), run_bazel_tests()],
     }
 }
 
-fn run_cargo_tests(cleanup: bool) -> Step {
+fn run_cargo_tests(cleanup: bool, benches: bool) -> Step {
     Step::Multiple {
         name: "cargo tests".to_string(),
-        steps: vec![run_cargo_clippy(), run_cargo_test(cleanup), run_cargo_doc()],
+        steps: vec![
+            run_cargo_clippy(),
+            run_cargo_test(cleanup, benches),
+            run_cargo_doc(),
+        ],
     }
 }
 
@@ -598,7 +602,7 @@ fn run_cargo_fmt(mode: FormatMode) -> Step {
     }
 }
 
-fn run_cargo_test(cleanup: bool) -> Step {
+fn run_cargo_test(cleanup: bool, benches: bool) -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: crate_manifest_files()
@@ -606,7 +610,14 @@ fn run_cargo_test(cleanup: bool) -> Step {
             .map(|entry| {
                 let test_run_step = |name| Step::Single {
                     name,
-                    command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
+                    command: Cmd::new(
+                        "cargo",
+                        &[
+                            "test",
+                            &format!("--manifest-path={}", &entry),
+                            if benches { "--benches" } else { "" },
+                        ],
+                    ),
                 };
                 let target_path = &entry.replace("Cargo.toml", "target");
 

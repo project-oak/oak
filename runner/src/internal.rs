@@ -48,7 +48,7 @@ pub enum Command {
     Format,
     CheckFormat,
     RunTests,
-    RunCargoTests(CleanupOpt),
+    RunCargoTests(RunTestsOpt),
     RunBazelTests,
     RunTestsTsan,
     RunCargoDeny,
@@ -224,12 +224,14 @@ pub struct BuildFunctionsServer {
 }
 
 #[derive(StructOpt, Clone)]
-pub struct CleanupOpt {
+pub struct RunTestsOpt {
     #[structopt(
         long,
         help = "remove generated files after running tests for each crate"
     )]
     pub cleanup: bool,
+    #[structopt(long, help = "run benchmarks")]
+    pub benches: bool,
 }
 
 pub trait RustBinaryOptions {
