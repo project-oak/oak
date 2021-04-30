@@ -82,10 +82,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::BuildFunctionsServer(ref opt) => build_functions_server(opt),
             Command::RunTests => run_tests(),
-            Command::RunCargoTests(ref opt) => run_cargo_tests(opt.cleanup),
+            Command::RunCargoTests(ref opt) => run_cargo_tests(opt.cleanup, opt.benches),
             Command::RunBazelTests => run_bazel_tests(),
             Command::RunTestsTsan => run_tests_tsan(),
-            Command::RunBench(ref opt) => run_benchmarks(opt.cleanup),
             Command::Format => format(),
             Command::CheckFormat => check_format(),
             Command::RunCi => run_ci(),
@@ -148,47 +147,18 @@ fn cleanup() {
 fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
-        steps: vec![run_cargo_tests(false), run_bazel_tests()],
+        steps: vec![run_cargo_tests(false, true), run_bazel_tests()],
     }
 }
 
-fn run_cargo_tests(cleanup: bool) -> Step {
+fn run_cargo_tests(cleanup: bool, benches: bool) -> Step {
     Step::Multiple {
         name: "cargo tests".to_string(),
-        steps: vec![run_cargo_clippy(), run_cargo_test(cleanup), run_cargo_doc()],
-    }
-}
-
-fn run_benchmarks(cleanup: bool) -> Step {
-    Step::Multiple {
-        name: "cargo bench".to_string(),
-        steps: crate_manifest_files()
-            .map(to_string)
-            .map(|entry| {
-                let test_run_step = |name| Step::Single {
-                    name,
-                    command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
-                };
-                let target_path = &entry.replace("Cargo.toml", "target");
-
-                // If `cleanup` is enabled, add a cleanup step to remove the generated files. Do
-                // this only if `target_path` is a non-empty, valid target path.
-                if cleanup && !target_path.ends_with("/target") {
-                    Step::Multiple {
-                        name: entry.clone(),
-                        steps: vec![
-                            test_run_step("run".to_string()),
-                            Step::Single {
-                                name: "cleanup".to_string(),
-                                command: Cmd::new("rm", &["-rf", target_path]),
-                            },
-                        ],
-                    }
-                } else {
-                    test_run_step(entry.clone())
-                }
-            })
-            .collect(),
+        steps: vec![
+            run_cargo_clippy(),
+            run_cargo_test(cleanup, benches),
+            run_cargo_doc(),
+        ],
     }
 }
 
@@ -632,7 +602,7 @@ fn run_cargo_fmt(mode: FormatMode) -> Step {
     }
 }
 
-fn run_cargo_test(cleanup: bool) -> Step {
+fn run_cargo_test(cleanup: bool, benches: bool) -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: crate_manifest_files()
@@ -640,7 +610,14 @@ fn run_cargo_test(cleanup: bool) -> Step {
             .map(|entry| {
                 let test_run_step = |name| Step::Single {
                     name,
-                    command: Cmd::new("cargo", &["test", &format!("--manifest-path={}", &entry)]),
+                    command: Cmd::new(
+                        "cargo",
+                        &[
+                            "test",
+                            &format!("--manifest-path={}", &entry),
+                            if benches { "--benches" } else { "" },
+                        ],
+                    ),
                 };
                 let target_path = &entry.replace("Cargo.toml", "target");
 

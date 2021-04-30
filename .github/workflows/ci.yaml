@@ -25,10 +25,9 @@ jobs:
           - build-server --server-variant=experimental
           - build-functions-server --server-variant=unsafe
           - build-functions-server --server-variant=base
-          - run-cargo-tests --cleanup
+          - run-cargo-tests --cleanup --benches
           - run-bazel-tests
           - run-tests-tsan
-          - run-bench --cleanup
           - run-examples --application-variant=rust
           - run-examples --application-variant=cpp
           - run-examples --application-variant=rust --example-name=abitest
