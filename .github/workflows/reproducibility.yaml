@@ -11,7 +11,10 @@ jobs:
     runs-on: ubuntu-20.04
 
     permissions:
+      # Allow the job to update the repo with the latest index.
       contents: write
+      # Allow the job to add a comment to the PR.
+      issues: write
 
     steps:
       - name: Checkout branch
