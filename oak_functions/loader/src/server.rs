@@ -100,7 +100,7 @@ impl Policy {
 /// `StatusCode::PolicyViolationInError` and an empty inner body. The recursion is guaranteed to
 /// terminate for a valid policy. If the policy is not valid, the function returns early with an
 /// error.
-fn create_response_and_apply_policy(
+pub fn create_response_and_apply_policy(
     response: Response,
     policy: &Policy,
 ) -> anyhow::Result<http::response::Response<Body>> {
