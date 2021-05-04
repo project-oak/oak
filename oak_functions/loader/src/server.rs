@@ -26,7 +26,7 @@ use log::Level;
 use oak_functions_abi::proto::{OakStatus, Response, StatusCode};
 use prost::Message;
 use serde::Deserialize;
-use std::{convert::TryFrom, future::Future, net::SocketAddr, str, sync::Arc, time::Duration};
+use std::{future::Future, net::SocketAddr, str, sync::Arc, time::Duration};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -47,12 +47,9 @@ type AbiPointerOffset = u32;
 /// Wasm would use a different value.
 const ABI_USIZE: ValueType = ValueType::I32;
 
-/// Specific header used for padding the response to match the expected response bytes
-const POLICY_PADDING_HEADER: &str = "oak-policy-padding";
-
 /// Minimum size of constant response bytes. It is large enough to fit an error response, in case
 /// the policy is violated.
-const MIN_RESPONSE_SIZE: u32 = 50;
+const MIN_RESPONSE_SIZE: usize = 50;
 
 /// A policy describing limits on the size of the response and response processing time to avoid
 /// side-channel leaks.
@@ -61,12 +58,13 @@ const MIN_RESPONSE_SIZE: u32 = 50;
 pub struct Policy {
     /// A fixed size for responses returned by the trusted runtime.
     ///
-    /// If the response computed by the Wasm module is smaller than this amount, it is padded with
-    /// additional data before encryption in order to make the payload size exactly this size. If
-    /// the response is larger than this amount, the trusted runtime discards the response and
-    /// instead sends a response of exactly this size to the client, containing an error message
-    /// indicating the failure.
-    pub constant_response_size_bytes: u32,
+    /// This size only applies to the body of the response. If the response body computed by the
+    /// Wasm module is smaller than this amount, it is padded with additional data before
+    /// encryption in order to make the payload size exactly this size. If the response is larger
+    /// than this amount, the trusted runtime discards the response and instead sends a response
+    /// with a body of exactly this size to the client, containing an error message indicating the
+    /// failure.
+    pub constant_response_size_bytes: usize,
     /// A fixed response time.
     ///
     /// Similar to the previous one, but controls the amount of time the function is allowed to run
@@ -90,18 +88,18 @@ impl Policy {
 
 /// Creates an HTTP response, with status `OK`, and the protobuf-encoded `response` as its body.
 ///
-/// To conform to the given security policy, the generated response is padded by adding a number of
-/// unspecified characters, to make the total size of the response equal to
-/// `policy.constant_response_size_bytes`. The padding is added as the value of the
-/// `oak-policy-padding` header. If the size of the input `response`, encoded as a protobuf message,
-/// is larger than `policy.constant_response_size_bytes` and the response is not already indicating
-/// policy violation, then the `response` is discarded and an HTTP response indicating the policy
-/// violation is returned. If `policy.constant_response_size_bytes` is too small even for the
-/// policy-violation response, or the response already indicates a policy violation, this function
-/// is recursively called to generate and return a response, where the protobuf-encoded body
-/// encapsulates `StatusCode::PolicyViolationInError` and an empty inner body. The recursion is
-/// guaranteed to terminate for a valid policy. If the policy is not valid, the function returns
-/// early with an error.
+/// To conform to the given security policy, the generated response body is padded by adding a
+/// number of trailing 0s, to make the total size of the response body equal to
+/// `policy.constant_response_size_bytes`. If the size of the input `response`, encoded as a
+/// length-delimited protobuf message, is larger than `policy.constant_response_size_bytes` and the
+/// response is not already indicating policy violation, then the `response` is discarded and an
+/// HTTP response indicating the policy violation is returned. If
+/// `policy.constant_response_size_bytes` is too small even for the policy-violation response, or
+/// the response already indicates a policy violation, this function is recursively called to
+/// generate and return a response, where the protobuf-encoded body encapsulates
+/// `StatusCode::PolicyViolationInError` and an empty inner body. The recursion is guaranteed to
+/// terminate for a valid policy. If the policy is not valid, the function returns early with an
+/// error.
 fn create_response_and_apply_policy(
     response: Response,
     policy: &Policy,
@@ -109,18 +107,13 @@ fn create_response_and_apply_policy(
     // check that the policy is valid
     policy.validate()?;
 
-    // Serialize the response and get its size.
+    // Serialize the response.
     let mut encoded = vec![];
     response
-        .encode(&mut encoded)
+        .encode_length_delimited(&mut encoded)
         .context("couldn't encode response")?;
-    let padding_length = i128::from(policy.constant_response_size_bytes)
-        - i128::try_from(encoded.len()).context(format!(
-            "cannot convert usize value {} to i128",
-            encoded.len()
-        ))?;
 
-    if padding_length < 0 {
+    if encoded.len() > policy.constant_response_size_bytes {
         let rsp = match StatusCode::from_i32(response.status) {
             // This match arm is not reachable, but is included to guarantee returning a
             // policy-conforming response, in case of a potential future breaking change.
@@ -147,36 +140,14 @@ fn create_response_and_apply_policy(
         // number of recursive calls.
         create_response_and_apply_policy(rsp, policy)
     } else {
-        let padding_length = usize::try_from(padding_length).context(format!(
-            "cannot convert non-negative i128 value {} to usize",
-            padding_length
-        ))?;
-        let padding_bytes = vec![b'x'; padding_length];
-
-        // If `padding_length` is zero, the `oak-policy-padding` header is still added, but with
-        // an empty string as the header value. The final encoding of the header in this case is
-        // `oak-policy-padding: ` including the whitespace at the end. This guarantees that the
-        // total size of the transmitted response remains constant.
+        // Add trailing 0s to make the total size of the encoded response body equal to
+        // `policy.constant_response_size_bytes`.
+        encoded.resize(policy.constant_response_size_bytes, 0);
         http::response::Builder::new()
             .status(hyper::StatusCode::OK)
-            .header(POLICY_PADDING_HEADER, std::str::from_utf8(&padding_bytes)?)
             .body(Body::from(encoded))
             .context("couldn't create response")
     }
-}
-
-/// Creates an HTTP response, with status `OK` and the given `response` as the response body.
-///
-/// Encodes the given `response` as binary protobuf, and sets that as the body of the response.
-/// This function is used when no security policy is provided.
-fn create_http_response(rsp: Response) -> anyhow::Result<http::response::Response<Body>> {
-    let mut encoded = vec![];
-    rsp.encode(&mut encoded)
-        .context("couldn't encode the response")?;
-    http::response::Response::builder()
-        .status(hyper::StatusCode::OK)
-        .body(Body::from(encoded))
-        .context("couldn't create the response")
 }
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
@@ -516,49 +487,44 @@ fn check_export_function_signature(
 /// policy, or the resulting response is larger than allowed by the policy, an error response
 /// generated by the policy is returned instead of the actual response.
 async fn apply_policy<F, S>(
-    policy: Option<Policy>,
+    policy: Policy,
     function: F,
 ) -> anyhow::Result<http::response::Response<Body>>
 where
     F: std::marker::Send + 'static + FnOnce() -> S,
     S: std::future::Future<Output = anyhow::Result<Response>> + std::marker::Send,
 {
-    match policy {
-        None => create_http_response(function().await?),
-        Some(policy) => {
-            // Use tokio::spawn to actually run the tasks in parallel, for more accurate measurement
-            // of time.
-            let task = tokio::spawn(async move { function().await });
-            // Sleep until the policy times out
-            tokio::time::sleep(policy.constant_processing_time).await;
+    // Use tokio::spawn to actually run the tasks in parallel, for more accurate measurement
+    // of time.
+    let task = tokio::spawn(async move { function().await });
+    // Sleep until the policy times out
+    tokio::time::sleep(policy.constant_processing_time).await;
 
-            let function_response = task.now_or_never();
+    let function_response = task.now_or_never();
 
-            let response = match function_response {
-                // The `function` did not terminate withing the policy timeout
-                None => Response {
-                    status: StatusCode::PolicyTimeViolation as i32,
-                    body: "Reason: response not available".as_bytes().to_vec(),
+    let response = match function_response {
+        // The `function` did not terminate withing the policy timeout
+        None => Response {
+            status: StatusCode::PolicyTimeViolation as i32,
+            body: "Reason: response not available".as_bytes().to_vec(),
+        },
+        Some(response) => match response {
+            // `tokio::task::JoinError` when getting the response from the tokio task
+            Err(_tokio_err) => Response {
+                status: StatusCode::InternalServerError as i32,
+                body: "Reason: internal server error".as_bytes().to_vec(),
+            },
+            Ok(response) => match response {
+                // The `function` terminated with an error
+                Err(err) => Response {
+                    status: StatusCode::InternalServerError as i32,
+                    body: err.to_string().as_bytes().to_vec(),
                 },
-                Some(response) => match response {
-                    // `tokio::task::JoinError` when getting the response from the tokio task
-                    Err(_tokio_err) => Response {
-                        status: StatusCode::InternalServerError as i32,
-                        body: "Reason: internal server error".as_bytes().to_vec(),
-                    },
-                    Ok(response) => match response {
-                        // The `function` terminated with an error
-                        Err(err) => Response {
-                            status: StatusCode::InternalServerError as i32,
-                            body: err.to_string().as_bytes().to_vec(),
-                        },
-                        Ok(rsp) => rsp,
-                    },
-                },
-            };
-            create_response_and_apply_policy(response, &policy)
-        }
-    }
+                Ok(rsp) => rsp,
+            },
+        },
+    };
+    create_response_and_apply_policy(response, &policy)
 }
 
 // An ephemeral request handler with a Wasm module for handling the requests.
@@ -620,7 +586,7 @@ pub async fn create_and_start_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,
-    policy: Option<Policy>,
+    policy: Policy,
     terminate: F,
     logger: Logger,
 ) -> anyhow::Result<()> {

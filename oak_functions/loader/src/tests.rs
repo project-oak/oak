@@ -40,22 +40,6 @@ struct TestResult {
 }
 
 #[tokio::test]
-async fn test_server_without_policy() {
-    let scenario = |server_port: u16| async move {
-        let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
-        assert_eq!(result.status_code, hyper::StatusCode::OK);
-        let response = Response::decode(result.body.as_ref()).unwrap();
-        assert_eq!(StatusCode::Success as i32, response.status,);
-        assert_eq!(
-            std::str::from_utf8(response.body.as_slice()).unwrap(),
-            r#"{"temperature_degrees_celsius":10}"#
-        );
-    };
-
-    run_scenario_with_policy(scenario, None).await;
-}
-
-#[tokio::test]
 async fn test_valid_policy() {
     // Policy values are large enough to allow successful serving of the request, and responding
     // with the actual response from the Wasm module.
@@ -77,7 +61,7 @@ async fn test_valid_policy() {
         );
 
         assert_eq!(result.status_code, hyper::StatusCode::OK);
-        let response = Response::decode(result.body.as_ref()).unwrap();
+        let response = Response::decode_length_delimited(result.body.as_ref()).unwrap();
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             std::str::from_utf8(response.body.as_slice()).unwrap(),
@@ -85,7 +69,7 @@ async fn test_valid_policy() {
         );
     };
 
-    run_scenario_with_policy(scenario, Some(policy)).await;
+    run_scenario_with_policy(scenario, policy).await;
 }
 
 // TODO(#2026): Remove `ignore` when we can interrupt execution in Wasm
@@ -111,7 +95,7 @@ async fn test_long_response_time() {
         );
     };
 
-    run_scenario_with_policy(scenario, Some(policy)).await;
+    run_scenario_with_policy(scenario, policy).await;
 }
 
 /// Starts the server with the given policy, and runs the given test scenario.
@@ -119,7 +103,7 @@ async fn test_long_response_time() {
 /// A normal test scenario makes any number of requests and checks the responses. It has to be an
 /// async function, with a single `u16` input argument as the `server_port`, and returning the unit
 /// type (`()`).
-async fn run_scenario_with_policy<F, S>(test_scenario: F, policy: Option<Policy>)
+async fn run_scenario_with_policy<F, S>(test_scenario: F, policy: Policy)
 where
     F: FnOnce(u16) -> S,
     S: std::future::Future<Output = ()>,
