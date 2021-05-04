@@ -6,9 +6,13 @@ set -o xtrace
 set -o pipefail
 
 echo Running client proxy
-# Dedicated `--base-id` is needed to run multiple Envoy proxies on the same machine:
-# https://github.com/envoyproxy/envoy/issues/88
-/envoy --config-path /client.yaml --base-id 1 -- --alsologtostderr &
+if [[ "${1:-}" == localhost ]]; then
+    # Dedicated `--base-id` is needed to run multiple Envoy proxies on the same machine:
+    # https://github.com/envoyproxy/envoy/issues/88
+    /usr/local/bin/envoy --config-path /client_localhost.yaml --base-id 1 -- --alsologtostderr &
+else
+    /usr/local/bin/envoy --config-path /client.yaml -- --alsologtostderr &
+fi
 # Give slack time for Envoy proxy to start in the background.
 sleep 1
 
@@ -22,4 +26,6 @@ curl \
   --data '{"lat":51,"lon":0}' \
   --location \
   --verbose \
-  localhost:8080
+  --output - \
+  --include \
+  localhost:8000/invoke

@@ -6,7 +6,7 @@ set -o xtrace
 set -o pipefail
 
 echo Running server proxy
-/envoy -c /server.yaml -- --alsologtostderr &
+/usr/local/bin/envoy --config-path /server.yaml -- --alsologtostderr &
 # Give slack time for Envoy proxy to start in the background.
 sleep 1
 

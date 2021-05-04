@@ -1,4 +1,4 @@
-# Envoy Proxy Experiment
+# Oak Functions with Envoy Proxy Experiment
 
 This experiment shows how to create a persistent connection to a Docker
 container in Cloud Run. It is done by using
@@ -13,7 +13,7 @@ The experiment consists of 2 Envoy proxies: _client side_ and _server side_.
 Proxy experiment is organized as follows:
 
 - `curl`
-  - Sends an HTTP GET request on `localhost:8000`
+  - Sends an HTTP POST request on `localhost:8000/invoke`
 - `client_listener`
   - Tunnels TCP stream over HTTP/2 stream
 - `client_cluster`
@@ -26,8 +26,8 @@ Proxy experiment is organized as follows:
   - Unwraps a TCP stream from an HTTP/2 stream
 - `server_cluster`
   - Forwards TCP stream to the server on port `8081`
-- `python` server
-  - Responds to an HTTP GET request
+- `weather_lookup` on `oak_functions`
+  - Responds to an HTTP POST request
 
 ## Running experiment
 

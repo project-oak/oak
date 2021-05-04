@@ -8,7 +8,8 @@ RUN apt-get --yes update \
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/*
 
-COPY ./experimental/oak_functions_with_envoy/client/client.yaml /etc/envoy/client.yaml
-COPY scripts/run_client.sh /etc/envoy/run_client.sh
+COPY ./client/client.yaml /client.yaml
+COPY ./client/client_localhost.yaml /client_localhost.yaml
+COPY ./scripts/run_client.sh /run_client.sh
 
-ENTRYPOINT ["/etc/envoy/run_client.sh"]
+ENTRYPOINT ["/run_client.sh"]

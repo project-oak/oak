@@ -6,5 +6,5 @@ readonly SCRIPTS_DIR="$(dirname "$0")/../../../scripts/"
 source "$SCRIPTS_DIR/common"
 
 readonly ENVOY_CLIENT_IMAGE_NAME='gcr.io/oak-ci/oak-functions-with-envoy-client'
-readonly ENVOY_SERVER_IMAGE_NAME='gcr.io/oak-ci/envoy-proxy-exampleoak-functions-with-envoy-server'
+readonly ENVOY_SERVER_IMAGE_NAME='gcr.io/oak-ci/oak-functions-with-envoy-server'
 readonly ENVOY_SERVER_INSTANCE_NAME='oak-functions-with-envoy-example'
