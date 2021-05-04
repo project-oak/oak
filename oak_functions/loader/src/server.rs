@@ -58,12 +58,14 @@ const MIN_RESPONSE_SIZE: usize = 50;
 pub struct Policy {
     /// A fixed size for responses returned by the trusted runtime.
     ///
-    /// This size only applies to the body of the response. If the response body computed by the
-    /// Wasm module is smaller than this amount, it is padded with additional data before
-    /// encryption in order to make the payload size exactly this size. If the response is larger
-    /// than this amount, the trusted runtime discards the response and instead sends a response
-    /// with a body of exactly this size to the client, containing an error message indicating the
-    /// failure.
+    /// This size only applies to the body of the Oak Functions response. If the response body
+    /// computed by the Wasm module is smaller than this amount, it is padded with additional
+    /// data before serialization and inclusion in the HTTP response to the client. If the body is
+    /// larger than this amount, the trusted runtime discards the response and instead uses a
+    /// response with a body of exactly this size, containing an error message indicating the
+    /// policy violation. The body included in the HTTP response sent to the client is the binary
+    /// protobuf encoding of the Oak Functions response, and will have a size larger than
+    /// `constant_response_size_bytes`. However, this size is still guaranteed to be a constant.
     pub constant_response_size_bytes: usize,
     /// A fixed response time.
     ///
@@ -86,20 +88,58 @@ impl Policy {
     }
 }
 
+/// Enum indicating a serialization error
+enum SerializationError {
+    ByteArrayTooLarge,
+    FailedEncoding(prost::EncodeError),
+}
+
+/// Trait with a single function for serializing objects into byte arrays of a fixed size.
+trait FixedSizeSerializer {
+    /// Serializes this instance into a vector of a fixed size, based on the input `size_hint`.
+    fn serialize(&self, size_hint: usize) -> Result<Vec<u8>, SerializationError>;
+}
+
+impl FixedSizeSerializer for Response {
+    /// Serializes the response into a vector of constant size.
+    ///
+    /// The resulting byte array is the binary protobuf encoding of this response instance, but with
+    /// the `body` padded with a number of trailing 0s, to make its length equal to `body_size`.
+    /// Returns `SerializationError::ByteArrayTooLarge` if `body` is larger than `body_size`, and
+    /// `SerializationError::FailedEncoding` if the protobuf encoding fails.
+    fn serialize(&self, body_size: usize) -> Result<Vec<u8>, SerializationError> {
+        if self.body.len() <= body_size {
+            let mut body = self.body.as_slice().to_vec();
+            // Set the length to the actual length of the body before padding.
+            let length = body.len() as u64;
+            // Add trailing 0s
+            body.resize(body_size, 0);
+            let response = Response {
+                status: self.status,
+                body,
+                length,
+            };
+            let mut encoded = vec![];
+            response
+                .encode(&mut encoded)
+                .map_err(SerializationError::FailedEncoding)?;
+            Ok(encoded)
+        } else {
+            Err(SerializationError::ByteArrayTooLarge)
+        }
+    }
+}
+
 /// Creates an HTTP response, with status `OK`, and the protobuf-encoded `response` as its body.
 ///
-/// To conform to the given security policy, the generated response body is padded by adding a
-/// number of trailing 0s, to make the total size of the response body equal to
-/// `policy.constant_response_size_bytes`. If the size of the input `response`, encoded as a
-/// length-delimited protobuf message, is larger than `policy.constant_response_size_bytes` and the
-/// response is not already indicating policy violation, then the `response` is discarded and an
-/// HTTP response indicating the policy violation is returned. If
-/// `policy.constant_response_size_bytes` is too small even for the policy-violation response, or
-/// the response already indicates a policy violation, this function is recursively called to
-/// generate and return a response, where the protobuf-encoded body encapsulates
-/// `StatusCode::PolicyViolationInError` and an empty inner body. The recursion is guaranteed to
-/// terminate for a valid policy. If the policy is not valid, the function returns early with an
-/// error.
+/// To conform to the given security policy, and to keep the total size of the HTTP response
+/// constant, the body of the `response` may be padded by a number of trailing 0s before encoding it
+/// as a binary protobuf message. In this case, the `length` in the `response` will contain the
+/// effective length of the `body`. If the size of the `body` in the input `response` is larger than
+/// `policy.constant_response_size_bytes`, then the `response` is discarded and a response with
+/// status `PolicySizeViolation` is instead included in the HTTP response to the client. For a valid
+/// policy, this response is guaranteed to comply with the `policy.constant_response_size_bytes`
+/// restriction. If the policy is not valid, the function returns early with an error.
 pub fn create_response_and_apply_policy(
     response: Response,
     policy: &Policy,
@@ -107,46 +147,23 @@ pub fn create_response_and_apply_policy(
     // check that the policy is valid
     policy.validate()?;
 
-    // Serialize the response.
-    let mut encoded = vec![];
-    response
-        .encode_length_delimited(&mut encoded)
-        .context("couldn't encode response")?;
-
-    if encoded.len() > policy.constant_response_size_bytes {
-        let rsp = match StatusCode::from_i32(response.status) {
-            // This match arm is not reachable, but is included to guarantee returning a
-            // policy-conforming response, in case of a potential future breaking change.
-            None => Response {
-                status: StatusCode::InternalServerError as i32,
-                body: "Reason: Invalid status code".as_bytes().to_vec(),
-            },
-            // If the `PolicySizeViolation` response itself is too large, return an error response
-            // with the inner status code `PolicyViolationInError`. No more recursive calls will
-            // happen after this point, since the size of the protobuf-encoded body is minimal in
-            // this case, and is guaranteed to fit within the size specified by any valid policy.
-            Some(StatusCode::PolicySizeViolation) => Response {
-                status: StatusCode::PolicyViolationInError as i32,
-                body: vec![],
-            },
-            // For all other status codes, return a `PolicySizeViolation`. Note that this may result
-            // in one more recursive call, if the size of the response generated here is too large.
-            _ => Response {
-                status: StatusCode::PolicySizeViolation as i32,
-                body: "Reason: the response is too large".as_bytes().to_vec(),
-            },
-        };
-        // The match arms above guarantee that a termination condition will be met after a finite
-        // number of recursive calls.
-        create_response_and_apply_policy(rsp, policy)
-    } else {
-        // Add trailing 0s to make the total size of the encoded response body equal to
-        // `policy.constant_response_size_bytes`.
-        encoded.resize(policy.constant_response_size_bytes, 0);
-        http::response::Builder::new()
+    // Serialize the response. If successful, create and return an HTTP response with it.
+    match response.serialize(policy.constant_response_size_bytes) {
+        Err(SerializationError::FailedEncoding(err)) => {
+            anyhow::bail!("couldn't encode response: {}", err)
+        }
+        Err(SerializationError::ByteArrayTooLarge) => {
+            let rsp = Response::create(
+                StatusCode::PolicySizeViolation,
+                "Reason: the response is too large".as_bytes().to_vec(),
+            );
+            // For a valid policy, this will not result in any more recursive calls.
+            create_response_and_apply_policy(rsp, policy)
+        }
+        Ok(encoded) => http::response::Builder::new()
             .status(hyper::StatusCode::OK)
             .body(Body::from(encoded))
-            .context("couldn't create response")
+            .context("couldn't create response"),
     }
 }
 
@@ -504,22 +521,22 @@ where
 
     let response = match function_response {
         // The `function` did not terminate withing the policy timeout
-        None => Response {
-            status: StatusCode::PolicyTimeViolation as i32,
-            body: "Reason: response not available".as_bytes().to_vec(),
-        },
+        None => Response::create(
+            StatusCode::PolicyTimeViolation,
+            "Reason: response not available".as_bytes().to_vec(),
+        ),
         Some(response) => match response {
             // `tokio::task::JoinError` when getting the response from the tokio task
-            Err(_tokio_err) => Response {
-                status: StatusCode::InternalServerError as i32,
-                body: "Reason: internal server error".as_bytes().to_vec(),
-            },
+            Err(_tokio_err) => Response::create(
+                StatusCode::InternalServerError,
+                "Reason: internal server error".as_bytes().to_vec(),
+            ),
             Ok(response) => match response {
                 // The `function` terminated with an error
-                Err(err) => Response {
-                    status: StatusCode::InternalServerError as i32,
-                    body: err.to_string().as_bytes().to_vec(),
-                },
+                Err(err) => Response::create(
+                    StatusCode::InternalServerError,
+                    err.to_string().as_bytes().to_vec(),
+                ),
                 Ok(rsp) => rsp,
             },
         },
@@ -556,12 +573,12 @@ impl WasmHandler {
             .log_sensitive(Level::Info, &format!("The request is: {:?}", req));
         match (req.method(), req.uri().path()) {
             (&hyper::Method::POST, "/invoke") => self.handle_invoke(req).await,
-            (method, path) => Ok(Response {
-                status: StatusCode::BadRequest as i32,
-                body: format!("Invalid request: {} {}\n", method, path)
+            (method, path) => Ok(Response::create(
+                StatusCode::BadRequest,
+                format!("Invalid request: {} {}\n", method, path)
                     .as_bytes()
                     .to_vec(),
-            }),
+            )),
         }
     }
 
@@ -574,10 +591,10 @@ impl WasmHandler {
             self.logger.clone(),
         )?;
         wasm_state.invoke();
-        Ok(Response {
-            status: StatusCode::Success as i32,
-            body: wasm_state.get_response_bytes(),
-        })
+        Ok(Response::create(
+            StatusCode::Success,
+            wasm_state.get_response_bytes(),
+        ))
     }
 }
 

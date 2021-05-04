@@ -21,6 +21,31 @@ pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.response.rs"));
+
+    impl Response {
+        /// Creates a new instance of Response.
+        ///
+        /// Sets the `status` and `body` to the given status and body, and sets the
+        /// `length` to the length of the body.
+        pub fn create(status: StatusCode, body: Vec<u8>) -> Self {
+            Response {
+                status: status as i32,
+                body: body.clone(),
+                length: body.len() as u64,
+            }
+        }
+
+        /// Returns the body of the response, excluding any trailing 0s.
+        ///
+        /// Uses the effective length of the body, in `self.length`, to remove the trailing 0s.
+        /// Returns as error if `self.length` cannot be converted to `usize` due to an overflow.
+        pub fn body(&self) -> Result<&[u8], std::num::TryFromIntError> {
+            use std::convert::TryFrom;
+
+            let length = usize::try_from(self.length)?;
+            Ok(&self.body.as_slice()[..length])
+        }
+    }
 }
 
 // TODO(#1963): Add tests, in an example.

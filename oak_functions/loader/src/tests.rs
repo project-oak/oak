@@ -61,10 +61,10 @@ async fn test_valid_policy() {
         );
 
         assert_eq!(result.status_code, hyper::StatusCode::OK);
-        let response = Response::decode_length_delimited(result.body.as_ref()).unwrap();
+        let response = Response::decode(result.body.as_ref()).unwrap();
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
-            std::str::from_utf8(response.body.as_slice()).unwrap(),
+            std::str::from_utf8(response.body().unwrap()).unwrap(),
             r#"{"temperature_degrees_celsius":10}"#
         );
     };
@@ -87,87 +87,17 @@ async fn test_long_response_time() {
     let scenario = |server_port: u16| async move {
         let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
         // TODO(#1987): Check elapsed time
-        println!("elapsed: {:?}", result.elapsed);
-        assert_eq!(result.status_code, hyper::StatusCode::INTERNAL_SERVER_ERROR);
+
+        assert_eq!(result.status_code, hyper::StatusCode::OK);
+        let response = Response::decode(result.body.as_ref()).unwrap();
+        assert_eq!(StatusCode::PolicyTimeViolation as i32, response.status,);
         assert_eq!(
-            std::str::from_utf8(result.body.as_slice()).unwrap(),
+            std::str::from_utf8(response.body().unwrap()).unwrap(),
             "Reason: response not available\n"
         );
     };
 
     run_scenario_with_policy(scenario, policy).await;
-}
-
-#[tokio::test]
-async fn test_response_creation_with_policy() {
-    {
-        // Return error if the policy is invalid
-        let policy = Policy {
-            constant_response_size_bytes: 20,
-            constant_processing_time: Duration::from_millis(10),
-        };
-
-        let time_violation_response = Response {
-            status: StatusCode::Success as i32,
-            body: vec![b'x'; 50],
-        };
-        let res = create_response_and_apply_policy(time_violation_response, &policy);
-        assert!(res.is_err());
-    }
-
-    // Use a valid policy
-    let policy = Policy {
-        constant_response_size_bytes: 50,
-        constant_processing_time: Duration::from_millis(10),
-    };
-
-    {
-        // Success response with small enough body is serialized with padding, and no other change
-        let small_success_response = Response {
-            status: StatusCode::Success as i32,
-            body: br#"abc"#.to_vec(),
-        };
-        let res = create_response_and_apply_policy(small_success_response, &policy);
-        assert!(res.is_ok());
-        let body_bytes = hyper::body::to_bytes(res.unwrap().into_body())
-            .await
-            .unwrap();
-        assert_eq!(body_bytes.len(), policy.constant_response_size_bytes);
-        let response = Response::decode_length_delimited(body_bytes).unwrap();
-        assert_eq!(response.status, StatusCode::Success as i32);
-    }
-
-    {
-        // Success response with large body is discarded
-        let large_success_response = Response {
-            status: StatusCode::Success as i32,
-            body: vec![b'x'; 50],
-        };
-        let res = create_response_and_apply_policy(large_success_response, &policy);
-        assert!(res.is_ok());
-        let body_bytes = hyper::body::to_bytes(res.unwrap().into_body())
-            .await
-            .unwrap();
-        assert_eq!(body_bytes.len(), policy.constant_response_size_bytes);
-        let response = Response::decode_length_delimited(body_bytes).unwrap();
-        assert_eq!(response.status, StatusCode::PolicySizeViolation as i32);
-    }
-
-    {
-        // Check termination condition
-        let time_violation_response = Response {
-            status: StatusCode::PolicySizeViolation as i32,
-            body: vec![b'x'; 50],
-        };
-        let res = create_response_and_apply_policy(time_violation_response, &policy);
-        assert!(res.is_ok());
-        let body_bytes = hyper::body::to_bytes(res.unwrap().into_body())
-            .await
-            .unwrap();
-        assert_eq!(body_bytes.len(), policy.constant_response_size_bytes);
-        let response = Response::decode_length_delimited(body_bytes).unwrap();
-        assert_eq!(response.status, StatusCode::PolicyViolationInError as i32);
-    }
 }
 
 /// Starts the server with the given policy, and runs the given test scenario.
@@ -471,4 +401,60 @@ async fn lookup_data_refresh() {
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
 
     mock_static_server_background.terminate_and_join().await;
+}
+
+#[tokio::test]
+async fn test_response_creation_with_policy() {
+    {
+        // Return an error if the policy is invalid
+        let policy = Policy {
+            constant_response_size_bytes: 20,
+            constant_processing_time: Duration::from_millis(10),
+        };
+
+        let time_violation_response = Response::create(StatusCode::Success, vec![b'x'; 50]);
+        let res = create_response_and_apply_policy(time_violation_response, &policy);
+        assert!(res.is_err());
+    }
+
+    // A valid constant response body size
+    let size = 50;
+
+    // We pad the body of the response to have a fixed size. The size of the binary protobuf-encoded
+    // message is different, but is guaranteed to remain constant for the same policy.
+    let protobuf_binary_size = 63;
+
+    // A valid policy
+    let policy = Policy {
+        constant_response_size_bytes: size,
+        constant_processing_time: Duration::from_millis(10),
+    };
+
+    {
+        // Wasm response with small enough body is serialized with padding, and no other change
+        let small_success_response = Response::create(StatusCode::Success, vec![b'x'; size]);
+        let res = create_response_and_apply_policy(small_success_response, &policy);
+        assert!(res.is_ok());
+        let body_bytes = hyper::body::to_bytes(res.unwrap().into_body())
+            .await
+            .unwrap();
+        assert_eq!(body_bytes.len(), protobuf_binary_size);
+        let response = Response::decode(body_bytes).unwrap();
+        assert_eq!(response.status, StatusCode::Success as i32);
+        assert_eq!(response.body.len(), policy.constant_response_size_bytes);
+    }
+
+    {
+        // Success Wasm response with a large body is discarded, and replaced with an error response
+        let large_success_response = Response::create(StatusCode::Success, vec![b'x'; size + 1]);
+        let res = create_response_and_apply_policy(large_success_response, &policy);
+        assert!(res.is_ok());
+        let body_bytes = hyper::body::to_bytes(res.unwrap().into_body())
+            .await
+            .unwrap();
+        assert_eq!(body_bytes.len(), protobuf_binary_size);
+        let response = Response::decode(body_bytes).unwrap();
+        assert_eq!(response.status, StatusCode::PolicySizeViolation as i32);
+        assert_eq!(response.body.len(), policy.constant_response_size_bytes);
+    }
 }
