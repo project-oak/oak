@@ -13,6 +13,12 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
+ignore = [
+  # TODO(#2055): Remove once tink-aead dependencies are updated.
+  "RUSTSEC-2021-0061",
+  # TODO(#2055): Remove once tink-aead dependencies are updated.
+  "RUSTSEC-2021-0060",
+]
 
 # Deny multiple versions unless explicitly skipped.
 [bans]
