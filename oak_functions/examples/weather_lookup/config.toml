@@ -1,5 +1,4 @@
-# TODO(#1973): Change schema to HTTPS when supported.
-lookup_data_url = "http://storage.googleapis.com/oak_lookup_data/lookup_data_weather"
+lookup_data_url = "https://storage.googleapis.com/oak_lookup_data/lookup_data_weather"
 lookup_data_download_period = "10m"
 worker_threads = 4
 

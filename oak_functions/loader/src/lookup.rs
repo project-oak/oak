@@ -16,6 +16,7 @@
 
 use crate::logger::Logger;
 use anyhow::Context;
+use hyper_rustls::HttpsConnector;
 use log::Level;
 use prost::Message;
 use std::{collections::HashMap, sync::RwLock, time::Instant};
@@ -55,7 +56,8 @@ impl LookupData {
     /// at a future time.
     pub async fn refresh(&self) -> anyhow::Result<()> {
         // TODO(#1930): Avoid loading the entire file in memory for parsing.
-        let client = hyper::Client::new();
+        let https = HttpsConnector::with_native_roots();
+        let client = hyper::Client::builder().build::<_, hyper::Body>(https);
         let res = client
             .get(
                 self.lookup_data_url
