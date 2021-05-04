@@ -154,6 +154,8 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -173,6 +175,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">logger</span>::<span class="ident">Logger</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
+<span class="kw">use</span> <span class="ident">hyper_rustls</span>::<span class="ident">HttpsConnector</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">Level</span>;
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">sync</span>::<span class="ident">RwLock</span>, <span class="ident">time</span>::<span class="ident">Instant</span>};
@@ -212,7 +215,8 @@
     <span class="doccomment">/// at a future time.</span>
     <span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">refresh</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="comment">// TODO(#1930): Avoid loading the entire file in memory for parsing.</span>
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">hyper</span>::<span class="ident">Client</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="ident">https</span> <span class="op">=</span> <span class="ident">HttpsConnector</span>::<span class="ident">with_native_roots</span>();
+        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">hyper</span>::<span class="ident">Client</span>::<span class="ident">builder</span>().<span class="ident">build</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">hyper</span>::<span class="ident">Body</span><span class="op">&gt;</span>(<span class="ident">https</span>);
         <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">client</span>
             .<span class="ident">get</span>(
                 <span class="self">self</span>.<span class="ident">lookup_data_url</span>
