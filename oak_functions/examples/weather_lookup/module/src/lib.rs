@@ -18,6 +18,8 @@
 
 #![feature(try_blocks)]
 
+use log::{info, LevelFilter};
+use oak_functions::logger::init;
 use serde::Deserialize;
 
 #[cfg(test)]
@@ -36,6 +38,7 @@ pub extern "C" fn main() {
     // Produce a result which is either a successful response (as raw bytes), or an error message to
     // return to the client (as a human-readable string).
     let result: Result<Vec<u8>, &str> = try {
+        init(LevelFilter::Info).map_err(|_err| "Couldn't initialise logger.")?;
         // Read the request.
         let request_body =
             oak_functions::read_request().map_err(|_err| "Couldn't read request body.")?;
@@ -47,6 +50,7 @@ pub extern "C" fn main() {
             "{},{}",
             location.latitude_degrees, location.longitude_degrees
         );
+        info!("Requested location: {}", &key);
         // Try to look up the location in the storage data, and if found use the result as the
         // response message.
         let response = oak_functions::storage_get_item(key.as_bytes())

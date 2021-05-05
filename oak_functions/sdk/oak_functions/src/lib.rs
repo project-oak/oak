@@ -19,6 +19,9 @@
 
 use oak_functions_abi::proto::OakStatus;
 
+#[cfg(feature = "logger")]
+pub mod logger;
+
 /// Reads and returns the user request.
 ///
 /// This function is idempotent. Multiple call to this function all return the same value.
@@ -74,6 +77,18 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
         OakStatus::ErrStorageItemNotFound => Ok(None),
         status => Err(status),
     }
+}
+
+/// Writes a debug log message.
+///
+/// These log messages are considered sensitive, so will only be logged by the runtime if the
+/// `oak_unsafe` feature is enabled.
+///
+/// See [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
+pub fn write_log_message(message: &str) -> Result<(), OakStatus> {
+    let buf = message.as_bytes();
+    let status = unsafe { oak_functions_abi::write_log_message(buf.as_ptr(), buf.len()) };
+    result_from_status(status as i32, ())
 }
 
 /// Convert a status returned from a host function call to a `Result`.
