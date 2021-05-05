@@ -18,7 +18,7 @@ static_resources:
                 cluster: client_cluster
                 tunneling_config:
                   # Hostname used in HTTP requests.
-                  hostname: envoy-proxy-example-62sa4xcfia-nw.a.run.app
+                  hostname: oak-functions-with-envoy-example-62sa4xcfia-nw.a.run.app
                   # Send each TCP segment in POST HTTP requests.
                   use_post: true
 
@@ -36,7 +36,7 @@ static_resources:
                   address:
                     # Remote server proxy address to connect to.
                     socket_address:
-                      address: envoy-proxy-example-62sa4xcfia-nw.a.run.app
+                      address: oak-functions-with-envoy-example-62sa4xcfia-nw.a.run.app
                       port_value: 443
       transport_socket:
         name: envoy.transport_sockets.tls
@@ -46,4 +46,4 @@ static_resources:
             validation_context:
               trusted_ca: { 'filename': '/etc/ssl/certs/ca-certificates.crt' }
           # SNI string to use when creating TLS backend connections.
-          sni: envoy-proxy-example-62sa4xcfia-nw.a.run.app
+          sni: oak-functions-with-envoy-example-62sa4xcfia-nw.a.run.app

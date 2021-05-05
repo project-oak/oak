@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 readonly EXPERIMENTAL_SCRIPTS_DIR="$(dirname "$0")"
-# shellcheck source=experimental/envoy_proxy/scripts/common.sh
+# shellcheck source=experimental/oak_functions_with_envoy/scripts/common.sh
 source "$EXPERIMENTAL_SCRIPTS_DIR/common.sh"
 
 # shellcheck source=scripts/gcp_common

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-readonly EXPERIMENAL_SCRIPTS_DIR="$(dirname "$0")"
+readonly EXPERIMENTAL_SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=experimental/envoy_proxy/scripts/common.sh
-source "$EXPERIMENAL_SCRIPTS_DIR/common.sh"
+source "$EXPERIMENTAL_SCRIPTS_DIR/common.sh"
 
 docker build \
   --file="./experimental/envoy_proxy/client/client.Dockerfile" \

@@ -1,4 +1,4 @@
-# Envoy Proxy Experiment
+# Oak Functions with Envoy Proxy Experiment
 
 This experiment shows how to create a persistent connection to a Docker
 container in Cloud Run. It is done by using
@@ -6,6 +6,10 @@ container in Cloud Run. It is done by using
 in Envoy proxy.
 
 The experiment consists of 2 Envoy proxies: _client side_ and _server side_.
+
+<!-- From: -->
+<!-- https://drive.google.com/corp/drive/folders/1u0INlJemLnriiU8Aq8G2ajWvCJ6JwyZw -->
+<img src="images/envoy_proxy_experiment.png" width="850">
 
 - Client side proxy:
   - Listens for TCP connections on a local port
@@ -50,7 +54,7 @@ Build Docker images:
 Run the server:
 
 ```bash
-docker run --interactive --tty --network=host 'gcr.io/oak-ci/envoy-proxy-example-server'
+docker run --interactive --tty -- --network=host 'gcr.io/oak-ci/envoy-proxy-example-server'
 ```
 
 Run the client (`localhost` parameter makes the script run the local version of
