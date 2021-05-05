@@ -7,8 +7,14 @@ in Envoy proxy.
 
 The experiment consists of 2 Envoy proxies: _client side_ and _server side_.
 
-- Client side proxy accepts TCP streams and tunnels them over HTTP streams.
-- Server side proxy listens for HTTP streams and unwraps TCP streams from them.
+- Client side proxy:
+  - Listens for TCP connections on a local port
+  - Accepts TCP streams and tunnels them over HTTP streams
+    - Each individual TCP connection is tunnelled over a dedicated HTTP stream
+      (using POST requests)
+- Server side proxy:
+  - Listens for HTTP streams and unwraps TCP streams from them
+  - Forwards TCP streams to the application server
 
 Proxy experiment is organized as follows:
 
@@ -21,7 +27,7 @@ Proxy experiment is organized as follows:
   - Checks Google public certificate
 - Cloud Run Frontend
   - Terminates TLS connection
-  - Redirects HTTP/2 stream to the Docker container on port `8080`
+  - Redirects plaintext HTTP/2 stream to the Docker container on port `8080`
 - `server_listener`
   - Unwraps a TCP stream from an HTTP/2 stream
 - `server_cluster`
@@ -42,13 +48,14 @@ Build Docker images:
 Run the server:
 
 ```bash
-docker run -it --network='host' 'gcr.io/oak-ci/envoy-proxy-example-server'
+docker run --interactive --tty -- --network=host 'gcr.io/oak-ci/envoy-proxy-example-server'
 ```
 
-Run the client:
+Run the client (`localhost` parameter makes the script run the local version of
+Envoy Proxy client):
 
 ```bash
-docker run -it --network='host' 'gcr.io/oak-ci/envoy-proxy-example-client' localhost
+docker run --interactive --tty --network=host 'gcr.io/oak-ci/envoy-proxy-example-client' localhost
 ```
 
 ### Running in Cloud Run
@@ -70,7 +77,7 @@ Deploy the server:
 Run the client:
 
 ```bash
-docker run -it --network='host' 'gcr.io/oak-ci/envoy-proxy-example-client'
+docker run --interactive --tty --network=host 'gcr.io/oak-ci/envoy-proxy-example-client'
 ```
 
 Delete the server (_optional_):

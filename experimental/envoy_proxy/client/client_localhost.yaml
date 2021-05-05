@@ -1,6 +1,6 @@
 static_resources:
   listeners:
-    # Accepts TCP streams and tunnels them over HTTP streams.
+    # Accepts TCP streams and tunnels each of them over HTTP streams.
     # https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/upgrades#tunneling-tcp-over-http
     - name: listener
       address:
@@ -17,8 +17,9 @@ static_resources:
                 stat_prefix: tcp_stats
                 cluster: cluster
                 tunneling_config:
+                  # Hostname used in HTTP requests.
                   hostname: localhost
-                  # Send TCP segments in POST HTTP requests.
+                  # Send each TCP segment in POST HTTP requests.
                   use_post: true
 
   clusters:

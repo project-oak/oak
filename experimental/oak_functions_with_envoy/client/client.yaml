@@ -1,13 +1,13 @@
 static_resources:
   listeners:
-    # Accepts TCP streams and tunnels them over HTTP streams.
+    # Accepts TCP streams and tunnels each of them over HTTP streams.
     # https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/upgrades#tunneling-tcp-over-http
     - name: client_listener
       address:
         # Client proxy address to listen on.
         socket_address:
           protocol: TCP
-          address: 0.0.0.0
+          address: 127.0.0.1
           port_value: 8000
       filter_chains:
         - filters:
@@ -17,8 +17,9 @@ static_resources:
                 stat_prefix: tcp_stats
                 cluster: client_cluster
                 tunneling_config:
+                  # Hostname used in HTTP requests.
                   hostname: oak-functions-with-envoy-example-62sa4xcfia-nw.a.run.app
-                  # Send TCP segments in POST HTTP requests.
+                  # Send each TCP segment in POST HTTP requests.
                   use_post: true
 
   clusters:
@@ -44,4 +45,5 @@ static_resources:
           common_tls_context:
             validation_context:
               trusted_ca: { 'filename': '/etc/ssl/certs/ca-certificates.crt' }
+          # SNI string to use when creating TLS backend connections.
           sni: oak-functions-with-envoy-example-62sa4xcfia-nw.a.run.app

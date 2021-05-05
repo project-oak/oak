@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-readonly EXPERIMENAL_SCRIPTS_DIR="$(dirname "$0")"
+readonly EXPERIMENTAL_SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=experimental/oak_functions_with_envoy/scripts/common.sh
-source "$EXPERIMENAL_SCRIPTS_DIR/common.sh"
+source "$EXPERIMENTAL_SCRIPTS_DIR/common.sh"
 
 # shellcheck source=scripts/gcp_common
 source "$SCRIPTS_DIR/gcp_common"
@@ -13,6 +13,6 @@ gcloud auth activate-service-account \
   --key-file="${GCP_ACCOUNT_FILE}"
 
 # Delete the application from Cloud Run.
-gcloud beta run services "${ENVOY_SERVER_INSTANCE_NAME}" \
+gcloud beta run services delete "${ENVOY_SERVER_INSTANCE_NAME}" \
   --region=europe-west2 \
   --platform=managed
