@@ -19,21 +19,23 @@ The experiment consists of 2 Envoy proxies: _client side_ and _server side_.
 Proxy experiment is organized as follows:
 
 - `curl`
-  - Sends an HTTP GET request on `localhost:8000`
+  - Sends an HTTP POST request on `localhost:8000/invoke`
 - `client_listener`
-  - Tunnels TCP stream over HTTP/2 stream
+  - Tunnels each TCP stream over a dedicated HTTP/2 stream
 - `client_cluster`
-  - Sends HTTP/2 stream on `APP_URL:443` using TLS
-  - Checks Google public certificate
+  - Sends each HTTP/2 stream on `APP_URL:443` using a dedicated TLS connection
+  - Checks Google public certificate for each TLS connection
 - Cloud Run Frontend
-  - Terminates TLS connection
-  - Redirects plaintext HTTP/2 stream to the Docker container on port `8080`
+  - Terminates each TLS connection and unwraps a plaintext HTTP/2 stream out of
+    it
+  - Redirects each plaintext HTTP/2 stream to the Docker container on port
+    `8080`
 - `server_listener`
-  - Unwraps a TCP stream from an HTTP/2 stream
+  - Unwraps a TCP stream from each HTTP/2 stream
 - `server_cluster`
-  - Forwards TCP stream to the server on port `8081`
-- `python` server
-  - Responds to an HTTP GET request
+  - Forwards each TCP stream to the server on port `8081`
+- `weather_lookup` on `oak_functions`
+  - Responds to each HTTP POST request
 
 ## Running experiment
 
