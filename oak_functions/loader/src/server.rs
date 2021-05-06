@@ -88,16 +88,10 @@ impl Policy {
     }
 }
 
-/// Enum indicating a serialization error
-enum SerializationError {
-    ByteArrayTooLarge,
-    FailedEncoding(prost::EncodeError),
-}
-
 /// Trait with a single function for serializing objects into byte arrays of a fixed size.
 trait FixedSizeSerializer {
     /// Serializes this instance into a vector of a fixed size, based on the input `size_hint`.
-    fn serialize(&self, size_hint: usize) -> Result<Vec<u8>, SerializationError>;
+    fn serialize(&self, size_hint: usize) -> anyhow::Result<Vec<u8>>;
 }
 
 impl FixedSizeSerializer for Response {
@@ -105,9 +99,8 @@ impl FixedSizeSerializer for Response {
     ///
     /// The resulting byte array is the binary protobuf encoding of this response instance, but with
     /// the `body` padded with a number of trailing 0s, to make its length equal to `body_size`.
-    /// Returns `SerializationError::ByteArrayTooLarge` if `body` is larger than `body_size`, and
-    /// `SerializationError::FailedEncoding` if the protobuf encoding fails.
-    fn serialize(&self, body_size: usize) -> Result<Vec<u8>, SerializationError> {
+    /// Returns an error if `body` is larger than `body_size`.
+    fn serialize(&self, body_size: usize) -> anyhow::Result<Vec<u8>> {
         if self.body.len() <= body_size {
             let mut body = self.body.as_slice().to_vec();
             // Set the length to the actual length of the body before padding.
@@ -122,10 +115,10 @@ impl FixedSizeSerializer for Response {
             let mut encoded = vec![];
             response
                 .encode(&mut encoded)
-                .map_err(SerializationError::FailedEncoding)?;
+                .context("unreachable: buffer is too small for the encoded message")?;
             Ok(encoded)
         } else {
-            Err(SerializationError::ByteArrayTooLarge)
+            anyhow::bail!("response body is larger than the input body_size")
         }
     }
 }
@@ -149,10 +142,7 @@ pub fn create_response_and_apply_policy(
 
     // Serialize the response. If successful, create and return an HTTP response with it.
     match response.serialize(policy.constant_response_size_bytes) {
-        Err(SerializationError::FailedEncoding(err)) => {
-            anyhow::bail!("couldn't encode response: {}", err)
-        }
-        Err(SerializationError::ByteArrayTooLarge) => {
+        Err(_err) => {
             let rsp = Response::create(
                 StatusCode::PolicySizeViolation,
                 "Reason: the response is too large".as_bytes().to_vec(),
