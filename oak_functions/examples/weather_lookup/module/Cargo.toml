@@ -9,8 +9,7 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-log = "*"
-oak_functions = { path = "../../../sdk/oak_functions", features = ["logger"] }
+oak_functions = { path = "../../../sdk/oak_functions" }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 

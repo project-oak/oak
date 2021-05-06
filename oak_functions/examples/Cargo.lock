@@ -529,7 +529,6 @@ dependencies = [
 name = "oak_functions"
 version = "0.1.0"
 dependencies = [
- "log",
  "oak_functions_abi",
 ]
 
@@ -1145,7 +1144,6 @@ version = "0.1.0"
 dependencies = [
  "http",
  "hyper",
- "log",
  "maplit",
  "oak_functions",
  "oak_functions_loader",
