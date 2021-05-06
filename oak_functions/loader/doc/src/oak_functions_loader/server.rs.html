@@ -725,6 +725,7 @@
 <span id="722">722</span>
 <span id="723">723</span>
 <span id="724">724</span>
+<span id="725">725</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -1010,7 +1011,8 @@
             );
             <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
         })<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(<span class="ident">Level</span>::<span class="ident">Debug</span>, <span class="ident">log_message</span>);
+        <span class="self">self</span>.<span class="ident">logger</span>
+            .<span class="ident">log_sensitive</span>(<span class="ident">Level</span>::<span class="ident">Debug</span>, <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;[Wasm] {}&quot;</span>, <span class="ident">log_message</span>));
         <span class="prelude-val">Ok</span>(())
     }
 
