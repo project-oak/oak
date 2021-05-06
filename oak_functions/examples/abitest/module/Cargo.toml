@@ -1,0 +1,18 @@
+[package]
+name = "oak_functions_abitest"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow = "*"
+assert_matches = "*"
+oak_functions = { path = "../../../sdk/oak_functions" }
+oak_functions_abi = { path = "../../../abi" }
+oak_functions_abitest_common = { path = "../common" }
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"

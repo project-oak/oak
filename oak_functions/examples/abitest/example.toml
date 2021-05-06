@@ -1,0 +1,21 @@
+name = "oak_functions_abitest"
+
+[applications]
+
+[applications.rust]
+type = "Functions"
+wasm_path = "oak_functions/examples/bin/oak_functions_abitest.wasm"
+target = { Cargo = { cargo_manifest = "oak_functions/examples/abitest/module/Cargo.toml" } }
+
+[backends]
+backend = { Cargo = { cargo_manifest = "oak_functions/examples/abitest/backend/Cargo.toml" }, additional_args = [
+  "--http-listen-address=[::]:8081",
+] }
+
+[server]
+additional_args = ["--config-path=./oak_functions/examples/abitest/config.toml"]
+
+[clients]
+rust = { Cargo = { cargo_manifest = "oak_functions/examples/abitest/client/Cargo.toml" }, additional_args = [
+  "--uri=http://localhost:8080/invoke"
+] }
