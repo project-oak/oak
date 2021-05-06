@@ -147,7 +147,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             &address,
             &wasm_module_bytes,
             lookup_data,
-            config.policy,
+            config.policy.unwrap(),
             async { notify_receiver.await.unwrap() },
             logger,
         )

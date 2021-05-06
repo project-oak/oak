@@ -16,11 +16,16 @@
 use hyper::client::Client;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Response, StatusCode};
-use oak_functions_loader::{logger::Logger, lookup::LookupData, server::create_and_start_server};
+use oak_functions_loader::{
+    logger::Logger,
+    lookup::LookupData,
+    server::{create_and_start_server, Policy},
+};
 use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
+    time::Duration,
 };
 
 #[tokio::test]
@@ -58,12 +63,17 @@ async fn test_server() {
     ));
     lookup_data.refresh().await.unwrap();
 
+    let policy = Policy {
+        constant_response_size_bytes: 100,
+        constant_processing_time: Duration::from_millis(200),
+    };
+
     let server_background = test_utils::background(|term| async move {
         create_and_start_server(
             &address,
             &wasm_module_bytes,
             lookup_data,
-            None,
+            policy,
             term,
             logger,
         )
@@ -77,7 +87,7 @@ async fn test_server() {
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             r#"{"temperature_degrees_celsius":10}"#,
-            std::str::from_utf8(response.body.as_slice()).unwrap()
+            std::str::from_utf8(response.body().unwrap()).unwrap()
         );
     }
     {
@@ -87,7 +97,7 @@ async fn test_server() {
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             r#"weather not found for location"#,
-            std::str::from_utf8(response.body.as_slice()).unwrap()
+            std::str::from_utf8(response.body().unwrap()).unwrap()
         );
     }
     {
@@ -97,7 +107,7 @@ async fn test_server() {
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             "could not deserialize request as JSON",
-            std::str::from_utf8(response.body.as_slice()).unwrap()
+            std::str::from_utf8(response.body().unwrap()).unwrap()
         );
     }
 
