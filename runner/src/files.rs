@@ -144,6 +144,11 @@ pub fn is_shell_script(path: &PathBuf) -> bool {
     }
 }
 
+/// Return whether the provided path refers to a `fuzz` crate for fuzz testing with `cargo-fuzz`.
+pub fn is_fuzzing_toml_file(path: &PathBuf) -> bool {
+    format!("{:?}", path).contains("/fuzz/")
+}
+
 /// Return whether the provided path refers to a `Cargo.toml` file. Note that it does not
 /// differentiate between workspace-level and crate-level files.
 fn is_cargo_toml_file(path: &PathBuf) -> bool {

@@ -22,7 +22,7 @@ use std::convert::AsRef;
 
 /// Reads and returns the user request.
 ///
-/// This function is idempotent. Multiple call to this function all return the same value.
+/// This function is idempotent. Multiple calls to this function all return the same value.
 ///
 /// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
 pub fn read_request() -> Result<Vec<u8>, OakStatus> {
