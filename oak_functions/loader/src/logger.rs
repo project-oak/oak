@@ -71,6 +71,6 @@ impl Logger {
 
 impl Default for Logger {
     fn default() -> Self {
-        Logger::new(LevelFilter::Info)
+        Logger::new(LevelFilter::Debug)
     }
 }
