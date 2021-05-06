@@ -279,7 +279,8 @@ impl WasmState {
             );
             OakStatus::ErrInvalidArgs
         })?;
-        self.logger.log_sensitive(Level::Debug, log_message);
+        self.logger
+            .log_sensitive(Level::Debug, &format!("[Wasm] {}", log_message));
         Ok(())
     }
 

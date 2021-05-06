@@ -18,6 +18,7 @@
 //! platform functionality.
 
 use oak_functions_abi::proto::OakStatus;
+use std::convert::AsRef;
 
 /// Reads and returns the user request.
 ///
@@ -82,9 +83,8 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
 /// `oak_unsafe` feature is enabled.
 ///
 /// See [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
-pub fn log(message: &str) -> Result<(), OakStatus> {
-    let message = &format!("[Wasm] {}", message);
-    let buf = message.as_bytes();
+pub fn log<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
+    let buf = message.as_ref().as_bytes();
     let status = unsafe { oak_functions_abi::write_log_message(buf.as_ptr(), buf.len()) };
     result_from_status(status as i32, ())
 }

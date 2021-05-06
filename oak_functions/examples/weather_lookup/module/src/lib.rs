@@ -48,7 +48,8 @@ pub extern "C" fn main() {
             "{},{}",
             location.latitude_degrees, location.longitude_degrees
         );
-        log(&format!("Requested location: {}", &key));
+        log(format!("Requested location: {}", &key))
+            .map_err(|_err| "could not write log message")?;
         // Try to look up the location in the storage data, and if found use the result as the
         // response message.
         let response = oak_functions::storage_get_item(key.as_bytes())
