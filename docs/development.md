@@ -11,6 +11,7 @@
   - [Run Runtime Server](#run-runtime-server)
   - [Run Example Client](#run-example-client)
   - [Signing Oak Wasm modules](#signing-oak-wasm-modules)
+- [Fuzz testing](#fuzz-testing)
 
 ## Quick Start
 
@@ -341,3 +342,23 @@ Oak clients can download the `test.pub` public key (from the reviewer's public
 repository) and use it as a
 [label](/docs/programming-oak.md#using-an-oak-application-from-a-client) for
 requests sent to the corresponding Oak application.
+
+## Fuzz testing
+
+We currently have fuzz testing enabled for Oak Functions on
+[OSS-Fuzz](https://github.com/google/oss-fuzz/tree/master/projects/oak). In
+addition, the runner has a command for running fuzz targets `run-fuzz-targets`.
+This command runs `cargo-fuzz` with the `-O` option for optimization, and
+supports all `libFuzzer` options. These options must be provided as the last
+argument. For instance, the following command runs all fuzz targets with a 2
+seconds timeout for each target.
+
+```bash
+./scripts/runner run-fuzz-targets -- -max_total_time=2
+```
+
+The following lists all the `libFuzzer` options:
+
+```bash
+./scripts/runner --logs run-fuzz-targets -- -help=1
+```

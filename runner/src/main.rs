@@ -28,7 +28,7 @@
 use colored::*;
 use maplit::hashmap;
 use once_cell::sync::Lazy;
-use std::sync::Mutex;
+use std::{path::PathBuf, sync::Mutex};
 use structopt::StructOpt;
 
 #[macro_use]
@@ -85,6 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::RunCargoTests(ref opt) => run_cargo_tests(opt.cleanup, opt.benches),
             Command::RunBazelTests => run_bazel_tests(),
             Command::RunTestsTsan => run_tests_tsan(),
+            Command::RunFuzzTargets(ref opt) => run_fuzz_targets(opt),
             Command::Format => format(),
             Command::CheckFormat => check_format(),
             Command::RunCi => run_ci(),
@@ -173,6 +174,67 @@ fn run_tests_tsan() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
         steps: vec![run_cargo_test_tsan()],
+    }
+}
+
+pub fn run_fuzz_targets(opt: &RunFuzzTargets) -> Step {
+    let cargo_manifests: Vec<(PathBuf, CargoManifest)> = crate_manifest_files()
+        .filter(|path| is_fuzzing_toml_file(path))
+        .filter(|path| match &opt.crate_name {
+            Some(crate_name) => {
+                let mut crate_path = path.clone();
+                crate_path.pop();
+                crate_path.pop();
+                crate_path.file_name().and_then(|s| s.to_str()).unwrap() == crate_name.as_str()
+            }
+            None => true,
+        })
+        .map(|path| {
+            let cargo_manifest = toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
+                panic!("could not parse cargo manifest file {:?}: {}", path, err)
+            });
+            (path, cargo_manifest)
+        })
+        .collect();
+
+    Step::Multiple {
+        name: "fuzzing".to_string(),
+        steps: cargo_manifests
+            .iter()
+            .map(|(path, cargo_manifest)| run_fuzz_targets_in_crate(path, &cargo_manifest, opt))
+            .collect(),
+    }
+}
+
+pub fn run_fuzz_targets_in_crate(
+    path: &PathBuf,
+    cargo_manifest: &CargoManifest,
+    opt: &RunFuzzTargets,
+) -> Step {
+    // `cargo-fuzz` can only run in the crate that contains the `fuzz` crate. So we need to use
+    // `Cmd::new_in_dir` to execute the command inside the crate's directory.
+    let mut crate_path = path.clone();
+    crate_path.pop();
+    crate_path.pop();
+
+    Step::Multiple {
+        name: format!("fuzzing {:?}", &crate_path.file_name().unwrap()),
+        steps: cargo_manifest
+            .bin
+            .iter()
+            .filter(|binary| match &opt.target_name {
+                Some(target_name) => &binary.name == target_name,
+                None => true,
+            })
+            .map(|binary| Step::Single {
+                name: binary.name.clone(),
+                command: Cmd::new_in_dir(
+                    "cargo-fuzz",
+                    spread!["run".to_string(), binary.name.clone(), "--target=x86_64-unknown-linux-gnu".to_string(), "-O".to_string(), "--".to_string(), ...opt.args],
+                    &crate_path,
+                ),
+            })
+            .collect(),
     }
 }
 
