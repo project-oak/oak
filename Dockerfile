@@ -219,6 +219,11 @@ RUN rustup component add \
 ARG deadlinks_version=0.5.0
 RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 
+# Install cargo-fuzz. 
+# To allow local testing of the fuzzing functionality.
+ARG cargo_fuzz_version=0.10.1
+RUN cargo install --version=${cargo_fuzz_version} cargo-fuzz
+
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
 

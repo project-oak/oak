@@ -2,10 +2,7 @@
 #
 # For further details on all configuration options see:
 # https://embarkstudios.github.io/cargo-deny/checks/cfg.html
-targets = [
-  { triple = "wasm32-unknown-unknown" },
-  { triple = "x86_64-unknown-linux-musl" },
-]
+targets = [{ triple = "x86_64-unknown-linux-musl" }]
 
 # Deny all advisories unless explicitly ignored.
 [advisories]
@@ -13,10 +10,6 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = [
-  # TODO(#2055): Remove once tink dependencies are updated.
-  "RUSTSEC-2021-0064",
-]
 
 # Deny multiple versions unless explicitly skipped.
 [bans]
@@ -26,7 +19,7 @@ wildcards = "allow"
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
-allow = ["Apache-2.0", "ISC", "MIT", "OpenSSL"]
+allow = ["Apache-2.0", "MPL-2.0", "MIT", "ISC", "OpenSSL"]
 copyleft = "deny"
 
 [[licenses.clarify]]
