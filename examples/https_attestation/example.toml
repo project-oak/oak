@@ -1,0 +1,20 @@
+name = "https_attestation"
+
+[applications]
+
+[backends]
+proxy = { Cargo = { cargo_manifest = "experimental/https_attestation/Cargo.toml" }, additional_args = [
+  "--https-listen-address=[::]:8888",
+  "--https-private-key=./examples/certs/local/local.key",
+  "--https-certificate=./examples/certs/local/local.pem",
+  "--backend-uri=http://localhost:8081",
+] }
+backend = { Cargo = { cargo_manifest = "examples/https_attestation/backend/Cargo.toml" }, additional_args = [
+  "--http-listen-address=[::]:8081",
+] }
+
+[clients]
+rust = { Cargo = { cargo_manifest = "examples/https_attestation/client/Cargo.toml" }, additional_args = [
+  "--root-https-certificate=./examples/certs/local/ca.pem",
+  "--attestation-service-uri=https://localhost:8888",
+] }

@@ -29,7 +29,7 @@ const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
 /// Placeholder implementation of TEE report for remote attestation.
 /// https://www.amd.com/system/files/TechDocs/56860.pdf#page=39
 ///
-/// TODO(#1867): Add remote attestation support and use real TEE report.
+/// TODO(#1867): Add remote attestation support and use real TEE reports.
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct Report {
     /// Version number of this attestation report.
@@ -84,5 +84,12 @@ impl AttestationInfo {
         // corresponds to an X.509 extension implementation.
         X509Extension::new_nid(None, None, Nid::NETSCAPE_COMMENT, &serialized_string)
             .context("Couldn't create X.509 extension")
+    }
+
+    /// Verifies that `AttestationInfo::report` is signed by `AttestationInfo::certificate`.
+    pub fn verify(&self) -> anyhow::Result<()> {
+        // TODO(#1867): Add remote attestation support, use real TEE reports and check that
+        // `AttestationInfo::certificate` is signed by one of the root certificates.
+        Ok(())
     }
 }

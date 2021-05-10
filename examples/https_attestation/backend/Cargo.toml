@@ -1,0 +1,24 @@
+[package]
+name = "https_attestation_backend"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+http = "*"
+hyper = { version = "*", features = ["http1", "http2", "runtime", "server"] }
+env_logger = "*"
+futures = "*"
+futures-core = "*"
+futures-util = "*"
+log = "*"
+structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "signal",
+  "sync",
+  "rt-multi-thread"
+] }
