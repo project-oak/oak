@@ -35,6 +35,7 @@ jobs:
           - run-examples --server-variant=base --application-variant=rust
             --example-name=hello_world --build-docker
           - run-functions-examples --application-variant=rust
+          - run-fuzz-targets -- -max_total_time=2
 
     steps:
       - name: Checkout branch

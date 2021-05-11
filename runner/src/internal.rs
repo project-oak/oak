@@ -20,6 +20,7 @@ use colored::*;
 use nix::sys::signal::Signal;
 use std::{
     collections::{HashMap, HashSet},
+    path::PathBuf,
     time::Instant,
 };
 use structopt::StructOpt;
@@ -51,6 +52,7 @@ pub enum Command {
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
     RunTestsTsan,
+    RunFuzzTargets(RunFuzzTargets),
     RunCargoDeny,
     RunCargoUdeps,
     RunCi,
@@ -291,6 +293,41 @@ impl RustBinaryOptions for BuildServer {
             _ => true,
         }
     }
+}
+
+#[derive(StructOpt, Clone)]
+pub struct RunFuzzTargets {
+    #[structopt(
+        long,
+        help = "name of a specific crate with fuzz-target. If not specified, runs all fuzz targets for all crates."
+    )]
+    pub crate_name: Option<String>,
+    #[structopt(
+        long,
+        help = "name of a specific fuzz-target. If not specified, runs all fuzz targets.",
+        requires("crate-name")
+    )]
+    pub target_name: Option<String>,
+    /// Additional `libFuzzer` arguments passed through to the binary
+    #[structopt(last(true))]
+    pub args: Vec<String>,
+}
+
+/// Partial representation of Cargo manifest files.
+///
+/// Only the fields that are required for extracting specific information (e.g., names of fuzz
+/// targets) are included.
+#[derive(serde::Deserialize, Debug)]
+pub struct CargoManifest {
+    #[serde(default)]
+    pub bin: Vec<CargoBinary>,
+}
+
+/// Partial information about a Cargo binary, as included in a Cargo manifest.
+#[derive(serde::Deserialize, Debug)]
+pub struct CargoBinary {
+    #[serde(default)]
+    pub name: String,
 }
 
 /// A construct to keep track of the status of the execution. It only cares about the top-level
@@ -624,6 +661,7 @@ pub struct Cmd {
     executable: String,
     args: Vec<String>,
     env: HashMap<String, String>,
+    current_dir: Option<PathBuf>,
 }
 
 impl Cmd {
@@ -636,6 +674,7 @@ impl Cmd {
             executable: executable.to_string(),
             args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
             env: HashMap::new(),
+            current_dir: None,
         })
     }
 
@@ -648,6 +687,20 @@ impl Cmd {
             executable: executable.to_string(),
             args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
             env: env.clone(),
+            current_dir: None,
+        })
+    }
+
+    pub fn new_in_dir<I, S>(executable: &str, args: I, current_dir: &PathBuf) -> Box<Self>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        Box::new(Cmd {
+            executable: executable.to_string(),
+            args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
+            env: HashMap::new(),
+            current_dir: Some(current_dir.clone()),
         })
     }
 }
@@ -726,6 +779,10 @@ impl Runnable for Cmd {
             } else {
                 std::process::Stdio::piped()
             };
+            if let Some(current_dir) = self.current_dir {
+                cmd.current_dir(current_dir);
+            }
+
             let child = cmd
                 // Close stdin to avoid hanging.
                 .stdin(std::process::Stdio::null())
