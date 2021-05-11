@@ -1,0 +1,54 @@
+[package]
+name = "oak_grpc_attestation"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+name = "oak_grpc_attestation"
+path = "src/lib.rs"
+
+[[bin]]
+name = "oak_grpc_attestation_bin"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "*"
+async-stream = "*"
+env_logger = "*"
+futures = "*"
+futures-core = "*"
+futures-util = "*"
+hex = "*"
+http = "*"
+hyper = { version = "*", features = [
+  "client",
+  "http1",
+  "http2",
+  "runtime",
+  "server"
+] }
+log = "*"
+oak_attestation_common = { version = "*", path = "../attestation_common" }
+openssl = "*"
+prost = "*"
+ring = "*"
+rustls = "*"
+serde = "*"
+serde_json = "*"
+sha2 = "*"
+structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "net",
+  "signal",
+  "sync",
+  "rt-multi-thread"
+] }
+tokio-rustls = "*"
+tonic = { version = "*", features = ["tls"] }
+
+[build-dependencies]
+oak_utils = { path = "../../oak_utils" }

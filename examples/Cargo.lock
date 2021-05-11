@@ -962,6 +962,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "grpc_attestation_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "base64 0.13.0",
+ "env_logger",
+ "http",
+ "log",
+ "oak_abi",
+ "oak_attestation_common",
+ "oak_client",
+ "oak_grpc_attestation",
+ "oak_grpc_attestation_client",
+ "oak_sign",
+ "pem",
+ "prost",
+ "ring",
+ "structopt",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1566,6 +1591,7 @@ dependencies = [
  "anyhow",
  "log",
  "openssl",
+ "ring",
  "rustls",
  "serde",
  "serde_json",
@@ -1601,6 +1627,64 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "oak_grpc_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "env_logger",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "hex",
+ "http",
+ "hyper",
+ "log",
+ "oak_attestation_common",
+ "oak_utils",
+ "openssl",
+ "prost",
+ "ring",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha2",
+ "structopt",
+ "tokio",
+ "tokio-rustls",
+ "tonic",
+]
+
+[[package]]
+name = "oak_grpc_attestation_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "env_logger",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "hex",
+ "http",
+ "hyper",
+ "log",
+ "oak_attestation_common",
+ "oak_grpc_attestation",
+ "openssl",
+ "prost",
+ "ring",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha2",
+ "structopt",
+ "tokio",
+ "tokio-rustls",
+ "tonic",
 ]
 
 [[package]]

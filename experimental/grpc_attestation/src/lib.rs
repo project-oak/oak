@@ -14,18 +14,6 @@
 // limitations under the License.
 //
 
-pub mod certificate;
-pub mod crypto;
-pub mod keying_material;
-pub mod report;
-#[cfg(test)]
-mod tests;
-
-use sha2::{digest::Digest, Sha256};
-
-/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
-pub fn get_sha256(input: &[u8]) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-    hasher.update(&input);
-    hasher.finalize().to_vec()
+pub mod proto {
+    tonic::include_proto!("oak.examples.grpc_attestation");
 }
