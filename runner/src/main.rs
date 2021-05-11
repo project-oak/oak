@@ -178,7 +178,7 @@ fn run_tests_tsan() -> Step {
 }
 
 pub fn run_fuzz_targets(opt: &RunFuzzTargets) -> Step {
-    let cargo_manifests: Vec<(PathBuf, CargoManifest)> = crate_manifest_files()
+    let cargo_manifests: Vec<PathBuf> = crate_manifest_files()
         .filter(|path| is_fuzzing_toml_file(path))
         .filter(|path| match &opt.crate_name {
             Some(crate_name) => {
@@ -189,33 +189,27 @@ pub fn run_fuzz_targets(opt: &RunFuzzTargets) -> Step {
             }
             None => true,
         })
-        .map(|path| {
-            let cargo_manifest = toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
-                panic!("could not parse cargo manifest file {:?}: {}", path, err)
-            });
-            (path, cargo_manifest)
-        })
         .collect();
 
     Step::Multiple {
         name: "fuzzing".to_string(),
         steps: cargo_manifests
             .iter()
-            .map(|(path, cargo_manifest)| run_fuzz_targets_in_crate(path, &cargo_manifest, opt))
+            .map(|path| run_fuzz_targets_in_crate(path, opt))
             .collect(),
     }
 }
 
-pub fn run_fuzz_targets_in_crate(
-    path: &PathBuf,
-    cargo_manifest: &CargoManifest,
-    opt: &RunFuzzTargets,
-) -> Step {
+pub fn run_fuzz_targets_in_crate(path: &PathBuf, opt: &RunFuzzTargets) -> Step {
     // `cargo-fuzz` can only run in the crate that contains the `fuzz` crate. So we need to use
-    // `Cmd::new_in_dir` to execute the command inside the crate's directory.
+    // `Cmd::new_in_dir` to execute the command inside the crate's directory. Pop the two components
+    // (i.e., `fuzz/Cargo.toml`) to get to the crate path.
     let mut crate_path = path.clone();
     crate_path.pop();
     crate_path.pop();
+
+    let cargo_manifest: CargoManifest = toml::from_str(&read_file(&path))
+        .unwrap_or_else(|err| panic!("could not parse cargo manifest file {:?}: {}", path, err));
 
     Step::Multiple {
         name: format!("fuzzing {:?}", &crate_path.file_name().unwrap()),
