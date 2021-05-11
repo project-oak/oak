@@ -763,6 +763,62 @@
 <span id="760">760</span>
 <span id="761">761</span>
 <span id="762">762</span>
+<span id="763">763</span>
+<span id="764">764</span>
+<span id="765">765</span>
+<span id="766">766</span>
+<span id="767">767</span>
+<span id="768">768</span>
+<span id="769">769</span>
+<span id="770">770</span>
+<span id="771">771</span>
+<span id="772">772</span>
+<span id="773">773</span>
+<span id="774">774</span>
+<span id="775">775</span>
+<span id="776">776</span>
+<span id="777">777</span>
+<span id="778">778</span>
+<span id="779">779</span>
+<span id="780">780</span>
+<span id="781">781</span>
+<span id="782">782</span>
+<span id="783">783</span>
+<span id="784">784</span>
+<span id="785">785</span>
+<span id="786">786</span>
+<span id="787">787</span>
+<span id="788">788</span>
+<span id="789">789</span>
+<span id="790">790</span>
+<span id="791">791</span>
+<span id="792">792</span>
+<span id="793">793</span>
+<span id="794">794</span>
+<span id="795">795</span>
+<span id="796">796</span>
+<span id="797">797</span>
+<span id="798">798</span>
+<span id="799">799</span>
+<span id="800">800</span>
+<span id="801">801</span>
+<span id="802">802</span>
+<span id="803">803</span>
+<span id="804">804</span>
+<span id="805">805</span>
+<span id="806">806</span>
+<span id="807">807</span>
+<span id="808">808</span>
+<span id="809">809</span>
+<span id="810">810</span>
+<span id="811">811</span>
+<span id="812">812</span>
+<span id="813">813</span>
+<span id="814">814</span>
+<span id="815">815</span>
+<span id="816">816</span>
+<span id="817">817</span>
+<span id="818">818</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -794,7 +850,7 @@
 <span class="kw">use</span> <span class="ident">colored</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">maplit</span>::<span class="ident">hashmap</span>;
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Mutex</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">sync</span>::<span class="ident">Mutex</span>};
 <span class="kw">use</span> <span class="ident">structopt</span>::<span class="ident">StructOpt</span>;
 
 <span class="attribute">#[<span class="ident">macro_use</span>]</span>
@@ -851,6 +907,7 @@
             <span class="ident">Command</span>::<span class="ident">RunCargoTests</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_cargo_tests</span>(<span class="ident">opt</span>.<span class="ident">cleanup</span>, <span class="ident">opt</span>.<span class="ident">benches</span>),
             <span class="ident">Command</span>::<span class="ident">RunBazelTests</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_bazel_tests</span>(),
             <span class="ident">Command</span>::<span class="ident">RunTestsTsan</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_tests_tsan</span>(),
+            <span class="ident">Command</span>::<span class="ident">RunFuzzTargets</span>(<span class="kw-2">ref</span> <span class="ident">opt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_fuzz_targets</span>(<span class="ident">opt</span>),
             <span class="ident">Command</span>::<span class="ident">Format</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">format</span>(),
             <span class="ident">Command</span>::<span class="ident">CheckFormat</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">check_format</span>(),
             <span class="ident">Command</span>::<span class="ident">RunCi</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">run_ci</span>(),
@@ -939,6 +996,61 @@
     <span class="ident">Step</span>::<span class="ident">Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;tests&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">steps</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">run_cargo_test_tsan</span>()],
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_fuzz_targets</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunFuzzTargets</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    <span class="kw">let</span> <span class="ident">cargo_manifests</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PathBuf</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">crate_manifest_files</span>()
+        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">is_fuzzing_toml_file</span>(<span class="ident">path</span>))
+        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">crate_name</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">crate_name</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">crate_path</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">clone</span>();
+                <span class="ident">crate_path</span>.<span class="ident">pop</span>();
+                <span class="ident">crate_path</span>.<span class="ident">pop</span>();
+                <span class="ident">crate_path</span>.<span class="ident">file_name</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_str</span>()).<span class="ident">unwrap</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">crate_name</span>.<span class="ident">as_str</span>()
+            }
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+        })
+        .<span class="ident">collect</span>();
+
+    <span class="ident">Step</span>::<span class="ident">Multiple</span> {
+        <span class="ident">name</span>: <span class="string">&quot;fuzzing&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="ident">steps</span>: <span class="ident">cargo_manifests</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">run_fuzz_targets_in_crate</span>(<span class="ident">path</span>, <span class="ident">opt</span>))
+            .<span class="ident">collect</span>(),
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_fuzz_targets_in_crate</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">PathBuf</span>, <span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunFuzzTargets</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    <span class="comment">// `cargo-fuzz` can only run in the crate that contains the `fuzz` crate. So we need to use</span>
+    <span class="comment">// `Cmd::new_in_dir` to execute the command inside the crate&#39;s directory. Pop the two components</span>
+    <span class="comment">// (i.e., `fuzz/Cargo.toml`) to get to the crate path.</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">crate_path</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">clone</span>();
+    <span class="ident">crate_path</span>.<span class="ident">pop</span>();
+    <span class="ident">crate_path</span>.<span class="ident">pop</span>();
+
+    <span class="kw">let</span> <span class="ident">cargo_manifest</span>: <span class="ident">CargoManifest</span> <span class="op">=</span> <span class="ident">toml</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>))
+        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;could not parse cargo manifest file {:?}: {}&quot;</span>, <span class="ident">path</span>, <span class="ident">err</span>));
+
+    <span class="ident">Step</span>::<span class="ident">Multiple</span> {
+        <span class="ident">name</span>: <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;fuzzing {:?}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">crate_path</span>.<span class="ident">file_name</span>().<span class="ident">unwrap</span>()),
+        <span class="ident">steps</span>: <span class="ident">cargo_manifest</span>
+            .<span class="ident">bin</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">binary</span><span class="op">|</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">target_name</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">target_name</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">binary</span>.<span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">target_name</span>,
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+            })
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">binary</span><span class="op">|</span> <span class="ident">Step</span>::<span class="ident">Single</span> {
+                <span class="ident">name</span>: <span class="ident">binary</span>.<span class="ident">name</span>.<span class="ident">clone</span>(),
+                <span class="ident">command</span>: <span class="ident">Cmd</span>::<span class="ident">new_in_dir</span>(
+                    <span class="string">&quot;cargo-fuzz&quot;</span>,
+                    <span class="macro">spread</span><span class="macro">!</span>[<span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(), <span class="ident">binary</span>.<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="string">&quot;--target=x86_64-unknown-linux-gnu&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;-O&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;--&quot;</span>.<span class="ident">to_string</span>(), ...<span class="ident">opt</span>.<span class="ident">args</span>],
+                    <span class="kw-2">&amp;</span><span class="ident">crate_path</span>,
+                ),
+            })
+            .<span class="ident">collect</span>(),
     }
 }
 
