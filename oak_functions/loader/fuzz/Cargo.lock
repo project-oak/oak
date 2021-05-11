@@ -597,9 +597,11 @@ dependencies = [
 name = "oak_functions_loader-fuzz"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "libfuzzer-sys",
  "oak_functions_abi",
  "oak_functions_loader",
+ "tokio",
 ]
 
 [[package]]

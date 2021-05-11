@@ -20,7 +20,7 @@ use libfuzzer_sys::{
     fuzz_target,
 };
 use oak_functions_abi::proto::{Response, StatusCode};
-use oak_functions_loader::server::{create_response_and_apply_policy, Policy};
+use oak_functions_loader::server::{apply_policy, Policy};
 
 #[derive(Debug)]
 struct ResponseAndValidPolicy {
@@ -51,6 +51,20 @@ impl Arbitrary<'_> for ResponseAndValidPolicy {
 }
 
 fuzz_target!(|data: ResponseAndValidPolicy| {
-    // With a valid policy, it should always be possible to create an HTTP response.
-    let _http_response = create_response_and_apply_policy(data.response, &data.policy).unwrap();
+    let policy = data.policy;
+    let function = move || handle_request(data.response);
+    let response = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(apply_policy(policy, function))
+        .unwrap();
+
+    // Check the response size
+    assert_eq!(response.body.len(), policy.constant_response_size_bytes)
 });
+
+// async closures are unstable, instead this function is used to return a future
+async fn handle_request(response: Response) -> anyhow::Result<Response> {
+    Ok(response)
+}

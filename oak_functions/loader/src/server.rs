@@ -17,16 +17,10 @@ use crate::{logger::Logger, lookup::LookupData};
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
-use http::request::Request;
-use hyper::{
-    service::{make_service_fn, service_fn},
-    Body, Server,
-};
 use log::Level;
 use oak_functions_abi::proto::{OakStatus, Response, StatusCode};
-use prost::Message;
 use serde::Deserialize;
-use std::{future::Future, net::SocketAddr, str, sync::Arc, time::Duration};
+use std::{str, sync::Arc, time::Duration};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -53,7 +47,7 @@ const MIN_RESPONSE_SIZE: usize = 50;
 
 /// A policy describing limits on the size of the response and response processing time to avoid
 /// side-channel leaks.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Copy)]
 #[serde(deny_unknown_fields)]
 pub struct Policy {
     /// A fixed size for responses returned by the trusted runtime.
@@ -88,72 +82,35 @@ impl Policy {
     }
 }
 
-/// Trait with a single function for serializing objects into byte arrays of a fixed size.
-trait FixedSizeSerializer {
-    /// Serializes this instance into a vector of a fixed size, based on the input `size_hint`.
-    fn serialize(&self, size_hint: usize) -> anyhow::Result<Vec<u8>>;
+/// Trait with a single function for padding objects so that they could be serialized into byte
+/// arrays of a fixed size.
+trait FixedSizePadder {
+    /// Add padding to this instance based on the input `size_hint`.
+    fn pad(&self, size_hint: usize) -> anyhow::Result<Self>
+    where
+        Self: std::marker::Sized;
 }
 
-impl FixedSizeSerializer for Response {
-    /// Serializes the response into a vector of constant size.
-    ///
-    /// The resulting byte array is the binary protobuf encoding of this response instance, but with
-    /// the `body` padded with a number of trailing 0s, to make its length equal to `body_size`.
-    /// Returns an error if `body` is larger than `body_size`.
-    fn serialize(&self, body_size: usize) -> anyhow::Result<Vec<u8>> {
+impl FixedSizePadder for Response {
+    /// Creates and returns a new [`Response`] instance with the same `status` and `body` as `self`,
+    /// except that the `body` may be padded, by adding a number trailing 0s, to make its length
+    /// equal to `body_size`. Sets the `length` of the new instance to the length of `self.body`.
+    /// Returns an error if the length of the `body` is larger than `body_size`.
+    fn pad(&self, body_size: usize) -> anyhow::Result<Self> {
         if self.body.len() <= body_size {
             let mut body = self.body.as_slice().to_vec();
             // Set the length to the actual length of the body before padding.
             let length = body.len() as u64;
             // Add trailing 0s
             body.resize(body_size, 0);
-            let response = Response {
+            Ok(Response {
                 status: self.status,
                 body,
                 length,
-            };
-            let mut encoded = vec![];
-            response
-                .encode(&mut encoded)
-                .context("unreachable: buffer is too small for the encoded message")?;
-            Ok(encoded)
+            })
         } else {
             anyhow::bail!("response body is larger than the input body_size")
         }
-    }
-}
-
-/// Creates an HTTP response, with status `OK`, and the protobuf-encoded `response` as its body.
-///
-/// To conform to the given security policy, and to keep the total size of the HTTP response
-/// constant, the body of the `response` may be padded by a number of trailing 0s before encoding it
-/// as a binary protobuf message. In this case, the `length` in the `response` will contain the
-/// effective length of the `body`. If the size of the `body` in the input `response` is larger than
-/// `policy.constant_response_size_bytes`, then the `response` is discarded and a response with
-/// status `PolicySizeViolation` is instead included in the HTTP response to the client. For a valid
-/// policy, this response is guaranteed to comply with the `policy.constant_response_size_bytes`
-/// restriction. If the policy is not valid, the function returns early with an error.
-pub fn create_response_and_apply_policy(
-    response: Response,
-    policy: &Policy,
-) -> anyhow::Result<http::response::Response<Body>> {
-    // check that the policy is valid
-    policy.validate()?;
-
-    // Serialize the response. If successful, create and return an HTTP response with it.
-    match response.serialize(policy.constant_response_size_bytes) {
-        Err(_err) => {
-            let rsp = Response::create(
-                StatusCode::PolicySizeViolation,
-                "Reason: the response is too large".as_bytes().to_vec(),
-            );
-            // For a valid policy, this will not result in any more recursive calls.
-            create_response_and_apply_policy(rsp, policy)
-        }
-        Ok(encoded) => http::response::Builder::new()
-            .status(hyper::StatusCode::OK)
-            .body(Body::from(encoded))
-            .context("couldn't create response"),
     }
 }
 
@@ -486,22 +443,26 @@ fn check_export_function_signature(
     }
 }
 
-/// Runs the given function and applies the given policy to the execution and result of the
-/// function.
+/// Runs the given function and applies the given security policy to the execution of the function
+/// and the response returned from it. Serializes and returns the response as a binary
+/// protobuf-encoded byte array of a constant size.
 ///
-/// If the policy is `None`, this function just runs the given function and returns its result.
-/// If a policy is present, the given function is run, but its generated response is only returned
-/// if allowed by the policy. If the execution of the function takes longer than allowed by the
-/// policy, or the resulting response is larger than allowed by the policy, an error response
-/// generated by the policy is returned instead of the actual response.
-async fn apply_policy<F, S>(
-    policy: Policy,
-    function: F,
-) -> anyhow::Result<http::response::Response<Body>>
+/// If the execution of the `function` takes longer than allowed by the given security policy,
+/// an error response with status `PolicyTimeViolation` is returned. If the size of the `body` in
+/// the response returned by the `function` is larger than allowed by the security policy, the
+/// response is discarded and a response with status `PolicySizeViolation` is returned instead.
+/// In all cases, to keep the total size of the returned byte array constant, the `body` of the
+/// response may be padded by a number of trailing 0s before encoding the response as a binary
+/// protobuf message. In this case, the `length` in the response will contain the effective length
+/// of the `body`. For a valid security policy, this response is guaranteed to comply with the
+/// policy's size restriction. If the policy is not valid, the function returns early with an error.
+pub async fn apply_policy<F, S>(policy: Policy, function: F) -> anyhow::Result<Response>
 where
     F: std::marker::Send + 'static + FnOnce() -> S,
     S: std::future::Future<Output = anyhow::Result<Response>> + std::marker::Send,
 {
+    policy.validate()?;
+
     // Use tokio::spawn to actually run the tasks in parallel, for more accurate measurement
     // of time.
     let task = tokio::spawn(async move { function().await });
@@ -532,7 +493,17 @@ where
             },
         },
     };
-    create_response_and_apply_policy(response, &policy)
+
+    // Return an error response if the body of the response is larger than allowed by the policy.
+    let response = if response.body.len() > policy.constant_response_size_bytes {
+        Response::create(
+            StatusCode::PolicySizeViolation,
+            "Reason: the response is too large".as_bytes().to_vec(),
+        )
+    } else {
+        response
+    };
+    response.pad(policy.constant_response_size_bytes)
 }
 
 // An ephemeral request handler with a Wasm module for handling the requests.
@@ -559,25 +530,10 @@ impl WasmHandler {
         })
     }
 
-    pub async fn handle_request(self, req: Request<Body>) -> anyhow::Result<Response> {
-        self.logger
-            .log_sensitive(Level::Info, &format!("The request is: {:?}", req));
-        match (req.method(), req.uri().path()) {
-            (&hyper::Method::POST, "/invoke") => self.handle_invoke(req).await,
-            (method, path) => Ok(Response::create(
-                StatusCode::BadRequest,
-                format!("Invalid request: {} {}\n", method, path)
-                    .as_bytes()
-                    .to_vec(),
-            )),
-        }
-    }
-
-    async fn handle_invoke(&self, req: Request<Body>) -> anyhow::Result<Response> {
-        let request_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
+    pub async fn handle_invoke(&self, request_bytes: Vec<u8>) -> anyhow::Result<Response> {
         let mut wasm_state = WasmState::new(
             &self.module,
-            request_bytes.to_vec(),
+            request_bytes,
             self.lookup_data.clone(),
             self.logger.clone(),
         )?;
@@ -587,59 +543,6 @@ impl WasmHandler {
             wasm_state.get_response_bytes(),
         ))
     }
-}
-
-/// Starts an HTTP server on the given address, serving the main function of the given Wasm module.
-pub async fn create_and_start_server<F: Future<Output = ()>>(
-    address: &SocketAddr,
-    wasm_module_bytes: &[u8],
-    lookup_data: Arc<LookupData>,
-    policy: Policy,
-    terminate: F,
-    logger: Logger,
-) -> anyhow::Result<()> {
-    let wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, logger.clone())?;
-
-    // A `Service` is needed for every connection. Here we create a service using the
-    // `wasm_handler`.
-    let service = make_service_fn(move |_conn| {
-        let wasm_handler = wasm_handler.clone();
-        let policy = policy.clone();
-        async move {
-            Ok::<_, hyper::Error>(service_fn(move |req| {
-                let wasm_handler = wasm_handler.clone();
-                let policy = policy.clone();
-                let func = move || wasm_handler.handle_request(req);
-                async move { apply_policy(policy, func).await }
-            }))
-        }
-    });
-
-    let server = Server::bind(address)
-        .http2_only(true)
-        .serve(service)
-        .with_graceful_shutdown(terminate);
-
-    logger.log_public(
-        Level::Info,
-        &format!(
-            "{:?}: Started HTTP server on {:?}",
-            std::thread::current().id(),
-            &address
-        ),
-    );
-
-    // Run until asked to terminate...
-    let result = server.await;
-
-    logger.log_public(
-        Level::Info,
-        &format!(
-            "HTTP server on addr {} terminated with {:?}",
-            &address, result
-        ),
-    );
-    Ok(())
 }
 
 /// A resolver function, mapping `oak_functions` host function names to an index and a type

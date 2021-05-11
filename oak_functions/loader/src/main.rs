@@ -30,10 +30,11 @@ use structopt::StructOpt;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
+mod http;
 mod logger;
 mod lookup;
 mod server;
-use crate::{logger::Logger, lookup::LookupData, server::create_and_start_server};
+use crate::{http::create_and_start_server, logger::Logger, lookup::LookupData};
 use server::Policy;
 
 #[cfg(test)]

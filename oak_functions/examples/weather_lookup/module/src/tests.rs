@@ -17,9 +17,7 @@ use hyper::client::Client;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Response, StatusCode};
 use oak_functions_loader::{
-    logger::Logger,
-    lookup::LookupData,
-    server::{create_and_start_server, Policy},
+    http::create_and_start_server, logger::Logger, lookup::LookupData, server::Policy,
 };
 use prost::Message;
 use std::{
