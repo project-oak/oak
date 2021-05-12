@@ -14,8 +14,12 @@
 // limitations under the License.
 //
 
-pub mod grpc;
-pub mod http;
-pub mod logger;
-pub mod lookup;
-pub mod server;
+syntax = "proto3";
+
+package oak.functions.server;
+
+import "invocation.proto";
+
+service GrpcServer {
+  rpc Invoke(oak.functions.invocation.Request) returns (oak.functions.invocation.Response);
+}

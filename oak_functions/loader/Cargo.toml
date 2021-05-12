@@ -43,6 +43,7 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 toml = "*"
+tonic = { version = "*", features = ["tls"] }
 wasmi = "*"
 signal-hook = "*"
 
@@ -50,3 +51,11 @@ signal-hook = "*"
 hyper = { version = "*", features = ["client", "http2"] }
 maplit = "*"
 test_utils = { path = "../sdk/test_utils" }
+
+[build-dependencies]
+# Disable the `rustfmt` feature, as it requires `rustfmt` which may not be supported for custom
+# toolchains.
+tonic-build = { version = "*", default-features = false, features = [
+  "prost",
+  "transport"
+] }

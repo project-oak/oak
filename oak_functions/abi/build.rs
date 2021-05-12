@@ -20,7 +20,7 @@ fn main() {
     let file_paths = [
         "../proto/abi.proto",
         "../proto/lookup_data.proto",
-        "../proto/response.proto",
+        "../proto/invocation.proto",
     ];
     prost_build::compile_protos(&file_paths, &["../proto"]).expect("Proto compilation failed");
 
