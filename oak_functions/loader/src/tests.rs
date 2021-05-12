@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::{
-    http::{create_and_start_server, handle_request},
+    http::{create_and_start_http_server, handle_request},
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData},
     server::{apply_policy, Policy, WasmHandler},
@@ -145,7 +145,7 @@ where
     lookup_data.refresh().await.unwrap();
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_server(
+        create_and_start_http_server(
             &address,
             &wasm_module_bytes,
             lookup_data,

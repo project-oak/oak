@@ -17,7 +17,7 @@ use hyper::client::Client;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Response, StatusCode};
 use oak_functions_loader::{
-    http::create_and_start_server, logger::Logger, lookup::LookupData, server::Policy,
+    http::create_and_start_http_server, logger::Logger, lookup::LookupData, server::Policy,
 };
 use prost::Message;
 use std::{
@@ -67,7 +67,7 @@ async fn test_server() {
     };
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_server(
+        create_and_start_http_server(
             &address,
             &wasm_module_bytes,
             lookup_data,

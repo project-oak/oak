@@ -30,11 +30,19 @@ use structopt::StructOpt;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
+pub mod proto {
+    tonic::include_proto!("oak.functions.server");
+}
+
+mod grpc;
 mod http;
 mod logger;
 mod lookup;
 mod server;
-use crate::{http::create_and_start_server, logger::Logger, lookup::LookupData};
+use crate::{
+    grpc::create_and_start_grpc_server, http::create_and_start_http_server, logger::Logger,
+    lookup::LookupData,
+};
 use server::Policy;
 
 #[cfg(test)]
@@ -62,6 +70,24 @@ struct Config {
     /// See https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads.
     worker_threads: Option<usize>,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+enum Protocol {
+    Http2,
+    Grpc,
+}
+
+impl std::str::FromStr for Protocol {
+    type Err = String;
+    fn from_str(protocol: &str) -> Result<Self, Self::Err> {
+        match protocol {
+            "http2" => Ok(Protocol::Http2),
+            "grpc" => Ok(Protocol::Grpc),
+            _ => Err(format!("Failed to parse server variant {}", protocol)),
+        }
+    }
+}
+
 /// Command line options for the Oak loader.
 ///
 /// In general, when adding new configuration parameters, they should go in the `Config` struct
@@ -76,6 +102,8 @@ pub struct Opt {
         help = "Port number that the server listens on."
     )]
     http_listen_port: u16,
+    #[structopt(long, default_value = "http2", help = "protocol: [http2, grpc]")]
+    protocol: Protocol,
     #[structopt(
         long,
         help = "Path to a Wasm file to be loaded and executed per invocation. The Wasm module must export a function named `main`."
@@ -142,19 +170,34 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
         .and_then(|policy| policy.validate())?;
 
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
-    // Start HTTP server.
-    let server_handle = tokio::spawn(async move {
-        create_and_start_server(
-            &address,
-            &wasm_module_bytes,
-            lookup_data,
-            config.policy.unwrap(),
-            async { notify_receiver.await.unwrap() },
-            logger,
-        )
-        .await
-        .context("error while waiting for the server to terminate")
-    });
+
+    // Start server.
+    let server_handle = match opt.protocol {
+        Protocol::Http2 => tokio::spawn(async move {
+            create_and_start_http_server(
+                &address,
+                &wasm_module_bytes,
+                lookup_data,
+                config.policy.unwrap(),
+                async { notify_receiver.await.unwrap() },
+                logger,
+            )
+            .await
+            .context("error while waiting for the server to terminate")
+        }),
+        Protocol::Grpc => tokio::spawn(async move {
+            create_and_start_grpc_server(
+                &address,
+                &wasm_module_bytes,
+                lookup_data,
+                config.policy.unwrap(),
+                async { notify_receiver.await.unwrap() },
+                logger,
+            )
+            .await
+            .context("error while waiting for the server to terminate")
+        }),
+    };
 
     // Wait for the termination signal.
     let done = Arc::new(AtomicBool::new(false));

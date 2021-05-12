@@ -45,7 +45,7 @@ pub fn create_http_response(response: Response) -> anyhow::Result<http::response
 
 /// Starts an HTTP server on the given address, serving the `main` function of the given Wasm
 /// module.
-pub async fn create_and_start_server<F: Future<Output = ()>>(
+pub async fn create_and_start_http_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,

@@ -45,8 +45,9 @@ enum StatusCode {
   INTERNAL_SERVER_ERROR = 5;
 }
 
-// Represents a request sent to an Oak Functions application. It wraps a byte array that the Wasm can interpret as a request it can handle.
+// Represents a request sent to an Oak Functions application. It wraps a byte array that the Wasm
+// can interpret as a request it can handle.
 message Request {
-  // The content of the request. 
+  // The content of the request.
   bytes content = 1;
 }

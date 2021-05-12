@@ -14,6 +14,76 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
+use crate::{
+    logger::Logger,
+    lookup::LookupData,
+    proto::grpc_handler_server::{GrpcHandler, GrpcHandlerServer},
+    server::{apply_policy, Policy, WasmHandler},
+};
+use anyhow::Context;
+use log::Level;
+use oak_functions_abi::proto::{Request, Response};
+use std::{future::Future, net::SocketAddr, sync::Arc};
+
+pub struct FunctionsServer {
+    wasm_handler: WasmHandler,
+    policy: Policy,
+}
+
+#[tonic::async_trait]
+impl GrpcHandler for FunctionsServer {
+    async fn invoke(
+        &self,
+        request: tonic::Request<Request>,
+    ) -> Result<tonic::Response<Response>, tonic::Status> {
+        let policy = self.policy;
+        let wasm_handler = self.wasm_handler.clone();
+        let function = move || handle_request(wasm_handler, request);
+        let response = apply_policy(policy, function).await.map_err(|err| {
+            tonic::Status::new(tonic::Code::Internal, format!("internal error: {:?}", err))
+        })?;
+        Ok(tonic::Response::new(response))
+    }
+}
+
+async fn handle_request(
+    wasm_handler: WasmHandler,
+    request: tonic::Request<Request>,
+) -> anyhow::Result<Response> {
+    let bytes = request.into_inner().content;
+    wasm_handler.handle_invoke(bytes).await
+}
+
+/// Starts a gRPC server on the given address, serving the `main` function of the given Wasm module.
+pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
+    address: &SocketAddr,
+    wasm_module_bytes: &[u8],
+    lookup_data: Arc<LookupData>,
+    policy: Policy,
+    terminate: F,
+    logger: Logger,
+) -> anyhow::Result<()> {
+    let wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, logger.clone())?;
+
+    logger.log_public(
+        Level::Info,
+        &format!(
+            "{:?}: Starting gRPC server on {:?}",
+            std::thread::current().id(),
+            &address
+        ),
+    );
+
+    // A `Service` is needed for every connection. Here we create a service using the
+    // `wasm_handler`.
+    tonic::transport::Server::builder()
+        .add_service(GrpcHandlerServer::new(FunctionsServer {
+            wasm_handler,
+            policy,
+        }))
+        .serve_with_shutdown(*address, terminate)
+        .await
+        .context("Couldn't start server")?;
+
+    Ok(())
 }

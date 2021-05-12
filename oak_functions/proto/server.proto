@@ -20,6 +20,6 @@ package oak.functions.server;
 
 import "invocation.proto";
 
-service GrpcServer {
+service GrpcHandler {
   rpc Invoke(oak.functions.invocation.Request) returns (oak.functions.invocation.Response);
 }
