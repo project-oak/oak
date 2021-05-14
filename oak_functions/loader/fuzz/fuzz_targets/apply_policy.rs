@@ -22,6 +22,7 @@ use libfuzzer_sys::{
 };
 use oak_functions_abi::proto::{Response, StatusCode};
 use oak_functions_loader::server::{apply_policy, Policy};
+use std::convert::TryInto;
 
 #[derive(Debug)]
 struct ResponseAndValidPolicy {
@@ -52,7 +53,8 @@ impl Arbitrary<'_> for ResponseAndValidPolicy {
 }
 
 fuzz_target!(|data: ResponseAndValidPolicy| {
-    let policy = data.policy;
+    let constant_response_size_bytes = data.policy.constant_response_size_bytes;
+    let policy = data.policy.try_into().unwrap();
     let function = async move || Ok(data.response);
     let response = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -62,5 +64,5 @@ fuzz_target!(|data: ResponseAndValidPolicy| {
         .unwrap();
 
     // Check the response size
-    assert_eq!(response.body.len(), policy.constant_response_size_bytes)
+    assert_eq!(response.body.len(), constant_response_size_bytes)
 });

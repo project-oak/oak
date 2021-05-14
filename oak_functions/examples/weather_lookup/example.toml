@@ -9,7 +9,6 @@ target = { Cargo = { cargo_manifest = "oak_functions/examples/weather_lookup/mod
 
 [server]
 additional_args = [
-  "--protocol=grpc",
   "--config-path=./oak_functions/examples/weather_lookup/config.toml"
 ]
 

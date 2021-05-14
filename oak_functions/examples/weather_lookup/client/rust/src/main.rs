@@ -53,8 +53,8 @@ async fn main() -> anyhow::Result<()> {
     let mut client = GrpcHandlerClient::new(channel);
 
     // create and send a request
-    let content = br#"{"lat":52,"lon":0}"#.to_vec();
-    let req = tonic::Request::new(Request { content });
+    let body = br#"{"lat":52,"lon":0}"#.to_vec();
+    let req = tonic::Request::new(Request { body });
 
     let res = client.invoke(req).await.context("Error sending request ")?;
     info!("Received response: {:?}", res.get_ref());

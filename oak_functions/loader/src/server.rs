@@ -20,7 +20,7 @@ use futures::future::FutureExt;
 use log::Level;
 use oak_functions_abi::proto::{OakStatus, Response, StatusCode};
 use serde::Deserialize;
-use std::{str, sync::Arc, time::Duration};
+use std::{convert::TryFrom, str, sync::Arc, time::Duration};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -82,16 +82,37 @@ impl Policy {
     }
 }
 
-/// Trait with a single function for padding objects so that they could be serialized into byte
-/// arrays of a fixed size.
-trait FixedSizePadder {
-    /// Add padding to this instance based on the input `size_hint`.
-    fn pad(&self, size_hint: usize) -> anyhow::Result<Self>
+/// Similar to [`Policy`], but it is guaranteed to be valid. An instance of this can only be created
+/// from a valid [`Policy`] by calling `try_into` on it.
+pub struct ValidatedPolicy {
+    /// See [`Policy::constant_response_size_bytes`]
+    constant_response_size_bytes: usize,
+    /// See [`Policy::constant_processing_time`]
+    constant_processing_time: Duration,
+}
+
+impl TryFrom<Policy> for ValidatedPolicy {
+    type Error = anyhow::Error;
+
+    fn try_from(policy: Policy) -> anyhow::Result<Self> {
+        policy.validate()?;
+        Ok(ValidatedPolicy {
+            constant_response_size_bytes: policy.constant_response_size_bytes,
+            constant_processing_time: policy.constant_processing_time,
+        })
+    }
+}
+
+/// Trait with a single function for padding the body of an object so that it could be serialized
+/// into a byte array of a fixed size.
+trait FixedSizeBodyPadder {
+    /// Adds padding to the body of this instance to make the size of the body equal to `body_size`.
+    fn pad(&self, body_size: usize) -> anyhow::Result<Self>
     where
         Self: std::marker::Sized;
 }
 
-impl FixedSizePadder for Response {
+impl FixedSizeBodyPadder for Response {
     /// Creates and returns a new [`Response`] instance with the same `status` and `body` as `self`,
     /// except that the `body` may be padded, by adding a number trailing 0s, to make its length
     /// equal to `body_size`. Sets the `length` of the new instance to the length of `self.body`.
@@ -454,15 +475,12 @@ fn check_export_function_signature(
 /// In all cases, to keep the total size of the returned byte array constant, the `body` of the
 /// response may be padded by a number of trailing 0s before encoding the response as a binary
 /// protobuf message. In this case, the `length` in the response will contain the effective length
-/// of the `body`. For a valid security policy, this response is guaranteed to comply with the
-/// policy's size restriction. If the policy is not valid, the function returns early with an error.
-pub async fn apply_policy<F, S>(policy: Policy, function: F) -> anyhow::Result<Response>
+/// of the `body`. This response is guaranteed to comply with the policy's size restriction.
+pub async fn apply_policy<F, S>(policy: ValidatedPolicy, function: F) -> anyhow::Result<Response>
 where
     F: std::marker::Send + 'static + FnOnce() -> S,
     S: std::future::Future<Output = anyhow::Result<Response>> + std::marker::Send,
 {
-    policy.validate()?;
-
     // Use tokio::spawn to actually run the tasks in parallel, for more accurate measurement
     // of time.
     let task = tokio::spawn(async move { function().await });

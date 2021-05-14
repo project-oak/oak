@@ -43,7 +43,7 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 toml = "*"
-tonic = { version = "*", features = ["tls"] }
+tonic = { version = "*" }
 wasmi = "*"
 signal-hook = "*"
 

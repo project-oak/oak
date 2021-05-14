@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -o xtrace
 
-# Send the request and print only the status code and the content type.
 curl \
-  -s -o /dev/null -w "%{http_code}\n%{content_type}\n"\
   --include \
   --fail-early \
   --http2 \
   --http2-prior-knowledge \
   --request POST \
   --data '{"lat":1,"lon":2}' \
-  --output - \
+  --silent \
+  --output \
+  --write-out \
   localhost:8080/invoke

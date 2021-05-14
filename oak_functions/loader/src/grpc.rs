@@ -25,7 +25,7 @@ use crate::{
 use anyhow::Context;
 use log::Level;
 use oak_functions_abi::proto::{Request, Response};
-use std::{future::Future, net::SocketAddr, sync::Arc};
+use std::{convert::TryInto, future::Future, net::SocketAddr, sync::Arc};
 
 /// A gRPC server with an `invoke` method to handle incoming requests to an Oak Functions
 /// application.
@@ -43,6 +43,9 @@ impl GrpcHandler for FunctionsServer {
         let policy = self.policy;
         let wasm_handler = self.wasm_handler.clone();
         let function = move || handle_request(wasm_handler, request);
+        let policy = policy.try_into().map_err(|err| {
+            tonic::Status::new(tonic::Code::Internal, format!("invalid policy: {:?}", err))
+        })?;
         let response = apply_policy(policy, function).await.map_err(|err| {
             tonic::Status::new(tonic::Code::Internal, format!("internal error: {:?}", err))
         })?;
@@ -54,7 +57,7 @@ async fn handle_request(
     wasm_handler: WasmHandler,
     request: tonic::Request<Request>,
 ) -> anyhow::Result<Response> {
-    let bytes = request.into_inner().content;
+    let bytes = request.into_inner().body;
     wasm_handler.handle_invoke(bytes).await
 }
 

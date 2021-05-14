@@ -14,9 +14,8 @@ ENTRYPOINT [ \
     "/oak_functions_loader", \
     "--http-listen-port=8080", \
     "--wasm-path=/module.wasm", \
-    "--config-path=/config.toml", \
-    "--protocol=grpc" \
-]
+    "--config-path=/config.toml" \
+    ]
 
 # Individual applications must copy their own Wasm module to `/module.wasm` and their config file to
 # `/config.toml`.

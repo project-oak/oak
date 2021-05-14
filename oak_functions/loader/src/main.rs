@@ -51,6 +51,8 @@ mod tests;
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Config {
+    /// The protocol (`Grpc` or `Http2`) used by this server.
+    protocol: Protocol,
     /// URL of a file to GET over HTTP containing key / value entries in protobuf binary format for
     /// lookup. If empty or not provided, no data is available for lookup.
     #[serde(default)]
@@ -73,21 +75,10 @@ struct Config {
 }
 
 /// The protocol used by the Oak Functions application.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize)]
 enum Protocol {
     Http2,
     Grpc,
-}
-
-impl std::str::FromStr for Protocol {
-    type Err = String;
-    fn from_str(protocol: &str) -> Result<Self, Self::Err> {
-        match protocol {
-            "http2" => Ok(Protocol::Http2),
-            "grpc" => Ok(Protocol::Grpc),
-            _ => Err(format!("Failed to parse protocol {}", protocol)),
-        }
-    }
 }
 
 /// Command line options for the Oak loader.
@@ -104,8 +95,6 @@ pub struct Opt {
         help = "Port number that the server listens on."
     )]
     http_listen_port: u16,
-    #[structopt(long, default_value = "http2", help = "protocol: [http2, grpc]")]
-    protocol: Protocol,
     #[structopt(
         long,
         help = "Path to a Wasm file to be loaded and executed per invocation. The Wasm module must export a function named `main`."
@@ -174,7 +163,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
 
     // Start server.
-    let server_handle = match opt.protocol {
+    let server_handle = match config.protocol {
         Protocol::Http2 => tokio::spawn(async move {
             create_and_start_http_server(
                 &address,

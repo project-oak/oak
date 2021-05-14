@@ -29,7 +29,7 @@ use hyper::{
 use log::Level;
 use oak_functions_abi::proto::{Response, StatusCode};
 use prost::Message;
-use std::{future::Future, net::SocketAddr, sync::Arc};
+use std::{convert::TryInto, future::Future, net::SocketAddr, sync::Arc};
 
 /// Creates an HTTP response, with status `OK`, and the protobuf-encoded `response` as its body.
 pub fn create_http_response(response: Response) -> anyhow::Result<http::response::Response<Body>> {
@@ -67,7 +67,7 @@ pub async fn create_and_start_http_server<F: Future<Output = ()>>(
                 let logger = logger.clone();
                 let func = move || handle_request(wasm_handler, req, logger);
                 async move {
-                    let response = apply_policy(policy, func).await?;
+                    let response = apply_policy(policy.try_into()?, func).await?;
                     create_http_response(response)
                 }
             }))

@@ -24,6 +24,7 @@ use maplit::hashmap;
 use oak_functions_abi::proto::{Response, StatusCode};
 use prost::Message;
 use std::{
+    convert::TryInto,
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
     time::Duration,
@@ -411,19 +412,6 @@ async fn lookup_data_refresh() {
 
 #[tokio::test]
 async fn test_apply_policy() {
-    {
-        // Return an error if the policy is invalid
-        let policy = Policy {
-            constant_response_size_bytes: 20,
-            constant_processing_time: Duration::from_millis(10),
-        };
-
-        let time_violation_response = Response::create(StatusCode::Success, vec![b'x'; 50]);
-        let function = async move || Ok(time_violation_response);
-        let res = apply_policy(policy, function).await;
-        assert!(res.is_err());
-    }
-
     // A valid constant response body size
     let size = 50;
 
@@ -437,7 +425,7 @@ async fn test_apply_policy() {
         // Wasm response with small enough body is serialized with padding, and no other change
         let small_success_response = Response::create(StatusCode::Success, vec![b'x'; size]);
         let function = async move || Ok(small_success_response);
-        let res = apply_policy(policy, function).await;
+        let res = apply_policy(policy.try_into().unwrap(), function).await;
         assert!(res.is_ok());
         let response = res.unwrap();
         assert_eq!(response.status, StatusCode::Success as i32);
@@ -448,7 +436,7 @@ async fn test_apply_policy() {
         // Success Wasm response with a large body is discarded, and replaced with an error response
         let large_success_response = Response::create(StatusCode::Success, vec![b'x'; size + 1]);
         let function = async move || Ok(large_success_response);
-        let res = apply_policy(policy, function).await;
+        let res = apply_policy(policy.try_into().unwrap(), function).await;
         assert!(res.is_ok());
         let response = res.unwrap();
         assert_eq!(response.status, StatusCode::PolicySizeViolation as i32);
