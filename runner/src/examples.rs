@@ -380,7 +380,7 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples) -> Step {
                 panic!("could not parse example manifest file {:?}: {}", path, err)
             })
         })
-        .filter(|example: &Example| !example.has_classic_app())
+        .filter(|example: &Example| example.has_functions_app() && !example.has_classic_app())
         .collect();
 
     Step::Multiple {
