@@ -596,8 +596,8 @@ dependencies = [
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
- "prost",
- "prost-build",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -615,7 +615,8 @@ dependencies = [
  "hyper-rustls",
  "log",
  "oak_functions_abi",
- "prost",
+ "oak_utils",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_derive",
  "signal-hook",
@@ -623,7 +624,6 @@ dependencies = [
  "tokio",
  "toml",
  "tonic",
- "tonic-build",
  "wasmi",
 ]
 
@@ -636,6 +636,18 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_loader",
  "tokio",
+]
+
+[[package]]
+name = "oak_utils"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "prost 0.7.0",
+ "prost-build 0.7.0",
+ "quote",
+ "tempfile",
+ "tonic-build",
 ]
 
 [[package]]
@@ -758,11 +770,35 @@ dependencies = [
 [[package]]
 name = "prost"
 version = "0.7.0"
+dependencies = [
+ "bytes",
+ "prost-derive 0.7.0",
+]
+
+[[package]]
+name = "prost"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e6984d2f1a23009bd270b8bb56d0926810a3d483f59c987d77969e9d8e840b2"
 dependencies = [
  "bytes",
- "prost-derive",
+ "prost-derive 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "prost-build"
+version = "0.7.0"
+dependencies = [
+ "bytes",
+ "heck",
+ "itertools",
+ "log",
+ "multimap",
+ "petgraph",
+ "prost 0.7.0",
+ "prost-types 0.7.0",
+ "tempfile",
+ "which",
 ]
 
 [[package]]
@@ -777,10 +813,21 @@ dependencies = [
  "log",
  "multimap",
  "petgraph",
- "prost",
- "prost-types",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-types 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
  "which",
+]
+
+[[package]]
+name = "prost-derive"
+version = "0.7.0"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -799,11 +846,19 @@ dependencies = [
 [[package]]
 name = "prost-types"
 version = "0.7.0"
+dependencies = [
+ "bytes",
+ "prost 0.7.0",
+]
+
+[[package]]
+name = "prost-types"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b518d7cdd93dab1d1122cf07fa9a60771836c668dde9d9e2a139f957f0d9f1bb"
 dependencies = [
  "bytes",
- "prost",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1181,8 +1236,8 @@ dependencies = [
  "hyper",
  "percent-encoding",
  "pin-project",
- "prost",
- "prost-derive",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-derive 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tokio-rustls",
  "tokio-stream",
@@ -1200,7 +1255,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c695de27302f4697191dda1c7178131a8cb805463dda02864acb80fe1322fdcf"
 dependencies = [
  "proc-macro2",
- "prost-build",
+ "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote",
  "syn",
 ]

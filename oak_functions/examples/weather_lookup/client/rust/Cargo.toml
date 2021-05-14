@@ -1,0 +1,27 @@
+[package]
+name = "weather_lookup_client"
+version = "0.1.0"
+authors = ["Razieh Behjati <razieh@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+futures = "*"
+http = "*"
+log = "*"
+oak_functions_abi = { path = "../../../../abi" }
+prost = "*"
+regex = "*"
+structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }
+tonic = { version = "*", features = ["tls"] }
+
+[build-dependencies]
+oak_utils = { path = "../../../../../oak_utils" }

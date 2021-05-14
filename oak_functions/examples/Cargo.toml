@@ -1,2 +1,2 @@
 [workspace]
-members = ["weather_lookup/module"]
+members = ["weather_lookup/module", "weather_lookup/client/rust"]
