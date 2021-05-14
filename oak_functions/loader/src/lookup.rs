@@ -28,6 +28,7 @@ use std::{collections::HashMap, sync::RwLock, time::Instant};
 /// protobuf messages according to the definition in `/oak_functions/proto/lookup_data.proto`.
 pub struct LookupData {
     lookup_data_url: String,
+    auth_token_url: Option<String>,
     entries: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
     logger: Logger,
 }
@@ -38,9 +39,14 @@ impl LookupData {
     ///
     /// The returned instance is empty, and must be populated by calling the [`LookupData::refresh`]
     /// method at least once.
-    pub fn new_empty(lookup_data_url: &str, logger: Logger) -> LookupData {
+    pub fn new_empty(
+        lookup_data_url: &str,
+        auth_token_url: Option<&str>,
+        logger: Logger,
+    ) -> LookupData {
         LookupData {
             lookup_data_url: lookup_data_url.to_string(),
+            auth_token_url: auth_token_url.map(String::from),
             entries: RwLock::new(HashMap::new()),
             logger,
         }
