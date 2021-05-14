@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Sends a gRPC request to the weather lookup app and checks the response has the correct format.
+//! Sends a gRPC request to the weather lookup application and checks that the response has the
+//! correct format.
 
 pub mod proto {
     tonic::include_proto!("oak.functions.server");

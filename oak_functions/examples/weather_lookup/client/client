@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -o xtrace
 
+# Send the request and print only the status code and the content type.
 curl \
+  -s -o /dev/null -w "%{http_code}\n%{content_type}\n"\
   --include \
   --fail-early \
   --http2 \

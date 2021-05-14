@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #![no_main]
+#![feature(async_closure)]
 
 use libfuzzer_sys::{
     arbitrary::{Arbitrary, Result, Unstructured},
@@ -52,7 +53,7 @@ impl Arbitrary<'_> for ResponseAndValidPolicy {
 
 fuzz_target!(|data: ResponseAndValidPolicy| {
     let policy = data.policy;
-    let function = move || handle_request(data.response);
+    let function = async move || Ok(data.response);
     let response = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -63,8 +64,3 @@ fuzz_target!(|data: ResponseAndValidPolicy| {
     // Check the response size
     assert_eq!(response.body.len(), policy.constant_response_size_bytes)
 });
-
-// async closures are unstable, instead this function is used to return a future
-async fn handle_request(response: Response) -> anyhow::Result<Response> {
-    Ok(response)
-}

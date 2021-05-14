@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! gRPC server for Oak Functions.
+
 use crate::{
     logger::Logger,
     lookup::LookupData,
@@ -25,6 +27,8 @@ use log::Level;
 use oak_functions_abi::proto::{Request, Response};
 use std::{future::Future, net::SocketAddr, sync::Arc};
 
+/// A gRPC server with an `invoke` method to handle incoming requests to an Oak Functions
+/// application.
 pub struct FunctionsServer {
     wasm_handler: WasmHandler,
     policy: Policy,

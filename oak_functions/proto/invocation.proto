@@ -46,7 +46,7 @@ enum StatusCode {
 }
 
 // Represents a request sent to an Oak Functions application. It wraps a byte array that the Wasm
-// can interpret as a request it can handle.
+// module can interpret as a request it can handle.
 message Request {
   // The content of the request.
   bytes content = 1;

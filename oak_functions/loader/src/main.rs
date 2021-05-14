@@ -16,6 +16,7 @@
 
 // Required for enabling benchmark tests.
 #![feature(test)]
+#![feature(async_closure)]
 
 use anyhow::Context;
 use log::Level;
@@ -71,6 +72,7 @@ struct Config {
     worker_threads: Option<usize>,
 }
 
+/// The protocol used by the Oak Functions application.
 #[derive(Clone, Debug, PartialEq)]
 enum Protocol {
     Http2,
@@ -83,7 +85,7 @@ impl std::str::FromStr for Protocol {
         match protocol {
             "http2" => Ok(Protocol::Http2),
             "grpc" => Ok(Protocol::Grpc),
-            _ => Err(format!("Failed to parse server variant {}", protocol)),
+            _ => Err(format!("Failed to parse protocol {}", protocol)),
         }
     }
 }

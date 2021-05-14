@@ -419,7 +419,7 @@ async fn test_apply_policy() {
         };
 
         let time_violation_response = Response::create(StatusCode::Success, vec![b'x'; 50]);
-        let function = move || async_response(time_violation_response);
+        let function = async move || Ok(time_violation_response);
         let res = apply_policy(policy, function).await;
         assert!(res.is_err());
     }
@@ -436,7 +436,7 @@ async fn test_apply_policy() {
     {
         // Wasm response with small enough body is serialized with padding, and no other change
         let small_success_response = Response::create(StatusCode::Success, vec![b'x'; size]);
-        let function = move || async_response(small_success_response);
+        let function = async move || Ok(small_success_response);
         let res = apply_policy(policy, function).await;
         assert!(res.is_ok());
         let response = res.unwrap();
@@ -447,16 +447,11 @@ async fn test_apply_policy() {
     {
         // Success Wasm response with a large body is discarded, and replaced with an error response
         let large_success_response = Response::create(StatusCode::Success, vec![b'x'; size + 1]);
-        let function = move || async_response(large_success_response);
+        let function = async move || Ok(large_success_response);
         let res = apply_policy(policy, function).await;
         assert!(res.is_ok());
         let response = res.unwrap();
         assert_eq!(response.status, StatusCode::PolicySizeViolation as i32);
         assert_eq!(response.body.len(), policy.constant_response_size_bytes);
     }
-}
-
-// async closures are unstable, instead this function is used to return a future
-async fn async_response(response: Response) -> anyhow::Result<Response> {
-    Ok(response)
 }
