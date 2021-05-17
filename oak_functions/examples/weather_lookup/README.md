@@ -1,4 +1,4 @@
-# Oak functions `weather_lookup` example
+# Oak Functions `weather_lookup` example
 
 This is an Oak Functions application that expects to receive geographic
 coordinates (latitude and longitude) in the request, and responds with the
