@@ -16,6 +16,7 @@
 
 use crate::logger::Logger;
 use anyhow::Context;
+use hyper::{body::Bytes, client::connect::Connect, Body, Client, Request};
 use hyper_rustls::HttpsConnector;
 use log::Level;
 use prost::Message;
@@ -28,7 +29,6 @@ use std::{collections::HashMap, sync::RwLock, time::Instant};
 /// protobuf messages according to the definition in `/oak_functions/proto/lookup_data.proto`.
 pub struct LookupData {
     lookup_data_url: String,
-    auth_token_url: Option<String>,
     entries: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
     logger: Logger,
 }
@@ -39,14 +39,9 @@ impl LookupData {
     ///
     /// The returned instance is empty, and must be populated by calling the [`LookupData::refresh`]
     /// method at least once.
-    pub fn new_empty(
-        lookup_data_url: &str,
-        auth_token_url: Option<&str>,
-        logger: Logger,
-    ) -> LookupData {
+    pub fn new_empty(lookup_data_url: &str, logger: Logger) -> LookupData {
         LookupData {
             lookup_data_url: lookup_data_url.to_string(),
-            auth_token_url: auth_token_url.map(String::from),
             entries: RwLock::new(HashMap::new()),
             logger,
         }
@@ -54,6 +49,10 @@ impl LookupData {
 
     /// Refreshes the internal entries of this struct from the data file URL provided at
     /// construction time.
+    ///
+    /// If the `gcp-metadata-auth` feature is enabled a service account access token token will be
+    /// downloaded first from the GCP metadata service and used to authenticate the lookup data
+    /// download request.
     ///
     /// If successful, entries are completely replaced (i.e. not merged).
     ///
@@ -63,20 +62,9 @@ impl LookupData {
     pub async fn refresh(&self) -> anyhow::Result<()> {
         // TODO(#1930): Avoid loading the entire file in memory for parsing.
         let https = HttpsConnector::with_native_roots();
-        let client = hyper::Client::builder().build::<_, hyper::Body>(https);
-        let res = client
-            .get(
-                self.lookup_data_url
-                    .parse()
-                    .context("could not parse lookup data URL")?,
-            )
-            .await
-            .context("could not fetch lookup data")?;
-
+        let client = Client::builder().build::<_, Body>(https);
         let start = Instant::now();
-        let lookup_data_buf = hyper::body::to_bytes(res.into_body())
-            .await
-            .context("could not read lookup data response body")?;
+        let lookup_data_buf = request_bytes(&client, self.build_download_request().await?).await?;
         self.logger.log_public(
             Level::Info,
             &format!(
@@ -154,6 +142,20 @@ impl LookupData {
             .expect("Could not lock entries for read")
             .is_empty()
     }
+
+    async fn build_download_request(&self) -> anyhow::Result<Request<Body>> {
+        let url: &str = &self.lookup_data_url;
+        let mut builder = Request::builder().method("GET").uri(url);
+        let access_token = get_access_token()
+            .await
+            .context("could not get access token")?;
+        if access_token.is_some() {
+            builder = builder.header("Authorization", format!("Bearer {}", access_token.unwrap()));
+        }
+        builder
+            .body(Body::empty())
+            .context("could not create lookup data request")
+    }
 }
 
 pub fn parse_lookup_entries<B: prost::bytes::Buf>(
@@ -168,4 +170,40 @@ pub fn parse_lookup_entries<B: prost::bytes::Buf>(
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)
+}
+
+async fn request_bytes<C>(client: &Client<C, Body>, request: Request<Body>) -> anyhow::Result<Bytes>
+where
+    C: Connect + Clone + Send + Sync + 'static,
+{
+    let response = client
+        .request(request)
+        .await
+        .context("could not execute request")?;
+    hyper::body::to_bytes(response.into_body())
+        .await
+        .context("could not read response body")
+}
+
+/// Gets a service account access token from the GCP metadata service.
+#[cfg(feature = "gcp-metadata-auth")]
+async fn get_access_token() -> anyhow::Result<Option<String>> {
+    let client = Client::new();
+    let request = Request::builder()
+        .method("GET")
+        .uri("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
+        .header("Metadata-Flavor", "Google")
+        .body(())
+        .context("could not create auth token request")?;
+    let result = request_bytes(&client, request).await?;
+    let token_json =
+        std::str::from_utf8(result.as_ref()).context("could not decode response as a string")?;
+    let token: serde_json::Value =
+        serde_json::from_str(token_json).context("could not decode response as JSON")?;
+    Ok(token["access_token"].as_str().map(String::from))
+}
+
+#[cfg(not(feature = "gcp-metadata-auth"))]
+async fn get_access_token() -> anyhow::Result<Option<String>> {
+    Ok(None)
 }

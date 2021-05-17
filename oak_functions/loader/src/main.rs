@@ -45,12 +45,6 @@ struct Config {
     /// lookup. If empty or not provided, no data is available for lookup.
     #[serde(default)]
     lookup_data_url: String,
-    /// URL for downloading an authentication token that can be used to authenticate the connection
-    /// when downloading the lookup data. If it is not specified the lookup data will be downloaded
-    /// without any authentication. In the case of Google Cloud Run, this can be used to fetch the
-    /// service account access token from the Metadata service.
-    #[serde(default)]
-    lookup_data_auth_token_url: Option<String>,
     /// How often to refresh the lookup data. If not provided, data is only loaded once at startup.
     #[serde(with = "humantime_serde")]
     lookup_data_download_period: Option<Duration>,
@@ -192,7 +186,6 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc<LookupData>> {
     let lookup_data = Arc::new(LookupData::new_empty(
         &config.lookup_data_url,
-        &config.lookup_data_auth_token_url,
         logger.clone(),
     ));
     if !config.lookup_data_url.is_empty() {

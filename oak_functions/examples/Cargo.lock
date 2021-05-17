@@ -756,6 +756,7 @@ dependencies = [
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_derive",
+ "serde_json",
  "signal-hook",
  "structopt",
  "tokio",

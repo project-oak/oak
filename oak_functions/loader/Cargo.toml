@@ -11,6 +11,9 @@ license = "Apache-2.0"
 # Feature that allows logging of potentially sensitive content.
 # Should only be used for debugging purposes.
 oak-unsafe = []
+# Feature that allows authentication using the Google Cloud Metadata service
+# when downloading the lookup data.
+gcp-metadata-auth = []
 default = []
 
 [dependencies]
@@ -37,6 +40,7 @@ oak_remote_attestation = { path = "../../remote_attestation/rust/" }
 prost = "*"
 serde = "*"
 serde_derive = "*"
+serde_json = "*"
 structopt = "*"
 tokio = { version = "*", features = [
   "fs",
