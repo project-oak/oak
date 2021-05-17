@@ -14,15 +14,17 @@
 // limitations under the License.
 
 use crate::{
+    http::{create_and_start_http_server, handle_request},
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData},
-    server::{create_and_start_server, create_response_and_apply_policy, Policy, WasmHandler},
+    server::{apply_policy, Policy, WasmHandler},
 };
 use hyper::{client::Client, Body};
 use maplit::hashmap;
 use oak_functions_abi::proto::{Response, StatusCode};
 use prost::Message;
 use std::{
+    convert::TryInto,
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
     time::Duration,
@@ -144,7 +146,7 @@ where
     lookup_data.refresh().await.unwrap();
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_server(
+        create_and_start_http_server(
             &address,
             &wasm_module_bytes,
             lookup_data,
@@ -207,8 +209,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             &format!("http://localhost:{}", static_server_port),
             logger.clone(),
         ));
-        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data.clone(), logger)
-            .expect("Couldn't create the server");
+        let wasm_handler =
+            WasmHandler::create(&wasm_module_bytes, lookup_data.clone(), logger.clone())
+                .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let (terminate_static_server_tx, terminate_static_server_rx) =
@@ -241,7 +244,11 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
                 .body(Body::from(r#"{"lat":52,"lon":0}"#))
                 .unwrap();
             let resp = rt
-                .block_on(wasm_handler.clone().handle_request(request))
+                .block_on(handle_request(
+                    wasm_handler.clone(),
+                    request,
+                    logger.clone(),
+                ))
                 .unwrap();
             assert_eq!(resp.status, StatusCode::Success as i32);
             assert_eq!(
@@ -404,25 +411,9 @@ async fn lookup_data_refresh() {
 }
 
 #[tokio::test]
-async fn test_response_creation_with_policy() {
-    {
-        // Return an error if the policy is invalid
-        let policy = Policy {
-            constant_response_size_bytes: 20,
-            constant_processing_time: Duration::from_millis(10),
-        };
-
-        let time_violation_response = Response::create(StatusCode::Success, vec![b'x'; 50]);
-        let res = create_response_and_apply_policy(time_violation_response, &policy);
-        assert!(res.is_err());
-    }
-
+async fn test_apply_policy() {
     // A valid constant response body size
     let size = 50;
-
-    // We pad the body of the response to have a fixed size. The size of the binary protobuf-encoded
-    // message is different, but is guaranteed to remain constant for the same policy.
-    let protobuf_binary_size = 63;
 
     // A valid policy
     let policy = Policy {
@@ -433,13 +424,10 @@ async fn test_response_creation_with_policy() {
     {
         // Wasm response with small enough body is serialized with padding, and no other change
         let small_success_response = Response::create(StatusCode::Success, vec![b'x'; size]);
-        let res = create_response_and_apply_policy(small_success_response, &policy);
+        let function = async move || Ok(small_success_response);
+        let res = apply_policy(policy.try_into().unwrap(), function).await;
         assert!(res.is_ok());
-        let body_bytes = hyper::body::to_bytes(res.unwrap().into_body())
-            .await
-            .unwrap();
-        assert_eq!(body_bytes.len(), protobuf_binary_size);
-        let response = Response::decode(body_bytes).unwrap();
+        let response = res.unwrap();
         assert_eq!(response.status, StatusCode::Success as i32);
         assert_eq!(response.body.len(), policy.constant_response_size_bytes);
     }
@@ -447,13 +435,10 @@ async fn test_response_creation_with_policy() {
     {
         // Success Wasm response with a large body is discarded, and replaced with an error response
         let large_success_response = Response::create(StatusCode::Success, vec![b'x'; size + 1]);
-        let res = create_response_and_apply_policy(large_success_response, &policy);
+        let function = async move || Ok(large_success_response);
+        let res = apply_policy(policy.try_into().unwrap(), function).await;
         assert!(res.is_ok());
-        let body_bytes = hyper::body::to_bytes(res.unwrap().into_body())
-            .await
-            .unwrap();
-        assert_eq!(body_bytes.len(), protobuf_binary_size);
-        let response = Response::decode(body_bytes).unwrap();
+        let response = res.unwrap();
         assert_eq!(response.status, StatusCode::PolicySizeViolation as i32);
         assert_eq!(response.body.len(), policy.constant_response_size_bytes);
     }

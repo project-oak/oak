@@ -16,6 +16,7 @@
 
 // Required for enabling benchmark tests.
 #![feature(test)]
+#![feature(async_closure)]
 
 use anyhow::Context;
 use log::Level;
@@ -30,10 +31,19 @@ use structopt::StructOpt;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
+pub mod proto {
+    tonic::include_proto!("oak.functions.server");
+}
+
+mod grpc;
+mod http;
 mod logger;
 mod lookup;
 mod server;
-use crate::{logger::Logger, lookup::LookupData, server::create_and_start_server};
+use crate::{
+    grpc::create_and_start_grpc_server, http::create_and_start_http_server, logger::Logger,
+    lookup::LookupData,
+};
 use server::Policy;
 
 #[cfg(test)]
@@ -41,6 +51,8 @@ mod tests;
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Config {
+    /// The protocol (`Grpc` or `Http2`) used by this server.
+    protocol: Protocol,
     /// URL of a file to GET over HTTP containing key / value entries in protobuf binary format for
     /// lookup. If empty or not provided, no data is available for lookup.
     #[serde(default)]
@@ -61,6 +73,14 @@ struct Config {
     /// See https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads.
     worker_threads: Option<usize>,
 }
+
+/// The protocol used by the Oak Functions application.
+#[derive(Clone, Debug, Deserialize)]
+enum Protocol {
+    Http2,
+    Grpc,
+}
+
 /// Command line options for the Oak loader.
 ///
 /// In general, when adding new configuration parameters, they should go in the `Config` struct
@@ -141,19 +161,34 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
         .and_then(|policy| policy.validate())?;
 
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
-    // Start HTTP server.
-    let server_handle = tokio::spawn(async move {
-        create_and_start_server(
-            &address,
-            &wasm_module_bytes,
-            lookup_data,
-            config.policy.unwrap(),
-            async { notify_receiver.await.unwrap() },
-            logger,
-        )
-        .await
-        .context("error while waiting for the server to terminate")
-    });
+
+    // Start server.
+    let server_handle = match config.protocol {
+        Protocol::Http2 => tokio::spawn(async move {
+            create_and_start_http_server(
+                &address,
+                &wasm_module_bytes,
+                lookup_data,
+                config.policy.unwrap(),
+                async { notify_receiver.await.unwrap() },
+                logger,
+            )
+            .await
+            .context("error while waiting for the server to terminate")
+        }),
+        Protocol::Grpc => tokio::spawn(async move {
+            create_and_start_grpc_server(
+                &address,
+                &wasm_module_bytes,
+                lookup_data,
+                config.policy.unwrap(),
+                async { notify_receiver.await.unwrap() },
+                logger,
+            )
+            .await
+            .context("error while waiting for the server to terminate")
+        }),
+    };
 
     // Wait for the termination signal.
     let done = Arc::new(AtomicBool::new(false));

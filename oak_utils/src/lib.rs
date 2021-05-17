@@ -364,6 +364,23 @@ pub struct CodegenOptions {
     pub build_client: bool,
     /// Specify whether to build server related code.
     pub build_server: bool,
+    /// Specify externally provided Protobuf packages or types.
+    pub extern_paths: Vec<ExternPath>,
+}
+
+#[derive(Default)]
+pub struct ExternPath {
+    proto_path: String,
+    rust_path: String,
+}
+
+impl ExternPath {
+    pub fn new(proto_path: &str, rust_path: &str) -> Self {
+        ExternPath {
+            proto_path: proto_path.to_string(),
+            rust_path: rust_path.to_string(),
+        }
+    }
 }
 
 /// Generate gRPC code from Protobuf using `tonic` library.
@@ -389,10 +406,14 @@ pub fn generate_grpc_code(
 
     // Generate the normal (non-Oak) server and client code for the gRPC service,
     // along with the Rust types corresponding to the message definitions.
-    tonic_build::configure()
+    let mut config = tonic_build::configure()
         .build_client(options.build_client)
-        .build_server(options.build_server)
-        .compile(&file_paths, &[proto_path.to_path_buf()])
+        .build_server(options.build_server);
+
+    for extern_path in options.extern_paths {
+        config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
+    }
+    config.compile(&file_paths, &[proto_path.to_path_buf()])
 }
 
 fn set_protoc_env_if_unset() {

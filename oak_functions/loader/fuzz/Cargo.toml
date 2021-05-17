@@ -9,16 +9,18 @@ license = "Apache-2.0"
 cargo-fuzz = true
 
 [dependencies]
+anyhow = "*"
 libfuzzer-sys = "*"
 oak_functions_loader = { path = ".." }
 oak_functions_abi = { path = "../../abi" }
+tokio = "*"
 
 # Prevent this from interfering with workspaces
 [workspace]
 members = ["."]
 
 [[bin]]
-name = "create_response_and_apply_policy"
-path = "fuzz_targets/create_response_and_apply_policy.rs"
+name = "apply_policy"
+path = "fuzz_targets/apply_policy.rs"
 test = false
 doc = false

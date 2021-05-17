@@ -1,5 +1,5 @@
 //
-// Copyright 2020 The Project Oak Authors
+// Copyright 2021 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,19 @@
 // limitations under the License.
 //
 
-use oak_utils::{generate_grpc_code, CodegenOptions};
+use oak_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "../../examples/trusted_database/proto",
-        &["trusted_database.proto"],
+        "../proto",
+        &["server.proto"],
         CodegenOptions {
-            build_client: true,
+            build_client: false,
             build_server: true,
-            ..Default::default()
+            extern_paths: vec![ExternPath::new(
+                ".oak.functions.invocation",
+                "::oak_functions_abi::proto",
+            )],
         },
     )?;
     Ok(())

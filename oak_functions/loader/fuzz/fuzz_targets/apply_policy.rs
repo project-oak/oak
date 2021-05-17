@@ -14,13 +14,15 @@
 // limitations under the License.
 
 #![no_main]
+#![feature(async_closure)]
 
 use libfuzzer_sys::{
     arbitrary::{Arbitrary, Result, Unstructured},
     fuzz_target,
 };
 use oak_functions_abi::proto::{Response, StatusCode};
-use oak_functions_loader::server::{create_response_and_apply_policy, Policy};
+use oak_functions_loader::server::{apply_policy, Policy};
+use std::convert::TryInto;
 
 #[derive(Debug)]
 struct ResponseAndValidPolicy {
@@ -51,6 +53,16 @@ impl Arbitrary<'_> for ResponseAndValidPolicy {
 }
 
 fuzz_target!(|data: ResponseAndValidPolicy| {
-    // With a valid policy, it should always be possible to create an HTTP response.
-    let _http_response = create_response_and_apply_policy(data.response, &data.policy).unwrap();
+    let constant_response_size_bytes = data.policy.constant_response_size_bytes;
+    let policy = data.policy.try_into().unwrap();
+    let function = async move || Ok(data.response);
+    let response = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(apply_policy(policy, function))
+        .unwrap();
+
+    // Check the response size
+    assert_eq!(response.body.len(), constant_response_size_bytes)
 });

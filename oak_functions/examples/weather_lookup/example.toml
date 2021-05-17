@@ -14,3 +14,6 @@ additional_args = [
 
 [clients]
 shell = { Shell = { script = "oak_functions/examples/weather_lookup/client/client" } }
+rust = { Cargo = { cargo_manifest = "oak_functions/examples/weather_lookup/client/rust/Cargo.toml" }, additional_args = [
+  "--uri=http://localhost:8080"
+] }

@@ -8,5 +8,7 @@ curl \
   --http2-prior-knowledge \
   --request POST \
   --data '{"lat":1,"lon":2}' \
-  --output - \
+  --silent \
+  --output \
+  --write-out \
   localhost:8080/invoke

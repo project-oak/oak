@@ -20,7 +20,7 @@
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
     include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.response.rs"));
+    include!(concat!(env!("OUT_DIR"), "/oak.functions.invocation.rs"));
 
     impl Response {
         /// Creates a new instance of Response.
