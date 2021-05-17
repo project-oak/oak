@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["create_and_start_http_server","Starts an HTTP server on the given address, serving the `main` function of the given Wasm module."],["create_http_response","Creates an HTTP response, with status `OK`, and the protobuf-encoded `response` as its body."],["handle_request",""]]});
