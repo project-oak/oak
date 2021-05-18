@@ -9,8 +9,13 @@ license = "Apache-2.0"
 anyhow = "*"
 cargo_metadata = "*"
 log = "*"
+http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 oak_functions_abi = { path = "../../abi" }
 port_check = "*"
 prost = "*"
 tokio = { version = "*", features = ["sync"] }
+tonic = "*"
+
+[build-dependencies]
+oak_utils = { path = "../../../oak_utils" }

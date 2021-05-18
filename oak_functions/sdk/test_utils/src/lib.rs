@@ -19,7 +19,7 @@
 use anyhow::Context;
 use hyper::{
     service::{make_service_fn, service_fn},
-    Body, Response,
+    Body,
 };
 use log::info;
 use prost::Message;
@@ -32,8 +32,19 @@ use std::{
     process::Command,
     sync::{Arc, Mutex},
     task::Poll,
+    time::Duration,
 };
 use tokio::{sync::oneshot, task::JoinHandle};
+
+use http::uri::Uri;
+use oak_functions_abi::proto::{Request, Response};
+use tonic::transport::Channel;
+
+pub mod proto {
+    tonic::include_proto!("oak.functions.server");
+}
+
+use crate::proto::grpc_handler_client::GrpcHandlerClient;
 
 /// Returns the path to the Wasm file produced by compiling the provided `Cargo.toml` file.
 fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
@@ -106,7 +117,7 @@ impl MockStaticServer {
                                 .lock()
                                 .expect("could not lock response body mutex")
                                 .clone();
-                            Ok::<_, Infallible>(Response::new(Body::from(response_body)))
+                            Ok::<_, Infallible>(hyper::Response::new(Body::from(response_body)))
                         }
                     }))
                 }
@@ -193,5 +204,40 @@ impl Future for Term {
             }
             Poll::Pending => Poll::Pending,
         }
+    }
+}
+
+pub struct TestResult {
+    pub elapsed: Duration,
+    pub response: Response,
+}
+
+pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
+    let uri = format!("http://localhost:{}/", port);
+    let uri: Uri = uri.parse().expect("Error parsing URI");
+
+    // Create client
+    let channel = Channel::builder(uri.clone())
+        .connect()
+        .await
+        .expect("could not establish connection");
+    let mut client = GrpcHandlerClient::new(channel);
+
+    // Create Tonic request
+    let req = tonic::Request::new(Request {
+        body: request_body.to_vec(),
+    });
+
+    // Send the request and measure time
+    let start = std::time::Instant::now();
+    let resp = client
+        .invoke(req)
+        .await
+        .expect("Error while awaiting response");
+    let elapsed = start.elapsed();
+
+    TestResult {
+        elapsed,
+        response: resp.into_inner(),
     }
 }

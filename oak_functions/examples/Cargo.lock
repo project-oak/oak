@@ -1265,12 +1265,15 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cargo_metadata",
+ "http",
  "hyper",
  "log",
  "oak_functions_abi",
+ "oak_utils",
  "port_check",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
@@ -1627,7 +1630,6 @@ name = "weather_lookup"
 version = "0.1.0"
 dependencies = [
  "http",
- "hyper",
  "maplit",
  "oak_functions",
  "oak_functions_abi",
@@ -1637,6 +1639,7 @@ dependencies = [
  "serde_json",
  "test_utils",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
@@ -1645,7 +1648,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "env_logger",
- "futures",
  "http",
  "log",
  "oak_functions_abi",

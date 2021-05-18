@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use hyper::client::Client;
 use maplit::hashmap;
-use oak_functions_abi::proto::{Response, StatusCode};
+use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
-    http::create_and_start_http_server, logger::Logger, lookup::LookupData, server::Policy,
+    grpc::create_and_start_grpc_server, logger::Logger, lookup::LookupData, server::Policy,
 };
-use prost::Message;
+use test_utils::make_request;
+
 use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
@@ -67,7 +67,7 @@ async fn test_server() {
     };
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_http_server(
+        create_and_start_grpc_server(
             &address,
             &wasm_module_bytes,
             lookup_data,
@@ -80,8 +80,9 @@ async fn test_server() {
 
     {
         // Lookup match.
-        let response = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
-        let response = Response::decode(response.as_ref()).unwrap();
+        let response = make_request(server_port, br#"{"lat":52,"lon":0}"#)
+            .await
+            .response;
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             r#"{"temperature_degrees_celsius":10}"#,
@@ -90,8 +91,9 @@ async fn test_server() {
     }
     {
         // Valid location but no lookup match.
-        let response = make_request(server_port, br#"{"lat":19,"lon":88}"#).await;
-        let response = Response::decode(response.as_ref()).unwrap();
+        let response = make_request(server_port, br#"{"lat":19,"lon":88}"#)
+            .await
+            .response;
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             r#"weather not found for location"#,
@@ -100,8 +102,7 @@ async fn test_server() {
     }
     {
         // Malformed request.
-        let response = make_request(server_port, b"invalid - JSON").await;
-        let response = Response::decode(response.as_ref()).unwrap();
+        let response = make_request(server_port, b"invalid - JSON").await.response;
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             "could not deserialize request as JSON",
@@ -113,23 +114,4 @@ async fn test_server() {
     assert!(res.is_ok());
 
     mock_static_server_background.terminate_and_join().await;
-}
-
-async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
-    let client = Client::builder().http2_only(true).build_http();
-    let request = hyper::Request::builder()
-        .method(http::Method::POST)
-        .uri(format!("http://localhost:{}/invoke", port))
-        .body(hyper::Body::from(request_body.to_vec()))
-        .unwrap();
-    let resp = client
-        .request(request)
-        .await
-        .expect("Error while awaiting response");
-
-    assert_eq!(resp.status(), hyper::StatusCode::OK);
-    hyper::body::to_bytes(resp.into_body())
-        .await
-        .unwrap()
-        .to_vec()
 }

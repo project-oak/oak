@@ -43,12 +43,11 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 toml = "*"
-tonic = { version = "*" }
+tonic = "*"
 wasmi = "*"
 signal-hook = "*"
 
 [dev-dependencies]
-hyper = { version = "*", features = ["client", "http2"] }
 maplit = "*"
 test_utils = { path = "../sdk/test_utils" }
 

@@ -490,7 +490,7 @@ where
     let function_response = task.now_or_never();
 
     let response = match function_response {
-        // The `function` did not terminate withing the policy timeout
+        // The `function` did not terminate within the policy timeout
         None => Response::create(
             StatusCode::PolicyTimeViolation,
             "Reason: response not available".as_bytes().to_vec(),

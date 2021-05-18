@@ -14,14 +14,14 @@
 // limitations under the License.
 
 use crate::{
-    http::{create_and_start_http_server, handle_request},
+    grpc::{create_and_start_grpc_server, handle_request},
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData},
     server::{apply_policy, Policy, WasmHandler},
 };
-use hyper::{client::Client, Body};
+use oak_functions_abi::proto::{Request, Response, StatusCode};
+
 use maplit::hashmap;
-use oak_functions_abi::proto::{Response, StatusCode};
 use prost::Message;
 use std::{
     convert::TryInto,
@@ -29,17 +29,12 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use test_utils::make_request;
 
 extern crate test;
 use test::Bencher;
 
 const MANIFEST_PATH: &str = "examples/weather_lookup/module/Cargo.toml";
-
-struct TestResult {
-    elapsed: Duration,
-    status_code: hyper::StatusCode,
-    body: Vec<u8>,
-}
 
 #[tokio::test]
 async fn test_valid_policy() {
@@ -62,8 +57,7 @@ async fn test_valid_policy() {
             format!("elapsed time is: {:?}", result.elapsed)
         );
 
-        assert_eq!(result.status_code, hyper::StatusCode::OK);
-        let response = Response::decode(result.body.as_ref()).unwrap();
+        let response = result.response;
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(
             std::str::from_utf8(response.body().unwrap()).unwrap(),
@@ -90,8 +84,7 @@ async fn test_long_response_time() {
         let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
         // TODO(#1987): Check elapsed time
 
-        assert_eq!(result.status_code, hyper::StatusCode::OK);
-        let response = Response::decode(result.body.as_ref()).unwrap();
+        let response = result.response;
         assert_eq!(StatusCode::PolicyTimeViolation as i32, response.status,);
         assert_eq!(
             std::str::from_utf8(response.body().unwrap()).unwrap(),
@@ -146,7 +139,7 @@ where
     lookup_data.refresh().await.unwrap();
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_http_server(
+        create_and_start_grpc_server(
             &address,
             &wasm_module_bytes,
             lookup_data,
@@ -169,30 +162,6 @@ where
     mock_static_server_background.terminate_and_join().await;
 }
 
-async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
-    let client = Client::builder().http2_only(true).build_http();
-    let request = hyper::Request::builder()
-        .method(http::Method::POST)
-        .uri(format!("http://localhost:{}/invoke", port))
-        .body(hyper::Body::from(request_body.to_vec()))
-        .unwrap();
-    let start = std::time::Instant::now();
-
-    let resp = client
-        .request(request)
-        .await
-        .expect("Error while awaiting response");
-    let elapsed = start.elapsed();
-    TestResult {
-        elapsed,
-        status_code: resp.status(),
-        body: hyper::body::to_bytes(resp.into_body())
-            .await
-            .unwrap()
-            .to_vec(),
-    }
-}
-
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
     let mut manifest_path = std::env::current_dir().unwrap();
@@ -209,9 +178,8 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             &format!("http://localhost:{}", static_server_port),
             logger.clone(),
         ));
-        let wasm_handler =
-            WasmHandler::create(&wasm_module_bytes, lookup_data.clone(), logger.clone())
-                .expect("Couldn't create the server");
+        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data.clone(), logger)
+            .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let (terminate_static_server_tx, terminate_static_server_rx) =
@@ -236,19 +204,11 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             static_server_join_handle.await.unwrap();
         });
         bencher.iter(|| {
-            let request = hyper::Request::builder()
-                .method(http::Method::POST)
-                // We don't really send the request. So the hostname can be anything. It is only
-                // needed for building a valid request.
-                .uri("http://example.com/invoke")
-                .body(Body::from(r#"{"lat":52,"lon":0}"#))
-                .unwrap();
+            let request = tonic::Request::new(Request {
+                body: br#"{"lat":52,"lon":0}"#.to_vec(),
+            });
             let resp = rt
-                .block_on(handle_request(
-                    wasm_handler.clone(),
-                    request,
-                    logger.clone(),
-                ))
+                .block_on(handle_request(wasm_handler.clone(), request))
                 .unwrap();
             assert_eq!(resp.status, StatusCode::Success as i32);
             assert_eq!(
