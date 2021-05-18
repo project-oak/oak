@@ -5,4 +5,7 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 # Check that any generated files match those that are checked in.
-git diff --exit-code -- . ':!*.bazelrc'
+if [[ $(git status --short) ]]; then
+    # One or more files are either modified or newly generated, exit with an error code
+    exit 1
+fi
