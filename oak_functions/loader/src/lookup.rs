@@ -146,11 +146,11 @@ impl LookupData {
     async fn build_download_request(&self) -> anyhow::Result<Request<Body>> {
         let url: &str = &self.lookup_data_url;
         let mut builder = Request::builder().method("GET").uri(url);
-        let access_token = get_access_token()
+        if let Some(access_token) = get_access_token()
             .await
-            .context("could not get access token")?;
-        if access_token.is_some() {
-            builder = builder.header("Authorization", format!("Bearer {}", access_token.unwrap()));
+            .context("could not get access token")?
+        {
+            builder = builder.header("Authorization", format!("Bearer {}", access_token));
         }
         builder
             .body(Body::empty())
