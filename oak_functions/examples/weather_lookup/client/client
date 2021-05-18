@@ -9,6 +9,6 @@ curl \
   --request POST \
   --data '{"lat":1,"lon":2}' \
   --silent \
-  --output \
-  --write-out \
+  --output /dev/null \
+  --write-out '%{http_code}\n%{content_type}\n' \
   localhost:8080/invoke
