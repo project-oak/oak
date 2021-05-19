@@ -47,7 +47,7 @@ sed \
   --expression="s/###TITLE###/${API_TITLE}/" \
   --expression="s/###HOST_NAME###/${CLOUD_RUN_HOST}/" \
   < ./oak_functions/gcp/api_config.yaml.template \
-  > ./oak_functions/bin/weather_lookup_api_config.yaml \
+  > "${OUT_DIR}/weather_lookup_api_config.yaml" \
 
 # Deploy the API Configuration
 readonly CONFIG_ID='weather-lookup-config'
@@ -55,7 +55,7 @@ readonly API_ID='weather-lookup-api'
 
 gcloud api-gateway api-configs create "${CONFIG_ID}" \
   --api="${API_ID}" --project="${GCP_PROJECT_ID}" \
-  --grpc-files="${OUT_DIR}/server.pb","${OUT_DIR}/weather_lookup_api_config.yaml"
+  --grpc-files="${OUT_DIR}/server.pb,${OUT_DIR}/weather_lookup_api_config.yaml"
 
 # Deploy the API Gateway
 gcloud api-gateway gateways create "${GATEWAY_ID}" \
