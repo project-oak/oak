@@ -35,8 +35,6 @@ docker build \
 
 docker push "${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest"
 
-readonly FUNCTIONS_INSTANCE_NAME=oak-functions-weather-lookup
-
 gcloud auth activate-service-account \
   --project="${GCP_PROJECT_ID}" \
   --key-file="${GCP_ACCOUNT_FILE}"
@@ -61,8 +59,6 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --platform=managed
 
 # Find the gateway URL.
-readonly GATEWAY_ID='weather-lookup-grpc'
-
 readonly HOST_NAME="$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --location="${GCP_REGION}" --format='value(defaultHostname)')"
 
 #Build the client to test the connection.

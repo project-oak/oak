@@ -11,16 +11,43 @@ gcloud auth activate-service-account \
   --project="${GCP_PROJECT_ID}" \
   --key-file="${GCP_ACCOUNT_FILE}"
 
+readonly OUT_DIR='./oak_functions/bin'
+
+# Copy proto files to the output directory. They must be in the same location
+# as the compiled proto descriptor so that they can also be uploaded as part
+# of the deployment.
+
+mkdir --parents "${OUT_DIR}"
+
+cp \
+  ./oak_functions/proto/server.proto \
+  ./oak_functions/proto/invocation.proto \
+  "${OUT_DIR}" \
+  --force
+
 # Rebuild the proto descriptor file for the API configuration.
+
 protoc \
-  --proto_path=./oak_functions/proto \
+  --proto_path="${OUT_DIR}" \
   --include_imports \
   --include_source_info \
-  --descriptor_set_out=./oak_functions/gcp/server.pb \
+  --descriptor_set_out="${OUT_DIR}/server.pb" \
   server.proto
 
 # See https://cloud.google.com/api-gateway/docs/deployment-model for more
 # details on the relationship between APIs, Configs and Gateways
+
+# Create a config file from the template by replacing tokens.
+readonly API_TITLE='Oak Functions Weather Lookup Service'
+# Fetch the URL or the Cloud Run backend service instance.
+readonly CLOUD_RUN_URL="$(gcloud beta run services describe "${FUNCTIONS_INSTANCE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')" 
+readonly CLOUD_RUN_HOST="$(echo "${CLOUD_RUN_URL}" | cut -c 9-)"
+
+sed \
+  --expression="s/###TITLE###/${API_TITLE}/" \
+  --expression="s/###HOST_NAME###/${CLOUD_RUN_HOST}/" \
+  < ./oak_functions/gcp/api_config.yaml.template \
+  > ./oak_functions/bin/weather_lookup_api_config.yaml \
 
 # Deploy the API Configuration
 readonly CONFIG_ID='weather-lookup-config'
@@ -28,11 +55,9 @@ readonly API_ID='weather-lookup-api'
 
 gcloud api-gateway api-configs create "${CONFIG_ID}" \
   --api="${API_ID}" --project="${GCP_PROJECT_ID}" \
-  --grpc-files=./oak_functions/gcp/server.pb,./oak_functions/gcp/weather_lookup_api_config.yaml
+  --grpc-files="${OUT_DIR}/server.pb","${OUT_DIR}/weather_lookup_api_config.yaml"
 
 # Deploy the API Gateway
-readonly GATEWAY_ID='weather-lookup-grpc'
-
 gcloud api-gateway gateways create "${GATEWAY_ID}" \
   --api="${API_ID}" --api-config="${CONFIG_ID}" \
   --location="${GCP_REGION}" --project="${GCP_PROJECT_ID}"

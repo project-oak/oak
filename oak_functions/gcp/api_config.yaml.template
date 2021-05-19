@@ -9,7 +9,7 @@ name: '*.apigateway.endpoints.oak-ci.cloud.goog'
 #
 # API title to appear in the user interface (Google Cloud Console).
 #
-title: Oak Functions gRPC API Gateway
+title: ###TITLE###
 apis:
   - name: oak.functions.server.GrpcHandler
 
@@ -25,6 +25,5 @@ usage:
 backend:
   rules:
     - selector: '*'
-      # Host name can be found on
-      # https://pantheon.corp.google.com/run/detail/europe-west2/oak-functions-weather-lookup/general?project=oak-ci
-      address: grpcs://oak-functions-weather-lookup-62sa4xcfia-nw.a.run.app
+      # The address of the Cloud Run backend instance
+      address: grpcs://###HOST_NAME###
