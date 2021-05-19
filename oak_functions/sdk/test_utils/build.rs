@@ -14,11 +14,20 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
-}
+use oak_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
-pub mod grpc;
-pub mod logger;
-pub mod lookup;
-pub mod server;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    generate_grpc_code(
+        "../../proto",
+        &["server.proto"],
+        CodegenOptions {
+            build_client: true,
+            build_server: false,
+            extern_paths: vec![ExternPath::new(
+                ".oak.functions.invocation",
+                "::oak_functions_abi::proto",
+            )],
+        },
+    )?;
+    Ok(())
+}

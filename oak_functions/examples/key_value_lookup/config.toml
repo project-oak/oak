@@ -1,4 +1,3 @@
-protocol = "Grpc"
 lookup_data_url = "https://storage.googleapis.com/oak_lookup_data/lookup_data_weather"
 lookup_data_download_period = "10m"
 worker_threads = 4

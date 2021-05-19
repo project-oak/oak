@@ -13,18 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use hyper::client::Client;
 use maplit::hashmap;
-use oak_functions_abi::proto::{Response, StatusCode};
+use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
-    http::create_and_start_http_server, logger::Logger, lookup::LookupData, server::Policy,
+    grpc::create_and_start_grpc_server, logger::Logger, lookup::LookupData, server::Policy,
 };
-use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
     time::Duration,
 };
+use test_utils::make_request;
 
 #[tokio::test]
 async fn test_server() {
@@ -69,7 +68,7 @@ async fn test_server() {
     };
 
     let server_background = test_utils::background(|term| async move {
-        create_and_start_http_server(
+        create_and_start_grpc_server(
             &address,
             &wasm_module_bytes,
             lookup_data,
@@ -82,22 +81,19 @@ async fn test_server() {
 
     {
         // Lookup match.
-        let response = make_request(server_port, b"key_1").await;
-        let response = Response::decode(response.as_ref()).unwrap();
+        let response = make_request(server_port, b"key_1").await.response;
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(b"value_1", response.body().unwrap(),);
     }
     {
         // Lookup fail.
-        let response = make_request(server_port, b"key_42").await;
-        let response = Response::decode(response.as_ref()).unwrap();
+        let response = make_request(server_port, b"key_42").await.response;
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(Vec::<u8>::new(), response.body().unwrap());
     }
     {
         // Lookup match but empty value.
-        let response = make_request(server_port, b"empty").await;
-        let response = Response::decode(response.as_ref()).unwrap();
+        let response = make_request(server_port, b"empty").await.response;
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(Vec::<u8>::new(), response.body().unwrap());
     }
@@ -106,23 +102,4 @@ async fn test_server() {
     assert!(res.is_ok());
 
     mock_static_server_background.terminate_and_join().await;
-}
-
-async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
-    let client = Client::builder().http2_only(true).build_http();
-    let request = hyper::Request::builder()
-        .method(http::Method::POST)
-        .uri(format!("http://localhost:{}/invoke", port))
-        .body(hyper::Body::from(request_body.to_vec()))
-        .unwrap();
-    let resp = client
-        .request(request)
-        .await
-        .expect("Error while awaiting response");
-
-    assert_eq!(resp.status(), hyper::StatusCode::OK);
-    hyper::body::to_bytes(resp.into_body())
-        .await
-        .unwrap()
-        .to_vec()
 }

@@ -53,7 +53,7 @@ impl GrpcHandler for FunctionsServer {
     }
 }
 
-async fn handle_request(
+pub async fn handle_request(
     wasm_handler: WasmHandler,
     request: tonic::Request<Request>,
 ) -> anyhow::Result<Response> {
