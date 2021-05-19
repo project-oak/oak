@@ -85,6 +85,9 @@ gcloud api-gateway gateways create "${GATEWAY_ID}" \
   --api="${API_ID}" --api-config="${CONFIG_ID}" \
   --location="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
 
+# Enable the API
+gcloud services enable weather-lookup-api-1uq7zmib3d0f5.apigateway.oak-ci.cloud.goog
+
 # Attempt to communicate with the newly deployed application.
 
 # TODO(): Use generic Oak Functions client to connect
