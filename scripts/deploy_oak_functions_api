@@ -19,6 +19,9 @@ protoc \
   --descriptor_set_out=./oak_functions/gcp/server.pb \
   server.proto
 
+# See https://cloud.google.com/api-gateway/docs/deployment-model for more
+# details on the relationship between APIs, Configs and Gateways
+
 # Deploy the API Configuration
 readonly CONFIG_ID='weather-lookup-config'
 readonly API_ID='weather-lookup-api'
@@ -35,7 +38,7 @@ gcloud api-gateway gateways create "${GATEWAY_ID}" \
   --location="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
 
 # Get the Managed Service name
-MANAGED_SERVICE=$(gcloud api-gateway apis describe "${API_ID}" --format='value(managedService)')
+readonly MANAGED_SERVICE="$(gcloud api-gateway apis describe "${API_ID}" --format='value(managedService)')"
 
 # Enable the API
 gcloud services enable "${MANAGED_SERVICE}"

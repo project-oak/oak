@@ -63,7 +63,7 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
 # Find the gateway URL.
 readonly GATEWAY_ID='weather-lookup-grpc'
 
-HOST_NAME=$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --location="${GCP_REGION}" --format='value(defaultHostname)')
+readonly HOST_NAME="$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --location="${GCP_REGION}" --format='value(defaultHostname)')"
 
 #Build the client to test the connection.
 cargo build --manifest-path=./oak_functions/client/Cargo.toml

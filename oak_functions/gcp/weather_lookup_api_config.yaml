@@ -25,4 +25,6 @@ usage:
 backend:
   rules:
     - selector: '*'
+      # Host name can be found on
+      # https://pantheon.corp.google.com/run/detail/europe-west2/oak-functions-weather-lookup/general?project=oak-ci
       address: grpcs://oak-functions-weather-lookup-62sa4xcfia-nw.a.run.app
