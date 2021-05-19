@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["test_utils"] = [{"text":"impl Unpin for MockStaticServer","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; Unpin for Background&lt;T&gt;","synthetic":true,"types":[]},{"text":"impl Unpin for Term","synthetic":true,"types":[]}];
+implementors["test_utils"] = [{"text":"impl Unpin for MockStaticServer","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; Unpin for Background&lt;T&gt;","synthetic":true,"types":[]},{"text":"impl Unpin for Term","synthetic":true,"types":[]},{"text":"impl Unpin for TestResult","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; Unpin for GrpcHandlerClient&lt;T&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Unpin,&nbsp;</span>","synthetic":true,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

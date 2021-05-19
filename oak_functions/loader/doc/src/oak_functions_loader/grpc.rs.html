@@ -153,7 +153,7 @@
     }
 }
 
-<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(
+<span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(
     <span class="ident">wasm_handler</span>: <span class="ident">WasmHandler</span>,
     <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Request</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {

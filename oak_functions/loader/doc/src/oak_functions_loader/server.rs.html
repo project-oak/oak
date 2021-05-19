@@ -1140,7 +1140,7 @@
     <span class="kw">let</span> <span class="ident">function_response</span> <span class="op">=</span> <span class="ident">task</span>.<span class="ident">now_or_never</span>();
 
     <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">function_response</span> {
-        <span class="comment">// The `function` did not terminate withing the policy timeout</span>
+        <span class="comment">// The `function` did not terminate within the policy timeout</span>
         <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Response</span>::<span class="ident">create</span>(
             <span class="ident">StatusCode</span>::<span class="ident">PolicyTimeViolation</span>,
             <span class="string">&quot;Reason: response not available&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>(),

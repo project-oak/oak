@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["test_utils"] = [{"text":"impl UnwindSafe for MockStaticServer","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; !UnwindSafe for Background&lt;T&gt;","synthetic":true,"types":[]},{"text":"impl !UnwindSafe for Term","synthetic":true,"types":[]}];
+implementors["test_utils"] = [{"text":"impl UnwindSafe for MockStaticServer","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; !UnwindSafe for Background&lt;T&gt;","synthetic":true,"types":[]},{"text":"impl !UnwindSafe for Term","synthetic":true,"types":[]},{"text":"impl UnwindSafe for TestResult","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; !UnwindSafe for GrpcHandlerClient&lt;T&gt;","synthetic":true,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
