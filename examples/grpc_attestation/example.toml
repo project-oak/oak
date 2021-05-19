@@ -1,5 +1,7 @@
 name = "grpc_attestation"
 
+# Currently backend sends responses to the client, so there is no need for Oak application.
+# TODO(#1932): Use gRPC Attestation for Weather Example in Oak Functions.
 [applications]
 
 [backends]

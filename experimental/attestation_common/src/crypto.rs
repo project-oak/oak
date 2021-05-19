@@ -60,7 +60,7 @@ pub struct AeadEncryptor {
 
 impl AeadEncryptor {
     pub fn new(key: &[u8]) -> Self {
-        // AES-GCM algorithm uses the same key is used for both encryption and decryption.
+        // AES-GCM algorithm uses the same key for both encryption and decryption.
         // https://datatracker.ietf.org/doc/html/rfc5288
         let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &key).unwrap();
         let sealing_key = ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new());
@@ -75,31 +75,29 @@ impl AeadEncryptor {
     }
 
     /// Encrypts `data` using [`AeadEncryptor::sealing_key`].
-    ///
-    /// Additional authenticated data is not required for the remotely attested channel,
-    /// since after session key is established client and server exchange messages with a
-    /// single encrypted field.
-    /// And the nonce is authenticated by the AEAD algorithm itself.
-    /// https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
         let mut encrypted_data = data.to_vec();
         self.sealing_key
+            // Additional authenticated data is not required for the remotely attested channel,
+            // since after session key is established client and server exchange messages with a
+            // single encrypted field.
+            // And the nonce is authenticated by the AEAD algorithm itself.
+            // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
             .seal_in_place_append_tag(aead::Aad::from(vec![]), &mut encrypted_data)
             .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
         Ok(encrypted_data)
     }
 
     /// Decrypts and authenticates `data` using [`AeadEncryptor::opening_key`].
-    ///
-    /// Additional authenticated data is not required for the remotely attested channel,
-    /// since after session key is established client and server exchange messages with a
-    /// single encrypted field.
-    /// And the nonce is authenticated by the AEAD algorithm itself.
-    /// https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
     pub fn decrypt(&mut self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
         let mut decrypted_data = data.to_vec();
         let decrypted_data = self
             .opening_key
+            // Additional authenticated data is not required for the remotely attested channel,
+            // since after session key is established client and server exchange messages with a
+            // single encrypted field.
+            // And the nonce is authenticated by the AEAD algorithm itself.
+            // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
             .open_in_place(aead::Aad::from(vec![]), &mut decrypted_data)
             .map_err(|error| anyhow!("Couldn't decrypt data: {:?}", error))?;
         Ok(decrypted_data.to_vec())
