@@ -7,8 +7,6 @@ source "$SCRIPTS_DIR/common"
 # shellcheck source=scripts/gcp_common
 source "$SCRIPTS_DIR/gcp_common"
 
-readonly GCP_REGION='europe-west2'
-
 # TODO(#1943): Remove when #1943 is submitted.
 cargo build --target=x86_64-unknown-linux-musl --manifest-path=./oak_functions/loader/Cargo.toml --release
 
@@ -62,6 +60,14 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --max-instances=10 \
   --platform=managed
 
-# Attempt to communicate with the newly deployed application.
+# Find the gateway URL.
+readonly GATEWAY_ID='weather-lookup-grpc'
 
-# TODO(): Use generic Oak Functions client to connect
+HOST_NAME=$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --location="${GCP_REGION}" --format='value(defaultHostname)')
+
+#Build the client to test the connection.
+cargo build --manifest-path=./oak_functions/client/Cargo.toml
+
+# Attempt to communicate with the newly deployed application.
+echo '{"lat":52,"lon":0}' | ./oak_functions/client/target/debug/oak_functions_client \
+  --uri="https://${HOST_NAME}"
