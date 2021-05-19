@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# shellcheck source=scripts/gcp_common
+source "$SCRIPTS_DIR/gcp_common"
+
+gcloud auth activate-service-account \
+  --project="${GCP_PROJECT_ID}" \
+  --key-file="${GCP_ACCOUNT_FILE}"
+
+# Rebuild the proto descriptor file for the API configuration.
+protoc \
+  --proto_path=./oak_functions/proto \
+  --include_imports \
+  --include_source_info \
+  --descriptor_set_out=./oak_functions/gcp/server.pb \
+  server.proto
+
+# Deploy the API Configuration
+readonly CONFIG_ID='weather-lookup-config'
+readonly API_ID='weather-lookup-api'
+
+gcloud api-gateway api-configs create "${CONFIG_ID}" \
+  --api="${API_ID}" --project="${GCP_PROJECT_ID}" \
+  --grpc-files=./oak_functions/gcp/server.pb,./oak_functions/gcp/weather_lookup_api_config.yaml
+
+# Deploy the API Gateway
+readonly GATEWAY_ID='weather-lookup-grpc'
+
+gcloud api-gateway gateways create "${GATEWAY_ID}" \
+  --api="${API_ID}" --api-config="${CONFIG_ID}" \
+  --location="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+
+# Get the Managed Service name
+MANAGED_SERVICE=$(gcloud api-gateway apis describe "${API_ID}" --format='value(managedService)')
+
+# Enable the API
+gcloud services enable "${MANAGED_SERVICE}"

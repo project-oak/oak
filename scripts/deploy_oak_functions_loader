@@ -62,32 +62,6 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --max-instances=10 \
   --platform=managed
 
-# Rebuild the proto descriptor file for the API configuration.
-protoc \
-  --proto_path=./oak_functions/proto \
-  --include_imports \
-  --include_source_info \
-  --descriptor_set_out=./oak_functions/gcp/server.pb \
-  server.proto
-
-# Deploy the API Configuration
-readonly CONFIG_ID='weather-lookup-config'
-readonly API_ID='weather-lookup-api'
-
-gcloud api-gateway api-configs create "${CONFIG_ID}" \
-  --api="${API_ID}" --project="${GCP_PROJECT_ID}" \
-  --grpc-files=./oak_functions/gcp/server.pb,./oak_functions/gcp/weather_lookup_api_config.yaml
-
-# Deploy the API Gateway
-readonly GATEWAY_ID='weather-lookup-grpc'
-
-gcloud api-gateway gateways create "${GATEWAY_ID}" \
-  --api="${API_ID}" --api-config="${CONFIG_ID}" \
-  --location="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
-
-# Enable the API
-gcloud services enable weather-lookup-api-1uq7zmib3d0f5.apigateway.oak-ci.cloud.goog
-
 # Attempt to communicate with the newly deployed application.
 
 # TODO(): Use generic Oak Functions client to connect

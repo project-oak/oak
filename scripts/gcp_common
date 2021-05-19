@@ -6,6 +6,7 @@ readonly DISK_NAME='oak-hello-world-disk'
 readonly INSTANCE_NAME='oak-hello-world-instance'
 readonly NETWORK_TAG='oak-hello-world-network'
 readonly FIREWALL_RULE='oak-hello-world-access'
+readonly GCP_REGION='europe-west2'
 readonly ZONE='europe-west2-c'
 
 if [[ -z "${GCP_PROJECT_ID:+''}" ]]; then
