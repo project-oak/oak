@@ -41,7 +41,10 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::from_args();
 
-    if AttestationClient::create(&opt.uri, INVALID_TEST_TEE_MEASUREMENT.as_bytes()).await.is_ok() {
+    if AttestationClient::create(&opt.uri, INVALID_TEST_TEE_MEASUREMENT.as_bytes())
+        .await
+        .is_ok()
+    {
         return Err(anyhow!("Invalid TEE measurement accepted"));
     }
 

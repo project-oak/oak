@@ -32,7 +32,7 @@ static AEAD_ALGORITHM: &aead::Algorithm = &aead::AES_256_GCM;
 // https://datatracker.ietf.org/doc/html/rfc7748
 static KEY_AGREEMENT_ALGORITHM: &agreement::Algorithm = &agreement::X25519;
 
-/// Nonce implementation used by [`AeadInterface`].
+/// Nonce implementation used by [`AeadEncryptor`].
 /// It returns a single nonce once and then only returns errors.
 struct OneNonceSequence(Option<aead::Nonce>);
 
@@ -84,10 +84,7 @@ impl AeadEncryptor {
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
         let mut encrypted_data = data.to_vec();
         self.sealing_key
-            .seal_in_place_append_tag(
-                aead::Aad::from(vec![]),
-                &mut encrypted_data,
-            )
+            .seal_in_place_append_tag(aead::Aad::from(vec![]), &mut encrypted_data)
             .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
         Ok(encrypted_data)
     }
@@ -103,10 +100,7 @@ impl AeadEncryptor {
         let mut decrypted_data = data.to_vec();
         let decrypted_data = self
             .opening_key
-            .open_in_place(
-                aead::Aad::from(vec![]),
-                &mut decrypted_data,
-            )
+            .open_in_place(aead::Aad::from(vec![]), &mut decrypted_data)
             .map_err(|error| anyhow!("Couldn't decrypt data: {:?}", error))?;
         Ok(decrypted_data.to_vec())
     }

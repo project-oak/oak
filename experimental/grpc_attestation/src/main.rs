@@ -47,7 +47,7 @@
 //!
 //! It's important to note that for each new gRPC stream both Client and Server generate new pairs
 //! of private/public key pairs and negotiate new session keys.
-//! 
+//!
 //! Key negotiation is done using [`ring::agreement`](https://briansmith.org/rustdoc/ring/agreement/index.html).
 //!
 //! Note: Current version of the gRPC Attestation Service doesn't have remote attestation.

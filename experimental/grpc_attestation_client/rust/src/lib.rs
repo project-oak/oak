@@ -109,9 +109,7 @@ impl AttestationClient {
 
         // Create attestation request with client's public key.
         let request = AttestedInvokeRequest {
-            request_type: Some(RequestType::ClientIdentity(ClientIdentity {
-                public_key,
-            })),
+            request_type: Some(RequestType::ClientIdentity(ClientIdentity { public_key })),
         };
         let response = client
             .send(request)
@@ -175,7 +173,7 @@ impl AttestationClient {
 
     /// Sends data encrypted by the [`AttestationClient::encryptor`] to the server and returns
     /// server responses.
-    /// `Ok(None)` output means that the corresponding gRPC stream has ended.
+    /// Returns `Ok(None)` to indicate that the corresponding gRPC stream has ended.
     pub async fn send(&mut self, data: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let encrypted_data = self
             .encryptor

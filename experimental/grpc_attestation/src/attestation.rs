@@ -16,7 +16,7 @@
 
 use anyhow::{anyhow, Context};
 use futures::{Stream, StreamExt};
-use log::info;
+use log::warn;
 use oak_attestation_common::{
     crypto::{AeadEncryptor, KeyNegotiator},
     get_sha256,
@@ -62,29 +62,35 @@ impl RequestHandler {
 
     /// Decrypts a client request, runs [`RequestHandler::handler`] on them and returns an encrypted
     /// response.
+    /// Returns `Ok(None)` to indicate that the corresponding gRPC stream has ended.
     pub async fn handle_request(
         &mut self,
         receiver: &mut Receiver,
     ) -> anyhow::Result<Option<AttestedInvokeResponse>> {
-        if let Some(request) = receiver.receive().await.context("Couldn't receive request")? {
+        if let Some(request) = receiver
+            .receive()
+            .await
+            .context("Couldn't receive request")?
+        {
             let request_type = request.request_type.context("Couldn't read request type")?;
-            let encrypted_payload = if let RequestType::EncryptedPayload(encrypted_payload) = request_type {
-                Ok(encrypted_payload)
-            } else {
-                Err(anyhow!("Received incorrect message type"))
-            }?;
-            let payload = self
+            let encrypted_request_payload =
+                if let RequestType::EncryptedPayload(encrypted_payload) = request_type {
+                    Ok(encrypted_payload)
+                } else {
+                    Err(anyhow!("Received incorrect message type"))
+                }?;
+            let request_payload = self
                 .encryptor
-                .decrypt(&encrypted_payload)
+                .decrypt(&encrypted_request_payload)
                 .context("Couldn't decrypt data")?;
 
-            let data = (self.handler)(&payload);
-            let encrypted_data = self
+            let response_payload = (self.handler)(&request_payload);
+            let encrypted_response_payload = self
                 .encryptor
-                .encrypt(&data)
+                .encrypt(&response_payload)
                 .context("Couldn't encrypt data")?;
             let response = AttestedInvokeResponse {
-                response_type: Some(ResponseType::EncryptedPayload(data)),
+                response_type: Some(ResponseType::EncryptedPayload(encrypted_response_payload)),
             };
 
             Ok(Some(response))
@@ -127,13 +133,11 @@ impl AttestationServer {
         // Receive client's attestation request containing a public key.
         // TODO(#2103): Refactor gRPC Attestation protocol state machine.
         let request_type = request.request_type.context("Couldn't read request type")?;
-        let request =
-            if let RequestType::ClientIdentity(request) = request_type {
-                Ok(request)
-            } else {
-                Err(anyhow!("Received incorrect message type"))
-            }?;
-        info!("Server received attestation request: {:?}", request);
+        let request = if let RequestType::ClientIdentity(request) = request_type {
+            Ok(request)
+        } else {
+            Err(anyhow!("Received incorrect message type"))
+        }?;
 
         // Generate session key.
         let key_negotiator = KeyNegotiator::create().context("Couldn't create key negotiator")?;
@@ -171,9 +175,8 @@ impl AttestationServer {
 
 #[tonic::async_trait]
 impl GrpcAttestation for AttestationServer {
-    type AttestedInvokeStream = Pin<
-        Box<dyn Stream<Item = Result<AttestedInvokeResponse, Status>> + Send + Sync + 'static>,
-    >;
+    type AttestedInvokeStream =
+        Pin<Box<dyn Stream<Item = Result<AttestedInvokeResponse, Status>> + Send + Sync + 'static>>;
 
     async fn attested_invoke(
         &self,
@@ -181,19 +184,26 @@ impl GrpcAttestation for AttestationServer {
     ) -> Result<Response<Self::AttestedInvokeStream>, Status> {
         let tee_certificate = self.tee_certificate.clone();
         let request_handler = self.request_handler;
-        info!("Server received request stream");
 
         let request_stream = request_stream.into_inner();
         let response_stream = async_stream::try_stream! {
             let mut receiver = Receiver { request_stream };
             let (attestation_response, encryptor) = Self::attest(&mut receiver, tee_certificate)
                 .await
-                .map_err(Status::internal("Couldn't attest to the client"))?;
+                .map_err(|error| {
+                    let message = format!("Couldn't attest to the client: {:?}", error).to_string();
+                    warn!("{}", message);
+                    Status::internal(message)
+                })?;
             yield attestation_response;
 
             let mut handler = RequestHandler::new(encryptor, request_handler);
-            while let Some(response) = handler.handle_request(&mut receiver).await.map_err(Status::internal("Couldn't process stream"))? {
-                yield response
+            while let Some(response) = handler.handle_request(&mut receiver).await.map_err(|error| {
+                let message = format!("Couldn't attest to the client: {:?}", error);
+                warn!("{}", message);
+                Status::internal(message)
+            })? {
+                yield response;
             }
         };
 
