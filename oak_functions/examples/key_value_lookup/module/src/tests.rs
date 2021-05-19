@@ -1,0 +1,128 @@
+//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use hyper::client::Client;
+use maplit::hashmap;
+use oak_functions_abi::proto::{Response, StatusCode};
+use oak_functions_loader::{
+    http::create_and_start_http_server, logger::Logger, lookup::LookupData, server::Policy,
+};
+use prost::Message;
+use std::{
+    net::{Ipv6Addr, SocketAddr},
+    sync::Arc,
+    time::Duration,
+};
+
+#[tokio::test]
+async fn test_server() {
+    let server_port = test_utils::free_port();
+    let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, server_port));
+
+    let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.push("Cargo.toml");
+
+    let wasm_module_bytes =
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+            .expect("Couldn't read Wasm module");
+
+    let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
+
+    let mock_static_server_clone = mock_static_server.clone();
+    let static_server_port = test_utils::free_port();
+    let mock_static_server_background = test_utils::background(|term| async move {
+        mock_static_server_clone
+            .serve(static_server_port, term)
+            .await
+    });
+
+    mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
+        b"key_0".to_vec() => b"value_0".to_vec(),
+        b"key_1".to_vec() => b"value_1".to_vec(),
+        b"key_2".to_vec() => b"value_2".to_vec(),
+        b"empty".to_vec() => vec![],
+    }));
+
+    let logger = Logger::for_test();
+
+    let lookup_data = Arc::new(LookupData::new_empty(
+        &format!("http://localhost:{}", static_server_port),
+        logger.clone(),
+    ));
+    lookup_data.refresh().await.unwrap();
+
+    let policy = Policy {
+        constant_response_size_bytes: 100,
+        constant_processing_time: Duration::from_millis(200),
+    };
+
+    let server_background = test_utils::background(|term| async move {
+        create_and_start_http_server(
+            &address,
+            &wasm_module_bytes,
+            lookup_data,
+            policy,
+            term,
+            logger,
+        )
+        .await
+    });
+
+    {
+        // Lookup match.
+        let response = make_request(server_port, b"key_1").await;
+        let response = Response::decode(response.as_ref()).unwrap();
+        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(b"value_1", response.body().unwrap(),);
+    }
+    {
+        // Lookup fail.
+        let response = make_request(server_port, b"key_42").await;
+        let response = Response::decode(response.as_ref()).unwrap();
+        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(Vec::<u8>::new(), response.body().unwrap());
+    }
+    {
+        // Lookup match but empty value.
+        let response = make_request(server_port, b"empty").await;
+        let response = Response::decode(response.as_ref()).unwrap();
+        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(Vec::<u8>::new(), response.body().unwrap());
+    }
+
+    let res = server_background.terminate_and_join().await;
+    assert!(res.is_ok());
+
+    mock_static_server_background.terminate_and_join().await;
+}
+
+async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
+    let client = Client::builder().http2_only(true).build_http();
+    let request = hyper::Request::builder()
+        .method(http::Method::POST)
+        .uri(format!("http://localhost:{}/invoke", port))
+        .body(hyper::Body::from(request_body.to_vec()))
+        .unwrap();
+    let resp = client
+        .request(request)
+        .await
+        .expect("Error while awaiting response");
+
+    assert_eq!(resp.status(), hyper::StatusCode::OK);
+    hyper::body::to_bytes(resp.into_body())
+        .await
+        .unwrap()
+        .to_vec()
+}

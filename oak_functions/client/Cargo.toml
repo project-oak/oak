@@ -1,0 +1,26 @@
+[package]
+name = "oak_functions_client"
+version = "0.1.0"
+authors = ["Tiziano Santoro <tzn@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+http = "*"
+log = "*"
+oak_functions_abi = { path = "../abi" }
+prost = "*"
+regex = "*"
+structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }
+tonic = { version = "*" }
+
+[build-dependencies]
+oak_utils = { path = "../../oak_utils" }
