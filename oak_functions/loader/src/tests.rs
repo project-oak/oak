@@ -68,12 +68,11 @@ async fn test_valid_policy() {
     run_scenario_with_policy(scenario, policy).await;
 }
 
-// TODO(#2026): Remove `ignore` when we can interrupt execution in Wasm
-#[ignore]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_long_response_time() {
     // The `constant_processing_time` is too low.
-    let constant_processing_time = Duration::from_millis(10);
+    let allowed_processing_time = 10;
+    let constant_processing_time = Duration::from_millis(allowed_processing_time);
     let policy = Policy {
         constant_response_size_bytes: 100,
         constant_processing_time,
@@ -82,13 +81,18 @@ async fn test_long_response_time() {
     // So we expect the request to fail, with `response not available error`.
     let scenario = |server_port: u16| async move {
         let result = make_request(server_port, br#"{"lat":52,"lon":0}"#).await;
-        // TODO(#1987): Check elapsed time
+        // Check the elapsed time, allowing a margin of 10ms.
+        assert!(
+            result.elapsed < Duration::from_millis(allowed_processing_time + 10),
+            "elapsed: {:?}",
+            result.elapsed
+        );
 
         let response = result.response;
         assert_eq!(StatusCode::PolicyTimeViolation as i32, response.status);
         assert_eq!(
             std::str::from_utf8(response.body().unwrap()).unwrap(),
-            "Reason: response not available\n"
+            "Reason: response not available.\n"
         );
     };
 
@@ -153,6 +157,7 @@ where
     // Yield to the Tokio runtime’s scheduler, to allow the server thread to make progress before
     // starting the client. This is needed for a more accurate measurement of the processing time.
     tokio::task::yield_now().await;
+    std::thread::sleep(Duration::from_secs(1));
 
     test_scenario(server_port).await;
 
