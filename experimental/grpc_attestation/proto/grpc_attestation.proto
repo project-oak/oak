@@ -1,0 +1,63 @@
+//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.examples.grpc_attestation;
+
+message AttestedInvokeRequest {
+  oneof request_type {
+    // Client part of session key negotiation.
+    ClientIdentity client_identity = 1;
+    // Payload encrypted using the session key.
+    bytes encrypted_payload = 2;
+  }
+}
+
+// TODO(#2105): Implement challenge-response in gRPC Attestation.
+message ClientIdentity {
+  // Client public key needed to establish a session key between client and server.
+  bytes public_key = 1;
+}
+
+message AttestedInvokeResponse {
+  oneof response_type {
+    // Server part of session key negotiation.
+    ServerIdentity server_identity = 1;
+    // Payload encrypted using the session key.
+    bytes encrypted_payload = 2;
+  }
+}
+
+// TODO(#2106): Support various claims in gRPC Attestation.
+message ServerIdentity {
+  // Server public key needed to establish a session key between client and server.
+  bytes public_key = 1;
+  // Information used for remote attestation such as a TEE report and a TEE provider's certificate.
+  // TEE report should contain a hash of the server's public key.
+  bytes attestation_info = 2;
+}
+
+service GrpcAttestation {
+  // Creates a message stream for session key negotiation and encrypted payload exchange.
+  //
+  // The created message stream looks as follows:
+  // - Client->Server: `AttestedInvokeRequest` with `ClientIdentity`.
+  // - Client->Server: `AttestedInvokeResponse` with `ServerIdentity`.
+  // - Client->Server: `AttestedInvokeRequest` with `encrypted_payload`.
+  // - Server->Client: `AttestedInvokeResponse` with `encrypted_payload`.
+  rpc AttestedInvoke(stream AttestedInvokeRequest) returns (stream AttestedInvokeResponse);
+}

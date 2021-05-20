@@ -9,6 +9,8 @@ members = [
   "proxy_attestation",
   "tls_attestation",
   "https_attestation",
+  "grpc_attestation",
+  "grpc_attestation_client/rust",
 ]
 
 [patch.crates-io]

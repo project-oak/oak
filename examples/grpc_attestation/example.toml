@@ -1,0 +1,16 @@
+name = "grpc_attestation"
+
+# Currently backend sends responses to the client, so there is no need for Oak application.
+# TODO(#1932): Use gRPC Attestation for Weather Example in Oak Functions.
+[applications]
+
+[backends]
+backend = { Cargo = { cargo_manifest = "experimental/grpc_attestation/Cargo.toml" }, additional_args = [
+  "--grpc-listen-address=[::]:8080",
+  "--tee-certificate=./examples/certs/local/ca.pem",
+] }
+
+[clients]
+rust = { Cargo = { cargo_manifest = "examples/grpc_attestation/client/Cargo.toml" }, additional_args = [
+  "--uri=https://localhost:8080"
+] }
