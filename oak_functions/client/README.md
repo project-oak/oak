@@ -3,7 +3,7 @@
 `oak_functions_client` is a command-line utility to invoke any instance of an
 Oak Functions server over gRPC.
 
-It reads the request payload from standard input, and prints the response
+It reads the request payload from the `--request` flag, and prints the response
 payload to standard output.
 
 To compile:
@@ -16,6 +16,7 @@ cargo build \
 Example invocation:
 
 ```sh
-echo request_body | ./oak_functions/client/target/debug/oak_functions_client \
-  --uri=http://localhost:8080
+./oak_functions/client/target/debug/oak_functions_client \
+  --uri=http://localhost:8080 \
+  --request=request_body
 ```

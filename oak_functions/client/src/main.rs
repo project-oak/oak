@@ -26,7 +26,6 @@ use crate::proto::grpc_handler_client::GrpcHandlerClient;
 use anyhow::Context;
 use http::uri::Uri;
 use oak_functions_abi::proto::Request;
-use std::io::Read;
 use structopt::StructOpt;
 use tonic::transport::Channel;
 
@@ -39,6 +38,8 @@ pub struct Opt {
         default_value = "http://localhost:8080"
     )]
     uri: String,
+    #[structopt(long, help = "request payload")]
+    request: String,
 }
 
 #[tokio::main]
@@ -52,11 +53,9 @@ async fn main() -> anyhow::Result<()> {
     let mut client = GrpcHandlerClient::new(channel);
 
     // Create and send request.
-    let mut request_body = Vec::new();
-    std::io::stdin()
-        .read_to_end(&mut request_body)
-        .context("Could not read request from STDIN")?;
-    let req = tonic::Request::new(Request { body: request_body });
+    let req = tonic::Request::new(Request {
+        body: opt.request.as_bytes().to_vec(),
+    });
 
     let res = client.invoke(req).await.context("Error sending request")?;
     let res = res.into_inner();

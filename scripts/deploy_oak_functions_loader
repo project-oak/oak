@@ -65,5 +65,6 @@ readonly HOST_NAME="$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --loc
 cargo build --manifest-path=./oak_functions/client/Cargo.toml
 
 # Attempt to communicate with the newly deployed application.
-echo '{"lat":52,"lon":0}' | ./oak_functions/client/target/debug/oak_functions_client \
-  --uri="https://${HOST_NAME}"
+./oak_functions/client/target/debug/oak_functions_client \
+  --uri="https://${HOST_NAME}" \
+  --request='{"lat":52,"lon":0}'
