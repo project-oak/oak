@@ -6,7 +6,10 @@ readonly DISK_NAME='oak-hello-world-disk'
 readonly INSTANCE_NAME='oak-hello-world-instance'
 readonly NETWORK_TAG='oak-hello-world-network'
 readonly FIREWALL_RULE='oak-hello-world-access'
+readonly GCP_REGION='europe-west2'
 readonly ZONE='europe-west2-c'
+readonly FUNCTIONS_INSTANCE_NAME='oak-functions-weather-lookup'
+readonly GATEWAY_ID='weather-lookup-grpc'
 
 if [[ -z "${GCP_PROJECT_ID:+''}" ]]; then
   echo 'Required environment variable GCP_PROJECT_ID is not set.' 1>&2

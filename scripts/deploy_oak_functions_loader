@@ -35,8 +35,6 @@ docker build \
 
 docker push "${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest"
 
-readonly FUNCTIONS_INSTANCE_NAME=oak-functions-weather-lookup
-
 gcloud auth activate-service-account \
   --project="${GCP_PROJECT_ID}" \
   --key-file="${GCP_ACCOUNT_FILE}"
@@ -49,7 +47,7 @@ gcloud auth activate-service-account \
 # Use beta channel of Cloud Run in order to support HTTP2 until it is generally available.
 
 gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
-  --region=europe-west2 \
+  --region="${GCP_REGION}" \
   --image="${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest" \
   --allow-unauthenticated \
   --use-http2 \
@@ -60,16 +58,12 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --max-instances=10 \
   --platform=managed
 
-# Attempt to communicate with the newly deployed application.
-#
-# The URL parameter at the end is just to let curl perform multiple consecutive requests, but it is
-# ignored by the server. See https://serverfault.com/a/358464.
+# Find the gateway URL.
+readonly HOST_NAME="$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --location="${GCP_REGION}" --format='value(defaultHostname)')"
 
-curl \
-  --fail \
-  --fail-early \
-  --http2 \
-  --http2-prior-knowledge \
-  --request POST \
-  --data '{"lat":51,"lon":0}' \
-  "https://${FUNCTIONS_INSTANCE_NAME}-62sa4xcfia-nw.a.run.app/invoke?n=[0-15]"
+#Build the client to test the connection.
+cargo build --manifest-path=./oak_functions/client/Cargo.toml
+
+# Attempt to communicate with the newly deployed application.
+echo '{"lat":52,"lon":0}' | ./oak_functions/client/target/debug/oak_functions_client \
+  --uri="https://${HOST_NAME}"
