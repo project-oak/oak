@@ -1,2 +1,6 @@
 [workspace]
-members = ["key_value_lookup/module", "weather_lookup/module"]
+members = [
+  "fuzzable/module",
+  "key_value_lookup/module",
+  "weather_lookup/module",
+]
