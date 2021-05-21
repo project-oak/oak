@@ -493,13 +493,13 @@ where
         // The `function` did not terminate within the policy timeout
         None => Response::create(
             StatusCode::PolicyTimeViolation,
-            "Reason: response not available.\n".as_bytes().to_vec(),
+            "Reason: response not available.".as_bytes().to_vec(),
         ),
         Some(response) => match response {
             // `tokio::task::JoinError` when getting the response from the tokio task
             Err(_tokio_err) => Response::create(
                 StatusCode::InternalServerError,
-                "Reason: internal server error.\n".as_bytes().to_vec(),
+                "Reason: internal server error.".as_bytes().to_vec(),
             ),
             Ok(response) => match response {
                 // The `function` terminated with an error
@@ -516,7 +516,7 @@ where
     let response = if response.body.len() > policy.constant_response_size_bytes {
         Response::create(
             StatusCode::PolicySizeViolation,
-            "Reason: the response is too large.\n".as_bytes().to_vec(),
+            "Reason: the response is too large.".as_bytes().to_vec(),
         )
     } else {
         response
