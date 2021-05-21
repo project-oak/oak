@@ -51,7 +51,7 @@ roughenough = { path = "../third_party/roughenough" }
 rustls = "*"
 serde = "*"
 serde_json = "*"
-sha2 = "^0.9.1"
+sha2 = "^0.9.5"
 tink-core = { version = "*", features = ["json"] }
 tink-aead = "*"
 tink-awskms = { version = "*", optional = true }
