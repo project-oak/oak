@@ -18,13 +18,12 @@ use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
     grpc::create_and_start_grpc_server, logger::Logger, lookup::LookupData, server::Policy,
 };
-use test_utils::make_request;
-
 use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
     time::Duration,
 };
+use test_utils::make_request;
 
 #[tokio::test]
 async fn test_server() {
@@ -83,7 +82,7 @@ async fn test_server() {
         let response = make_request(server_port, br#"{"lat":52,"lon":0}"#)
             .await
             .response;
-        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
             r#"{"temperature_degrees_celsius":10}"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
@@ -94,7 +93,7 @@ async fn test_server() {
         let response = make_request(server_port, br#"{"lat":19,"lon":88}"#)
             .await
             .response;
-        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
             r#"weather not found for location"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
@@ -103,7 +102,7 @@ async fn test_server() {
     {
         // Malformed request.
         let response = make_request(server_port, b"invalid - JSON").await.response;
-        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
             "could not deserialize request as JSON",
             std::str::from_utf8(response.body().unwrap()).unwrap()

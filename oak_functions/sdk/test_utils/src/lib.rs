@@ -17,11 +17,13 @@
 //! Test utilities to help with unit testing of Oak-Functions SDK code.
 
 use anyhow::Context;
+use http::uri::Uri;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body,
 };
 use log::info;
+use oak_functions_abi::proto::Response;
 use prost::Message;
 use std::{
     collections::HashMap,
@@ -35,16 +37,6 @@ use std::{
     time::Duration,
 };
 use tokio::{sync::oneshot, task::JoinHandle};
-
-use http::uri::Uri;
-use oak_functions_abi::proto::{Request, Response};
-use tonic::transport::Channel;
-
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
-}
-
-use crate::proto::grpc_handler_client::GrpcHandlerClient;
 
 /// Returns the path to the Wasm file produced by compiling the provided `Cargo.toml` file.
 fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
@@ -217,27 +209,17 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let uri: Uri = uri.parse().expect("Error parsing URI");
 
     // Create client
-    let channel = Channel::builder(uri.clone())
-        .connect()
+    let mut client = oak_functions_client::Client::new(&uri)
         .await
-        .expect("could not establish connection");
-    let mut client = GrpcHandlerClient::new(channel);
-
-    // Create Tonic request
-    let req = tonic::Request::new(Request {
-        body: request_body.to_vec(),
-    });
+        .expect("Could not create client");
 
     // Send the request and measure time
     let start = std::time::Instant::now();
-    let resp = client
-        .invoke(req)
+    let response = client
+        .invoke(request_body)
         .await
         .expect("Error while awaiting response");
     let elapsed = start.elapsed();
 
-    TestResult {
-        elapsed,
-        response: resp.into_inner(),
-    }
+    TestResult { elapsed, response }
 }

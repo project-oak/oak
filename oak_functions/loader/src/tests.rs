@@ -58,7 +58,7 @@ async fn test_valid_policy() {
         );
 
         let response = result.response;
-        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
             std::str::from_utf8(response.body().unwrap()).unwrap(),
             r#"{"temperature_degrees_celsius":10}"#
@@ -85,7 +85,7 @@ async fn test_long_response_time() {
         // TODO(#1987): Check elapsed time
 
         let response = result.response;
-        assert_eq!(StatusCode::PolicyTimeViolation as i32, response.status,);
+        assert_eq!(StatusCode::PolicyTimeViolation as i32, response.status);
         assert_eq!(
             std::str::from_utf8(response.body().unwrap()).unwrap(),
             "Reason: response not available\n"

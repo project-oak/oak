@@ -17,17 +17,10 @@
 //! Sends a gRPC request to the weather lookup application and checks that the response has the
 //! correct format.
 
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
-}
-
-use crate::proto::grpc_handler_client::GrpcHandlerClient;
-
 use anyhow::Context;
 use http::uri::Uri;
-use oak_functions_abi::proto::Request;
+use oak_functions_client::Client;
 use structopt::StructOpt;
-use tonic::transport::Channel;
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Oak Functions Client")]
@@ -48,18 +41,15 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
     let uri: Uri = opt.uri.parse().context("Error parsing URI")?;
 
-    // Create client.
-    let channel = Channel::builder(uri.clone()).connect().await?;
-    let mut client = GrpcHandlerClient::new(channel);
+    let mut client = Client::new(&uri)
+        .await
+        .context("Could not create Oak Functions client")?;
 
-    // Create and send request.
-    let req = tonic::Request::new(Request {
-        body: opt.request.as_bytes().to_vec(),
-    });
-
-    let res = client.invoke(req).await.context("Error sending request")?;
-    let res = res.into_inner();
-    let response_body = std::str::from_utf8(res.body().unwrap()).unwrap();
+    let response = client
+        .invoke(opt.request.as_bytes())
+        .await
+        .context("Could not invoke Oak Functions")?;
+    let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
     print!("{}", response_body);
 
     Ok(())

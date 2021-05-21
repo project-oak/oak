@@ -82,19 +82,19 @@ async fn test_server() {
     {
         // Lookup match.
         let response = make_request(server_port, b"key_1").await.response;
-        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(b"value_1", response.body().unwrap(),);
     }
     {
         // Lookup fail.
         let response = make_request(server_port, b"key_42").await.response;
-        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(Vec::<u8>::new(), response.body().unwrap());
     }
     {
         // Lookup match but empty value.
         let response = make_request(server_port, b"empty").await.response;
-        assert_eq!(StatusCode::Success as i32, response.status,);
+        assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(Vec::<u8>::new(), response.body().unwrap());
     }
 

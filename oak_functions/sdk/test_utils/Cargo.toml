@@ -12,10 +12,7 @@ log = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 oak_functions_abi = { path = "../../abi" }
+oak_functions_client = { path = "../../client" }
 port_check = "*"
 prost = "*"
 tokio = { version = "*", features = ["sync"] }
-tonic = "*"
-
-[build-dependencies]
-oak_utils = { path = "../../../oak_utils" }
