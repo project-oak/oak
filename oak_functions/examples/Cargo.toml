@@ -1,6 +1,2 @@
 [workspace]
-members = [
-  "key_value_lookup/module",
-  "weather_lookup/client/rust",
-  "weather_lookup/module",
-]
+members = ["key_value_lookup/module", "weather_lookup/module"]
