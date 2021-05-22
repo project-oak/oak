@@ -17,7 +17,7 @@
 extern crate prost_build;
 
 fn main() {
-    let file_paths = ["../../../loader/fuzz/proto/abi_functions.proto"];
+    let file_paths = ["../../../loader/fuzz/proto/instructions.proto"];
     prost_build::compile_protos(&file_paths, &["../../../loader/fuzz/proto"])
         .expect("Proto compilation failed");
 

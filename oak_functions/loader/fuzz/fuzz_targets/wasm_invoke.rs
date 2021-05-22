@@ -16,11 +16,11 @@
 #![no_main]
 
 pub mod proto {
-    include!(concat!(env!("OUT_DIR"), "/loader.fuzz.abi_functions.rs"));
+    include!(concat!(env!("OUT_DIR"), "/loader.fuzz.instructions.rs"));
 }
 
-use crate::proto::{abi_function::Function, AbiFunctions};
-use arbitrary::{Arbitrary, Result, Unstructured};
+use crate::proto::{instruction::InstructionVariant, Instructions};
+use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
 use oak_functions_abi::proto::Request;
 use oak_functions_loader::{
@@ -30,33 +30,20 @@ use prost::Message;
 use std::sync::Arc;
 
 #[derive(Arbitrary, Debug)]
-enum AbiFunction {
+enum ArbitraryInstruction {
     Panic,
     ReadRequest,
     WriteResponse {
         // The response to write.
-        response: Bytes,
+        response: Vec<u8>,
     },
     StorageGetItem {
         // The key to lookup.
-        key: Bytes,
+        key: Vec<u8>,
     },
     WriteLogMessage {
-        message: Bytes,
+        message: Vec<u8>,
     },
-}
-
-/// Wrapper for a byte vector, to provide a custom `Arbitrary` implementation.
-#[derive(Debug)]
-struct Bytes {
-    bytes: Vec<u8>,
-}
-
-impl Arbitrary<'_> for Bytes {
-    fn arbitrary(raw: &mut Unstructured<'_>) -> Result<Self> {
-        let bytes = <Vec<u8>>::arbitrary(raw)?;
-        Ok(Self { bytes })
-    }
 }
 
 const MANIFEST_PATH: &str = "../examples/fuzzable/module/Cargo.toml";
@@ -65,38 +52,15 @@ lazy_static::lazy_static! {
         test_utils::compile_rust_wasm(MANIFEST_PATH).expect("Couldn't read Wasm module");
 }
 
-// Randomly generate a list of `AbiFunctions` and send them to the Wasm module to run them.
-fuzz_target!(|methods: Vec<AbiFunction>| {
-    let functions = methods
+// Generate a random list of `Instruction`s and send them to the Wasm module to run.
+fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
+    let instructions = instruction_list
         .iter()
-        .map(|method| {
-            let function = match method {
-                AbiFunction::Panic => Some(Function::Panic(crate::proto::Panic {})),
-                AbiFunction::ReadRequest => {
-                    Some(Function::ReadRequest(crate::proto::ReadRequest {}))
-                }
-                AbiFunction::WriteResponse { response } => {
-                    Some(Function::WriteResponse(crate::proto::WriteResponse {
-                        response: response.bytes.clone(),
-                    }))
-                }
-                AbiFunction::StorageGetItem { key } => {
-                    Some(Function::StorageGetItem(crate::proto::StorageGetItem {
-                        key: key.bytes.clone(),
-                    }))
-                }
-                AbiFunction::WriteLogMessage { message } => {
-                    Some(Function::WriteLogMessage(crate::proto::WriteLogMessage {
-                        message: message.bytes.clone(),
-                    }))
-                }
-            };
-            crate::proto::AbiFunction { function }
-        })
+        .map(crate::proto::Instruction::from)
         .collect();
-    let abi_functions = AbiFunctions { functions };
+    let instructions = Instructions { instructions };
     let mut body = vec![];
-    abi_functions
+    instructions
         .encode(&mut body)
         .expect("Error encoding abi_function");
     let request = Request { body };
@@ -113,3 +77,33 @@ fuzz_target!(|methods: Vec<AbiFunction>| {
     assert!(result.is_ok());
     // Cannot check the exact response value, since the wasm function may panic at any point.
 });
+
+/// Convert [`&ArbitraryInstruction`] into [`crate::proto::Instruction`].
+impl From<&ArbitraryInstruction> for crate::proto::Instruction {
+    fn from(instruction: &ArbitraryInstruction) -> Self {
+        let instruction_variant = match instruction {
+            ArbitraryInstruction::Panic => Some(InstructionVariant::Panic(crate::proto::Panic {})),
+            ArbitraryInstruction::ReadRequest => Some(InstructionVariant::ReadRequest(
+                crate::proto::ReadRequest {},
+            )),
+            ArbitraryInstruction::WriteResponse { response } => Some(
+                InstructionVariant::WriteResponse(crate::proto::WriteResponse {
+                    response: response.clone(),
+                }),
+            ),
+            ArbitraryInstruction::StorageGetItem { key } => {
+                Some(InstructionVariant::StorageGetItem(
+                    crate::proto::StorageGetItem { key: key.clone() },
+                ))
+            }
+            ArbitraryInstruction::WriteLogMessage { message } => Some(
+                InstructionVariant::WriteLogMessage(crate::proto::WriteLogMessage {
+                    message: message.clone(),
+                }),
+            ),
+        };
+        crate::proto::Instruction {
+            instruction_variant,
+        }
+    }
+}

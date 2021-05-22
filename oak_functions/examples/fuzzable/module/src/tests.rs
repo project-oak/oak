@@ -13,7 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::{abi_function::Function, AbiFunction, AbiFunctions, Panic, WriteResponse};
+use crate::proto::{
+    instruction::InstructionVariant, Instruction, Instructions, Panic, WriteResponse,
+};
 use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
     grpc::create_and_start_grpc_server, logger::Logger, lookup::LookupData, server::Policy,
@@ -60,12 +62,14 @@ async fn test_server() {
     });
 
     {
-        // Send a request with an empty list of AbiFunctions.
-        let request = AbiFunctions { functions: vec![] };
+        // Send a request with an empty instruction list.
+        let request = Instructions {
+            instructions: vec![],
+        };
         let mut request_bytes = vec![];
         request
             .encode(&mut request_bytes)
-            .expect("Could not encode empty AbiFunctions");
+            .expect("Couldn't encode empty instruction list");
         let response = make_request(server_port, &request_bytes).await.response;
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(b"Done fuzzing!", response.body().unwrap());
@@ -73,15 +77,15 @@ async fn test_server() {
 
     {
         // Send a request to simulate a panic.
-        let request = AbiFunctions {
-            functions: vec![AbiFunction {
-                function: Some(Function::Panic(Panic {})),
+        let request = Instructions {
+            instructions: vec![Instruction {
+                instruction_variant: Some(InstructionVariant::Panic(Panic {})),
             }],
         };
         let mut request_bytes = vec![];
         request
             .encode(&mut request_bytes)
-            .expect("Could not encode empty AbiFunctions");
+            .expect("Couldn't encode a single panic instruction");
         let response = make_request(server_port, &request_bytes).await.response;
         assert_eq!(StatusCode::Success as i32, response.status);
 
@@ -91,22 +95,22 @@ async fn test_server() {
 
     {
         // Send a request to simulate a write_response followed by a panic.
-        let request = AbiFunctions {
-            functions: vec![
-                AbiFunction {
-                    function: Some(Function::WriteResponse(WriteResponse {
+        let request = Instructions {
+            instructions: vec![
+                Instruction {
+                    instruction_variant: Some(InstructionVariant::WriteResponse(WriteResponse {
                         response: br"Random response!".to_vec(),
                     })),
                 },
-                AbiFunction {
-                    function: Some(Function::Panic(Panic {})),
+                Instruction {
+                    instruction_variant: Some(InstructionVariant::Panic(Panic {})),
                 },
             ],
         };
         let mut request_bytes = vec![];
         request
             .encode(&mut request_bytes)
-            .expect("Could not encode empty AbiFunctions");
+            .expect("Couldn't encode instruction list");
         let response = make_request(server_port, &request_bytes).await.response;
         assert_eq!(StatusCode::Success as i32, response.status);
 

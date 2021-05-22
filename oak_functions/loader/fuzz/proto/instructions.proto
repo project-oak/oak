@@ -16,14 +16,14 @@
 
 syntax = "proto3";
 
-package loader.fuzz.abi_functions;
+package loader.fuzz.instructions;
 
-message AbiFunctions {
-  repeated AbiFunction functions = 1;
+message Instructions {
+  repeated Instruction instructions = 1;
 }
 
-message AbiFunction {
-  oneof function {
+message Instruction {
+  oneof instruction_variant {
     Panic panic = 1;
     ReadRequest read_request = 2;
     WriteResponse write_response = 3;
