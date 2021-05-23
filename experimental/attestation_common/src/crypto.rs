@@ -70,7 +70,8 @@ impl AeadEncryptor {
         // Bind `AeadEncryptor::key` to a `NONCE`.
         let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.key)
             .map_err(|error| anyhow!("Couldn't create sealing key: {:?}", error))?;
-        let mut sealing_key = ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new(NONCE));
+        let mut sealing_key =
+            ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new(NONCE));
 
         let mut encrypted_data = data.to_vec();
         sealing_key
@@ -81,11 +82,11 @@ impl AeadEncryptor {
             // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
             .seal_in_place_append_tag(aead::Aad::empty(), &mut encrypted_data)
             .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
-        
+
         // Add `NONCE` as a prefix to the resulting data.
         let mut result = NONCE.to_vec();
         result.extend(encrypted_data.to_vec());
-        
+
         Ok(result)
     }
 
@@ -102,8 +103,9 @@ impl AeadEncryptor {
 
         // Bind `AeadEncryptor::key` to the extracted `nonce`.
         let unbound_opening_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.key).unwrap();
-        let mut opening_key = ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new(nonce));
-        
+        let mut opening_key =
+            ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new(nonce));
+
         let decrypted_data = opening_key
             // Additional authenticated data is not required for the remotely attested channel,
             // since after session key is established client and server exchange messages with a

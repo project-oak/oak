@@ -41,15 +41,7 @@ java_binary(
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//protobuf",
         "@io_grpc_grpc_java//stub",
-        # "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_hkdf_streaming",
-        # "@tink_java//src/main/java/com/google/crypto/tink:aead",
-        # "@tink_java//src/main/java/com/google/crypto/tink/aead:aead_config",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:x25519",
     ],
 )
-
-# bazel build //experimental/grpc_attestation_client/java:grpc_attestation_client
-
-# option java_multiple_files = true;
-# option java_package = "oak.examples.grpc_attestation";
