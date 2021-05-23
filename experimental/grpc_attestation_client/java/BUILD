@@ -23,10 +23,10 @@ package(
 java_binary(
     name = "grpc_attestation_client",
     srcs = [
-        "com/google/oak/grpc_attestation_client/Main.java",
+        "com/google/oak/grpc_attestation_client/AeadEncryptor.java",
         "com/google/oak/grpc_attestation_client/AttestationClient.java",
         "com/google/oak/grpc_attestation_client/KeyNegotiator.java",
-        "com/google/oak/grpc_attestation_client/AeadEncryptor.java",
+        "com/google/oak/grpc_attestation_client/Main.java",
     ],
     main_class = "com.google.oak.grpc_attestation_client.Main",
     runtime_deps = [
