@@ -10,10 +10,18 @@ cargo-fuzz = true
 
 [dependencies]
 anyhow = "*"
+arbitrary = { version = "1", features = ["derive"] }
+lazy_static = "*"
 libfuzzer-sys = "*"
 oak_functions_loader = { path = ".." }
 oak_functions_abi = { path = "../../abi" }
+prost = "*"
+test_utils = { path = "../../sdk/test_utils" }
 tokio = "*"
+tonic = "*"
+
+[build-dependencies]
+prost-build = "*"
 
 # Prevent this from interfering with workspaces
 [workspace]
@@ -22,5 +30,11 @@ members = ["."]
 [[bin]]
 name = "apply_policy"
 path = "fuzz_targets/apply_policy.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "wasm_invoke"
+path = "fuzz_targets/wasm_invoke.rs"
 test = false
 doc = false

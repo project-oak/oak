@@ -330,6 +330,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fuzzable"
+version = "0.1.0"
+dependencies = [
+ "oak_functions",
+ "oak_functions_abi",
+ "oak_functions_loader",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "test_utils",
+ "tokio",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
