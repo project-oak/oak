@@ -18,6 +18,9 @@ syntax = "proto3";
 
 package oak.examples.grpc_attestation;
 
+option java_multiple_files = true;
+option java_package = "oak.examples.grpc_attestation";
+
 message AttestedInvokeRequest {
   oneof request_type {
     // Client part of session key negotiation.

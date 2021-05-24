@@ -68,7 +68,7 @@ pub struct Opt {
     #[structopt(
         long,
         help = "Address to listen on for the gRPC server.",
-        default_value = "[::]:8888"
+        default_value = "[::]:8080"
     )]
     grpc_listen_address: String,
     #[structopt(

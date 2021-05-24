@@ -56,6 +56,22 @@ http_archive(
     ],
 )
 
+# Tink crypto library for Java.
+http_archive(
+    name = "tink_java",
+    patches = [
+        # This patch removes Android dependencies from Tink Java libraries.
+        # https://github.com/google/tink/issues/507
+        "//third_party/google/tink:Remove-android-from-java.patch",
+    ],
+    sha256 = "5856b0207ffb2cf28dd5c421789ffca3cfeea0680055f455e14bec2f335b1765",
+    strip_prefix = "tink-58be99b3c4d09154d12643327f293cc45b2a6a7b/java_src",
+    # Commit from 2021-05-19
+    urls = [
+        "https://github.com/google/tink/archive/58be99b3c4d09154d12643327f293cc45b2a6a7b.tar.gz",
+    ],
+)
+
 # BoringSSL
 http_archive(
     name = "boringssl",

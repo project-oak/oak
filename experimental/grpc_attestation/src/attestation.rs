@@ -148,7 +148,7 @@ impl AttestationServer {
             .derive_session_key(&request.public_key)
             .context("Couldn't derive session key")?;
 
-        let encryptor = AeadEncryptor::new(&session_key);
+        let encryptor = AeadEncryptor::new(session_key);
 
         // Generate attestation info with a TEE report.
         // TEE report contains a hash of the server's public key.
@@ -199,7 +199,7 @@ impl GrpcAttestation for AttestationServer {
 
             let mut handler = RequestHandler::new(encryptor, request_handler);
             while let Some(response) = handler.handle_request(&mut receiver).await.map_err(|error| {
-                let message = format!("Couldn't attest to the client: {:?}", error);
+                let message = format!("Couldn't handle request: {:?}", error);
                 warn!("{}", message);
                 Status::internal(message)
             })? {

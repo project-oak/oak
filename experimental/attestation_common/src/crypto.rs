@@ -37,8 +37,8 @@ static KEY_AGREEMENT_ALGORITHM: &agreement::Algorithm = &agreement::X25519;
 struct OneNonceSequence(Option<aead::Nonce>);
 
 impl OneNonceSequence {
-    fn new() -> Self {
-        let nonce = aead::Nonce::assume_unique_for_key(NONCE);
+    fn new(nonce: [u8; aead::NONCE_LEN]) -> Self {
+        let nonce = aead::Nonce::assume_unique_for_key(nonce);
         Self(Some(nonce))
     }
 }
@@ -52,58 +52,74 @@ impl aead::NonceSequence for OneNonceSequence {
 /// Implementation of Authenticated Encryption with Associated Data (AEAD).
 /// https://datatracker.ietf.org/doc/html/rfc5116
 pub struct AeadEncryptor {
-    // Key used for encrypting data.
-    sealing_key: aead::SealingKey<OneNonceSequence>,
-    // Key used for decrypting data.
-    opening_key: aead::OpeningKey<OneNonceSequence>,
+    /// Key used for encrypting and decrypting data.
+    ///
+    /// AES-GCM algorithm uses the same key for both encryption and decryption.
+    /// https://datatracker.ietf.org/doc/html/rfc5288
+    key: Vec<u8>,
 }
 
 impl AeadEncryptor {
-    pub fn new(key: &[u8]) -> Self {
-        // AES-GCM algorithm uses the same key for both encryption and decryption.
-        // https://datatracker.ietf.org/doc/html/rfc5288
-        let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &key).unwrap();
-        let sealing_key = ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new());
-
-        let unbound_opening_key = aead::UnboundKey::new(AEAD_ALGORITHM, &key).unwrap();
-        let opening_key = ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new());
-
-        Self {
-            sealing_key,
-            opening_key,
-        }
+    pub fn new(key: Vec<u8>) -> Self {
+        Self { key }
     }
 
-    /// Encrypts `data` using [`AeadEncryptor::sealing_key`].
+    /// Encrypts `data` using [`AeadEncryptor::key`].
+    /// The resulting encrypted data is prefixed with a nonce.
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        // Bind `AeadEncryptor::key` to a `NONCE`.
+        let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.key)
+            .map_err(|error| anyhow!("Couldn't create sealing key: {:?}", error))?;
+        let mut sealing_key =
+            ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new(NONCE));
+
         let mut encrypted_data = data.to_vec();
-        self.sealing_key
+        sealing_key
             // Additional authenticated data is not required for the remotely attested channel,
             // since after session key is established client and server exchange messages with a
             // single encrypted field.
             // And the nonce is authenticated by the AEAD algorithm itself.
             // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
-            .seal_in_place_append_tag(aead::Aad::from(vec![]), &mut encrypted_data)
+            .seal_in_place_append_tag(aead::Aad::empty(), &mut encrypted_data)
             .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
-        Ok(encrypted_data)
+
+        // Add `NONCE` as a prefix to the resulting data.
+        let mut result = NONCE.to_vec();
+        result.extend(encrypted_data.to_vec());
+
+        Ok(result)
     }
 
-    /// Decrypts and authenticates `data` using [`AeadEncryptor::opening_key`].
+    /// Decrypts and authenticates `data` using [`AeadEncryptor::key`].
+    /// `data` must contain an encrypted message prefixed with a random nonce of [`aead::NONCE_LEN`]
+    /// length.
     pub fn decrypt(&mut self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let mut decrypted_data = data.to_vec();
-        let decrypted_data = self
-            .opening_key
+        // Extract nonce from `data`.
+        let mut nonce: [u8; aead::NONCE_LEN] = Default::default();
+        nonce.copy_from_slice(&data[0..NONCE.len()]);
+
+        // Prepare encrypted message.
+        let mut decrypted_data = data[NONCE.len()..].to_vec();
+
+        // Bind `AeadEncryptor::key` to the extracted `nonce`.
+        let unbound_opening_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.key).unwrap();
+        let mut opening_key =
+            ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new(nonce));
+
+        let decrypted_data = opening_key
             // Additional authenticated data is not required for the remotely attested channel,
             // since after session key is established client and server exchange messages with a
             // single encrypted field.
             // And the nonce is authenticated by the AEAD algorithm itself.
             // https://datatracker.ietf.org/doc/html/rfc5116#section-2.1
-            .open_in_place(aead::Aad::from(vec![]), &mut decrypted_data)
+            .open_in_place(aead::Aad::empty(), &mut decrypted_data)
             .map_err(|error| anyhow!("Couldn't decrypt data: {:?}", error))?;
         Ok(decrypted_data.to_vec())
     }
 }
 
+/// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
+/// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
 pub struct KeyNegotiator {
     private_key: agreement::EphemeralPrivateKey,
 }

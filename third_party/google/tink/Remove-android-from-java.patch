@@ -1,0 +1,13 @@
+diff --git src/main/java/com/google/crypto/tink/subtle/BUILD.bazel src/main/java/com/google/crypto/tink/subtle/BUILD.bazel
+index a9fde1379..59d97ef12 100644
+--- src/main/java/com/google/crypto/tink/subtle/BUILD.bazel
++++ src/main/java/com/google/crypto/tink/subtle/BUILD.bazel
+@@ -193,7 +193,7 @@ java_library(
+     srcs = ["Validators.java"],
+     deps = [
+         ":enums",
+-        "//src/main/java/com/google/crypto/tink/config:tink_fips-android",
++        "//src/main/java/com/google/crypto/tink/config:tink_fips",
+     ],
+ )
+
