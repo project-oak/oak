@@ -140,7 +140,7 @@ impl AttestationClient {
             .derive_session_key(&attestation_response.public_key)
             .context("Couldn't derive session key")?;
 
-        Ok(AeadEncryptor::new(&session_key))
+        Ok(AeadEncryptor::new(session_key))
     }
 
     /// Verifies the validity of the attestation info:

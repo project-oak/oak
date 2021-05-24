@@ -42,8 +42,7 @@ public class AttestationClient {
                 try {
                     messageQueue.put(response);
                 } catch (Exception e) {
-                    logger.log(Level.WARNING, "Couldn't send server response to the message queue");
-                    e.printStackTrace();
+                    logger.log(Level.WARNING, "Couldn't send server response to the message queue: {0}", e);
                 }
             }
 
