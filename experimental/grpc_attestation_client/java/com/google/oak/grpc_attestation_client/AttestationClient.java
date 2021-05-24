@@ -19,6 +19,7 @@ import oak.examples.grpc_attestation.ServerIdentity;
 import oak.examples.grpc_attestation.GrpcAttestationGrpc;
 import oak.examples.grpc_attestation.GrpcAttestationGrpc.GrpcAttestationStub;
 
+// TODO(#2121): Implement a protocol independent state machine.
 public class AttestationClient {
     private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
     private ManagedChannel channel;
@@ -74,18 +75,15 @@ public class AttestationClient {
         requestObserver.onNext(request);
         AttestedInvokeResponse response = (AttestedInvokeResponse) this.messageQueue.take();
 
-        // Generate session key.
-        byte[] peerPublicKey = response.getServerIdentity().getPublicKey().toByteArray();
-        byte[] sessionKey = keyNegotiator.deriveSessionKey(peerPublicKey);
-
         // Verify remote attestation.
         byte[] attestationInfo = response.getServerIdentity().getAttestationInfo().toByteArray();
         if (!verifyAttestation(attestationInfo)) {
             throw new RuntimeException("Couldn't verify attestation info");
         }
 
-        // Initialize AEAD encryptor based on the session key.
-        this.encryptor = new AeadEncryptor(sessionKey);
+        // Generate session key and initialize AEAD encryptor based on it.
+        byte[] peerPublicKey = response.getServerIdentity().getPublicKey().toByteArray();
+        this.encryptor = keyNegotiator.createAeadEncryptor(peerPublicKey);
     }
 
     private Boolean verifyAttestation(byte[] attestationInfo) {

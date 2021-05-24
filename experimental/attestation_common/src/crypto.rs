@@ -65,7 +65,7 @@ impl AeadEncryptor {
     }
 
     /// Encrypts `data` using [`AeadEncryptor::key`].
-    /// The resulting encrypted data is prefixed with a [`NONCE`].
+    /// The resulting encrypted data is prefixed with a nonce.
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
         // Bind `AeadEncryptor::key` to a `NONCE`.
         let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.key)

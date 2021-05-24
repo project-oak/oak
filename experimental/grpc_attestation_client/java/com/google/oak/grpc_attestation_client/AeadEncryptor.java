@@ -11,6 +11,7 @@ public class AeadEncryptor {
     private AesGcmJce encryptor;
 
     public AeadEncryptor(byte[] key) throws GeneralSecurityException {
+        // TODO(#2120): Use a wrapper AEAD interface and don't use `tink.subtle`.
         this.encryptor = new AesGcmJce(key);
     }
 
