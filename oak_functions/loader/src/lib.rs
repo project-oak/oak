@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+#![feature(async_closure)]
+
 pub mod proto {
     tonic::include_proto!("oak.functions.server");
 }

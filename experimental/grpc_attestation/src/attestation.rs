@@ -14,6 +14,11 @@
 // limitations under the License.
 //
 
+use crate::proto::{
+    attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
+    remote_attestation_server::RemoteAttestation, AttestedInvokeRequest, AttestedInvokeResponse,
+    ServerIdentity,
+};
 use anyhow::{anyhow, Context};
 use futures::{Stream, StreamExt};
 use log::warn;
@@ -21,11 +26,6 @@ use oak_attestation_common::{
     crypto::{AeadEncryptor, KeyNegotiator},
     get_sha256,
     report::{AttestationInfo, Report},
-};
-use oak_grpc_attestation::proto::{
-    attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
-    remote_attestation_server::RemoteAttestation, AttestedInvokeRequest, AttestedInvokeResponse,
-    ServerIdentity,
 };
 use std::pin::Pin;
 use tonic::{Request, Response, Status, Streaming};
@@ -48,15 +48,19 @@ impl Receiver {
     }
 }
 
-struct RequestHandler {
+struct RequestHandler<F> {
     /// Utility object for decrypting and encrypting messages using a Diffie-Hellman session key.
     encryptor: AeadEncryptor,
     /// Handler function that processes data from client requests and creates responses.
-    handler: fn(&[u8]) -> Vec<u8>,
+    handler: F,
 }
 
-impl RequestHandler {
-    pub fn new(encryptor: AeadEncryptor, handler: fn(&[u8]) -> Vec<u8>) -> Self {
+impl<F, S> RequestHandler<F>
+where
+    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
+    S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
+{
+    pub fn new(encryptor: AeadEncryptor, handler: F) -> Self {
         Self { encryptor, handler }
     }
 
@@ -84,7 +88,7 @@ impl RequestHandler {
                 .decrypt(&encrypted_request_payload)
                 .context("Couldn't decrypt data")?;
 
-            let response_payload = (self.handler)(&request_payload);
+            let response_payload = (self.handler.clone())(request_payload).await?;
             let encrypted_response_payload = self
                 .encryptor
                 .encrypt(&response_payload)
@@ -101,18 +105,21 @@ impl RequestHandler {
 }
 
 /// gRPC Attestation Service implementation.
-pub struct AttestationServer {
+pub struct AttestationServer<F> {
     /// PEM encoded X.509 certificate that signs TEE firmware key.
     tee_certificate: Vec<u8>,
     /// Processes data from client requests and creates responses.
-    request_handler: fn(&[u8]) -> Vec<u8>,
+    request_handler: F,
 }
 
-impl AttestationServer {
-    pub fn create(
-        tee_certificate: Vec<u8>,
-        request_handler: fn(&[u8]) -> Vec<u8>,
-    ) -> anyhow::Result<Self> {
+impl<F, S> AttestationServer<F>
+where
+    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
+    S: std::future::Future<Output = anyhow::Result<Vec<u8>>>
+        + std::marker::Send
+        + std::marker::Sync,
+{
+    pub fn create(tee_certificate: Vec<u8>, request_handler: F) -> anyhow::Result<Self> {
         Ok(Self {
             tee_certificate,
             request_handler,
@@ -174,7 +181,11 @@ impl AttestationServer {
 }
 
 #[tonic::async_trait]
-impl RemoteAttestation for AttestationServer {
+impl<F, S> RemoteAttestation for AttestationServer<F>
+where
+    F: 'static + Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
+    S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync + 'static,
+{
     type AttestedInvokeStream =
         Pin<Box<dyn Stream<Item = Result<AttestedInvokeResponse, Status>> + Send + Sync + 'static>>;
 
@@ -183,7 +194,7 @@ impl RemoteAttestation for AttestationServer {
         request_stream: Request<tonic::Streaming<AttestedInvokeRequest>>,
     ) -> Result<Response<Self::AttestedInvokeStream>, Status> {
         let tee_certificate = self.tee_certificate.clone();
-        let request_handler = self.request_handler;
+        let request_handler = self.request_handler.clone();
 
         let request_stream = request_stream.into_inner();
         let response_stream = async_stream::try_stream! {
@@ -197,7 +208,7 @@ impl RemoteAttestation for AttestationServer {
                 })?;
             yield attestation_response;
 
-            let mut handler = RequestHandler::new(encryptor, request_handler);
+            let mut handler = RequestHandler::<F>::new(encryptor, request_handler);
             while let Some(response) = handler.handle_request(&mut receiver).await.map_err(|error| {
                 let message = format!("Couldn't handle request: {:?}", error);
                 warn!("{}", message);

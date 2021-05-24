@@ -25,6 +25,9 @@ use crate::{
 use anyhow::Context;
 use log::Level;
 use oak_functions_abi::proto::{Request, Response};
+use oak_grpc_attestation::{
+    attestation::AttestationServer, proto::remote_attestation_server::RemoteAttestationServer,
+};
 use std::{convert::TryInto, future::Future, net::SocketAddr, sync::Arc};
 
 /// A gRPC server with an `invoke` method to handle incoming requests to an Oak Functions
@@ -88,6 +91,58 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
             wasm_handler,
             policy,
         }))
+        .serve_with_shutdown(*address, terminate)
+        .await
+        .context("Couldn't start server")?;
+
+    Ok(())
+}
+
+pub async fn handle_request_with_ra(
+    request: Vec<u8>,
+    wasm_handler: WasmHandler,
+    policy: Policy,
+) -> anyhow::Result<Vec<u8>> {
+    let function = async move || wasm_handler.clone().handle_invoke(request.to_vec()).await;
+    let policy = policy.try_into().context("invalid policy")?;
+    let response = apply_policy(policy, function)
+        .await
+        .context("internal error")?;
+    Ok(response.body)
+}
+
+#[allow(dead_code)]
+pub async fn create_and_start_grpc_server_with_ra<F: Future<Output = ()>>(
+    address: &SocketAddr,
+    tee_certificate: Vec<u8>,
+    wasm_module_bytes: &[u8],
+    lookup_data: Arc<LookupData>,
+    policy: Policy,
+    terminate: F,
+    logger: Logger,
+) -> anyhow::Result<()> {
+    let wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, logger.clone())?;
+
+    logger.log_public(
+        Level::Info,
+        &format!(
+            "{:?}: Starting gRPC server on {:?}",
+            std::thread::current().id(),
+            &address
+        ),
+    );
+
+    let request_handler = async move |request: Vec<u8>| {
+        handle_request_with_ra(request.to_vec(), wasm_handler, policy).await
+    };
+
+    // A `Service` is needed for every connection. Here we create a service using the
+    // `wasm_handler`.
+    tonic::transport::Server::builder()
+        .add_service(RemoteAttestationServer::new(
+            AttestationServer::create(tee_certificate, request_handler)
+                .context("Couldn't create proxy")?,
+        ))
         .serve_with_shutdown(*address, terminate)
         .await
         .context("Couldn't start server")?;
