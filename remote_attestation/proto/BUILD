@@ -24,18 +24,18 @@ package(
 )
 
 proto_library(
-    name = "grpc_attestation_proto",
-    srcs = ["grpc_attestation.proto"],
+    name = "remote_attestation_proto",
+    srcs = ["remote_attestation.proto"],
     deps = ["@com_google_protobuf//:empty_proto"],
 )
 
 java_proto_library(
-    name = "grpc_attestation_java_proto",
-    deps = [":grpc_attestation_proto"],
+    name = "remote_attestation_java_proto",
+    deps = [":remote_attestation_proto"],
 )
 
 java_grpc_library(
-    name = "grpc_attestation_java_grpc",
-    srcs = [":grpc_attestation_proto"],
-    deps = [":grpc_attestation_java_proto"],
+    name = "remote_attestation_java_grpc",
+    srcs = [":remote_attestation_proto"],
+    deps = [":remote_attestation_java_proto"],
 )

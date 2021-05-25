@@ -21,8 +21,8 @@ use oak_attestation_common::{
 };
 use oak_grpc_attestation::proto::{
     attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
-    grpc_attestation_client::GrpcAttestationClient, AttestedInvokeRequest, AttestedInvokeResponse,
-    ClientIdentity,
+    remote_attestation_client::RemoteAttestationClient, AttestedInvokeRequest,
+    AttestedInvokeResponse, ClientIdentity,
 };
 use tokio::sync::mpsc::Sender;
 use tonic::{transport::Channel, Request, Streaming};
@@ -42,7 +42,7 @@ impl Client {
             .connect()
             .await
             .context("Couldn't connect via gRPC channel")?;
-        let mut client = GrpcAttestationClient::new(channel);
+        let mut client = RemoteAttestationClient::new(channel);
 
         let (sender, mut receiver) = tokio::sync::mpsc::channel(MESSAGE_BUFFER_SIZE);
 
