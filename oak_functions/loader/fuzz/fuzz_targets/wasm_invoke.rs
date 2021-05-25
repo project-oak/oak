@@ -22,10 +22,7 @@ pub mod proto {
 use crate::proto::{instruction::InstructionVariant, Instructions};
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
-use oak_functions_abi::proto::Request;
-use oak_functions_loader::{
-    grpc::handle_request, logger::Logger, lookup::LookupData, server::WasmHandler,
-};
+use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandler};
 use prost::Message;
 use std::{path::Path, sync::Arc};
 
@@ -80,7 +77,6 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     instructions
         .encode(&mut body)
         .expect("Error encoding abi_function");
-    let request = Request { body };
 
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
@@ -89,7 +85,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     )
     .expect("Could instantiate WasmHandler");
 
-    let result = RUNTIME.block_on(handle_request(wasm_handler, tonic::Request::new(request)));
+    let result = RUNTIME.block_on(wasm_handler.handle_invoke(body));
     assert!(result.is_ok());
     // Cannot check the exact response value, since the wasm function may panic at any point.
 });

@@ -17,7 +17,6 @@
 //! Test utilities to help with unit testing of Oak-Functions SDK code.
 
 use anyhow::Context;
-use http::uri::Uri;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body,
@@ -206,7 +205,6 @@ pub struct TestResult {
 
 pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let uri = format!("http://localhost:{}/", port);
-    let uri: Uri = uri.parse().expect("Error parsing URI");
 
     // Create client
     let mut client = oak_functions_client::Client::new(&uri)

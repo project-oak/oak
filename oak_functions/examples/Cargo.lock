@@ -504,6 +504,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
 name = "http"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -847,6 +853,7 @@ dependencies = [
  "http",
  "log",
  "oak_functions_abi",
+ "oak_grpc_attestation_client",
  "oak_utils",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex",
@@ -898,6 +905,35 @@ dependencies = [
  "log",
  "oak_attestation_common",
  "oak_utils",
+ "openssl",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ring",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha2",
+ "structopt",
+ "tokio",
+ "tokio-rustls",
+ "tonic",
+]
+
+[[package]]
+name = "oak_grpc_attestation_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "env_logger",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "hex",
+ "http",
+ "hyper",
+ "log",
+ "oak_attestation_common",
+ "oak_grpc_attestation",
  "openssl",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ring",

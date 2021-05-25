@@ -52,6 +52,7 @@ async fn test_server() {
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
             &address,
+            vec![],
             &wasm_module_bytes,
             lookup_data,
             policy,

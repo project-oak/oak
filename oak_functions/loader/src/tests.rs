@@ -14,12 +14,12 @@
 // limitations under the License.
 
 use crate::{
-    grpc::{create_and_start_grpc_server, handle_request},
+    grpc::create_and_start_grpc_server,
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData},
     server::{apply_policy, Policy, WasmHandler},
 };
-use oak_functions_abi::proto::{Request, Response, StatusCode};
+use oak_functions_abi::proto::{Response, StatusCode};
 
 use maplit::hashmap;
 use prost::Message;
@@ -145,6 +145,7 @@ where
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
             &address,
+            vec![],
             &wasm_module_bytes,
             lookup_data,
             policy,
@@ -209,11 +210,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             static_server_join_handle.await.unwrap();
         });
         bencher.iter(|| {
-            let request = tonic::Request::new(Request {
-                body: br#"{"lat":52,"lon":0}"#.to_vec(),
-            });
+            let bytes = br#"{"lat":52,"lon":0}"#.to_vec();
             let resp = rt
-                .block_on(handle_request(wasm_handler.clone(), request))
+                .block_on(wasm_handler.clone().handle_invoke(bytes))
                 .unwrap();
             assert_eq!(resp.status, StatusCode::Success as i32);
             assert_eq!(
