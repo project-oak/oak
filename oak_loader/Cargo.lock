@@ -2628,9 +2628,9 @@ dependencies = [
 
 [[package]]
 name = "tink-aead"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa8862f200d9f4382e74d2f08cf01c33bebb7dc29f41e403e1c47821a6b0786c"
+checksum = "b42721a0582f6058024a2669a7b2fbbfa1c04153332e08fe6e335dd8e8b7ee6d"
 dependencies = [
  "aead",
  "aes",
@@ -2647,9 +2647,9 @@ dependencies = [
 
 [[package]]
 name = "tink-awskms"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e98022b471d93017ab2244930147b93804afeedb8312a818b3decb57a02af2be"
+checksum = "7b5f02b526286c5f991c0d05944f76c01660268230b7fde8144706994e2b3d82"
 dependencies = [
  "csv",
  "hex",
@@ -2663,9 +2663,9 @@ dependencies = [
 
 [[package]]
 name = "tink-core"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dd526b76cb9594cd4d205676a235689ee03549a45e3bc48ab79460e0387e852"
+checksum = "b7fefcbc7d04471b83ca8b3c445c376d45a8ab8fc35c3aa215df51f90aa95737"
 dependencies = [
  "digest",
  "hkdf",
@@ -2682,9 +2682,9 @@ dependencies = [
 
 [[package]]
 name = "tink-daead"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2507ec534150e2ef81a9cf983aecb9bba52463d72a80cf5291c2cad28f753d29"
+checksum = "cc4f26fc8337a45a073e2c49676215838d7c57004e25d31ebc7f1438c15caf45"
 dependencies = [
  "aead",
  "aes-siv",
@@ -2695,9 +2695,9 @@ dependencies = [
 
 [[package]]
 name = "tink-gcpkms"
-version = "0.1.3"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fddf33241f3fe32a765397103a97f7cbea49818f860e0d45a1b5138fc55e381e"
+checksum = "ff574cafdf268b310b2d4c20e8d66bf98ba35093e41f848dad9144a6e9e642e8"
 dependencies = [
  "base64 0.13.0",
  "chrono",
@@ -2716,9 +2716,9 @@ dependencies = [
 
 [[package]]
 name = "tink-mac"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c9cec90154e63961a3e14b43ce60dd8cbc3232c1259f41852efe426ebdfb090"
+checksum = "b4e4cfdad0b51ddd727a51245e860b97ae931be05f99dd98bb7a51b1b19e5a97"
 dependencies = [
  "prost",
  "tink-core",
@@ -2728,9 +2728,9 @@ dependencies = [
 
 [[package]]
 name = "tink-prf"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96d719ca5b97b103aebe5126127505466376fe4ff85daafc43b87ec074ebb13d"
+checksum = "6ae8bd3f58adff2c1fb3286c9a8ab1c0964045614778595ec9877b9f6ba98d38"
 dependencies = [
  "aes",
  "cmac",
@@ -2746,9 +2746,9 @@ dependencies = [
 
 [[package]]
 name = "tink-proto"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf8a63551303028eccb54bdefb8d1d868ba90197067638a845977288a169d7aa"
+checksum = "6f097af9d2db1a08ea01008f88bc803d8bda25c13bfdc076df7449da907e259f"
 dependencies = [
  "base64 0.13.0",
  "prost",
@@ -2758,9 +2758,9 @@ dependencies = [
 
 [[package]]
 name = "tink-signature"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1564629092d684f10b16126cd71d5aadecdf66f8bf9f563ce74cfe44d269f76"
+checksum = "c5b54df96bd2a0524d2ffb9f2b6aa9574a4c9a4834e7d8585907f5b04fcd0743"
 dependencies = [
  "ecdsa",
  "ed25519-dalek",
