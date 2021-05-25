@@ -29,6 +29,7 @@ RUN apt-get --yes update \
   libncurses5 \
   libssl-dev \
   musl-tools \
+  openjdk-11-jdk \
   pkg-config \
   procps \
   python3 \

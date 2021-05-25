@@ -14,3 +14,4 @@ backend = { Cargo = { cargo_manifest = "experimental/grpc_attestation/Cargo.toml
 rust = { Cargo = { cargo_manifest = "examples/grpc_attestation/client/Cargo.toml" }, additional_args = [
   "--uri=https://localhost:8080"
 ] }
+java = { Bazel = { bazel_target = "//experimental/grpc_attestation_client/java:grpc_attestation_client" } }
