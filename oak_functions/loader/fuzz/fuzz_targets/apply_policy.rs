@@ -52,16 +52,17 @@ impl Arbitrary<'_> for ResponseAndValidPolicy {
     }
 }
 
+// Create the `tokio::runtime::Runtime` only once, instead of creating a new instance in each
+// testcase.
+lazy_static::lazy_static! {
+    static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
+}
+
 fuzz_target!(|data: ResponseAndValidPolicy| {
     let constant_response_size_bytes = data.policy.constant_response_size_bytes;
     let policy = data.policy.try_into().unwrap();
     let function = async move || Ok(data.response);
-    let response = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(apply_policy(policy, function))
-        .unwrap();
+    let response = RUNTIME.block_on(apply_policy(policy, function)).unwrap();
 
     // Check the response size
     assert_eq!(response.body.len(), constant_response_size_bytes)

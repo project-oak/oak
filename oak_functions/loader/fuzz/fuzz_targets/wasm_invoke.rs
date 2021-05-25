@@ -56,20 +56,17 @@ const MANIFEST_PATH: &str = "../examples/fuzzable/module/Cargo.toml";
 /// build the Wasm module for `fuzzable` in the build phase, when the fuzz targets are built as
 /// well, and store the `.wasm` file in `/out/bin`.
 ///
-///Keep this path in sync with `https://github.com/google/oss-fuzz/blob/master/projects/oak/build.sh`.
+/// Keep this path in sync with `https://github.com/google/oss-fuzz/blob/master/projects/oak/build.sh`.
 const OSS_FUZZ_WASM_MODULE_PATH: &str = "/out/bin/fuzzable.wasm";
 
 lazy_static::lazy_static! {
     static ref WASM_MODULE_BYTES: Vec<u8> = get_wasm_module_bytes();
 }
 
-pub fn get_wasm_module_bytes() -> Vec<u8> {
-    let module_path = Path::new(OSS_FUZZ_WASM_MODULE_PATH);
-    if module_path.exists() {
-        std::fs::read(module_path).expect("Couldn't read wasm module")
-    } else {
-        test_utils::compile_rust_wasm(&MANIFEST_PATH).expect("Couldn't read Wasm module")
-    }
+// Create the `tokio::runtime::Runtime` only once, instead of creating a new instance in each
+// testcase.
+lazy_static::lazy_static! {
+    static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
 }
 
 // Generate a random list of `Instruction`s and send them to the Wasm module to run.
@@ -92,8 +89,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     )
     .expect("Could instantiate WasmHandler");
 
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(handle_request(wasm_handler, tonic::Request::new(request)));
+    let result = RUNTIME.block_on(handle_request(wasm_handler, tonic::Request::new(request)));
     assert!(result.is_ok());
     // Cannot check the exact response value, since the wasm function may panic at any point.
 });
@@ -125,5 +121,14 @@ impl From<&ArbitraryInstruction> for crate::proto::Instruction {
         crate::proto::Instruction {
             instruction_variant,
         }
+    }
+}
+
+fn get_wasm_module_bytes() -> Vec<u8> {
+    let module_path = Path::new(OSS_FUZZ_WASM_MODULE_PATH);
+    if module_path.exists() {
+        std::fs::read(module_path).expect("Couldn't read wasm module")
+    } else {
+        test_utils::compile_rust_wasm(&MANIFEST_PATH).expect("Couldn't read Wasm module")
     }
 }
