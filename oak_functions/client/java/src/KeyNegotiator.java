@@ -1,6 +1,6 @@
-package com.google.oak.grpc_attestation_client;
+package com.google.oak.functions.client;
 
-import com.google.oak.grpc_attestation_client.AeadEncryptor;
+import com.google.oak.functions.client.AeadEncryptor;
 import com.google.crypto.tink.subtle.X25519;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;

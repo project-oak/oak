@@ -1,4 +1,4 @@
-package com.google.oak.grpc_attestation_client;
+package com.google.oak.functions.client;
 
 import com.google.crypto.tink.subtle.AesGcmJce;
 import java.security.GeneralSecurityException;

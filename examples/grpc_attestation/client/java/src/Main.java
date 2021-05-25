@@ -1,6 +1,6 @@
-package com.google.oak.grpc_attestation_client;
+package com.google.oak.examples.grpc_attestation.client;
 
-import com.google.oak.grpc_attestation_client.AttestationClient;
+import com.google.oak.functions.client.AttestationClient;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
