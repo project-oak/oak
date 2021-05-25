@@ -18,3 +18,4 @@ rust = { Cargo = { cargo_manifest = "oak_functions/client/Cargo.toml" }, additio
   "--request={\"lat\":52,\"lon\":0}",
   "--expected-response={\"temperature_degrees\":-10}"
 ] }
+java = { Bazel = { bazel_target = "//examples/grpc_attestation/client/java:client" } }

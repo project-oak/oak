@@ -16,10 +16,6 @@
 
 #![feature(async_closure)]
 
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
-}
-
 pub mod grpc;
 pub mod logger;
 pub mod lookup;

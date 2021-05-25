@@ -13,14 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
-    tonic::include_proto!("oak.functions.server");
-}
-
 use anyhow::Context;
 use oak_functions_abi::proto::Response;
 use oak_grpc_attestation_client::AttestationClient;
 use prost::Message;
+
+const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
 
 pub struct Client {
     inner: AttestationClient,
@@ -28,7 +26,7 @@ pub struct Client {
 
 impl Client {
     pub async fn new(uri: &str) -> anyhow::Result<Self> {
-        let inner = AttestationClient::create(uri, br"Test TEE measurement")
+        let inner = AttestationClient::create(uri, TEE_MEASUREMENT)
             .await
             .context("Could not create Oak Functions client")?;
         Ok(Client { inner })

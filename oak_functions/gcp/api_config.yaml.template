@@ -11,7 +11,7 @@ name: '*.apigateway.endpoints.oak-ci.cloud.goog'
 #
 title: ###TITLE###
 apis:
-  - name: oak.functions.server.GrpcHandler
+  - name: oak.remote_attestation.RemoteAttestation
 
 #
 # API usage restrictions.
@@ -19,7 +19,7 @@ apis:
 usage:
   rules:
     # Invoke method can be called without an API Key for now.
-    - selector: oak.functions.server.GrpcHandler.Invoke
+    - selector: oak.remote_attestation.RemoteAttestation.AttestedInvoke
       allow_unregistered_calls: true
 
 backend:

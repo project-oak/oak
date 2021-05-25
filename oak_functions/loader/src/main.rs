@@ -31,10 +31,6 @@ use structopt::StructOpt;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
-}
-
 mod grpc;
 mod logger;
 mod lookup;
