@@ -14,21 +14,20 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_binary")
+load("@rules_java//java:defs.bzl", "java_library")
 
 package(
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-java_binary(
-    name = "grpc_attestation_client",
+java_library(
+    name = "client",
     srcs = [
-        "com/google/oak/grpc_attestation_client/AeadEncryptor.java",
-        "com/google/oak/grpc_attestation_client/AttestationClient.java",
-        "com/google/oak/grpc_attestation_client/KeyNegotiator.java",
-        "com/google/oak/grpc_attestation_client/Main.java",
+        "src/AeadEncryptor.java",
+        "src/AttestationClient.java",
+        "src/KeyNegotiator.java",
     ],
-    main_class = "com.google.oak.grpc_attestation_client.Main",
     runtime_deps = [
         "@io_grpc_grpc_java//netty",
     ],

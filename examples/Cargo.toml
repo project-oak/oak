@@ -12,7 +12,7 @@ members = [
   "authentication/client",
   "chat/module/rust",
   "chat/grpc",
-  "grpc_attestation/client",
+  "grpc_attestation/rust/client",
   "hello_world/grpc",
   "hello_world/client/rust",
   "hello_world/module/rust",

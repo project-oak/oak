@@ -1,7 +1,7 @@
-package com.google.oak.grpc_attestation_client;
+package com.google.oak.functions.client;
 
-import com.google.oak.grpc_attestation_client.AeadEncryptor;
-import com.google.oak.grpc_attestation_client.KeyNegotiator;
+import com.google.oak.functions.client.AeadEncryptor;
+import com.google.oak.functions.client.KeyNegotiator;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
