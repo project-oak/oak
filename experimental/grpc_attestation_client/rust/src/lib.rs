@@ -21,8 +21,8 @@ use oak_attestation_common::{
 };
 use oak_grpc_attestation::proto::{
     attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
-    remote_attestation_client::RemoteAttestationClient, AttestedInvokeRequest, AttestedInvokeResponse,
-    ClientIdentity,
+    remote_attestation_client::RemoteAttestationClient, AttestedInvokeRequest,
+    AttestedInvokeResponse, ClientIdentity,
 };
 use tokio::sync::mpsc::Sender;
 use tonic::{transport::Channel, Request, Streaming};
