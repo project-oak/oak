@@ -15,5 +15,5 @@
 //
 
 pub mod proto {
-    tonic::include_proto!("oak.examples.grpc_attestation");
+    tonic::include_proto!("oak.remote_attestation");
 }

@@ -16,10 +16,10 @@
 
 syntax = "proto3";
 
-package oak.examples.grpc_attestation;
+package oak.remote_attestation;
 
 option java_multiple_files = true;
-option java_package = "oak.examples.grpc_attestation";
+option java_package = "oak.remote_attestation";
 
 message AttestedInvokeRequest {
   oneof request_type {
@@ -30,7 +30,7 @@ message AttestedInvokeRequest {
   }
 }
 
-// TODO(#2105): Implement challenge-response in gRPC Attestation.
+// TODO(#2105): Implement challenge-response in remote attestation.
 message ClientIdentity {
   // Client public key needed to establish a session key between client and server.
   bytes public_key = 1;
@@ -45,7 +45,7 @@ message AttestedInvokeResponse {
   }
 }
 
-// TODO(#2106): Support various claims in gRPC Attestation.
+// TODO(#2106): Support various claims in remote attestation.
 message ServerIdentity {
   // Server public key needed to establish a session key between client and server.
   bytes public_key = 1;
@@ -54,7 +54,7 @@ message ServerIdentity {
   bytes attestation_info = 2;
 }
 
-service GrpcAttestation {
+service RemoteAttestation {
   // Creates a message stream for session key negotiation and encrypted payload exchange.
   //
   // The created message stream looks as follows:

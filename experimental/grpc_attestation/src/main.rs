@@ -58,7 +58,7 @@ use crate::attestation::AttestationServer;
 use anyhow::Context;
 use futures::FutureExt;
 use log::info;
-use oak_grpc_attestation::proto::grpc_attestation_server::GrpcAttestationServer;
+use oak_grpc_attestation::proto::remote_attestation_server::RemoteAttestationServer;
 use structopt::StructOpt;
 use tonic::transport::Server;
 
@@ -105,7 +105,7 @@ async fn main() -> anyhow::Result<()> {
         grpc_listen_address
     );
     Server::builder()
-        .add_service(GrpcAttestationServer::new(
+        .add_service(RemoteAttestationServer::new(
             AttestationServer::create(tee_certificate, request_handler)
                 .context("Couldn't create proxy")?,
         ))

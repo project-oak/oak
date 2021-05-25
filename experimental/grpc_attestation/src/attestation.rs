@@ -24,7 +24,7 @@ use oak_attestation_common::{
 };
 use oak_grpc_attestation::proto::{
     attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
-    grpc_attestation_server::GrpcAttestation, AttestedInvokeRequest, AttestedInvokeResponse,
+    remote_attestation_server::RemoteAttestation, AttestedInvokeRequest, AttestedInvokeResponse,
     ServerIdentity,
 };
 use std::pin::Pin;
@@ -174,7 +174,7 @@ impl AttestationServer {
 }
 
 #[tonic::async_trait]
-impl GrpcAttestation for AttestationServer {
+impl RemoteAttestation for AttestationServer {
     type AttestedInvokeStream =
         Pin<Box<dyn Stream<Item = Result<AttestedInvokeResponse, Status>> + Send + Sync + 'static>>;
 

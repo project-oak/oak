@@ -12,12 +12,12 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import oak.examples.grpc_attestation.AttestedInvokeResponse;
-import oak.examples.grpc_attestation.AttestedInvokeRequest;
-import oak.examples.grpc_attestation.ClientIdentity;
-import oak.examples.grpc_attestation.ServerIdentity;
-import oak.examples.grpc_attestation.GrpcAttestationGrpc;
-import oak.examples.grpc_attestation.GrpcAttestationGrpc.GrpcAttestationStub;
+import oak.remote_attestation.AttestedInvokeResponse;
+import oak.remote_attestation.AttestedInvokeRequest;
+import oak.remote_attestation.ClientIdentity;
+import oak.remote_attestation.ServerIdentity;
+import oak.remote_attestation.RemoteAttestationGrpc;
+import oak.remote_attestation.RemoteAttestationGrpc.RemoteAttestationStub;
 
 // TODO(#2121): Implement a protocol independent state machine.
 public class AttestationClient {
@@ -33,7 +33,7 @@ public class AttestationClient {
             .forTarget(uri)
             .usePlaintext()
             .build();
-        GrpcAttestationStub stub = GrpcAttestationGrpc.newStub(channel);
+        RemoteAttestationStub stub = RemoteAttestationGrpc.newStub(channel);
 
         // Create server response handler.
         this.messageQueue = new ArrayBlockingQueue(1);
