@@ -21,9 +21,6 @@
 # Generated vscode files.
 **/.vscode/
 
-# History files.
-/.bash_history
-
 # emacs stuff
 *~
 
