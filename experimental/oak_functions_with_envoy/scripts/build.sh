@@ -4,7 +4,6 @@ readonly EXPERIMENTAL_SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=experimental/oak_functions_with_envoy/scripts/common.sh
 source "$EXPERIMENTAL_SCRIPTS_DIR/common.sh"
 
-# TODO(#1943): Remove when #1943 is submitted.
 cargo build --target=x86_64-unknown-linux-musl \
   --manifest-path=./oak_functions/loader/Cargo.toml \
   --release

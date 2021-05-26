@@ -7,8 +7,7 @@ source "$SCRIPTS_DIR/common"
 # shellcheck source=scripts/gcp_common
 source "$SCRIPTS_DIR/gcp_common"
 
-# TODO(#1943): Remove when #1943 is submitted.
-cargo build --target=x86_64-unknown-linux-musl --manifest-path=./oak_functions/loader/Cargo.toml --release
+./scripts/docker_run cargo build --target=x86_64-unknown-linux-musl --manifest-path=./oak_functions/loader/Cargo.toml --release
 
 # Build and push base Oak Functions Loader image.
 
@@ -22,7 +21,7 @@ docker push "${FUNCTIONS_DOCKER_IMAGE_NAME}:latest"
 
 # Build and push the `weather_lookup` example application built on Oak Functions.
 
-cargo -Zunstable-options build --release \
+./scripts/docker_run cargo -Zunstable-options build --release \
   --target=wasm32-unknown-unknown \
   --manifest-path=./oak_functions/examples/weather_lookup/module/Cargo.toml \
   --out-dir=./oak_functions/examples/weather_lookup/bin
@@ -62,7 +61,7 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
 readonly HOST_NAME="$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --location="${GCP_REGION}" --format='value(defaultHostname)')"
 
 #Build the client to test the connection.
-cargo build --manifest-path=./oak_functions/client/Cargo.toml
+./scripts/docker_run cargo build --manifest-path=./oak_functions/client/Cargo.toml
 
 # Attempt to communicate with the newly deployed application.
 ./oak_functions/client/target/debug/oak_functions_client \
