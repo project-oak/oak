@@ -10,8 +10,6 @@ import io.grpc.stub.StreamObserver;
 import java.lang.RuntimeException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import oak.remote_attestation.AttestedInvokeResponse;
 import oak.remote_attestation.AttestedInvokeRequest;
 import oak.remote_attestation.ClientIdentity;
@@ -21,7 +19,6 @@ import oak.remote_attestation.RemoteAttestationGrpc.RemoteAttestationStub;
 
 // TODO(#2121): Implement a protocol independent state machine.
 public class AttestationClient {
-    private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
     private ManagedChannel channel;
     private StreamObserver<AttestedInvokeRequest> requestObserver;
     private BlockingQueue messageQueue;
@@ -43,14 +40,14 @@ public class AttestationClient {
                 try {
                     messageQueue.put(response);
                 } catch (Exception e) {
-                    logger.log(Level.WARNING, "Couldn't send server response to the message queue: {0}", e);
+                    System.out.printf("Couldn't send server response to the message queue: %s\n", e.toString());
                 }
             }
 
             @Override
             public void onError(Throwable t) {
                 Status status = Status.fromThrowable(t);
-                logger.log(Level.WARNING, "Couldn't receive response: {0}", status);
+                System.out.printf("Couldn't receive response: %s\n", status.toString());
             }
 
             @Override
