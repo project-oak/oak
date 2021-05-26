@@ -12,6 +12,9 @@
 # Cargo cache.
 /cargo-cache/
 
+# Bazel cache.
+/.cache/
+
 # Node modules.
 **/node_modules/
 
