@@ -77,7 +77,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     tonic::transport::Server::builder()
         .add_service(RemoteAttestationServer::new(
             AttestationServer::create(tee_certificate, request_handler)
-                .context("Couldn't create proxy")?,
+                .context("Couldn't create remote attestation server")?,
         ))
         .serve_with_shutdown(*address, terminate)
         .await

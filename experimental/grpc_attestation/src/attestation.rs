@@ -115,9 +115,7 @@ pub struct AttestationServer<F> {
 impl<F, S> AttestationServer<F>
 where
     F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
-    S: std::future::Future<Output = anyhow::Result<Vec<u8>>>
-        + std::marker::Send
-        + std::marker::Sync,
+    S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
     pub fn create(tee_certificate: Vec<u8>, request_handler: F) -> anyhow::Result<Self> {
         Ok(Self {

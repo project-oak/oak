@@ -18,6 +18,7 @@ use oak_functions_abi::proto::Response;
 use oak_grpc_attestation_client::AttestationClient;
 use prost::Message;
 
+// TODO(#1867): Add remote attestation support.
 const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
 
 pub struct Client {

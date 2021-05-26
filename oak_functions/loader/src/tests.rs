@@ -141,11 +141,12 @@ where
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();
+    let tee_certificate = vec![];
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
             &address,
-            vec![],
+            tee_certificate,
             &wasm_module_bytes,
             lookup_data,
             policy,

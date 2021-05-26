@@ -34,7 +34,8 @@ pub struct Opt {
     uri: String,
     #[structopt(long, help = "request payload")]
     request: String,
-    #[structopt(long, help = "expected response body")]
+    /// Optional, only for testing.
+    #[structopt(long, help = "expected response body, for testing")]
     expected_response: Option<String>,
 }
 
@@ -63,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
     let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
     match opt.expected_response {
         Some(expected) => assert_eq!(expected, response_body),
-        None => println!("response_body: `{}`", response_body),
+        None => println!("{}", response_body),
     }
 
     Ok(())
