@@ -21,7 +21,7 @@ import oak.remote_attestation.RemoteAttestationGrpc.RemoteAttestationStub;
 
 // TODO(#2121): Implement a protocol independent state machine.
 public class AttestationClient {
-    private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
+    private static Logger logger = Logger.getLogger(AttestationClient.class.getName());
     private ManagedChannel channel;
     private StreamObserver<AttestedInvokeRequest> requestObserver;
     private BlockingQueue messageQueue;
@@ -43,14 +43,14 @@ public class AttestationClient {
                 try {
                     messageQueue.put(response);
                 } catch (Exception e) {
-                    logger.log(Level.WARNING, "Couldn't send server response to the message queue: {0}", e);
+                    logger.log(Level.WARNING, "Couldn't send server response to the message queue: " + e);
                 }
             }
 
             @Override
             public void onError(Throwable t) {
                 Status status = Status.fromThrowable(t);
-                logger.log(Level.WARNING, "Couldn't receive response: {0}", status);
+                logger.log(Level.WARNING, "Couldn't receive response: " + status);
             }
 
             @Override
