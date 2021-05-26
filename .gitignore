@@ -12,11 +12,17 @@
 # Cargo cache.
 /cargo-cache/
 
+# Bazel cache.
+/.cache/
+
 # Node modules.
 **/node_modules/
 
 # Generated vscode files.
 **/.vscode/
+
+# History files.
+/.bash_history
 
 # emacs stuff
 *~
