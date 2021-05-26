@@ -37,12 +37,13 @@ To build and run this example manually follow these steps:
 1. Invoke with:
 
    ```shell
-   curl \
-     --include \
-     --fail-early \
-     --http2 \
-     --http2-prior-knowledge \
-     --request POST \
-     --data '{"lat":51,"lon":0}' \
-     http://localhost:8080/invoke
+   cargo run --manifest-path=./oak_functions/client/Cargo.toml \
+       --uri=http://localhost:8080,
+       --request={\"lat\":52,\"lon\":0}
    ```
+
+Alternatively, the `runner` could be used to run this example:
+
+```shell
+./scripts/runner run-functions-examples --example-name=weather_lookup
+```

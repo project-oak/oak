@@ -4,9 +4,8 @@ readonly EXPERIMENTAL_SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=experimental/oak_functions_with_envoy/scripts/common.sh
 source "$EXPERIMENTAL_SCRIPTS_DIR/common.sh"
 
-cargo build --target=x86_64-unknown-linux-musl \
-  --manifest-path=./oak_functions/loader/Cargo.toml \
-  --release
+# Build Oak Functions server binary
+./scripts/docker_run ./scripts/runner build-functions-server --server-variant=base
 
 # Build the `weather_lookup` example application built on Oak Functions.
 cargo -Zunstable-options build --release \

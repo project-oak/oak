@@ -7,7 +7,8 @@ source "$SCRIPTS_DIR/common"
 # shellcheck source=scripts/gcp_common
 source "$SCRIPTS_DIR/gcp_common"
 
-./scripts/docker_run cargo build --target=x86_64-unknown-linux-musl --manifest-path=./oak_functions/loader/Cargo.toml --release
+# Build Oak Functions server binary
+./scripts/docker_run ./scripts/runner build-functions-server --server-variant=base
 
 # Build and push base Oak Functions Loader image.
 
