@@ -48,14 +48,18 @@ impl Receiver {
     }
 }
 
-struct RequestHandler<F> {
+struct RequestHandler<F, S>
+where
+    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
+    S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
+{
     /// Utility object for decrypting and encrypting messages using a Diffie-Hellman session key.
     encryptor: AeadEncryptor,
     /// Handler function that processes data from client requests and creates responses.
     handler: F,
 }
 
-impl<F, S> RequestHandler<F>
+impl<F, S> RequestHandler<F, S>
 where
     F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
@@ -206,7 +210,7 @@ where
                 })?;
             yield attestation_response;
 
-            let mut handler = RequestHandler::<F>::new(encryptor, request_handler);
+            let mut handler = RequestHandler::<F, S>::new(encryptor, request_handler);
             while let Some(response) = handler.handle_request(&mut receiver).await.map_err(|error| {
                 let message = format!("Couldn't handle request: {:?}", error);
                 warn!("{}", message);
