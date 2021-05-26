@@ -82,7 +82,7 @@ pub struct Opt {
 const EXAMPLE_MESSAGE: &str = "Example message";
 
 async fn request_handler(request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-    let parsed_request = String::from_utf8(request.to_vec()).context("Couldn't parse request")?;
+    let parsed_request = String::from_utf8(request).context("Couldn't parse request")?;
     info!("Server received data: {:?}", parsed_request);
     Ok(EXAMPLE_MESSAGE.as_bytes().to_vec())
 }

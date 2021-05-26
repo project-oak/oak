@@ -69,8 +69,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
         ),
     );
 
-    let request_handler =
-        async move |request: Vec<u8>| handle_request(wasm_handler, policy, request.to_vec()).await;
+    let request_handler = async move |request| handle_request(wasm_handler, policy, request).await;
 
     // A `Service` is needed for every connection. Here we create a service using the
     // `wasm_handler`.
