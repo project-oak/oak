@@ -19,7 +19,7 @@ use crate::{
     lookup::{parse_lookup_entries, LookupData},
     server::{apply_policy, Policy, WasmHandler},
 };
-use oak_functions_abi::proto::{Response, StatusCode};
+use oak_functions_abi::proto::{Request, Response, StatusCode};
 
 use maplit::hashmap;
 use prost::Message;
@@ -210,9 +210,11 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             static_server_join_handle.await.unwrap();
         });
         bencher.iter(|| {
-            let bytes = br#"{"lat":52,"lon":0}"#.to_vec();
+            let request = Request {
+                body: br#"{"lat":52,"lon":0}"#.to_vec(),
+            };
             let resp = rt
-                .block_on(wasm_handler.clone().handle_invoke(bytes))
+                .block_on(wasm_handler.clone().handle_invoke(request))
                 .unwrap();
             assert_eq!(resp.status, StatusCode::Success as i32);
             assert_eq!(

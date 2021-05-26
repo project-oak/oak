@@ -23,6 +23,7 @@ use crate::{
 };
 use anyhow::Context;
 use log::Level;
+use oak_functions_abi::proto::Request;
 use oak_grpc_attestation::{
     attestation::AttestationServer, proto::remote_attestation_server::RemoteAttestationServer,
 };
@@ -34,7 +35,8 @@ async fn handle_request(
     policy: Policy,
     request: Vec<u8>,
 ) -> anyhow::Result<Vec<u8>> {
-    let function = async move || wasm_handler.clone().handle_invoke(request.to_vec()).await;
+    let request = Request::decode(request.as_ref())?;
+    let function = async move || wasm_handler.clone().handle_invoke(request).await;
     let policy = policy.try_into().context("invalid policy")?;
     let response = apply_policy(policy, function)
         .await
