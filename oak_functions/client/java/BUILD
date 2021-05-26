@@ -40,7 +40,5 @@ java_library(
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//protobuf",
         "@io_grpc_grpc_java//stub",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:x25519",
     ],
 )

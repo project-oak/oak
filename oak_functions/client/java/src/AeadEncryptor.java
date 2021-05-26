@@ -1,5 +1,6 @@
 package com.google.oak.functions.client;
 
+import java.lang.IllegalArgumentException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -15,14 +16,19 @@ import javax.crypto.spec.SecretKeySpec;
 public class AeadEncryptor {
     private static String ENCRYPTION_ALGORITHM = "AES";
     private static String AEAD_ALGORITHM = "AES/GCM/NoPadding";
-    private static int AES_KEY_LENGTH_BITS = 256;
+    private static int KEY_LENGTH_BITS = 256;
+    private static int TAG_LENGTH_BITS = 128;
     private static int INITIALIZATION_VECTOR_LENGTH_BYTES = 12;
-    private static int GCM_TAG_LENGTH_BITS = 128;
 
     private SecretKey key;
     private SecretKeySpec keySpecification;
 
-    public AeadEncryptor(byte[] key) {
+    public AeadEncryptor(byte[] key) throws IllegalArgumentException {
+        if (key.length * 8 != KEY_LENGTH_BITS) {
+            throw new IllegalArgumentException(
+                String.format("Incorrect key length: %d, expected %d", key.length * 8, KEY_LENGTH_BITS)
+            );
+        }
         this.key = new SecretKeySpec(key, 0, key.length, AEAD_ALGORITHM);
         this.keySpecification = new SecretKeySpec(this.key.getEncoded(), ENCRYPTION_ALGORITHM);
     }
@@ -36,7 +42,7 @@ public class AeadEncryptor {
 
         // Create a random initialization vector.
         byte[] initializationVector = generateInitializationVector(INITIALIZATION_VECTOR_LENGTH_BYTES);
-        GCMParameterSpec gcmParameterSpecification = new GCMParameterSpec(GCM_TAG_LENGTH_BITS, initializationVector);
+        GCMParameterSpec gcmParameterSpecification = new GCMParameterSpec(TAG_LENGTH_BITS, initializationVector);
 
         // Initialize encryptor.
         encryptor.init(Cipher.ENCRYPT_MODE, this.keySpecification, gcmParameterSpecification);
@@ -59,7 +65,7 @@ public class AeadEncryptor {
 
         // Extract initialization vector from `data`.
         byte[] initializationVector = Arrays.copyOfRange(data, 0, INITIALIZATION_VECTOR_LENGTH_BYTES );
-        GCMParameterSpec gcmParameterSpecification = new GCMParameterSpec(GCM_TAG_LENGTH_BITS, initializationVector);
+        GCMParameterSpec gcmParameterSpecification = new GCMParameterSpec(TAG_LENGTH_BITS, initializationVector);
 
         // Initialize decryptor.
         decryptor.init(Cipher.DECRYPT_MODE, this.keySpecification, gcmParameterSpecification);
