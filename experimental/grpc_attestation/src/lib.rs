@@ -15,7 +15,7 @@
 //
 
 pub mod proto {
-    tonic::include_proto!("oak.remote_attestation");
+    tonic::include_proto!("oak.functions.server");
 }
 
 pub mod attestation;

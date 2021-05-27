@@ -20,6 +20,7 @@ use oak_attestation_common::{
     report::AttestationInfo,
 };
 use oak_grpc_attestation::proto::{
+    SecureRequest,
     attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
     remote_attestation_client::RemoteAttestationClient, AttestedInvokeRequest,
     AttestedInvokeResponse, ClientIdentity,
@@ -175,12 +176,12 @@ impl AttestationClient {
     /// server responses.
     /// Returns `Ok(None)` to indicate that the corresponding gRPC stream has ended.
     pub async fn send(&mut self, data: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
-        let encrypted_data = self
+        let encrypted_payload = self
             .encryptor
             .encrypt(data)
             .context("Couldn't encrypt data")?;
         let data_request = AttestedInvokeRequest {
-            request_type: Some(RequestType::EncryptedPayload(encrypted_data)),
+            request_type: Some(RequestType::Request(SecureRequest {encrypted_payload})),
         };
 
         let response = self

@@ -12,12 +12,12 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import oak.remote_attestation.AttestedInvokeResponse;
-import oak.remote_attestation.AttestedInvokeRequest;
-import oak.remote_attestation.ClientIdentity;
-import oak.remote_attestation.ServerIdentity;
-import oak.remote_attestation.RemoteAttestationGrpc;
-import oak.remote_attestation.RemoteAttestationGrpc.RemoteAttestationStub;
+import oak.functions.server.AttestedInvokeResponse;
+import oak.functions.server.AttestedInvokeRequest;
+import oak.functions.server.ClientIdentity;
+import oak.functions.server.ServerIdentity;
+import oak.functions.server.RemoteAttestationGrpc;
+import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
 
 // TODO(#2121): Implement a protocol independent state machine.
 public class AttestationClient {

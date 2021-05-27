@@ -33,9 +33,9 @@ java_library(
         "@io_grpc_grpc_java//netty",
     ],
     deps = [
-        "//remote_attestation/proto:remote_attestation_java_grpc",
-        "//remote_attestation/proto:remote_attestation_java_proto",
-        "//remote_attestation/proto:remote_attestation_proto",
+        "//oak_functions/proto:server_java_grpc",
+        "//oak_functions/proto:server_java_proto",
+        "//oak_functions/proto:server_proto",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@io_grpc_grpc_java//api",
