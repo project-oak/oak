@@ -36,7 +36,7 @@ public class AeadEncryptor {
 
     /**
      * Encrypts `data` using AES-GCM.
-     * The resulting encrypted data is prefixed with a random 12 bit initialization vector.
+     * The resulting encrypted data is prefixed with a random 12 byte initialization vector.
      */
     public byte[] encrypt(byte[] data) throws GeneralSecurityException {
         Cipher encryptor = Cipher.getInstance(AEAD_ALGORITHM);
@@ -59,7 +59,7 @@ public class AeadEncryptor {
 
     /**
      * Decrypts and authenticates `data` using AES-GCM.
-     * `data` must contain an encrypted message prefixed with a 12 bit initialization vector.
+     * `data` must contain an encrypted message prefixed with a 12 byte initialization vector.
      */
     public byte[] decrypt(byte[] data) throws GeneralSecurityException {
         Cipher decryptor = Cipher.getInstance(AEAD_ALGORITHM);
@@ -83,7 +83,7 @@ public class AeadEncryptor {
     /**
      * Generates a random initialization vector.
      */
-    private byte[] generateInitializationVector(int lengthBytes) {
+    static private byte[] generateInitializationVector(int lengthBytes) {
         byte[] initializationVector = new byte[lengthBytes];
         SecureRandom random = new SecureRandom();
         random.nextBytes(initializationVector);

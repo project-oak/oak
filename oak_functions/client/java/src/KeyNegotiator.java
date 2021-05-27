@@ -29,7 +29,7 @@ public class KeyNegotiator {
     /**
      * Returns a `subjectPublicKey` bit string from an X.509 `SubjectPublicKeyInfo`.
      * https://datatracker.ietf.org/doc/html/rfc3280#section-4.1
-     * */
+     */
     public byte[] getPublicKey() throws GeneralSecurityException {
         // Get a public key encoded as an X.509 `SubjectPublicKeyInfo`.
         byte[] publicKey = keyPair.getPublic().getEncoded();
@@ -40,10 +40,9 @@ public class KeyNegotiator {
 
     /**
      * Derives a session key from `peerPublicKey` and `KeyNegotiator::privateKey`.
-     * `peerPublicKey` should be a `subjectPublicKey` bit string from an X.509
-     * `SubjectPublicKeyInfo`.
+     * `peerPublicKey` must be a `subjectPublicKey` bit string from an X.509 `SubjectPublicKeyInfo`.
      * https://datatracker.ietf.org/doc/html/rfc3280#section-4.1
-     * */
+     */
     public byte[] deriveSessionKey(byte[] peerPublicKey) throws GeneralSecurityException {
         PublicKey parsedPeerPublicKey = parsePublicKey(peerPublicKey);
 
@@ -64,7 +63,7 @@ public class KeyNegotiator {
     /**
      * Parses a public key represented as a `subjectPublicKey` bit string from an X.509
      * `SubjectPublicKeyInfo`.
-     * */
+     */
     private PublicKey parsePublicKey(byte[] publicKey) throws GeneralSecurityException {
         // Add an X.509 `AlgorithmIdentifier` prefix to the public key.
         byte[] algorithmIdentifier = getAlgorithmIdentifier();
