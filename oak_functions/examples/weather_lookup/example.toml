@@ -13,7 +13,7 @@ additional_args = [
 ]
 
 [clients]
-rust = { Cargo = { cargo_manifest = "oak_functions/client/Cargo.toml" }, additional_args = [
+rust = { Cargo = { cargo_manifest = "oak_functions/client/rust/Cargo.toml" }, additional_args = [
   "--uri=http://localhost:8080",
   "--request={\"lat\":52,\"lon\":0}",
   "--expected-response={\"temperature_degrees\":-10}"
