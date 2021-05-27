@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["oak_functions_loader"] = [{"text":"impl&lt;T:&nbsp;GrpcHandler&gt; Clone for GrpcHandlerServer&lt;T&gt;","synthetic":false,"types":[]},{"text":"impl Clone for Logger","synthetic":false,"types":[]},{"text":"impl Clone for Policy","synthetic":false,"types":[]},{"text":"impl Clone for WasmHandler","synthetic":false,"types":[]}];
+implementors["oak_functions_loader"] = [{"text":"impl Clone for Logger","synthetic":false,"types":[]},{"text":"impl Clone for Policy","synthetic":false,"types":[]},{"text":"impl Clone for WasmHandler","synthetic":false,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

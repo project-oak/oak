@@ -647,6 +647,7 @@
 <span id="644">644</span>
 <span id="645">645</span>
 <span id="646">646</span>
+<span id="647">647</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -668,7 +669,7 @@
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">FutureExt</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::<span class="ident">proto</span>::{<span class="ident">OakStatus</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::<span class="ident">proto</span>::{<span class="ident">OakStatus</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">str</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 <span class="kw">use</span> <span class="ident">wasmi</span>::<span class="ident">ValueType</span>;
@@ -1198,7 +1199,8 @@
         })
     }
 
-    <span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_invoke</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">request_bytes</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">body</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wasm_state</span> <span class="op">=</span> <span class="ident">WasmState</span>::<span class="ident">new</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>,
             <span class="ident">request_bytes</span>,

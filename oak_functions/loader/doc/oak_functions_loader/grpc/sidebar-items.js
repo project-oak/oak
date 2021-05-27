@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["create_and_start_grpc_server","Starts a gRPC server on the given address, serving the `main` function of the given Wasm module."],["handle_request",""]],"struct":[["FunctionsServer","A gRPC server with an `invoke` method to handle incoming requests to an Oak Functions application."]]});
+initSidebarItems({"fn":[["create_and_start_grpc_server","Starts a gRPC server on the given address, serving the `main` function of the given Wasm module."]]});

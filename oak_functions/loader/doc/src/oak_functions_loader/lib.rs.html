@@ -23,8 +23,6 @@
 <span id="20">20</span>
 <span id="21">21</span>
 <span id="22">22</span>
-<span id="23">23</span>
-<span id="24">24</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -42,9 +40,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
-    <span class="ident">tonic</span>::<span class="macro">include_proto</span><span class="macro">!</span>(<span class="string">&quot;oak.functions.server&quot;</span>);
-}
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">async_closure</span>)]</span>
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">grpc</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">logger</span>;

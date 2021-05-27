@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["grpc","gRPC server for Oak Functions."],["logger",""],["lookup",""],["proto",""],["server",""]]});
+initSidebarItems({"mod":[["grpc","gRPC server for Oak Functions."],["logger",""],["lookup",""],["server",""]]});

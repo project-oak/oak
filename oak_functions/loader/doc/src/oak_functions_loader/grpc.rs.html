@@ -87,16 +87,6 @@
 <span id="84">84</span>
 <span id="85">85</span>
 <span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
-<span id="89">89</span>
-<span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
-<span id="93">93</span>
-<span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -119,51 +109,39 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">logger</span>::<span class="ident">Logger</span>,
     <span class="ident">lookup</span>::<span class="ident">LookupData</span>,
-    <span class="ident">proto</span>::<span class="ident">grpc_handler_server</span>::{<span class="ident">GrpcHandler</span>, <span class="ident">GrpcHandlerServer</span>},
     <span class="ident">server</span>::{<span class="ident">apply_policy</span>, <span class="ident">Policy</span>, <span class="ident">WasmHandler</span>},
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">Level</span>;
-<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::<span class="ident">proto</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>};
+<span class="kw">use</span> <span class="ident">oak_functions_abi</span>::<span class="ident">proto</span>::<span class="ident">Request</span>;
+<span class="kw">use</span> <span class="ident">oak_grpc_attestation</span>::{
+    <span class="ident">attestation</span>::<span class="ident">AttestationServer</span>, <span class="ident">proto</span>::<span class="ident">remote_attestation_server</span>::<span class="ident">RemoteAttestationServer</span>,
+};
+<span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryInto</span>, <span class="ident">future</span>::<span class="ident">Future</span>, <span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 
-<span class="doccomment">/// A gRPC server with an `invoke` method to handle incoming requests to an Oak Functions</span>
-<span class="doccomment">/// application.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FunctionsServer</span> {
+<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(
     <span class="ident">wasm_handler</span>: <span class="ident">WasmHandler</span>,
     <span class="ident">policy</span>: <span class="ident">Policy</span>,
-}
-
-<span class="attribute">#[<span class="ident">tonic</span>::<span class="ident">async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">GrpcHandler</span> <span class="kw">for</span> <span class="ident">FunctionsServer</span> {
-    <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">invoke</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Request</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">policy</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">policy</span>;
-        <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">wasm_handler</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="ident">handle_request</span>(<span class="ident">wasm_handler</span>, <span class="ident">request</span>);
-        <span class="kw">let</span> <span class="ident">policy</span> <span class="op">=</span> <span class="ident">policy</span>.<span class="ident">try_into</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(<span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">Internal</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;invalid policy: {:?}&quot;</span>, <span class="ident">err</span>))
-        })<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">apply_policy</span>(<span class="ident">policy</span>, <span class="ident">function</span>).<span class="ident">await</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(<span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">Internal</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;internal error: {:?}&quot;</span>, <span class="ident">err</span>))
-        })<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">tonic</span>::<span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">response</span>))
-    }
-}
-
-<span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(
-    <span class="ident">wasm_handler</span>: <span class="ident">WasmHandler</span>,
-    <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Request</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">into_inner</span>().<span class="ident">body</span>;
-    <span class="ident">wasm_handler</span>.<span class="ident">handle_invoke</span>(<span class="ident">bytes</span>).<span class="ident">await</span>
+    <span class="ident">request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Request</span>::<span class="ident">decode</span>(<span class="ident">request</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">async</span> <span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="ident">wasm_handler</span>.<span class="ident">clone</span>().<span class="ident">handle_invoke</span>(<span class="ident">request</span>).<span class="ident">await</span>;
+    <span class="kw">let</span> <span class="ident">policy</span> <span class="op">=</span> <span class="ident">policy</span>.<span class="ident">try_into</span>().<span class="ident">context</span>(<span class="string">&quot;invalid policy&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">apply_policy</span>(<span class="ident">policy</span>, <span class="ident">function</span>)
+        .<span class="ident">await</span>
+        .<span class="ident">context</span>(<span class="string">&quot;internal error&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="ident">response</span>
+        .<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">bytes</span>)
+        .<span class="ident">context</span>(<span class="string">&quot;couldn&#39;t encode response&quot;</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">bytes</span>)
 }
 
 <span class="doccomment">/// Starts a gRPC server on the given address, serving the `main` function of the given Wasm module.</span>
 <span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">create_and_start_grpc_server</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span><span class="op">&gt;</span>(
     <span class="ident">address</span>: <span class="kw-2">&amp;</span><span class="ident">SocketAddr</span>,
+    <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
     <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
     <span class="ident">policy</span>: <span class="ident">Policy</span>,
@@ -181,13 +159,15 @@
         ),
     );
 
+    <span class="kw">let</span> <span class="ident">request_handler</span> <span class="op">=</span> <span class="ident">async</span> <span class="kw">move</span> <span class="op">|</span><span class="ident">request</span><span class="op">|</span> <span class="ident">handle_request</span>(<span class="ident">wasm_handler</span>, <span class="ident">policy</span>, <span class="ident">request</span>).<span class="ident">await</span>;
+
     <span class="comment">// A `Service` is needed for every connection. Here we create a service using the</span>
     <span class="comment">// `wasm_handler`.</span>
     <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Server</span>::<span class="ident">builder</span>()
-        .<span class="ident">add_service</span>(<span class="ident">GrpcHandlerServer</span>::<span class="ident">new</span>(<span class="ident">FunctionsServer</span> {
-            <span class="ident">wasm_handler</span>,
-            <span class="ident">policy</span>,
-        }))
+        .<span class="ident">add_service</span>(<span class="ident">RemoteAttestationServer</span>::<span class="ident">new</span>(
+            <span class="ident">AttestationServer</span>::<span class="ident">create</span>(<span class="ident">tee_certificate</span>, <span class="ident">request_handler</span>)
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create remote attestation server&quot;</span>)<span class="question-mark">?</span>,
+        ))
         .<span class="ident">serve_with_shutdown</span>(<span class="kw-2">*</span><span class="ident">address</span>, <span class="ident">terminate</span>)
         .<span class="ident">await</span>
         .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t start server&quot;</span>)<span class="question-mark">?</span>;
