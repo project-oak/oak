@@ -19,51 +19,39 @@
 use crate::{
     logger::Logger,
     lookup::LookupData,
-    proto::grpc_handler_server::{GrpcHandler, GrpcHandlerServer},
     server::{apply_policy, Policy, WasmHandler},
 };
 use anyhow::Context;
 use log::Level;
-use oak_functions_abi::proto::{Request, Response};
+use oak_functions_abi::proto::Request;
+use oak_grpc_attestation::{
+    attestation::AttestationServer, proto::remote_attestation_server::RemoteAttestationServer,
+};
+use prost::Message;
 use std::{convert::TryInto, future::Future, net::SocketAddr, sync::Arc};
 
-/// A gRPC server with an `invoke` method to handle incoming requests to an Oak Functions
-/// application.
-pub struct FunctionsServer {
+async fn handle_request(
     wasm_handler: WasmHandler,
     policy: Policy,
-}
-
-#[tonic::async_trait]
-impl GrpcHandler for FunctionsServer {
-    async fn invoke(
-        &self,
-        request: tonic::Request<Request>,
-    ) -> Result<tonic::Response<Response>, tonic::Status> {
-        let policy = self.policy;
-        let wasm_handler = self.wasm_handler.clone();
-        let function = move || handle_request(wasm_handler, request);
-        let policy = policy.try_into().map_err(|err| {
-            tonic::Status::new(tonic::Code::Internal, format!("invalid policy: {:?}", err))
-        })?;
-        let response = apply_policy(policy, function).await.map_err(|err| {
-            tonic::Status::new(tonic::Code::Internal, format!("internal error: {:?}", err))
-        })?;
-        Ok(tonic::Response::new(response))
-    }
-}
-
-pub async fn handle_request(
-    wasm_handler: WasmHandler,
-    request: tonic::Request<Request>,
-) -> anyhow::Result<Response> {
-    let bytes = request.into_inner().body;
-    wasm_handler.handle_invoke(bytes).await
+    request: Vec<u8>,
+) -> anyhow::Result<Vec<u8>> {
+    let request = Request::decode(request.as_ref())?;
+    let function = async move || wasm_handler.clone().handle_invoke(request).await;
+    let policy = policy.try_into().context("invalid policy")?;
+    let response = apply_policy(policy, function)
+        .await
+        .context("internal error")?;
+    let mut bytes = vec![];
+    response
+        .encode(&mut bytes)
+        .context("couldn't encode response")?;
+    Ok(bytes)
 }
 
 /// Starts a gRPC server on the given address, serving the `main` function of the given Wasm module.
 pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     address: &SocketAddr,
+    tee_certificate: Vec<u8>,
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,
     policy: Policy,
@@ -81,13 +69,15 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
         ),
     );
 
+    let request_handler = async move |request| handle_request(wasm_handler, policy, request).await;
+
     // A `Service` is needed for every connection. Here we create a service using the
     // `wasm_handler`.
     tonic::transport::Server::builder()
-        .add_service(GrpcHandlerServer::new(FunctionsServer {
-            wasm_handler,
-            policy,
-        }))
+        .add_service(RemoteAttestationServer::new(
+            AttestationServer::create(tee_certificate, request_handler)
+                .context("Couldn't create remote attestation server")?,
+        ))
         .serve_with_shutdown(*address, terminate)
         .await
         .context("Couldn't start server")?;

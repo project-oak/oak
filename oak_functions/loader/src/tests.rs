@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::{
-    grpc::{create_and_start_grpc_server, handle_request},
+    grpc::create_and_start_grpc_server,
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData},
     server::{apply_policy, Policy, WasmHandler},
@@ -141,10 +141,12 @@ where
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();
+    let tee_certificate = vec![];
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
             &address,
+            tee_certificate,
             &wasm_module_bytes,
             lookup_data,
             policy,
@@ -209,11 +211,11 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             static_server_join_handle.await.unwrap();
         });
         bencher.iter(|| {
-            let request = tonic::Request::new(Request {
+            let request = Request {
                 body: br#"{"lat":52,"lon":0}"#.to_vec(),
-            });
+            };
             let resp = rt
-                .block_on(handle_request(wasm_handler.clone(), request))
+                .block_on(wasm_handler.clone().handle_invoke(request))
                 .unwrap();
             assert_eq!(resp.status, StatusCode::Success as i32);
             assert_eq!(

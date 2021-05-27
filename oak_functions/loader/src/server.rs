@@ -18,7 +18,7 @@ use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
-use oak_functions_abi::proto::{OakStatus, Response, StatusCode};
+use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode};
 use serde::Deserialize;
 use std::{convert::TryFrom, str, sync::Arc, time::Duration};
 use wasmi::ValueType;
@@ -548,7 +548,8 @@ impl WasmHandler {
         })
     }
 
-    pub async fn handle_invoke(&self, request_bytes: Vec<u8>) -> anyhow::Result<Response> {
+    pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
+        let request_bytes = request.body;
         let mut wasm_state = WasmState::new(
             &self.module,
             request_bytes,

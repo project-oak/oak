@@ -17,13 +17,12 @@
 //! Test utilities to help with unit testing of Oak-Functions SDK code.
 
 use anyhow::Context;
-use http::uri::Uri;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body,
 };
 use log::info;
-use oak_functions_abi::proto::Response;
+use oak_functions_abi::proto::{Request, Response};
 use prost::Message;
 use std::{
     collections::HashMap,
@@ -206,17 +205,24 @@ pub struct TestResult {
 
 pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let uri = format!("http://localhost:{}/", port);
-    let uri: Uri = uri.parse().expect("Error parsing URI");
 
     // Create client
     let mut client = oak_functions_client::Client::new(&uri)
         .await
         .expect("Could not create client");
 
+    let request = Request {
+        body: request_body.to_vec(),
+    };
+    let mut request_bytes = vec![];
+    request
+        .encode(&mut request_bytes)
+        .expect("Could not encode request");
+
     // Send the request and measure time
     let start = std::time::Instant::now();
     let response = client
-        .invoke(request_body)
+        .invoke(&request_bytes)
         .await
         .expect("Error while awaiting response");
     let elapsed = start.elapsed();

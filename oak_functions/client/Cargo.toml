@@ -11,6 +11,7 @@ env_logger = "*"
 http = "*"
 log = "*"
 oak_functions_abi = { path = "../abi" }
+oak_grpc_attestation_client = { path = "../../experimental/grpc_attestation_client/rust" }
 prost = "*"
 regex = "*"
 structopt = "*"
@@ -20,7 +21,6 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
-tonic = { version = "*", features = ["tls", "tls-roots"] }
 
 [build-dependencies]
 oak_utils = { path = "../../oak_utils" }

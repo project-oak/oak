@@ -13,35 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
-    tonic::include_proto!("oak.functions.server");
-}
-
-use crate::proto::grpc_handler_client::GrpcHandlerClient;
 use anyhow::Context;
-use http::uri::Uri;
-use oak_functions_abi::proto::{Request, Response};
-use tonic::transport::Channel;
+use oak_functions_abi::proto::Response;
+use oak_grpc_attestation_client::AttestationClient;
+use prost::Message;
+
+// TODO(#1867): Add remote attestation support.
+const TEE_MEASUREMENT: &[u8] = br"Test TEE measurement";
 
 pub struct Client {
-    inner: GrpcHandlerClient<Channel>,
+    inner: AttestationClient,
 }
 
 impl Client {
-    pub async fn new(uri: &Uri) -> anyhow::Result<Self> {
-        let channel = Channel::builder(uri.clone()).connect().await?;
-        let inner = GrpcHandlerClient::new(channel);
+    pub async fn new(uri: &str) -> anyhow::Result<Self> {
+        let inner = AttestationClient::create(uri, TEE_MEASUREMENT)
+            .await
+            .context("Could not create Oak Functions client")?;
         Ok(Client { inner })
     }
     pub async fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Response> {
-        let request = tonic::Request::new(Request {
-            body: request_body.to_vec(),
-        });
         let response = self
             .inner
-            .invoke(request)
+            .send(request_body)
             .await
             .context("Error invoking Oak Functions instance")?;
-        Ok(response.into_inner())
+        response
+            .ok_or_else(|| anyhow::anyhow!("Empty response"))
+            .and_then(|rsp| Response::decode(rsp.as_ref()).context("Could not decode the response"))
     }
 }

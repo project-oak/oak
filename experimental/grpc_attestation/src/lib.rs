@@ -17,3 +17,5 @@
 pub mod proto {
     tonic::include_proto!("oak.remote_attestation");
 }
+
+pub mod attestation;

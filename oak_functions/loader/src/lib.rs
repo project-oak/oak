@@ -14,9 +14,7 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
-}
+#![feature(async_closure)]
 
 pub mod grpc;
 pub mod logger;

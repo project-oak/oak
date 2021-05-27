@@ -18,8 +18,9 @@
 //! correct format.
 
 use anyhow::Context;
-use http::uri::Uri;
+use oak_functions_abi::proto::Request;
 use oak_functions_client::Client;
+use prost::Message;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -33,24 +34,38 @@ pub struct Opt {
     uri: String,
     #[structopt(long, help = "request payload")]
     request: String,
+    /// Optional, only for testing.
+    #[structopt(long, help = "expected response body, for testing")]
+    expected_response: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::from_args();
-    let uri: Uri = opt.uri.parse().context("Error parsing URI")?;
 
-    let mut client = Client::new(&uri)
+    let mut client = Client::new(&opt.uri)
         .await
         .context("Could not create Oak Functions client")?;
 
+    let request = Request {
+        body: opt.request.as_bytes().to_vec(),
+    };
+    let mut request_bytes = vec![];
+    request
+        .encode(&mut request_bytes)
+        .context("Could not encode request")?;
+
     let response = client
-        .invoke(opt.request.as_bytes())
+        .invoke(&request_bytes)
         .await
         .context("Could not invoke Oak Functions")?;
+
     let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
-    print!("{}", response_body);
+    match opt.expected_response {
+        Some(expected) => assert_eq!(expected, response_body),
+        None => println!("{}", response_body),
+    }
 
     Ok(())
 }

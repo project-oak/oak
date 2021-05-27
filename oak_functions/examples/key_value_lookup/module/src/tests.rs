@@ -66,10 +66,12 @@ async fn test_server() {
         constant_response_size_bytes: 100,
         constant_processing_time: Duration::from_millis(200),
     };
+    let tee_certificate = vec![];
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
             &address,
+            tee_certificate,
             &wasm_module_bytes,
             lookup_data,
             policy,

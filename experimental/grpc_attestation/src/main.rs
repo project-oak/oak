@@ -52,13 +52,12 @@
 //!
 //! Note: Current version of the gRPC Attestation Service doesn't have remote attestation.
 
-mod attestation;
-
-use crate::attestation::AttestationServer;
 use anyhow::Context;
 use futures::FutureExt;
 use log::info;
-use oak_grpc_attestation::proto::remote_attestation_server::RemoteAttestationServer;
+use oak_grpc_attestation::{
+    attestation::AttestationServer, proto::remote_attestation_server::RemoteAttestationServer,
+};
 use structopt::StructOpt;
 use tonic::transport::Server;
 
@@ -82,10 +81,10 @@ pub struct Opt {
 // Example message sent to the client.
 const EXAMPLE_MESSAGE: &str = "Example message";
 
-fn request_handler(request: &[u8]) -> Vec<u8> {
-    let parsed_request = String::from_utf8(request.to_vec()).expect("Couldn't parse request");
+async fn request_handler(request: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+    let parsed_request = String::from_utf8(request).context("Couldn't parse request")?;
     info!("Server received data: {:?}", parsed_request);
-    EXAMPLE_MESSAGE.as_bytes().to_vec()
+    Ok(EXAMPLE_MESSAGE.as_bytes().to_vec())
 }
 
 #[tokio::main]
