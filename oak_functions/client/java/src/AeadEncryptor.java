@@ -36,7 +36,7 @@ public class AeadEncryptor {
 
     /**
      * Encrypts `data` using AES-GCM.
-     * The resulting encrypted data is prefixed with a random 12 bit nonce.
+     * The resulting encrypted data is prefixed with a random 12 bit initialization vector.
      */
     public byte[] encrypt(byte[] data) throws GeneralSecurityException {
         Cipher encryptor = Cipher.getInstance(AEAD_ALGORITHM);
@@ -59,7 +59,7 @@ public class AeadEncryptor {
 
     /**
      * Decrypts and authenticates `data` using AES-GCM.
-     * `data` must contain an encrypted message prefixed with a 12 bit nonce.
+     * `data` must contain an encrypted message prefixed with a 12 bit initialization vector.
      */
     public byte[] decrypt(byte[] data) throws GeneralSecurityException {
         Cipher decryptor = Cipher.getInstance(AEAD_ALGORITHM);
@@ -71,10 +71,12 @@ public class AeadEncryptor {
         // Initialize decryptor.
         decryptor.init(Cipher.DECRYPT_MODE, this.keySpecification, gcmParameterSpecification);
 
+        // Remove a 12 bit initialization vector prefix from `data`.
+        byte[] encryptedData = Arrays.copyOfRange(data, INITIALIZATION_VECTOR_LENGTH_BYTES, data.length);
+
         // Additional authenticated data is not required for the remotely attested channel,
         // since after session key is established client and server exchange messages with a
         // single encrypted field.
-        byte[] encryptedData = Arrays.copyOfRange(data, INITIALIZATION_VECTOR_LENGTH_BYTES, data.length);
         return decryptor.doFinal(encryptedData);
     }
 

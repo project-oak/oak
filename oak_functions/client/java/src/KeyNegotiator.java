@@ -62,7 +62,7 @@ public class KeyNegotiator {
     }
 
     /**
-     * Parses a public key represented as `subjectPublicKey` bit string from an X.509
+     * Parses a public key represented as a `subjectPublicKey` bit string from an X.509
      * `SubjectPublicKeyInfo`.
      * */
     private PublicKey parsePublicKey(byte[] publicKey) throws GeneralSecurityException {
@@ -84,7 +84,7 @@ public class KeyNegotiator {
 
     /** Derives a session key from `keyMaterial`. */
     private byte[] keyDerivationFunction(byte[] keyMaterial, byte[] peerPublicKey) {
-        // TODO(#2100): Derive a session key not just from `key_material` but also from server's and
+        // TODO(#2100): Derive a session key not just from `keyMaterial` but also from server's and
         // client's public keys.
         // https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
         return keyMaterial;
