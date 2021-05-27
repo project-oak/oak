@@ -16,14 +16,14 @@ import javax.crypto.KeyAgreement;
  * https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
  */
 public class KeyNegotiator {
-    private static String KEY_AGREEMENT_ALGORITHM = "X25519";
-    private static int ALGORITHM_IDENTIFIER_LENGTH_BYTES = 14;
+    private static final String KEY_AGREEMENT_ALGORITHM = "X25519";
+    private static final int ALGORITHM_IDENTIFIER_LENGTH_BYTES = 14;
 
     KeyPair keyPair;
 
     public KeyNegotiator() throws GeneralSecurityException {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(KEY_AGREEMENT_ALGORITHM);
-        this.keyPair = keyPairGenerator.generateKeyPair();
+        keyPair = keyPairGenerator.generateKeyPair();
     }
 
     /**
@@ -32,7 +32,7 @@ public class KeyNegotiator {
      * */
     public byte[] getPublicKey() throws GeneralSecurityException {
         // Get a public key encoded as an X.509 `SubjectPublicKeyInfo`.
-        byte[] publicKey = this.keyPair.getPublic().getEncoded();
+        byte[] publicKey = keyPair.getPublic().getEncoded();
         // Remove `AlgorithmIdentifier` from X.509 `SubjectPublicKeyInfo` and get `subjectPublicKey`
         // bit string.
         return Arrays.copyOfRange(publicKey, ALGORITHM_IDENTIFIER_LENGTH_BYTES, publicKey.length);
@@ -45,19 +45,19 @@ public class KeyNegotiator {
      * https://datatracker.ietf.org/doc/html/rfc3280#section-4.1
      * */
     public byte[] deriveSessionKey(byte[] peerPublicKey) throws GeneralSecurityException {
-        PublicKey parsedPeerPublicKey = this.parsePublicKey(peerPublicKey);
+        PublicKey parsedPeerPublicKey = parsePublicKey(peerPublicKey);
 
         KeyAgreement keyAgreement = KeyAgreement.getInstance(KEY_AGREEMENT_ALGORITHM);
-        keyAgreement.init(this.keyPair.getPrivate());
+        keyAgreement.init(keyPair.getPrivate());
         keyAgreement.doPhase(parsedPeerPublicKey, true);
         byte[] keyMaterial = keyAgreement.generateSecret();
 
-        return this.keyDerivationFunction(keyMaterial, peerPublicKey);
+        return keyDerivationFunction(keyMaterial, peerPublicKey);
     }
 
     /** Derives a session key and creates an `AeadEncryptor` from it. */
     public AeadEncryptor createAeadEncryptor(byte[] peerPublicKey) throws GeneralSecurityException {
-        byte[] sessionKey = this.deriveSessionKey(peerPublicKey);
+        byte[] sessionKey = deriveSessionKey(peerPublicKey);
         return new AeadEncryptor(sessionKey);
     }
 
@@ -67,7 +67,7 @@ public class KeyNegotiator {
      * */
     private PublicKey parsePublicKey(byte[] publicKey) throws GeneralSecurityException {
         // Add an X.509 `AlgorithmIdentifier` prefix to the public key.
-        byte[] algorithmIdentifier = this.getAlgorithmIdentifier();
+        byte[] algorithmIdentifier = getAlgorithmIdentifier();
         byte[] prefixedPublicKey = Util.concatenate(algorithmIdentifier, publicKey);
         X509EncodedKeySpec keySpecification = new X509EncodedKeySpec(prefixedPublicKey);
 
@@ -78,7 +78,7 @@ public class KeyNegotiator {
 
     /** Returns an X.509 `AlgorithmIdentifier` bit string. */
     private byte[] getAlgorithmIdentifier() {
-        PublicKey publicKey = this.keyPair.getPublic();
+        PublicKey publicKey = keyPair.getPublic();
         return Arrays.copyOfRange(publicKey.getEncoded(), 0, ALGORITHM_IDENTIFIER_LENGTH_BYTES);
     }
 
