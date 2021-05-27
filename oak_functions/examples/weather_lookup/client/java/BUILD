@@ -14,28 +14,19 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_binary")
 
 package(
-    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-java_library(
+java_binary(
     name = "client",
     srcs = [
-        "src/AeadEncryptor.java",
-        "src/AttestationClient.java",
-        "src/KeyNegotiator.java",
-        "src/Util.java",
+        "src/Main.java",
     ],
-    runtime_deps = [
-        "@io_grpc_grpc_java//netty",
-    ],
+    main_class = "com.google.oak.functions.examples.weather_lookup.client.Main",
     deps = [
-        "//oak_functions/proto:server_java_grpc",
-        "//oak_functions/proto:server_java_proto",
-        "//oak_functions/proto:server_proto",
         "//oak_functions/proto:invocation_java_proto",
         "//oak_functions/proto:invocation_proto",
         "@com_google_protobuf//:protobuf_java",
@@ -43,5 +34,6 @@ java_library(
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//protobuf",
         "@io_grpc_grpc_java//stub",
+        "//oak_functions/client/java:client",
     ],
 )

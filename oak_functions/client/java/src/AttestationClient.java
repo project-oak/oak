@@ -12,8 +12,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import oak.functions.invocation.Request;
+import oak.functions.invocation.Response;
 import oak.functions.server.AttestedInvokeResponse;
 import oak.functions.server.AttestedInvokeRequest;
+import oak.functions.server.SecureRequest;
 import oak.functions.server.ClientIdentity;
 import oak.functions.server.ServerIdentity;
 import oak.functions.server.RemoteAttestationGrpc;
@@ -99,17 +102,22 @@ public class AttestationClient {
     /**
      * Encrypts and sends `message` via an attested gRPC channel to the server.
      */
-    public byte[] Send(byte[] message) throws Exception {
-        byte[] encryptedMessage = encryptor.encrypt(message);
-        AttestedInvokeRequest request = AttestedInvokeRequest
+    public Response Send(Request request) throws Exception {
+        byte[] encryptedMessage = encryptor.encrypt(request.toByteArray());
+        SecureRequest secureRequest = SecureRequest.newBuilder()
+                    .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
+                    .build();
+        AttestedInvokeRequest attestedRequest = AttestedInvokeRequest
             .newBuilder()
-            .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
+            .setRequest(secureRequest)
             .build();
 
-        requestObserver.onNext(request);
-        AttestedInvokeResponse response = (AttestedInvokeResponse) messageQueue.take();
+        requestObserver.onNext(attestedRequest);
+        AttestedInvokeResponse attestedResponse = (AttestedInvokeResponse) messageQueue.take();
 
-        byte[] responsePayload = response.getEncryptedPayload().toByteArray();
-        return encryptor.decrypt(responsePayload);
+        byte[] responsePayload = attestedResponse.getEncryptedPayload().toByteArray();
+        byte[] decryptedResponse = encryptor.decrypt(responsePayload);
+        Response response = Response.parseFrom(decryptedResponse);
+        return response;
     }
 }

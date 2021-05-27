@@ -39,3 +39,14 @@ java_grpc_library(
     srcs = [":server_proto"],
     deps = [":server_java_proto"],
 )
+
+proto_library(
+    name = "invocation_proto",
+    srcs = ["invocation.proto"],
+    deps = ["@com_google_protobuf//:empty_proto"],
+)
+
+java_proto_library(
+    name = "invocation_java_proto",
+    deps = [":invocation_proto"],
+)
