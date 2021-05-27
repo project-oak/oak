@@ -29,14 +29,14 @@ public class AttestationClient {
 
     public AttestationClient(String uri) throws Exception {
         // Create gRPC channel.
-        this.channel = ManagedChannelBuilder
+        channel = ManagedChannelBuilder
             .forTarget(uri)
             .usePlaintext()
             .build();
         RemoteAttestationStub stub = RemoteAttestationGrpc.newStub(channel);
 
         // Create server response handler.
-        this.messageQueue = new ArrayBlockingQueue(1);
+        messageQueue = new ArrayBlockingQueue(1);
         StreamObserver<AttestedInvokeResponse> responseObserver = new StreamObserver<AttestedInvokeResponse>() {
             @Override
             public void onNext(AttestedInvokeResponse response) {
@@ -56,7 +56,7 @@ public class AttestationClient {
             @Override
             public void onCompleted() {}
         };
-        this.requestObserver = stub.attestedInvoke(responseObserver);
+        requestObserver = stub.attestedInvoke(responseObserver);
 
         // Generate client private/public key pair.
         KeyNegotiator keyNegotiator = new KeyNegotiator();
@@ -73,7 +73,7 @@ public class AttestationClient {
             )
             .build();
         requestObserver.onNext(request);
-        AttestedInvokeResponse response = (AttestedInvokeResponse) this.messageQueue.take();
+        AttestedInvokeResponse response = (AttestedInvokeResponse) messageQueue.take();
 
         // Verify remote attestation.
         byte[] attestationInfo = response.getServerIdentity().getAttestationInfo().toByteArray();
@@ -83,7 +83,7 @@ public class AttestationClient {
 
         // Generate session key and initialize AEAD encryptor based on it.
         byte[] peerPublicKey = response.getServerIdentity().getPublicKey().toByteArray();
-        this.encryptor = keyNegotiator.createAeadEncryptor(peerPublicKey);
+        encryptor = keyNegotiator.createAeadEncryptor(peerPublicKey);
     }
 
     private Boolean verifyAttestation(byte[] attestationInfo) {
@@ -92,8 +92,8 @@ public class AttestationClient {
     }
 
     protected void finalize() throws Throwable {
-        this.requestObserver.onCompleted();
-        this.channel.shutdown();
+        requestObserver.onCompleted();
+        channel.shutdown();
     }
 
     /**
@@ -106,8 +106,8 @@ public class AttestationClient {
             .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
             .build();
 
-        this.requestObserver.onNext(request);
-        AttestedInvokeResponse response = (AttestedInvokeResponse) this.messageQueue.take();
+        requestObserver.onNext(request);
+        AttestedInvokeResponse response = (AttestedInvokeResponse) messageQueue.take();
 
         byte[] responsePayload = response.getEncryptedPayload().toByteArray();
         return encryptor.decrypt(responsePayload);
