@@ -20,10 +20,9 @@ use oak_attestation_common::{
     report::AttestationInfo,
 };
 use oak_grpc_attestation::proto::{
-    SecureRequest,
     attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
     remote_attestation_client::RemoteAttestationClient, AttestedInvokeRequest,
-    AttestedInvokeResponse, ClientIdentity,
+    AttestedInvokeResponse, ClientIdentity, SecureRequest,
 };
 use tokio::sync::mpsc::Sender;
 use tonic::{transport::Channel, Request, Streaming};
@@ -181,7 +180,7 @@ impl AttestationClient {
             .encrypt(data)
             .context("Couldn't encrypt data")?;
         let data_request = AttestedInvokeRequest {
-            request_type: Some(RequestType::Request(SecureRequest {encrypted_payload})),
+            request_type: Some(RequestType::Request(SecureRequest { encrypted_payload })),
         };
 
         let response = self

@@ -33,11 +33,11 @@ java_library(
         "@io_grpc_grpc_java//netty",
     ],
     deps = [
+        "//oak_functions/proto:invocation_java_proto",
+        "//oak_functions/proto:invocation_proto",
         "//oak_functions/proto:server_java_grpc",
         "//oak_functions/proto:server_java_proto",
         "//oak_functions/proto:server_proto",
-        "//oak_functions/proto:invocation_java_proto",
-        "//oak_functions/proto:invocation_proto",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@io_grpc_grpc_java//api",

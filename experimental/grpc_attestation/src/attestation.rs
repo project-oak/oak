@@ -81,12 +81,11 @@ where
             .context("Couldn't receive request")?
         {
             let request_type = request.request_type.context("Couldn't read request type")?;
-            let encrypted_request_payload =
-                if let RequestType::Request(request) = request_type {
-                    Ok(request.encrypted_payload)
-                } else {
-                    Err(anyhow!("Received incorrect message type"))
-                }?;
+            let encrypted_request_payload = if let RequestType::Request(request) = request_type {
+                Ok(request.encrypted_payload)
+            } else {
+                Err(anyhow!("Received incorrect message type"))
+            }?;
             let request_payload = self
                 .encryptor
                 .decrypt(&encrypted_request_payload)
