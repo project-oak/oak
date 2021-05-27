@@ -1,5 +1,6 @@
 package com.google.oak.functions.client;
 
+import com.google.oak.functions.client.Util;
 import java.lang.IllegalArgumentException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -53,7 +54,7 @@ public class AeadEncryptor {
         byte[] encryptedData = encryptor.doFinal(data);
 
         // Add `initializationVector` as a prefix to the `encryptedData`.
-        return concatenate(initializationVector, encryptedData);
+        return Util.concatenate(initializationVector, encryptedData);
     }
 
     /**
@@ -85,15 +86,5 @@ public class AeadEncryptor {
         SecureRandom random = new SecureRandom();
         random.nextBytes(initializationVector);
         return initializationVector;
-    }
-
-    /**
-     * Concatenate two byte arrays.
-     */
-    private byte[] concatenate(byte[] first, byte[] second) {
-        byte[] result = new byte[first.length + second.length];
-        System.arraycopy(first, 0, result, 0, first.length);
-        System.arraycopy(second, 0, result, first.length, second.length);
-        return result;
     }
 }

@@ -27,6 +27,7 @@ java_library(
         "src/AeadEncryptor.java",
         "src/AttestationClient.java",
         "src/KeyNegotiator.java",
+        "src/Util.java",
     ],
     runtime_deps = [
         "@io_grpc_grpc_java//netty",
