@@ -20,7 +20,6 @@
 use anyhow::Context;
 use oak_functions_abi::proto::Request;
 use oak_functions_client::Client;
-use prost::Message;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -51,13 +50,9 @@ async fn main() -> anyhow::Result<()> {
     let request = Request {
         body: opt.request.as_bytes().to_vec(),
     };
-    let mut request_bytes = vec![];
-    request
-        .encode(&mut request_bytes)
-        .context("Could not encode request")?;
 
     let response = client
-        .invoke(&request_bytes)
+        .invoke(request)
         .await
         .context("Could not invoke Oak Functions")?;
 

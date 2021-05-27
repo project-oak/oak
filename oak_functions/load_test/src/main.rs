@@ -16,6 +16,7 @@
 
 use anyhow::Context;
 use bencher::stats::Stats;
+use oak_functions_abi::proto::Request;
 use std::time::Instant;
 
 // From https://pantheon.corp.google.com/api-gateway/gateway/weather-lookup-grpc/location/europe-west2?project=oak-ci.
@@ -34,7 +35,9 @@ async fn main() -> anyhow::Result<()> {
     for i in 0..TOTAL_REQUESTS {
         let start = Instant::now();
         let response = client
-            .invoke(REQUEST)
+            .invoke(Request {
+                body: REQUEST.to_vec(),
+            })
             .await
             .context("Could not invoke Oak Functions instance")?;
         let elapsed_millis = start.elapsed().as_millis();

@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use anyhow::Context;
-use oak_functions_abi::proto::Response;
+use oak_functions_abi::proto::{Request, Response};
 use oak_grpc_attestation_client::AttestationClient;
 use prost::Message;
 
@@ -32,10 +32,10 @@ impl Client {
             .context("Could not create Oak Functions client")?;
         Ok(Client { inner })
     }
-    pub async fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Response> {
+    pub async fn invoke(&mut self, request: Request) -> anyhow::Result<Response> {
         let response = self
             .inner
-            .send(request_body)
+            .send(request)
             .await
             .context("Error invoking Oak Functions instance")?;
         response

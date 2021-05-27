@@ -103,7 +103,7 @@ public class AttestationClient {
      * Encrypts and sends `message` via an attested gRPC channel to the server.
      */
     public Response Send(Request request) throws Exception {
-        byte[] encryptedMessage = encryptor.encrypt(request.toByteArray());
+        byte[] encryptedMessage = encryptor.encrypt(request.getBody().toByteArray());
         SecureRequest secureRequest = SecureRequest.newBuilder()
                     .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
                     .build();

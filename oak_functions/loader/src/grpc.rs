@@ -33,9 +33,8 @@ use std::{convert::TryInto, future::Future, net::SocketAddr, sync::Arc};
 async fn handle_request(
     wasm_handler: WasmHandler,
     policy: Policy,
-    request: Vec<u8>,
+    request: Request,
 ) -> anyhow::Result<Vec<u8>> {
-    let request = Request::decode(request.as_ref())?;
     let function = async move || wasm_handler.clone().handle_invoke(request).await;
     let policy = policy.try_into().context("invalid policy")?;
     let response = apply_policy(policy, function)
