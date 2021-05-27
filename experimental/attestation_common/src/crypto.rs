@@ -147,14 +147,14 @@ impl KeyNegotiator {
             self.private_key,
             &peer_public_key,
             ring::error::Unspecified,
-            Self::kdf,
+            Self::key_derivation_function,
         )
         .map_err(|error| anyhow!("Couldn't derive session key: {:?}", error))?;
         Ok(session_key)
     }
 
     /// Derives a session key from `key_material`.
-    fn kdf(key_material: &[u8]) -> Result<Vec<u8>, ring::error::Unspecified> {
+    fn key_derivation_function(key_material: &[u8]) -> Result<Vec<u8>, ring::error::Unspecified> {
         // TODO(#2100): Derive a session key not just from `key_material` but also from server's and
         // client's public keys.
         // https://datatracker.ietf.org/doc/html/rfc7748#section-6.1

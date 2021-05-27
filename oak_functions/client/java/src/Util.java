@@ -1,7 +1,5 @@
 package com.google.oak.functions.client;
 
-import java.util.Arrays;
-
 public class Util {
     /**
      * Concatenates two byte arrays.
