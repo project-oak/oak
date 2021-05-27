@@ -71,7 +71,7 @@ public class AeadEncryptor {
         // Initialize decryptor.
         decryptor.init(Cipher.DECRYPT_MODE, this.keySpecification, gcmParameterSpecification);
 
-        // Remove a 12 bit initialization vector prefix from `data`.
+        // Remove initialization vector prefix from `data`.
         byte[] encryptedData = Arrays.copyOfRange(data, INITIALIZATION_VECTOR_LENGTH_BYTES, data.length);
 
         // Additional authenticated data is not required for the remotely attested channel,
