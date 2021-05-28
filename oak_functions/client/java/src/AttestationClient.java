@@ -24,7 +24,7 @@ public class AttestationClient {
     private static Logger logger = Logger.getLogger(AttestationClient.class.getName());
     private ManagedChannel channel;
     private StreamObserver<AttestedInvokeRequest> requestObserver;
-    private BlockingQueue messageQueue;
+    private BlockingQueue<AttestedInvokeResponse> messageQueue;
     private AeadEncryptor encryptor;
 
     public AttestationClient(String uri) throws Exception {
@@ -36,7 +36,7 @@ public class AttestationClient {
         RemoteAttestationStub stub = RemoteAttestationGrpc.newStub(channel);
 
         // Create server response handler.
-        messageQueue = new ArrayBlockingQueue(1);
+        messageQueue = new ArrayBlockingQueue<AttestedInvokeResponse>(1);
         StreamObserver<AttestedInvokeResponse> responseObserver = new StreamObserver<AttestedInvokeResponse>() {
             @Override
             public void onNext(AttestedInvokeResponse response) {
