@@ -16,7 +16,6 @@ import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
 import oak.functions.server.AttestedInvokeResponse;
 import oak.functions.server.AttestedInvokeRequest;
-import oak.functions.server.SecureRequest;
 import oak.functions.server.ClientIdentity;
 import oak.functions.server.ServerIdentity;
 import oak.functions.server.RemoteAttestationGrpc;
@@ -104,12 +103,12 @@ public class AttestationClient {
      */
     public Response Send(Request request) throws Exception {
         byte[] encryptedMessage = encryptor.encrypt(request.getBody().toByteArray());
-        SecureRequest secureRequest = SecureRequest.newBuilder()
+        oak.functions.server.Request serverRequest = oak.functions.server.Request.newBuilder()
                     .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
                     .build();
         AttestedInvokeRequest attestedRequest = AttestedInvokeRequest
             .newBuilder()
-            .setRequest(secureRequest)
+            .setRequest(serverRequest)
             .build();
 
         requestObserver.onNext(attestedRequest);

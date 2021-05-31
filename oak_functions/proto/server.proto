@@ -24,7 +24,7 @@ option java_package = "oak.functions.server";
 // Wrapper around the encrypted payload.
 // TODO(#2144): Extend this with additional potentially public fields, for instance for specifying
 // policies.
-message SecureRequest {
+message Request {
   // Payload encrypted using the session key.
   bytes encrypted_payload = 1;
 }
@@ -34,7 +34,7 @@ message AttestedInvokeRequest {
     // Client part of session key negotiation.
     ClientIdentity client_identity = 1;
     // Request with payload encrypted using the session key.
-    SecureRequest request = 2;
+    Request request = 2;
   }
 }
 
