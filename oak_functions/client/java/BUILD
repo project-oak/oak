@@ -24,10 +24,9 @@ package(
 java_library(
     name = "client",
     srcs = [
-        "src/AeadEncryptor.java",
-        "src/AttestationClient.java",
-        "src/KeyNegotiator.java",
-        "src/Util.java",
+        "com/google/oak/functions/client/AeadEncryptor.java",
+        "com/google/oak/functions/client/AttestationClient.java",
+        "com/google/oak/functions/client/KeyNegotiator.java",
     ],
     runtime_deps = [
         "@io_grpc_grpc_java//netty",
@@ -38,6 +37,7 @@ java_library(
         "//oak_functions/proto:server_java_grpc",
         "//oak_functions/proto:server_java_proto",
         "//oak_functions/proto:server_proto",
+        "@com_google_guava_guava//:com_google_guava_guava",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@io_grpc_grpc_java//api",

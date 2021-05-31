@@ -1,6 +1,6 @@
 package com.google.oak.functions.client;
 
-import com.google.oak.functions.client.Util;
+import com.google.common.primitives.Bytes;
 import java.lang.IllegalArgumentException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -21,9 +21,9 @@ public class AeadEncryptor {
     private static final int TAG_LENGTH_BITS = 128;
     private static final int INITIALIZATION_VECTOR_LENGTH_BYTES = 12;
 
-    private SecretKey key;
+    private final SecretKey key;
 
-    public AeadEncryptor(byte[] key) throws IllegalArgumentException {
+    public AeadEncryptor(byte[] key) {
         if (key.length * 8 != KEY_LENGTH_BITS) {
             throw new IllegalArgumentException(
                 String.format("Incorrect key length: %d, expected %d", key.length * 8, KEY_LENGTH_BITS)
@@ -52,7 +52,7 @@ public class AeadEncryptor {
         byte[] encryptedData = encryptor.doFinal(data);
 
         // Add `initializationVector` as a prefix to the `encryptedData`.
-        return Util.concatenate(initializationVector, encryptedData);
+        return Bytes.concat(initializationVector, encryptedData);
     }
 
     /**
@@ -63,7 +63,7 @@ public class AeadEncryptor {
         Cipher decryptor = Cipher.getInstance(AEAD_ALGORITHM);
 
         // Extract initialization vector from `data`.
-        byte[] initializationVector = Arrays.copyOfRange(data, 0, INITIALIZATION_VECTOR_LENGTH_BYTES );
+        byte[] initializationVector = Arrays.copyOf(data, INITIALIZATION_VECTOR_LENGTH_BYTES);
         GCMParameterSpec gcmParameterSpecification = new GCMParameterSpec(TAG_LENGTH_BITS, initializationVector);
 
         // Initialize decryptor.
