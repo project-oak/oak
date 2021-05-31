@@ -52,7 +52,7 @@ pub enum Command {
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
     RunTestsTsan,
-    RunFuzzTargets(RunFuzzTargets),
+    RunCargoFuzz(RunCargoFuzz),
     RunCargoDeny,
     RunCargoUdeps,
     RunCi,
@@ -296,7 +296,7 @@ impl RustBinaryOptions for BuildServer {
 }
 
 #[derive(StructOpt, Clone)]
-pub struct RunFuzzTargets {
+pub struct RunCargoFuzz {
     #[structopt(
         long,
         help = "name of a specific crate with fuzz-target. If not specified, runs all fuzz targets for all crates."
@@ -308,6 +308,11 @@ pub struct RunFuzzTargets {
         requires("crate-name")
     )]
     pub target_name: Option<String>,
+    #[structopt(
+        long,
+        help = "weather to run additional config steps for fuzz targets."
+    )]
+    pub run_config: bool,
     /// Additional `libFuzzer` arguments passed through to the binary
     #[structopt(last(true))]
     pub args: Vec<String>,
@@ -328,6 +333,25 @@ pub struct CargoManifest {
 pub struct CargoBinary {
     #[serde(default)]
     pub name: String,
+}
+
+/// Struct representing config files for fuzzing.
+#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct FuzzConfig {
+    pub examples: Vec<FuzzableExample>,
+}
+
+/// Config for building an example for fuzzing.
+#[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct FuzzableExample {
+    /// Name of the example
+    pub name: String,
+    /// Path to the Cargo.toml file for the example.
+    pub manifest_path: String,
+    /// Path to desired location of the .wasm file.
+    pub out_dir: String,
 }
 
 /// A construct to keep track of the status of the execution. It only cares about the top-level
