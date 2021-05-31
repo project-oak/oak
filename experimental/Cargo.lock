@@ -1265,6 +1265,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_abi"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "prost-build",
+]
+
+[[package]]
 name = "oak_grpc_attestation"
 version = "0.1.0"
 dependencies = [
@@ -1278,6 +1286,7 @@ dependencies = [
  "hyper",
  "log",
  "oak_attestation_common",
+ "oak_functions_abi",
  "oak_utils",
  "openssl",
  "prost",
@@ -1307,6 +1316,7 @@ dependencies = [
  "hyper",
  "log",
  "oak_attestation_common",
+ "oak_functions_abi",
  "oak_grpc_attestation",
  "openssl",
  "prost",

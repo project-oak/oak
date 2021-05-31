@@ -50,7 +50,7 @@ impl Receiver {
 
 struct RequestHandler<F, S>
 where
-    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
+    F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
     /// Utility object for decrypting and encrypting messages using a Diffie-Hellman session key.
@@ -61,7 +61,7 @@ where
 
 impl<F, S> RequestHandler<F, S>
 where
-    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
+    F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
     pub fn new(encryptor: AeadEncryptor, handler: F) -> Self {
@@ -81,18 +81,21 @@ where
             .context("Couldn't receive request")?
         {
             let request_type = request.request_type.context("Couldn't read request type")?;
-            let encrypted_request_payload =
-                if let RequestType::EncryptedPayload(encrypted_payload) = request_type {
-                    Ok(encrypted_payload)
-                } else {
-                    Err(anyhow!("Received incorrect message type"))
-                }?;
+            let secure_request = if let RequestType::Request(request) = request_type {
+                Ok(request)
+            } else {
+                Err(anyhow!("Received incorrect message type"))
+            }?;
             let request_payload = self
                 .encryptor
-                .decrypt(&encrypted_request_payload)
+                .decrypt(&secure_request.encrypted_payload)
                 .context("Couldn't decrypt data")?;
 
-            let response_payload = (self.handler.clone())(request_payload).await?;
+            let request = oak_functions_abi::proto::Request {
+                body: request_payload,
+            };
+
+            let response_payload = (self.handler.clone())(request).await?;
             let encrypted_response_payload = self
                 .encryptor
                 .encrypt(&response_payload)
@@ -118,7 +121,7 @@ pub struct AttestationServer<F> {
 
 impl<F, S> AttestationServer<F>
 where
-    F: Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
+    F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
     pub fn create(tee_certificate: Vec<u8>, request_handler: F) -> anyhow::Result<Self> {
@@ -185,7 +188,7 @@ where
 #[tonic::async_trait]
 impl<F, S> RemoteAttestation for AttestationServer<F>
 where
-    F: 'static + Send + Sync + Clone + FnOnce(Vec<u8>) -> S,
+    F: 'static + Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync + 'static,
 {
     type AttestedInvokeStream =

@@ -174,13 +174,18 @@ impl AttestationClient {
     /// Sends data encrypted by the [`AttestationClient::encryptor`] to the server and returns
     /// server responses.
     /// Returns `Ok(None)` to indicate that the corresponding gRPC stream has ended.
-    pub async fn send(&mut self, data: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
-        let encrypted_data = self
+    pub async fn send(
+        &mut self,
+        request: oak_functions_abi::proto::Request,
+    ) -> anyhow::Result<Option<Vec<u8>>> {
+        let encrypted_payload = self
             .encryptor
-            .encrypt(data)
+            .encrypt(&request.body)
             .context("Couldn't encrypt data")?;
         let data_request = AttestedInvokeRequest {
-            request_type: Some(RequestType::EncryptedPayload(encrypted_data)),
+            request_type: Some(RequestType::Request(oak_grpc_attestation::proto::Request {
+                encrypted_payload,
+            })),
         };
 
         let response = self

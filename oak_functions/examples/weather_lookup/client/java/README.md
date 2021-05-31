@@ -10,12 +10,12 @@ negotiate new a session key.
 Build and run client with the following command:
 
 ```bash
-bazel run //examples/grpc_attestation/client/java:client
+bazel run //oak_functions/examples/weather_lookup/client/java:client
 ```
 
 Build and run gRPC Attestation example (including server) with the following
 command:
 
 ```bash
-./scripts/runner run-examples --example-name=grpc_attestation --client-variant=java
+./scripts/runner run-functions-examples --example-name=weather_lookup --client-variant=java
 ```

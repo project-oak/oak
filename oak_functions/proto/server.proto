@@ -16,17 +16,25 @@
 
 syntax = "proto3";
 
-package oak.remote_attestation;
+package oak.functions.server;
 
 option java_multiple_files = true;
-option java_package = "oak.remote_attestation";
+option java_package = "oak.functions.server";
+
+// Wrapper around the encrypted payload.
+// TODO(#2144): Extend this with additional potentially public fields, for instance for specifying
+// policies.
+message Request {
+  // Payload encrypted using the session key.
+  bytes encrypted_payload = 1;
+}
 
 message AttestedInvokeRequest {
   oneof request_type {
     // Client part of session key negotiation.
     ClientIdentity client_identity = 1;
-    // Payload encrypted using the session key.
-    bytes encrypted_payload = 2;
+    // Request with payload encrypted using the session key.
+    Request request = 2;
   }
 }
 

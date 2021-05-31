@@ -12,7 +12,6 @@ members = [
   "authentication/client",
   "chat/module/rust",
   "chat/grpc",
-  "grpc_attestation/client/rust",
   "hello_world/grpc",
   "hello_world/client/rust",
   "hello_world/module/rust",
@@ -48,8 +47,6 @@ oak_abi = { path = "../oak_abi" }
 oak_attestation_common = { path = "../experimental/attestation_common" }
 oak_client = { path = "../oak_client" }
 oak_derive = { path = "../oak_derive" }
-oak_grpc_attestation = { path = "../experimental/grpc_attestation" }
-oak_grpc_attestation_client = { path = "../experimental/grpc_attestation_client/rust" }
 oak_io = { path = "../oak_io" }
 oak_proxy_attestation = { path = "../experimental/proxy_attestation" }
 oak_runtime = { path = "../oak_runtime" }

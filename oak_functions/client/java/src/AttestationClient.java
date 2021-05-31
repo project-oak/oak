@@ -12,12 +12,14 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import oak.remote_attestation.AttestedInvokeResponse;
-import oak.remote_attestation.AttestedInvokeRequest;
-import oak.remote_attestation.ClientIdentity;
-import oak.remote_attestation.ServerIdentity;
-import oak.remote_attestation.RemoteAttestationGrpc;
-import oak.remote_attestation.RemoteAttestationGrpc.RemoteAttestationStub;
+import oak.functions.invocation.Request;
+import oak.functions.invocation.Response;
+import oak.functions.server.AttestedInvokeResponse;
+import oak.functions.server.AttestedInvokeRequest;
+import oak.functions.server.ClientIdentity;
+import oak.functions.server.ServerIdentity;
+import oak.functions.server.RemoteAttestationGrpc;
+import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
 
 // TODO(#2121): Implement a protocol independent state machine.
 public class AttestationClient {
@@ -99,17 +101,22 @@ public class AttestationClient {
     /**
      * Encrypts and sends `message` via an attested gRPC channel to the server.
      */
-    public byte[] Send(byte[] message) throws Exception {
-        byte[] encryptedMessage = encryptor.encrypt(message);
-        AttestedInvokeRequest request = AttestedInvokeRequest
+    public Response Send(Request request) throws Exception {
+        byte[] encryptedMessage = encryptor.encrypt(request.getBody().toByteArray());
+        oak.functions.server.Request serverRequest = oak.functions.server.Request.newBuilder()
+                    .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
+                    .build();
+        AttestedInvokeRequest attestedRequest = AttestedInvokeRequest
             .newBuilder()
-            .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
+            .setRequest(serverRequest)
             .build();
 
-        requestObserver.onNext(request);
-        AttestedInvokeResponse response = (AttestedInvokeResponse) messageQueue.take();
+        requestObserver.onNext(attestedRequest);
+        AttestedInvokeResponse attestedResponse = (AttestedInvokeResponse) messageQueue.take();
 
-        byte[] responsePayload = response.getEncryptedPayload().toByteArray();
-        return encryptor.decrypt(responsePayload);
+        byte[] responsePayload = attestedResponse.getEncryptedPayload().toByteArray();
+        byte[] decryptedResponse = encryptor.decrypt(responsePayload);
+        Response response = Response.parseFrom(decryptedResponse);
+        return response;
     }
 }
