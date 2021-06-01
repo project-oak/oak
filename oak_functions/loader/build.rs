@@ -14,17 +14,20 @@
 // limitations under the License.
 //
 
-pub mod certificate;
-pub mod keying_material;
-pub mod report;
-#[cfg(test)]
-mod tests;
+use oak_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
-use sha2::{digest::Digest, Sha256};
-
-/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
-pub fn get_sha256(input: &[u8]) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-    hasher.update(&input);
-    hasher.finalize().to_vec()
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    generate_grpc_code(
+        "../../",
+        &["oak_functions/proto/server.proto"],
+        CodegenOptions {
+            build_client: false,
+            build_server: true,
+            extern_paths: vec![ExternPath::new(
+                ".oak.remote_attestation",
+                "::oak_remote_attestation::proto",
+            )],
+        },
+    )?;
+    Ok(())
 }

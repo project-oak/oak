@@ -1,0 +1,40 @@
+//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+use crate::proto::{AttestationInfo, AttestationReport};
+
+// TODO(#1867): Add remote attestation support.
+const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
+
+impl AttestationReport {
+    /// Placeholder function for collecting TEE measurement of remotely attested TEEs.
+    pub fn new(data: &[u8]) -> Self {
+        Self {
+            measurement: TEST_TEE_MEASUREMENT.to_string().as_bytes().to_vec(),
+            data: data.to_vec(),
+            ..Default::default()
+        }
+    }
+}
+
+impl AttestationInfo {
+    /// Verifies that `AttestationInfo::report` is signed by `AttestationInfo::certificate`.
+    pub fn verify(&self) -> anyhow::Result<()> {
+        // TODO(#1867): Add remote attestation support, use real TEE reports and check that
+        // `AttestationInfo::certificate` is signed by one of the root certificates.
+        Ok(())
+    }
+}

@@ -33,9 +33,10 @@ import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
 import oak.functions.server.AttestedInvokeRequest;
 import oak.functions.server.AttestedInvokeResponse;
-import oak.functions.server.ClientIdentity;
 import oak.functions.server.RemoteAttestationGrpc;
 import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
+import oak.remote_attestation.AttestationIdentity;
+import oak.remote_attestation.EncryptedData;
 
 /**
  * Client with remote attestation support for sending requests to an Oak Functions loader
@@ -43,6 +44,8 @@ import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
  */
 public class AttestationClient {
     private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
+    // TODO(#1867): Add remote attestation support.
+    private static final String test_tee_measurement = "Test TEE measurement";
     private final ManagedChannel channel;
     private final StreamObserver<AttestedInvokeRequest> requestObserver;
     private final BlockingQueue<AttestedInvokeResponse> messageQueue;
@@ -81,22 +84,20 @@ public class AttestationClient {
         requestObserver = stub.attestedInvoke(responseObserver);
 
         // Generate client private/public key pair.
-        AttestationStateMachine.Unattested unattestedClient = new AttestationStateMachine.Unattested();
-        byte[] publicKey = unattestedClient.getPublicKey();
-        ByteString publicKeyBytes = ByteString.copyFrom(publicKey);
+        AttestationStateMachine.Unattested unattestedClient = new AttestationStateMachine.Unattested(test_tee_measurement.getBytes());
+        AttestationIdentity identity = unattestedClient.getIdentity();
 
         // Send client public key to the server.
         AttestedInvokeRequest request =
                 AttestedInvokeRequest.newBuilder()
-                        .setClientIdentity(ClientIdentity.newBuilder().setPublicKey(publicKeyBytes).build())
+                        .setClientIdentity(identity)
                         .build();
         requestObserver.onNext(request);
         AttestedInvokeResponse response = messageQueue.take();
 
         // Remotely attest peer.
-        byte[] peerPublicKey = response.getServerIdentity().getPublicKey().toByteArray();
-        byte[] peerAttestationInfo = response.getServerIdentity().getAttestationInfo().toByteArray();
-        attestedClient = unattestedClient.attest(peerPublicKey, peerAttestationInfo);
+        AttestationIdentity peerIdentity = response.getServerIdentity();
+        attestedClient = unattestedClient.attest(peerIdentity);
     }
 
     private Boolean verifyAttestation(byte[] attestationInfo) {
@@ -114,10 +115,10 @@ public class AttestationClient {
     @SuppressWarnings("ProtoParseWithRegistry")
     public Response send(Request request)
             throws GeneralSecurityException, InterruptedException, InvalidProtocolBufferException {
-        byte[] encryptedMessage = attestedClient.encrypt(request.getBody().toByteArray());
+        EncryptedData encryptedData = attestedClient.encrypt(request.getBody().toByteArray());
         oak.functions.server.Request serverRequest =
                 oak.functions.server.Request.newBuilder()
-                        .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
+                        .setEncryptedPayload(encryptedData)
                         .build();
         AttestedInvokeRequest attestedRequest =
                 AttestedInvokeRequest.newBuilder().setRequest(serverRequest).build();
@@ -125,7 +126,7 @@ public class AttestationClient {
         requestObserver.onNext(attestedRequest);
         AttestedInvokeResponse attestedResponse = messageQueue.take();
 
-        byte[] responsePayload = attestedResponse.getEncryptedPayload().toByteArray();
+        EncryptedData responsePayload = attestedResponse.getEncryptedPayload();
         byte[] decryptedResponse = attestedClient.decrypt(responsePayload);
         return Response.parseFrom(decryptedResponse);
     }

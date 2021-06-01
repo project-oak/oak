@@ -24,32 +24,17 @@ package(
 )
 
 proto_library(
-    name = "server_proto",
-    srcs = ["server.proto"],
-    deps = [
-        "//remote_attestation/proto:remote_attestation_proto",
-        "@com_google_protobuf//:empty_proto",
-    ],
+    name = "remote_attestation_proto",
+    srcs = ["remote_attestation.proto"],
 )
 
 java_proto_library(
-    name = "server_java_proto",
-    deps = [":server_proto"],
+    name = "remote_attestation_java_proto",
+    deps = [":remote_attestation_proto"],
 )
 
 java_grpc_library(
-    name = "server_java_grpc",
-    srcs = [":server_proto"],
-    deps = [":server_java_proto"],
-)
-
-proto_library(
-    name = "invocation_proto",
-    srcs = ["invocation.proto"],
-    deps = ["@com_google_protobuf//:empty_proto"],
-)
-
-java_proto_library(
-    name = "invocation_java_proto",
-    deps = [":invocation_proto"],
+    name = "remote_attestation_java_grpc",
+    srcs = [":remote_attestation_proto"],
+    deps = [":remote_attestation_java_proto"],
 )

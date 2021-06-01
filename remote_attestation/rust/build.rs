@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    oak_utils::compile_protos(&["../proto/remote_attestation.proto"], &["../proto"]);
+    Ok(())
 }
-
-pub mod attestation;

@@ -114,9 +114,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.6.1"
+version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63396b8a4b9de3f4fdfb320ab6080762242f66a8ef174c49d8e19b674db4cdbe"
+checksum = "9c59e7af012c713f529e7a3ee57ce9b31ddd858d4b512923602f74608b009631"
 
 [[package]]
 name = "bytes"
@@ -263,28 +263,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fed34cd105917e91daa4da6b3728c47b068749d6a62c59811f06ed2ac71d9da7"
 
 [[package]]
-name = "futures"
-version = "0.3.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e7e43a803dae2fa37c1f6a8fe121e1f7bf9548b4dfc0522a42f34145dadfc27"
-dependencies = [
- "futures-channel",
- "futures-core",
- "futures-executor",
- "futures-io",
- "futures-sink",
- "futures-task",
- "futures-util",
-]
-
-[[package]]
 name = "futures-channel"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e682a68b29a882df0545c143dc3646daefe80ba479bcdede94d5a703de2871e2"
 dependencies = [
  "futures-core",
- "futures-sink",
 ]
 
 [[package]]
@@ -292,36 +276,6 @@ name = "futures-core"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0402f765d8a89a26043b889b26ce3c4679d268fa6bb22cd7c6aad98340e179d1"
-
-[[package]]
-name = "futures-executor"
-version = "0.3.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "badaa6a909fac9e7236d0620a2f57f7664640c56575b71a7552fbd68deafab79"
-dependencies = [
- "futures-core",
- "futures-task",
- "futures-util",
-]
-
-[[package]]
-name = "futures-io"
-version = "0.3.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acc499defb3b348f8d8f3f66415835a9131856ff7714bf10dadfc4ec4bdb29a1"
-
-[[package]]
-name = "futures-macro"
-version = "0.3.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4c40298486cdf52cc00cd6d6987892ba502c7656a16a4192a9992b1ccedd121"
-dependencies = [
- "autocfg",
- "proc-macro-hack",
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "futures-sink"
@@ -342,18 +296,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "feb5c238d27e2bf94ffdfd27b2c29e3df4a68c4193bb6427384259e2bf191967"
 dependencies = [
  "autocfg",
- "futures-channel",
  "futures-core",
- "futures-io",
- "futures-macro",
- "futures-sink",
  "futures-task",
- "memchr",
  "pin-project-lite",
  "pin-utils",
- "proc-macro-hack",
- "proc-macro-nested",
- "slab",
 ]
 
 [[package]]
@@ -655,18 +601,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_attestation_common"
+name = "oak_abi"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "log",
- "openssl",
- "ring",
- "rustls",
+ "oak_utils",
+ "prost 0.7.0",
+ "prost-build 0.7.0",
+ "prost-types 0.7.0",
  "serde",
- "serde_json",
- "sha2",
- "x509-parser",
+]
+
+[[package]]
+name = "oak_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -682,33 +633,43 @@ name = "oak_functions_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
  "env_logger",
  "http",
  "log",
  "oak_functions_abi",
- "oak_grpc_attestation_client",
+ "oak_remote_attestation",
  "oak_utils",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex",
  "structopt",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
-name = "oak_grpc_attestation"
+name = "oak_io"
+version = "0.1.0"
+dependencies = [
+ "either",
+ "hex",
+ "log",
+ "oak_abi",
+ "oak_derive",
+ "oak_utils",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.7.0",
+ "prost-types 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-stream",
  "env_logger",
- "futures",
- "futures-core",
- "futures-util",
- "http",
- "hyper",
  "log",
- "oak_attestation_common",
- "oak_functions_abi",
+ "oak_io",
  "oak_utils",
  "openssl",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -717,40 +678,8 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "structopt",
- "tokio",
- "tokio-rustls",
  "tonic",
-]
-
-[[package]]
-name = "oak_grpc_attestation_client"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "env_logger",
- "futures",
- "futures-core",
- "futures-util",
- "hex",
- "http",
- "hyper",
- "log",
- "oak_attestation_common",
- "oak_functions_abi",
- "oak_grpc_attestation",
- "openssl",
- "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ring",
- "rustls",
- "serde",
- "serde_json",
- "sha2",
- "structopt",
- "tokio",
- "tokio-rustls",
- "tonic",
+ "x509-parser",
 ]
 
 [[package]]
@@ -767,9 +696,9 @@ dependencies = [
 
 [[package]]
 name = "oid-registry"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2434841326d1f18c2eb9e4857729ef88f0d5ce4b71c9b989eda17d9e3d6456d"
+checksum = "b26c042283b4ecc71edde70de2d6d0ab7e8743b8e7a7cb8467e4d153dfc7ad43"
 dependencies = [
  "der-parser",
 ]
@@ -896,18 +825,6 @@ dependencies = [
  "quote",
  "version_check",
 ]
-
-[[package]]
-name = "proc-macro-hack"
-version = "0.5.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbf0c48bc1d91375ae5c3cd81e3722dff1abcf81a30960240640d223f59fe0e5"
-
-[[package]]
-name = "proc-macro-nested"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc881b2c22681370c6a780e47af9840ef841837bc98118431d4e1868bd0c1086"
 
 [[package]]
 name = "proc-macro2"
@@ -1206,15 +1123,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "signal-hook-registry"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16f1d0fef1604ba8f7a073c7e701f213e056707210e9020af4528e0101ce11a6"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "slab"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1353,11 +1261,8 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
- "once_cell",
  "pin-project-lite",
- "signal-hook-registry",
  "tokio-macros",
- "winapi",
 ]
 
 [[package]]
@@ -1451,9 +1356,9 @@ dependencies = [
 
 [[package]]
 name = "tower"
-version = "0.4.7"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf0aa6dfc29148c3826708dabbfa83c121eeb84df4d1468220825e3a33651687"
+checksum = "f60422bc7fefa2f3ec70359b8ff1caff59d785877eb70595904605bcc412470f"
 dependencies = [
  "futures-core",
  "futures-util",

@@ -1,0 +1,24 @@
+[package]
+name = "oak_remote_attestation"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+log = "*"
+oak_io = { path = "../../oak_io" }
+openssl = "*"
+prost = "*"
+ring = "*"
+rustls = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+sha2 = "*"
+tonic = { version = "*", features = ["tls"] }
+x509-parser = "*"
+
+[build-dependencies]
+oak_utils = { path = "../../oak_utils" }

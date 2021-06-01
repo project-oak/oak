@@ -16,7 +16,7 @@
 
 package com.google.oak.remote_attestation.crypto;
 
-import com.google.common.primitives.Bytes;
+import com.google.protobuf.ByteString;
 import java.lang.IllegalArgumentException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -25,6 +25,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import oak.remote_attestation.EncryptedData;
 
 /**
  * Implementation of Authenticated Encryption with Associated Data (AEAD).
@@ -35,7 +36,7 @@ public class AeadEncryptor {
     private static final String AEAD_ALGORITHM = "AES/GCM/NoPadding";
     private static final int KEY_LENGTH_BITS = 256;
     private static final int TAG_LENGTH_BITS = 128;
-    private static final int INITIALIZATION_VECTOR_LENGTH_BYTES = 12;
+    private static final int NONCE_LENGTH_BYTES = 12;
 
     private final SecretKey key;
 
@@ -50,14 +51,14 @@ public class AeadEncryptor {
 
     /**
      * Encrypts `data` using AES-GCM.
-     * The resulting encrypted data is prefixed with a random 12 byte initialization vector.
+     * The resulting encrypted data contains a random 12 byte nonce.
      */
-    public byte[] encrypt(byte[] data) throws GeneralSecurityException {
+    public EncryptedData encrypt(byte[] data) throws GeneralSecurityException {
         Cipher encryptor = Cipher.getInstance(AEAD_ALGORITHM);
 
-        // Create a random initialization vector.
-        byte[] initializationVector = generateInitializationVector(INITIALIZATION_VECTOR_LENGTH_BYTES);
-        GCMParameterSpec gcmParameterSpecification = new GCMParameterSpec(TAG_LENGTH_BITS, initializationVector);
+        // Create a random nonce.
+        byte[] nonce = generateNonce(NONCE_LENGTH_BYTES);
+        GCMParameterSpec gcmParameterSpecification = new GCMParameterSpec(TAG_LENGTH_BITS, nonce);
 
         // Initialize encryptor.
         encryptor.init(Cipher.ENCRYPT_MODE, key, gcmParameterSpecification);
@@ -66,41 +67,38 @@ public class AeadEncryptor {
         // since after session key is established client and server exchange messages with a
         // single encrypted field.
         byte[] encryptedData = encryptor.doFinal(data);
-
-        // Add `initializationVector` as a prefix to the `encryptedData`.
-        return Bytes.concat(initializationVector, encryptedData);
+        return EncryptedData.newBuilder()
+                .setNonce(ByteString.copyFrom(nonce))
+                .setData(ByteString.copyFrom(encryptedData))
+                .build();
     }
 
     /**
      * Decrypts and authenticates `data` using AES-GCM.
-     * `data` must contain an encrypted message prefixed with a 12 byte initialization vector.
      */
-    public byte[] decrypt(byte[] data) throws GeneralSecurityException {
+    public byte[] decrypt(EncryptedData data) throws GeneralSecurityException {
         Cipher decryptor = Cipher.getInstance(AEAD_ALGORITHM);
 
-        // Extract initialization vector from `data`.
-        byte[] initializationVector = Arrays.copyOf(data, INITIALIZATION_VECTOR_LENGTH_BYTES);
-        GCMParameterSpec gcmParameterSpecification = new GCMParameterSpec(TAG_LENGTH_BITS, initializationVector);
+        byte[] nonce = data.getNonce().toByteArray();
+        GCMParameterSpec gcmParameterSpecification = new GCMParameterSpec(TAG_LENGTH_BITS, nonce);
 
         // Initialize decryptor.
         decryptor.init(Cipher.DECRYPT_MODE, key, gcmParameterSpecification);
 
-        // Remove initialization vector prefix from `data`.
-        byte[] encryptedData = Arrays.copyOfRange(data, INITIALIZATION_VECTOR_LENGTH_BYTES, data.length);
-
         // Additional authenticated data is not required for the remotely attested channel,
         // since after session key is established client and server exchange messages with a
         // single encrypted field.
+        byte[] encryptedData = data.getData().toByteArray();
         return decryptor.doFinal(encryptedData);
     }
 
     /**
-     * Generates a random initialization vector.
+     * Generates a random nonce.
      */
-    static private byte[] generateInitializationVector(int lengthBytes) {
-        byte[] initializationVector = new byte[lengthBytes];
+    static private byte[] generateNonce(int lengthBytes) {
+        byte[] nonce = new byte[lengthBytes];
         SecureRandom random = new SecureRandom();
-        random.nextBytes(initializationVector);
-        return initializationVector;
+        random.nextBytes(nonce);
+        return nonce;
     }
 }

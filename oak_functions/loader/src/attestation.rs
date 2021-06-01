@@ -17,15 +17,12 @@
 use crate::proto::{
     attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
     remote_attestation_server::RemoteAttestation, AttestedInvokeRequest, AttestedInvokeResponse,
-    ServerIdentity,
 };
 use anyhow::{anyhow, Context};
 use futures::{Stream, StreamExt};
 use log::warn;
-use oak_attestation_common::{
-    crypto::{AeadEncryptor, KeyNegotiator},
-    get_sha256,
-    report::{AttestationInfo, Report},
+use oak_remote_attestation::attestation::{
+    attested_session::AttestedSession, unattested_session::UnattestedSelf, AttestationEngine,
 };
 use std::pin::Pin;
 use tonic::{Request, Response, Status, Streaming};
@@ -54,7 +51,7 @@ where
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
     /// Utility object for decrypting and encrypting messages using a Diffie-Hellman session key.
-    encryptor: AeadEncryptor,
+    attested_session: AttestedSession,
     /// Handler function that processes data from client requests and creates responses.
     handler: F,
 }
@@ -64,8 +61,11 @@ where
     F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
-    pub fn new(encryptor: AeadEncryptor, handler: F) -> Self {
-        Self { encryptor, handler }
+    pub fn new(attested_session: AttestedSession, handler: F) -> Self {
+        Self {
+            attested_session,
+            handler,
+        }
     }
 
     /// Decrypts a client request, runs [`RequestHandler::handler`] on them and returns an encrypted
@@ -87,8 +87,12 @@ where
                 Err(anyhow!("Received incorrect message type"))
             }?;
             let request_payload = self
-                .encryptor
-                .decrypt(&secure_request.encrypted_payload)
+                .attested_session
+                .decrypt(
+                    &secure_request
+                        .encrypted_payload
+                        .context("Empty encrypted payload")?,
+                )
                 .context("Couldn't decrypt data")?;
 
             let request = oak_functions_abi::proto::Request {
@@ -97,7 +101,7 @@ where
 
             let response_payload = (self.handler.clone())(request).await?;
             let encrypted_response_payload = self
-                .encryptor
+                .attested_session
                 .encrypt(&response_payload)
                 .context("Couldn't encrypt data")?;
             let response = AttestedInvokeResponse {
@@ -130,59 +134,6 @@ where
             request_handler,
         })
     }
-
-    /// Attest a single gRPC streaming request. Client messages are provided via `receiver`.
-    async fn attest(
-        receiver: &mut Receiver,
-        tee_certificate: Vec<u8>,
-    ) -> anyhow::Result<(AttestedInvokeResponse, AeadEncryptor)> {
-        let request = receiver
-            .receive()
-            .await
-            .context("Couldn't receive attestation request")?
-            .context("Stream stopped preemptively")?;
-
-        // Receive client's attestation request containing a public key.
-        // TODO(#2103): Refactor gRPC Attestation protocol state machine.
-        let request_type = request.request_type.context("Couldn't read request type")?;
-        let request = if let RequestType::ClientIdentity(request) = request_type {
-            Ok(request)
-        } else {
-            Err(anyhow!("Received incorrect message type"))
-        }?;
-
-        // Generate session key.
-        let key_negotiator = KeyNegotiator::create().context("Couldn't create key negotiator")?;
-        let public_key = key_negotiator
-            .public_key()
-            .context("Couldn't get public key")?;
-        let session_key = key_negotiator
-            .derive_session_key(&request.public_key)
-            .context("Couldn't derive session key")?;
-
-        let encryptor = AeadEncryptor::new(session_key);
-
-        // Generate attestation info with a TEE report.
-        // TEE report contains a hash of the server's public key.
-        let public_key_hash = get_sha256(&public_key);
-        let tee_report = Report::new(&public_key_hash);
-        let attestation_info = AttestationInfo {
-            report: tee_report,
-            certificate: tee_certificate,
-        };
-        let serialized_attestation_info = attestation_info
-            .to_string()
-            .context("Couldn't serialize attestation info")?;
-
-        let attestation_response = AttestedInvokeResponse {
-            response_type: Some(ResponseType::ServerIdentity(ServerIdentity {
-                public_key,
-                attestation_info: serialized_attestation_info.as_bytes().to_vec(),
-            })),
-        };
-
-        Ok((attestation_response, encryptor))
-    }
 }
 
 #[tonic::async_trait]
@@ -204,7 +155,7 @@ where
         let request_stream = request_stream.into_inner();
         let response_stream = async_stream::try_stream! {
             let mut receiver = Receiver { request_stream };
-            let (attestation_response, encryptor) = Self::attest(&mut receiver, tee_certificate)
+            let (attestation_response, attested_server) = attest(&mut receiver, &tee_certificate)
                 .await
                 .map_err(|error| {
                     let message = format!("Couldn't attest to the client: {:?}", error).to_string();
@@ -213,7 +164,7 @@ where
                 })?;
             yield attestation_response;
 
-            let mut handler = RequestHandler::<F, S>::new(encryptor, request_handler);
+            let mut handler = RequestHandler::<F, S>::new(attested_server, request_handler);
             while let Some(response) = handler.handle_request(&mut receiver).await.map_err(|error| {
                 let message = format!("Couldn't handle request: {:?}", error);
                 warn!("{}", message);
@@ -225,4 +176,40 @@ where
 
         Ok(Response::new(Box::pin(response_stream)))
     }
+}
+
+/// Attest a single gRPC streaming request. Client messages are provided via `receiver`.
+async fn attest(
+    receiver: &mut Receiver,
+    tee_certificate: &[u8],
+) -> anyhow::Result<(AttestedInvokeResponse, AttestedSession)> {
+    let request = receiver
+        .receive()
+        .await
+        .context("Couldn't receive attestation request")?
+        .context("Stream stopped preemptively")?;
+
+    // Receive client's attestation request containing a public key.
+    let request_type = request.request_type.context("Couldn't read request type")?;
+    let client_identity = if let RequestType::ClientIdentity(request) = request_type {
+        Ok(request)
+    } else {
+        Err(anyhow!("Received incorrect message type"))
+    }?;
+
+    let attestation_engine = AttestationEngine::<UnattestedSelf>::create(tee_certificate)
+        .context("Couldn't create attestation engine")?;
+    let identity = attestation_engine
+        .identity()
+        .context("Couldn't get server identity")?;
+
+    // Remotely attest to client.
+    let attestation_response = AttestedInvokeResponse {
+        response_type: Some(ResponseType::ServerIdentity(identity)),
+    };
+    let attested_session = attestation_engine
+        .create_attested_session(&client_identity)
+        .context("Couldn't attest to client")?;
+
+    Ok((attestation_response, attested_session))
 }

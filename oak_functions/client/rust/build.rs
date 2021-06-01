@@ -14,16 +14,19 @@
 // limitations under the License.
 //
 
-use oak_utils::{generate_grpc_code, CodegenOptions};
+use oak_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "../../oak_functions/proto",
-        &["server.proto"],
+        "../../../",
+        &["oak_functions/proto/server.proto"],
         CodegenOptions {
             build_client: true,
-            build_server: true,
-            extern_paths: vec![],
+            build_server: false,
+            extern_paths: vec![ExternPath::new(
+                ".oak.remote_attestation",
+                "::oak_remote_attestation::proto",
+            )],
         },
     )?;
     Ok(())

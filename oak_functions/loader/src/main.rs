@@ -20,26 +20,21 @@
 
 use anyhow::Context;
 use log::Level;
+use oak_functions_loader::{
+    grpc::create_and_start_grpc_server, logger::Logger, lookup::LookupData, server::Policy,
+};
 use serde_derive::Deserialize;
 use std::{
     fs,
     net::{Ipv6Addr, SocketAddr},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::Duration,
 };
 use structopt::StructOpt;
 
-use std::sync::atomic::{AtomicBool, Ordering};
-
-mod grpc;
-mod logger;
-mod lookup;
-mod server;
-use crate::{grpc::create_and_start_grpc_server, logger::Logger, lookup::LookupData};
-use server::Policy;
-
-#[cfg(test)]
-mod tests;
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Config {

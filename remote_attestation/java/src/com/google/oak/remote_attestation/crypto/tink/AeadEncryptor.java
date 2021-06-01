@@ -16,14 +16,20 @@
 
 package com.google.oak.remote_attestation.crypto;
 
+import com.google.common.primitives.Bytes;
 import com.google.crypto.tink.subtle.AesGcmJce;
+import com.google.protobuf.ByteString;
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
+
+import oak.remote_attestation.EncryptedData;
 
 /**
  * Implementation of Authenticated Encryption with Associated Data (AEAD).
  * https://datatracker.ietf.org/doc/html/rfc5116
  */
 public class AeadEncryptor {
+    private static final int NONCE_LENGTH_BYTES = 12;
     private final AesGcmJce encryptor;
 
     public AeadEncryptor(byte[] key) throws GeneralSecurityException {
@@ -34,21 +40,33 @@ public class AeadEncryptor {
      * Encrypts `data` using `AeadEncryptor::encryptor`.
      * The resulting encrypted data is prefixed with a random 12 bit nonce.
      */
-    public byte[] encrypt(byte[] data) throws GeneralSecurityException {
+    public EncryptedData encrypt(byte[] data) throws GeneralSecurityException {
         // Additional authenticated data is not required for the remotely attested channel,
         // since after session key is established client and server exchange messages with a
         // single encrypted field.
-        return encryptor.encrypt(data, null);
+        byte[] result = encryptor.encrypt(data, null);
+
+        byte[] nonce = Arrays.copyOf(result, NONCE_LENGTH_BYTES);
+        byte[] encryptedData = Arrays.copyOfRange(result, NONCE_LENGTH_BYTES, result.length);
+        return EncryptedData.newBuilder()
+                .setNonce(ByteString.copyFrom(nonce))
+                .setData(ByteString.copyFrom(encryptedData))
+                .build();
     }
 
     /**
      * Decrypts and authenticates `data` using `AeadEncryptor::encryptor`.
-     * `data` must contain an encrypted message prefixed with a 12 bit nonce.
      */
-    public byte[] decrypt(byte[] data) throws GeneralSecurityException {
+    public byte[] decrypt(EncryptedData data) throws GeneralSecurityException {
+        // Create a byte array prefixed with a 12 bit nonce.
+        byte[] prefixedData = Bytes.concat(
+            data.getNonce().toByteArray(),
+            data.getData().toByteArray()
+        );
+
         // Additional authenticated data is not required for the remotely attested channel,
         // since after session key is established client and server exchange messages with a
         // single encrypted field.
-        return encryptor.decrypt(data, null);
+        return encryptor.decrypt(prefixedData, null);
     }
 }

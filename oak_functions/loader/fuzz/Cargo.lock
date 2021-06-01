@@ -479,6 +479,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
 name = "http"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -773,18 +779,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_attestation_common"
+name = "oak_abi"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "log",
- "openssl",
- "ring",
- "rustls",
+ "oak_utils",
+ "prost 0.7.0",
+ "prost-build 0.7.0",
+ "prost-types 0.7.0",
  "serde",
- "serde_json",
- "sha2",
- "x509-parser",
+]
+
+[[package]]
+name = "oak_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -800,6 +811,7 @@ name = "oak_functions_loader"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
  "byteorder",
  "bytes",
  "chrono",
@@ -810,7 +822,7 @@ dependencies = [
  "hyper-rustls",
  "log",
  "oak_functions_abi",
- "oak_grpc_attestation",
+ "oak_remote_attestation",
  "oak_utils",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
@@ -840,20 +852,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_grpc_attestation"
+name = "oak_io"
+version = "0.1.0"
+dependencies = [
+ "either",
+ "hex",
+ "log",
+ "oak_abi",
+ "oak_derive",
+ "oak_utils",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.7.0",
+ "prost-types 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-stream",
  "env_logger",
- "futures",
- "futures-core",
- "futures-util",
- "http",
- "hyper",
  "log",
- "oak_attestation_common",
- "oak_functions_abi",
+ "oak_io",
  "oak_utils",
  "openssl",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -862,10 +882,8 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "structopt",
- "tokio",
- "tokio-rustls",
  "tonic",
+ "x509-parser",
 ]
 
 [[package]]
@@ -1545,11 +1563,8 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
- "once_cell",
  "pin-project-lite",
- "signal-hook-registry",
  "tokio-macros",
- "winapi",
 ]
 
 [[package]]

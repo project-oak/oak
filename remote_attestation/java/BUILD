@@ -29,7 +29,11 @@ java_library(
         "src/com/google/oak/remote_attestation/crypto/KeyNegotiator.java",
     ],
     deps = [
+        "//remote_attestation/proto:remote_attestation_java_grpc",
+        "//remote_attestation/proto:remote_attestation_java_proto",
+        "//remote_attestation/proto:remote_attestation_proto",
         "@com_google_guava_guava",
+        "@com_google_protobuf//:protobuf_java",
     ],
 )
 
@@ -41,7 +45,11 @@ java_library(
         "src/com/google/oak/remote_attestation/crypto/tink/KeyNegotiator.java",
     ],
     deps = [
+        "//remote_attestation/proto:remote_attestation_java_grpc",
+        "//remote_attestation/proto:remote_attestation_java_proto",
+        "//remote_attestation/proto:remote_attestation_proto",
         "@com_google_guava_guava",
+        "@com_google_protobuf//:protobuf_java",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:x25519",
     ],

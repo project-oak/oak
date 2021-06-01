@@ -7,11 +7,12 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
+async-stream = "*"
 env_logger = "*"
 http = "*"
 log = "*"
 oak_functions_abi = { path = "../../abi" }
-oak_grpc_attestation_client = { path = "../../../experimental/grpc_attestation_client/rust" }
+oak_remote_attestation = { path = "../../../remote_attestation/rust/" }
 prost = "*"
 regex = "*"
 structopt = "*"
@@ -21,6 +22,7 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
+tonic = "*"
 
 [build-dependencies]
 oak_utils = { path = "../../../oak_utils" }

@@ -31,6 +31,9 @@ use std::{
 };
 use test_utils::make_request;
 
+#[cfg(test)]
+mod tests;
+
 extern crate test;
 use test::Bencher;
 
