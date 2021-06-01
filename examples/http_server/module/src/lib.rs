@@ -164,7 +164,7 @@ impl CommandHandler for StaticHttpHandler {
     fn handle_command(&mut self, invocation: HttpInvocation) -> anyhow::Result<()> {
         let request = invocation.receive()?;
 
-        info!("Handling a request to {}.", request.uri());
+        info!("handling a request to {}", request.uri());
 
         let response = match request.uri().path().as_ref() {
             "/" => http::response::Builder::new()
@@ -186,7 +186,7 @@ impl CommandHandler for StaticHttpHandler {
                 .context("Couldn't build response")?,
         };
 
-        info!("Sending the response on the invocation channel");
+        info!("sending the response on the invocation channel");
         invocation.send(&response).context("Couldn't send response")
     }
 }
@@ -214,7 +214,7 @@ impl CommandHandler for RedirectHandler {
     type Command = HttpInvocation;
 
     fn handle_command(&mut self, invocation: HttpInvocation) -> anyhow::Result<()> {
-        info!("Redirecting the request");
+        info!("redirecting the request");
 
         let label = confidentiality_label(tls_endpoint_tag("localhost:8080"));
 
@@ -271,7 +271,7 @@ impl CommandHandler for RedirectHelper {
         let client_invocation = invocation.http_invocation_source.unwrap();
         let uri = request.uri.parse::<http::Uri>()?;
 
-        info!("Handling a request to {}", uri);
+        info!("handling a request to {}", uri);
 
         // Create redirection request. Nothing from the original request is relevant here
         let label = Label::public_untrusted();
@@ -295,7 +295,7 @@ impl CommandHandler for RedirectHelper {
             .receive()
             .context("Couldn't receive the response from the HTTP client")?;
 
-        info!("Got a response with status: {}", response.status());
+        info!("got a response with status: {}", response.status());
         Ok(())
     }
 }

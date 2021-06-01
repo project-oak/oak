@@ -144,7 +144,7 @@ impl Node for EchoNode {
                 .receive(&runtime)
                 .expect("Couldn't receive the request");
 
-            info!("Got the request: {:?}", request);
+            info!("got the request: {:?}", request);
             if self.can_reply {
                 let resp = HttpResponse {
                     body: request.body,
@@ -497,7 +497,7 @@ fn create_runtime(permissions: PermissionsConfiguration) -> RuntimeProxy {
         }),
     };
     let signature_table = crate::SignatureTable::default();
-    info!("Create runtime for test");
+    info!("create runtime for test");
 
     crate::RuntimeProxy::create_runtime(
         &configuration,

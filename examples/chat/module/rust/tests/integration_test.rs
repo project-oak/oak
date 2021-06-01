@@ -161,14 +161,14 @@ impl<'a> Chatter<'a> {
                 text: text.to_string(),
             }),
         };
-        info!("Sending request: {:?}", req);
+        info!("sending request: {:?}", req);
         let result = self.client.send_message(req).await;
         assert_matches!(result, Ok(_));
     }
 
     pub async fn subscribe(&mut self) -> tonic::Streaming<Message> {
         let req = SubscribeRequest {};
-        info!("Sending request: {:?}", req);
+        info!("sending request: {:?}", req);
         self.client.subscribe(req).await.unwrap().into_inner()
     }
 }

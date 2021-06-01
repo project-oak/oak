@@ -62,7 +62,7 @@ impl Aggregator for AggregatorBackend {
     async fn submit_sample(&self, req: Request<Sample>) -> Result<Response<()>, Status> {
         let sample = req.into_inner();
         info!(
-            "Received sample: bucket={}, data={:?}",
+            "received sample: bucket={}, data={:?}",
             sample.bucket, sample.data
         );
         Ok(Response::new(()))
@@ -87,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Couldn't parse address")?;
     let handler = AggregatorBackend::default();
 
-    info!("Starting the backend server at {:?}", address);
+    info!("starting the backend server at {:?}", address);
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))
         .context("Couldn't create TLS configuration")?

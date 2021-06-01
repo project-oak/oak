@@ -140,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
             result.context("Couldn't run server")?;
         },
         () = tokio::signal::ctrl_c().map(|r| r.unwrap()) => {
-            info!("Stopping HTTPS Attestation Service");
+            info!("stopping HTTPS Attestation Service");
         },
     );
 

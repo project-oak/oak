@@ -85,7 +85,7 @@ mod common {
             ..Default::default()
         };
 
-        info!("Starting the runtime with one node.");
+        info!("starting the runtime with one node");
         config::configure_and_run(oak_runtime::RuntimeConfiguration {
             metrics_port: Some(crate::METRICS_PORT),
             introspect_port: None,
@@ -99,7 +99,7 @@ mod common {
     }
 
     pub async fn read_metrics() -> Result<String, hyper::Error> {
-        info!("Reading the metrics.");
+        info!("reading the metrics");
         let client = Client::new();
 
         let uri = format!("http://localhost:{}/metrics", &super::METRICS_PORT)

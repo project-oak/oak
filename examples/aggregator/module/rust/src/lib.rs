@@ -133,7 +133,7 @@ impl oak::CommandHandler for Main {
         let config: Config =
             toml::from_slice(&command.items.get("config").expect("Couldn't find config"))
                 .context("Couldn't parse TOML config file")?;
-        info!("Parsed config: {:?}", config);
+        info!("parsed config: {:?}", config);
 
         // Create Oak Nodes.
         let grpc_client_invocation_sender = oak::grpc::client::init(&config.backend_server_address)

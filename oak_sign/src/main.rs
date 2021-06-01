@@ -109,7 +109,7 @@ fn main() -> anyhow::Result<()> {
                 &key_pair.key_pair_pkcs_8(),
             )?;
             write_pem_file(&opt.public_key, PUBLIC_KEY_TAG, &key_pair.public_key_der()?)?;
-            info!("Key pair generated successfully");
+            info!("key pair generated successfully");
         }
         Command::Sign(ref opt) => {
             let private_key = read_pem_file(&opt.private_key)?;
@@ -130,12 +130,12 @@ fn main() -> anyhow::Result<()> {
             }?;
             let signature = SignatureBundle::create(&input, &key_pair)?;
             signature.to_pem_file(&opt.signature_file)?;
-            info!("Input file signed successfully");
+            info!("input file signed successfully");
         }
         Command::Verify(ref opt) => {
             let signature = SignatureBundle::from_pem_file(&opt.signature_file)?;
             signature.verify()?;
-            info!("Input file signature verified successfully");
+            info!("input file signature verified successfully");
         }
     }
     Ok(())

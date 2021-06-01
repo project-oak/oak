@@ -49,14 +49,14 @@ impl Handler {
 
 impl HelloWorld for Handler {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
-        info!("Say hello to {}", req.greeting);
+        info!("say hello to {}", req.greeting);
         let mut res = HelloResponse::default();
         res.reply = format!("HELLO {}!", req.greeting);
         Ok(res)
     }
 
     fn lots_of_replies(&mut self, req: HelloRequest, writer: grpc::ChannelResponseWriter) {
-        info!("Say hello to {}", req.greeting);
+        info!("say hello to {}", req.greeting);
         let mut res1 = HelloResponse::default();
         res1.reply = format!("HELLO {}!", req.greeting);
         writer
@@ -65,7 +65,7 @@ impl HelloWorld for Handler {
 
         // Attempt to also generate a translated response.
         if let Some(salutation) = self.translate(&req.greeting, "en", "fr") {
-            info!("Say bonjour to {}", salutation);
+            info!("say bonjour to {}", salutation);
             let mut res = HelloResponse::default();
             res.reply = format!("BONJOUR {}!", salutation);
             writer
@@ -73,7 +73,7 @@ impl HelloWorld for Handler {
                 .expect("Failed to write translated response");
         }
 
-        info!("Say hello again to {}", req.greeting);
+        info!("say hello again to {}", req.greeting);
         let mut res2 = HelloResponse::default();
         res2.reply = format!("HELLO AGAIN {}!", req.greeting);
         writer
@@ -82,7 +82,7 @@ impl HelloWorld for Handler {
     }
 
     fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> grpc::Result<HelloResponse> {
-        info!("Say hello");
+        info!("say hello");
         let mut msg = String::new();
         msg.push_str("Hello ");
         msg.push_str(&recipients(&reqs));
@@ -92,7 +92,7 @@ impl HelloWorld for Handler {
     }
 
     fn bidi_hello(&mut self, reqs: Vec<HelloRequest>, writer: grpc::ChannelResponseWriter) {
-        info!("Say hello");
+        info!("say hello");
         let msg = recipients(&reqs);
         let mut res1 = HelloResponse::default();
         res1.reply = format!("HELLO {}!", msg);

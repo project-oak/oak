@@ -58,7 +58,7 @@ async fn test_say_hello() {
         let req = HelloRequest {
             greeting: "world".into(),
         };
-        info!("Sending request: {:?}", req);
+        info!("sending request: {:?}", req);
         let result = client.say_hello(req.clone()).await;
         assert_matches!(result, Ok(_));
         assert_eq!("HELLO world!", result.unwrap().into_inner().reply);
@@ -67,7 +67,7 @@ async fn test_say_hello() {
         let req = HelloRequest {
             greeting: "WORLDS".into(),
         };
-        info!("Sending request: {:?}", req);
+        info!("sending request: {:?}", req);
         let result = client.lots_of_replies(req).await;
         assert_matches!(result, Ok(_));
         // Make sure that the translated response was received.

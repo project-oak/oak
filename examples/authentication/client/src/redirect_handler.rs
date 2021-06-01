@@ -53,12 +53,12 @@ impl Service<Request<Body>> for RedirectHandler {
             let lookup: HashMap<_, _> = form_urlencoded::parse(query.as_bytes()).collect();
             if let Some(code) = lookup.get("code") {
                 let code = code.to_string();
-                info!("Auth code: {:?}", code);
+                info!("auth code: {:?}", code);
                 self.result_sender.try_send(Ok(code)).unwrap();
                 future::ok(Response::new(Body::from("Success!")))
             } else if let Some(error) = lookup.get("error") {
                 let error = error.to_string();
-                warn!("Error: {:?}", error);
+                warn!("error: {:?}", error);
                 self.result_sender
                     .try_send(Err(AuthError::new(&error)))
                     .unwrap();
@@ -133,7 +133,7 @@ impl AuthError {
 
 impl fmt::Display for AuthError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Authentication error: {}", &self.server_message)
+        write!(f, "authentication error: {}", &self.server_message)
     }
 }
 

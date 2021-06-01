@@ -40,7 +40,7 @@ pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, O
 
     // Pass in the config map over the initial channel.
     let sender = crate::io::Sender::new(WriteHandle { handle });
-    info!("Send in initial config map");
+    info!("send in initial config map");
     sender.send(config_map, &proxy)?;
 
     if let Err(err) = sender.close(&proxy) {

@@ -73,9 +73,9 @@ async fn main() -> anyhow::Result<()> {
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
-    info!("stop Runtime");
+    info!("stopping Runtime");
     runtime.stop();
 
-    info!("Runtime stopped");
+    info!("stopped Runtime");
     Ok(())
 }

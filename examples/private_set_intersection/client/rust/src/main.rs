@@ -59,7 +59,7 @@ async fn create_client(
     root_tls_certificate: &[u8],
     public_key: &[u8],
 ) -> anyhow::Result<PrivateSetIntersectionClient<Channel>> {
-    info!("Connecting to Oak Application: {:?}", uri);
+    info!("connecting to Oak Application: {:?}", uri);
     let channel = create_tls_channel(uri, root_tls_certificate)
         .await
         .context("Couldn't create TLS channel")?;
@@ -148,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
             intersection_1
         ));
     }
-    info!("Client 1 intersection: {:?}", &intersection_1);
+    info!("client 1 intersection: {:?}", &intersection_1);
 
     let response_2 = client_2
         .get_intersection(Request::new(GetIntersectionRequest {
@@ -164,7 +164,7 @@ async fn main() -> anyhow::Result<()> {
             intersection_2
         ));
     }
-    info!("Client 2 intersection: {:?}", &intersection_2);
+    info!("client 2 intersection: {:?}", &intersection_2);
 
     Ok(())
 }

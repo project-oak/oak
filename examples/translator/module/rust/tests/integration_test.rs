@@ -38,7 +38,7 @@ async fn test_translate() {
         from_lang: "en".into(),
         to_lang: "it".into(),
     };
-    info!("Sending request: {:?}", req);
+    info!("sending request: {:?}", req);
 
     let result = client.translate(req).await;
     assert_matches!(result, Ok(_));

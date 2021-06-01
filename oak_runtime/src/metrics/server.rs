@@ -34,8 +34,8 @@ enum MetricsServerError {
 impl std::fmt::Display for MetricsServerError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            MetricsServerError::EncodingError(msg) => write!(f, "Metrics server error: {}", msg),
-            MetricsServerError::ResponseError(msg) => write!(f, "Metrics server error: {}", msg),
+            MetricsServerError::EncodingError(msg) => write!(f, "metrics server error: {}", msg),
+            MetricsServerError::ResponseError(msg) => write!(f, "metrics server error: {}", msg),
         }
     }
 }
@@ -47,17 +47,17 @@ async fn handle_metrics_request(runtime: &Runtime) -> Result<Response<Body>, Met
     let metric_families = runtime.gather_metrics();
     let mut buffer = vec![];
     encoder.encode(&metric_families, &mut buffer).map_err(|e| {
-        MetricsServerError::EncodingError(format!("Could not encode metrics data: {}", e))
+        MetricsServerError::EncodingError(format!("could not encode metrics data: {}", e))
     })?;
 
-    info!("Metrics size: {}", buffer.len());
+    info!("metrics size: {}", buffer.len());
 
     Response::builder()
         .status(StatusCode::OK)
         .header(CONTENT_TYPE, encoder.format_type())
         .body(Body::from(buffer))
         .map_err(|e| {
-            MetricsServerError::ResponseError(format!("Could not build the response: {}", e))
+            MetricsServerError::ResponseError(format!("could not build the response: {}", e))
         })
 }
 

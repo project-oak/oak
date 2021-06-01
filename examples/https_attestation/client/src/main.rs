@@ -63,7 +63,7 @@ async fn send_request(
         .await
         .context("Couldn't send request")?;
     assert_eq!(response.status(), http::StatusCode::OK);
-    info!("Response: {:?}", response);
+    info!("response: {:?}", response);
 
     let response_body = String::from_utf8(
         hyper::body::to_bytes(response.into_body())
@@ -110,7 +110,7 @@ async fn main() -> anyhow::Result<()> {
     // Send remote attestation request via HTTP POST message.
     // `/report` is used to connect to the HTTPS Attestation Service directly.
     let assertion_url = format!("{}/report", &opt.attestation_service_uri);
-    info!("Connecting to: {:?}", &assertion_url);
+    info!("connecting to: {:?}", &assertion_url);
     let assertion = send_request(&client, &assertion_url, http::Method::POST)
         .await
         .context("Couldn't send request")?;
@@ -120,11 +120,11 @@ async fn main() -> anyhow::Result<()> {
     // `/invoke` is used to tell HTTPS Attestation Service to proxy the request to the backend
     // server.
     let application_url = format!("{}/invoke", &opt.attestation_service_uri);
-    info!("Connecting to: {:?}", &application_url);
+    info!("connecting to: {:?}", &application_url);
     let example_message = send_request(&client, &application_url, http::Method::GET)
         .await
         .context("Couldn't send request")?;
-    info!("Example message: {:?}", &example_message);
+    info!("example message: {:?}", &example_message);
     assert_eq!(EXAMPLE_MESSAGE, example_message);
 
     Ok(())

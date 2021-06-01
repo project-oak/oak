@@ -102,7 +102,7 @@ impl FrontendNode {
 
         {
             // Create a new node to handle HTTP requests
-            info!("Starting HTTP server pseudo-node on port {}.", HTTP_ADDR);
+            info!("starting HTTP server pseudo-node on port {}", HTTP_ADDR);
             let http_channel = oak::http::server::init(HTTP_ADDR)
                 .expect("could not create HTTP server pseudo-Node!");
             oak::node_create(
@@ -152,7 +152,7 @@ impl FrontendNode {
         let mut nonce = [0; 16];
         oak::random_get(&mut nonce).unwrap();
         let storage_name = format!("{}-{}", STORAGE_NAME_PREFIX, hex::encode(nonce));
-        info!("Using storage name '{}' for storage tests", storage_name);
+        info!("using storage name '{}' for storage tests", storage_name);
 
         FrontendNode {
             backend_out,
@@ -206,11 +206,11 @@ enum Count {
 impl OakAbiTestService for FrontendNode {
     fn run_tests(&mut self, req: AbiTestRequest) -> grpc::Result<AbiTestResponse> {
         info!(
-            "Run tests matching '{}' except those matching '{}'",
+            "run tests matching '{}' except those matching '{}'",
             req.include, req.exclude
         );
         if req.predictable_counts {
-            info!("Skip tests with unpredictable effects on object counts");
+            info!("skip tests with unpredictable effects on object counts");
         }
         let include = regex::Regex::new(&req.include).unwrap();
         let exclude = regex::Regex::new(&req.exclude).unwrap();
@@ -1358,7 +1358,7 @@ impl FrontendNode {
 
     fn test_channel_chain_leaked(&mut self) -> TestResult {
         let outermost_rh = new_channel_chain(8)?;
-        info!("Deliberately forgetting handle value {:?}", outermost_rh);
+        info!("deliberately forgetting handle value {:?}", outermost_rh);
         Ok(())
     }
 
@@ -1962,7 +1962,7 @@ impl FrontendNode {
                 expect_eq!(32, module_tag.web_assembly_module_hash_sha_256.len())
             }
             _ => {
-                error!("Unreachable code reached.");
+                error!("unreachable code reached");
                 unreachable!();
             }
         };
@@ -2175,11 +2175,11 @@ impl FrontendNode {
 
     fn test_log(&mut self) -> TestResult {
         // Try out all the levels.
-        trace!("This is a trace level log");
-        debug!("This is a debug level log");
-        info!("This is a info level log");
-        warn!("This is a warn level log");
-        error!("This is an error level log");
+        trace!("this is a trace level log");
+        debug!("this is a debug level log");
+        info!("this is a info level log");
+        warn!("this is a warn level log");
+        error!("this is an error level log");
         Ok(())
     }
 
@@ -2731,7 +2731,7 @@ impl FrontendNode {
                 ),
                 chrono::Utc,
             );
-            info!("Roughtime[{}] is {}", i, dt);
+            info!("roughtime[{}] is {}", i, dt);
         }
 
         expect!(times[0] <= times[1]);
@@ -2771,7 +2771,7 @@ impl FrontendNode {
             .bind(aead_kh, daead_kh, oak::crypto::KeysetFormat::Json)
             .map_err(from_proto)?;
         info!(
-            "Encrypted keyset: {}",
+            "encrypted keyset: {}",
             String::from_utf8_lossy(&encrypted_keyset)
         );
         let recovered_kh = crypto

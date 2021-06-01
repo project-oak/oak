@@ -105,7 +105,7 @@ struct Handler;
 impl Translator for Handler {
     fn translate(&mut self, req: TranslateRequest) -> grpc::Result<TranslateResponse> {
         info!(
-            "Attempt to translate '{}' from {} to {}",
+            "attempt to translate '{}' from {} to {}",
             req.text, req.from_lang, req.to_lang
         );
         let mut rsp = TranslateResponse::default();
@@ -115,7 +115,7 @@ impl Translator for Handler {
                     "fr" => "MONDES".to_string(),
                     "it" => "MONDI".to_string(),
                     _ => {
-                        info!("Output language {} not found", req.to_lang);
+                        info!("output language {} not found", req.to_lang);
                         return Err(grpc::build_status(
                             grpc::Code::NotFound,
                             "Output language not found",
@@ -124,7 +124,7 @@ impl Translator for Handler {
                 },
                 _ => {
                     info!(
-                        "Input text '{}' in {} not recognized",
+                        "input text '{}' in {} not recognized",
                         req.text, req.from_lang
                     );
                     return Err(grpc::build_status(
@@ -134,14 +134,14 @@ impl Translator for Handler {
                 }
             },
             _ => {
-                info!("Input language '{}' not recognized", req.from_lang);
+                info!("input language '{}' not recognized", req.from_lang);
                 return Err(grpc::build_status(
                     grpc::Code::NotFound,
                     "Input language unrecognized",
                 ));
             }
         };
-        info!("Translation '{}'", rsp.translated_text);
+        info!("translation '{}'", rsp.translated_text);
         Ok(rsp)
     }
 }

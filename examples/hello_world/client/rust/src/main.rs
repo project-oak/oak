@@ -45,14 +45,14 @@ pub struct Opt {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    info!("Initialising and reading args");
+    info!("initialising and reading args");
     let opt = Opt::from_args();
 
     let uri = opt.uri.parse().context("Error parsing URI")?;
     let root_tls_certificate =
         std::fs::read(&opt.root_tls_certificate).context("Could not load certificate file")?;
 
-    info!("Connecting to Oak Application: {:?}", uri);
+    info!("connecting to Oak Application: {:?}", uri);
     let channel = create_tls_channel(&uri, &root_tls_certificate)
         .await
         .context("Couldn't create TLS channel")?;
@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
     let client = HelloWorldClient::with_interceptor(channel, interceptor);
 
     let worlds = vec!["WORLD", "MONDO", "世界", "MONDE"];
-    info!("Sending requests");
+    info!("sending requests");
     let responses = worlds
         .iter()
         .map(|world| {
@@ -76,7 +76,7 @@ async fn main() -> anyhow::Result<()> {
                 let result = c.say_hello(req).await;
                 match result {
                     Ok(res) => {
-                        info!("Received response: {}", res.get_ref().reply);
+                        info!("received response: {}", res.get_ref().reply);
                         res.get_ref().reply.clone()
                     }
                     Err(e) => panic!("Error sending request {:?}", e),

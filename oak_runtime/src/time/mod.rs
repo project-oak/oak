@@ -109,7 +109,7 @@ impl RoughtimeClient {
         let runtime = Runtime::new()?;
         let intervals = runtime.block_on(self.get_intervals_from_all_servers());
         let result = self.find_overlap(&intervals)?;
-        info!("Roughtime interval: min={}, max={}", result.min, result.max);
+        info!("roughtime interval: min={}, max={}", result.min, result.max);
         Ok((result.min + result.max) / 2)
     }
 

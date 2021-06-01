@@ -61,7 +61,7 @@ pub async fn get_tls_identity_from_proxy(
         .await
         .context("Couldn't get signed certificate")?;
     let certificate = response.get_ref().certificate.to_vec();
-    info!("Received signed certificate from Proxy Attestation Service");
+    info!("received signed certificate from Proxy Attestation Service");
 
     Ok(Identity::from_pem(&certificate, &private_key))
 }

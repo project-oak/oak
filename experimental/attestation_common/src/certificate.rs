@@ -89,7 +89,7 @@ impl CertificateAuthority {
         key_pair: &PKey<Private>,
         add_tee_extension: AddTeeExtension,
     ) -> anyhow::Result<X509> {
-        info!("Generating root certificate");
+        info!("generating root certificate");
 
         let mut builder = CertificateBuilder::create()?;
         builder.set_version(CERTIFICATE_VERSION)?;
@@ -119,7 +119,7 @@ impl CertificateAuthority {
         request: X509Req,
         add_tee_extension: AddTeeExtension,
     ) -> anyhow::Result<X509> {
-        info!("Signing certificate");
+        info!("signing certificate");
 
         let mut builder = CertificateBuilder::create()?;
         builder.set_version(CERTIFICATE_VERSION)?;

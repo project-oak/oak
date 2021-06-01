@@ -65,7 +65,7 @@ impl<T: Decodable> Future for ChannelRead<T> {
 impl<T: Decodable> Drop for ChannelRead<T> {
     fn drop(&mut self) {
         with_executor(|e| {
-            debug!("Dropping reader {}", self.reader_id);
+            debug!("dropping reader {}", self.reader_id);
             // Remove the reader from the waiting set, or the executor will keep waiting for
             // data on this channel (which might never come).
             e.remove_waiting_reader(self.reader_id)
@@ -151,8 +151,8 @@ where
     match crate::block_on(handler(receiver.receive_stream())) {
         Ok(()) => {}
         Err(OakStatus::ErrTerminated) => {
-            info!("Received termination status, terminating command loop");
+            info!("received termination status, terminating command loop");
         }
-        Err(e) => error!("Command loop received non-termination error: {:?}", e),
+        Err(e) => error!("command loop received non-termination error: {:?}", e),
     }
 }

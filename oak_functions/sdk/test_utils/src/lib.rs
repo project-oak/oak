@@ -72,7 +72,7 @@ pub fn compile_rust_wasm(manifest_path: &str) -> anyhow::Result<Vec<u8>> {
         .context("Couldn't wait for cargo build to finish")?;
 
     let module_path = build_wasm_module_path(&metadata);
-    info!("Compiled Wasm module path: {:?}", module_path);
+    info!("compiled Wasm module path: {:?}", module_path);
 
     std::fs::read(module_path).context("Couldn't read compiled module")
 }

@@ -56,7 +56,7 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                 .map_err(|error| error.into())
                 .and_then(|message| T::decode(&message)),
             ChannelReadStatus::Orphaned => {
-                info!("Channel closed {:?}", self.handle);
+                info!("channel closed {:?}", self.handle);
                 Err(OakStatus::ErrChannelClosed.into())
             }
             status => {

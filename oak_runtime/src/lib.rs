@@ -453,7 +453,7 @@ pub struct Runtime {
 impl Drop for Runtime {
     fn drop(&mut self) {
         self.stop();
-        info!("Runtime instance dropped");
+        info!("runtime instance dropped");
     }
 }
 

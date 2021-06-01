@@ -78,7 +78,7 @@ pub struct NativeApplication {
 
 impl NativeApplication {
     pub async fn start(database: &Database, port: u16) -> Self {
-        info!("Running native application");
+        info!("running native application");
         let (notification_sender, notification_receiver) = oneshot::channel::<()>();
         tokio::spawn(NativeApplication::create_server(
             database.points_of_interest.clone(),

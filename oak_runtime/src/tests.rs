@@ -49,7 +49,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         ..Default::default()
     };
     let signature_table = SignatureTable::default();
-    info!("Create runtime for test");
+    info!("create runtime for test");
     let proxy = crate::RuntimeProxy::create_runtime(
         &configuration,
         &permissions,
@@ -127,9 +127,9 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
         .expect("test node disconnected, probably due to panic/assert fail in test");
     assert_eq!(result_value, Ok(()));
 
-    info!("Stop runtime..");
+    info!("stop runtime..");
     proxy.runtime.stop();
-    info!("Stop runtime..done");
+    info!("stop runtime..done");
 }
 
 /// Returns a non-trivial label for testing.

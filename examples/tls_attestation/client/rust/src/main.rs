@@ -65,7 +65,7 @@ async fn send_request(
         .await
         .context("Couldn't send request")?;
     assert_eq!(response.status(), http::StatusCode::OK);
-    info!("Response: {:?}", response);
+    info!("response: {:?}", response);
 
     let response_body = String::from_utf8(
         hyper::body::to_bytes(response.into_body())
@@ -75,7 +75,7 @@ async fn send_request(
     )
     .context("Couldn't decode response body")?;
 
-    info!("Response body: {:?}", response_body);
+    info!("response body: {:?}", response_body);
     Ok(response_body)
 }
 
@@ -98,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Couldn't send request")?;
     assert_eq!(EXAMPLE_MESSAGE, example_message);
-    info!("Successfully connected to: {:?}", &opt.proxy_uri);
+    info!("successfully connected to: {:?}", &opt.proxy_uri);
 
     Ok(())
 }

@@ -28,7 +28,7 @@ async fn main() -> io::Result<()> {
     env_logger::init();
     let in_address = "[::1]:50051";
     let listener = TcpListener::bind(in_address).await?;
-    info!("Proxy listening on {:?}", in_address);
+    info!("proxy listening on {:?}", in_address);
     proxy(TcpListenerStream::new(listener)).await?;
     Ok(())
 }
@@ -38,7 +38,7 @@ async fn proxy(mut listener: TcpListenerStream) -> io::Result<()> {
         match connection_in {
             Err(e) => error!("Accept incoming failed: {:?}", e),
             Ok(stream_in) => {
-                info!("Accepted incoming connection.");
+                info!("accepted incoming connection");
                 spawn(handle_connection(stream_in)).await??;
             }
         }
@@ -48,12 +48,12 @@ async fn proxy(mut listener: TcpListenerStream) -> io::Result<()> {
 
 async fn handle_connection(stream_in: TcpStream) -> io::Result<()> {
     let out_address = "[::1]:50052";
-    info!("Attempting to connect to {:?}", out_address);
+    info!("attempting to connect to {:?}", out_address);
     let connection_out = TcpStream::connect(out_address).await;
     match connection_out {
         Err(e) => error!("Connect to {:?} failed: {:?}", out_address, e),
         Ok(stream_out) => {
-            info!("Connected to {:?}", out_address);
+            info!("connected to {:?}", out_address);
             let (mut reader_up, mut writer_down) = io::split(stream_in);
             let (mut reader_down, mut writer_up) = io::split(stream_out);
 
@@ -61,12 +61,12 @@ async fn handle_connection(stream_in: TcpStream) -> io::Result<()> {
             let down = spawn(async move { io::copy(&mut reader_down, &mut writer_down).await });
 
             match up.await? {
-                Err(e) => error!("Error copying to server: {:?}", e),
-                Ok(count) => info!("Copied {:?} bytes to server", count),
+                Err(e) => error!("error copying to server: {:?}", e),
+                Ok(count) => info!("copied {:?} bytes to server", count),
             }
             match down.await? {
-                Err(e) => error!("Error copying to client: {:?}", e),
-                Ok(count) => info!("Copied {:?} bytes to client", count),
+                Err(e) => error!("error copying to client: {:?}", e),
+                Ok(count) => info!("copied {:?} bytes to client", count),
             }
         }
     }

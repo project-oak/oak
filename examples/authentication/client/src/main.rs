@@ -58,9 +58,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let request_url =
         auth_client::get_authentication_request_url(&mut client, &opt.redirect_address).await?;
     let code = get_authentication_code(&opt.redirect_address, &request_url).await?;
-    info!("Received code: {}", &code);
+    info!("received code: {}", &code);
     let token = auth_client::get_identity_token(&mut client, &code).await?;
-    info!("Received token: {}", &token);
+    info!("received token: {}", &token);
     Ok(())
 }
 
@@ -75,7 +75,7 @@ async fn get_authentication_code(
     let producer = redirect_handler::RedirectHandlerProducer::new(result_sender);
 
     let redirect_address = redirect_address.parse()?;
-    info!("Listening for redirect on {}", &redirect_address);
+    info!("listening for redirect on {}", &redirect_address);
     let task = tokio::spawn(async move {
         Server::bind(&redirect_address)
             .serve(producer)
@@ -87,7 +87,7 @@ async fn get_authentication_code(
             .unwrap();
     });
 
-    info!("Opening Auth request in Browser");
+    info!("opening Auth request in Browser");
     info!("URL: {}", &request_url);
     // Open the URL in the system-configured default browser.
     open::that(request_url)?;
@@ -101,7 +101,7 @@ async fn get_authentication_code(
 
     // Wait until graceful shutdown is completed, logging shutdown errors.
     if let Err(error) = task.await {
-        warn!("Error while shutting down server: {}", error);
+        warn!("error while shutting down server: {}", error);
     }
     let code = result.unwrap().unwrap();
     Ok(code)

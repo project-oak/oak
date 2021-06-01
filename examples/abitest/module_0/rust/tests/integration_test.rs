@@ -85,11 +85,11 @@ async fn test_abi() {
         let mut req = AbiTestRequest::default();
         req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
 
-        info!("Sending request: {:?}", req);
+        info!("sending request: {:?}", req);
         let result = client.run_tests(req).await;
         assert_matches!(result, Ok(_));
 
-        info!("Runtime graph at exit is:\n{}", runtime.graph());
+        info!("runtime graph at exit is:\n{}", runtime.graph());
 
         let mut disabled = 0;
         let mut success = true;
@@ -126,7 +126,7 @@ async fn test_leaks() {
     {
         let (before_nodes, before_channels) = runtime.object_counts();
         info!(
-            "Counts before test: Nodes={}, Channels={}",
+            "counts before test: Nodes={}, Channels={}",
             before_nodes, before_channels
         );
 
@@ -138,7 +138,7 @@ async fn test_leaks() {
         req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
         req.predictable_counts = true;
 
-        debug!("Sending request: {:?}", req);
+        debug!("sending request: {:?}", req);
         let result = client.run_tests(req).await;
         assert_matches!(result, Ok(_));
         let results = result.unwrap().into_inner().results;
@@ -169,13 +169,13 @@ async fn test_leaks() {
             };
 
         info!(
-            "Counts change from test: Nodes={} => {}, Channels={} => {}",
+            "counts change from test: Nodes={} => {}, Channels={} => {}",
             before_nodes, after_nodes, before_channels, after_channels
         );
 
         if after_nodes != want_nodes || after_channels != want_channels {
             error!(
-                "Batch test showed unexpected count change: got: node_delta={} channel_delta={}, want node_delta={} channel_delta={}",
+                "batch test showed unexpected count change: got: node_delta={} channel_delta={}, want node_delta={} channel_delta={}",
                 (after_nodes-before_nodes), (after_channels-before_channels),
                 (want_nodes-before_nodes), (want_channels-before_channels),
             );
@@ -195,7 +195,7 @@ async fn test_leaks() {
 
                 let mut req = AbiTestRequest::default();
                 req.include = format!("^{}$", result.name);
-                debug!("Sending request: {:?}", req);
+                debug!("sending request: {:?}", req);
                 let this_result = client.run_tests(req).await;
                 assert_matches!(this_result, Ok(_));
                 let (after_nodes, after_channels) = runtime.object_counts();
@@ -216,7 +216,7 @@ async fn test_leaks() {
             for detail in details {
                 info!("{}", detail);
             }
-            panic!("Leak of Nodes or channels found");
+            panic!("leak of Nodes or channels found");
         }
     } // ensure futures are all dropped
     drop(client);

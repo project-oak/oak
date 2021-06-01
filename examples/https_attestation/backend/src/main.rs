@@ -42,7 +42,7 @@ pub struct Opt {
 const EXAMPLE_MESSAGE: &str = "Example message";
 
 async fn service(_request: Request<Body>) -> Result<Response<Body>, hyper::Error> {
-    info!("Received request");
+    info!("received request");
     Ok(Response::new(Body::from(EXAMPLE_MESSAGE)))
 }
 

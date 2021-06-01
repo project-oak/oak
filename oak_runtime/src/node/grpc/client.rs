@@ -108,7 +108,7 @@ impl GrpcClientNode {
             })?;
 
             let result = self.process_invocation(&runtime, &invocation).await;
-            info!("Invocation processing finished: {:?}", result);
+            info!("invocation processing finished: {:?}", result);
             if result.is_err() {
                 warn!(
                     "Error encountered; forcing re-connection next time around ({:?})",

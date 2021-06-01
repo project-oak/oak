@@ -178,7 +178,7 @@ async fn load_module(manifest_dir: &Path, module: &Module) -> anyhow::Result<Vec
             let cache_path = get_module_cache_path(&manifest_dir, &external.sha256);
             let data = match fs::read(&cache_path) {
                 Ok(data) => {
-                    info!("Loaded module from cache {:?}", cache_path.as_path());
+                    info!("loaded module from cache {:?}", cache_path.as_path());
                     data
                 }
                 Err(_) => {

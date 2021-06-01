@@ -90,7 +90,7 @@ impl ExampleApplication for Handler {
         &mut self,
         _req: GetExampleMessageRequest,
     ) -> grpc::Result<GetExampleMessageResponse> {
-        info!("Received request");
+        info!("received request");
         Ok(GetExampleMessageResponse {
             message: EXAMPLE_MESSAGE.to_string(),
         })

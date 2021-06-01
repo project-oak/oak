@@ -70,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
         longitude
     );
 
-    info!("Connecting to Oak Application: {:?}", uri);
+    info!("connecting to Oak Application: {:?}", uri);
     let channel = create_tls_channel(&uri, &root_tls_certificate)
         .await
         .context("Couldn't create TLS channel")?;
@@ -90,13 +90,13 @@ async fn main() -> anyhow::Result<()> {
             longitude_degrees: longitude,
         }),
     });
-    info!("Sending request: {:?}", request);
+    info!("sending request: {:?}", request);
 
     let response = client
         .list_points_of_interest(request)
         .await
         .context("Couldn't receive response")?;
-    info!("Received response: {:?}", response);
+    info!("received response: {:?}", response);
 
     Ok(())
 }

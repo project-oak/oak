@@ -104,10 +104,10 @@ impl ProxyAttestation for Proxy {
         &self,
         req: Request<GetSignedCertificateRequest>,
     ) -> Result<Response<GetSignedCertificateResponse>, Status> {
-        info!("Received certificate sign request");
+        info!("received certificate sign request");
         let certificate_request = X509Req::from_pem(&req.into_inner().certificate_request)
             .map_err(|error| {
-                let msg = "Certificate deserialize certificate request";
+                let msg = "certificate deserialize certificate request";
                 error!("{}: {}", msg, error);
                 Status::invalid_argument(msg)
             })?;
@@ -117,19 +117,19 @@ impl ProxyAttestation for Proxy {
         ) {
             Ok(certificate) => match certificate.to_pem() {
                 Ok(serialized_certificate) => {
-                    info!("Sending signed certificate");
+                    info!("sending signed certificate");
                     let mut res = GetSignedCertificateResponse::default();
                     res.certificate = serialized_certificate;
                     Ok(Response::new(res))
                 }
                 Err(error) => {
-                    let msg = "Certificate serialization error";
+                    let msg = "certificate serialization error";
                     error!("{}: {}", msg, error);
                     Err(Status::internal(msg))
                 }
             },
             Err(error) => {
-                let msg = "Certificate signing error";
+                let msg = "certificate signing error";
                 error!("{}: {}", msg, error);
                 Err(Status::internal(msg))
             }
@@ -142,10 +142,10 @@ impl ProxyAttestation for Proxy {
         &self,
         _req: Request<GetRootCertificateRequest>,
     ) -> Result<Response<GetRootCertificateResponse>, Status> {
-        info!("Received root certificate request");
+        info!("received root certificate request");
         match self.certificate_authority.root_certificate.to_pem() {
             Ok(serialized_certificate) => {
-                info!("Sending root certificate");
+                info!("sending root certificate");
                 let mut res = GetRootCertificateResponse::default();
                 res.root_certificate = serialized_certificate;
                 Ok(Response::new(res))
@@ -178,7 +178,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Couldn't parse address")?;
 
     // Create proxy attestation gRPC server.
-    info!("Starting proxy attestation server at {:?}", address);
+    info!("starting proxy attestation server at {:?}", address);
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))
         .context("Couldn't create TLS configuration")?

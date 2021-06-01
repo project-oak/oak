@@ -88,7 +88,7 @@ async fn measure_request_time(
             })
         );
         let _ = client.send_request(&id).await.map_err(|error| {
-            error!("Couldn't send request: {}", error);
+            error!("couldn't send request: {}", error);
         });
     }
     request_start.elapsed().div_f32(REQUEST_NUMBER as f32)
@@ -108,14 +108,14 @@ async fn main() -> anyhow::Result<()> {
 
     // Start Oak runtime.
     info!(
-        "Loading Runtime: Sending database - size: {} entries ({} bytes)",
+        "loading Runtime: Sending database - size: {} entries ({} bytes)",
         database.points_of_interest.entries.len(),
         serialized_database.as_bytes().len()
     );
     let oak_loading_start = Instant::now();
     let mut oak_app = OakApplication::start(&serialized_database).await;
     let oak_loading_time = oak_loading_start.elapsed();
-    info!("Runtime loaded: {:?}", oak_loading_time);
+    info!("runtime loaded: {:?}", oak_loading_time);
 
     // Measure native request durations.
     let average_native_request_time =
@@ -128,15 +128,11 @@ async fn main() -> anyhow::Result<()> {
     native_app.stop()?;
 
     info!(
-        "Database size: {} entries",
-        database.points_of_interest.entries.len()
-    );
-    info!("Runtime loading time: {:?}", oak_loading_time);
-    info!(
-        "Average native request time: {:?}",
-        average_native_request_time
-    );
-    info!("Average Oak request time: {:?}", average_oak_request_time);
+        "database size: {} entries",
+        database.points_of_interest.entries.len());
+    info!("runtime loading time: {:?}", oak_loading_time);
+    info!("average native request time: {:?}", average_native_request_time);
+    info!("average Oak request time: {:?}", average_oak_request_time);
 
     Ok(())
 }

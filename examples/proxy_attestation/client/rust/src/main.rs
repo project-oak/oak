@@ -71,7 +71,7 @@ async fn create_proxy_client(
     uri: &Uri,
     root_tls_certificate: &[u8],
 ) -> anyhow::Result<ProxyAttestationClient<Channel>> {
-    info!("Connecting to Proxy Attestation Service: {:?}", uri);
+    info!("connecting to Proxy Attestation Service: {:?}", uri);
     let channel = create_tls_channel(uri, root_tls_certificate)
         .await
         .context("Couldn't create TLS channel")?;
@@ -84,7 +84,7 @@ async fn create_application_client(
     root_tls_certificate: &[u8],
     tee_measurement: &[u8],
 ) -> anyhow::Result<ExampleApplicationClient<Channel>> {
-    info!("Connecting to Oak application: {:?}", uri);
+    info!("connecting to Oak application: {:?}", uri);
     let channel = create_attested_grpc_channel(uri, root_tls_certificate, tee_measurement)
         .await
         .context("Couldn't create TLS channel")?;
@@ -144,7 +144,7 @@ async fn main() -> anyhow::Result<()> {
 
     let root_tls_certificate =
         get_root_tls_certificate(&proxy_uri, &proxy_root_tls_certificate).await?;
-    info!("Received root certificate from Proxy Attestation Service");
+    info!("received root certificate from Proxy Attestation Service");
 
     // Test that invalid TEE measurements are not accepted by the client.
     let result = get_example_message(
@@ -163,7 +163,7 @@ async fn main() -> anyhow::Result<()> {
     .await
     .context("Couldn't send request")?;
     assert_eq!(EXAMPLE_MESSAGE, example_message);
-    info!("Successfully connected to: {:?}", &opt.proxy_uri);
+    info!("successfully connected to: {:?}", &opt.proxy_uri);
 
     Ok(())
 }
