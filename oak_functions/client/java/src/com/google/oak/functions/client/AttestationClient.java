@@ -41,7 +41,7 @@ public class AttestationClient {
 
         // Create server response handler.
         messageQueue = new ArrayBlockingQueue<>(1);
-        StreamObserver<AttestedInvokeResponse> responseObserver = new StreamObserver<AttestedInvokeResponse>() {
+        StreamObserver responseObserver = new StreamObserver<AttestedInvokeResponse>() {
             @Override
             public void onNext(AttestedInvokeResponse response) {
                 try {
