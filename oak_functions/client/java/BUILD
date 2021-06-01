@@ -24,9 +24,9 @@ package(
 java_library(
     name = "client",
     srcs = [
-        "com/google/oak/functions/client/AeadEncryptor.java",
-        "com/google/oak/functions/client/AttestationClient.java",
-        "com/google/oak/functions/client/KeyNegotiator.java",
+        "src/com/google/oak/functions/client/AeadEncryptor.java",
+        "src/com/google/oak/functions/client/AttestationClient.java",
+        "src/com/google/oak/functions/client/KeyNegotiator.java",
     ],
     runtime_deps = [
         "@io_grpc_grpc_java//netty",
