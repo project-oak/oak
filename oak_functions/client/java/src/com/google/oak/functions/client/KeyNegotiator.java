@@ -1,7 +1,7 @@
 package com.google.oak.functions.client;
 
+import com.google.common.primitives.Bytes;
 import com.google.oak.functions.client.AeadEncryptor;
-import com.google.oak.functions.client.Util;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -67,7 +67,7 @@ public class KeyNegotiator {
     private PublicKey parsePublicKey(byte[] publicKey) throws GeneralSecurityException {
         // Add an X.509 `AlgorithmIdentifier` prefix to the public key.
         byte[] algorithmIdentifier = getAlgorithmIdentifier();
-        byte[] prefixedPublicKey = Util.concatenate(algorithmIdentifier, publicKey);
+        byte[] prefixedPublicKey = Bytes.concat(algorithmIdentifier, publicKey);
         X509EncodedKeySpec keySpecification = new X509EncodedKeySpec(prefixedPublicKey);
 
         // Parse public key.
@@ -78,7 +78,7 @@ public class KeyNegotiator {
     /** Returns an X.509 `AlgorithmIdentifier` bit string. */
     private byte[] getAlgorithmIdentifier() {
         PublicKey publicKey = keyPair.getPublic();
-        return Arrays.copyOfRange(publicKey.getEncoded(), 0, ALGORITHM_IDENTIFIER_LENGTH_BYTES);
+        return Arrays.copyOf(publicKey.getEncoded(), ALGORITHM_IDENTIFIER_LENGTH_BYTES);
     }
 
     /** Derives a session key from `keyMaterial`. */

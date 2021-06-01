@@ -17,7 +17,7 @@ public class Main {
 
         byte[] requestBody = "{\"lat\":52,\"lon\":0}".getBytes();
         Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();
-        Response response = client.Send(request);
+        Response response = client.send(request);
         ByteString responseBody = response.getBody().substring(0, (int)response.getLength());
         String decodedResponse = responseBody.toStringUtf8();
         

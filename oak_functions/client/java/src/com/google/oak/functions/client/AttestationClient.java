@@ -1,35 +1,37 @@
 package com.google.oak.functions.client;
 
+import com.google.common.base.VerifyException;
 import com.google.oak.functions.client.AeadEncryptor;
 import com.google.oak.functions.client.KeyNegotiator;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.lang.RuntimeException;
+import java.security.GeneralSecurityException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
-import oak.functions.server.AttestedInvokeResponse;
 import oak.functions.server.AttestedInvokeRequest;
+import oak.functions.server.AttestedInvokeResponse;
 import oak.functions.server.ClientIdentity;
-import oak.functions.server.ServerIdentity;
 import oak.functions.server.RemoteAttestationGrpc;
 import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
 
 // TODO(#2121): Implement a protocol independent state machine.
 public class AttestationClient {
-    private static Logger logger = Logger.getLogger(AttestationClient.class.getName());
-    private ManagedChannel channel;
-    private StreamObserver<AttestedInvokeRequest> requestObserver;
-    private BlockingQueue<AttestedInvokeResponse> messageQueue;
-    private AeadEncryptor encryptor;
+    private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
+    private final ManagedChannel channel;
+    private final StreamObserver<AttestedInvokeRequest> requestObserver;
+    private final BlockingQueue<AttestedInvokeResponse> messageQueue;
+    private final AeadEncryptor encryptor;
 
-    public AttestationClient(String uri) throws Exception {
+    public AttestationClient(String uri) throws GeneralSecurityException, InterruptedException {
         // Create gRPC channel.
         channel = ManagedChannelBuilder
             .forTarget(uri)
@@ -38,13 +40,16 @@ public class AttestationClient {
         RemoteAttestationStub stub = RemoteAttestationGrpc.newStub(channel);
 
         // Create server response handler.
-        messageQueue = new ArrayBlockingQueue<AttestedInvokeResponse>(1);
-        StreamObserver<AttestedInvokeResponse> responseObserver = new StreamObserver<AttestedInvokeResponse>() {
+        messageQueue = new ArrayBlockingQueue<>(1);
+        StreamObserver responseObserver = new StreamObserver<AttestedInvokeResponse>() {
             @Override
             public void onNext(AttestedInvokeResponse response) {
                 try {
                     messageQueue.put(response);
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) {
+                        Thread.currentThread().interrupt();
+                    }
                     logger.log(Level.WARNING, "Couldn't send server response to the message queue: " + e);
                 }
             }
@@ -75,12 +80,12 @@ public class AttestationClient {
             )
             .build();
         requestObserver.onNext(request);
-        AttestedInvokeResponse response = (AttestedInvokeResponse) messageQueue.take();
+        AttestedInvokeResponse response = messageQueue.take();
 
         // Verify remote attestation.
         byte[] attestationInfo = response.getServerIdentity().getAttestationInfo().toByteArray();
         if (!verifyAttestation(attestationInfo)) {
-            throw new RuntimeException("Couldn't verify attestation info");
+            throw new VerifyException("Couldn't verify attestation info");
         }
 
         // Generate session key and initialize AEAD encryptor based on it.
@@ -93,6 +98,7 @@ public class AttestationClient {
         return true;
     }
 
+    @Override
     protected void finalize() throws Throwable {
         requestObserver.onCompleted();
         channel.shutdown();
@@ -101,7 +107,7 @@ public class AttestationClient {
     /**
      * Encrypts and sends `message` via an attested gRPC channel to the server.
      */
-    public Response Send(Request request) throws Exception {
+    public Response send(Request request) throws GeneralSecurityException, InterruptedException, InvalidProtocolBufferException {
         byte[] encryptedMessage = encryptor.encrypt(request.getBody().toByteArray());
         oak.functions.server.Request serverRequest = oak.functions.server.Request.newBuilder()
                     .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
@@ -112,7 +118,7 @@ public class AttestationClient {
             .build();
 
         requestObserver.onNext(attestedRequest);
-        AttestedInvokeResponse attestedResponse = (AttestedInvokeResponse) messageQueue.take();
+        AttestedInvokeResponse attestedResponse = messageQueue.take();
 
         byte[] responsePayload = attestedResponse.getEncryptedPayload().toByteArray();
         byte[] decryptedResponse = encryptor.decrypt(responsePayload);
