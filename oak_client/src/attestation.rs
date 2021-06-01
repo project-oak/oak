@@ -208,7 +208,7 @@ fn verify_attestation(
 
     // Extract X.509 TEE extension.
     let extensions = parsed_certificate.extensions();
-    debug!("Provided X.509 extension: {:?}", extensions);
+    debug!("provided X.509 extension: {:?}", extensions);
     let tee_extension = extensions
         .get(&TEE_EXTENSION_OID)
         .context("Couldn't find X.509 TEE extension")?;
@@ -218,7 +218,7 @@ fn verify_attestation(
         .as_str()
         .context("Couldn't convert TEE extension to string")?;
     debug!(
-        "Found TEE X.509 extension: {:?}, {:?}",
+        "found TEE X.509 extension: {:?}, {:?}",
         TEE_EXTENSION_OID, tee_extension_value
     );
 
@@ -245,17 +245,17 @@ fn verify_tee_extension(
     let attestation_info =
         AttestationInfo::from_string(extension).context("Couldn't parse attestation info")?;
 
-    debug!("Expected public key hash: {:?}", public_key_hash);
+    debug!("expected public key hash: {:?}", public_key_hash);
     debug!(
-        "Received public key hash: {:?}",
+        "received public key hash: {:?}",
         attestation_info.report.data
     );
     if public_key_hash != attestation_info.report.data {
         return Err(anyhow!("TEE report contains incorrect public key"));
     }
-    debug!("Expected TEE measurement: {:?}", tee_measurement);
+    debug!("expected TEE measurement: {:?}", tee_measurement);
     debug!(
-        "Received TEE measurement: {:?}",
+        "received TEE measurement: {:?}",
         attestation_info.report.measurement
     );
     if tee_measurement != attestation_info.report.measurement {

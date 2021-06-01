@@ -127,17 +127,17 @@ impl HttpClientNode {
         // Create a [`Receiver`] to receive the HTTP/HTTPS request.
         let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
-            debug!("Waiting for HTTP invocation");
+            debug!("waiting for HTTP invocation");
             // Read an HTTP invocation from the [`Receiver`].
             let invocation = receiver.receive(&runtime).map_err(|error| {
                 match error {
                     OakError::OakStatus(OakStatus::ErrTerminated) => {
-                        debug!("HTTP client node is terminating.")
+                        debug!("HTTP client node is terminating")
                     }
                     OakError::OakStatus(OakStatus::ErrChannelClosed) => {
                         info!("HTTP invocation channel closed")
                     }
-                    _ => error!("Couldn't receive the invocation: {:?}", error),
+                    _ => error!("couldn't receive the invocation: {:?}", error),
                 }
                 error
             })?;
@@ -169,7 +169,7 @@ impl HttpClientNode {
         let request = invocation
             .receive_request(&runtime)
             .map_err(ProcessingError::ReadFailed)?;
-        debug!("Incoming HTTP request: {:?}", request);
+        debug!("incoming HTTP request: {:?}", request);
 
         let uri = request
             .uri
@@ -253,7 +253,7 @@ impl<'a> ResponseHandler<'a> {
             .map(|bytes| bytes.to_vec())
             .map_err(|err| {
                 error!(
-                    "Error when converting the response body into bytes: {:?}",
+                    "error when converting the response body into bytes: {:?}",
                     err
                 );
                 ProcessingError::ResponseHandlingError
@@ -266,12 +266,12 @@ impl<'a> ResponseHandler<'a> {
         };
 
         // Send the response back to the invocation channel.
-        debug!("Sending the HTTP response: {:?}", self.response);
+        debug!("sending the HTTP response: {:?}", self.response);
         self.invocation
             .send_response(response, &self.runtime)
             .map_err(|error| {
                 error!(
-                    "Couldn't send the HTTP response to the invocation: {:?}",
+                    "couldn't send the HTTP response to the invocation: {:?}",
                     error
                 );
                 ProcessingError::ResponseHandlingError

@@ -73,7 +73,7 @@ impl Handler {
     /// Return an error if the backend server is not available.
     fn report(&self, bucket: String, svec: SparseVector) -> Result<(), String> {
         debug!(
-            "Reporting data to the backend: bucket {}, sparse vector: {:?}",
+            "reporting data to the backend: bucket {}, sparse vector: {:?}",
             bucket, svec
         );
         let result = self.backend_client.submit_sample(Sample {
@@ -82,7 +82,7 @@ impl Handler {
         });
         match result {
             Ok(response) => {
-                debug!("Data report response: {:?}", response);
+                debug!("data report response: {:?}", response);
                 Ok(())
             }
             Err(err) => Err(format!("gRPC send error: {:?}", err)),
@@ -97,7 +97,7 @@ impl Aggregator for Handler {
             Some(data) => match SparseVector::try_from(&data) {
                 Ok(svec) => {
                     debug!(
-                        "Received data: bucket {}, sparse vector: {:?}",
+                        "received data: bucket {}, sparse vector: {:?}",
                         sample.bucket, svec
                     );
                     match self.submit(sample.bucket, &svec) {

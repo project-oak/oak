@@ -258,10 +258,10 @@ impl Service<http::Request<hyper::Body>> for HttpRequestHandler {
         let method_name = request.uri().path().to_string();
         let metrics_data = self.runtime.metrics_data();
         let future = async move {
-            debug!("Processing HTTP/2 request: {:?}", request);
+            debug!("processing HTTP/2 request: {:?}", request);
             let mut grpc_service = Grpc::new(VecCodec::default());
             let response = grpc_service.server_streaming(grpc_handler, request).await;
-            debug!("Sending HTTP/2 response: {:?}", response);
+            debug!("sending HTTP/2 response: {:?}", response);
             let stc = format!("{}", response.status());
             metrics_data
                 .grpc_server_metrics
@@ -465,14 +465,14 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
             std::thread::spawn(move || {
                 runtime.set_as_current();
                 for response in response_iter {
-                    debug!("Returning gRPC response: {:?}", response);
+                    debug!("returning gRPC response: {:?}", response);
                     let result = match response.status {
                         None => Ok(response.rsp_msg),
                         Some(status) if status.code == rpc::Code::Ok as i32 => Ok(response.rsp_msg),
                         Some(status) => Err(to_tonic_status(status)),
                     };
                     if let Err(err) = tx.send(result) {
-                        error!("Failed to send gRPC response: {:?}", err);
+                        error!("failed to send gRPC response: {:?}", err);
                         break;
                     }
                 }

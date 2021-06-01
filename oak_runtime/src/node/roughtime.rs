@@ -160,11 +160,11 @@ impl super::Node for RoughtimeClientNode {
         handle: oak_abi::Handle,
         _notify_receiver: oneshot::Receiver<()>,
     ) {
-        info!("{}: Starting Roughtime pseudo-Node", self.node_name);
+        info!("{}: starting Roughtime pseudo-Node", self.node_name);
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
-            debug!("Waiting for gRPC invocation");
+            debug!("waiting for gRPC invocation");
             // Read a gRPC invocation from the [`Receiver`].
             match receiver.receive(&runtime) {
                 Ok(invocation) => {
@@ -175,7 +175,7 @@ impl super::Node for RoughtimeClientNode {
                     break;
                 }
                 Err(error) => {
-                    error!("Couldn't receive the invocation: {:?}", error);
+                    error!("couldn't receive the invocation: {:?}", error);
                     break;
                 }
             }

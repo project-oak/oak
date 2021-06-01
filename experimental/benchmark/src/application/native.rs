@@ -47,10 +47,10 @@ impl TrustedDatabase for TrustedDatabaseService {
         &self,
         request: Request<GetPointOfInterestRequest>,
     ) -> Result<Response<GetPointOfInterestResponse>, Status> {
-        debug!("Received request: {:?}", request);
+        debug!("received request: {:?}", request);
         match self.points_of_interest.entries.get(&request.get_ref().id) {
             Some(point) => {
-                debug!("Found Point Of Interest: {:?}", point);
+                debug!("found Point Of Interest: {:?}", point);
                 Ok(Response::new(GetPointOfInterestResponse {
                     point_of_interest: Some(point.clone()),
                 }))

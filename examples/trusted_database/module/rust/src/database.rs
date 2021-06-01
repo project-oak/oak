@@ -62,16 +62,16 @@ struct Station {
 
 /// Load an XML database from [`ConfigMap`] and parse it.
 pub fn load_database(config_map: ConfigMap) -> Result<PointOfInterestMap, OakError> {
-    debug!("Loading database");
+    debug!("loading database");
     match config_map.items.get("database") {
         Some(xml_database) => {
-            debug!("Parsing database - size: {} bytes", xml_database.len());
+            debug!("parsing database - size: {} bytes", xml_database.len());
             let points_of_interest = parse_database(xml_database).map_err(|error| {
                 error!("Couldn't parse database: {:?}", error);
                 OakError::OakStatus(oak_abi::OakStatus::ErrInvalidArgs)
             })?;
             debug!(
-                "Database loaded - size: {} entries ({} bytes)",
+                "database loaded - size: {} entries ({} bytes)",
                 points_of_interest.entries.len(),
                 std::mem::size_of_val(&points_of_interest),
             );
@@ -89,7 +89,7 @@ pub fn parse_database(xml_database: &[u8]) -> Result<PointOfInterestMap, OakErro
     let database: Database = quick_xml::de::from_str(
         String::from_utf8(xml_database.to_vec())
             .map_err(|error| {
-                error!("Couldn't convert vector to string: {:?}", error);
+                error!("couldn't convert vector to string: {:?}", error);
                 OakError::OakStatus(oak_abi::OakStatus::ErrInvalidArgs)
             })?
             .as_ref(),

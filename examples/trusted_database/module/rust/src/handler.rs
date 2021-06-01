@@ -50,10 +50,10 @@ impl TrustedDatabase for Handler {
         &mut self,
         request: GetPointOfInterestRequest,
     ) -> grpc::Result<GetPointOfInterestResponse> {
-        debug!("Received request: {:?}", request);
+        debug!("received request: {:?}", request);
         match self.points_of_interest.entries.get(&request.id) {
             Some(point) => {
-                debug!("Found Point Of Interest: {:?}", point);
+                debug!("found Point Of Interest: {:?}", point);
                 Ok(GetPointOfInterestResponse {
                     point_of_interest: Some(point.clone()),
                 })
@@ -95,7 +95,7 @@ impl TrustedDatabase for Handler {
         );
         match nearest_point.0 {
             Some(point) => {
-                debug!("Found the nearest Point Of Interest: {:?}", point);
+                debug!("found the nearest Point Of Interest: {:?}", point);
                 Ok(ListPointsOfInterestResponse {
                     point_of_interest: Some(point),
                 })

@@ -242,7 +242,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let opt = Opt::from_args();
-    debug!("Parsed opts: {:?}", opt);
+    debug!("parsed opts: {:?}", opt);
 
     let manifest_path = Path::new(&opt.manifest_path);
     let manifest_dir = manifest_path
@@ -252,7 +252,7 @@ async fn main() -> anyhow::Result<()> {
     let manifest_file = fs::read_to_string(manifest_path).context("Couldn't read manifest file")?;
     let manifest: Manifest =
         toml::from_str(&manifest_file).context("Couldn't parse manifest file as TOML")?;
-    debug!("Parsed manifest file: {:?}", manifest);
+    debug!("parsed manifest file: {:?}", manifest);
 
     // Load Wasm modules.
     let mut modules = HashMap::new();
@@ -271,7 +271,7 @@ async fn main() -> anyhow::Result<()> {
             .context("Couldn't load file")?;
         let signature_manifest: SignatureManifest = toml::from_slice(file.as_slice())
             .context("Couldn't parse signature manifest file as TOML")?;
-        debug!("Parsed signature manifest file: {:?}", signature_manifest);
+        debug!("parsed signature manifest file: {:?}", signature_manifest);
         for signature_location in signature_manifest.signatures.iter() {
             let signature = load_file_from_location(signature_location)
                 .await

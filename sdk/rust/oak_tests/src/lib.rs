@@ -232,17 +232,17 @@ pub async fn channel_and_interceptor(label: &Label) -> (Channel, LabelIntercepto
     loop {
         match builder.connect().await {
             Ok(c) => {
-                debug!("Connected to gRPC server");
+                debug!("connected to gRPC server");
                 channel = c;
                 break;
             }
             Err(err) => {
                 if retries < RETRY_COUNT {
-                    debug!("Failed to connect, try again momentarily: {:?}", err);
+                    debug!("failed to connect, try again momentarily: {:?}", err);
                     retries += 1;
                     std::thread::sleep(RETRY_INTERVAL);
                 } else {
-                    panic!("Failed to connect, last err: {:?}", err);
+                    panic!("failed to connect, last err: {:?}", err);
                 }
             }
         }

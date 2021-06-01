@@ -186,7 +186,7 @@ impl HttpServerNode {
 
         let incoming_tls_stream = TcpListenerStream::new(tcp)
             .and_then(move |stream| {
-                debug!("Received incoming TLS stream: {:?}", stream);
+                debug!("received incoming TLS stream: {:?}", stream);
                 tls_acceptor.accept(stream).map_err(|err| {
                     error!("Client-connection error: {:?}", err);
                     io::Error::new(io::ErrorKind::Other, format!("TLS Error: {:?}", err))
@@ -315,7 +315,7 @@ impl HttpRequestHandler {
                     oak_label
                 );
 
-                debug!("Injecting the request into the Oak Node");
+                debug!("injecting the request into the Oak Node");
                 let response = self.inject_http_request(request, oak_label)?;
 
                 response.try_into_hyper_response()

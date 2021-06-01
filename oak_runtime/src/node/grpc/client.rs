@@ -92,17 +92,17 @@ impl GrpcClientNode {
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
-            debug!("Waiting for gRPC invocation");
+            debug!("waiting for gRPC invocation");
             // Read a gRPC invocation from the [`Receiver`].
             let invocation = receiver.receive(&runtime).map_err(|error| {
                 match error {
                     OakError::OakStatus(OakStatus::ErrTerminated) => {
-                        debug!("gRPC client node is terminating.")
+                        debug!("gRPC client node is terminating")
                     }
                     OakError::OakStatus(OakStatus::ErrChannelClosed) => {
                         info!("gRPC invocation channel closed")
                     }
-                    _ => error!("Couldn't receive the invocation: {:?}", error),
+                    _ => error!("couldn't receive the invocation: {:?}", error),
                 }
                 error
             })?;
@@ -111,7 +111,7 @@ impl GrpcClientNode {
             info!("invocation processing finished: {:?}", result);
             if result.is_err() {
                 warn!(
-                    "Error encountered; forcing re-connection next time around ({:?})",
+                    "error encountered; forcing re-connection next time around ({:?})",
                     result
                 );
                 self.grpc_client = None;
@@ -156,31 +156,31 @@ impl GrpcClientNode {
         let request = invocation.receive_request(&runtime).map_err(|error| {
             send_error(rpc::Code::Internal, "Failed to read request");
             error!(
-                "Couldn't read gRPC request from the invocation: {:?}",
+                "couldn't read gRPC request from the invocation: {:?}",
                 error
             );
             error
         })?;
-        debug!("Incoming gRPC request: {:?}", request);
+        debug!("incoming gRPC request: {:?}", request);
 
         if self.grpc_client.is_none() {
             // Connect to an external gRPC service.
             self.grpc_client = Some(self.connect().await.map_err(|error| {
-                error!("Couldn't connect to {}: {:?}", self.uri, error);
+                error!("couldn't connect to {}: {:?}", self.uri, error);
                 send_error(rpc::Code::NotFound, "Service connection failed");
                 OakStatus::ErrInternal
             })?);
         }
         let grpc_client = self.grpc_client.as_mut().unwrap();
         grpc_client.ready().await.map_err(|error| {
-            error!("Service was not ready: {}", error);
+            error!("service was not ready: {}", error);
             send_error(rpc::Code::NotFound, "Service not ready");
             OakStatus::ErrInternal
         })?;
 
         let codec = VecCodec::default();
         let path = request.method_name.parse().map_err(|error| {
-            error!("Invalid URI {}: {}", request.method_name, error);
+            error!("invalid URI {}: {}", request.method_name, error);
             send_error(rpc::Code::InvalidArgument, "Invalid URI");
             OakStatus::ErrInternal
         })?;
@@ -216,7 +216,7 @@ impl GrpcClientNode {
         &self,
     ) -> Result<tonic::client::Grpc<tonic::transport::channel::Channel>, tonic::transport::Error>
     {
-        debug!("Connecting to {}", self.uri);
+        debug!("connecting to {}", self.uri);
 
         // Create a TLS configuration.
         let tls_config = ClientTlsConfig::new().ca_certificate(self.root_tls_certificate.clone());
@@ -228,7 +228,7 @@ impl GrpcClientNode {
             .connect()
             .await?;
 
-        debug!("Connected to {}", self.uri);
+        debug!("connected to {}", self.uri);
         Ok(tonic::client::Grpc::new(connection))
     }
 }
@@ -326,7 +326,7 @@ impl<'a> ResponseHandler<'a> {
             let invocation = self.invocation;
             let runtime = &self.runtime.clone();
             let message = body_stream.message().await.map_err(|error| {
-                error!("Failed to read response: {}", error);
+                error!("failed to read response: {}", error);
                 invocation.send_error(rpc::Code::Internal, "Failed to read response", runtime);
                 metrics_recorder.update_status_code(rpc::Code::Internal);
                 OakStatus::ErrInternal
@@ -340,16 +340,16 @@ impl<'a> ResponseHandler<'a> {
                     last: false,
                 };
                 // Send the response back to the invocation channel.
-                debug!("Sending gRPC response: {:?}", encap_rsp);
+                debug!("sending gRPC response: {:?}", encap_rsp);
                 invocation
                     .send_response(encap_rsp, runtime)
                     .map_err(|error| {
-                        error!("Couldn't send gRPC response to the invocation: {:?}", error);
+                        error!("couldn't send gRPC response to the invocation: {:?}", error);
                         error
                     })?;
                 metrics_recorder.observe_message_with_len(msg_len);
             } else {
-                debug!("No message available, close out method invocation");
+                debug!("no message available, close out method invocation");
                 break;
             }
         }

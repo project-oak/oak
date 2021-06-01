@@ -183,14 +183,14 @@ impl super::Node for CryptoNode {
         handle: oak_abi::Handle,
         _notify_receiver: oneshot::Receiver<()>,
     ) {
-        info!("{}: Starting crypto pseudo-Node", self.node_name);
+        info!("{}: starting crypto pseudo-Node", self.node_name);
 
         let mut server = CryptoNodeServer::new(&self.node_name, self.kms_credentials.clone());
 
         // Create a [`Receiver`] used for reading gRPC invocations.
         let receiver = Receiver::<Invocation>::new(ReadHandle { handle });
         loop {
-            debug!("Waiting for gRPC invocation");
+            debug!("waiting for gRPC invocation");
             match receiver.receive(&runtime) {
                 Ok(invocation) => {
                     server.process_invocation(&runtime, &invocation);
@@ -200,7 +200,7 @@ impl super::Node for CryptoNode {
                     break;
                 }
                 Err(error) => {
-                    error!("Couldn't receive the invocation: {:?}", error);
+                    error!("couldn't receive the invocation: {:?}", error);
                     break;
                 }
             }
