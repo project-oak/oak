@@ -128,7 +128,7 @@ async fn process_request(
         (&hyper::Method::POST, "/report") => {
             // Verify client assertion.
             if let Err(error) = proxy.verify_client_assertion(request).await {
-                warn!("Incorrect client assertion: {:?}", error);
+                warn!("incorrect client assertion: {:?}", error);
                 return Ok(Response::builder()
                     .status(hyper::StatusCode::UNAUTHORIZED)
                     .body(Body::from("Incorrect client assertion"))
@@ -140,7 +140,7 @@ async fn process_request(
             match proxy.generate_server_assertion() {
                 Ok(assertion) => Ok(Response::new(assertion.into())),
                 Err(error) => {
-                    warn!("Couldn't generate assertion: {:?}", error);
+                    warn!("couldn't generate assertion: {:?}", error);
                     Ok(Response::builder()
                         .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
                         .body(Body::from("Couldn't generate assertion"))
@@ -199,7 +199,7 @@ pub async fn run_server(
         loop {
             let (socket, _) = tcp_listener.accept().await?;
             let stream = tls_acceptor.accept(socket).map_err(|error| {
-                warn!("Client connection error: {:?}", error);
+                warn!("client connection error: {:?}", error);
                 std::io::Error::new(std::io::ErrorKind::Other, error)
             });
             yield stream.await;

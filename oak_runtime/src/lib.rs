@@ -1297,7 +1297,7 @@ impl Runtime {
                 // If the node thread terminated before this method is invoked, its NodeInfo entry
                 // may have already been deleted, in which case we just log a warning and continue.
                 // See https://github.com/project-oak/oak/issues/1762.
-                warn!("No NodeInfo found for node {:?}", node_id);
+                warn!("no NodeInfo found for node {:?}", node_id);
             }
         }
     }

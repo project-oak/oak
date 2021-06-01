@@ -45,7 +45,7 @@ impl super::Node for StorageNode {
         _handle: oak_abi::Handle,
         _notify_receiver: oneshot::Receiver<()>,
     ) {
-        info!("{}: Starting storage pseudo-Node", self.node_name);
-        warn!("No storage implemented!");
+        info!("{}: starting storage pseudo-Node", self.node_name);
+        warn!("no storage implemented");
     }
 }

@@ -105,7 +105,7 @@ impl CommandHandler for Router {
             )
             .ok();
         if translator_sender_option == None {
-            log::warn!("Couldn't create translator node");
+            log::warn!("couldn't create translator node");
         }
 
         let handler_invocation_sender = oak::io::entrypoint_node_create::<Handler, _, _>(

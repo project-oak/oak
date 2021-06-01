@@ -310,7 +310,7 @@ impl HttpRequestHandler {
         match get_oak_label(&request) {
             Ok(oak_label) => {
                 info!(
-                    "Handling HTTP request; request body size: {} bytes, label: {:?}",
+                    "handling HTTP request; request body size: {} bytes, label: {:?}",
                     request.body.len(),
                     oak_label
                 );
@@ -321,7 +321,7 @@ impl HttpRequestHandler {
                 response.try_into_hyper_response()
             }
             Err(err) => {
-                warn!("Invalid or missing Oak label: {}", err);
+                warn!("invalid or missing Oak label: {}", err);
                 http::response::Builder::new()
                     .status(StatusCode::BAD_REQUEST)
                     .body(Body::from("Invalid or missing Oak label."))
@@ -504,13 +504,13 @@ impl HttpResponseReceiver {
 
     fn try_into_hyper_response(&self) -> anyhow::Result<Response<Body>> {
         info!(
-            "Generating response for runtime {} and receiver {:?}.",
+            "generating response for runtime {} and receiver {:?}",
             self.runtime.node_id.0, self.response_receiver
         );
         match self.read_response() {
             Ok(http_response) => to_hyper_response(http_response),
             Err(status) => {
-                warn!("Couldn't read response: {}", status);
+                warn!("couldn't read response: {}", status);
                 http::response::Builder::new()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
                     .body(Body::empty())
@@ -527,7 +527,7 @@ impl Drop for HttpResponseReceiver {
             .channel_close(self.response_receiver.handle.handle)
         {
             error!(
-                "Failed to close response channel {}: {:?}",
+                "failed to close response channel {}: {:?}",
                 self.response_receiver.handle.handle, err
             );
         }

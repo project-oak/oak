@@ -166,7 +166,7 @@ impl RoughtimeClient {
         match self.get_roughtime_from_server(server).await {
             Ok(interval) => Some(interval),
             Err(error) => {
-                warn!("Error getting Roughtime from {}: {:?}", &server.name, error);
+                warn!("error getting Roughtime from {}: {:?}", &server.name, error);
                 None
             }
         }
@@ -260,7 +260,7 @@ impl RoughtimeServer {
         socket.connect(&remote_addr).await?;
         match timeout(Duration::from_secs(timeout_seconds), socket.send(request)).await {
             Err(error) => {
-                warn!("Timed out sending request to {}: {}", self.name, error);
+                warn!("timed out sending request to {}: {}", self.name, error);
                 return Err(RoughtimeError::TimeoutError);
             }
             Ok(result) => {
@@ -270,7 +270,7 @@ impl RoughtimeServer {
         let mut data = vec![0u8; MAX_RESPONSE_SIZE];
         match timeout(Duration::from_secs(timeout_seconds), socket.recv(&mut data)).await {
             Err(error) => {
-                warn!("Timed out receiving response from {}: {}", self.name, error);
+                warn!("timed out receiving response from {}: {}", self.name, error);
                 return Err(RoughtimeError::TimeoutError);
             }
             Ok(result) => {

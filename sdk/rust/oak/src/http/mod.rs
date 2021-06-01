@@ -57,18 +57,18 @@ impl HttpInvocation {
         match self.receiver.as_ref() {
             Some(receiver) => {
                 if let Err(error) = receiver.close() {
-                    warn!("Error when trying to close receiver: {}", error);
+                    warn!("error when trying to close receiver: {}", error);
                 }
             }
-            None => warn!("No receive present on invocation."),
+            None => warn!("no receive present on invocation"),
         };
         match self.sender.as_ref() {
             Some(sender) => {
                 if let Err(error) = sender.close() {
-                    warn!("Error when trying to close response_sender: {}", error);
+                    warn!("error when trying to close response_sender: {}", error);
                 }
             }
-            None => warn!("No receive present on invocation."),
+            None => warn!("no receive present on invocation"),
         };
     }
 }
@@ -106,18 +106,18 @@ impl HttpInvocationSource {
         match self.receiver.as_ref() {
             Some(receiver) => {
                 if let Err(error) = receiver.close() {
-                    warn!("Error when trying to close receiver: {}", error);
+                    warn!("error when trying to close receiver: {}", error);
                 }
             }
-            None => warn!("No receive present on invocation."),
+            None => warn!("no receive present on invocation"),
         };
         match self.sender.as_ref() {
             Some(sender) => {
                 if let Err(error) = sender.close() {
-                    warn!("Error when trying to close response_sender: {}", error);
+                    warn!("error when trying to close response_sender: {}", error);
                 }
             }
-            None => warn!("No receive present on invocation."),
+            None => warn!("no receive present on invocation"),
         };
     }
 }

@@ -35,7 +35,7 @@ impl std::convert::TryFrom<HttpResponse> for Response<Vec<u8>> {
     fn try_from(response: HttpResponse) -> Result<Self, Self::Error> {
         let mut builder = Response::builder().status(
             StatusCode::from_u16(response.status as u16).map_err(|err| {
-                warn!("Could not map status code: {}", err);
+                warn!("could not map status code: {}", err);
                 OakStatus::ErrInternal
             })?,
         );
@@ -45,7 +45,7 @@ impl std::convert::TryFrom<HttpResponse> for Response<Vec<u8>> {
             }
         }
         builder.body(response.body).map_err(|err| {
-            warn!("Could not create the response: {}", err);
+            warn!("could not create the response: {}", err);
             OakStatus::ErrInternal
         })
     }
@@ -63,7 +63,7 @@ impl std::convert::TryFrom<HttpRequest> for Request<Vec<u8>> {
             }
         }
         builder.body(request.body).map_err(|err| {
-            warn!("Could not create request: {}", err);
+            warn!("could not create request: {}", err);
             OakStatus::ErrInternal
         })
     }
@@ -123,12 +123,12 @@ impl std::iter::IntoIterator for HeaderMap {
                     let name_value_pair_closure = || -> Result<(http::header::HeaderName, http::header::HeaderValue), OakStatus>  {
                         let header_name = http::header::HeaderName::from_bytes(name.as_bytes())
                             .map_err(|err| {
-                                warn!("Error when parsing header name: {}", err);
+                                warn!("error when parsing header name: {}", err);
                                 OakStatus::ErrInternal
                             })?;
                         let header_value =
                             http::header::HeaderValue::from_bytes(val.as_ref()).map_err(|err| {
-                                warn!("Error when parsing header value: {}", err);
+                                warn!("error when parsing header value: {}", err);
                                 OakStatus::ErrInternal
                             })?;
                         Ok((header_name, header_value))

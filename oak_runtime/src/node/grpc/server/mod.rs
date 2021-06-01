@@ -205,17 +205,17 @@ impl Node for GrpcServerNode {
 
         // Start the gRPC server.
         info!(
-            "{}: Starting gRPC server pseudo-Node on: {}",
+            "{}: starting gRPC server pseudo-Node on: {}",
             self.node_name, self.address
         );
         match async_runtime.block_on(server) {
             Err(err) => warn!(
-                "{}: Error running gRPC server pseudo-Node: {}",
+                "{}: error running gRPC server pseudo-Node: {}",
                 self.node_name, err
             ),
             Ok(()) => {
                 info!(
-                    "{}: Success running gRPC server pseudo-Node",
+                    "{}: success running gRPC server pseudo-Node",
                     self.node_name,
                 );
             }
@@ -360,7 +360,7 @@ fn get_user_identity_label(metadata_map: &MetadataMap) -> Result<Label, OakIdent
         .iter()
         .collect::<Vec<_>>();
     if signature.is_empty() {
-        info!("no signed challenge provided.");
+        info!("no signed challenge provided");
         return Ok(Label::public_untrusted());
     }
     if signature.len() >= 2 {
@@ -512,7 +512,7 @@ impl GrpcInvocationHandler {
         let (request_sender, request_receiver) =
             channel_create_with_downgrade::<GrpcRequest>(&self.runtime, "gRPC request", &label)
                 .map_err(|err| {
-                    warn!("Couldn't create gRPC request channel: {:?}", err);
+                    warn!("couldn't create gRPC request channel: {:?}", err);
                 })?;
 
         // The channel containing the response is created with the label containing the identity of
@@ -523,7 +523,7 @@ impl GrpcInvocationHandler {
             &identity_label,
         )
         .map_err(|err| {
-            warn!("Couldn't create gRPC response channel: {:?}", err);
+            warn!("couldn't create gRPC response channel: {:?}", err);
         })?;
 
         let invocation = GrpcInvocation {
