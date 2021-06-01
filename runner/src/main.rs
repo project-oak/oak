@@ -261,7 +261,7 @@ fn copy_wasm_file(config: &FuzzableExample) -> Step {
         steps: vec![
             Step::Single {
                 name: "mkdir".to_string(),
-                command: Cmd::new("mkdir", vec!["-p", &config.out_dir]),
+                command: Cmd::new("mkdir", vec!["--parents", &config.out_dir]),
             },
             Step::Single {
                 name: "copy".to_string(),
@@ -321,7 +321,7 @@ pub fn run_fuzz_targets_in_crate(path: &PathBuf, opt: &RunCargoFuzz) -> Step {
                     spread!["run".to_string(),
                         binary.name.clone(),
                         "--target=x86_64-unknown-linux-gnu".to_string(),
-                        "-O".to_string(),
+                        "--release".to_string(),
                         "--".to_string(),
                         ...opt.args
                     ],
