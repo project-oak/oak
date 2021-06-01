@@ -1,0 +1,4 @@
+[[examples]]
+name = "fuzzable"
+manifest_path = "./oak_functions/examples/fuzzable/module/Cargo.toml"
+out_dir = "./oak_functions/loader/fuzz/fuzz_targets/data"

@@ -96,7 +96,7 @@ struct ExampleServer {
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-enum Target {
+pub enum Target {
     Bazel {
         bazel_target: String,
         #[serde(default)]
@@ -558,7 +558,7 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
     }
 }
 
-fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
+pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
     match target {
         Target::Cargo {
             cargo_manifest,

@@ -25,7 +25,7 @@ use libfuzzer_sys::fuzz_target;
 use oak_functions_abi::proto::Request;
 use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandler};
 use prost::Message;
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Arbitrary, Debug)]
 enum ArbitraryInstruction {
@@ -44,21 +44,8 @@ enum ArbitraryInstruction {
     },
 }
 
-/// Path to the manifest file of the `fuzzable` example. Required for running locally, or the CI.
-const MANIFEST_PATH: &str = "../examples/fuzzable/module/Cargo.toml";
-
-/// Path to the Wasm module when running the OSS-Fuzz project.
-/// The OSS-Fuzz project uses separate directories for building and running fuzz targets.
-/// Therefore, to build the Wasm module at runtime, we'll have to copy the entire `oak` project
-/// to the running path (i.e., `/out`). To avoid the need for this, in the OSS-Fuzz project, we
-/// build the Wasm module for `fuzzable` in the build phase, when the fuzz targets are built as
-/// well, and store the `.wasm` file in `/out/bin`.
-///
-/// Keep this path in sync with `https://github.com/google/oss-fuzz/blob/master/projects/oak/build.sh`.
-const OSS_FUZZ_WASM_MODULE_PATH: &str = "/out/bin/fuzzable.wasm";
-
 lazy_static::lazy_static! {
-    static ref WASM_MODULE_BYTES: Vec<u8> = get_wasm_module_bytes();
+    static ref WASM_MODULE_BYTES: Vec<u8> = include_bytes!("./data/fuzzable.wasm").to_vec();
 }
 
 // Create the `tokio::runtime::Runtime` only once, instead of creating a new instance in each
@@ -119,14 +106,5 @@ impl From<&ArbitraryInstruction> for crate::proto::Instruction {
         crate::proto::Instruction {
             instruction_variant,
         }
-    }
-}
-
-fn get_wasm_module_bytes() -> Vec<u8> {
-    let module_path = Path::new(OSS_FUZZ_WASM_MODULE_PATH);
-    if module_path.exists() {
-        std::fs::read(module_path).expect("Couldn't read wasm module")
-    } else {
-        test_utils::compile_rust_wasm(&MANIFEST_PATH).expect("Couldn't read Wasm module")
     }
 }

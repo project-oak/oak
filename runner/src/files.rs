@@ -53,6 +53,10 @@ pub fn example_toml_files() -> impl Iterator<Item = PathBuf> {
     source_files().filter(is_example_toml_file)
 }
 
+pub fn fuzz_config_toml_files() -> impl Iterator<Item = PathBuf> {
+    source_files().filter(is_fuzz_config_toml_file)
+}
+
 /// Return an iterator of all known Cargo Manifest files that define crates.
 pub fn crate_manifest_files() -> impl Iterator<Item = PathBuf> {
     source_files()
@@ -177,6 +181,11 @@ fn is_cargo_package_file(path: &PathBuf) -> bool {
 fn is_example_toml_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "example.toml"
+}
+
+fn is_fuzz_config_toml_file(path: &PathBuf) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename == "fuzz.toml"
 }
 
 fn is_ignored_entry(entry: &walkdir::DirEntry) -> bool {
