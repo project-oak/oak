@@ -81,7 +81,7 @@ impl<T> Drop for OneshotWriter<T> {
         if let Some(writer) = self.writer.take() {
             error!("drop() called on OneshotWriter");
             if let Err(e) = writer.close(Err(oak::grpc::build_status(Code::Unknown, ""))) {
-                error!("Failed to close OneshotWriter in Drop: {}", e);
+                error!("failed to close OneshotWriter in Drop: {}", e);
             }
         }
     }
@@ -140,7 +140,7 @@ impl<T> Drop for MultiWriter<T> {
     fn drop(&mut self) {
         if let Some(writer) = self.writer.take() {
             if let Err(e) = writer.close(Ok(())) {
-                error!("Failed to close MultiWriter in Drop: {}", e);
+                error!("failed to close MultiWriter in Drop: {}", e);
             };
         }
     }
@@ -229,13 +229,13 @@ pub struct DecomposedInvocation {
 impl DecomposedInvocation {
     pub async fn from(invocation: Invocation) -> Result<DecomposedInvocation, OakError> {
         let receiver = invocation.receiver.ok_or_else(|| {
-            error!("Invocation did not have a receiver");
+            error!("invocation did not have a receiver");
             OakError::OakStatus(OakStatus::ErrInvalidArgs)
         })?;
         let mut requests = GrpcRequestStream::new(receiver.receive_stream());
         let requests_pinned = core::pin::Pin::new(&mut requests);
         let sender = invocation.sender.ok_or_else(|| {
-            error!("Invocation did not have a sender");
+            error!("invocation did not have a sender");
             OakError::OakStatus(OakStatus::ErrInvalidArgs)
         })?;
         let response_writer = ChannelResponseWriter::new(sender);
@@ -244,7 +244,7 @@ impl DecomposedInvocation {
             .peek()
             .await
             .ok_or_else(|| {
-                error!("No request arrived for invocation");
+                error!("no request arrived for invocation");
                 OakError::OakStatus(OakStatus::ErrBadHandle)
             })?
             .as_ref()

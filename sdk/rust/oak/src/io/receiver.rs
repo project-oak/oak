@@ -105,7 +105,7 @@ impl<T: Decodable> Iterator for ReceiverIterator<T> {
                     }
                     ChannelReadStatus::NotReady => {
                         error!(
-                        "{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`.",
+                        "{:?}: received `ChannelReadStatus::NotReady`, which should never be returned from `Receiver::wait`",
                         receiver);
                         return None;
                     }
@@ -209,17 +209,17 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                 .and_then(ChannelReadStatus::from_i32)
                 .ok_or_else(|| {
                     error!(
-                        "Should never get here. `wait_on_channels` always yields a valid `ChannelReadStatus` if the returned status is not Err(OakStatus::ErrTerminated)."
+                        "should never get here. `wait_on_channels` always yields a valid `ChannelReadStatus` if the returned status is not Err(OakStatus::ErrTerminated)"
                     );
                     OakStatus::ErrInternal
                 }),
             Err(OakStatus::ErrTerminated) => Err(OakStatus::ErrTerminated),
             Err(OakStatus::ErrInvalidArgs) => {
-                error!("Should never get here. `ErrInvalidArgs` here indicates that `space` is corrupted.");
+                error!("should never get here. `ErrInvalidArgs` here indicates that `space` is corrupted");
                 Err(OakStatus::ErrInternal)
             }
             Err(status) => {
-                error!("Should never get here. `wait_on_channels` should never return {:?}.", status);
+                error!("should never get here. `wait_on_channels` should never return {:?}", status);
                 Err(OakStatus::ErrInternal)
             }
         }
@@ -242,17 +242,17 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                 .and_then(ChannelReadStatus::from_i32)
                 .ok_or_else(|| {
                     error!(
-                        "Should never get here. `wait_on_channels_with_downgrade` always yields a valid `ChannelReadStatus` if the returned status is not Err(OakStatus::ErrTerminated)."
+                        "should never get here. `wait_on_channels_with_downgrade` always yields a valid `ChannelReadStatus` if the returned status is not Err(OakStatus::ErrTerminated)"
                     );
                     OakStatus::ErrInternal
                 }),
             Err(OakStatus::ErrTerminated) => Err(OakStatus::ErrTerminated),
             Err(OakStatus::ErrInvalidArgs) => {
-                error!("Should never get here. `ErrInvalidArgs` here indicates that `space` is corrupted.");
+                error!("should never get here. `ErrInvalidArgs` here indicates that `space` is corrupted");
                 Err(OakStatus::ErrInternal)
             }
             Err(status) => {
-                error!("Should never get here. `wait_on_channels_with_downgrade` should never return {:?}.", status);
+                error!("should never get here. `wait_on_channels_with_downgrade` should never return {:?}", status);
                 Err(OakStatus::ErrInternal)
             }
         }

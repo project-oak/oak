@@ -49,19 +49,19 @@ pub trait InvocationExt {
             Some(receiver) => {
                 let receiver = oak_io::Receiver::<Self::Request>::new(receiver.handle);
                 if let Err(err) = receiver.close(runtime) {
-                    error!("Failed to close receiver channel in invocation: {:?}", err);
+                    error!("failed to close receiver channel in invocation: {:?}", err);
                 }
             }
-            None => error!("No receiver on invocation."),
+            None => error!("no receiver on invocation"),
         };
         match self.sender() {
             Some(sender) => {
                 let sender = oak_io::Sender::<Self::Response>::new(sender.handle);
                 if let Err(err) = sender.close(runtime) {
-                    error!("Failed to close sender channel in invocation: {:?}", err);
+                    error!("failed to close sender channel in invocation: {:?}", err);
                 }
             }
-            None => error!("No sender on invocation."),
+            None => error!("no sender on invocation"),
         };
     }
 
@@ -93,7 +93,7 @@ pub trait InvocationExt {
 
     /// Send an error response for the invocation.
     fn send_error(&self, code: Self::ErrorCode, msg: &str, runtime: &RuntimeProxy) {
-        error!("Fail invocation with {:?} '{}'", code, msg);
+        error!("fail invocation with {:?} '{}'", code, msg);
         let _ = self.send_response(self.encap_error(code, msg), runtime);
     }
 }

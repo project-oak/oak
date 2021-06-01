@@ -105,7 +105,7 @@ async fn test_abi() {
                 result.name
             );
             if !result.success {
-                error!("Failure details: {}", result.details);
+                error!("failure details: {}", result.details);
                 success = false;
             }
         }

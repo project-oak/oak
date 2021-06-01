@@ -71,7 +71,7 @@ impl TrustedDatabase for Handler {
         &mut self,
         request: ListPointsOfInterestRequest,
     ) -> grpc::Result<ListPointsOfInterestResponse> {
-        error!("Received request: {:?}", request);
+        error!("received request: {:?}", request);
         let request_location = request.location.ok_or_else(|| {
             let err = grpc::build_status(grpc::Code::InvalidArgument, &NO_LOCATION_ERROR);
             warn!("{:?}", err);

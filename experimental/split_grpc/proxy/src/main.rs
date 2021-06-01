@@ -36,7 +36,7 @@ async fn main() -> io::Result<()> {
 async fn proxy(mut listener: TcpListenerStream) -> io::Result<()> {
     while let Some(connection_in) = listener.next().await {
         match connection_in {
-            Err(e) => error!("Accept incoming failed: {:?}", e),
+            Err(e) => error!("accept incoming failed: {:?}", e),
             Ok(stream_in) => {
                 info!("accepted incoming connection");
                 spawn(handle_connection(stream_in)).await??;
@@ -51,7 +51,7 @@ async fn handle_connection(stream_in: TcpStream) -> io::Result<()> {
     info!("attempting to connect to {:?}", out_address);
     let connection_out = TcpStream::connect(out_address).await;
     match connection_out {
-        Err(e) => error!("Connect to {:?} failed: {:?}", out_address, e),
+        Err(e) => error!("connect to {:?} failed: {:?}", out_address, e),
         Ok(stream_out) => {
             info!("connected to {:?}", out_address);
             let (mut reader_up, mut writer_down) = io::split(stream_in);

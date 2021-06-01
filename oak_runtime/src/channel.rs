@@ -273,7 +273,7 @@ impl Drop for Channel {
                 }));
             }
             None => {
-                error!("Couldn't send ChannelDestroyed event, since the runtime has been dropped. {:?}", self);
+                error!("couldn't send ChannelDestroyed event, since the runtime has been dropped. {:?}", self);
             }
         }
 

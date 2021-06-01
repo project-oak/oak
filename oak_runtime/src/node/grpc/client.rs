@@ -198,7 +198,7 @@ impl GrpcClientNode {
         let rsp_stream = match grpc_client.streaming(request_stream, path, codec).await {
             Ok(rsp_stream) => rsp_stream,
             Err(error) => {
-                error!("Request to remote service failed: {}", error);
+                error!("request to remote service failed: {}", error);
                 let error_code = tonic_code_to_grpc(error.code());
                 invocation.send_error(error_code, error.message(), runtime);
                 record_completion_with_error(&method_name, error_code);

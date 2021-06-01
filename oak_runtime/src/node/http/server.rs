@@ -94,7 +94,7 @@ impl hyper::server::accept::Accept for TlsServer<'_> {
             // be awoken when there is a new incoming connection, by calling `wake` on
             // the `waker` in the context `cx`.
             Poll::Ready(Some(Err(e))) => {
-                error!("Error when processing TLS stream: {:?}", e);
+                error!("error when processing TLS stream: {:?}", e);
                 Poll::Pending
             }
             _ => connection,
@@ -151,7 +151,7 @@ impl HttpServerNode {
             Ok(tcp) => tcp,
             Err(e) => {
                 error!(
-                    "{:?}: Couldn't create TCP listener: {:?}",
+                    "{:?}: couldn't create TCP listener: {:?}",
                     std::thread::current().id(),
                     e
                 );
@@ -188,7 +188,7 @@ impl HttpServerNode {
             .and_then(move |stream| {
                 debug!("received incoming TLS stream: {:?}", stream);
                 tls_acceptor.accept(stream).map_err(|err| {
-                    error!("Client-connection error: {:?}", err);
+                    error!("client-connection error: {:?}", err);
                     io::Error::new(io::ErrorKind::Other, format!("TLS Error: {:?}", err))
                 })
             })
@@ -222,7 +222,7 @@ impl Node for HttpServerNode {
             Ok(writer) => writer,
             Err(status) => {
                 error!(
-                    "Failed to retrieve invocation channel write handle: {:?}",
+                    "failed to retrieve invocation channel write handle: {:?}",
                     status
                 );
                 return;
@@ -230,7 +230,7 @@ impl Node for HttpServerNode {
         };
         if let Err(err) = runtime.channel_close(startup_handle) {
             error!(
-                "Failed to close initial inbound channel {}: {:?}",
+                "failed to close initial inbound channel {}: {:?}",
                 startup_handle, err
             );
         }
@@ -268,13 +268,13 @@ fn get_invocation_channel(
     match invocation_channel.sender {
         Some(invocation_sender) => {
             info!(
-                "Invocation channel write handle received: {}",
+                "invocation channel write handle received: {}",
                 invocation_sender.handle.handle
             );
             Ok(invocation_sender.handle)
         }
         None => {
-            error!("Couldn't receive the invocation sender.");
+            error!("couldn't receive the invocation sender");
             Err(OakError::OakStatus(OakStatus::ErrBadHandle))
         }
     }

@@ -236,7 +236,7 @@ pub fn inject_handles<T: HandleVisit>(msg: &mut T, handles: &[Handle]) -> Result
     msg.fold(Ok(handles.iter()), |handles, handle| {
         let mut handles = handles?;
         let to_inject = handles.next().ok_or_else(|| {
-            error!("Not enough handles provided to populate message");
+            error!("not enough handles provided to populate message");
             OakError::ProtobufDecodeError(None)
         })?;
         *handle = *to_inject;
@@ -245,7 +245,7 @@ pub fn inject_handles<T: HandleVisit>(msg: &mut T, handles: &[Handle]) -> Result
     // Check that there are no remaining handles
     .and_then(|mut remaining_handles| {
         if remaining_handles.next().is_some() {
-            error!("Too many handles provided for message",);
+            error!("too many handles provided for message");
             Err(OakError::ProtobufDecodeError(None))
         } else {
             Ok(())

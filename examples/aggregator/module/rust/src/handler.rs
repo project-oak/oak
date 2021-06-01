@@ -62,7 +62,7 @@ impl Handler {
                 let aggregated_data = aggregated_data.clone();
                 if let Err(err) = self.report(bucket, aggregated_data) {
                     // Backend report errors are not returned to the clients.
-                    error!("Backend report error: {:?}", err);
+                    error!("backend report error: {:?}", err);
                 }
                 Ok(())
             }

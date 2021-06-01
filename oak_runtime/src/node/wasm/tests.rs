@@ -42,11 +42,11 @@ fn start_node(
     };
     for signature in signatures.iter() {
         signature.verify().map_err(|error| {
-            error!("Wasm module signature verification failed: {:?}", error);
+            error!("wasm module signature verification failed: {:?}", error);
             OakStatus::ErrInvalidArgs
         })?;
         if module_hash != hex::encode(&signature.hash) {
-            error!("Incorrect Wasm module signature hash");
+            error!("incorrect Wasm module signature hash");
             return Err(OakStatus::ErrInvalidArgs);
         }
     }

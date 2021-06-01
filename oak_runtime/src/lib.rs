@@ -1375,7 +1375,7 @@ impl Runtime {
                 );
                 if !downgraded_label.flows_to(&Label::public_untrusted()) {
                     error!(
-                        "Node {} of type {} has insufficent privilege.",
+                        "node {} of type {} has insufficent privilege",
                         node_name, node_type
                     );
                     return Err(OakStatus::ErrPermissionDenied);
@@ -1383,7 +1383,7 @@ impl Runtime {
             }
             NodeIsolation::Sandboxed => {
                 trace!(
-                    "Node {} of type {} is sandboxed, so not checking privilege.",
+                    "node {} of type {} is sandboxed, so not checking privilege",
                     node_name,
                     node_type
                 );
@@ -1525,7 +1525,7 @@ fn serialize_label(label: Label, capacity: usize) -> Result<LabelReadStatus, Oak
         let mut encoded = Vec::with_capacity(size);
         match label.encode(&mut encoded) {
             Err(error) => {
-                error!("Could not encode label: {}", error);
+                error!("could not encode label: {}", error);
                 Err(OakStatus::ErrInternal)
             }
             Ok(()) => Ok(LabelReadStatus::Success(encoded)),

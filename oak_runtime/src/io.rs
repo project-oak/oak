@@ -49,7 +49,7 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                 .channel_read(self.handle.handle)
                 .and_then(|message| {
                     message.ok_or_else(|| {
-                        error!("Channel read error {:?}: Empty message", self.handle);
+                        error!("channel read error {:?}: empty message", self.handle);
                         OakStatus::ErrInternal
                     })
                 })
@@ -60,7 +60,7 @@ impl<T: Decodable> ReceiverExt<T> for Receiver<T> {
                 Err(OakStatus::ErrChannelClosed.into())
             }
             status => {
-                error!("Channel read error {:?}: {:?}", self.handle, status);
+                error!("channel read error {:?}: {:?}", self.handle, status);
                 Err(OakStatus::ErrInternal.into())
             }
         }

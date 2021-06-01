@@ -112,13 +112,13 @@ impl GrpcServerNode {
         match invocation_channel.sender {
             Some(invocation_sender) => {
                 info!(
-                    "Invocation channel write handle received: {}",
+                    "invocation channel write handle received: {}",
                     invocation_sender.handle.handle
                 );
                 Ok(invocation_sender.handle)
             }
             None => {
-                error!("Couldn't receive the invocation sender.");
+                error!("couldn't receive the invocation sender");
                 Err(OakError::OakStatus(OakStatus::ErrBadHandle))
             }
         }
@@ -145,7 +145,7 @@ impl Node for GrpcServerNode {
                 Ok(writer) => writer,
                 Err(status) => {
                     error!(
-                        "Failed to retrieve invocation channel write handle: {:?}",
+                        "failed to retrieve invocation channel write handle: {:?}",
                         status
                     );
                     return;
@@ -153,7 +153,7 @@ impl Node for GrpcServerNode {
             };
         if let Err(err) = runtime.channel_close(startup_handle) {
             error!(
-                "Failed to close initial inbound channel {}: {:?}",
+                "failed to close initial inbound channel {}: {:?}",
                 startup_handle, err
             );
         }
@@ -536,7 +536,7 @@ impl GrpcInvocationHandler {
             .send_with_downgrade(request, &self.runtime)
             .map_err(|error| {
                 error!(
-                    "Couldn't write message to the gRPC request channel: {:?}",
+                    "couldn't write message to the gRPC request channel: {:?}",
                     error
                 );
             })?;
@@ -545,25 +545,25 @@ impl GrpcInvocationHandler {
         self.invocation_channel
             .send_with_downgrade(invocation, &self.runtime)
             .map_err(|error| {
-                error!("Couldn't write gRPC invocation message: {:?}", error);
+                error!("couldn't write gRPC invocation message: {:?}", error);
             })?;
 
         // Close all local handles except for the one that allows reading responses.
         if let Err(err) = request_sender.close(&self.runtime) {
             error!(
-                "Failed to close request writer channel for invocation: {:?}",
+                "failed to close request writer channel for invocation: {:?}",
                 err
             );
         }
         if let Err(err) = request_receiver.close(&self.runtime) {
             error!(
-                "Failed to close request reader channel for invocation: {:?}",
+                "failed to close request reader channel for invocation: {:?}",
                 err
             );
         }
         if let Err(err) = response_sender.close(&self.runtime) {
             error!(
-                "Failed to close response writer channel for invocation: {:?}",
+                "failed to close response writer channel for invocation: {:?}",
                 err
             );
         }
@@ -659,12 +659,12 @@ impl Drop for GrpcResponseIterator {
     fn drop(&mut self) {
         if let Some(receiver) = self.response_reader.take() {
             trace!(
-                "Dropping GrpcResponseIterator for '{}': close channel {}",
+                "dropping GrpcResponseIterator for '{}': close channel {}",
                 self.method_name,
                 receiver.handle.handle
             );
             if let Err(err) = receiver.close(&self.runtime) {
-                error!("Failed to close gRPC response reader channel: {:?}", err);
+                error!("failed to close gRPC response reader channel: {:?}", err);
             }
         }
         // Note that dropping self.metrics_recorder will record the duration, and update the
@@ -707,7 +707,7 @@ impl Iterator for GrpcResponseIterator {
                         Some(grpc_rsp)
                     }
                     Err(error) => {
-                        error!("Error reading gRPC response: {:?}", error);
+                        error!("error reading gRPC response: {:?}", error);
                         None
                     }
                 }

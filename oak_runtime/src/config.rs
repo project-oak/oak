@@ -44,7 +44,7 @@ pub fn configure_and_run(config: RuntimeConfiguration) -> Result<Arc<Runtime>, O
     sender.send(config_map, &proxy)?;
 
     if let Err(err) = sender.close(&proxy) {
-        error!("Failed to close initial handle {:?}: {:?}", handle, err);
+        error!("failed to close initial handle {:?}: {:?}", handle, err);
     }
 
     // Now that the implicit initial Node has been used to inject the

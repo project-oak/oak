@@ -131,7 +131,7 @@ impl RoughtimeClientNode {
                         let _ = invocation
                             .send_response(grpc_response, runtime)
                             .map_err(|error| {
-                                error!("Couldn't send the response: {:?}", error);
+                                error!("couldn't send the response: {:?}", error);
                             });
                     }
                     Err(error) => {

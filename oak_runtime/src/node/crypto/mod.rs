@@ -150,7 +150,7 @@ impl CryptoNodeServer {
             },
         };
         if let Err(e) = invocation.send_response(grpc_response, runtime) {
-            error!("Couldn't send the gRPC response: {:?}", e);
+            error!("couldn't send the gRPC response: {:?}", e);
         }
     }
 }

@@ -67,7 +67,7 @@ pub fn load_database(config_map: ConfigMap) -> Result<PointOfInterestMap, OakErr
         Some(xml_database) => {
             debug!("parsing database - size: {} bytes", xml_database.len());
             let points_of_interest = parse_database(xml_database).map_err(|error| {
-                error!("Couldn't parse database: {:?}", error);
+                error!("couldn't parse database: {:?}", error);
                 OakError::OakStatus(oak_abi::OakStatus::ErrInvalidArgs)
             })?;
             debug!(
@@ -95,7 +95,7 @@ pub fn parse_database(xml_database: &[u8]) -> Result<PointOfInterestMap, OakErro
             .as_ref(),
     )
     .map_err(|error| {
-        error!("Couldn't parse XML data: {:?}", error);
+        error!("couldn't parse XML data: {:?}", error);
         OakError::OakStatus(oak_abi::OakStatus::ErrInvalidArgs)
     })?;
 
