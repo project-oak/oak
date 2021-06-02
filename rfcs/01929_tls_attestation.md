@@ -125,7 +125,6 @@ which is defined as follows:
 | TLS master key will not be compromised even if long-term secrets used in its exchange are compromised |
 | ----------------------------------------------------------------------------------------------------- |
 
-
 This means that if Token parameters are leaked, an attacker would still need the
 TLS session master secret, so they won’t be able to reconstruct the Token.
 
@@ -179,7 +178,6 @@ As defined by the
 
 | An assertion is a cryptographically verifiable statement of an identity; an identity corresponding to a given assertion is said to be asserted by that assertion |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-
 
 The protocol supports multiple assertion types (e.g. Intel SGX ECDSA, AMD
 SEV-SNP, public key), each having a type uniquely identified by a string.
