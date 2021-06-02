@@ -1,7 +1,6 @@
-package com.google.oak.functions.client;
+package com.google.oak.remote_attestation.crypto;
 
 import com.google.common.primitives.Bytes;
-import com.google.oak.functions.client.AeadEncryptor;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyPair;

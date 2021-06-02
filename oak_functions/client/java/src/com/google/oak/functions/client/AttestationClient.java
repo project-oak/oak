@@ -1,6 +1,8 @@
 package com.google.oak.functions.client;
 
 import com.google.common.base.VerifyException;
+import com.google.oak.remote_attestation.Attestor;
+import com.google.oak.remote_attestation.Encryptor;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.ManagedChannel;
@@ -20,7 +22,6 @@ import oak.functions.server.ClientIdentity;
 import oak.functions.server.RemoteAttestationGrpc;
 import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
 
-// TODO(#2121): Implement a protocol independent state machine.
 /**
  * Client with remote attestation support for sending requests to an Oak Functions loader
  * application.
@@ -30,7 +31,7 @@ public class AttestationClient {
     private final ManagedChannel channel;
     private final StreamObserver<AttestedInvokeRequest> requestObserver;
     private final BlockingQueue<AttestedInvokeResponse> messageQueue;
-    private final AeadEncryptor encryptor;
+    private final Encryptor encryptor;
 
     public AttestationClient(String uri) throws GeneralSecurityException, InterruptedException {
         // Create gRPC channel.
@@ -65,8 +66,8 @@ public class AttestationClient {
         requestObserver = stub.attestedInvoke(responseObserver);
 
         // Generate client private/public key pair.
-        KeyNegotiator keyNegotiator = new KeyNegotiator();
-        byte[] publicKey = keyNegotiator.getPublicKey();
+        Attestor attestor = new Attestor();
+        byte[] publicKey = attestor.getPublicKey();
         ByteString publicKeyBytes = ByteString.copyFrom(publicKey);
 
         // Send client public key to the server.
@@ -77,15 +78,10 @@ public class AttestationClient {
         requestObserver.onNext(request);
         AttestedInvokeResponse response = messageQueue.take();
 
-        // Verify remote attestation.
-        byte[] attestationInfo = response.getServerIdentity().getAttestationInfo().toByteArray();
-        if (!verifyAttestation(attestationInfo)) {
-            throw new VerifyException("Couldn't verify attestation info");
-        }
-
-        // Generate session key and initialize AEAD encryptor based on it.
+        // Remotely attest peer.
         byte[] peerPublicKey = response.getServerIdentity().getPublicKey().toByteArray();
-        encryptor = keyNegotiator.createAeadEncryptor(peerPublicKey);
+        byte[] peerAttestationInfo = response.getServerIdentity().getAttestationInfo().toByteArray();
+        encryptor = attestor.attest(peerPublicKey, peerAttestationInfo);
     }
 
     private Boolean verifyAttestation(byte[] attestationInfo) {

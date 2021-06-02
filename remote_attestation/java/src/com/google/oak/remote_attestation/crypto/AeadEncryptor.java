@@ -1,4 +1,4 @@
-package com.google.oak.functions.client;
+package com.google.oak.remote_attestation.crypto;
 
 import com.google.common.primitives.Bytes;
 import java.lang.IllegalArgumentException;
