@@ -33,15 +33,12 @@ public class AttestationClient {
 
     public AttestationClient(String uri) throws GeneralSecurityException, InterruptedException {
         // Create gRPC channel.
-        channel = ManagedChannelBuilder
-            .forTarget(uri)
-            .usePlaintext()
-            .build();
+        channel = ManagedChannelBuilder.forTarget(uri).usePlaintext().build();
         RemoteAttestationStub stub = RemoteAttestationGrpc.newStub(channel);
 
         // Create server response handler.
         messageQueue = new ArrayBlockingQueue<>(1);
-        StreamObserver responseObserver = new StreamObserver<AttestedInvokeResponse>() {
+        StreamObserver<AttestedInvokeResponse> responseObserver = new StreamObserver<AttestedInvokeResponse>() {
             @Override
             public void onNext(AttestedInvokeResponse response) {
                 try {
@@ -61,7 +58,8 @@ public class AttestationClient {
             }
 
             @Override
-            public void onCompleted() {}
+            public void onCompleted() {
+            }
         };
         requestObserver = stub.attestedInvoke(responseObserver);
 
@@ -71,14 +69,8 @@ public class AttestationClient {
         ByteString publicKeyBytes = ByteString.copyFrom(publicKey);
 
         // Send client public key to the server.
-        AttestedInvokeRequest request = AttestedInvokeRequest
-            .newBuilder()
-            .setClientIdentity(
-                ClientIdentity.newBuilder()
-                    .setPublicKey(publicKeyBytes)
-                    .build()
-            )
-            .build();
+        AttestedInvokeRequest request = AttestedInvokeRequest.newBuilder()
+                .setClientIdentity(ClientIdentity.newBuilder().setPublicKey(publicKeyBytes).build()).build();
         requestObserver.onNext(request);
         AttestedInvokeResponse response = messageQueue.take();
 
@@ -107,15 +99,12 @@ public class AttestationClient {
     /**
      * Encrypts and sends `message` via an attested gRPC channel to the server.
      */
-    public Response send(Request request) throws GeneralSecurityException, InterruptedException, InvalidProtocolBufferException {
+    public Response send(Request request)
+            throws GeneralSecurityException, InterruptedException, InvalidProtocolBufferException {
         byte[] encryptedMessage = encryptor.encrypt(request.getBody().toByteArray());
         oak.functions.server.Request serverRequest = oak.functions.server.Request.newBuilder()
-                    .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
-                    .build();
-        AttestedInvokeRequest attestedRequest = AttestedInvokeRequest
-            .newBuilder()
-            .setRequest(serverRequest)
-            .build();
+                .setEncryptedPayload(ByteString.copyFrom(encryptedMessage)).build();
+        AttestedInvokeRequest attestedRequest = AttestedInvokeRequest.newBuilder().setRequest(serverRequest).build();
 
         requestObserver.onNext(attestedRequest);
         AttestedInvokeResponse attestedResponse = messageQueue.take();
