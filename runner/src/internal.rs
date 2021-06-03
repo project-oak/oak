@@ -44,6 +44,7 @@ pub struct Opt {
 pub enum Command {
     RunExamples(RunExamples),
     RunFunctionsExamples(RunFunctionsExamples),
+    BuildFunctionsExample(BuildFunctionsExample),
     BuildServer(BuildServer),
     BuildFunctionsServer(BuildFunctionsServer),
     Format,
@@ -120,6 +121,47 @@ pub struct RunFunctionsExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
+}
+
+#[derive(StructOpt, Clone)]
+pub struct BuildFunctionsExample {
+    #[structopt(
+        long,
+        help = "application variant: [rust, cpp]",
+        default_value = "rust"
+    )]
+    pub application_variant: String,
+    // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
+    #[structopt(
+        long,
+        help = "name of a single example to run; if unset, run all the examples"
+    )]
+    pub example_name: Option<String>,
+    #[structopt(flatten)]
+    pub build_client: BuildClient,
+    #[structopt(flatten)]
+    pub build_server: BuildFunctionsServer,
+    #[structopt(long, help = "additional arguments to pass to clients")]
+    pub client_additional_args: Vec<String>,
+    #[structopt(long, help = "additional arguments to pass to server")]
+    pub server_additional_args: Vec<String>,
+    #[structopt(long, help = "build a Docker image for the examples")]
+    pub build_docker: bool,
+}
+
+impl From<&BuildFunctionsExample> for RunFunctionsExamples {
+    fn from(opt: &BuildFunctionsExample) -> Self {
+        RunFunctionsExamples {
+            application_variant: opt.application_variant.clone(),
+            example_name: opt.example_name.clone(),
+            build_client: opt.build_client.clone(),
+            build_server: opt.build_server.clone(),
+            run_server: Some(false),
+            client_additional_args: opt.client_additional_args.clone(),
+            server_additional_args: opt.server_additional_args.clone(),
+            build_docker: opt.build_docker,
+        }
+    }
 }
 
 #[derive(StructOpt, Clone, Debug)]

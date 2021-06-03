@@ -8,11 +8,10 @@ source "$SCRIPTS_DIR/common"
 source "$SCRIPTS_DIR/gcp_common"
 
 # Build Oak Functions server binary and the `weather_lookup` example application, and the client to test the connection.
-./scripts/docker_run ./scripts/runner run-functions-examples \
+./scripts/docker_run ./scripts/runner build-functions-example \
   --example-name=weather_lookup \
-  --run-server=false \
-  --client-variant=none
-
+  --client-variant=rust
+  
 # Build and push base Oak Functions Loader image.
 
 readonly FUNCTIONS_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-functions'
@@ -26,6 +25,9 @@ docker push "${FUNCTIONS_DOCKER_IMAGE_NAME}:latest"
 # Build and push the `weather_lookup` example application built on Oak Functions.
 
 readonly FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-functions-weather-lookup'
+
+# Copy the certificate file to the example directory.
+cp ./examples/certs/local/ca.pem ./oak_functions/examples/weather_lookup
 
 docker build \
   --tag="${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest" \
@@ -60,6 +62,6 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
 readonly HOST_NAME="$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --location="${GCP_REGION}" --format='value(defaultHostname)')"
 
 # Attempt to communicate with the newly deployed application.
-./oak_functions/client/target/debug/oak_functions_client \
+./oak_functions/client/rust/target/debug/oak_functions_client \
   --uri="https://${HOST_NAME}" \
   --request='{"lat":52,"lon":0}'

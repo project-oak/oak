@@ -37,7 +37,7 @@ To build and run this example manually follow these steps:
 1. Invoke with:
 
    ```shell
-   cargo run --manifest-path=./oak_functions/client/Cargo.toml \
+   cargo run --manifest-path=./oak_functions/client/rust/Cargo.toml -- \
        --uri=http://localhost:8080,
        --request={\"lat\":52,\"lon\":0}
    ```

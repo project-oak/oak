@@ -53,6 +53,11 @@ sed \
 readonly CONFIG_ID='weather-lookup-config'
 readonly API_ID='weather-lookup-api'
 
+# First delete the existing api-config and gateway
+# gcloud api-gateway gateways delete "${GATEWAY_ID}" --location="${GCP_REGION}"
+# gcloud api-gateway api-configs delete "${CONFIG_ID}" --api="${API_ID}" --project="${GCP_PROJECT_ID}"
+
+# Deploy the api-config and the gateway
 gcloud api-gateway api-configs create "${CONFIG_ID}" \
   --api="${API_ID}" --project="${GCP_PROJECT_ID}" \
   --grpc-files="${OUT_DIR}/server.pb,${OUT_DIR}/weather_lookup_api_config.yaml"

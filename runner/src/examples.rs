@@ -558,6 +558,59 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
     }
 }
 
+pub fn build_functions_example(opt: &BuildFunctionsExample) -> Step {
+    let example: Example = example_toml_files()
+        .map(|path| {
+            toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
+                panic!("could not parse example manifest file {:?}: {}", path, err)
+            })
+        })
+        .find(|example: &Example| match &opt.example_name {
+            Some(example_name) => &example.name == example_name,
+            None => true,
+        })
+        .expect("could not find the specified example");
+
+    // build any backend server
+    let build_client = Step::Multiple {
+        name: "build clients".to_string(),
+        steps: example
+            .clients
+            .iter()
+            .filter(|(name, _)| match opt.build_client.client_variant.as_str() {
+                ALL_CLIENTS => true,
+                client => *name == client,
+            })
+            .map(|(name, client)| Step::Single {
+                name: format!("build{}", name),
+                command: build(&client.target, &opt.build_client),
+            })
+            .collect(),
+    };
+
+    let functions_example = FunctionsExample::new(&example, opt.into());
+
+    Step::Multiple {
+        name: example.name.to_string(),
+        steps: vec![
+            functions_example.construct_application_build_steps(),
+            // Build the server first so that when running it in the next step it will start up
+            // faster.
+            vec![build_functions_server(&opt.build_server)],
+            if opt.build_docker {
+                vec![build_docker(&example)]
+            } else {
+                vec![]
+            },
+            functions_example.construct_backend_build_steps(),
+            vec![build_client],
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>(),
+    }
+}
+
 pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Step {
     match target {
         Target::Cargo {
