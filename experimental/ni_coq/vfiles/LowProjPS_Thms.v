@@ -210,27 +210,6 @@ Proof.
     intros. inversion H. destruct (top <<? ell); reflexivity.
 Qed.
 
-(* Probably delete this -- mcswiggen *)
-Theorem proj_preserves_fresh_nid: forall ell s id,
-    fresh_nid s id <->
-    fresh_nid (state_low_proj ell s) id.
-Proof.
-    unfold fresh_nid. autounfold with loweq. unfold fnd.
-    destruct s. simpl. intros. destruct (nodes id).
-    split.
-    - (* -> *)
-        intros. inversion H. pose proof (bot_is_bot ell).
-        destruct (bot <<? ell). reflexivity. contradiction.
-    - (* <- *)
-        intros. destruct (lbl <<? ell). apply H.
-        (* H tells us top = bot, so all labels must be equal. *)
-        (* This implies a contradiction in `n: ~ lbl <<L ell` *)
-        inversion H. contradiction n.
-        pose proof (top_is_top lbl). pose proof (bot_is_bot ell).
-        rewrite H1 in *. pose proof (ord_trans lbl bot ell).
-        apply H3. apply H0. apply H2.
-Qed.
-
 Theorem proj_preserves_fresh_nid_top: forall ell s id,
     fresh_nid_top s id -> (* The normal fresh_nid version has <->, but not provable here *)
     fresh_nid_top (state_low_proj ell s) id.
@@ -238,22 +217,6 @@ Proof.
     unfold fresh_nid_top. autounfold with loweq. unfold fnd.
     destruct s. simpl. intros. destruct (nodes id).
     intros. inversion H. destruct (top <<? ell); reflexivity.
-Qed.
-
-(* Unnecessary *)
-Theorem flows_proj_preserves_channel_valid: forall ell s h,
-    s.(chans).[? h].(lbl) <<L ell ->
-    channel_valid s h <-> channel_valid (state_low_proj ell s) h.
-Proof.
-    unfold channel_valid. autounfold with loweq. unfold fnd. 
-    destruct s. intros. simpl in *. destruct (chans h). simpl in *.
-    split.
-    - (* -> *)
-        destruct 1 as [ms [lvl H0]]. inversion H0.
-        do 2 eexists. destruct (lvl <<? ell). eauto. congruence.
-    - (* <- *)
-        destruct 1 as [ms [lvl H0]]. inversion H0.
-        do 2 eexists. destruct (lbl <<? ell). eauto. congruence.
 Qed.
 
 End low_projection.
@@ -347,27 +310,6 @@ Proof.
   split; intros; congruence.
 Qed.
 
-Lemma invert_chans_state_low_proj_flowsto ell lvl s han :
-  lvl <<L ell ->
-  lvl <<L (chans (state_low_proj ell s)).[? han].(lbl) ->
-  lvl <<L (chans s).[? han].(lbl).
-Proof.
-    destruct s.
-    repeat match goal with
-        | _ => progress cbn [state_low_proj
-                             State.chans State.lbl ]
-        | _ => progress cbv [low_proj chan_state_low_proj fnd]
-        | _ => destruct_match
-        | _ => tauto
-        end.
-    intros. 
-    (*
-    Note: I think this is not true with the low-projection def
-    where labels are partially secret
-    *)
-    admit.
-Admitted.
-
 Theorem node_state_proj_index_assoc: forall ell ns id,
     (node_state_low_proj ell ns) id = low_proj ell (ns id).
 Proof.
@@ -396,7 +338,7 @@ End low_equivalence.
 
 Section misc.
 
-(* These split theorems should be put somewhere else *)
+(* These split theorems are generic and could be put somewhere else to be shared. *)
 
 Theorem can_split_node_index: forall s id n ell,
     (nodes s).[? id] = {| obj := Some n; lbl := ell |} ->

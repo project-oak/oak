@@ -38,28 +38,6 @@ Definition empty_event (ell: level) := Labeled event None ell.
 Definition trace_low_eq_pni := 
     @trace_low_eq (state_low_eq)(@low_eq event).
 
-Theorem trace_leq_imples_head_st_leq: forall ell t1 t2 s1 s2,
-    (head_st t1 = Some s1) ->
-    (head_st t2 = Some s2) ->
-    (trace_low_eq_pni ell t1 t2) ->
-    (state_low_eq ell s1 s2).
-Proof.
-    inversion 3. 
-    - 
-        exfalso. rewrite <- H3 in H. inversion H.
-    - 
-        assert (xs = s1). {
-            assert (head_st ((xs, xe) :: t0 ) = Some xs) by reflexivity.
-            congruence.
-        }
-
-        assert (ys = s2). {
-            assert (head_st ((ys, ye) :: t3 ) = Some ys) by reflexivity.
-            congruence.
-        }
-    congruence.
-Qed.
-
 Theorem unobservable_node_step: forall ell s s' e id nl n,
     s.(nodes).[? id] = nl ->
     nl.(obj) = Some n ->
@@ -280,16 +258,6 @@ Proof.
     intros. logical_simplify. specialize (H id).
     congruence.
 Qed. 
-
-Lemma proj_some_chans_implies_observable: forall ell s han ch ell',
-    (chans (state_low_proj ell s)).[? han] =
-        {| obj := Some ch; lbl := ell' |} ->
-    ell' <<L ell.
-Proof.
-    autounfold with loweq. unfold fnd. destruct s. simpl.
-    intros. destruct (chans han). destruct (lbl <<? ell).
-    all: inversion H; try congruence.
-Qed.
 
 Lemma eq_chan_idx_to_eq_validity: forall s1 s2 han,
     (chans s1).[? han] = (chans s2).[? han] ->
