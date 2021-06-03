@@ -21,14 +21,14 @@ import com.google.oak.remote_attestation.crypto.AeadEncryptor;
 import com.google.oak.remote_attestation.crypto.KeyNegotiator;
 import java.security.GeneralSecurityException;
 
-public class Attestor {
+public class AttestationStateMachine {
     /**
      * Performs remote attestation and key negotiation.
      */
-    static public class UnattestedPeer {
+    public static class Unattested {
         private final KeyNegotiator keyNegotiator;
 
-        public UnattestedPeer() throws GeneralSecurityException {
+        public Unattested() throws GeneralSecurityException {
             // Generate client private/public key pair.
             keyNegotiator = new KeyNegotiator();
         }
@@ -39,14 +39,15 @@ public class Attestor {
         }
 
         /**
-         * Remotely attests a peer, agrees on the shared key and creates an `Attestor.AttestedPeer`.
+         * Remotely attests a peer, agrees on the shared key and creates an
+         * `AttestationStateMachine.Attested`.
          */
-        public AttestedPeer attest(byte[] peerPublicKey, byte[] peerAttestationInfo) throws GeneralSecurityException {
+        public Attested attest(byte[] peerPublicKey, byte[] peerAttestationInfo) throws GeneralSecurityException {
             if (!verifyAttestation(peerAttestationInfo)) {
                 throw new VerifyException("Couldn't verify attestation info");
             }
             AeadEncryptor encryptor = keyNegotiator.createAeadEncryptor(peerPublicKey);
-            return new AttestedPeer(encryptor);
+            return new Attested(encryptor);
         }
 
         private Boolean verifyAttestation(byte[] attestationInfo) {
@@ -58,10 +59,10 @@ public class Attestor {
     /**
      * Performs data encryption/decryption based on the negotiated key.
      */
-    static public class AttestedPeer {
+    public static class Attested {
         private final AeadEncryptor encryptor;
 
-        protected AttestedPeer(AeadEncryptor encryptor) {
+        protected Attested(AeadEncryptor encryptor) {
             this.encryptor = encryptor;
         }
 
