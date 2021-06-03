@@ -21,11 +21,10 @@ import com.google.oak.remote_attestation.crypto.AeadEncryptor;
 import com.google.oak.remote_attestation.crypto.KeyNegotiator;
 import java.security.GeneralSecurityException;
 
-/**
- * Performs remote attestation, key negotiation and data encryption/decryption based on the
- * negotiated key.
- */
 public class Attestor {
+    /**
+     * Performs remote attestation and key negotiation.
+     */
     static public class UnattestedPeer {
         private final KeyNegotiator keyNegotiator;
 
@@ -39,6 +38,9 @@ public class Attestor {
             return keyNegotiator.getPublicKey();
         }
 
+        /**
+         * Remotely attests a peer, agrees on the shared key and creates an `Attestor.AttestedPeer`.
+         */
         public AttestedPeer attest(byte[] peerPublicKey, byte[] peerAttestationInfo) throws GeneralSecurityException {
             if (!verifyAttestation(peerAttestationInfo)) {
                 throw new VerifyException("Couldn't verify attestation info");
@@ -53,6 +55,9 @@ public class Attestor {
         }
     }
 
+    /**
+     * Performs data encryption/decryption based on the negotiated key.
+     */
     static public class AttestedPeer {
         private final AeadEncryptor encryptor;
 
