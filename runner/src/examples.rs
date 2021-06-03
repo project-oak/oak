@@ -558,7 +558,7 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
     }
 }
 
-pub fn build_functions_example(opt: &BuildFunctionsExample) -> Step {
+pub fn build_functions_example(opt: &RunFunctionsExamples) -> Step {
     let example: Example = example_toml_files()
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
@@ -588,7 +588,7 @@ pub fn build_functions_example(opt: &BuildFunctionsExample) -> Step {
             .collect(),
     };
 
-    let functions_example = FunctionsExample::new(&example, opt.into());
+    let functions_example = FunctionsExample::new(&example, opt.clone());
 
     Step::Multiple {
         name: example.name.to_string(),
