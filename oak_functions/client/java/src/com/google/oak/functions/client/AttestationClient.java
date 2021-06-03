@@ -1,6 +1,23 @@
+//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package com.google.oak.functions.client;
 
 import com.google.common.base.VerifyException;
+import com.google.oak.remote_attestation.AttestationStateMachine;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.ManagedChannel;
@@ -20,7 +37,6 @@ import oak.functions.server.ClientIdentity;
 import oak.functions.server.RemoteAttestationGrpc;
 import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
 
-// TODO(#2121): Implement a protocol independent state machine.
 /**
  * Client with remote attestation support for sending requests to an Oak Functions loader
  * application.
@@ -30,7 +46,7 @@ public class AttestationClient {
     private final ManagedChannel channel;
     private final StreamObserver<AttestedInvokeRequest> requestObserver;
     private final BlockingQueue<AttestedInvokeResponse> messageQueue;
-    private final AeadEncryptor encryptor;
+    private final AttestationStateMachine.Attested attestedClient;
 
     public AttestationClient(String uri) throws GeneralSecurityException, InterruptedException {
         // Create gRPC channel.
@@ -65,8 +81,8 @@ public class AttestationClient {
         requestObserver = stub.attestedInvoke(responseObserver);
 
         // Generate client private/public key pair.
-        KeyNegotiator keyNegotiator = new KeyNegotiator();
-        byte[] publicKey = keyNegotiator.getPublicKey();
+        AttestationStateMachine.Unattested unattestedClient = new AttestationStateMachine.Unattested();
+        byte[] publicKey = unattestedClient.getPublicKey();
         ByteString publicKeyBytes = ByteString.copyFrom(publicKey);
 
         // Send client public key to the server.
@@ -77,15 +93,10 @@ public class AttestationClient {
         requestObserver.onNext(request);
         AttestedInvokeResponse response = messageQueue.take();
 
-        // Verify remote attestation.
-        byte[] attestationInfo = response.getServerIdentity().getAttestationInfo().toByteArray();
-        if (!verifyAttestation(attestationInfo)) {
-            throw new VerifyException("Couldn't verify attestation info");
-        }
-
-        // Generate session key and initialize AEAD encryptor based on it.
+        // Remotely attest peer.
         byte[] peerPublicKey = response.getServerIdentity().getPublicKey().toByteArray();
-        encryptor = keyNegotiator.createAeadEncryptor(peerPublicKey);
+        byte[] peerAttestationInfo = response.getServerIdentity().getAttestationInfo().toByteArray();
+        attestedClient = unattestedClient.attest(peerPublicKey, peerAttestationInfo);
     }
 
     private Boolean verifyAttestation(byte[] attestationInfo) {
@@ -103,7 +114,7 @@ public class AttestationClient {
     @SuppressWarnings("ProtoParseWithRegistry")
     public Response send(Request request)
             throws GeneralSecurityException, InterruptedException, InvalidProtocolBufferException {
-        byte[] encryptedMessage = encryptor.encrypt(request.getBody().toByteArray());
+        byte[] encryptedMessage = attestedClient.encrypt(request.getBody().toByteArray());
         oak.functions.server.Request serverRequest =
                 oak.functions.server.Request.newBuilder()
                         .setEncryptedPayload(ByteString.copyFrom(encryptedMessage))
@@ -115,7 +126,7 @@ public class AttestationClient {
         AttestedInvokeResponse attestedResponse = messageQueue.take();
 
         byte[] responsePayload = attestedResponse.getEncryptedPayload().toByteArray();
-        byte[] decryptedResponse = encryptor.decrypt(responsePayload);
+        byte[] decryptedResponse = attestedClient.decrypt(responsePayload);
         return Response.parseFrom(decryptedResponse);
     }
 }

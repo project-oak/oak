@@ -24,9 +24,7 @@ package(
 java_library(
     name = "client",
     srcs = [
-        "src/com/google/oak/functions/client/AeadEncryptor.java",
         "src/com/google/oak/functions/client/AttestationClient.java",
-        "src/com/google/oak/functions/client/KeyNegotiator.java",
     ],
     runtime_deps = [
         "@io_grpc_grpc_java//netty",
@@ -37,6 +35,31 @@ java_library(
         "//oak_functions/proto:server_java_grpc",
         "//oak_functions/proto:server_java_proto",
         "//oak_functions/proto:server_proto",
+        "//remote_attestation/java:remote_attestation",
+        "@com_google_guava_guava",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf//:protobuf_java_util",
+        "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//protobuf",
+        "@io_grpc_grpc_java//stub",
+    ],
+)
+
+java_library(
+    name = "client_tink",
+    srcs = [
+        "src/com/google/oak/functions/client/AttestationClient.java",
+    ],
+    runtime_deps = [
+        "@io_grpc_grpc_java//netty",
+    ],
+    deps = [
+        "//oak_functions/proto:invocation_java_proto",
+        "//oak_functions/proto:invocation_proto",
+        "//oak_functions/proto:server_java_grpc",
+        "//oak_functions/proto:server_java_proto",
+        "//oak_functions/proto:server_proto",
+        "//remote_attestation/java:remote_attestation_tink",
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
