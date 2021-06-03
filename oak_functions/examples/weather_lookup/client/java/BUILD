@@ -37,3 +37,21 @@ java_binary(
         "@io_grpc_grpc_java//stub",
     ],
 )
+
+java_binary(
+    name = "client_tink",
+    srcs = [
+        "src/Main.java",
+    ],
+    main_class = "com.google.oak.functions.examples.weather_lookup.client.Main",
+    deps = [
+        "//oak_functions/client/java:client_tink",
+        "//oak_functions/proto:invocation_java_proto",
+        "//oak_functions/proto:invocation_proto",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf//:protobuf_java_util",
+        "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//protobuf",
+        "@io_grpc_grpc_java//stub",
+    ],
+)

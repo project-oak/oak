@@ -25,7 +25,6 @@ java_library(
     name = "remote_attestation",
     srcs = [
         "src/com/google/oak/remote_attestation/Attestor.java",
-        "src/com/google/oak/remote_attestation/Encryptor.java",
         "src/com/google/oak/remote_attestation/crypto/AeadEncryptor.java",
         "src/com/google/oak/remote_attestation/crypto/KeyNegotiator.java",
     ],
@@ -38,7 +37,6 @@ java_library(
     name = "remote_attestation_tink",
     srcs = [
         "src/com/google/oak/remote_attestation/Attestor.java",
-        "src/com/google/oak/remote_attestation/Encryptor.java",
         "src/com/google/oak/remote_attestation/crypto/tink/AeadEncryptor.java",
         "src/com/google/oak/remote_attestation/crypto/tink/KeyNegotiator.java",
     ],

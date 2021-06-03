@@ -26,28 +26,46 @@ import java.security.GeneralSecurityException;
  * negotiated key.
  */
 public class Attestor {
-    private final KeyNegotiator keyNegotiator;
+    static public class UnattestedPeer {
+        private final KeyNegotiator keyNegotiator;
 
-    public Attestor() throws GeneralSecurityException {
-        // Generate client private/public key pair.
-        keyNegotiator = new KeyNegotiator();
-    }
-
-    /** Returns a Diffie-Hellman public key corresponding to the `keyNegotiator`. */
-    public byte[] getPublicKey() throws GeneralSecurityException {
-        return keyNegotiator.getPublicKey();
-    }
-
-    public Encryptor attest(byte[] peerPublicKey, byte[] peerAttestationInfo) throws GeneralSecurityException {
-        if (!verifyAttestation(peerAttestationInfo)) {
-            throw new VerifyException("Couldn't verify attestation info");
+        public UnattestedPeer() throws GeneralSecurityException {
+            // Generate client private/public key pair.
+            keyNegotiator = new KeyNegotiator();
         }
-        AeadEncryptor encryptor = keyNegotiator.createAeadEncryptor(peerPublicKey);
-        return new Encryptor(encryptor);
+
+        /** Returns a Diffie-Hellman public key corresponding to the `keyNegotiator`. */
+        public byte[] getPublicKey() throws GeneralSecurityException {
+            return keyNegotiator.getPublicKey();
+        }
+
+        public AttestedPeer attest(byte[] peerPublicKey, byte[] peerAttestationInfo) throws GeneralSecurityException {
+            if (!verifyAttestation(peerAttestationInfo)) {
+                throw new VerifyException("Couldn't verify attestation info");
+            }
+            AeadEncryptor encryptor = keyNegotiator.createAeadEncryptor(peerPublicKey);
+            return new AttestedPeer(encryptor);
+        }
+
+        private Boolean verifyAttestation(byte[] attestationInfo) {
+            // TODO(#1867): Add remote attestation support.
+            return true;
+        }
     }
 
-    private Boolean verifyAttestation(byte[] attestationInfo) {
-        // TODO(#1867): Add remote attestation support.
-        return true;
+    static public class AttestedPeer {
+        private final AeadEncryptor encryptor;
+
+        protected AttestedPeer(AeadEncryptor encryptor) {
+            this.encryptor = encryptor;
+        }
+
+        public byte[] encrypt(byte[] data) throws GeneralSecurityException {
+            return encryptor.encrypt(data);
+        }
+
+        public byte[] decrypt(byte[] data) throws GeneralSecurityException {
+            return encryptor.decrypt(data);
+        }
     }
 }
