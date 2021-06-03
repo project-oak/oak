@@ -334,6 +334,7 @@ pub fn run_fuzz_targets_in_crate(path: &PathBuf, opt: &RunCargoFuzz) -> Step {
 }
 
 fn format() -> Step {
+    let modified_files = modified_files();
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
@@ -342,18 +343,19 @@ fn format() -> Step {
             run_prettier(FormatMode::Fix),
             run_markdownlint(FormatMode::Fix),
             run_embedmd(FormatMode::Fix),
-            run_cargo_fmt(FormatMode::Fix),
+            run_cargo_fmt(FormatMode::Fix, &modified_files),
         ],
     }
 }
 
 fn check_format() -> Step {
+    let modified_files = modified_files();
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
-            run_check_license(),
-            run_check_build_licenses(),
-            run_check_todo(),
+            run_check_license(&modified_files),
+            run_check_build_licenses(&modified_files),
+            run_check_todo(&modified_files),
             run_clang_format(FormatMode::Check),
             run_buildifier(FormatMode::Check),
             run_prettier(FormatMode::Check),
@@ -361,7 +363,7 @@ fn check_format() -> Step {
             run_embedmd(FormatMode::Check),
             // TODO(#1304): Uncomment, when re-run from GitHub is fixed.
             // run_liche(),
-            run_cargo_fmt(FormatMode::Check),
+            run_cargo_fmt(FormatMode::Check, &modified_files),
             run_hadolint(),
             run_shellcheck(),
         ],
@@ -687,11 +689,12 @@ fn run_clang_format(mode: FormatMode) -> Step {
     }
 }
 
-fn run_check_license() -> Step {
+fn run_check_license(modified_paths: &Vec<String>) -> Step {
     Step::Multiple {
         name: "check license".to_string(),
         steps: source_files()
             .filter(is_source_code_file)
+            .filter(|file| is_modified(file.to_str().unwrap(), modified_paths))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -701,11 +704,12 @@ fn run_check_license() -> Step {
     }
 }
 
-fn run_check_build_licenses() -> Step {
+fn run_check_build_licenses(modified_paths: &Vec<String>) -> Step {
     Step::Multiple {
         name: "check BUILD licenses".to_string(),
         steps: source_files()
             .filter(is_build_file)
+            .filter(|file| is_modified(file.to_str().unwrap(), modified_paths))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -715,11 +719,12 @@ fn run_check_build_licenses() -> Step {
     }
 }
 
-fn run_check_todo() -> Step {
+fn run_check_todo(modified_paths: &Vec<String>) -> Step {
     Step::Multiple {
         name: "check todo".to_string(),
         steps: source_files()
             .filter(is_source_code_file)
+            .filter(|file| is_modified(file.to_str().unwrap(), modified_paths))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -729,10 +734,12 @@ fn run_check_todo() -> Step {
     }
 }
 
-fn run_cargo_fmt(mode: FormatMode) -> Step {
+fn run_cargo_fmt(mode: FormatMode, modified_paths: &Vec<String>) -> Step {
+    let modified_crates = modified_crates(modified_paths);
     Step::Multiple {
         name: "cargo fmt".to_string(),
         steps: crate_manifest_files()
+            .filter(|path| modified_crates.contains(&path.to_str().unwrap().to_string()))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -760,6 +767,8 @@ fn run_cargo_fmt(mode: FormatMode) -> Step {
 }
 
 fn run_cargo_test(cleanup: bool, benches: bool) -> Step {
+    let _modified_files = modified_files();
+
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: crate_manifest_files()

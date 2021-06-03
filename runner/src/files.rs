@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::{io::Read, path::PathBuf};
+use std::{io::Read, path::PathBuf, process::Command};
 
 pub fn read_file(path: &PathBuf) -> String {
     let mut file = std::fs::File::open(path).expect("could not open file");
@@ -32,6 +32,48 @@ pub fn source_files() -> impl Iterator<Item = PathBuf> {
         .filter_entry(|e| !is_ignored_entry(e))
         .filter_map(Result::ok)
         .map(|e| e.into_path())
+}
+
+// TODO: make it a class with the paths
+pub fn modified_files() -> Vec<String> {
+    let vec = Command::new("git")
+        .args(&["status", "--short"])
+        .output()
+        .expect("could not get modified files")
+        .stdout;
+    
+    // Extract the file names from the git output
+    let re = regex::Regex::new(r".{1, 2} (.*)").unwrap();
+    String::from_utf8(vec)
+        .expect("could not convert to string")
+        .split("\n")
+        .map(|s| s.trim().to_string())
+        .map(|s| {
+            re.captures(s.as_str())
+                .and_then(|caps| caps.get(1))
+                .map_or("", |m| m.as_str())
+                .to_string()
+        })
+        .filter(|s| s.len() > 0)
+        .collect()
+}
+
+/// Checks if the given file is among the modfied paths
+pub fn is_modified(file_path: &str, modified_paths: &Vec<String>) -> bool {
+    modified_paths.contains(&file_path.to_string()) || modified_paths.iter().find(|path| file_path.starts_with(path.as_str())).is_some()
+}
+
+/// Returns the list of all crates in which at least one file is modified. Returns a list of the paths to the `Cargo.toml` files.
+pub fn modified_crates(modified_files: &Vec<String>) -> Vec<String> {
+    let mut crates = vec![];
+    for path in modified_files {
+        if path.ends_with("Cargo.toml") {
+            crates.push(path.clone())
+        } else if path.ends_with(".rs") {
+            // TODO: find and add the Cargo.toml files
+        }
+    }
+    crates
 }
 
 pub fn file_contains(path: &PathBuf, pattern: &str) -> bool {
