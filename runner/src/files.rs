@@ -16,6 +16,8 @@
 
 use std::{io::Read, path::PathBuf};
 
+use crate::{diffs::all_affected_crates, internal::Diffs};
+
 pub fn read_file(path: &PathBuf) -> String {
     let mut file = std::fs::File::open(path).expect("could not open file");
     let mut contents = String::new();
@@ -49,8 +51,37 @@ pub fn file_contains(path: &PathBuf, pattern: &str) -> bool {
     }
 }
 
-pub fn example_toml_files() -> impl Iterator<Item = PathBuf> {
-    source_files().filter(is_example_toml_file)
+pub fn example_toml_files(diffs: &Diffs) -> Box<dyn Iterator<Item = PathBuf>> {
+    match diffs.commits {
+        None => Box::new(source_files().filter(is_example_toml_file)),
+        _ => affected_example_toml_filles(diffs),
+    }
+}
+
+fn affected_example_toml_filles(diffs: &Diffs) -> Box<dyn Iterator<Item = PathBuf>> {
+    // Pattern for matching the path to a file belonging to an example. The pattern has a capturing
+    // group after `examples` to capture the name of the example.
+    let re = regex::Regex::new(r#"(.*)/examples/([^/]*)/(.*)"#).unwrap();
+
+    // Using the regular expression above, find paths to the root folders of all examples that are
+    // affected by recent changes.
+    let modified_examples = all_affected_crates(&diffs)
+        .into_iter()
+        .map(move |path| {
+            re.captures(&path)
+                .map(|caps| format!("{}/examples/{}", caps[1].to_string(), caps[2].to_string()))
+        })
+        .filter(|path| path.is_some())
+        .map(|path| path.unwrap());
+
+    // Iterate through all `example.toml` files and choose and return the ones that belong to the
+    // affected examples
+    let example_toml_files = source_files().filter(is_example_toml_file);
+    Box::new(example_toml_files.filter(move |path| {
+        modified_examples
+            .clone()
+            .any(|example_root| to_string(path.clone()).starts_with(&example_root))
+    }))
 }
 
 pub fn fuzz_config_toml_files() -> impl Iterator<Item = PathBuf> {

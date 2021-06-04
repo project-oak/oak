@@ -166,7 +166,6 @@ fn run_tests() -> Step {
 
 fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
     let all_affected_crates = all_affected_crates(&opt.diffs);
-    println!("Affected crates: {:?}", all_affected_crates);
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![
@@ -709,13 +708,13 @@ fn run_clang_format(mode: FormatMode) -> Step {
     }
 }
 
-fn run_check_license(modified_paths: &ModifiedFiles) -> Step {
+fn run_check_license(modified_files: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "check license".to_string(),
         steps: source_files()
             .filter(is_source_code_file)
             .map(to_string)
-            .filter(|file| modified_paths.is_modified(file))
+            .filter(|file| modified_files.contains(file))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckLicense::new(entry),
@@ -724,13 +723,13 @@ fn run_check_license(modified_paths: &ModifiedFiles) -> Step {
     }
 }
 
-fn run_check_build_licenses(modified_paths: &ModifiedFiles) -> Step {
+fn run_check_build_licenses(modified_files: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "check BUILD licenses".to_string(),
         steps: source_files()
             .filter(is_build_file)
             .map(to_string)
-            .filter(|file| modified_paths.is_modified(file))
+            .filter(|file| modified_files.contains(file))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckBuildLicenses::new(entry),
@@ -739,13 +738,13 @@ fn run_check_build_licenses(modified_paths: &ModifiedFiles) -> Step {
     }
 }
 
-fn run_check_todo(modified_paths: &ModifiedFiles) -> Step {
+fn run_check_todo(modified_files: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "check todo".to_string(),
         steps: source_files()
             .filter(is_source_code_file)
             .map(to_string)
-            .filter(|file| modified_paths.is_modified(file))
+            .filter(|file| modified_files.contains(file))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckTodo::new(entry),
@@ -754,7 +753,7 @@ fn run_check_todo(modified_paths: &ModifiedFiles) -> Step {
     }
 }
 
-fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedFiles) -> Step {
+fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "cargo fmt".to_string(),
         steps: crate_manifest_files()
@@ -785,7 +784,7 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedFiles) -> Step {
     }
 }
 
-fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedFiles) -> Step {
+fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: crate_manifest_files()
@@ -828,7 +827,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedFiles) -> Ste
     }
 }
 
-fn run_cargo_doc(all_affected_crates: &ModifiedFiles) -> Step {
+fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "cargo doc".to_string(),
         steps: crate_manifest_files()
@@ -877,7 +876,7 @@ fn run_cargo_test_tsan() -> Step {
     }
 }
 
-fn run_cargo_clippy(all_affected_crates: &ModifiedFiles) -> Step {
+fn run_cargo_clippy(all_affected_crates: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()

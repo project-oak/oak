@@ -342,8 +342,10 @@ pub struct CargoManifest {
     #[serde(default)]
     pub dependencies: HashMap<String, Dependency>,
     #[serde(default)]
+    #[serde(rename = "dev-dependencies")]
     pub dev_dependencies: HashMap<String, Dependency>,
     #[serde(default)]
+    #[serde(rename = "build-dependencies")]
     pub build_dependencies: HashMap<String, Dependency>,
 }
 
@@ -354,13 +356,17 @@ pub struct CargoBinary {
     pub name: String,
 }
 
+/// Partial representation of a dependency in a `Cargo.toml` file.
 #[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
 #[serde(untagged)]
 pub enum Dependency {
+    /// Plaintext specification of a dependency with only the version number.
     Text(String),
+    /// Json specification of a dependency.
     Json(DependencySpec),
 }
 
+/// Partial representation of a Json specification of a dependency in a `Cargo.toml` file.
 #[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
 pub struct DependencySpec {
     #[serde(default)]
@@ -368,17 +374,19 @@ pub struct DependencySpec {
 }
 
 impl CargoManifest {
-    pub fn all_dependency_paths(self) -> Vec<String> {
-        let all_deps = itertools::merge(
-            self.dependencies.into_values(),
-            self.dev_dependencies.into_values(),
-        );
-        let all_deps = itertools::merge(all_deps, self.build_dependencies.into_values());
+    pub fn all_dependencies_with_toml_path(self) -> Vec<String> {
+        let all_deps = vec![
+            self.dependencies.into_values().collect(),
+            self.dev_dependencies.into_values().collect(),
+            self.build_dependencies.into_values().collect(),
+        ];
+        let all_deps: Vec<Dependency> = itertools::concat(all_deps);
 
         // Collect all the dependencies that specify a path.
         all_deps
+            .iter()
             .map(|dep| match dep {
-                Dependency::Json(spec) => spec.path,
+                Dependency::Json(spec) => spec.path.clone(),
                 Dependency::Text(_) => None,
             })
             .filter(|path| path.is_some())
