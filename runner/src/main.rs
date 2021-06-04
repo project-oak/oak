@@ -154,12 +154,14 @@ fn run_tests() -> Step {
 }
 
 fn run_cargo_tests(cleanup: bool, benches: bool) -> Step {
+    let all_affected_crates = all_affected_crates();
+    println!("Affected crates: {:?}", all_affected_crates);
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![
-            run_cargo_clippy(),
-            run_cargo_test(cleanup, benches),
-            run_cargo_doc(),
+            run_cargo_clippy(&all_affected_crates),
+            run_cargo_test(cleanup, benches, &all_affected_crates),
+            run_cargo_doc(&all_affected_crates),
         ],
     }
 }
@@ -350,6 +352,7 @@ fn format() -> Step {
 
 fn check_format() -> Step {
     let modified_files = modified_files();
+    println!("modified files: {:?}", modified_files);
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
@@ -689,13 +692,13 @@ fn run_clang_format(mode: FormatMode) -> Step {
     }
 }
 
-fn run_check_license(modified_paths: &Vec<String>) -> Step {
+fn run_check_license(modified_paths: &[String]) -> Step {
     Step::Multiple {
         name: "check license".to_string(),
         steps: source_files()
             .filter(is_source_code_file)
-            .filter(|file| is_modified(file.to_str().unwrap(), modified_paths))
             .map(to_string)
+            .filter(|file| is_modified(file, modified_paths))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckLicense::new(entry),
@@ -704,13 +707,13 @@ fn run_check_license(modified_paths: &Vec<String>) -> Step {
     }
 }
 
-fn run_check_build_licenses(modified_paths: &Vec<String>) -> Step {
+fn run_check_build_licenses(modified_paths: &[String]) -> Step {
     Step::Multiple {
         name: "check BUILD licenses".to_string(),
         steps: source_files()
             .filter(is_build_file)
-            .filter(|file| is_modified(file.to_str().unwrap(), modified_paths))
             .map(to_string)
+            .filter(|file| is_modified(file, modified_paths))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckBuildLicenses::new(entry),
@@ -719,13 +722,13 @@ fn run_check_build_licenses(modified_paths: &Vec<String>) -> Step {
     }
 }
 
-fn run_check_todo(modified_paths: &Vec<String>) -> Step {
+fn run_check_todo(modified_paths: &[String]) -> Step {
     Step::Multiple {
         name: "check todo".to_string(),
         steps: source_files()
             .filter(is_source_code_file)
-            .filter(|file| is_modified(file.to_str().unwrap(), modified_paths))
             .map(to_string)
+            .filter(|file| is_modified(file, modified_paths))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckTodo::new(entry),
@@ -734,13 +737,13 @@ fn run_check_todo(modified_paths: &Vec<String>) -> Step {
     }
 }
 
-fn run_cargo_fmt(mode: FormatMode, modified_paths: &Vec<String>) -> Step {
-    let modified_crates = modified_crates(modified_paths);
+fn run_cargo_fmt(mode: FormatMode, modified_crates: &[String]) -> Step {
     Step::Multiple {
         name: "cargo fmt".to_string(),
         steps: crate_manifest_files()
             .filter(|path| modified_crates.contains(&path.to_str().unwrap().to_string()))
             .map(to_string)
+            .filter(|path| modified_crates.contains(&path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new_with_env(
@@ -766,15 +769,14 @@ fn run_cargo_fmt(mode: FormatMode, modified_paths: &Vec<String>) -> Step {
     }
 }
 
-fn run_cargo_test(cleanup: bool, benches: bool) -> Step {
-    let _modified_files = modified_files();
-
+fn run_cargo_test(cleanup: bool, benches: bool, all_affected_crates: &[String]) -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: crate_manifest_files()
             // Exclude `fuzz` crates, as there are no tests and binaries should not be executed.
             .filter(|path| !is_fuzzing_toml_file(path))
             .map(to_string)
+            .filter(|path| all_affected_crates.contains(&path))
             .map(|entry| {
                 let test_run_step = |name| Step::Single {
                     name,
@@ -810,10 +812,22 @@ fn run_cargo_test(cleanup: bool, benches: bool) -> Step {
     }
 }
 
-fn run_cargo_doc() -> Step {
-    Step::Single {
+fn run_cargo_doc(all_affected_crates: &[String]) -> Step {
+    Step::Multiple {
         name: "cargo doc".to_string(),
-        command: Cmd::new("bash", &["./scripts/check_docs"]),
+        steps: crate_manifest_files()
+            .map(to_string)
+            .filter(|path| all_affected_crates.contains(&path))
+            .map(|entry| {
+                let mut path = PathBuf::from(entry);
+                path.pop();
+                let path = path.to_str().unwrap();
+                Step::Single {
+                    name: path.to_string(),
+                    command: Cmd::new("bash", &["./scripts/check_docs", path]),
+                }
+            })
+            .collect(),
     }
 }
 
@@ -847,11 +861,12 @@ fn run_cargo_test_tsan() -> Step {
     }
 }
 
-fn run_cargo_clippy() -> Step {
+fn run_cargo_clippy(all_affected_crates: &[String]) -> Step {
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
+            .filter(|path| all_affected_crates.contains(&path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new(

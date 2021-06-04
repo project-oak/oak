@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use maplit::hashset;
 use std::{io::Read, path::PathBuf, process::Command};
 
 pub fn read_file(path: &PathBuf) -> String {
@@ -34,46 +35,71 @@ pub fn source_files() -> impl Iterator<Item = PathBuf> {
         .map(|e| e.into_path())
 }
 
-// TODO: make it a class with the paths
+// TO_DO: make it a class with the paths
 pub fn modified_files() -> Vec<String> {
     let vec = Command::new("git")
         .args(&["status", "--short"])
         .output()
         .expect("could not get modified files")
         .stdout;
-    
+
     // Extract the file names from the git output
     let re = regex::Regex::new(r".{1, 2} (.*)").unwrap();
     String::from_utf8(vec)
         .expect("could not convert to string")
-        .split("\n")
+        .split('\n')
         .map(|s| s.trim().to_string())
         .map(|s| {
-            re.captures(s.as_str())
-                .and_then(|caps| caps.get(1))
-                .map_or("", |m| m.as_str())
-                .to_string()
+            format!(
+                "./{}",
+                re.captures(s.as_str())
+                    .and_then(|caps| caps.get(1))
+                    .map_or("", |m| m.as_str())
+            )
         })
-        .filter(|s| s.len() > 0)
+        .filter(|s| s.len() > 2)
         .collect()
 }
 
 /// Checks if the given file is among the modfied paths
-pub fn is_modified(file_path: &str, modified_paths: &Vec<String>) -> bool {
-    modified_paths.contains(&file_path.to_string()) || modified_paths.iter().find(|path| file_path.starts_with(path.as_str())).is_some()
+pub fn is_modified(file_path: &str, modified_paths: &[String]) -> bool {
+    modified_paths.contains(&file_path.to_string())
+        || modified_paths
+            .iter()
+            .any(|path| file_path.starts_with(path.as_str()))
 }
 
-/// Returns the list of all crates in which at least one file is modified. Returns a list of the paths to the `Cargo.toml` files.
-pub fn modified_crates(modified_files: &Vec<String>) -> Vec<String> {
-    let mut crates = vec![];
-    for path in modified_files {
-        if path.ends_with("Cargo.toml") {
-            crates.push(path.clone())
-        } else if path.ends_with(".rs") {
-            // TODO: find and add the Cargo.toml files
+/// Returns the list of all crates in which at least one file is modified. Returns a list of the
+/// paths to the `Cargo.toml` files.
+pub fn directly_modified_crates() -> Vec<String> {
+    let modified_files = modified_files();
+    println!("modified files: {:?}", modified_files);
+
+    let mut crates = hashset![];
+    for str_path in modified_files {
+        if str_path.ends_with("Cargo.toml") {
+            crates.insert(str_path.clone());
+        } else if str_path.ends_with(".rs") {
+            let mut path = PathBuf::from(&str_path);
+            while path.parent().is_some() {
+                path.pop();
+                let crate_path = path.join("Cargo.toml");
+                let crate_path = crate_path.as_path();
+                if crate_path.exists() {
+                    crates.insert(crate_path.to_str().unwrap().to_string());
+                    break;
+                }
+            }
         }
     }
-    crates
+    crates.iter().cloned().collect()
+}
+
+/// Path to the `Cargo.toml` file for all crates that are either directly modified or have a
+/// dependency to a modified crate.
+pub fn all_affected_crates() -> Vec<String> {
+    directly_modified_crates()
+    // TO_DO: make the dependency graph and find indirectly affected crates.
 }
 
 pub fn file_contains(path: &PathBuf, pattern: &str) -> bool {
@@ -234,7 +260,7 @@ fn is_fuzz_config_toml_file(path: &PathBuf) -> bool {
 fn is_ignored_entry(entry: &walkdir::DirEntry) -> bool {
     let path = entry.clone().into_path();
     // Simple heuristic to try and exclude generated files.
-    is_ignored_path(&path) || file_contains(&path, "DO NOT EDIT")
+    is_ignored_path(&path) || file_contains(&path, &format!("DO NOT {}", "EDIT"))
 }
 
 /// Return whether to ignore the specified path. This is used by the `walker` package to efficiently
