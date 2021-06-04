@@ -327,6 +327,12 @@ pub struct RunCargoFuzz {
 pub struct CargoManifest {
     #[serde(default)]
     pub bin: Vec<CargoBinary>,
+    #[serde(default)]
+    pub dependencies: HashMap<String, Dependency>,
+    #[serde(default)]
+    pub dev_dependencies: HashMap<String, Dependency>,
+    #[serde(default)]
+    pub build_dependencies: HashMap<String, Dependency>,
 }
 
 /// Partial information about a Cargo binary, as included in a Cargo manifest.
@@ -334,6 +340,43 @@ pub struct CargoManifest {
 pub struct CargoBinary {
     #[serde(default)]
     pub name: String,
+}
+
+#[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
+#[serde(untagged)]
+pub enum Dependency {
+    Text(String),
+    Json(DependencySpec),
+}
+
+#[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
+pub struct DependencySpec {
+    #[serde(default)]
+    pub path: Option<String>,
+}
+
+impl CargoManifest {
+    pub fn all_dependency_paths(self) -> Vec<String> {
+        let all_deps = itertools::merge(
+            self.dependencies.into_values(),
+            self.dev_dependencies.into_values(),
+        );
+        let all_deps = itertools::merge(all_deps, self.build_dependencies.into_values());
+
+        // Collect all the dependencies that specify a path.
+        all_deps
+            .map(|dep| match dep {
+                Dependency::Json(spec) => spec.path,
+                Dependency::Text(_) => None,
+            })
+            .filter(|path| path.is_some())
+            .map(|path| {
+                let mut path = PathBuf::from(path.unwrap());
+                path.push("Cargo.toml");
+                path.to_str().unwrap().to_string()
+            })
+            .collect()
+    }
 }
 
 /// Struct representing config files for fuzzing.

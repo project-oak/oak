@@ -24,6 +24,7 @@
 //! ```
 
 #![feature(async_closure)]
+#![feature(map_into_keys_values)]
 
 use colored::*;
 use maplit::hashmap;
@@ -352,7 +353,6 @@ fn format() -> Step {
 
 fn check_format() -> Step {
     let modified_files = modified_files();
-    println!("modified files: {:?}", modified_files);
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
@@ -821,10 +821,10 @@ fn run_cargo_doc(all_affected_crates: &[String]) -> Step {
             .map(|entry| {
                 let mut path = PathBuf::from(entry);
                 path.pop();
-                let path = path.to_str().unwrap();
+                let path = to_string(path).replace("./", "");
                 Step::Single {
-                    name: path.to_string(),
-                    command: Cmd::new("bash", &["./scripts/check_docs", path]),
+                    name: path.clone(),
+                    command: Cmd::new("bash", &["./scripts/check_docs", &path]),
                 }
             })
             .collect(),

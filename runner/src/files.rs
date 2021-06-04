@@ -15,7 +15,9 @@
 //
 
 use maplit::hashset;
-use std::{io::Read, path::PathBuf, process::Command};
+use std::{collections::HashSet, io::Read, iter::FromIterator, path::PathBuf, process::Command};
+
+use crate::internal::CargoManifest;
 
 pub fn read_file(path: &PathBuf) -> String {
     let mut file = std::fs::File::open(path).expect("could not open file");
@@ -35,29 +37,19 @@ pub fn source_files() -> impl Iterator<Item = PathBuf> {
         .map(|e| e.into_path())
 }
 
-// TO_DO: make it a class with the paths
+// Get all the files that have been changed in this branch.
 pub fn modified_files() -> Vec<String> {
     let vec = Command::new("git")
-        .args(&["status", "--short"])
+        .args(&["diff", "--name-only", "HEAD^"])
         .output()
         .expect("could not get modified files")
         .stdout;
 
     // Extract the file names from the git output
-    let re = regex::Regex::new(r".{1, 2} (.*)").unwrap();
     String::from_utf8(vec)
         .expect("could not convert to string")
         .split('\n')
-        .map(|s| s.trim().to_string())
-        .map(|s| {
-            format!(
-                "./{}",
-                re.captures(s.as_str())
-                    .and_then(|caps| caps.get(1))
-                    .map_or("", |m| m.as_str())
-            )
-        })
-        .filter(|s| s.len() > 2)
+        .map(|s| format!("./{}", s))
         .collect()
 }
 
@@ -73,7 +65,6 @@ pub fn is_modified(file_path: &str, modified_paths: &[String]) -> bool {
 /// paths to the `Cargo.toml` files.
 pub fn directly_modified_crates() -> Vec<String> {
     let modified_files = modified_files();
-    println!("modified files: {:?}", modified_files);
 
     let mut crates = hashset![];
     for str_path in modified_files {
@@ -97,9 +88,62 @@ pub fn directly_modified_crates() -> Vec<String> {
 
 /// Path to the `Cargo.toml` file for all crates that are either directly modified or have a
 /// dependency to a modified crate.
+// TODO: modified protos?
 pub fn all_affected_crates() -> Vec<String> {
-    directly_modified_crates()
-    // TO_DO: make the dependency graph and find indirectly affected crates.
+    println!("getting affected files");
+    let crate_manifest_files = crate_manifest_files();
+    println!("got all crate manifest files");
+    let mut affected_crates =
+        HashSet::<String>::from_iter(directly_modified_crates().iter().cloned());
+    for crate_path in crate_manifest_files {
+        add_affected_dependencies(crate_path, &mut affected_crates);
+    }
+    affected_crates.iter().cloned().collect()
+}
+
+fn add_affected_dependencies(crate_path: PathBuf, affected_crates: &mut HashSet<String>) {
+    if affected_crates.contains(&to_string(crate_path.clone())) {
+        return;
+    }
+    let deps = get_local_dependencies(&crate_path);
+    for dep in deps {
+        if !affected_crates.contains(&dep) {
+            let dep_path = PathBuf::from(dep.clone());
+            add_affected_dependencies(dep_path.clone(), affected_crates)
+        }
+        if affected_crates.contains(&dep) {
+            affected_crates.insert(to_string(crate_path));
+            return;
+        }
+    }
+}
+
+/// Get local dependencies.
+fn get_local_dependencies(path: &PathBuf) -> Vec<String> {
+    let cargo_manifest: CargoManifest = toml::from_str(&read_file(&path))
+        .unwrap_or_else(|err| panic!("could not parse crate manifest file {:?}: {}", path, err));
+
+    let mut dependency_paths = vec![];
+    cargo_manifest.all_dependency_paths().iter().fold(
+        &mut dependency_paths,
+        |paths, dep_path_str| {
+            let dep_path = PathBuf::from(dep_path_str);
+            let dep_path = dep_path.as_path();
+            let mut canonical_dep_path = path.clone();
+            canonical_dep_path.pop();
+            for dir in dep_path.components() {
+                if dir == std::path::Component::ParentDir {
+                    canonical_dep_path.pop();
+                } else {
+                    canonical_dep_path.push(dir);
+                }
+            }
+            paths.push(to_string(canonical_dep_path));
+            paths
+        },
+    );
+
+    dependency_paths
 }
 
 pub fn file_contains(path: &PathBuf, pattern: &str) -> bool {
