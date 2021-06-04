@@ -26,9 +26,6 @@ docker push "${FUNCTIONS_DOCKER_IMAGE_NAME}:latest"
 
 readonly FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-functions-weather-lookup'
 
-# Copy the certificate file to the example directory.
-cp ./examples/certs/local/ca.pem ./oak_functions/examples/weather_lookup
-
 docker build \
   --tag="${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest" \
   ./oak_functions/examples/weather_lookup

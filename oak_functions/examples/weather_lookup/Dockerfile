@@ -4,4 +4,3 @@ FROM gcr.io/oak-ci/oak-functions:latest
 
 COPY ./bin/weather_lookup.wasm /module.wasm
 COPY ./config.toml /config.toml
-COPY ./ca.pem /examples/certs/local/ca.pem

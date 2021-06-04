@@ -1,7 +1,6 @@
 lookup_data_url = "https://storage.googleapis.com/oak_lookup_data/lookup_data_weather"
 lookup_data_download_period = "10m"
 worker_threads = 4
-tee_certificate_path = "./examples/certs/local/ca.pem"
 
 [policy]
 constant_response_size_bytes = 90

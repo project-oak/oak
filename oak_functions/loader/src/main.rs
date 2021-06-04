@@ -55,9 +55,6 @@ struct Config {
     ///
     /// See https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Builder.html#method.worker_threads.
     worker_threads: Option<usize>,
-    /// Path to a PEM encoded X.509 certificate that signs TEE firmware key. This field must be
-    /// specified.
-    tee_certificate_path: String,
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
 }
@@ -142,14 +139,13 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
         .and_then(|policy| policy.validate())?;
 
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
-    let tee_certificate =
-        std::fs::read(&config.tee_certificate_path).context("Couldn't load certificate")?;
+    let tee_certificate = vec![];
 
     // Start server.
     let server_handle = tokio::spawn(async move {
         create_and_start_grpc_server(
             &address,
-            tee_certificate.to_vec(),
+            tee_certificate,
             &wasm_module_bytes,
             lookup_data,
             config.policy.unwrap(),
