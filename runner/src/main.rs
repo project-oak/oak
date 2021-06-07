@@ -353,6 +353,8 @@ fn format() -> Step {
 
 fn check_format() -> Step {
     let modified_files = modified_files();
+    println!("modified files: {:?}", modified_files);
+
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
