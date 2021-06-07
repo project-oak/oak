@@ -22,7 +22,7 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
-tonic = "*"
+tonic = { version = "*", features = ["tls", "tls-roots"] }
 
 [build-dependencies]
 oak_utils = { path = "../../../oak_utils" }

@@ -53,9 +53,16 @@ sed \
 readonly CONFIG_ID='weather-lookup-config'
 readonly API_ID='weather-lookup-api'
 
-# First delete the existing api-config and gateway
-# gcloud api-gateway gateways delete "${GATEWAY_ID}" --location="${GCP_REGION}"
-# gcloud api-gateway api-configs delete "${CONFIG_ID}" --api="${API_ID}" --project="${GCP_PROJECT_ID}"
+# Get the Managed Service name
+readonly MANAGED_SERVICE="$(gcloud api-gateway apis describe "${API_ID}" --format='value(managedService)')"
+
+# Delete the existing resources if present
+readonly CURRENT_API="$(gcloud beta api-gateway apis list --filter=displayName:"${API_ID}" --format='value(displayName)')"
+if [[ "$CURRENT_API" == "${API_ID}" ]]; then
+  gcloud api-gateway gateways delete "${GATEWAY_ID}" --location="${GCP_REGION}" --quiet
+  gcloud api-gateway api-configs delete "${CONFIG_ID}" --api="${API_ID}" --project="${GCP_PROJECT_ID}" --quiet
+  gcloud api-gateway apis delete "${API_ID}" --quiet
+fi
 
 # Deploy the api-config and the gateway
 gcloud api-gateway api-configs create "${CONFIG_ID}" \
@@ -66,9 +73,6 @@ gcloud api-gateway api-configs create "${CONFIG_ID}" \
 gcloud api-gateway gateways create "${GATEWAY_ID}" \
   --api="${API_ID}" --api-config="${CONFIG_ID}" \
   --location="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
-
-# Get the Managed Service name
-readonly MANAGED_SERVICE="$(gcloud api-gateway apis describe "${API_ID}" --format='value(managedService)')"
 
 # Enable the API
 gcloud services enable "${MANAGED_SERVICE}"

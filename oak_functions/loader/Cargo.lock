@@ -1666,6 +1666,7 @@ dependencies = [
  "pin-project",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-derive 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustls-native-certs",
  "tokio",
  "tokio-rustls",
  "tokio-stream",

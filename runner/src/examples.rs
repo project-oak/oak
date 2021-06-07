@@ -515,13 +515,14 @@ fn run_example(example: &ClassicExample) -> Step {
 fn run_functions_example(example: &FunctionsExample) -> Step {
     let opt = &example.options;
 
-    // build any backend server
+    // Build steps for running clients
     let run_clients = run_clients(
         &example.example,
         &opt.build_client,
         opt.client_additional_args.clone(),
     );
 
+    // Build any backend server
     #[allow(clippy::collapsible_if)]
     let run_backend_server_clients: Step = if opt.run_server.unwrap_or(true) {
         let run_server_clients = example.construct_example_server_run_step(run_clients);
@@ -559,19 +560,23 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
 }
 
 pub fn build_functions_example(opt: &RunFunctionsExamples) -> Step {
+    let example_name = &opt
+        .example_name
+        .as_ref()
+        .expect("--example-name must be specified")
+        .clone();
+
     let example: Example = example_toml_files()
         .map(|path| {
             toml::from_str(&read_file(&path)).unwrap_or_else(|err| {
                 panic!("could not parse example manifest file {:?}: {}", path, err)
             })
         })
-        .find(|example: &Example| match &opt.example_name {
-            Some(example_name) => &example.name == example_name,
-            None => true,
-        })
-        .expect("could not find the specified example");
+        .find(|example: &Example| &example.name == example_name)
+        .filter(|example| example.has_functions_app())
+        .expect("could not find the specified functions example");
 
-    // build any backend server
+    // Build steps for building clients
     let build_client = Step::Multiple {
         name: "build clients".to_string(),
         steps: example

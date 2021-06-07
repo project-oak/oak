@@ -59,6 +59,6 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
 readonly HOST_NAME="$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --location="${GCP_REGION}" --format='value(defaultHostname)')"
 
 # Attempt to communicate with the newly deployed application.
-./oak_functions/client/rust/target/debug/oak_functions_client \
+./oak_functions/client/rust/target/x86_64-unknown-linux-gnu/release/oak_functions_client \
   --uri="https://${HOST_NAME}" \
   --request='{"lat":52,"lon":0}'
