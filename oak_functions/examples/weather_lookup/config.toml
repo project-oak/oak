@@ -5,4 +5,4 @@ tee_certificate_path = "./examples/certs/local/ca.pem"
 
 [policy]
 constant_response_size_bytes = 90
-constant_processing_time = "20ms"
+constant_processing_time = "100ms"

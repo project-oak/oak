@@ -28,6 +28,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import com.google.oak.functions.android.client.R;
 import com.google.oak.functions.client.AttestationClient;
+import com.google.protobuf.ByteString;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.Runnable;
@@ -36,6 +37,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import oak.functions.invocation.Request;
+import oak.functions.invocation.Response;
 
 /** Main class for the Oak Functions Client application. */
 public class MainActivity extends Activity {
@@ -58,10 +61,10 @@ public class MainActivity extends Activity {
     Button invokeButton = findViewById(R.id.invokeButton);
     invokeButton.setOnClickListener(v -> onClick());
 
-    // Set default URI of a Cloud Run application:
-    // https://pantheon.corp.google.com/run/detail/europe-west2/oak-functions-weather-lookup/metrics?project=oak-ci
+    // Set default URI of a localhost application:
     EditText uriInput = findViewById(R.id.uriInput);
-    uriInput.setText("oak-functions-weather-lookup-62sa4xcfia-nw.a.run.app:443");
+    // 10.0.2.2 is routed to the host machine by the Android emulator.
+    uriInput.setText("10.0.2.2:8080");
 
     // Set default request payload.
     EditText requestInput = findViewById(R.id.requestInput);
@@ -80,13 +83,15 @@ public class MainActivity extends Activity {
     String uri = uriInput.getText().toString();
 
     EditText requestInput = findViewById(R.id.requestInput);
-    String request = requestInput.getText().toString();
+    byte[] requestBody = requestInput.getText().toString().getBytes();
+    Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();
 
     TextView resultTextView = findViewById(R.id.resultTextView);
     try {
       AttestationClient client = new AttestationClient(uri);
-      byte[] response = client.Send(request.getBytes());
-      String decodedResponse = new String(response, StandardCharsets.UTF_8);
+      Response response = client.send(request);
+      ByteString responseBody = response.getBody().substring(0, (int)response.getLength());
+      String decodedResponse = responseBody.toStringUtf8();
 
       Log.v("Oak", "Received response: " + decodedResponse);
       resultTextView.setTextColor(Color.GREEN);

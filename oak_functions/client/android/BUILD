@@ -27,7 +27,10 @@ android_library(
     manifest = "AndroidManifest.xml",
     resource_files = glob(["com/google/oak/functions/android/client/res/**"]),
     deps = [
-        "//oak_functions/client/java:client",
+        "//oak_functions/client/java:client_tink",
+        "//oak_functions/proto:invocation_java_proto",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf//:protobuf_java_util",
     ],
 )
 
