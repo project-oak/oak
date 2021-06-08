@@ -38,9 +38,9 @@ android_binary(
     name = "client_app",
     custom_package = "com.google.oak.functions.android.client",
     manifest = "AndroidManifest.xml",
+    multidex = "native",
     deps = [
         ":client_activity",
         "//examples/certs:gcp_certs",
     ],
-    multidex = "native",
 )

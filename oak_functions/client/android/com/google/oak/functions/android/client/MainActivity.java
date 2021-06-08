@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
     Button invokeButton = findViewById(R.id.invokeButton);
     invokeButton.setOnClickListener(v -> onClick());
 
-    // Set default URI of a localhost application:
+    // Set default URI of the Oak Functions application.
     EditText uriInput = findViewById(R.id.uriInput);
     // 10.0.2.2 is routed to the host machine by the Android emulator.
     uriInput.setText("10.0.2.2:8080");
