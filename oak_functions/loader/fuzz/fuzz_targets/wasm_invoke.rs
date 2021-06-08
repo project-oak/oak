@@ -27,7 +27,7 @@ use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandl
 use prost::Message;
 use std::sync::Arc;
 
-#[derive(Arbitrary, Debug)]
+#[derive(Arbitrary, Debug, Clone, PartialEq)]
 enum ArbitraryInstruction {
     Panic,
     ReadRequest,
@@ -56,10 +56,24 @@ lazy_static::lazy_static! {
 
 // Generate a random list of `Instruction`s and send them to the Wasm module to run.
 fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
-    let instructions = instruction_list
-        .iter()
-        .map(crate::proto::Instruction::from)
-        .collect();
+    let (folded, _) =
+        instruction_list
+            .iter()
+            .fold((vec![], None), |(mut folded, last_seen), instruction| {
+                // If there are a number of consecutive ReadRequest instructions merge them into
+                // one, since it is idempotent. This is required to avoid timeouts.
+                match last_seen {
+                    Some(ArbitraryInstruction::ReadRequest) => {
+                        if *instruction != ArbitraryInstruction::ReadRequest {
+                            folded.push(instruction.clone())
+                        }
+                    }
+                    _ => folded.push(instruction.clone()),
+                }
+                (folded, Some(instruction.clone()))
+            });
+
+    let instructions = folded.iter().map(crate::proto::Instruction::from).collect();
     let instructions = Instructions { instructions };
     let mut body = vec![];
     instructions

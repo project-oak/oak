@@ -330,7 +330,7 @@ where
         prost_config
             // Auto-derive the HandleVisit trait
             .type_attribute(".", "#[derive(::oak_io::handle::HandleVisit)]")
-            // Link relevant Oak protos to the appropirate oak_io and oak_services types.
+            // Link relevant Oak protos to the appropriate oak_io and oak_services types.
             .extern_path(".oak.handle", "::oak_io::handle")
             .extern_path(".oak.encap", "::oak_services::proto::oak::encap");
     }
