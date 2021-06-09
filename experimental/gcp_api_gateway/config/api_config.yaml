@@ -1,0 +1,28 @@
+type: google.api.Service
+config_version: 3
+
+#
+# Name of the service configuration.
+#
+name: '*.apigateway.endpoints.oak-ci.cloud.goog'
+
+#
+# API title to appear in the user interface (Google Cloud Console).
+#
+title: Hello World Streaming
+apis:
+  - name: oak.examples.hello_world.HelloWorld
+
+#
+# API usage restrictions.
+#
+usage:
+  rules:
+    # All methods can be called without an API Key for now.
+    - selector: '*'
+      allow_unregistered_calls: true
+
+backend:
+  rules:
+    - selector: '*'
+      address: grpcs://test-streaming-grpc-62sa4xcfia-nw.a.run.app

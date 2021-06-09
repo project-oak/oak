@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR='./scripts'
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# shellcheck source=scripts/gcp_common
+source "$SCRIPTS_DIR/gcp_common"
+
+gcloud auth activate-service-account \
+  --project="${GCP_PROJECT_ID}" \
+  --key-file="${GCP_ACCOUNT_FILE}"
+
+readonly BIN_OUTPUT_PATH='./experimental/gcp_api_gateway/bin'
+
+# Copy proto files to the output directory. They must be in the same location
+# as the compiled proto descriptor so that they can also be uploaded as part
+# of the deployment.
+
+mkdir --parents "${BIN_OUTPUT_PATH}"
+
+cp \
+  ./examples/hello_world/proto/hello_world.proto \
+  ./experimental/gcp_api_gateway/config/api_config.yaml \
+  "${BIN_OUTPUT_PATH}" \
+  --force
+
+# Rebuild the proto descriptor file for the API configuration.
+
+protoc \
+  --proto_path="${BIN_OUTPUT_PATH}" \
+  --include_imports \
+  --include_source_info \
+  --descriptor_set_out="${BIN_OUTPUT_PATH}/hello_world.pb" \
+  hello_world.proto
+
+# Deploy the API Configuration
+readonly CONFIG_ID='streaming-grpc-config'
+readonly API_ID='streaming-grpc-api'
+
+gcloud api-gateway api-configs create "${CONFIG_ID}" \
+  --api="${API_ID}" --project="${GCP_PROJECT_ID}" \
+  --grpc-files="${BIN_OUTPUT_PATH}/hello_world.pb,${BIN_OUTPUT_PATH}/api_config.yaml"
+
+# Deploy the API Gateway
+gcloud api-gateway gateways create 'streaming-grpc-gateway' \
+  --api="${API_ID}" --api-config="${CONFIG_ID}" \
+  --location="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+
+# Get the Managed Service name
+readonly MANAGED_SERVICE="$(gcloud api-gateway apis describe "${API_ID}" --format='value(managedService)')"
+
+# Enable the API
+gcloud services enable "${MANAGED_SERVICE}"
