@@ -15,9 +15,7 @@
 //
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    prost_build::compile_protos(
-        &["../proto/remote_attestation.proto"],
-        &["../proto"]
-    ).expect("Proto compilation failed");
+    prost_build::compile_protos(&["../proto/remote_attestation.proto"], &["../proto"])
+        .expect("Proto compilation failed");
     Ok(())
 }
