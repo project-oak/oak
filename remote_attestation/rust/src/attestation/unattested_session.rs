@@ -47,8 +47,8 @@ impl UnattestedPeer {
     }
 }
 
-/// Represents an attestation process, where current machine attests and a remote peer remotely
-/// attest each other.
+/// Represents an attestation process, where current machine and a remote peer remotely attest each
+/// other.
 pub struct MutuallyUnattested {
     /// PEM encoded X.509 certificate that signs TEE firmware key.
     tee_certificate: Vec<u8>,
@@ -91,12 +91,7 @@ impl UnattestedSession for UnattestedPeer {
     }
 
     fn verify_attestation(self, peer_identity: &AttestationIdentity) -> anyhow::Result<()> {
-        // Verify peer attestation info.
-        let peer_attestation_info = peer_identity
-            .attestation_info
-            .as_ref()
-            .context("Peer identity doesn't contain attestation info")?;
-        verify_attestation(&peer_attestation_info, &self.expected_tee_measurement)
+        verify_attestation(&peer_identity, &self.expected_tee_measurement)
             .context("Couldn't verify peer attestation info")
     }
 }
@@ -112,12 +107,7 @@ impl UnattestedSession for MutuallyUnattested {
     }
 
     fn verify_attestation(self, peer_identity: &AttestationIdentity) -> anyhow::Result<()> {
-        // Verify peer attestation info.
-        let peer_attestation_info = peer_identity
-            .attestation_info
-            .as_ref()
-            .context("Peer identity doesn't contain attestation info")?;
-        verify_attestation(&peer_attestation_info, &self.expected_tee_measurement)
+        verify_attestation(&peer_identity, &self.expected_tee_measurement)
             .context("Couldn't verify peer attestation info")
     }
 }
@@ -129,11 +119,16 @@ impl UnattestedSession for MutuallyUnattested {
 /// - Extracts the TEE measurement from the TEE report and compares it to the
 ///   `expected_tee_measurement`.
 fn verify_attestation(
-    peer_attestation_info: &AttestationInfo,
+    peer_identity: &AttestationIdentity,
     expected_tee_measurement: &[u8],
 ) -> anyhow::Result<()> {
+    // Verify peer attestation info.
     // TODO(#1867): Add remote attestation support, use real TEE reports and check that
     // `AttestationInfo::certificate` is signed by one of the root certificates.
+    let peer_attestation_info = peer_identity
+        .attestation_info
+        .as_ref()
+        .context("Peer identity doesn't contain attestation info")?;
     peer_attestation_info
         .verify()
         .context("Couldn't verify peer attestation info")?;
