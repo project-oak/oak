@@ -17,9 +17,9 @@
 fn main() {
     oak_utils::compile_protos(
         &[
-            "../../proto/aggregator.proto",
-            "../../proto/aggregator_init.proto",
+            "examples/aggregator/proto/aggregator.proto",
+            "examples/aggregator/proto/aggregator_init.proto",
         ],
-        &["../../proto", "../../../../"],
+        &["../../../../"],
     );
 }

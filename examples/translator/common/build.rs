@@ -18,7 +18,7 @@ fn main() {
     // Generate the Oak-specific server and client code for the gRPC service,
     // along with the Rust types corresponding to the message definitions.
     oak_utils::compile_protos(
-        &["../proto/translator.proto"],
-        &["../proto", "../third_party"],
+        &["examples/translator/proto/translator.proto"],
+        &["../../.."],
     );
 }

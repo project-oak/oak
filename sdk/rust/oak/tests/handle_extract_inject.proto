@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package tests;
 
-import "handle.proto";
+import "proto/handle.proto";
 
 message TestMessage {
   string other_arbitrary_field = 1;

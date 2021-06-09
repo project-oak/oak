@@ -16,7 +16,7 @@
 
 fn main() {
     oak_utils::compile_protos(
-        &["../../proto/injection.proto"],
-        &["../../proto", "../../../.."],
+        &["examples/injection/proto/injection.proto"],
+        &["../../../.."],
     );
 }

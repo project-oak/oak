@@ -17,9 +17,9 @@
 fn main() {
     oak_utils::compile_protos(
         &[
-            "../../proto/hello_world.proto",
-            "../../proto/hello_world_internal.proto",
+            "examples/hello_world/proto/hello_world.proto",
+            "examples/hello_world/proto/hello_world_internal.proto",
         ],
-        &["../../proto", "../../../../"],
+        &["../../../../"],
     );
 }

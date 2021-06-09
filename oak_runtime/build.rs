@@ -29,9 +29,9 @@ fn main() {
 
     compile_protos_with_options(
         &[
-            "../oak_services/proto/grpc_invocation.proto",
-            "../oak_services/proto/http_invocation.proto",
-            "../proto/introspection_events.proto",
+            "oak_services/proto/grpc_invocation.proto",
+            "oak_services/proto/http_invocation.proto",
+            "proto/introspection_events.proto",
         ],
         &[".."],
         ProtoOptions {

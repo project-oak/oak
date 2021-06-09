@@ -17,8 +17,8 @@
 use oak_utils::CodegenOptions;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let proto_path = "../../../examples/hello_world/proto";
-    let file_path = "hello_world.proto";
+    let proto_path = "../../../";
+    let file_path = "examples/hello_world/proto/hello_world.proto";
 
     oak_utils::generate_grpc_code(
         proto_path,

@@ -18,7 +18,7 @@
 #[allow(clippy::needless_update)]
 fn main() {
     oak_utils::compile_protos_with_options(
-        &["../proto/handle.proto"],
+        &["proto/handle.proto"],
         &[".."],
         oak_utils::ProtoOptions {
             // Exclude generation of service code and HandleVisit auto-derive, as it would require a

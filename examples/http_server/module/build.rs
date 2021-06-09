@@ -16,7 +16,7 @@
 
 fn main() {
     oak_utils::compile_protos(
-        &["../proto/http_server_init.proto"],
-        &["../proto", "../../../"],
+        &["examples/http_server/proto/http_server_init.proto"],
+        &["../../../"],
     );
 }

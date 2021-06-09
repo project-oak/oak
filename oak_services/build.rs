@@ -19,10 +19,10 @@
 fn main() {
     oak_utils::compile_protos_with_options(
         &[
-            "../oak_services/proto/grpc_encap.proto",
-            "../oak_services/proto/http_encap.proto",
-            "../third_party/google/rpc/code.proto",
-            "../third_party/google/rpc/status.proto",
+            "oak_services/proto/grpc_encap.proto",
+            "oak_services/proto/http_encap.proto",
+            "third_party/google/rpc/code.proto",
+            "third_party/google/rpc/status.proto",
         ],
         &[".."],
         oak_utils::ProtoOptions {
@@ -38,9 +38,9 @@ fn main() {
     );
     oak_utils::compile_protos_with_options(
         &[
-            "../oak_services/proto/crypto.proto",
-            "../oak_services/proto/log.proto",
-            "../oak_services/proto/roughtime_service.proto",
+            "oak_services/proto/crypto.proto",
+            "oak_services/proto/log.proto",
+            "oak_services/proto/roughtime_service.proto",
         ],
         &[".."],
         oak_utils::ProtoOptions {
