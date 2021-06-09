@@ -1,0 +1,47 @@
+#
+# Copyright 2021 The Project Oak Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+load("@rules_android//android:rules.bzl", "android_binary", "android_library")
+
+package(
+    licenses = ["notice"],
+)
+
+android_library(
+    name = "client_activity",
+    srcs = ["com/google/oak/functions/android/client/MainActivity.java"],
+    custom_package = "com.google.oak.functions.android.client",
+    manifest = "AndroidManifest.xml",
+    resource_files = glob(["com/google/oak/functions/android/client/res/**"]),
+    deps = [
+        "//oak_functions/client/java:client_tink",
+        "//oak_functions/proto:invocation_java_proto",
+        "@com_google_guava_guava",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf//:protobuf_java_util",
+    ],
+)
+
+android_binary(
+    name = "client_app",
+    custom_package = "com.google.oak.functions.android.client",
+    manifest = "AndroidManifest.xml",
+    multidex = "native",
+    deps = [
+        ":client_activity",
+        "//examples/certs:gcp_certs",
+    ],
+)

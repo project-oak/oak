@@ -1,0 +1,22 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.google.oak.functions.android.client"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+  <uses-sdk
+      android:minSdkVersion="28"
+      android:targetSdkVersion="28" />
+  <uses-permission android:name="android.permission.INTERNET"/>
+
+  <application
+      android:label="Oak Functions Client">
+    <activity
+        android:name="com.google.oak.functions.android.client.MainActivity"
+        android:label="Oak Functions Client" >
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

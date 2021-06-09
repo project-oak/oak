@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="empty"></string>
+  <string name="uri">URI</string>
+  <string name="request">Request</string>
+  <string name="invoke_button">Invoke</string>
+</resources>
