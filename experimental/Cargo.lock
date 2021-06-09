@@ -734,6 +734,7 @@ dependencies = [
  "env_logger",
  "futures-core",
  "futures-util",
+ "http",
  "log",
  "oak_utils",
  "prost",

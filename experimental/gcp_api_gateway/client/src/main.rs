@@ -15,6 +15,7 @@
 //
 
 use futures_util::stream::iter;
+use http::Uri;
 use log::info;
 use proto::{hello_world_client::HelloWorldClient, HelloRequest};
 use std::time::Duration;
@@ -42,8 +43,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let opt = Opt::from_args();
 
-    let mut endpoint = Channel::from_shared(opt.uri.to_string())?;
-    if opt.uri.starts_with("https://") {
+    let uri: Uri = opt.uri.parse()?;
+    let use_tls = uri.scheme_str() == Some("https");
+
+    let mut endpoint = Channel::builder(uri);
+    if use_tls {
         endpoint = endpoint.tls_config(ClientTlsConfig::new())?;
     }
 
@@ -51,6 +55,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut client = HelloWorldClient::new(channel);
 
+    test_unary(&mut client).await?;
+    test_client_streaming(&mut client).await?;
+    test_server_streaming(&mut client).await?;
+    test_bidi_streaming(&mut client).await?;
+
+    Ok(())
+}
+
+async fn test_unary(
+    client: &mut HelloWorldClient<Channel>,
+) -> Result<(), Box<dyn std::error::Error>> {
     info!("Tesing unary request");
     let request = tonic::Request::new(HelloRequest {
         greeting: "World".into(),
@@ -59,7 +74,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let response = client.say_hello(request).await?;
 
     info!("reply={:?}", response.into_inner().reply);
+    Ok(())
+}
 
+async fn test_client_streaming(
+    client: &mut HelloWorldClient<Channel>,
+) -> Result<(), Box<dyn std::error::Error>> {
     info!("Tesing client streaming");
     let mut requests = vec![];
     requests.push(HelloRequest {
@@ -74,6 +94,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("reply={:?}", response.into_inner().reply);
 
+    Ok(())
+}
+
+async fn test_server_streaming(
+    client: &mut HelloWorldClient<Channel>,
+) -> Result<(), Box<dyn std::error::Error>> {
     info!("Tesing server streaming");
     let request = tonic::Request::new(HelloRequest {
         greeting: "World".into(),
@@ -84,9 +110,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     while let Some(response) = stream.message().await? {
         info!("reply={:?}", response.reply);
     }
+
+    Ok(())
+}
+
+async fn test_bidi_streaming(
+    client: &mut HelloWorldClient<Channel>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    info!("Tesing bidirectional streaming");
+
     let (sender, mut receiver) = mpsc::channel(4);
 
-    info!("Tesing bidirectional streaming");
     let outbound = async_stream::stream! {
         let mut interval = time::interval(Duration::from_secs(1));
         interval.tick().await;
