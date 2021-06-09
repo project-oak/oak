@@ -101,6 +101,7 @@ impl HelloWorld for HelloWorldHandler {
     // Server streaming response type for the BidiHello method.
     type BidiHelloStream =
         Pin<Box<dyn Stream<Item = Result<HelloResponse, Status>> + Send + Sync + 'static>>;
+
     async fn bidi_hello(
         &self,
         request: Request<Streaming<HelloRequest>>,

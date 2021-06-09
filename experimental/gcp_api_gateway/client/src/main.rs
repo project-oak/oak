@@ -52,7 +52,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let channel = endpoint.connect().await?;
-
     let mut client = HelloWorldClient::new(channel);
 
     test_unary(&mut client).await?;
@@ -67,6 +66,7 @@ async fn test_unary(
     client: &mut HelloWorldClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Tesing unary request");
+
     let request = tonic::Request::new(HelloRequest {
         greeting: "World".into(),
     });
@@ -74,6 +74,7 @@ async fn test_unary(
     let response = client.say_hello(request).await?;
 
     info!("reply={:?}", response.into_inner().reply);
+
     Ok(())
 }
 
@@ -81,6 +82,7 @@ async fn test_client_streaming(
     client: &mut HelloWorldClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Tesing client streaming");
+
     let mut requests = vec![];
     requests.push(HelloRequest {
         greeting: "A".into(),
@@ -90,6 +92,7 @@ async fn test_client_streaming(
     });
 
     let request = tonic::Request::new(iter(requests));
+
     let response = client.lots_of_greetings(request).await?;
 
     info!("reply={:?}", response.into_inner().reply);
@@ -101,6 +104,7 @@ async fn test_server_streaming(
     client: &mut HelloWorldClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Tesing server streaming");
+
     let request = tonic::Request::new(HelloRequest {
         greeting: "World".into(),
     });
@@ -141,6 +145,7 @@ async fn test_bidi_streaming(
     };
 
     let response = client.bidi_hello(tonic::Request::new(outbound)).await?;
+
     let mut inbound = response.into_inner();
 
     while let Some(response) = inbound.message().await? {
