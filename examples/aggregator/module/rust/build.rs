@@ -20,6 +20,6 @@ fn main() {
             "examples/aggregator/proto/aggregator.proto",
             "examples/aggregator/proto/aggregator_init.proto",
         ],
-        &["../../../../"],
+        "../../../../",
     );
 }

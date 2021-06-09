@@ -33,7 +33,7 @@ fn main() {
             "oak_services/proto/http_invocation.proto",
             "proto/introspection_events.proto",
         ],
-        &[".."],
+        "..",
         ProtoOptions {
             ..Default::default()
         },

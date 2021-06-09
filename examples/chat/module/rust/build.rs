@@ -15,5 +15,5 @@
 //
 
 fn main() {
-    oak_utils::compile_protos(&["examples/chat/proto/chat.proto"], &["../../../../"]);
+    oak_utils::compile_protos(&["examples/chat/proto/chat.proto"], "../../../../");
 }

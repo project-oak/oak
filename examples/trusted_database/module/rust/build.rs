@@ -20,6 +20,6 @@ fn main() {
             "examples/trusted_database/proto/trusted_database.proto",
             "examples/trusted_database/proto/trusted_database_init.proto",
         ],
-        &["../../../../"],
+        "../../../../",
     );
 }

@@ -20,6 +20,6 @@ fn main() {
             "examples/hello_world/proto/hello_world.proto",
             "examples/hello_world/proto/hello_world_internal.proto",
         ],
-        &["../../../../"],
+        "../../../../",
     );
 }

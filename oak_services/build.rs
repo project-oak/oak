@@ -24,7 +24,7 @@ fn main() {
             "third_party/google/rpc/code.proto",
             "third_party/google/rpc/status.proto",
         ],
-        &[".."],
+        "..",
         oak_utils::ProtoOptions {
             // Exclude generation of service code as it would require a reference to the Oak SDK to
             // compile.
@@ -42,7 +42,7 @@ fn main() {
             "oak_services/proto/log.proto",
             "oak_services/proto/roughtime_service.proto",
         ],
-        &[".."],
+        "..",
         oak_utils::ProtoOptions {
             // Exclude generation of service code as it would require a reference to the Oak SDK to
             // compile.

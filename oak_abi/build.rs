@@ -24,7 +24,7 @@ fn main() {
             "oak_abi/proto/identity.proto",
             "oak_abi/proto/oak_abi.proto",
         ],
-        &[".."],
+        "..",
         oak_utils::ProtoOptions {
             // Exclude generation of service code and HandleVisit auto-derive, as it would require a
             // reference to the Oak SDK to compile.
