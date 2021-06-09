@@ -26,6 +26,7 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import com.google.common.base.VerifyException;
 import com.google.oak.functions.android.client.R;
 import com.google.oak.functions.client.AttestationClient;
 import com.google.protobuf.ByteString;
@@ -39,6 +40,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
+import oak.functions.invocation.StatusCode;
 
 /** Main class for the Oak Functions Client application. */
 public class MainActivity extends Activity {
@@ -64,6 +66,7 @@ public class MainActivity extends Activity {
     // Set default URI of the Oak Functions application.
     EditText uriInput = findViewById(R.id.uriInput);
     // 10.0.2.2 is routed to the host machine by the Android emulator.
+    // TODO(#2172): Connect to API Gateway instead of the host machine.
     uriInput.setText("10.0.2.2:8080");
 
     // Set default request payload.
@@ -90,6 +93,13 @@ public class MainActivity extends Activity {
     try {
       AttestationClient client = new AttestationClient(uri);
       Response response = client.send(request);
+      StatusCode responseStatus = response.getStatus();
+      if (responseStatus != StatusCode.SUCCESS) {
+        throw new VerifyException(
+          String.format("Couldn't receive response: %s", responseStatus.toString())
+        );
+      }
+
       ByteString responseBody = response.getBody().substring(0, (int)response.getLength());
       String decodedResponse = responseBody.toStringUtf8();
 

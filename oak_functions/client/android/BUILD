@@ -29,6 +29,7 @@ android_library(
     deps = [
         "//oak_functions/client/java:client_tink",
         "//oak_functions/proto:invocation_java_proto",
+        "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
     ],
