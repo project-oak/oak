@@ -9,7 +9,6 @@ license = "Apache-2.0"
 anyhow = "*"
 env_logger = "*"
 log = "*"
-oak_io = { path = "../../oak_io" }
 openssl = "*"
 prost = "*"
 ring = "*"
@@ -21,4 +20,4 @@ tonic = { version = "*", features = ["tls"] }
 x509-parser = "*"
 
 [build-dependencies]
-oak_utils = { path = "../../oak_utils" }
+prost-build = "*"
