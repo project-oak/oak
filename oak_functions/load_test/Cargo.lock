@@ -372,12 +372,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hex"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
 name = "http"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -606,26 +600,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_abi"
-version = "0.1.0"
-dependencies = [
- "oak_utils",
- "prost 0.7.0",
- "prost-build 0.7.0",
- "prost-types 0.7.0",
- "serde",
-]
-
-[[package]]
-name = "oak_derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
@@ -665,31 +639,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_io"
-version = "0.1.0"
-dependencies = [
- "either",
- "hex",
- "log",
- "oak_abi",
- "oak_derive",
- "oak_utils",
- "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-build 0.7.0",
- "prost-types 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "env_logger",
  "log",
- "oak_io",
- "oak_utils",
  "openssl",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ring",
  "rustls",
  "serde",
