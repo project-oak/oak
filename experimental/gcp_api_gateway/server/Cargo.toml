@@ -1,0 +1,23 @@
+[package]
+name = "gcp_api_gateway_server"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+async-stream = "*"
+futures-core = "*"
+futures-util = "*"
+prost = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }
+tokio-stream = "*"
+tonic = "*"
+
+[build-dependencies]
+oak_utils = "*"

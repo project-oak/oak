@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR='./scripts'
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# shellcheck source=scripts/gcp_common
+source "$SCRIPTS_DIR/gcp_common"
+
+readonly BIN_OUTPUT_PATH='./experimental/gcp_api_gateway/bin'
+
+mkdir --parents "${DEBUG_OUTPUT_PATH}"
+
+# Build the server
+cargo build \
+  --manifest-path=./experimental/gcp_api_gateway/server/Cargo.toml \
+  --release \
+  --target=x86_64-unknown-linux-musl
+  
+cp \
+  ./experimental/target/x86_64-unknown-linux-musl/release/gcp_api_gateway_server \
+  "${BIN_OUTPUT_PATH}/gcp_api_gateway_server" \
+  --force
+
+# Build and push the Docker image
+readonly GRPC_STREAMING_DOCKER_IMAGE_NAME='gcr.io/oak-ci/test-streaming-grpc'
+
+docker build \
+  --tag="${GRPC_STREAMING_DOCKER_IMAGE_NAME}:latest" \
+  ./experimental/gcp_api_gateway/
+
+docker push "${GRPC_STREAMING_DOCKER_IMAGE_NAME}:latest"
+
+gcloud auth activate-service-account \
+  --project="${GCP_PROJECT_ID}" \
+  --key-file="${GCP_ACCOUNT_FILE}"
+
+# Deploy the server to Cloud Run.
+#
+# Use beta channel of Cloud Run in order to support HTTP2 until it is generally available.
+gcloud beta run deploy 'test-streaming-grpc' \
+  --region="${GCP_REGION}" \
+  --image="${GRPC_STREAMING_DOCKER_IMAGE_NAME}:latest" \
+  --allow-unauthenticated \
+  --use-http2 \
+  --concurrency=10 \
+  --memory=4G \
+  --cpu=2 \
+  --min-instances=1 \
+  --max-instances=10 \
+  --platform=managed
+
+cargo run --manifest-path=./experimental/gcp_api_gateway/client/Cargo.toml -- \
+  --uri='https://test-streaming-grpc-62sa4xcfia-nw.a.run.app'

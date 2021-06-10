@@ -1,0 +1,21 @@
+[package]
+name = "gcp_api_gateway_client"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+async-stream = "*"
+env_logger = "*"
+futures-core = "*"
+futures-util = "*"
+http = "*"
+log = "*"
+prost = "*"
+structopt = "*"
+tokio = { version = "*", features = ["fs", "macros", "rt-multi-thread"] }
+tonic = { version = "*", features = ["tls", "tls-roots"] }
+
+[build-dependencies]
+oak_utils = "*"
