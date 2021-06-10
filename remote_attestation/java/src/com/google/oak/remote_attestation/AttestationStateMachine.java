@@ -42,7 +42,7 @@ public class AttestationStateMachine {
             keyNegotiator = new KeyNegotiator();
         }
 
-        /** Returns a Diffie-Hellman public key corresponding to the `keyNegotiator`. */
+        /** Returns an `AttestationIdentity` corresponding to the `keyNegotiator`. */
         public AttestationIdentity getIdentity() throws GeneralSecurityException {
             // Generate `AttestationInfo`.
             AttestationReport report = AttestationReport.newBuilder()

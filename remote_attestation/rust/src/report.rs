@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::{AttestationInfo, AttestationReport};
+use crate::proto::AttestationReport;
 
 // TODO(#1867): Add remote attestation support.
 const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
@@ -27,14 +27,5 @@ impl AttestationReport {
             data: data.to_vec(),
             ..Default::default()
         }
-    }
-}
-
-impl AttestationInfo {
-    /// Verifies that `AttestationInfo::report` is signed by `AttestationInfo::certificate`.
-    pub fn verify(&self) -> anyhow::Result<()> {
-        // TODO(#1867): Add remote attestation support, use real TEE reports and check that
-        // `AttestationInfo::certificate` is signed by one of the root certificates.
-        Ok(())
     }
 }

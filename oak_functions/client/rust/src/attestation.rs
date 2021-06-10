@@ -20,8 +20,9 @@ use crate::proto::{
     AttestedInvokeResponse,
 };
 use anyhow::{anyhow, Context};
-use oak_remote_attestation::attestation::{
-    attested_session::AttestedSession, unattested_session::UnattestedPeer, AttestationEngine,
+use oak_remote_attestation::{
+    attestation::{AttestationEngine, UnattestedPeer},
+    crypto::AeadEncryptor,
 };
 use tokio::sync::mpsc::Sender;
 use tonic::{transport::Channel, Request, Streaming};
@@ -81,7 +82,7 @@ impl Client {
 /// gRPC Attestation Service client implementation.
 pub struct AttestationClient {
     client: Client,
-    attested_session: AttestedSession,
+    encryptor: AeadEncryptor,
 }
 
 impl AttestationClient {
@@ -89,21 +90,18 @@ impl AttestationClient {
         let mut client = Client::create(uri)
             .await
             .context("Couldn't create gRPC client")?;
-        let attested_session = Self::attest(&mut client, expected_tee_measurement)
+        let encryptor = Self::attest(&mut client, expected_tee_measurement)
             .await
             .context("Couldn't attest server")?;
 
-        Ok(Self {
-            client,
-            attested_session,
-        })
+        Ok(Self { client, encryptor })
     }
 
     /// Attests server for a single gRPC streaming request.
     async fn attest(
         client: &mut Client,
         expected_tee_measurement: &[u8],
-    ) -> anyhow::Result<AttestedSession> {
+    ) -> anyhow::Result<AeadEncryptor> {
         let attestation_engine =
             AttestationEngine::<UnattestedPeer>::create(expected_tee_measurement)
                 .context("Couldn't create attestation state machine")?;
@@ -133,11 +131,11 @@ impl AttestationClient {
             }?;
 
         // Remotely attest server.
-        let attested_session = attestation_engine
-            .create_attested_session(&server_identity)
+        let encryptor = attestation_engine
+            .create_encryptor(&server_identity)
             .context("Couldn't attest server")?;
 
-        Ok(attested_session)
+        Ok(encryptor)
     }
 
     /// Sends data encrypted by the [`AttestationClient::encryptor`] to the server and returns
@@ -148,7 +146,7 @@ impl AttestationClient {
         request: oak_functions_abi::proto::Request,
     ) -> anyhow::Result<Option<Vec<u8>>> {
         let encrypted_message = self
-            .attested_session
+            .encryptor
             .encrypt(&request.body)
             .context("Couldn't encrypt data")?;
         let data_request = AttestedInvokeRequest {
@@ -172,7 +170,7 @@ impl AttestationClient {
                 Err(anyhow!("Received incorrect message type"))
             }?;
             let payload = self
-                .attested_session
+                .encryptor
                 .decrypt(&encrypted_payload)
                 .context("Couldn't decrypt data")?;
             Some(payload)

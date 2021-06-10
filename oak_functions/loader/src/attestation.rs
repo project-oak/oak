@@ -21,8 +21,9 @@ use crate::proto::{
 use anyhow::{anyhow, Context};
 use futures::{Stream, StreamExt};
 use log::warn;
-use oak_remote_attestation::attestation::{
-    attested_session::AttestedSession, unattested_session::UnattestedSelf, AttestationEngine,
+use oak_remote_attestation::{
+    attestation::{AttestationEngine, UnattestedSelf},
+    crypto::AeadEncryptor,
 };
 use std::pin::Pin;
 use tonic::{Request, Response, Status, Streaming};
@@ -51,7 +52,7 @@ where
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
     /// Utility object for decrypting and encrypting messages using a Diffie-Hellman session key.
-    attested_session: AttestedSession,
+    encryptor: AeadEncryptor,
     /// Handler function that processes data from client requests and creates responses.
     handler: F,
 }
@@ -61,11 +62,8 @@ where
     F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
-    pub fn new(attested_session: AttestedSession, handler: F) -> Self {
-        Self {
-            attested_session,
-            handler,
-        }
+    pub fn new(encryptor: AeadEncryptor, handler: F) -> Self {
+        Self { encryptor, handler }
     }
 
     /// Decrypts a client request, runs [`RequestHandler::handler`] on them and returns an encrypted
@@ -87,7 +85,7 @@ where
                 Err(anyhow!("Received incorrect message type"))
             }?;
             let request_payload = self
-                .attested_session
+                .encryptor
                 .decrypt(
                     &secure_request
                         .encrypted_payload
@@ -101,7 +99,7 @@ where
 
             let response_payload = (self.handler.clone())(request).await?;
             let encrypted_response_payload = self
-                .attested_session
+                .encryptor
                 .encrypt(&response_payload)
                 .context("Couldn't encrypt data")?;
             let response = AttestedInvokeResponse {
@@ -155,7 +153,7 @@ where
         let request_stream = request_stream.into_inner();
         let response_stream = async_stream::try_stream! {
             let mut receiver = Receiver { request_stream };
-            let (attestation_response, attested_server) = attest(&mut receiver, &tee_certificate)
+            let (attestation_response, encryptor) = attest(&mut receiver, &tee_certificate)
                 .await
                 .map_err(|error| {
                     let message = format!("Couldn't attest to the client: {:?}", error).to_string();
@@ -164,7 +162,7 @@ where
                 })?;
             yield attestation_response;
 
-            let mut handler = RequestHandler::<F, S>::new(attested_server, request_handler);
+            let mut handler = RequestHandler::<F, S>::new(encryptor, request_handler);
             while let Some(response) = handler.handle_request(&mut receiver).await.map_err(|error| {
                 let message = format!("Couldn't handle request: {:?}", error);
                 warn!("{}", message);
@@ -182,7 +180,7 @@ where
 async fn attest(
     receiver: &mut Receiver,
     tee_certificate: &[u8],
-) -> anyhow::Result<(AttestedInvokeResponse, AttestedSession)> {
+) -> anyhow::Result<(AttestedInvokeResponse, AeadEncryptor)> {
     let request = receiver
         .receive()
         .await
@@ -192,10 +190,10 @@ async fn attest(
     // Receive client's attestation request containing a public key.
     let request_type = request.request_type.context("Couldn't read request type")?;
     let client_identity = if let RequestType::ClientIdentity(request) = request_type {
-        Ok(request)
+        request
     } else {
-        Err(anyhow!("Received incorrect message type"))
-    }?;
+        anyhow::bail!("Received incorrect message type");
+    };
 
     let attestation_engine = AttestationEngine::<UnattestedSelf>::create(tee_certificate)
         .context("Couldn't create attestation engine")?;
@@ -207,9 +205,9 @@ async fn attest(
     let attestation_response = AttestedInvokeResponse {
         response_type: Some(ResponseType::ServerIdentity(identity)),
     };
-    let attested_session = attestation_engine
-        .create_attested_session(&client_identity)
+    let encryptor = attestation_engine
+        .create_encryptor(&client_identity)
         .context("Couldn't attest to client")?;
 
-    Ok((attestation_response, attested_session))
+    Ok((attestation_response, encryptor))
 }
