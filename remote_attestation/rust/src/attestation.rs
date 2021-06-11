@@ -72,10 +72,7 @@ where
         peer_identity: &AttestationIdentity,
     ) -> anyhow::Result<AeadEncryptor> {
         // Verify peer attestation info.
-        let peer_attestation_info = peer_identity
-            .attestation_info
-            .as_ref()
-            .context("Peer identity doesn't contain attestation info")?;
+        let peer_attestation_info = &peer_identity.attestation_info;
         self.attestation_type
             .verify_attestation_info(&peer_attestation_info)
             .context("Couldn't verify peer attestation info")?;
@@ -173,8 +170,10 @@ pub trait AttestationType {
     /// Generates attestation info if trait implementor can be remotely attested a peer.
     fn generate_attestation_info(&self, public_key_hash: &[u8]) -> Option<AttestationInfo>;
     /// Verifies peer attestation info if trait implementor can remotely attest a peer.
-    fn verify_attestation_info(self, peer_attestation_info: &AttestationInfo)
-        -> anyhow::Result<()>;
+    fn verify_attestation_info(
+        self,
+        peer_attestation_info: &Option<AttestationInfo>,
+    ) -> anyhow::Result<()>;
 }
 
 impl AttestationType for UnattestedSelf {
@@ -191,7 +190,7 @@ impl AttestationType for UnattestedSelf {
     /// by peer.
     fn verify_attestation_info(
         self,
-        _peer_attestation_info: &AttestationInfo,
+        _peer_attestation_info: &Option<AttestationInfo>,
     ) -> anyhow::Result<()> {
         Ok(())
     }
@@ -204,8 +203,11 @@ impl AttestationType for UnattestedPeer {
 
     fn verify_attestation_info(
         self,
-        peer_attestation_info: &AttestationInfo,
+        peer_attestation_info: &Option<AttestationInfo>,
     ) -> anyhow::Result<()> {
+        let peer_attestation_info = peer_attestation_info
+            .as_ref()
+            .context("No attestation info provided")?;
         verify_attestation(&peer_attestation_info, &self.expected_tee_measurement)
             .context("Couldn't verify peer attestation info")
     }
@@ -223,8 +225,11 @@ impl AttestationType for MutuallyUnattested {
 
     fn verify_attestation_info(
         self,
-        peer_attestation_info: &AttestationInfo,
+        peer_attestation_info: &Option<AttestationInfo>,
     ) -> anyhow::Result<()> {
+        let peer_attestation_info = peer_attestation_info
+            .as_ref()
+            .context("No attestation info provided")?;
         verify_attestation(&peer_attestation_info, &self.expected_tee_measurement)
             .context("Couldn't verify peer attestation info")
     }
