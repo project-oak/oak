@@ -18,15 +18,11 @@ use crate::proto::EncryptedData;
 use anyhow::anyhow;
 use ring::{
     aead::{self, BoundKey},
-    agreement, rand,
+    agreement,
+    rand::{SecureRandom, SystemRandom},
 };
 use sha2::{digest::Digest, Sha256};
 
-// `ring::aead` uses 96-bit (12-byte) nonces.
-// https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html
-//
-// TODO(#2087): Use a unique nonce for each message.
-const NONCE: [u8; aead::NONCE_LEN] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 // Algorithm used for encrypting/decrypting messages.
 // https://datatracker.ietf.org/doc/html/rfc5288
 static AEAD_ALGORITHM: &aead::Algorithm = &aead::AES_256_GCM;
@@ -68,11 +64,14 @@ impl AeadEncryptor {
 
     /// Encrypts `data` using [`AeadEncryptor::key`].
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<EncryptedData> {
+        // Generate a random nonce.
+        let nonce = Self::generate_nonce();
+
         // Bind `AeadEncryptor::key` to a `NONCE`.
         let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.key)
             .map_err(|error| anyhow!("Couldn't create sealing key: {:?}", error))?;
         let mut sealing_key =
-            ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new(NONCE));
+            ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new(nonce));
 
         let mut encrypted_data = data.to_vec();
         sealing_key
@@ -85,7 +84,7 @@ impl AeadEncryptor {
             .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
 
         Ok(EncryptedData {
-            nonce: NONCE.to_vec(),
+            nonce: nonce.to_vec(),
             data: encrypted_data,
         })
     }
@@ -96,7 +95,7 @@ impl AeadEncryptor {
     pub fn decrypt(&mut self, data: &EncryptedData) -> anyhow::Result<Vec<u8>> {
         // Extract nonce from `data`.
         let mut nonce: [u8; aead::NONCE_LEN] = Default::default();
-        nonce.copy_from_slice(&data.nonce[0..NONCE.len()]);
+        nonce.copy_from_slice(&data.nonce[0..aead::NONCE_LEN]);
 
         // Bind `AeadEncryptor::key` to the extracted `nonce`.
         let unbound_opening_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.key).unwrap();
@@ -114,6 +113,16 @@ impl AeadEncryptor {
             .map_err(|error| anyhow!("Couldn't decrypt data: {:?}", error))?;
         Ok(decrypted_data.to_vec())
     }
+
+    /// Generate a random nonce.
+    /// `ring::aead` uses 96-bit (12-byte) nonces.
+    /// https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html
+    fn generate_nonce() -> [u8; aead::NONCE_LEN] {
+        let mut nonce: [u8; aead::NONCE_LEN] = Default::default();
+        let rng = SystemRandom::new();
+        rng.fill(&mut nonce).unwrap();
+        nonce
+    }
 }
 
 /// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
@@ -124,7 +133,7 @@ pub struct KeyNegotiator {
 
 impl KeyNegotiator {
     pub fn create() -> anyhow::Result<Self> {
-        let rng = rand::SystemRandom::new();
+        let rng = ring::rand::SystemRandom::new();
         let private_key = agreement::EphemeralPrivateKey::generate(KEY_AGREEMENT_ALGORITHM, &rng)
             .map_err(|error| anyhow!("Couldn't generate private key: {:?}", error))?;
         Ok(Self { private_key })
