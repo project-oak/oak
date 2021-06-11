@@ -23,7 +23,6 @@ use ring::{
     rand::{SecureRandom, SystemRandom},
 };
 use sha2::{digest::Digest, Sha256};
-use std::cmp::Ordering;
 
 // Algorithm used for encrypting/decrypting messages.
 // https://datatracker.ietf.org/doc/html/rfc5288
@@ -33,7 +32,7 @@ static AEAD_ALGORITHM: &aead::Algorithm = &aead::AES_256_GCM;
 static KEY_AGREEMENT_ALGORITHM: &agreement::Algorithm = &agreement::X25519;
 /// Salt used for key derivation with HKDF.
 /// https://datatracker.ietf.org/doc/html/rfc5869
-const HKDF_SALT: &str = "Remote Attestation Protocol v1";
+const KEY_DERIVATION_SALT: &str = "Remote Attestation Protocol v1";
 /// Purpose string used for deriving session keys with HKDF.
 const SESSION_KEY_PURPOSE: &str = "Remote Attestation Protocol Session Key";
 
@@ -155,7 +154,7 @@ impl KeyNegotiator {
     }
 
     pub fn derive_session_key(self, peer_public_key: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let public_key = self.public_key()?;
+        let self_public_key = self.public_key()?;
         let session_key = agreement::agree_ephemeral(
             self.private_key,
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
@@ -163,7 +162,7 @@ impl KeyNegotiator {
             |key_material| {
                 Self::key_derivation_function(
                     key_material,
-                    &public_key,
+                    &self_public_key,
                     &peer_public_key.as_ref().to_vec(),
                 )
             },
@@ -179,23 +178,17 @@ impl KeyNegotiator {
     /// TODO(#2181): Use separate keys for server and client encryption.
     fn key_derivation_function(
         key_material: &[u8],
-        public_key: &[u8],
+        self_public_key: &[u8],
         peer_public_key: &[u8],
     ) -> Result<Vec<u8>, ring::error::Unspecified> {
         // Session key is derived from a purpose string, public key and peer public key.
-        let mut info = vec![];
-        info.push(SESSION_KEY_PURPOSE.as_bytes());
+        let mut info = vec![self_public_key, peer_public_key];
         // Sort public keys so that keys derived on the both sides of the protocol are equal.
-        if public_key.iter().cmp(peer_public_key.iter()) == Ordering::Less {
-            info.push(public_key);
-            info.push(peer_public_key);
-        } else {
-            info.push(peer_public_key);
-            info.push(public_key);
-        }
+        info.sort();
+        info.insert(0, SESSION_KEY_PURPOSE.as_bytes());
 
         // Initialize key derivation function.
-        let salt = Salt::new(HKDF_SHA256, HKDF_SALT.as_bytes());
+        let salt = Salt::new(HKDF_SHA256, KEY_DERIVATION_SALT.as_bytes());
         let kdf = salt.extract(key_material);
 
         // Derive session key.
