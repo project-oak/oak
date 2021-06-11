@@ -55,10 +55,11 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --max-instances=10 \
   --platform=managed
 
-# Find the gateway URL.
-readonly HOST_NAME="$(gcloud api-gateway gateways describe "${GATEWAY_ID}" --location="${GCP_REGION}" --format='value(defaultHostname)')"
+# Find the Cloud Endpoint URL.
+readonly CLOUD_RUN_SERVICE_NAME='weather-lookup-endpoint'
+readonly CLOUD_RUN_SERVICE_URL="$(gcloud beta run services describe "${CLOUD_RUN_SERVICE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')" 
 
 # Attempt to communicate with the newly deployed application.
 ./oak_functions/client/rust/target/x86_64-unknown-linux-gnu/release/oak_functions_client \
-  --uri="https://${HOST_NAME}" \
+  --uri="${CLOUD_RUN_SERVICE_URL}" \
   --request='{"lat":52,"lon":0}'
