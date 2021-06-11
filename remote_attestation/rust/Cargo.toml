@@ -11,6 +11,7 @@ env_logger = "*"
 log = "*"
 openssl = "*"
 prost = "*"
+rand = "*"
 ring = "*"
 rustls = "*"
 serde = { version = "*", features = ["derive"] }

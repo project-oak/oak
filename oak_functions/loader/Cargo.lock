@@ -850,6 +850,7 @@ dependencies = [
  "openssl",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand",
  "ring",
  "rustls",
  "serde",
