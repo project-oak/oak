@@ -17,8 +17,8 @@
 package com.google.oak.remote_attestation;
 
 import com.google.common.base.VerifyException;
-import com.google.oak.remote_attestation.crypto.AeadEncryptor;
-import com.google.oak.remote_attestation.crypto.KeyNegotiator;
+import com.google.oak.remote_attestation.AeadEncryptor;
+import com.google.oak.remote_attestation.KeyNegotiator;
 import com.google.protobuf.ByteString;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;

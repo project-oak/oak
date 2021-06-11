@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.remote_attestation.crypto;
+package com.google.oak.remote_attestation;
 
 import com.google.common.primitives.Bytes;
 import com.google.crypto.tink.subtle.AesGcmJce;
