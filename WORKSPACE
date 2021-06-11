@@ -264,13 +264,13 @@ load("@rules_android//android:rules.bzl", "android_ndk_repository", "android_sdk
 
 android_sdk_repository(
     name = "androidsdk",
-    api_level = 28,
-    build_tools_version = "28.0.3",
+    api_level = 30,
+    build_tools_version = "30.0.2",
 )
 
 android_ndk_repository(
     name = "androidndk",
-    api_level = 28,
+    api_level = 30,
 )
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")

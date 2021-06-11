@@ -1,5 +1,6 @@
-# Download Debian-9 (Stretch) with openjdk-8 that is required for Android.
-ARG debian_snapshot=stretch-20200327
+# Use fixed snapshot of Debian to create a deterministic environment.
+# Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags
+ARG debian_snapshot=buster-20210511
 FROM debian/snapshot:${debian_snapshot}
 
 RUN apt-get --yes update && \
@@ -15,7 +16,7 @@ RUN apt-get --yes update && \
     libmpfr-dev \
     libncurses5 \
     ocaml-nox \
-    openjdk-8-jdk \
+    openjdk-11-jdk \
     python-dev \
     python2.7-dev \
     python3-dev \
@@ -56,15 +57,14 @@ RUN mkdir --parents ${ANDROID_HOME} \
 # https://developer.android.com/studio/releases/platform-tools
 # https://developer.android.com/studio/releases/platforms
 # https://developer.android.com/studio/releases/build-tools
-# '28.0.3' is the maximal version supported by NDK.
-ARG platform=28
-ARG tools=28.0.3
+ARG platform=30
+ARG tools=30.0.2
 RUN ${ANDROID_HOME}/tools/bin/sdkmanager --update \
     && yes | ${ANDROID_HOME}/tools/bin/sdkmanager --licenses \
     && yes | ${ANDROID_HOME}/tools/bin/sdkmanager \
     'tools' 'platform-tools' 'cmake;3.6.4111459' \
     "platforms;android-${platform}" "build-tools;${tools}" \
-    "system-images;android-${platform};default;x86_64"
+    "system-images;android-${platform};google_apis;x86_64"
 
 # Set up Android SDK paths.
 ENV PATH "${PATH}:${ANDROID_HOME}/emulator:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools/bin"
@@ -74,12 +74,12 @@ ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${ANDROID_HOME}/emulator/lib64:${ANDROID
 # `no` is used to opt-out from custom hardware profile.
 RUN echo no | ${ANDROID_HOME}/tools/bin/avdmanager create avd \
     -n "android-${platform}-x86_64" \
-    -k "system-images;android-${platform};default;x86_64" \
+    -k "system-images;android-${platform};google_apis;x86_64" \
     -b x86_64
 
 # Install Android NDK
 # https://developer.android.com/ndk/downloads
-ARG android_ndk_version=r20b
+ARG android_ndk_version=r21e
 ENV ANDROID_NDK_HOME /opt/android-ndk
 RUN mkdir --parents ${ANDROID_NDK_HOME} \
     && curl --location https://dl.google.com/android/repository/android-ndk-"${android_ndk_version}"-linux-x86_64.zip > android_ndk.zip \

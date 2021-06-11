@@ -3,6 +3,6 @@
     android:versionCode="1"
     android:versionName="1.0" >
   <uses-sdk
-      android:minSdkVersion="28"
-      android:targetSdkVersion="28" />
+      android:minSdkVersion="30"
+      android:targetSdkVersion="30" />
 </manifest>
