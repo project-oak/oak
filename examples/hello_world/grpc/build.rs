@@ -18,8 +18,8 @@ use oak_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "../proto",
-        &["hello_world.proto"],
+        "../../../",
+        &["examples/hello_world/proto/hello_world.proto"],
         CodegenOptions {
             build_client: true,
             ..Default::default()

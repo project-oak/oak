@@ -16,7 +16,7 @@
 
 fn main() {
     oak_utils::compile_protos(
-        &["../../proto/proxy_attestation_example.proto"],
-        &["../../proto", "../../../../"],
+        &["examples/proxy_attestation/proto/proxy_attestation_example.proto"],
+        "../../../../",
     );
 }

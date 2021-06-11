@@ -18,8 +18,8 @@ use oak_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "../../proto",
-        &["proxy_attestation_example.proto"],
+        "../../../../",
+        &["examples/proxy_attestation/proto/proxy_attestation_example.proto"],
         CodegenOptions {
             build_client: true,
             ..Default::default()

@@ -18,8 +18,8 @@ use oak_utils::{compile_protos_with_options, generate_grpc_code, CodegenOptions,
 
 fn main() {
     generate_grpc_code(
-        "../proto",
-        &["authentication.proto"],
+        "../",
+        &["proto/authentication.proto"],
         CodegenOptions {
             build_server: true,
             ..Default::default()
@@ -29,11 +29,11 @@ fn main() {
 
     compile_protos_with_options(
         &[
-            "../oak_services/proto/grpc_invocation.proto",
-            "../oak_services/proto/http_invocation.proto",
-            "../proto/introspection_events.proto",
+            "oak_services/proto/grpc_invocation.proto",
+            "oak_services/proto/http_invocation.proto",
+            "proto/introspection_events.proto",
         ],
-        &[".."],
+        "..",
         ProtoOptions {
             ..Default::default()
         },

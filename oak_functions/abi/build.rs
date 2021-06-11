@@ -18,11 +18,11 @@ extern crate prost_build;
 
 fn main() {
     let file_paths = [
-        "../proto/abi.proto",
-        "../proto/lookup_data.proto",
-        "../proto/invocation.proto",
+        "oak_functions/proto/abi.proto",
+        "oak_functions/proto/lookup_data.proto",
+        "oak_functions/proto/invocation.proto",
     ];
-    prost_build::compile_protos(&file_paths, &["../proto"]).expect("Proto compilation failed");
+    prost_build::compile_protos(&file_paths, &["../.."]).expect("Proto compilation failed");
 
     // Tell cargo to rerun this build script if the proto file has changed.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath

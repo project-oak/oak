@@ -297,15 +297,19 @@ impl Default for ProtoOptions {
 /// emitting generated code to crate's `OUT_DIR`.  For gRPC service definitions, this
 /// function generates Oak-specific code that is suitable for use inside an Oak Node (i.e.  *not*
 /// code that is suitable for use in a normal application running on the host platform).
-pub fn compile_protos<P>(inputs: &[P], includes: &[P])
+///
+/// `root_repo` is the path to the root repository. All paths to `.proto` files must be specified
+/// relative to `repo_root`. Likewise, all imported paths in `.proto` files must be specified
+/// relative to this path.
+pub fn compile_protos<P>(inputs: &[P], repo_root: P)
 where
     P: AsRef<std::path::Path>,
 {
-    compile_protos_with_options(inputs, includes, ProtoOptions::default());
+    compile_protos_with_options(inputs, repo_root, ProtoOptions::default());
 }
 
 /// Like `compile_protos`, but allows for configuring options through `ProtoOptions`.
-pub fn compile_protos_with_options<P>(inputs: &[P], includes: &[P], options: ProtoOptions)
+pub fn compile_protos_with_options<P>(inputs: &[P], repo_root: P, options: ProtoOptions)
 where
     P: AsRef<std::path::Path>,
 {
@@ -353,7 +357,7 @@ where
             "#[derive(serde::Deserialize, serde::Serialize)]",
         )
         .type_attribute(".oak.label", "#[serde(rename_all = \"camelCase\")]")
-        .compile_protos(inputs, includes)
+        .compile_protos(inputs, &[repo_root])
         .expect("could not run prost-build");
 }
 
@@ -384,6 +388,10 @@ impl ExternPath {
 }
 
 /// Generate gRPC code from Protobuf using `tonic` library.
+///
+/// The path to the root repository must be passed as `proto_path`. All paths to `.proto` files
+/// must be specified relative to this path. Likewise, all imported paths in `.proto` files must
+/// be specified relative to this path.
 pub fn generate_grpc_code(
     proto_path: &str,
     file_paths: &[&str],

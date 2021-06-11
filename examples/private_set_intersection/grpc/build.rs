@@ -18,8 +18,8 @@ use oak_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "../proto",
-        &["private_set_intersection.proto"],
+        "../../../",
+        &["examples/private_set_intersection/proto/private_set_intersection.proto"],
         CodegenOptions {
             build_client: true,
             ..Default::default()

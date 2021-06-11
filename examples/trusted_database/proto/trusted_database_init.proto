@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.examples.trusted_database_init;
 
-import "trusted_database.proto";
+import "examples/trusted_database/proto/trusted_database.proto";
 import "oak_services/proto/grpc_invocation.proto";
 import "oak_services/proto/log.proto";
 import "proto/handle.proto";

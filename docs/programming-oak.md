@@ -245,10 +245,7 @@ to autogenerate Rust code from a
 fn main() {
     // Generate the Oak-specific server and client code for the gRPC service,
     // along with the Rust types corresponding to the message definitions.
-    oak_utils::compile_protos(
-        &["../proto/translator.proto"],
-        &["../proto", "../third_party"],
-    );
+    oak_utils::compile_protos(&["examples/translator/proto/translator.proto"], "../../..");
 }
 ```
 <!-- prettier-ignore-end -->

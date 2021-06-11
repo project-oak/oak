@@ -17,9 +17,9 @@
 fn main() {
     oak_utils::compile_protos(
         &[
-            "../../proto/trusted_database.proto",
-            "../../proto/trusted_database_init.proto",
+            "examples/trusted_database/proto/trusted_database.proto",
+            "examples/trusted_database/proto/trusted_database_init.proto",
         ],
-        &["../../proto", "../../../../"],
+        "../../../../",
     );
 }

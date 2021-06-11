@@ -18,8 +18,8 @@ use oak_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "../../examples/trusted_database/proto",
-        &["trusted_database.proto"],
+        "../../",
+        &["examples/trusted_database/proto/trusted_database.proto"],
         CodegenOptions {
             build_client: true,
             build_server: true,

@@ -17,13 +17,13 @@
 fn main() {
     oak_utils::compile_protos_with_options(
         &[
-            "../../../oak_services/proto/grpc_invocation.proto",
-            "../../../oak_services/proto/http_invocation.proto",
-            "../../../oak_services/proto/crypto.proto",
-            "../../../oak_services/proto/storage_service.proto",
-            "../../../oak_services/proto/roughtime_service.proto",
+            "oak_services/proto/grpc_invocation.proto",
+            "oak_services/proto/http_invocation.proto",
+            "oak_services/proto/crypto.proto",
+            "oak_services/proto/storage_service.proto",
+            "oak_services/proto/roughtime_service.proto",
         ],
-        &["../../.."],
+        "../../..",
         oak_utils::ProtoOptions {
             ..Default::default()
         },
@@ -33,8 +33,8 @@ fn main() {
     handle_tests_out.push("handle_tests");
     std::fs::create_dir_all(&handle_tests_out).unwrap();
     oak_utils::compile_protos_with_options(
-        &["tests/handle_extract_inject.proto"],
-        &["tests/", "../../../proto"],
+        &["sdk/rust/oak/tests/handle_extract_inject.proto"],
+        "../../..",
         oak_utils::ProtoOptions {
             out_dir_override: Some(handle_tests_out),
             ..Default::default()

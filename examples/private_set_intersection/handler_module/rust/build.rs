@@ -16,7 +16,7 @@
 
 fn main() {
     oak_utils::compile_protos(
-        &["../../proto/private_set_intersection.proto"],
-        &["../../proto"],
+        &["examples/private_set_intersection/proto/private_set_intersection.proto"],
+        "../../../..",
     );
 }

@@ -15,8 +15,5 @@
 //
 
 fn main() {
-    oak_utils::compile_protos(
-        &["../../proto/abitest.proto"],
-        &["../../proto", "../../../../third_party"],
-    );
+    oak_utils::compile_protos(&["../../proto/abitest.proto"], "../../");
 }
