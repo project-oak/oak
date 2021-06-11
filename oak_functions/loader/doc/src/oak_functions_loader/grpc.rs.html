@@ -85,7 +85,6 @@
 <span id="82">82</span>
 <span id="83">83</span>
 <span id="84">84</span>
-<span id="85">85</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -106,16 +105,15 @@
 <span class="doccomment">//! gRPC server for Oak Functions.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">attestation</span>::<span class="ident">AttestationServer</span>,
     <span class="ident">logger</span>::<span class="ident">Logger</span>,
     <span class="ident">lookup</span>::<span class="ident">LookupData</span>,
+    <span class="ident">proto</span>::<span class="ident">remote_attestation_server</span>::<span class="ident">RemoteAttestationServer</span>,
     <span class="ident">server</span>::{<span class="ident">apply_policy</span>, <span class="ident">Policy</span>, <span class="ident">WasmHandler</span>},
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">Level</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi</span>::<span class="ident">proto</span>::<span class="ident">Request</span>;
-<span class="kw">use</span> <span class="ident">oak_grpc_attestation</span>::{
-    <span class="ident">attestation</span>::<span class="ident">AttestationServer</span>, <span class="ident">proto</span>::<span class="ident">remote_attestation_server</span>::<span class="ident">RemoteAttestationServer</span>,
-};
 <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryInto</span>, <span class="ident">future</span>::<span class="ident">Future</span>, <span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 

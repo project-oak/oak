@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_functions_loader"] = [{"text":"impl StructuralPartialEq for Request","synthetic":false,"types":[]},{"text":"impl StructuralPartialEq for AttestedInvokeRequest","synthetic":false,"types":[]},{"text":"impl StructuralPartialEq for RequestType","synthetic":false,"types":[]},{"text":"impl StructuralPartialEq for AttestedInvokeResponse","synthetic":false,"types":[]},{"text":"impl StructuralPartialEq for ResponseType","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

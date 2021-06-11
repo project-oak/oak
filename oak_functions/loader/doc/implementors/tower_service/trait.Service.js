@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oak_functions_loader"] = [{"text":"impl&lt;T, B&gt; Service&lt;Request&lt;B&gt;&gt; for RemoteAttestationServer&lt;T&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: RemoteAttestation,<br>&nbsp;&nbsp;&nbsp;&nbsp;B: HttpBody + Send + Sync + 'static,<br>&nbsp;&nbsp;&nbsp;&nbsp;B::Error: Into&lt;StdError&gt; + Send + 'static,&nbsp;</span>","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
