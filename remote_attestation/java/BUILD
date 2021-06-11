@@ -24,25 +24,9 @@ package(
 java_library(
     name = "remote_attestation",
     srcs = [
+        "src/com/google/oak/remote_attestation/AeadEncryptor.java",
         "src/com/google/oak/remote_attestation/AttestationStateMachine.java",
-        "src/com/google/oak/remote_attestation/crypto/AeadEncryptor.java",
-        "src/com/google/oak/remote_attestation/crypto/KeyNegotiator.java",
-    ],
-    deps = [
-        "//remote_attestation/proto:remote_attestation_java_grpc",
-        "//remote_attestation/proto:remote_attestation_java_proto",
-        "//remote_attestation/proto:remote_attestation_proto",
-        "@com_google_guava_guava",
-        "@com_google_protobuf//:protobuf_java",
-    ],
-)
-
-java_library(
-    name = "remote_attestation_tink",
-    srcs = [
-        "src/com/google/oak/remote_attestation/AttestationStateMachine.java",
-        "src/com/google/oak/remote_attestation/crypto/tink/AeadEncryptor.java",
-        "src/com/google/oak/remote_attestation/crypto/tink/KeyNegotiator.java",
+        "src/com/google/oak/remote_attestation/KeyNegotiator.java",
     ],
     deps = [
         "//remote_attestation/proto:remote_attestation_java_grpc",
@@ -51,6 +35,7 @@ java_library(
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_java",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
+        "@tink_java//src/main/java/com/google/crypto/tink/subtle:hkdf",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:x25519",
     ],
 )

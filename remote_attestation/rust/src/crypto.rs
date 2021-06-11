@@ -19,9 +19,11 @@ use anyhow::anyhow;
 use ring::{
     aead::{self, BoundKey},
     agreement,
+    hkdf::{Salt, HKDF_SHA256},
     rand::{SecureRandom, SystemRandom},
 };
 use sha2::{digest::Digest, Sha256};
+use std::cmp::Ordering;
 
 // Algorithm used for encrypting/decrypting messages.
 // https://datatracker.ietf.org/doc/html/rfc5288
@@ -29,6 +31,11 @@ static AEAD_ALGORITHM: &aead::Algorithm = &aead::AES_256_GCM;
 // Algorithm used for negotiating a session key.
 // https://datatracker.ietf.org/doc/html/rfc7748
 static KEY_AGREEMENT_ALGORITHM: &agreement::Algorithm = &agreement::X25519;
+/// Salt used for key derivation with HKDF.
+/// https://datatracker.ietf.org/doc/html/rfc5869
+const HKDF_SALT: &str = "Remote Attestation Protocol v1";
+/// Purpose string used for deriving session keys with HKDF.
+const SESSION_KEY_PURPOSE: &str = "Remote Attestation Protocol Session Key";
 
 /// Nonce implementation used by [`AeadEncryptor`].
 /// It returns a single nonce once and then only returns errors.
@@ -148,24 +155,54 @@ impl KeyNegotiator {
     }
 
     pub fn derive_session_key(self, peer_public_key: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let peer_public_key =
-            agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key);
+        let public_key = self.public_key()?;
         let session_key = agreement::agree_ephemeral(
             self.private_key,
-            &peer_public_key,
+            &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
             ring::error::Unspecified,
-            Self::key_derivation_function,
+            |key_material| {
+                Self::key_derivation_function(
+                    key_material,
+                    &public_key,
+                    &peer_public_key.as_ref().to_vec(),
+                )
+            },
         )
-        .map_err(|error| anyhow!("Couldn't derive session key: {:?}", error))?;
+        .map_err(|error| anyhow!("Couldn't agree on a session key: {:?}", error))?;
         Ok(session_key)
     }
 
-    /// Derives a session key from `key_material`.
-    fn key_derivation_function(key_material: &[u8]) -> Result<Vec<u8>, ring::error::Unspecified> {
-        // TODO(#2100): Derive a session key not just from `key_material` but also from server's and
-        // client's public keys.
-        // https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
-        Ok(key_material.to_vec())
+    /// Derives a session key from `key_material` using HKDF.
+    /// https://datatracker.ietf.org/doc/html/rfc5869
+    /// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
+    ///
+    /// TODO(#2181): Use separate keys for server and client encryption.
+    fn key_derivation_function(
+        key_material: &[u8],
+        public_key: &[u8],
+        peer_public_key: &[u8],
+    ) -> Result<Vec<u8>, ring::error::Unspecified> {
+        // Session key is derived from a purpose string, public key and peer public key.
+        let mut info = vec![];
+        info.push(SESSION_KEY_PURPOSE.as_bytes());
+        // Sort public keys so that keys derived on the both sides of the protocol are equal.
+        if public_key.iter().cmp(peer_public_key.iter()) == Ordering::Less {
+            info.push(public_key);
+            info.push(peer_public_key);
+        } else {
+            info.push(peer_public_key);
+            info.push(public_key);
+        }
+
+        // Initialize key derivation function.
+        let salt = Salt::new(HKDF_SHA256, HKDF_SALT.as_bytes());
+        let kdf = salt.extract(key_material);
+
+        // Derive session key.
+        let mut session_key = vec![0; AEAD_ALGORITHM.key_len()];
+        let output_key_material = kdf.expand(&info, AEAD_ALGORITHM)?;
+        output_key_material.fill(&mut session_key)?;
+        Ok(session_key.to_vec())
     }
 }
 

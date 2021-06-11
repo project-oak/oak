@@ -45,28 +45,3 @@ java_library(
         "@io_grpc_grpc_java//stub",
     ],
 )
-
-java_library(
-    name = "client_tink",
-    srcs = [
-        "src/com/google/oak/functions/client/AttestationClient.java",
-    ],
-    runtime_deps = [
-        "@io_grpc_grpc_java//netty",
-    ],
-    deps = [
-        "//oak_functions/proto:invocation_java_proto",
-        "//oak_functions/proto:invocation_proto",
-        "//oak_functions/proto:server_java_grpc",
-        "//oak_functions/proto:server_java_proto",
-        "//oak_functions/proto:server_proto",
-        "//remote_attestation/java:remote_attestation_tink",
-        "//remote_attestation/proto:remote_attestation_java_proto",
-        "@com_google_guava_guava",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf//:protobuf_java_util",
-        "@io_grpc_grpc_java//api",
-        "@io_grpc_grpc_java//protobuf",
-        "@io_grpc_grpc_java//stub",
-    ],
-)
