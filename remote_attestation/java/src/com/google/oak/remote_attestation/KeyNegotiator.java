@@ -33,10 +33,10 @@ public class KeyNegotiator {
     // https://datatracker.ietf.org/doc/html/rfc5869
     private static final String KEY_DERIVATION_SALT = "Remote Attestation Protocol v1";
     // Purpose string used for deriving session keys with HKDF.
-    private static final String SESSION_KEY_PURPOSE = "Remote Attestation Protocol Session Key";
+    private static final String KEY_PURPOSE = "Remote Attestation Protocol Session Key";
     // AES-256 with GCM key size.
     // https://datatracker.ietf.org/doc/html/rfc5288
-    private static final int SESSION_KEY_SIZE_BYTES = 32;
+    private static final int KEY_SIZE_BYTES = 32;
     private final byte[] privateKey;
 
     public KeyNegotiator() {
@@ -55,7 +55,7 @@ public class KeyNegotiator {
      */
     public byte[] deriveSessionKey(byte[] peerPublicKey) throws GeneralSecurityException {
         // Session key is derived from a purpose string, public key and peer public key.
-        byte[] info = SESSION_KEY_PURPOSE.getBytes();
+        byte[] info = KEY_PURPOSE.getBytes();
         // Sort public keys so that keys derived on the both sides of the protocol are equal.
         byte[] publicKey = getPublicKey();
         byte[] publicKeys = null;
@@ -73,7 +73,7 @@ public class KeyNegotiator {
             key_material,
             KEY_DERIVATION_SALT.getBytes(),
             info,
-            SESSION_KEY_SIZE_BYTES
+            KEY_SIZE_BYTES
         );
     }
 

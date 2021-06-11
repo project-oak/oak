@@ -34,7 +34,7 @@ static KEY_AGREEMENT_ALGORITHM: &agreement::Algorithm = &agreement::X25519;
 /// https://datatracker.ietf.org/doc/html/rfc5869
 const KEY_DERIVATION_SALT: &str = "Remote Attestation Protocol v1";
 /// Purpose string used for deriving session keys with HKDF.
-const SESSION_KEY_PURPOSE: &str = "Remote Attestation Protocol Session Key";
+const KEY_PURPOSE: &str = "Remote Attestation Protocol Session Key";
 
 /// Nonce implementation used by [`AeadEncryptor`].
 /// It returns a single nonce once and then only returns errors.
@@ -185,7 +185,7 @@ impl KeyNegotiator {
         let mut info = vec![self_public_key, peer_public_key];
         // Sort public keys so that keys derived on the both sides of the protocol are equal.
         info.sort();
-        info.insert(0, SESSION_KEY_PURPOSE.as_bytes());
+        info.insert(0, KEY_PURPOSE.as_bytes());
 
         // Initialize key derivation function.
         let salt = Salt::new(HKDF_SHA256, KEY_DERIVATION_SALT.as_bytes());
