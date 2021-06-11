@@ -16,10 +16,10 @@
 
 use crate::proto::EncryptedData;
 use anyhow::anyhow;
-use rand::Rng;
 use ring::{
     aead::{self, BoundKey},
     agreement,
+    rand::{SecureRandom, SystemRandom},
 };
 use sha2::{digest::Digest, Sha256};
 
@@ -118,12 +118,9 @@ impl AeadEncryptor {
     /// `ring::aead` uses 96-bit (12-byte) nonces.
     /// https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html
     fn generate_nonce() -> [u8; aead::NONCE_LEN] {
-        let mut rng = rand::thread_rng();
-        let random_vector: Vec<u8> = (0..aead::NONCE_LEN).map(|_| {
-            rng.gen::<u8>()
-        }).collect();
         let mut nonce: [u8; aead::NONCE_LEN] = Default::default();
-        nonce.copy_from_slice(&random_vector[0..aead::NONCE_LEN]);
+        let rng = SystemRandom::new();
+        rng.fill(&mut nonce).unwrap();
         nonce
     }
 }

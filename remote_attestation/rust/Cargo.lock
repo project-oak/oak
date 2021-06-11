@@ -570,7 +570,6 @@ dependencies = [
  "openssl",
  "prost",
  "prost-build",
- "rand",
  "ring",
  "rustls",
  "serde",
