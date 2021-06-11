@@ -9,7 +9,7 @@ protobuf messages according to the definition in <code>/oak_functions/proto/look
 provided data file URL.</p>
 <p>The returned instance is empty, and must be populated by calling the <a href="../../oak_functions_loader/lookup/struct.LookupData.html#method.refresh" title="LookupData::refresh"><code>LookupData::refresh</code></a>
 method at least once.</p>
-</div><h4 id="method.refresh" class="method"><code>pub async fn <a href="#method.refresh" class="fnname">refresh</a>&lt;'_&gt;(&amp;'_ self) -&gt; <a class="type" href="https://docs.rs/anyhow/1.0.40/anyhow/type.Result.html" title="type anyhow::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code><a class="srclink" href="../../src/oak_functions_loader/lookup.rs.html#57-114" title="goto source code">[src]</a></h4><div class="docblock"><p>Refreshes the internal entries of this struct from the data file URL provided at
+</div><h4 id="method.refresh" class="method"><code>pub async fn <a href="#method.refresh" class="fnname">refresh</a>&lt;'_&gt;(&amp;'_ self) -&gt; <a class="type" href="https://docs.rs/anyhow/1.0.41/anyhow/type.Result.html" title="type anyhow::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code><a class="srclink" href="../../src/oak_functions_loader/lookup.rs.html#57-114" title="goto source code">[src]</a></h4><div class="docblock"><p>Refreshes the internal entries of this struct from the data file URL provided at
 construction time.</p>
 <p>If successful, entries are completely replaced (i.e. not merged).</p>
 <p>If there is any error while reading or parsing the data, an error is returned by this
