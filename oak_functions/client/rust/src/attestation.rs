@@ -14,15 +14,15 @@
 // limitations under the License.
 //
 
-use anyhow::{anyhow, Context};
-use oak_attestation_common::{
-    crypto::{AeadEncryptor, KeyNegotiator},
-    report::AttestationInfo,
-};
-use oak_grpc_attestation::proto::{
+use crate::proto::{
     attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
     remote_attestation_client::RemoteAttestationClient, AttestedInvokeRequest,
-    AttestedInvokeResponse, ClientIdentity,
+    AttestedInvokeResponse,
+};
+use anyhow::{anyhow, Context};
+use oak_remote_attestation::{
+    attestation::{AttestationEngine, UnattestedPeer},
+    crypto::AeadEncryptor,
 };
 use tokio::sync::mpsc::Sender;
 use tonic::{transport::Channel, Request, Streaming};
@@ -90,7 +90,7 @@ impl AttestationClient {
         let mut client = Client::create(uri)
             .await
             .context("Couldn't create gRPC client")?;
-        let encryptor = AttestationClient::attest(&mut client, expected_tee_measurement)
+        let encryptor = Self::attest(&mut client, expected_tee_measurement)
             .await
             .context("Couldn't attest server")?;
 
@@ -102,14 +102,16 @@ impl AttestationClient {
         client: &mut Client,
         expected_tee_measurement: &[u8],
     ) -> anyhow::Result<AeadEncryptor> {
-        let key_negotiator = KeyNegotiator::create().expect("Couldn't create key negotiator");
-        let public_key = key_negotiator
-            .public_key()
-            .expect("Couldn't get public key");
+        let attestation_engine =
+            AttestationEngine::<UnattestedPeer>::create(expected_tee_measurement)
+                .context("Couldn't create attestation state machine")?;
+        let identity = attestation_engine
+            .identity()
+            .context("Couldn't get server identity")?;
 
         // Create attestation request with client's public key.
         let request = AttestedInvokeRequest {
-            request_type: Some(RequestType::ClientIdentity(ClientIdentity { public_key })),
+            request_type: Some(RequestType::ClientIdentity(identity)),
         };
         let response = client
             .send(request)
@@ -121,54 +123,19 @@ impl AttestationClient {
         let response_type = response
             .response_type
             .context("Couldn't read response type")?;
-        let attestation_response =
+        let server_identity =
             if let ResponseType::ServerIdentity(attestation_response) = response_type {
                 Ok(attestation_response)
             } else {
                 Err(anyhow!("Received incorrect message type"))
             }?;
 
-        // Verify server's attestation info.
-        AttestationClient::verify_attestation(
-            attestation_response.attestation_info,
-            expected_tee_measurement,
-        )
-        .context("Couldn't verify server attestation")?;
+        // Remotely attest server.
+        let encryptor = attestation_engine
+            .create_encryptor(&server_identity)
+            .context("Couldn't attest server")?;
 
-        // Create attestation key based on client's and server's public keys.
-        let session_key = key_negotiator
-            .derive_session_key(&attestation_response.public_key)
-            .context("Couldn't derive session key")?;
-
-        Ok(AeadEncryptor::new(session_key))
-    }
-
-    /// Verifies the validity of the attestation info:
-    /// - Checks that the TEE report is signed by TEE Provider’s root key.
-    /// - Checks that the public key hash from the TEE report is equal to the hash of the public key
-    ///   presented in the server response.
-    /// - Extracts the TEE measurement from the TEE report and compares it to the
-    ///   `expected_tee_measurement`.
-    fn verify_attestation(
-        attestation_info: Vec<u8>,
-        expected_tee_measurement: &[u8],
-    ) -> anyhow::Result<()> {
-        let serialized_attestation_info =
-            String::from_utf8(attestation_info).context("Couldn't get attestation info string")?;
-        let deserialized_attestation_info =
-            AttestationInfo::from_string(&serialized_attestation_info)
-                .context("Couldn't deserialize attestation info")?;
-
-        // TODO(#1867): Add remote attestation support, use real TEE reports and check that
-        // `AttestationInfo::certificate` is signed by one of the root certificates.
-        deserialized_attestation_info
-            .verify()
-            .context("Couldn't verify attestation info")?;
-        if expected_tee_measurement == deserialized_attestation_info.report.measurement {
-            Ok(())
-        } else {
-            Err(anyhow!("Incorrect TEE measurement"))
-        }
+        Ok(encryptor)
     }
 
     /// Sends data encrypted by the [`AttestationClient::encryptor`] to the server and returns
@@ -178,13 +145,13 @@ impl AttestationClient {
         &mut self,
         request: oak_functions_abi::proto::Request,
     ) -> anyhow::Result<Option<Vec<u8>>> {
-        let encrypted_payload = self
+        let encrypted_message = self
             .encryptor
             .encrypt(&request.body)
             .context("Couldn't encrypt data")?;
         let data_request = AttestedInvokeRequest {
-            request_type: Some(RequestType::Request(oak_grpc_attestation::proto::Request {
-                encrypted_payload,
+            request_type: Some(RequestType::Request(crate::proto::Request {
+                encrypted_payload: Some(encrypted_message),
             })),
         };
 

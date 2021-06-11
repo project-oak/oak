@@ -17,16 +17,15 @@
 //! gRPC server for Oak Functions.
 
 use crate::{
+    attestation::AttestationServer,
     logger::Logger,
     lookup::LookupData,
+    proto::remote_attestation_server::RemoteAttestationServer,
     server::{apply_policy, Policy, WasmHandler},
 };
 use anyhow::Context;
 use log::Level;
 use oak_functions_abi::proto::Request;
-use oak_grpc_attestation::{
-    attestation::AttestationServer, proto::remote_attestation_server::RemoteAttestationServer,
-};
 use prost::Message;
 use std::{convert::TryInto, future::Future, net::SocketAddr, sync::Arc};
 

@@ -773,21 +773,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_attestation_common"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "openssl",
- "ring",
- "rustls",
- "serde",
- "serde_json",
- "sha2",
- "x509-parser",
-]
-
-[[package]]
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
@@ -800,6 +785,7 @@ name = "oak_functions_loader"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
  "byteorder",
  "bytes",
  "chrono",
@@ -810,7 +796,7 @@ dependencies = [
  "hyper-rustls",
  "log",
  "oak_functions_abi",
- "oak_grpc_attestation",
+ "oak_remote_attestation",
  "oak_utils",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
@@ -840,32 +826,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_grpc_attestation"
+name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-stream",
  "env_logger",
- "futures",
- "futures-core",
- "futures-util",
- "http",
- "hyper",
  "log",
- "oak_attestation_common",
- "oak_functions_abi",
- "oak_utils",
  "openssl",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ring",
  "rustls",
  "serde",
  "serde_json",
  "sha2",
- "structopt",
- "tokio",
- "tokio-rustls",
  "tonic",
+ "x509-parser",
 ]
 
 [[package]]
@@ -1545,11 +1521,8 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
- "once_cell",
  "pin-project-lite",
- "signal-hook-registry",
  "tokio-macros",
- "winapi",
 ]
 
 [[package]]

@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package oak.functions.server;
 
+import "remote_attestation/proto/remote_attestation.proto";
+
 option java_multiple_files = true;
 option java_package = "oak.functions.server";
 
@@ -26,40 +28,25 @@ option java_package = "oak.functions.server";
 // policies.
 message Request {
   // Payload encrypted using the session key.
-  bytes encrypted_payload = 1;
+  oak.remote_attestation.EncryptedData encrypted_payload = 1;
 }
 
 message AttestedInvokeRequest {
   oneof request_type {
     // Client part of session key negotiation.
-    ClientIdentity client_identity = 1;
+    oak.remote_attestation.AttestationIdentity client_identity = 1;
     // Request with payload encrypted using the session key.
     Request request = 2;
   }
 }
 
-// TODO(#2105): Implement challenge-response in remote attestation.
-message ClientIdentity {
-  // Client public key needed to establish a session key between client and server.
-  bytes public_key = 1;
-}
-
 message AttestedInvokeResponse {
   oneof response_type {
     // Server part of session key negotiation.
-    ServerIdentity server_identity = 1;
+    oak.remote_attestation.AttestationIdentity server_identity = 1;
     // Payload encrypted using the session key.
-    bytes encrypted_payload = 2;
+    oak.remote_attestation.EncryptedData encrypted_payload = 2;
   }
-}
-
-// TODO(#2106): Support various claims in remote attestation.
-message ServerIdentity {
-  // Server public key needed to establish a session key between client and server.
-  bytes public_key = 1;
-  // Information used for remote attestation such as a TEE report and a TEE provider's certificate.
-  // TEE report should contain a hash of the server's public key.
-  bytes attestation_info = 2;
 }
 
 service RemoteAttestation {

@@ -13,9 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod proto {
+    tonic::include_proto!("oak.functions.server");
+}
+
+pub mod attestation;
+
+use crate::attestation::AttestationClient;
 use anyhow::Context;
 use oak_functions_abi::proto::{Request, Response};
-use oak_grpc_attestation_client::AttestationClient;
 use prost::Message;
 
 // TODO(#1867): Add remote attestation support.

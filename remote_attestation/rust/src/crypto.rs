@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
+use crate::proto::EncryptedData;
 use anyhow::anyhow;
 use ring::{
     aead::{self, BoundKey},
     agreement, rand,
 };
+use sha2::{digest::Digest, Sha256};
 
 // `ring::aead` uses 96-bit (12-byte) nonces.
 // https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html
@@ -65,8 +67,7 @@ impl AeadEncryptor {
     }
 
     /// Encrypts `data` using [`AeadEncryptor::key`].
-    /// The resulting encrypted data is prefixed with a nonce.
-    pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+    pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<EncryptedData> {
         // Bind `AeadEncryptor::key` to a `NONCE`.
         let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.key)
             .map_err(|error| anyhow!("Couldn't create sealing key: {:?}", error))?;
@@ -83,29 +84,26 @@ impl AeadEncryptor {
             .seal_in_place_append_tag(aead::Aad::empty(), &mut encrypted_data)
             .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
 
-        // Add `NONCE` as a prefix to the resulting data.
-        let mut result = NONCE.to_vec();
-        result.extend(encrypted_data.to_vec());
-
-        Ok(result)
+        Ok(EncryptedData {
+            nonce: NONCE.to_vec(),
+            data: encrypted_data,
+        })
     }
 
     /// Decrypts and authenticates `data` using [`AeadEncryptor::key`].
     /// `data` must contain an encrypted message prefixed with a random nonce of [`aead::NONCE_LEN`]
     /// length.
-    pub fn decrypt(&mut self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+    pub fn decrypt(&mut self, data: &EncryptedData) -> anyhow::Result<Vec<u8>> {
         // Extract nonce from `data`.
         let mut nonce: [u8; aead::NONCE_LEN] = Default::default();
-        nonce.copy_from_slice(&data[0..NONCE.len()]);
-
-        // Prepare encrypted message.
-        let mut decrypted_data = data[NONCE.len()..].to_vec();
+        nonce.copy_from_slice(&data.nonce[0..NONCE.len()]);
 
         // Bind `AeadEncryptor::key` to the extracted `nonce`.
         let unbound_opening_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.key).unwrap();
         let mut opening_key =
             ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new(nonce));
 
+        let mut decrypted_data = data.data.to_vec();
         let decrypted_data = opening_key
             // Additional authenticated data is not required for the remotely attested channel,
             // since after session key is established client and server exchange messages with a
@@ -160,4 +158,11 @@ impl KeyNegotiator {
         // https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
         Ok(key_material.to_vec())
     }
+}
+
+/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
+pub fn get_sha256(input: &[u8]) -> Vec<u8> {
+    let mut hasher = Sha256::new();
+    hasher.update(&input);
+    hasher.finalize().to_vec()
 }
