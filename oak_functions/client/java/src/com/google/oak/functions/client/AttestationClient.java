@@ -17,7 +17,8 @@
 package com.google.oak.functions.client;
 
 import com.google.common.base.VerifyException;
-import com.google.oak.remote_attestation.AttestationStateMachine;
+import com.google.oak.remote_attestation.AeadEncryptor;
+import com.google.oak.remote_attestation.AttestationEngine;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.ManagedChannel;
@@ -49,7 +50,7 @@ public class AttestationClient {
     private final ManagedChannel channel;
     private final StreamObserver<AttestedInvokeRequest> requestObserver;
     private final BlockingQueue<AttestedInvokeResponse> messageQueue;
-    private final AttestationStateMachine.Attested attestedClient;
+    private final AeadEncryptor encryptor;
 
     public AttestationClient(String uri) throws GeneralSecurityException, InterruptedException {
         // Create gRPC channel.
@@ -84,8 +85,8 @@ public class AttestationClient {
         requestObserver = stub.attestedInvoke(responseObserver);
 
         // Generate client private/public key pair.
-        AttestationStateMachine.Unattested unattestedClient = new AttestationStateMachine.Unattested(test_tee_measurement.getBytes());
-        AttestationIdentity identity = unattestedClient.getIdentity();
+        AttestationEngine attestationEngine = new AttestationEngine(test_tee_measurement.getBytes());
+        AttestationIdentity identity = attestationEngine.getIdentity();
 
         // Send client public key to the server.
         AttestedInvokeRequest request =
@@ -97,7 +98,7 @@ public class AttestationClient {
 
         // Remotely attest peer.
         AttestationIdentity peerIdentity = response.getServerIdentity();
-        attestedClient = unattestedClient.attest(peerIdentity);
+        encryptor = attestationEngine.createClientEncryptor(peerIdentity);
     }
 
     private Boolean verifyAttestation(byte[] attestationInfo) {
@@ -115,7 +116,7 @@ public class AttestationClient {
     @SuppressWarnings("ProtoParseWithRegistry")
     public Response send(Request request)
             throws GeneralSecurityException, InterruptedException, InvalidProtocolBufferException {
-        EncryptedData encryptedData = attestedClient.encrypt(request.getBody().toByteArray());
+        EncryptedData encryptedData = encryptor.encrypt(request.getBody().toByteArray());
         oak.functions.server.Request serverRequest =
                 oak.functions.server.Request.newBuilder()
                         .setEncryptedPayload(encryptedData)
@@ -127,7 +128,7 @@ public class AttestationClient {
         AttestedInvokeResponse attestedResponse = messageQueue.take();
 
         EncryptedData responsePayload = attestedResponse.getEncryptedPayload();
-        byte[] decryptedResponse = attestedClient.decrypt(responsePayload);
+        byte[] decryptedResponse = encryptor.decrypt(responsePayload);
         return Response.parseFrom(decryptedResponse);
     }
 }

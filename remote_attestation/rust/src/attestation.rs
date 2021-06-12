@@ -15,25 +15,19 @@
 //
 
 use crate::{
-    crypto::{get_sha256, AeadEncryptor, KeyNegotiator},
+    crypto::{get_sha256, AeadEncryptor, EncryptorType, KeyNegotiator},
     proto::{AttestationIdentity, AttestationInfo, AttestationReport},
 };
 use anyhow::{anyhow, Context};
 
 /// Remote attestation protocol implementation.
 /// Template `S` defines the type of attestation used. It can be one of:
-/// - [`UnattestedSelf`]
-///     - Represents an attestation process, where current machine remotely attests to a remote peer
-///       and
-/// sends attestation info to it.
-/// - [`UnattestedPeer`]
-///     - Represents an attestation process, where current machine remotely attests a remote peer
-///       and
-/// verifies its attestation info.
-/// - [`MutuallyUnattested`]
-///     - Represents an attestation process, where current machine and a remote peer remotely attest
-///       each
-/// other.
+/// - [`UnattestedSelf`]: represents an attestation process, where current machine remotely attests
+///   to a remote peer and sends attestation info to it.
+/// - [`UnattestedPeer`]: represents an attestation process, where current machine remotely attests
+///   a remote peer and verifies its attestation info.
+/// - [`MutuallyUnattested`]: represents an attestation process, where current machine and a remote
+///   peer remotely attest each other.
 pub struct AttestationEngine<S>
 where
     S: AttestationType,
@@ -66,8 +60,11 @@ where
         })
     }
 
-    /// Verifies remote attestation, negotiates a session key and creates an [`AeadEncryptor`].
-    pub fn create_encryptor(
+    /// Verifies remote attestation, negotiates session keys and creates server [`AeadEncryptor`].
+    ///
+    /// Server encryptor uses server session key for encryption and client session key for
+    /// encryption.
+    pub fn create_server_encryptor(
         self,
         peer_identity: &AttestationIdentity,
     ) -> anyhow::Result<AeadEncryptor> {
@@ -79,7 +76,27 @@ where
 
         // Agree on session keys and create encryptor.
         self.key_negotiator
-            .create_encryptor(peer_identity.public_key.as_ref())
+            .create_encryptor(peer_identity.public_key.as_ref(), EncryptorType::Server)
+            .context("Couldn't derive session key")
+    }
+
+    /// Verifies remote attestation, negotiates session keys and creates client [`AeadEncryptor`].
+    ///
+    /// Client encryptor uses client session key for encryption and server session key for
+    /// encryption.
+    pub fn create_client_encryptor(
+        self,
+        peer_identity: &AttestationIdentity,
+    ) -> anyhow::Result<AeadEncryptor> {
+        // Verify peer attestation info.
+        let peer_attestation_info = &peer_identity.attestation_info;
+        self.attestation_type
+            .verify_attestation_info(&peer_attestation_info)
+            .context("Couldn't verify peer attestation info")?;
+
+        // Agree on session keys and create encryptor.
+        self.key_negotiator
+            .create_encryptor(peer_identity.public_key.as_ref(), EncryptorType::Client)
             .context("Couldn't derive session key")
     }
 }

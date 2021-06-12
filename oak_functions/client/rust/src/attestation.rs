@@ -132,7 +132,7 @@ impl AttestationClient {
 
         // Remotely attest server.
         let encryptor = attestation_engine
-            .create_encryptor(&server_identity)
+            .create_client_encryptor(&server_identity)
             .context("Couldn't attest server")?;
 
         Ok(encryptor)

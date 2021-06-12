@@ -33,8 +33,10 @@ static KEY_AGREEMENT_ALGORITHM: &agreement::Algorithm = &agreement::X25519;
 /// Salt used for key derivation with HKDF.
 /// https://datatracker.ietf.org/doc/html/rfc5869
 const KEY_DERIVATION_SALT: &str = "Remote Attestation Protocol v1";
-/// Purpose string used for deriving session keys with HKDF.
-const KEY_PURPOSE: &str = "Remote Attestation Protocol Session Key";
+/// Purpose string used for deriving server session keys with HKDF.
+const SERVER_KEY_PURPOSE: &str = "Remote Attestation Protocol Server Session Key";
+/// Purpose string used for deriving client session keys with HKDF.
+const CLIENT_KEY_PURPOSE: &str = "Remote Attestation Protocol Client Session Key";
 
 /// Nonce implementation used by [`AeadEncryptor`].
 /// It returns a single nonce once and then only returns errors.
@@ -55,8 +57,10 @@ impl aead::NonceSequence for OneNonceSequence {
 
 /// Implementation of Authenticated Encryption with Associated Data (AEAD).
 /// https://datatracker.ietf.org/doc/html/rfc5116
-/// 
+///
 /// This implementation uses separate keys for encrypting data and decrypting peer encrypted data.
+/// Which means that this implementation uses the same key for encryption, which peer uses for
+/// decryption.
 /// It is necessary to prevent the Loopback Attack, where malicious network takes an outgoing packet
 /// and feeds it back as an incoming packet.
 pub struct AeadEncryptor {
@@ -158,28 +162,56 @@ impl KeyNegotiator {
 
     /// Derives session keys from self and peer public keys and creates an [`AeadEncryptor`].
     ///
-    /// The resulting keys are created by calling derivation function with a different order of
-    /// public keys:
-    ///  - For [`AeadEncryptor::encryption_key`] self public key goes first.
-    ///  - For [`AeadEncryptor::decryption_key`] self public key goes last.
-    pub fn create_encryptor(self, peer_public_key: &[u8]) -> anyhow::Result<AeadEncryptor> {
+    /// HKDF is used to derive both server and client session keys. The information string provided
+    /// to HKDF consists of a purpose string, a server public key and a client public key (in that
+    /// specific order).
+    /// Server session key uses the [`SERVER_KEY_PURPOSE`] purpose string and client session key
+    /// uses [`CLIENT_KEY_PURPOSE`].
+    ///
+    /// Depending on `encryptor_type` creates a different type of encryptor: either server encryptor
+    /// or client encryptor.
+    pub fn create_encryptor(self, peer_public_key: &[u8], encryptor_type: EncryptorType) -> anyhow::Result<AeadEncryptor> {
         let self_public_key = self.public_key()?;
         let (encryption_key, decryption_key) = agreement::agree_ephemeral(
             self.private_key,
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
             ring::error::Unspecified,
             |key_material| {
-                let encryption_key = Self::key_derivation_function(
-                    key_material,
-                    &self_public_key,
-                    &peer_public_key.as_ref().to_vec(),
-                );
-                let decryption_key = Self::key_derivation_function(
-                    key_material,
-                    &peer_public_key.as_ref().to_vec(),
-                    &self_public_key,
-                );
-                Ok((encryption_key, decryption_key))
+                let peer_public_key = peer_public_key.clone();
+                match encryptor_type {
+                    // On the server side `self_public_key` is the server key.
+                    EncryptorType::Server => {
+                        let encryption_key = Self::key_derivation_function(
+                            key_material,
+                            SERVER_KEY_PURPOSE,
+                            &self_public_key,
+                            &peer_public_key,
+                        );
+                        let decryption_key = Self::key_derivation_function(
+                            key_material,
+                            CLIENT_KEY_PURPOSE,
+                            &self_public_key,
+                            &peer_public_key,
+                        );
+                        Ok((encryption_key, decryption_key))
+                    },
+                    // On the client side `peer_public_key` is the server key.
+                    EncryptorType::Client => {
+                        let encryption_key = Self::key_derivation_function(
+                            key_material,
+                            CLIENT_KEY_PURPOSE,
+                            &peer_public_key,
+                            &self_public_key,
+                        );
+                        let decryption_key = Self::key_derivation_function(
+                            key_material,
+                            SERVER_KEY_PURPOSE,
+                            &peer_public_key,
+                            &self_public_key,
+                        );
+                        Ok((encryption_key, decryption_key))
+                    },
+                }
             },
         )
         .map_err(|error| anyhow!("Couldn't agree on a session key: {:?}", error))?;
@@ -192,15 +224,14 @@ impl KeyNegotiator {
     /// Derives a session key from `key_material` using HKDF.
     /// https://datatracker.ietf.org/doc/html/rfc5869
     /// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
-    ///
-    /// TODO(#2181): Use separate keys for server and client encryption.
     fn key_derivation_function(
         key_material: &[u8],
+        key_purpose: &str,
         first_public_key: &[u8],
         second_public_key: &[u8],
     ) -> Result<Vec<u8>, ring::error::Unspecified> {
         // Session key is derived from a purpose string and two public keys.
-        let info = vec![KEY_PURPOSE.as_bytes(), first_public_key, second_public_key];
+        let info = vec![key_purpose.as_bytes(), first_public_key, second_public_key];
 
         // Initialize key derivation function.
         let salt = Salt::new(HKDF_SHA256, KEY_DERIVATION_SALT.as_bytes());
@@ -212,6 +243,16 @@ impl KeyNegotiator {
         output_key_material.fill(&mut session_key)?;
         Ok(session_key.to_vec())
     }
+}
+
+/// Defines the type of encryptor created by [`KeyNegotiator::create_encryptor`].
+pub enum EncryptorType {
+    /// Defines a server encryptor, which uses server session key for encryption and client session
+    /// key for encryption.
+    Server,
+    /// Defines a client encryptor, which uses client session key for encryption and server session
+    /// key for encryption.
+    Client,
 }
 
 /// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
