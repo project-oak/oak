@@ -77,13 +77,10 @@ where
             .verify_attestation_info(&peer_attestation_info)
             .context("Couldn't verify peer attestation info")?;
 
-        // Generate session key.
-        let session_key = self
-            .key_negotiator
-            .derive_session_key(peer_identity.public_key.as_ref())
-            .context("Couldn't derive session key")?;
-
-        Ok(AeadEncryptor::new(session_key))
+        // Agree on session keys and create encryptor.
+        self.key_negotiator
+            .create_encryptor(peer_identity.public_key.as_ref())
+            .context("Couldn't derive session key")
     }
 }
 
