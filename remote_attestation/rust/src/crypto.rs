@@ -72,7 +72,10 @@ pub struct AeadEncryptor {
 
 impl AeadEncryptor {
     pub fn new(encryption_key: Vec<u8>, decryption_key: Vec<u8>) -> Self {
-        Self { encryption_key, decryption_key }
+        Self {
+            encryption_key,
+            decryption_key,
+        }
     }
 
     /// Encrypts `data` using [`AeadEncryptor::key`].
@@ -111,7 +114,8 @@ impl AeadEncryptor {
         nonce.copy_from_slice(&data.nonce[0..aead::NONCE_LEN]);
 
         // Bind `AeadEncryptor::key` to the extracted `nonce`.
-        let unbound_opening_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.decryption_key).unwrap();
+        let unbound_opening_key =
+            aead::UnboundKey::new(AEAD_ALGORITHM, &self.decryption_key).unwrap();
         let mut opening_key =
             ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new(nonce));
 
@@ -170,14 +174,18 @@ impl KeyNegotiator {
     ///
     /// Depending on `encryptor_type` creates a different type of encryptor: either server encryptor
     /// or client encryptor.
-    pub fn create_encryptor(self, peer_public_key: &[u8], encryptor_type: EncryptorType) -> anyhow::Result<AeadEncryptor> {
+    pub fn create_encryptor(
+        self,
+        peer_public_key: &[u8],
+        encryptor_type: EncryptorType,
+    ) -> anyhow::Result<AeadEncryptor> {
         let self_public_key = self.public_key()?;
         let (encryption_key, decryption_key) = agreement::agree_ephemeral(
             self.private_key,
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
             ring::error::Unspecified,
             |key_material| {
-                let peer_public_key = peer_public_key.clone();
+                let peer_public_key = peer_public_key.as_ref().to_vec();
                 match encryptor_type {
                     // On the server side `self_public_key` is the server key.
                     EncryptorType::Server => {
@@ -194,7 +202,7 @@ impl KeyNegotiator {
                             &peer_public_key,
                         );
                         Ok((encryption_key, decryption_key))
-                    },
+                    }
                     // On the client side `peer_public_key` is the server key.
                     EncryptorType::Client => {
                         let encryption_key = Self::key_derivation_function(
@@ -210,14 +218,16 @@ impl KeyNegotiator {
                             &self_public_key,
                         );
                         Ok((encryption_key, decryption_key))
-                    },
+                    }
                 }
             },
         )
         .map_err(|error| anyhow!("Couldn't agree on a session key: {:?}", error))?;
         Ok(AeadEncryptor::new(
-            encryption_key.map_err(|error| anyhow!("Couldn't derive encryption key: {:?}", error))?,
-            decryption_key.map_err(|error| anyhow!("Couldn't derive decryption key: {:?}", error))?,
+            encryption_key
+                .map_err(|error| anyhow!("Couldn't derive encryption key: {:?}", error))?,
+            decryption_key
+                .map_err(|error| anyhow!("Couldn't derive decryption key: {:?}", error))?,
         ))
     }
 
