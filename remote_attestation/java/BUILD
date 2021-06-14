@@ -44,7 +44,7 @@ android_library(
     name = "remote_attestation_android",
     srcs = [
         "src/com/google/oak/remote_attestation/AeadEncryptor.java",
-        "src/com/google/oak/remote_attestation/AttestationStateMachine.java",
+        "src/com/google/oak/remote_attestation/AttestationEngine.java",
         "src/com/google/oak/remote_attestation/KeyNegotiator.java",
     ],
     deps = [
