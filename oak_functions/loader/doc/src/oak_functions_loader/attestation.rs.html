@@ -423,7 +423,7 @@
         <span class="ident">response_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseType</span>::<span class="ident">ServerIdentity</span>(<span class="ident">identity</span>)),
     };
     <span class="kw">let</span> <span class="ident">encryptor</span> <span class="op">=</span> <span class="ident">attestation_engine</span>
-        .<span class="ident">create_encryptor</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity</span>)
+        .<span class="ident">create_server_encryptor</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity</span>)
         .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t attest to client&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>((<span class="ident">attestation_response</span>, <span class="ident">encryptor</span>))
