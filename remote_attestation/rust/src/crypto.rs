@@ -234,7 +234,7 @@ impl KeyNegotiator {
     /// Derives a session key from `key_material` using HKDF.
     /// https://datatracker.ietf.org/doc/html/rfc5869
     /// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
-    /// 
+    ///
     /// In order to derive keys, uses the information string that consists of a purpose string, a
     /// server public key and a client public key (in that specific order).
     fn key_derivation_function(
