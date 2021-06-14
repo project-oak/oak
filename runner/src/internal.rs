@@ -44,6 +44,7 @@ pub struct Opt {
 pub enum Command {
     RunExamples(RunExamples),
     RunFunctionsExamples(RunFunctionsExamples),
+    BuildFunctionsExample(RunFunctionsExamples),
     BuildServer(BuildServer),
     BuildFunctionsServer(BuildFunctionsServer),
     Format,

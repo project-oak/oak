@@ -1,0 +1,29 @@
+type: google.api.Service
+config_version: 3
+
+#
+# Name of the service configuration.
+#
+name: ###SERVICE_HOSTNAME###
+
+#
+# API title to appear in the user interface (Google Cloud Console).
+#
+title: ###TITLE###
+apis:
+  - name: oak.functions.server.RemoteAttestation
+
+#
+# API usage restrictions.
+#
+usage:
+  rules:
+    # Invoke method can be called without an API Key for now.
+    - selector: oak.functions.server.RemoteAttestation.AttestedInvoke
+      allow_unregistered_calls: true
+
+backend:
+  rules:
+    - selector: '*'
+      # The address of the Cloud Run backend instance
+      address: grpcs://###BACKEND_HOSTNAME###

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+readonly OAK_ROOT="$(dirname "$(dirname "$(dirname "$(dirname "$(dirname "$(dirname "$0")")")")")")"
+
+(
+cd "${OAK_ROOT}"
+# shellcheck source=scripts/common
+source ./scripts/common
+
+# Declare variables used in `deploy_oak_functions_loader` and `deploy_oak_functions_endpoints` scripts
+export EXAMPLE_NAME='weather_lookup'
+export FUNCTIONS_INSTANCE_NAME='oak-functions-weather-lookup'
+export CLOUD_RUN_SERVICE_NAME='weather-lookup-endpoint'
+export API_TITLE='Oak Functions Weather Lookup Endpoint'
+
+
+# Deploy Oak Functions loader for the `weather_lookup` example
+./scripts/deploy_oak_functions_loader
+
+# Deploy Cloud Endpoints service
+./scripts/deploy_oak_functions_endpoints
+
+# Find the Cloud Endpoints URL.
+readonly CLOUD_RUN_SERVICE_URL="$(gcloud beta run services describe "${CLOUD_RUN_SERVICE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')" 
+
+# Attempt to communicate with the newly deployed application.
+./oak_functions/client/rust/target/x86_64-unknown-linux-gnu/release/oak_functions_client \
+  --uri="${CLOUD_RUN_SERVICE_URL}" \
+  --request='{"lat":52,"lon":0}'
+)

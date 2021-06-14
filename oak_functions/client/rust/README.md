@@ -10,7 +10,7 @@ To compile:
 
 ```sh
 cargo build \
-  --manifest-path=./oak_functions/client/Cargo.toml
+  --manifest-path=./oak_functions/client/rust/Cargo.toml
 ```
 
 Example invocation:

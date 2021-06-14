@@ -79,6 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let steps = match opt.cmd {
             Command::RunExamples(ref opt) => run_examples(&opt),
             Command::RunFunctionsExamples(ref opt) => run_functions_examples(&opt),
+            Command::BuildFunctionsExample(ref opt) => build_functions_example(&opt),
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::BuildFunctionsServer(ref opt) => build_functions_server(opt),
             Command::RunTests => run_tests(),
