@@ -51,9 +51,6 @@ android_library(
     srcs = [
         "src/com/google/oak/functions/client/AttestationClient.java",
     ],
-    runtime_deps = [
-        "@io_grpc_grpc_java//netty",
-    ],
     deps = [
         "//oak_functions/proto:invocation_java_proto",
         "//oak_functions/proto:server_java_grpc",
