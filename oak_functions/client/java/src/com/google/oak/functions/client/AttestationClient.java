@@ -57,7 +57,7 @@ public class AttestationClient {
     /**
      * Creates an attested gRPC channel.
      * 
-     * `url` should contain protocol used for connection ("https://" or "http://").
+     * `url` must contain protocol used for connection ("https://" or "http://").
      */
     public AttestationClient(String url) throws GeneralSecurityException, InterruptedException, MalformedURLException {
         // Create gRPC channel.
