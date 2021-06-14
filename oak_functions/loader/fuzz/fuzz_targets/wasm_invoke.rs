@@ -22,10 +22,11 @@ pub mod proto {
 use crate::proto::{instruction::InstructionVariant, Instructions};
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
+use maplit::hashmap;
 use oak_functions_abi::proto::Request;
 use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandler};
 use prost::Message;
-use std::sync::Arc;
+use std::{convert::Into, sync::Arc};
 
 #[derive(Arbitrary, Debug, Clone, PartialEq)]
 enum ArbitraryInstruction {
@@ -37,12 +38,34 @@ enum ArbitraryInstruction {
     },
     StorageGetItem {
         // The key to lookup.
-        key: Vec<u8>,
+        key: LookupKey,
     },
     WriteLogMessage {
         message: Vec<u8>,
     },
 }
+
+/// Enum to allow simulating both hit and miss lookup scenarios.
+#[derive(Arbitrary, Debug, Clone, PartialEq)]
+enum LookupKey {
+    /// Uses `FIXED_KEY` for lookup. Covers the scenario where the lookup matches a key in
+    /// LookupData.
+    FixedKey,
+    /// Uses a random key for lookup. Covers the scenario where the key does not match anything in
+    /// LookupData.
+    RandomKey { key: Vec<u8> },
+}
+
+impl From<&LookupKey> for Vec<u8> {
+    fn from(key: &LookupKey) -> Self {
+        match key {
+            LookupKey::FixedKey => FIXED_KEY.to_vec(),
+            LookupKey::RandomKey { key } => key.clone(),
+        }
+    }
+}
+
+const FIXED_KEY: &[u8] = b"key";
 
 lazy_static::lazy_static! {
     static ref WASM_MODULE_BYTES: Vec<u8> = include_bytes!("./data/fuzzable.wasm").to_vec();
@@ -81,9 +104,13 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
         .expect("Error encoding abi_function");
     let request = Request { body };
 
+    let entries = hashmap! {
+        FIXED_KEY.to_vec() => br"value".to_vec(),
+    };
+
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
-        Arc::new(LookupData::new_empty("", Logger::for_test())),
+        Arc::new(LookupData::for_test(entries)),
         Logger::for_test(),
     )
     .expect("Could instantiate WasmHandler");
@@ -108,7 +135,7 @@ impl From<&ArbitraryInstruction> for crate::proto::Instruction {
             ),
             ArbitraryInstruction::StorageGetItem { key } => {
                 Some(InstructionVariant::StorageGetItem(
-                    crate::proto::StorageGetItem { key: key.clone() },
+                    crate::proto::StorageGetItem { key: key.into() },
                 ))
             }
             ArbitraryInstruction::WriteLogMessage { message } => Some(
