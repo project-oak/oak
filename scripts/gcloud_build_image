@@ -106,7 +106,8 @@ NEW_IMAGE="gcr.io/${PROJECT}/endpoints-runtime-serverless:${ESP_FULL_VERSION}-${
 if [ -n "${ZONE}" ]; then
   NEW_IMAGE="${ZONE}.${NEW_IMAGE}"
 fi
-gcloud builds submit --tag "${NEW_IMAGE}" . --project="${PROJECT}"
+# `|| true` is needed to prevent an error message regarding logging stop the script from completing.
+gcloud builds submit --tag "${NEW_IMAGE}" . --project="${PROJECT}" || true
 )
 
 # Delete the temporary directory we created earlier.
