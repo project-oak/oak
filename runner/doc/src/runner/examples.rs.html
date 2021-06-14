@@ -940,6 +940,64 @@
 <span id="937">937</span>
 <span id="938">938</span>
 <span id="939">939</span>
+<span id="940">940</span>
+<span id="941">941</span>
+<span id="942">942</span>
+<span id="943">943</span>
+<span id="944">944</span>
+<span id="945">945</span>
+<span id="946">946</span>
+<span id="947">947</span>
+<span id="948">948</span>
+<span id="949">949</span>
+<span id="950">950</span>
+<span id="951">951</span>
+<span id="952">952</span>
+<span id="953">953</span>
+<span id="954">954</span>
+<span id="955">955</span>
+<span id="956">956</span>
+<span id="957">957</span>
+<span id="958">958</span>
+<span id="959">959</span>
+<span id="960">960</span>
+<span id="961">961</span>
+<span id="962">962</span>
+<span id="963">963</span>
+<span id="964">964</span>
+<span id="965">965</span>
+<span id="966">966</span>
+<span id="967">967</span>
+<span id="968">968</span>
+<span id="969">969</span>
+<span id="970">970</span>
+<span id="971">971</span>
+<span id="972">972</span>
+<span id="973">973</span>
+<span id="974">974</span>
+<span id="975">975</span>
+<span id="976">976</span>
+<span id="977">977</span>
+<span id="978">978</span>
+<span id="979">979</span>
+<span id="980">980</span>
+<span id="981">981</span>
+<span id="982">982</span>
+<span id="983">983</span>
+<span id="984">984</span>
+<span id="985">985</span>
+<span id="986">986</span>
+<span id="987">987</span>
+<span id="988">988</span>
+<span id="989">989</span>
+<span id="990">990</span>
+<span id="991">991</span>
+<span id="992">992</span>
+<span id="993">993</span>
+<span id="994">994</span>
+<span id="995">995</span>
+<span id="996">996</span>
+<span id="997">997</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -1458,13 +1516,14 @@
 <span class="kw">fn</span> <span class="ident">run_functions_example</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionsExample</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
     <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">options</span>;
 
-    <span class="comment">// build any backend server</span>
+    <span class="comment">// Build steps for running clients</span>
     <span class="kw">let</span> <span class="ident">run_clients</span> <span class="op">=</span> <span class="ident">run_clients</span>(
         <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">example</span>,
         <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_client</span>,
         <span class="ident">opt</span>.<span class="ident">client_additional_args</span>.<span class="ident">clone</span>(),
     );
 
+    <span class="comment">// Build any backend server</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">collapsible_if</span>)]</span>
     <span class="kw">let</span> <span class="ident">run_backend_server_clients</span>: <span class="ident">Step</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">run_server</span>.<span class="ident">unwrap_or</span>(<span class="bool-val">true</span>) {
         <span class="kw">let</span> <span class="ident">run_server_clients</span> <span class="op">=</span> <span class="ident">example</span>.<span class="ident">construct_example_server_run_step</span>(<span class="ident">run_clients</span>);
@@ -1494,6 +1553,63 @@
                 <span class="ident">name</span>: <span class="string">&quot;run&quot;</span>.<span class="ident">to_string</span>(),
                 <span class="ident">steps</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">run_backend_server_clients</span>],
             }],
+        ]
+        .<span class="ident">into_iter</span>()
+        .<span class="ident">flatten</span>()
+        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_functions_example</span>(<span class="ident">opt</span>: <span class="kw-2">&amp;</span><span class="ident">RunFunctionsExamples</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
+    <span class="kw">let</span> <span class="ident">example_name</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">opt</span>
+        .<span class="ident">example_name</span>
+        .<span class="ident">as_ref</span>()
+        .<span class="ident">expect</span>(<span class="string">&quot;--example-name must be specified&quot;</span>)
+        .<span class="ident">clone</span>();
+
+    <span class="kw">let</span> <span class="ident">example</span>: <span class="ident">Example</span> <span class="op">=</span> <span class="ident">example_toml_files</span>()
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
+            <span class="ident">toml</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;could not parse example manifest file {:?}: {}&quot;</span>, <span class="ident">path</span>, <span class="ident">err</span>)
+            })
+        })
+        .<span class="ident">find</span>(<span class="op">|</span><span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="ident">Example</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">example</span>.<span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">example_name</span>)
+        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">example</span><span class="op">|</span> <span class="ident">example</span>.<span class="ident">has_functions_app</span>())
+        .<span class="ident">expect</span>(<span class="string">&quot;could not find the specified functions example&quot;</span>);
+
+    <span class="comment">// Build steps for building clients</span>
+    <span class="kw">let</span> <span class="ident">build_client</span> <span class="op">=</span> <span class="ident">Step</span>::<span class="ident">Multiple</span> {
+        <span class="ident">name</span>: <span class="string">&quot;build clients&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="ident">steps</span>: <span class="ident">example</span>
+            .<span class="ident">clients</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">build_client</span>.<span class="ident">client_variant</span>.<span class="ident">as_str</span>() {
+                <span class="ident">ALL_CLIENTS</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+                <span class="ident">client</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">client</span>,
+            })
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">client</span>)<span class="op">|</span> <span class="ident">Step</span>::<span class="ident">Single</span> {
+                <span class="ident">name</span>: <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;build{}&quot;</span>, <span class="ident">name</span>),
+                <span class="ident">command</span>: <span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="ident">client</span>.<span class="ident">target</span>, <span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_client</span>),
+            })
+            .<span class="ident">collect</span>(),
+    };
+
+    <span class="kw">let</span> <span class="ident">functions_example</span> <span class="op">=</span> <span class="ident">FunctionsExample</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>, <span class="ident">opt</span>.<span class="ident">clone</span>());
+
+    <span class="ident">Step</span>::<span class="ident">Multiple</span> {
+        <span class="ident">name</span>: <span class="ident">example</span>.<span class="ident">name</span>.<span class="ident">to_string</span>(),
+        <span class="ident">steps</span>: <span class="macro">vec</span><span class="macro">!</span>[
+            <span class="ident">functions_example</span>.<span class="ident">construct_application_build_steps</span>(),
+            <span class="comment">// Build the server first so that when running it in the next step it will start up</span>
+            <span class="comment">// faster.</span>
+            <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">build_functions_server</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">build_server</span>)],
+            <span class="kw">if</span> <span class="ident">opt</span>.<span class="ident">build_docker</span> {
+                <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">build_docker</span>(<span class="kw-2">&amp;</span><span class="ident">example</span>)]
+            } <span class="kw">else</span> {
+                <span class="macro">vec</span><span class="macro">!</span>[]
+            },
+            <span class="ident">functions_example</span>.<span class="ident">construct_backend_build_steps</span>(),
+            <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">build_client</span>],
         ]
         .<span class="ident">into_iter</span>()
         .<span class="ident">flatten</span>()
