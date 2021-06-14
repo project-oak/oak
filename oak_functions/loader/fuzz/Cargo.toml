@@ -13,6 +13,7 @@ anyhow = "*"
 arbitrary = { version = "1", features = ["derive"] }
 lazy_static = "*"
 libfuzzer-sys = "*"
+maplit = "*"
 oak_functions_loader = { path = ".." }
 oak_functions_abi = { path = "../../abi" }
 prost = "*"

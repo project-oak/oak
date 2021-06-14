@@ -22,8 +22,9 @@ pub mod proto {
 use crate::proto::{instruction::InstructionVariant, Instructions};
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
+use maplit::hashmap;
 use oak_functions_abi::proto::Request;
-use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandler};
+use oak_functions_loader::{logger::Logger, lookup::LookupDataForTest, server::WasmHandler};
 use prost::Message;
 use std::sync::Arc;
 
@@ -37,12 +38,20 @@ enum ArbitraryInstruction {
     },
     StorageGetItem {
         // The key to lookup.
-        key: Vec<u8>,
+        key: LookupKey,
     },
     WriteLogMessage {
         message: Vec<u8>,
     },
 }
+
+#[derive(Arbitrary, Debug, Clone, PartialEq)]
+enum LookupKey {
+    Key,
+    RandomKey { key: Vec<u8> },
+}
+
+const FIXED_KEY: &[u8] = b"key";
 
 lazy_static::lazy_static! {
     static ref WASM_MODULE_BYTES: Vec<u8> = include_bytes!("./data/fuzzable.wasm").to_vec();
@@ -81,9 +90,13 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
         .expect("Error encoding abi_function");
     let request = Request { body };
 
+    let entries = hashmap! {
+        FIXED_KEY.to_vec() => br"value".to_vec(),
+    };
+
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
-        Arc::new(LookupData::new_empty("", Logger::for_test())),
+        Arc::new(LookupDataForTest::new(entries).lookup_data),
         Logger::for_test(),
     )
     .expect("Could instantiate WasmHandler");
@@ -106,11 +119,16 @@ impl From<&ArbitraryInstruction> for crate::proto::Instruction {
                     response: response.clone(),
                 }),
             ),
-            ArbitraryInstruction::StorageGetItem { key } => {
-                Some(InstructionVariant::StorageGetItem(
+            ArbitraryInstruction::StorageGetItem { key } => match key {
+                LookupKey::Key => Some(InstructionVariant::StorageGetItem(
+                    crate::proto::StorageGetItem {
+                        key: FIXED_KEY.to_vec(),
+                    },
+                )),
+                LookupKey::RandomKey { key } => Some(InstructionVariant::StorageGetItem(
                     crate::proto::StorageGetItem { key: key.clone() },
-                ))
-            }
+                )),
+            },
             ArbitraryInstruction::WriteLogMessage { message } => Some(
                 InstructionVariant::WriteLogMessage(crate::proto::WriteLogMessage {
                     message: message.clone(),

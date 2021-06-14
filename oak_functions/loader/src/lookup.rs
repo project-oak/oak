@@ -153,3 +153,24 @@ pub fn parse_lookup_entries<B: prost::bytes::Buf>(
     }
     Ok(entries)
 }
+
+/// Wrapper around a LookupData instance for testing.
+#[allow(dead_code)]
+pub struct LookupDataForTest {
+    pub lookup_data: LookupData,
+}
+
+impl LookupDataForTest {
+    /// Creates an instance of LookupDataForTest, containing an instance of LookupData populated
+    /// with the given entires.
+    #[allow(dead_code)]
+    pub fn new(entries: HashMap<Vec<u8>, Vec<u8>>) -> Self {
+        Self {
+            lookup_data: LookupData {
+                lookup_data_url: "".to_string(),
+                entries: RwLock::new(entries),
+                logger: Logger::for_test(),
+            },
+        }
+    }
+}
