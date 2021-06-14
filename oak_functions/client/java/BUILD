@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -26,21 +27,39 @@ java_library(
     srcs = [
         "src/com/google/oak/functions/client/AttestationClient.java",
     ],
-    runtime_deps = [
-        "@io_grpc_grpc_java//netty",
-    ],
     deps = [
         "//oak_functions/proto:invocation_java_proto",
-        "//oak_functions/proto:invocation_proto",
         "//oak_functions/proto:server_java_grpc",
         "//oak_functions/proto:server_java_proto",
-        "//oak_functions/proto:server_proto",
         "//remote_attestation/java:remote_attestation",
         "//remote_attestation/proto:remote_attestation_java_proto",
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//netty",
+        "@io_grpc_grpc_java//protobuf",
+        "@io_grpc_grpc_java//stub",
+    ],
+)
+
+# Dedicated Android target is necessary for using Tink internally.
+android_library(
+    name = "client_android",
+    srcs = [
+        "src/com/google/oak/functions/client/AttestationClient.java",
+    ],
+    deps = [
+        "//oak_functions/proto:invocation_java_proto",
+        "//oak_functions/proto:server_java_grpc",
+        "//oak_functions/proto:server_java_proto",
+        "//remote_attestation/java:remote_attestation_android",
+        "//remote_attestation/proto:remote_attestation_java_proto",
+        "@com_google_guava_guava",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf//:protobuf_java_util",
+        "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//netty",
         "@io_grpc_grpc_java//protobuf",
         "@io_grpc_grpc_java//stub",
     ],

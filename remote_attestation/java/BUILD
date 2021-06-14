@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -29,9 +30,25 @@ java_library(
         "src/com/google/oak/remote_attestation/KeyNegotiator.java",
     ],
     deps = [
-        "//remote_attestation/proto:remote_attestation_java_grpc",
         "//remote_attestation/proto:remote_attestation_java_proto",
-        "//remote_attestation/proto:remote_attestation_proto",
+        "@com_google_guava_guava",
+        "@com_google_protobuf//:protobuf_java",
+        "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
+        "@tink_java//src/main/java/com/google/crypto/tink/subtle:hkdf",
+        "@tink_java//src/main/java/com/google/crypto/tink/subtle:x25519",
+    ],
+)
+
+# Dedicated Android target is necessary for using Tink internally.
+android_library(
+    name = "remote_attestation_android",
+    srcs = [
+        "src/com/google/oak/remote_attestation/AeadEncryptor.java",
+        "src/com/google/oak/remote_attestation/AttestationEngine.java",
+        "src/com/google/oak/remote_attestation/KeyNegotiator.java",
+    ],
+    deps = [
+        "//remote_attestation/proto:remote_attestation_java_proto",
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_java",
         "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
