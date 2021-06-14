@@ -156,6 +156,16 @@
 <span id="153">153</span>
 <span id="154">154</span>
 <span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -270,6 +280,16 @@
         );
 
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Creates an instance of LookupData populated with the given entries.</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">for_test</span>(<span class="ident">entries</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">LookupData</span> {
+            <span class="ident">lookup_data_url</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">entries</span>: <span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="ident">entries</span>),
+            <span class="ident">logger</span>: <span class="ident">Logger</span>::<span class="ident">for_test</span>(),
+        }
     }
 
     <span class="doccomment">/// Convenience getter for an individual entry that reduces lock contention by cloning the</span>
