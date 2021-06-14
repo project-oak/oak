@@ -64,6 +64,7 @@ public class MainActivity extends Activity {
     invokeButton.setOnClickListener(v -> onClick());
 
     // Set default URI of the Oak Functions application.
+    // https://pantheon.corp.google.com/run/detail/europe-west2/weather-lookup-endpoint/general?project=oak-ci
     EditText uriInput = findViewById(R.id.uriInput);
     uriInput.setText("https://weather-lookup-endpoint-62sa4xcfia-nw.a.run.app");
 
