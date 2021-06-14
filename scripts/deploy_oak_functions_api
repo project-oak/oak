@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# API Gateways currenlty do not support bidirectional gRPC streaming. So this script has currently no use. Instead deploy_oak_functions_endpoints should be used.
+# API Gateways currenlty do not support bidirectional gRPC streaming. So this script has currently no use.
+# Instead `deploy_oak_functions_endpoints` should be used.
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
@@ -41,7 +42,7 @@ protoc \
 
 # Create a config file from the template by replacing tokens.
 readonly API_TITLE='Oak Functions Weather Lookup Service'
-# Fetch the URL or the Cloud Run backend service instance.
+# Fetch the URL for the Cloud Run backend service instance.
 readonly CLOUD_RUN_URL="$(gcloud beta run services describe "${FUNCTIONS_INSTANCE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')" 
 readonly CLOUD_RUN_HOST="$(echo "${CLOUD_RUN_URL}" | cut -c 9-)"
 

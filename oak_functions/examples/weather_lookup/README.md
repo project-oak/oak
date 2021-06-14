@@ -47,3 +47,18 @@ Alternatively, the `runner` could be used to run this example:
 ```shell
 ./scripts/runner run-functions-examples --example-name=weather_lookup
 ```
+
+## Cloud Run Deploy
+
+Use the following script to deploy the service on Cloud Run.
+
+```shell
+./oak_functions/examples/weather_lookup/scripts/cloud_run_deploy run-functions-examples --example-name=weather_lookup
+```
+
+The script:
+
+1. Deploys the weather-lookup service in Cloud Run.
+2. Deploys a Cloud Endpoint service for connecting to the service on Cloud Run.
+3. Sends a request to the Cloud Endpoints URL to test that the deployment has
+   been successful.

@@ -7,9 +7,9 @@ source "$SCRIPTS_DIR/common"
 # shellcheck source=scripts/gcp_common
 source "$SCRIPTS_DIR/gcp_common"
 
-# Build Oak Functions server binary and the `weather_lookup` example application, and the client to test the connection.
+# Build Oak Functions server binary and the example application, and the client to test the connection.
 ./scripts/docker_run ./scripts/runner build-functions-example \
-  --example-name=weather_lookup \
+  --example-name="${EXAMPLE_NAME}" \
   --client-variant=rust
   
 # Build and push base Oak Functions Loader image.
@@ -22,13 +22,13 @@ docker build \
 
 docker push "${FUNCTIONS_DOCKER_IMAGE_NAME}:latest"
 
-# Build and push the `weather_lookup` example application built on Oak Functions.
+# Build and push the example application built on Oak Functions.
 
-readonly FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-functions-weather-lookup'
+readonly FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME="gcr.io/oak-ci/${FUNCTIONS_INSTANCE_NAME}"
 
 docker build \
   --tag="${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest" \
-  ./oak_functions/examples/weather_lookup
+  ./oak_functions/examples/"${EXAMPLE_NAME}"
 
 docker push "${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest"
 
@@ -54,12 +54,3 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --min-instances=1 \
   --max-instances=10 \
   --platform=managed
-
-# Find the Cloud Endpoint URL.
-readonly CLOUD_RUN_SERVICE_NAME='weather-lookup-endpoint'
-readonly CLOUD_RUN_SERVICE_URL="$(gcloud beta run services describe "${CLOUD_RUN_SERVICE_NAME}" --project="${GCP_PROJECT_ID}" --region=europe-west2 --platform=managed --format='value(status.url)')" 
-
-# Attempt to communicate with the newly deployed application.
-./oak_functions/client/rust/target/x86_64-unknown-linux-gnu/release/oak_functions_client \
-  --uri="${CLOUD_RUN_SERVICE_URL}" \
-  --request='{"lat":52,"lon":0}'
