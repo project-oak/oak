@@ -113,6 +113,16 @@ impl LookupData {
         Ok(())
     }
 
+    /// Creates an instance of LookupData populated with the given entries.
+    #[allow(dead_code)]
+    pub fn for_test(entries: HashMap<Vec<u8>, Vec<u8>>) -> Self {
+        LookupData {
+            lookup_data_url: "".to_string(),
+            entries: RwLock::new(entries),
+            logger: Logger::for_test(),
+        }
+    }
+
     /// Convenience getter for an individual entry that reduces lock contention by cloning the
     /// resulting value as quickly as possible and returning it instead of a reference.
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
@@ -152,25 +162,4 @@ pub fn parse_lookup_entries<B: prost::bytes::Buf>(
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)
-}
-
-/// Wrapper around a LookupData instance for testing.
-#[allow(dead_code)]
-pub struct LookupDataForTest {
-    pub lookup_data: LookupData,
-}
-
-impl LookupDataForTest {
-    /// Creates an instance of LookupDataForTest, containing an instance of LookupData populated
-    /// with the given entires.
-    #[allow(dead_code)]
-    pub fn new(entries: HashMap<Vec<u8>, Vec<u8>>) -> Self {
-        Self {
-            lookup_data: LookupData {
-                lookup_data_url: "".to_string(),
-                entries: RwLock::new(entries),
-                logger: Logger::for_test(),
-            },
-        }
-    }
 }
