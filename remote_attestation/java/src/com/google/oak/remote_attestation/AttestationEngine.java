@@ -60,7 +60,7 @@ public class AttestationEngine {
      * Verifies remote attestation, negotiates session keys and creates server [`AeadEncryptor`].
      *
      * Server encryptor uses server session key for encryption and client session key for
-     * encryption.
+     * decryption.
      */
     public AeadEncryptor createServerEncryptor(AttestationIdentity peerIdentity) throws GeneralSecurityException {
         if (!verifyAttestation(peerIdentity.getAttestationInfo())) {
@@ -76,7 +76,7 @@ public class AttestationEngine {
      * Verifies remote attestation, negotiates session keys and creates client [`AeadEncryptor`].
      *
      * Client encryptor uses client session key for encryption and server session key for
-     * encryption.
+     * decryption.
      */
     public AeadEncryptor createClientEncryptor(AttestationIdentity peerIdentity) throws GeneralSecurityException {
         if (!verifyAttestation(peerIdentity.getAttestationInfo())) {

@@ -63,7 +63,7 @@ where
     /// Verifies remote attestation, negotiates session keys and creates server [`AeadEncryptor`].
     ///
     /// Server encryptor uses server session key for encryption and client session key for
-    /// encryption.
+    /// decryption.
     pub fn create_server_encryptor(
         self,
         peer_identity: &AttestationIdentity,
@@ -83,7 +83,7 @@ where
     /// Verifies remote attestation, negotiates session keys and creates client [`AeadEncryptor`].
     ///
     /// Client encryptor uses client session key for encryption and server session key for
-    /// encryption.
+    /// decryption.
     pub fn create_client_encryptor(
         self,
         peer_identity: &AttestationIdentity,

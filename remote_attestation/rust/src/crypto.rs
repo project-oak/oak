@@ -234,14 +234,17 @@ impl KeyNegotiator {
     /// Derives a session key from `key_material` using HKDF.
     /// https://datatracker.ietf.org/doc/html/rfc5869
     /// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
+    /// 
+    /// In order to derive keys, uses the information string that consists of a purpose string, a
+    /// server public key and a client public key (in that specific order).
     fn key_derivation_function(
         key_material: &[u8],
         key_purpose: &str,
-        first_public_key: &[u8],
-        second_public_key: &[u8],
+        server_public_key: &[u8],
+        client_public_key: &[u8],
     ) -> Result<Vec<u8>, ring::error::Unspecified> {
         // Session key is derived from a purpose string and two public keys.
-        let info = vec![key_purpose.as_bytes(), first_public_key, second_public_key];
+        let info = vec![key_purpose.as_bytes(), server_public_key, client_public_key];
 
         // Initialize key derivation function.
         let salt = Salt::new(HKDF_SHA256, KEY_DERIVATION_SALT.as_bytes());
@@ -258,10 +261,10 @@ impl KeyNegotiator {
 /// Defines the type of encryptor created by [`KeyNegotiator::create_encryptor`].
 pub enum EncryptorType {
     /// Defines a server encryptor, which uses server session key for encryption and client session
-    /// key for encryption.
+    /// key for decryption.
     Server,
     /// Defines a client encryptor, which uses client session key for encryption and server session
-    /// key for encryption.
+    /// key for decryption.
     Client,
 }
 

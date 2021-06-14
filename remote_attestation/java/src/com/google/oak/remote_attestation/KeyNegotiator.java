@@ -44,10 +44,10 @@ public class KeyNegotiator {
     // Defines the type of encryptor created by `KeyNegotiator.createEncryptor`.
     public enum EncryptorType {
         // Defines a server encryptor, which uses server session key for encryption and client
-        // session key for encryption.
+        // session key for decryption.
         Server,
         // Defines a client encryptor, which uses client session key for encryption and server
-        // session key for encryption.
+        // session key for decryption.
         Client,
     }
 
@@ -63,6 +63,9 @@ public class KeyNegotiator {
      * Derives a session key from `key_material` using HKDF.
      * https://datatracker.ietf.org/doc/html/rfc5869
      * https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
+     * 
+     * In order to derive keys, uses the information string that consists of a purpose string, a
+     * server public key and a client public key (in that specific order).
      */
     byte[] keyDerivationFunction(
         byte[] keyMaterial,
