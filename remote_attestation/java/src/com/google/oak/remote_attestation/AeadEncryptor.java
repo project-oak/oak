@@ -27,13 +27,21 @@ import oak.remote_attestation.EncryptedData;
 /**
  * Implementation of Authenticated Encryption with Associated Data (AEAD).
  * https://datatracker.ietf.org/doc/html/rfc5116
+ *
+ * This implementation uses separate keys for encrypting data and decrypting peer encrypted data.
+ * Which means that this implementation uses the same key for encryption, which peer uses for
+ * decryption.
+ * It is necessary to prevent the Loopback Attack, where malicious network takes an outgoing packet
+ * and feeds it back as an incoming packet.
  */
 public class AeadEncryptor {
     private static final int NONCE_LENGTH_BYTES = 12;
     private final AesGcmJce encryptor;
+    private final AesGcmJce decryptor;
 
-    public AeadEncryptor(byte[] key) throws GeneralSecurityException {
-        encryptor = new AesGcmJce(key);
+    public AeadEncryptor(byte[] encryptionKey, byte[] decryptionKey) throws GeneralSecurityException {
+        encryptor = new AesGcmJce(encryptionKey);
+        decryptor = new AesGcmJce(decryptionKey);
     }
 
     /**
@@ -67,6 +75,6 @@ public class AeadEncryptor {
         // Additional authenticated data is not required for the remotely attested channel,
         // since after session key is established client and server exchange messages with a
         // single encrypted field.
-        return encryptor.decrypt(prefixedData, null);
+        return decryptor.decrypt(prefixedData, null);
     }
 }

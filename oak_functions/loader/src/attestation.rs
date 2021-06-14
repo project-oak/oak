@@ -206,7 +206,7 @@ async fn attest(
         response_type: Some(ResponseType::ServerIdentity(identity)),
     };
     let encryptor = attestation_engine
-        .create_encryptor(&client_identity)
+        .create_server_encryptor(&client_identity)
         .context("Couldn't attest to client")?;
 
     Ok((attestation_response, encryptor))
