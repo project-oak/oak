@@ -64,10 +64,9 @@ public class MainActivity extends Activity {
     invokeButton.setOnClickListener(v -> onClick());
 
     // Set default URI of the Oak Functions application.
+    // https://pantheon.corp.google.com/run/detail/europe-west2/weather-lookup-endpoint/general?project=oak-ci
     EditText uriInput = findViewById(R.id.uriInput);
-    // 10.0.2.2 is routed to the host machine by the Android emulator.
-    // TODO(#2172): Connect to API Gateway instead of the host machine.
-    uriInput.setText("10.0.2.2:8080");
+    uriInput.setText("https://weather-lookup-endpoint-62sa4xcfia-nw.a.run.app");
 
     // Set default request payload.
     EditText requestInput = findViewById(R.id.requestInput);

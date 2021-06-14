@@ -29,7 +29,7 @@ public class Main {
     private static final String EXPECTED_RESPONSE = "{\"temperature_degrees\":-10}";
 
     public static void main(String[] args) throws Exception {
-        AttestationClient client = new AttestationClient("localhost:8080");
+        AttestationClient client = new AttestationClient("http://localhost:8080");
 
         byte[] requestBody = "{\"lat\":52,\"lon\":0}".getBytes();
         Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();

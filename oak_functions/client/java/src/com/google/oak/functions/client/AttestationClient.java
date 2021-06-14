@@ -25,6 +25,8 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -52,9 +54,24 @@ public class AttestationClient {
     private final BlockingQueue<AttestedInvokeResponse> messageQueue;
     private final AeadEncryptor encryptor;
 
-    public AttestationClient(String uri) throws GeneralSecurityException, InterruptedException {
+    /**
+     * Creates an attested gRPC channel.
+     * 
+     * `url` must contain protocol used for connection ("https://" or "http://").
+     */
+    public AttestationClient(String url) throws GeneralSecurityException, InterruptedException, MalformedURLException {
         // Create gRPC channel.
-        channel = ManagedChannelBuilder.forTarget(uri).usePlaintext().build();
+        URL parsedUrl = new URL(url);
+        if (parsedUrl.getProtocol().equals("https")) {
+            channel = ManagedChannelBuilder
+                .forAddress(parsedUrl.getHost(), parsedUrl.getPort())
+                .build();
+        } else {
+            channel = ManagedChannelBuilder
+                .forAddress(parsedUrl.getHost(), parsedUrl.getPort())
+                .usePlaintext()
+                .build();
+        }
         RemoteAttestationStub stub = RemoteAttestationGrpc.newStub(channel);
 
         // Create server response handler.
