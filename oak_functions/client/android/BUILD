@@ -42,6 +42,5 @@ android_binary(
     multidex = "native",
     deps = [
         ":client_activity",
-        "//examples/certs:gcp_certs",
     ],
 )
