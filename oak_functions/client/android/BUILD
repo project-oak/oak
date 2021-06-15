@@ -33,7 +33,7 @@ android_library(
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
-        "@conscrypt//:conscrypt",
+        # "@conscrypt//:conscrypt",
         # "@conscrypt-android",
         ":conscrypt-android-local",
     ],
