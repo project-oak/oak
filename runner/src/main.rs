@@ -42,6 +42,9 @@ use examples::*;
 mod files;
 use files::*;
 
+mod diffs;
+use diffs::*;
+
 mod check_todo;
 use check_todo::CheckTodo;
 
