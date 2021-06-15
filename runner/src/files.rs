@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-use std::{
-    io::{Read},
-    path::PathBuf,
-};
+use std::{io::Read, path::PathBuf};
 
 pub fn read_file(path: &PathBuf) -> String {
     let mut file = std::fs::File::open(path).expect("could not open file");

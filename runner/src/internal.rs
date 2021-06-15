@@ -47,8 +47,8 @@ pub enum Command {
     BuildFunctionsExample(RunFunctionsExamples),
     BuildServer(BuildServer),
     BuildFunctionsServer(BuildFunctionsServer),
-    Format,
-    CheckFormat,
+    Format(Diffs),
+    CheckFormat(Diffs),
     RunTests,
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
@@ -93,6 +93,8 @@ pub struct RunExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
+    #[structopt(flatten, help = "run the command only for the specified diffs")]
+    pub diffs: Diffs,
 }
 
 #[derive(StructOpt, Clone)]
@@ -121,6 +123,14 @@ pub struct RunFunctionsExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
+    #[structopt(flatten, help = "run the command only for the specified diffs")]
+    pub diffs: Diffs,
+}
+
+#[derive(StructOpt, Clone, Debug, Default)]
+pub struct Diffs {
+    #[structopt(long, help = "number of past commits to include in the diff")]
+    pub commits: Option<u8>,
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -235,6 +245,8 @@ pub struct RunTestsOpt {
     pub cleanup: bool,
     #[structopt(long, help = "run benchmarks")]
     pub benches: bool,
+    #[structopt(flatten, help = "run the command only for the specified diffs")]
+    pub diffs: Diffs,
 }
 
 pub trait RustBinaryOptions {

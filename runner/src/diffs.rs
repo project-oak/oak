@@ -23,45 +23,96 @@ use std::{
     process::Command,
 };
 
-use crate::internal::CargoManifest;
-use crate::files::*;
+use crate::{
+    files::*,
+    internal::{CargoManifest, Diffs},
+};
 
-// Get all the files that have been changed in this branch.
-pub fn modified_files() -> Vec<String> {
-    let vec = Command::new("git")
-        .args(&["diff", "--name-only", "HEAD^"])
-        .output()
-        .expect("could not get modified files")
-        .stdout;
-
-    // Extract the file names from the git output
-    String::from_utf8(vec)
-        .expect("could not convert to string")
-        .split('\n')
-        .map(|s| format!("./{}", s))
-        .collect()
+#[derive(Debug)]
+pub struct ModifiedFiles {
+    /// List of modified files.
+    files: Vec<String>,
+    /// If true, acts as if all files are modified or affected.
+    all_modified: bool,
 }
 
-/// Checks if the given file is among the modfied paths
-pub fn is_modified(file_path: &str, modified_paths: &[String]) -> bool {
-    modified_paths.contains(&file_path.to_string())
-        || modified_paths
-            .iter()
-            .any(|path| file_path.starts_with(path.as_str()))
+impl ModifiedFiles {
+    pub fn contains(&self, file_name: &str) -> bool {
+        self.all_modified || self.files.contains(&file_name.to_string())
+    }
+
+    /// Checks if the given file is among the modified paths
+    pub fn is_modified(&self, file_name: &str) -> bool {
+        self.all_modified
+            || self.files.contains(&file_name.to_string())
+            || self
+                .files
+                .iter()
+                .any(|path| file_name.starts_with(path.as_str()))
+    }
+}
+
+impl IntoIterator for ModifiedFiles {
+    type Item = String;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.files.into_iter()
+    }
+}
+
+// Get all the files that have been changed in this branch. Does not include new files, unless they
+// are added to git.
+pub fn modified_files(diffs: &Diffs) -> ModifiedFiles {
+    match diffs.commits {
+        None => ModifiedFiles {
+            files: vec![],
+            all_modified: true,
+        },
+        Some(commits) => {
+            let vec = Command::new("git")
+                .args(&["diff", "--name-only", &format!("HEAD~{}", commits)])
+                .output()
+                .expect("could not get modified files")
+                .stdout;
+
+            // Extract the file names from the git output
+            let files = String::from_utf8(vec)
+                .expect("could not convert to string")
+                .split('\n')
+                .map(|s| format!("./{}", s))
+                .collect();
+            ModifiedFiles {
+                files,
+                all_modified: false,
+            }
+        }
+    }
 }
 
 /// Returns the list of all crates in which at least one file is modified. Returns a list of the
 /// paths to the `Cargo.toml` files.
-pub fn directly_modified_crates() -> Vec<String> {
-    let modified_files = modified_files();
+pub fn directly_modified_crates(diffs: &Diffs) -> ModifiedFiles {
+    match diffs.commits {
+        None => ModifiedFiles {
+            files: vec![],
+            all_modified: true,
+        },
+        _ => {
+            let modified_files = modified_files(diffs);
 
-    let mut crates = hashset![];
-    for str_path in modified_files {
-        if let Some(crate_path) = find_crate(str_path) {
-            crates.insert(crate_path);
+            let mut crates = hashset![];
+            for str_path in modified_files {
+                if let Some(crate_path) = find_crate(str_path) {
+                    crates.insert(crate_path);
+                }
+            }
+            ModifiedFiles {
+                files: crates.iter().cloned().collect(),
+                all_modified: false,
+            }
         }
     }
-    crates.iter().cloned().collect()
 }
 
 fn find_crate(str_path: String) -> Option<String> {
@@ -81,25 +132,29 @@ fn find_crate(str_path: String) -> Option<String> {
     None
 }
 
-fn affected_protos() -> Vec<String> {
-    let mut affected_protos: Vec<String> = modified_files()
-        .iter()
-        .filter(|p| p.ends_with(".proto"))
-        .cloned()
-        .collect();
+fn affected_protos(diffs: &Diffs) -> Vec<String> {
+    match diffs.commits {
+        None => vec![],
+        _ => {
+            let mut affected_protos: Vec<String> = modified_files(diffs)
+                .into_iter()
+                .filter(|p| p.ends_with(".proto"))
+                .collect();
 
-    if !affected_protos.is_empty() {
-        let all_protos = source_files()
-            .map(to_string)
-            .map(|s| s.replace("./", ""))
-            .filter(|p| p.ends_with(".proto"));
+            if !affected_protos.is_empty() {
+                let all_protos = source_files()
+                    .map(to_string)
+                    .map(|s| s.replace("./", ""))
+                    .filter(|p| p.ends_with(".proto"));
 
-        for proto in all_protos {
-            add_affected_protos(proto, &mut affected_protos);
+                for proto in all_protos {
+                    add_affected_protos(proto, &mut affected_protos);
+                }
+            }
+
+            affected_protos
         }
     }
-
-    affected_protos
 }
 
 fn add_affected_protos(proto_path: String, affected_protos: &mut Vec<String>) {
@@ -139,24 +194,35 @@ fn imported_proto_files(proto_file_path: String) -> Vec<String> {
 
 /// Path to the `Cargo.toml` file for all crates that are either directly modified or have a
 /// dependency to a modified crate.
-pub fn all_affected_crates() -> Vec<String> {
-    println!("getting affected files");
-    let crate_manifest_files = crate_manifest_files();
-    println!("got all crate manifest files");
-    let mut affected_crates =
-        HashSet::<String>::from_iter(directly_modified_crates().iter().cloned());
+pub fn all_affected_crates(diffs: &Diffs) -> ModifiedFiles {
+    match diffs.commits {
+        None => ModifiedFiles {
+            files: vec![],
+            all_modified: true,
+        },
+        _ => {
+            println!("getting affected files");
+            let crate_manifest_files = crate_manifest_files();
+            println!("got all crate manifest files");
+            let mut affected_crates =
+                HashSet::<String>::from_iter(directly_modified_crates(diffs).into_iter());
 
-    let crates_affected_by_protos = crates_affected_by_protos(&affected_protos());
-    affected_crates = affected_crates
-        .union(&crates_affected_by_protos)
-        .cloned()
-        .collect();
+            let crates_affected_by_protos = crates_affected_by_protos(&affected_protos(diffs));
+            affected_crates = affected_crates
+                .union(&crates_affected_by_protos)
+                .cloned()
+                .collect();
 
-    for crate_path in crate_manifest_files {
-        add_affected_dependencies(crate_path, &mut affected_crates);
+            for crate_path in crate_manifest_files {
+                add_affected_dependencies(crate_path, &mut affected_crates);
+            }
+
+            ModifiedFiles {
+                files: affected_crates.iter().cloned().collect(),
+                all_modified: false,
+            }
+        }
     }
-
-    affected_crates.iter().cloned().collect()
 }
 
 fn crates_affected_by_protos(affected_protos: &[String]) -> HashSet<String> {
@@ -191,7 +257,6 @@ fn add_affected_dependencies(crate_path: PathBuf, affected_crates: &mut HashSet<
         }
     }
 }
-
 
 /// Get local dependencies.
 fn get_local_dependencies(path: &PathBuf) -> Vec<String> {

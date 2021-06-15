@@ -87,12 +87,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::BuildServer(ref opt) => build_server(&opt),
             Command::BuildFunctionsServer(ref opt) => build_functions_server(opt),
             Command::RunTests => run_tests(),
-            Command::RunCargoTests(ref opt) => run_cargo_tests(opt.cleanup, opt.benches),
+            Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
             Command::RunBazelTests => run_bazel_tests(),
             Command::RunTestsTsan => run_tests_tsan(),
             Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
-            Command::Format => format(),
-            Command::CheckFormat => check_format(),
+            Command::Format(ref diffs) => format(diffs),
+            Command::CheckFormat(ref diffs) => check_format(diffs),
             Command::RunCi => run_ci(),
             Command::Completion => panic!("should have been handled above"),
             Command::RunCargoDeny => run_cargo_deny(),
@@ -153,18 +153,25 @@ fn cleanup() {
 fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
-        steps: vec![run_cargo_tests(false, true), run_bazel_tests()],
+        steps: vec![
+            run_cargo_tests(&RunTestsOpt {
+                cleanup: false,
+                benches: true,
+                diffs: Diffs::default(),
+            }),
+            run_bazel_tests(),
+        ],
     }
 }
 
-fn run_cargo_tests(cleanup: bool, benches: bool) -> Step {
-    let all_affected_crates = all_affected_crates();
+fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
+    let all_affected_crates = all_affected_crates(&opt.diffs);
     println!("Affected crates: {:?}", all_affected_crates);
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![
             run_cargo_clippy(&all_affected_crates),
-            run_cargo_test(cleanup, benches, &all_affected_crates),
+            run_cargo_test(opt, &all_affected_crates),
             run_cargo_doc(&all_affected_crates),
         ],
     }
@@ -339,8 +346,8 @@ pub fn run_fuzz_targets_in_crate(path: &PathBuf, opt: &RunCargoFuzz) -> Step {
     }
 }
 
-fn format() -> Step {
-    let modified_files = modified_files();
+fn format(diffs: &Diffs) -> Step {
+    let modified_crates = directly_modified_crates(diffs);
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
@@ -349,14 +356,14 @@ fn format() -> Step {
             run_prettier(FormatMode::Fix),
             run_markdownlint(FormatMode::Fix),
             run_embedmd(FormatMode::Fix),
-            run_cargo_fmt(FormatMode::Fix, &modified_files),
+            run_cargo_fmt(FormatMode::Fix, &modified_crates),
         ],
     }
 }
 
-fn check_format() -> Step {
-    let modified_files = modified_files();
-    println!("modified files: {:?}", modified_files);
+fn check_format(diffs: &Diffs) -> Step {
+    let modified_files = modified_files(diffs);
+    let modified_crates = directly_modified_crates(diffs);
 
     Step::Multiple {
         name: "format".to_string(),
@@ -371,7 +378,7 @@ fn check_format() -> Step {
             run_embedmd(FormatMode::Check),
             // TODO(#1304): Uncomment, when re-run from GitHub is fixed.
             // run_liche(),
-            run_cargo_fmt(FormatMode::Check, &modified_files),
+            run_cargo_fmt(FormatMode::Check, &modified_crates),
             run_hadolint(),
             run_shellcheck(),
         ],
@@ -382,7 +389,7 @@ fn run_ci() -> Step {
     Step::Multiple {
         name: "ci".to_string(),
         steps: vec![
-            check_format(),
+            check_format(&Diffs::default()),
             run_cargo_deny(),
             run_cargo_udeps(),
             build_server(&BuildServer {
@@ -430,6 +437,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
+                diffs: Diffs::default(),
             }),
             run_examples(&RunExamples {
                 application_variant: "cpp".to_string(),
@@ -449,6 +457,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
+                diffs: Diffs::default(),
             }),
             // Package the Hello World application in a Docker image.
             run_examples(&RunExamples {
@@ -469,6 +478,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
+                diffs: Diffs::default(),
             }),
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
@@ -488,6 +498,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
+                diffs: Diffs::default(),
             }),
             run_functions_examples(&RunFunctionsExamples {
                 application_variant: "rust".to_string(),
@@ -506,6 +517,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
+                diffs: Diffs::default(),
             }),
         ],
     }
@@ -697,13 +709,13 @@ fn run_clang_format(mode: FormatMode) -> Step {
     }
 }
 
-fn run_check_license(modified_paths: &[String]) -> Step {
+fn run_check_license(modified_paths: &ModifiedFiles) -> Step {
     Step::Multiple {
         name: "check license".to_string(),
         steps: source_files()
             .filter(is_source_code_file)
             .map(to_string)
-            .filter(|file| is_modified(file, modified_paths))
+            .filter(|file| modified_paths.is_modified(file))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckLicense::new(entry),
@@ -712,13 +724,13 @@ fn run_check_license(modified_paths: &[String]) -> Step {
     }
 }
 
-fn run_check_build_licenses(modified_paths: &[String]) -> Step {
+fn run_check_build_licenses(modified_paths: &ModifiedFiles) -> Step {
     Step::Multiple {
         name: "check BUILD licenses".to_string(),
         steps: source_files()
             .filter(is_build_file)
             .map(to_string)
-            .filter(|file| is_modified(file, modified_paths))
+            .filter(|file| modified_paths.is_modified(file))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckBuildLicenses::new(entry),
@@ -727,13 +739,13 @@ fn run_check_build_licenses(modified_paths: &[String]) -> Step {
     }
 }
 
-fn run_check_todo(modified_paths: &[String]) -> Step {
+fn run_check_todo(modified_paths: &ModifiedFiles) -> Step {
     Step::Multiple {
         name: "check todo".to_string(),
         steps: source_files()
             .filter(is_source_code_file)
             .map(to_string)
-            .filter(|file| is_modified(file, modified_paths))
+            .filter(|file| modified_paths.is_modified(file))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckTodo::new(entry),
@@ -742,11 +754,10 @@ fn run_check_todo(modified_paths: &[String]) -> Step {
     }
 }
 
-fn run_cargo_fmt(mode: FormatMode, modified_crates: &[String]) -> Step {
+fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedFiles) -> Step {
     Step::Multiple {
         name: "cargo fmt".to_string(),
         steps: crate_manifest_files()
-            .filter(|path| modified_crates.contains(&path.to_str().unwrap().to_string()))
             .map(to_string)
             .filter(|path| modified_crates.contains(&path))
             .map(|entry| Step::Single {
@@ -774,7 +785,7 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &[String]) -> Step {
     }
 }
 
-fn run_cargo_test(cleanup: bool, benches: bool, all_affected_crates: &[String]) -> Step {
+fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedFiles) -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: crate_manifest_files()
@@ -790,7 +801,7 @@ fn run_cargo_test(cleanup: bool, benches: bool, all_affected_crates: &[String]) 
                         &[
                             "test",
                             &format!("--manifest-path={}", &entry),
-                            if benches { "--benches" } else { "" },
+                            if opt.benches { "--benches" } else { "" },
                         ],
                     ),
                 };
@@ -798,7 +809,7 @@ fn run_cargo_test(cleanup: bool, benches: bool, all_affected_crates: &[String]) 
 
                 // If `cleanup` is enabled, add a cleanup step to remove the generated files. Do
                 // this only if `target_path` is a non-empty, valid target path.
-                if cleanup && target_path.ends_with("/target") {
+                if opt.cleanup && target_path.ends_with("/target") {
                     Step::Multiple {
                         name: entry.clone(),
                         steps: vec![
@@ -817,7 +828,7 @@ fn run_cargo_test(cleanup: bool, benches: bool, all_affected_crates: &[String]) 
     }
 }
 
-fn run_cargo_doc(all_affected_crates: &[String]) -> Step {
+fn run_cargo_doc(all_affected_crates: &ModifiedFiles) -> Step {
     Step::Multiple {
         name: "cargo doc".to_string(),
         steps: crate_manifest_files()
@@ -866,7 +877,7 @@ fn run_cargo_test_tsan() -> Step {
     }
 }
 
-fn run_cargo_clippy(all_affected_crates: &[String]) -> Step {
+fn run_cargo_clippy(all_affected_crates: &ModifiedFiles) -> Step {
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()
