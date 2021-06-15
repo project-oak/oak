@@ -34,8 +34,8 @@ android_library(
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@conscrypt//:conscrypt",
-        # ":conscrypt-android",
-        "@conscrypt-android",
+        # "@conscrypt-android",
+        ":conscrypt-android-local",
     ],
 )
 
@@ -44,7 +44,6 @@ android_binary(
     custom_package = "com.google.oak.functions.android.client",
     manifest = "AndroidManifest.xml",
     manifest_values = {
-
         "manifest_merger": "android",
     },
     multidex = "native",
@@ -53,9 +52,21 @@ android_binary(
     ],
 )
 
-# aar_import(
-#     name = "conscrypt-android",
-#     licenses = ["notice"],
-#     # jar_sha256 = "42d18979caf53f5ef68548c76d4c98b41adb910a32ad9448133f9c5b20bd65a3",
-#     aar = "https://search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
-# )
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+http_file(
+    name = "conscrypt-android-aar",
+    sha256 = "42d18979caf53f5ef68548c76d4c98b41adb910a32ad9448133f9c5b20bd65a3",
+    urls = [
+        "https://search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
+    ]
+)
+
+aar_import(
+    name = "conscrypt-android-local",
+    # licenses = ["notice"],
+    # jar_sha256 = "42d18979caf53f5ef68548c76d4c98b41adb910a32ad9448133f9c5b20bd65a3",
+    # aar = "search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
+    # aar = "https://search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
+    aar = ":conscrypt-android-aar"
+)
