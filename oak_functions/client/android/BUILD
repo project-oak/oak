@@ -25,6 +25,7 @@ android_library(
     srcs = ["com/google/oak/functions/android/client/MainActivity.java"],
     custom_package = "com.google.oak.functions.android.client",
     manifest = "AndroidManifest.xml",
+    exports_manifest = 1,
     resource_files = glob(["com/google/oak/functions/android/client/res/**"]),
     deps = [
         "//oak_functions/client/java:client_android",
@@ -32,6 +33,9 @@ android_library(
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
+        "@conscrypt//:conscrypt",
+        # ":conscrypt-android",
+        "@conscrypt-android",
     ],
 )
 
@@ -39,8 +43,19 @@ android_binary(
     name = "client_app",
     custom_package = "com.google.oak.functions.android.client",
     manifest = "AndroidManifest.xml",
+    manifest_values = {
+
+        "manifest_merger": "android",
+    },
     multidex = "native",
     deps = [
         ":client_activity",
     ],
 )
+
+# aar_import(
+#     name = "conscrypt-android",
+#     licenses = ["notice"],
+#     # jar_sha256 = "42d18979caf53f5ef68548c76d4c98b41adb910a32ad9448133f9c5b20bd65a3",
+#     aar = "https://search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
+# )

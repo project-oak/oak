@@ -62,5 +62,7 @@ android_library(
         "@io_grpc_grpc_java//netty",
         "@io_grpc_grpc_java//protobuf",
         "@io_grpc_grpc_java//stub",
+        "@conscrypt//:conscrypt",
+        "@conscrypt-android",
     ],
 )

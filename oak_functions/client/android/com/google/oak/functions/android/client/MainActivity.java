@@ -35,12 +35,14 @@ import java.io.InputStreamReader;
 import java.lang.Runnable;
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
 import oak.functions.invocation.StatusCode;
+import org.conscrypt.Conscrypt;
 
 /** Main class for the Oak Functions Client application. */
 public class MainActivity extends Activity {
@@ -59,6 +61,9 @@ public class MainActivity extends Activity {
     HandlerThread backgroundHandlerThread = new HandlerThread("Background");
     backgroundHandlerThread.start();
     backgroundHandler = new Handler(backgroundHandlerThread.getLooper());
+
+    // Create TLS provider.
+    Security.insertProviderAt(Conscrypt.newProvider(), 1);
 
     Button invokeButton = findViewById(R.id.invokeButton);
     invokeButton.setOnClickListener(v -> onClick());

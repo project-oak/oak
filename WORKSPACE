@@ -18,6 +18,7 @@ workspace(name = "oak")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
+load("@bazel_tools//tools/build_defs/repo:java.bzl", "java_import_external")
 
 http_archive(
     name = "bazel_skylib",
@@ -81,6 +82,25 @@ http_archive(
     urls = [
         "https://github.com/google/boringssl/archive/6a47fc1adc71998756d275050351346e4fb4e2d5.tar.gz",
     ],
+)
+
+# TLS provider for Android.
+java_import_external(
+    name = "conscrypt",
+    licenses = ["notice"],
+    jar_sha256 = "eaf537d98e033d0f0451cd1b8cc74e02d7b55ec882da63c88060d806ba89c348",
+    jar_urls = [
+        "https://repo1.maven.org/maven2/org/conscrypt/conscrypt-openjdk-uber/2.5.2/conscrypt-openjdk-uber-2.5.2.jar",
+    ],
+)
+
+java_import_external(
+    name = "conscrypt-android",
+    licenses = ["notice"],
+    jar_sha256 = "42d18979caf53f5ef68548c76d4c98b41adb910a32ad9448133f9c5b20bd65a3",
+    jar_urls = [
+        "https://search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
+    ]
 )
 
 # Patch gRPC ares BUILD file.
