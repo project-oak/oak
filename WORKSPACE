@@ -103,6 +103,16 @@ java_import_external(
     ]
 )
 
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+http_file(
+    name = "conscrypt-android-aar",
+    downloaded_file_path = "conscrypt-android-2.5.2.aar",
+    sha256 = "42d18979caf53f5ef68548c76d4c98b41adb910a32ad9448133f9c5b20bd65a3",
+    urls = [
+        "https://search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
+    ]
+)
+
 # Patch gRPC ares BUILD file.
 # TODO: Remove when gRPC will fix Ares Android build
 # https://github.com/grpc/grpc/pull/21463

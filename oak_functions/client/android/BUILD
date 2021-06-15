@@ -54,13 +54,13 @@ android_binary(
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 
-http_file(
-    name = "conscrypt-android-aar",
-    sha256 = "42d18979caf53f5ef68548c76d4c98b41adb910a32ad9448133f9c5b20bd65a3",
-    urls = [
-        "https://search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
-    ]
-)
+# http_file(
+#     name = "conscrypt-android-aar",
+#     sha256 = "42d18979caf53f5ef68548c76d4c98b41adb910a32ad9448133f9c5b20bd65a3",
+#     urls = [
+#         "https://search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
+#     ]
+# )
 
 aar_import(
     name = "conscrypt-android-local",
@@ -68,5 +68,5 @@ aar_import(
     # jar_sha256 = "42d18979caf53f5ef68548c76d4c98b41adb910a32ad9448133f9c5b20bd65a3",
     # aar = "search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
     # aar = "https://search.maven.org/remotecontent?filepath=org/conscrypt/conscrypt-android/2.5.2/conscrypt-android-2.5.2.aar",
-    aar = ":conscrypt-android-aar"
+    aar = "@conscrypt-android-aar//file"
 )
