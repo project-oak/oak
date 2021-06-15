@@ -25,7 +25,7 @@ android_library(
     srcs = ["com/google/oak/functions/android/client/MainActivity.java"],
     custom_package = "com.google.oak.functions.android.client",
     manifest = "AndroidManifest.xml",
-    exports_manifest = 1,
+    # exports_manifest = 1,
     resource_files = glob(["com/google/oak/functions/android/client/res/**"]),
     deps = [
         "//oak_functions/client/java:client_android",
@@ -43,9 +43,9 @@ android_binary(
     name = "client_app",
     custom_package = "com.google.oak.functions.android.client",
     manifest = "AndroidManifest.xml",
-    manifest_values = {
-        "manifest_merger": "android",
-    },
+    # manifest_values = {
+    #     "manifest_merger": "android",
+    # },
     multidex = "native",
     deps = [
         ":client_activity",
