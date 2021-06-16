@@ -114,7 +114,7 @@ pub fn directly_modified_crates(diffs: &Diffs) -> ModifiedContent {
 fn find_crate_toml_file(str_path: String) -> Option<String> {
     if str_path.ends_with("Cargo.toml") {
         return Some(str_path);
-    } else if str_path.ends_with(".rs") {
+    } else if str_path.ends_with(".rs") || str_path.ends_with(".lock") {
         let mut path = PathBuf::from(&str_path);
         while path.parent().is_some() {
             path.pop();
