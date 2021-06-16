@@ -648,6 +648,13 @@
 <span id="645">645</span>
 <span id="646">646</span>
 <span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -939,16 +946,15 @@
             })<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
             <span class="ident">Level</span>::<span class="ident">Debug</span>,
-            <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;storage_get_item(): key: {:?}&quot;</span>, <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>)),
+            <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;storage_get_item(): key: {}&quot;</span>, <span class="ident">format_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>)),
         );
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">lookup_data</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) {
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// Truncate value for logging.</span>
+                <span class="kw">let</span> <span class="ident">value_to_log</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">clone</span>().<span class="ident">into_iter</span>().<span class="ident">take</span>(<span class="number">512</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
                 <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
                     <span class="ident">Level</span>::<span class="ident">Debug</span>,
-                    <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(
-                        <span class="string">&quot;storage_get_item(): value: {:?}&quot;</span>,
-                        <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>)
-                    ),
+                    <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;storage_get_item(): value: {}&quot;</span>, <span class="ident">format_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">value_to_log</span>)),
                 );
                 <span class="kw">let</span> <span class="ident">dest_ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">alloc</span>(<span class="ident">value</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
                 <span class="self">self</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>, <span class="ident">dest_ptr</span>)<span class="question-mark">?</span>;
@@ -1295,6 +1301,14 @@
         <span class="op">|</span><span class="ident">x</span>: <span class="ident">OakStatus</span><span class="op">|</span> <span class="ident">x</span> <span class="kw">as</span> <span class="ident">i32</span>,
         <span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span>,
     ))))
+}
+
+<span class="doccomment">/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric</span>
+<span class="doccomment">/// vector of bytes otherwise.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">format_bytes</span>(<span class="ident">v</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="ident">v</span>)
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_string</span>())
+        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">v</span>))
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_functions_loader";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
