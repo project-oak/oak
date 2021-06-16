@@ -12,5 +12,5 @@ cargo run --manifest-path=./oak_functions/lookup_data_generator/Cargo.toml -- \
   weather-sparse
 
 # Once uploaded, this file is publicly available at the following URL:
-# https://storage.googleapis.com/oak_lookup_data/lookup_data_weather
+# https://storage.googleapis.com/oak_lookup_data/lookup_data_weather_sparse
 gsutil cp /tmp/lookup_data_weather_sparse gs://oak_lookup_data/lookup_data_weather_sparse

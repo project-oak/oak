@@ -26,7 +26,7 @@ import java.util.logging.Logger;
 
 public class Main {
     private static Logger logger = Logger.getLogger(Main.class.getName());
-    private static final String EXPECTED_RESPONSE = "{\"temperature_degrees\":-10}";
+    private static final String EXPECTED_RESPONSE = "{\"temperature_degrees_celsius\":16}";
 
     public static void main(String[] args) throws Exception {
         AttestationClient client = new AttestationClient("http://localhost:8080");
@@ -36,7 +36,7 @@ public class Main {
         Response response = client.send(request);
         ByteString responseBody = response.getBody().substring(0, (int)response.getLength());
         String decodedResponse = responseBody.toStringUtf8();
-        
+
         if (EXPECTED_RESPONSE.equals(decodedResponse)) {
             logger.log(Level.INFO, "Client received the expected response: " + decodedResponse);
         } else {

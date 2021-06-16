@@ -93,8 +93,19 @@ async fn test_server() {
     });
 
     {
+        // Exact key_0.
+        let response = make_request(server_port, br#"{"lat":52.0,"lon":0}"#)
+            .await
+            .response;
+        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(
+            r#"{"temperature_degrees_celsius":10}"#,
+            std::str::from_utf8(response.body().unwrap()).unwrap()
+        );
+    }
+    {
         // Close to key_0.
-        let response = make_request(server_port, br#"{"lat":52.1,"lon":0}"#)
+        let response = make_request(server_port, br#"{"lat":52.1,"lon":-0.1}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -119,7 +130,7 @@ async fn test_server() {
         let response = make_request(server_port, b"invalid - JSON").await.response;
         assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
-            "could not deserialize request as JSON",
+            "could not deserialize request as JSON: Error(\"expected value\", line: 1, column: 1)",
             std::str::from_utf8(response.body().unwrap()).unwrap()
         );
     }

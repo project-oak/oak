@@ -21,7 +21,7 @@ use oak_functions_loader::{
     grpc::create_and_start_grpc_server,
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData},
-    server::{apply_policy, try_from_utf8, Policy, WasmHandler},
+    server::{apply_policy, format_bytes, Policy, WasmHandler},
 };
 use prost::Message;
 use std::{
@@ -410,8 +410,9 @@ async fn test_apply_policy() {
 }
 
 #[test]
-fn test_try_from_utf8() {
-    assert_eq!("🚀oak⭐", try_from_utf8("🚀oak⭐".as_bytes()));
+fn test_format_bytes() {
+    // Valid UTF-8 string.
+    assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
     // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
-    assert_eq!("[0, 159, 146, 150]", try_from_utf8(&[0, 159, 146, 150]));
+    assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
 }

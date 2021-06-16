@@ -56,6 +56,7 @@ pub extern "C" fn main() {
             latitude_millidegrees: (request.latitude_degrees * 1000.0) as i32,
             longitude_millidegrees: (request.longitude_degrees * 1000.0) as i32,
         };
+        log!("request location: {:?}\n", request_location).unwrap();
 
         // Find the closest key by linearly scanning the keys from the index and computing their
         // distance to the client request location.
@@ -67,6 +68,7 @@ pub extern "C" fn main() {
             })
             .ok_or("could not find nearest location")?;
         log!("nearest location key: {:?}\n", best_key).unwrap();
+        log!("nearest location: {:?}\n", Location::from_bytes(&best_key)).unwrap();
 
         let best_value = oak_functions::storage_get_item(best_key)
             .map_err(|err| format!("could not get item: {:?}", err))?
@@ -114,6 +116,8 @@ impl Location {
     }
 
     fn distance(&self, other: &Location) -> i32 {
+        // TODO(#2201): Improve distance calculation logic.
+
         // Convert to `i64` in order to avoid overflow when squaring.
         (((self.latitude_millidegrees as i64 - other.latitude_millidegrees as i64).pow(2)
             + (self.longitude_millidegrees as i64 - other.longitude_millidegrees as i64).pow(2))
