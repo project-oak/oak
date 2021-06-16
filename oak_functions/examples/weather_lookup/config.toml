@@ -1,7 +1,7 @@
-lookup_data_url = "https://storage.googleapis.com/oak_lookup_data/lookup_data_weather"
+lookup_data_url = "https://storage.googleapis.com/oak_lookup_data/lookup_data_weather_sparse"
 lookup_data_download_period = "10m"
 worker_threads = 4
 
 [policy]
-constant_response_size_bytes = 90
-constant_processing_time = "100ms"
+constant_response_size_bytes = 900
+constant_processing_time = "1s"

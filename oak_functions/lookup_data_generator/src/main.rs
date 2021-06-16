@@ -45,6 +45,13 @@ pub enum Command {
     },
     #[structopt(about = "Generate entries for the weather lookup example with random values")]
     Weather {},
+    #[structopt(
+        about = "Generate sparse entries plus an index for the weather lookup example with random values"
+    )]
+    WeatherSparse {
+        #[structopt(long, default_value = "100000")]
+        entries: usize,
+    },
 }
 
 fn create_bytes<R: Rng>(rng: &mut R, size_bytes: usize) -> Vec<u8> {
@@ -64,20 +71,24 @@ fn create_random_entry<R: Rng>(
     }
 }
 
+#[derive(Serialize)]
+struct WeatherValue {
+    temperature_degrees_celsius: i32,
+}
+
 fn create_weather_entry<R: Rng>(rng: &mut R, lat: i32, lon: i32) -> Entry {
-    #[derive(Serialize)]
-    struct WeatherValue {
-        temperature_degrees_celsius: i32,
-    }
-    let dist = rand::distributions::Uniform::new(-30, 40);
     let key = format!("{},{}", lat, lon);
-    let value = serde_json::to_string(&WeatherValue {
-        temperature_degrees_celsius: rng.sample(dist),
-    })
-    .unwrap();
+    let value = serde_json::to_string(&create_weather_value(rng)).unwrap();
     Entry {
         key: key.as_bytes().to_vec(),
         value: value.as_bytes().to_vec(),
+    }
+}
+
+fn create_weather_value<R: Rng>(rng: &mut R) -> WeatherValue {
+    let dist = rand::distributions::Uniform::new(-30, 40);
+    WeatherValue {
+        temperature_degrees_celsius: rng.sample(dist),
     }
 }
 
@@ -107,6 +118,36 @@ fn main() -> anyhow::Result<()> {
                         .context("could not encode entry")?;
                 }
             }
+        }
+        Command::WeatherSparse { entries } => {
+            let lat_dist = rand::distributions::Uniform::new(-90_000, 90_000);
+            let lon_dist = rand::distributions::Uniform::new(-180_000, 180_000);
+            let mut keys = vec![];
+            for _ in 0..entries {
+                let latitude_millidegrees: i32 = rng.sample(lat_dist);
+                let longitude_millidegrees: i32 = rng.sample(lon_dist);
+                let key = [
+                    latitude_millidegrees.to_be_bytes(),
+                    longitude_millidegrees.to_be_bytes(),
+                ]
+                .concat();
+                keys.push(key.clone());
+                let value = serde_json::to_string(&create_weather_value(&mut rng)).unwrap();
+                let entry = Entry {
+                    key: key.clone(),
+                    value: value.as_bytes().to_vec(),
+                };
+                entry
+                    .encode_length_delimited(&mut buf)
+                    .context("could not encode entry")?;
+            }
+            let index = Entry {
+                key: "index".as_bytes().to_vec(),
+                value: keys.concat(),
+            };
+            index
+                .encode_length_delimited(&mut buf)
+                .context("could not encode index")?;
         }
     }
     let mut file = File::create(opt.out_file_path).context("could not create out file")?;

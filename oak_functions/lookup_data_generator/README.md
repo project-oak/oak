@@ -5,5 +5,5 @@ configurable key and value size, to be used to benchmark and test the lookup
 functionality of the Oak Functions platform.
 
 See
-[`generate_and_upload_lookup_data`](/scripts/generate_and_upload_lookup_data)
+[`generate_and_upload_lookup_data_weather`](/scripts/generate_and_upload_lookup_data_weather)
 for an example use.

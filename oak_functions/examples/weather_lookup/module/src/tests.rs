@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::Location;
 use maplit::hashmap;
 use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
@@ -47,9 +48,21 @@ async fn test_server() {
             .await
     });
 
+    let key_0 = Location {
+        latitude_millidegrees: 52_000,
+        longitude_millidegrees: 0,
+    }
+    .to_bytes();
+    let key_1 = Location {
+        latitude_millidegrees: 14_000,
+        longitude_millidegrees: -12_000,
+    }
+    .to_bytes();
+
     mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
-        b"52,0".to_vec() => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
-        b"14,12".to_vec() => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
+        b"index".to_vec() => [key_0.clone(), key_1.clone()].concat(),
+        key_0 => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
+        key_1 => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
     }));
 
     let logger = Logger::for_test();
@@ -80,8 +93,8 @@ async fn test_server() {
     });
 
     {
-        // Lookup match.
-        let response = make_request(server_port, br#"{"lat":52,"lon":0}"#)
+        // Exact key_0.
+        let response = make_request(server_port, br#"{"lat":52.0,"lon":0}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -91,13 +104,24 @@ async fn test_server() {
         );
     }
     {
-        // Valid location but no lookup match.
-        let response = make_request(server_port, br#"{"lat":19,"lon":88}"#)
+        // Close to key_0.
+        let response = make_request(server_port, br#"{"lat":52.1,"lon":-0.1}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
-            r#"weather not found for location"#,
+            r#"{"temperature_degrees_celsius":10}"#,
+            std::str::from_utf8(response.body().unwrap()).unwrap()
+        );
+    }
+    {
+        // Close to key_1.
+        let response = make_request(server_port, br#"{"lat":14.1,"lon":-12.1}"#)
+            .await
+            .response;
+        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(
+            r#"{"temperature_degrees_celsius":42}"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
         );
     }
@@ -106,7 +130,7 @@ async fn test_server() {
         let response = make_request(server_port, b"invalid - JSON").await.response;
         assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
-            "could not deserialize request as JSON",
+            "could not deserialize request as JSON: Error(\"expected value\", line: 1, column: 1)",
             std::str::from_utf8(response.body().unwrap()).unwrap()
         );
     }
@@ -115,4 +139,16 @@ async fn test_server() {
     assert!(res.is_ok());
 
     mock_static_server_background.terminate_and_join().await;
+}
+
+// Test for the example contained in the README.
+#[test]
+fn test_location_from_slice() {
+    let value = Location {
+        latitude_millidegrees: 14_120,
+        longitude_millidegrees: -19_880,
+    };
+    let bytes = vec![0x00, 0x00, 0x37, 0x28, 0xFF, 0xFF, 0xB2, 0x58];
+    assert_eq!(bytes, value.to_bytes(),);
+    assert_eq!(value, Location::from_bytes(&bytes));
 }

@@ -288,16 +288,15 @@ impl WasmState {
             })?;
         self.logger.log_sensitive(
             Level::Debug,
-            &format!("storage_get_item(): key: {:?}", std::str::from_utf8(&key)),
+            &format!("storage_get_item(): key: {}", format_bytes(&key)),
         );
         match self.lookup_data.get(&key) {
             Some(value) => {
+                // Truncate value for logging.
+                let value_to_log = value.clone().into_iter().take(512).collect::<Vec<_>>();
                 self.logger.log_sensitive(
                     Level::Debug,
-                    &format!(
-                        "storage_get_item(): value: {:?}",
-                        std::str::from_utf8(&value)
-                    ),
+                    &format!("storage_get_item(): value: {}", format_bytes(&value_to_log)),
                 );
                 let dest_ptr = self.alloc(value.len() as u32);
                 self.write_buffer_to_wasm_memory(&value, dest_ptr)?;
@@ -644,4 +643,12 @@ fn map_host_errors(
         |x: OakStatus| x as i32,
         |_| OakStatus::Ok as i32,
     ))))
+}
+
+/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
+/// vector of bytes otherwise.
+pub fn format_bytes(v: &[u8]) -> String {
+    std::str::from_utf8(v)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|_| format!("{:?}", v))
 }
