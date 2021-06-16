@@ -358,7 +358,7 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
             )),
-            _ => panic!("Unimplemented function at {}", index),
+            _ => panic!("unimplemented function at {}", index),
         }
     }
 }

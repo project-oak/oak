@@ -224,7 +224,7 @@ pub fn error_from_nonok_status(status: OakStatus) -> io::Error {
         OakStatus::Unspecified => {
             io::Error::new(io::ErrorKind::Other, "Unspecified Oak status value")
         }
-        OakStatus::Ok => panic!("OK status found"),
+        OakStatus::Ok => panic!("status OK found"),
         OakStatus::ErrBadHandle => io::Error::new(io::ErrorKind::NotConnected, "Bad handle"),
         OakStatus::ErrInvalidArgs => {
             io::Error::new(io::ErrorKind::InvalidInput, "Invalid arguments")

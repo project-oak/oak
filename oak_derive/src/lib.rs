@@ -28,7 +28,7 @@ pub fn handle_visit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     match &ast.data {
         Data::Struct(data) => struct_impls(name, data),
         Data::Enum(data) => enum_impls(name, data),
-        Data::Union(_) => panic!("HandleVisit cannot be derived for unions"),
+        Data::Union(_) => panic!("trait HandleVisit cannot be derived for unions"),
     }
     .into()
 }

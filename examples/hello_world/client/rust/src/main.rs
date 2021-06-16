@@ -79,7 +79,7 @@ async fn main() -> anyhow::Result<()> {
                         info!("received response: {}", res.get_ref().reply);
                         res.get_ref().reply.clone()
                     }
-                    Err(e) => panic!("Error sending request {:?}", e),
+                    Err(e) => panic!("error sending request: {:?}", e),
                 }
             }
         })

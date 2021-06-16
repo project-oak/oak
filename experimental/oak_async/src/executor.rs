@@ -60,7 +60,7 @@ pub struct Executor {
 impl Executor {
     pub fn add_waiting_reader(&mut self, reader_id: ReaderId, handle: ReadHandle, waker: &Waker) {
         trace!(
-            "Add waiting reader {} waiting on handle {}",
+            "add waiting reader {} waiting on handle {}",
             reader_id,
             handle.handle
         );
@@ -74,7 +74,7 @@ impl Executor {
     }
 
     pub fn remove_waiting_reader(&mut self, reader_id: ReaderId) {
-        trace!("Remove waiting reader {}", reader_id);
+        trace!("remove waiting reader {}", reader_id);
         if self.waiting_readers.remove(&reader_id).is_none() {
             // This is usually not an error. If a Future is dropped as a result of it being woken up
             // and then resolving, we expect the reader_id to not be present in the waiting set.
@@ -179,14 +179,14 @@ pub fn block_on<F: Future + 'static>(f: F) -> Result<F::Output, OakStatus> {
                     ChannelReadStatus::NotReady => { /* Nothing */ }
                     ChannelReadStatus::ReadReady => {
                         trace!(
-                            "Waking reader with id {} because channel was ReadReady",
+                            "waking reader with id {} because channel was ReadReady",
                             reader_id
                         );
                         executor.wake_reader(reader_id);
                     }
                     err => {
                         debug!(
-                            "Channel wait returned error for reader id {}: {:?}",
+                            "channel wait returned error for reader id {}: {:?}",
                             reader_id, err
                         );
                         // Wake the future so it can deal with the error

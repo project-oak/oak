@@ -217,7 +217,7 @@ impl<T: ServerNode> crate::CommandHandler for T {
         request_receiver.close()?;
         if !req.last {
             // TODO(#97): Implement client streaming.
-            panic!("Support for streaming requests not yet implemented");
+            panic!("support for streaming requests not yet implemented");
         }
         self.invoke(&req.method_name, req.req_msg.as_slice(), response_writer);
         Ok(())
@@ -365,7 +365,7 @@ where
                     Err(status) => writer.close(Err(status)),
                 };
                 if let Err(e) = result {
-                    panic!("Failed to process response: {:?}", e)
+                    panic!("failed to process response: {:?}", e)
                 }
             }
             ServerMethod::UnaryStream(server_method) => {
@@ -380,7 +380,7 @@ where
                     Err(status) => writer.close(Err(status)),
                 };
                 if let Err(e) = result {
-                    panic!("Failed to process response: {:?}", e)
+                    panic!("failed to process response: {:?}", e)
                 }
             }
             ServerMethod::StreamStream(server_method) => {

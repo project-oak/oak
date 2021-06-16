@@ -25,8 +25,8 @@ fn try_message(input: TokenStream) -> Result<TokenStream, Error> {
 
     let variant_data = match input.data {
         Data::Struct(variant_data) => variant_data,
-        Data::Enum(..) => bail!("Message can not be derived for an enum"),
-        Data::Union(..) => bail!("Message can not be derived for a union"),
+        Data::Enum(..) => bail!("message can not be derived for an enum"),
+        Data::Union(..) => bail!("message can not be derived for a union"),
     };
 
     let generics = &input.generics;
@@ -242,8 +242,8 @@ fn try_enumeration(input: TokenStream) -> Result<TokenStream, Error> {
 
     let punctuated_variants = match input.data {
         Data::Enum(DataEnum { variants, .. }) => variants,
-        Data::Struct(_) => bail!("Enumeration can not be derived for a struct"),
-        Data::Union(..) => bail!("Enumeration can not be derived for a union"),
+        Data::Struct(_) => bail!("enumeration can not be derived for a struct"),
+        Data::Union(..) => bail!("enumeration can not be derived for a union"),
     };
 
     // Map the variants into 'fields'.
@@ -258,18 +258,18 @@ fn try_enumeration(input: TokenStream) -> Result<TokenStream, Error> {
         match fields {
             Fields::Unit => (),
             Fields::Named(_) | Fields::Unnamed(_) => {
-                bail!("Enumeration variants may not have fields")
+                bail!("enumeration variants may not have fields")
             }
         }
 
         match discriminant {
             Some((_, expr)) => variants.push((ident, expr)),
-            None => bail!("Enumeration variants must have a disriminant"),
+            None => bail!("enumeration variants must have a disriminant"),
         }
     }
 
     if variants.is_empty() {
-        panic!("Enumeration must have at least one variant");
+        panic!("enumeration must have at least one variant");
     }
 
     let default = variants[0].0.clone();

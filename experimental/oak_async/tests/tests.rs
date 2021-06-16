@@ -89,7 +89,7 @@ fn block_on_multiple_readers_sequentially() {
         let data = match handles[0].handle() {
             HANDLE_0 => "Hello",
             HANDLE_1 => "world!",
-            c => panic!("Unexpected waiting channel {}", c),
+            c => panic!("unexpected waiting channel {}", c),
         };
         add_ready_data(handles[0].handle(), &DummyData::new(data));
         handles[0].set_status(ChannelReadStatus::ReadReady);
@@ -119,7 +119,7 @@ fn block_on_multiple_readers_parallel() {
             let data = match handle.handle() {
                 HANDLE_0 => "Hello",
                 HANDLE_1 => "world!",
-                c => panic!("Unexpected waiting channel {}", c),
+                c => panic!("unexpected waiting channel {}", c),
             };
             add_ready_data(handle.handle(), &DummyData::new(data));
             handle.set_status(ChannelReadStatus::ReadReady);
@@ -167,7 +167,7 @@ fn block_on_drop_channel_read_after_wait() {
                     add_ready_data(HANDLE_1, &DummyData::new("hello"));
                     handle.set_status(ChannelReadStatus::ReadReady);
                 }
-                c => panic!("Unexpected waiting channel {}", c),
+                c => panic!("unexpected waiting channel {}", c),
             };
         }
         OakStatus::Ok
@@ -202,7 +202,7 @@ fn block_on_channel_read_propagate_immediate_error() {
 
     match result {
         Err(OakError::OakStatus(OakStatus::ErrBadHandle)) => { /* The expected error */ }
-        e => panic!("Unexpected error: {:?}", e),
+        e => panic!("unexpected error: {:?}", e),
     }
 }
 
@@ -222,7 +222,7 @@ fn block_on_channel_read_propagate_error_after_wait() {
 
     match result {
         Err(OakError::OakStatus(OakStatus::ErrPermissionDenied)) => { /* The expected error */ }
-        e => panic!("Unexpected error: {:?}", e),
+        e => panic!("unexpected error: {:?}", e),
     }
 }
 

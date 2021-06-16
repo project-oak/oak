@@ -396,7 +396,7 @@ impl BytesTy {
         match s {
             "vec" => Ok(BytesTy::Vec),
             "bytes" => Ok(BytesTy::Bytes),
-            _ => bail!("Invalid bytes type: {}", s),
+            _ => bail!("invalid bytes type: {}", s),
         }
     }
 

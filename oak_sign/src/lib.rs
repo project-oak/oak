@@ -147,26 +147,26 @@ pub fn decode_public_key_der(key_der: &[u8]) -> anyhow::Result<Vec<u8>> {
     let asn_blocks = simple_asn1::from_der(key_der).unwrap();
     if asn_blocks.len() != 1 {
         anyhow::bail!(
-            "Invalid number of ASN.1 blocks: {}, expected: 1",
+            "invalid number of ASN.1 blocks: {}, expected: 1",
             asn_blocks.len()
         );
     }
     if let ASN1Block::Sequence(_, v) = &asn_blocks[0] {
         if v.len() != 2 {
-            anyhow::bail!("Invalid length of ASN.1 sequence: {}, expected: 2", v.len());
+            anyhow::bail!("invalid length of ASN.1 sequence: {}, expected: 2", v.len());
         }
         if v[0] == ED_25519_ALG.clone() {
             if let ASN1Block::BitString(_, _, key_bytes) = &v[1] {
                 Ok(key_bytes.clone())
             } else {
-                anyhow::bail!("Invalid ASN.1 block: {:?}, expected: BIT STRING", v[1]);
+                anyhow::bail!("invalid ASN.1 block: {:?}, expected: BIT STRING", v[1]);
             }
         } else {
-            anyhow::bail!("Invalid algorithm: {:?}", v[0]);
+            anyhow::bail!("invalid algorithm: {:?}", v[0]);
         }
     } else {
         anyhow::bail!(
-            "Invalid ASN.1 block: {:?}, expected: SEQUENCE",
+            "invalid ASN.1 block: {:?}, expected: SEQUENCE",
             asn_blocks[0]
         );
     }

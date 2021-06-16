@@ -337,7 +337,7 @@ impl oak::CommandHandler for BlobStoreImpl {
         let response = match request.request {
             Some(Request::Get(req)) => self.get_blob(req),
             Some(Request::Put(req)) => self.put_blob(req),
-            None => panic!("No inner request"),
+            None => panic!("no inner request"),
         };
         self.sender
             .send(&response)

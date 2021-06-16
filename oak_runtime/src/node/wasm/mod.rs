@@ -1011,8 +1011,8 @@ impl wasmi::Externals for WasmInterface {
             WAIT_ON_CHANNELS_WITH_DOWNGRADE => map_host_errors(
                 self.wait_on_channels_with_downgrade(args.nth_checked(0)?, args.nth_checked(1)?),
             ),
-            WASI_STUB => panic!("Attempt to invoke unimplemented WASI function"),
-            _ => panic!("Unimplemented function at {}", index),
+            WASI_STUB => panic!("attempt to invoke unimplemented WASI function"),
+            _ => panic!("unimplemented function at {}", index),
         }
     }
 }

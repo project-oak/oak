@@ -23,6 +23,6 @@ fn generic_enum() {
     let enumeration = GenericEnum::Data(msg);
     match enumeration {
         GenericEnum::Data(d) => assert_eq!(100, d.data.unwrap()),
-        GenericEnum::Number(_) => panic!("Not supposed to reach"),
+        GenericEnum::Number(_) => panic!("not supposed to reach"),
     }
 }

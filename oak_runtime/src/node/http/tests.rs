@@ -83,7 +83,7 @@ impl Node for RouterNode {
             // Send the newly created invocation to the request channel.
             echo_sender.send(invocation.clone(), &runtime).unwrap();
             if let Err(error) = echo_sender.close(&runtime) {
-                panic!("Couldn't close the `invocation_sender` channel: {}", error);
+                panic!("couldn't close the `invocation_sender` channel: {}", error);
             }
             runtime
                 .node_register(
@@ -568,10 +568,10 @@ fn create_communication_channel(
     };
 
     if let Err(error) = init_sender.send(http_invocation_sender, runtime) {
-        panic!("Couldn't write to the `init_sender` channel: {}", error);
+        panic!("couldn't write to the `init_sender` channel: {}", error);
     }
     if let Err(error) = init_sender.close(runtime) {
-        panic!("Couldn't close the `init_sender` channel: {}", error);
+        panic!("couldn't close the `init_sender` channel: {}", error);
     }
 
     (init_receiver, invocation_receiver)
@@ -582,7 +582,7 @@ fn create_client(
     ca_path: &str,
 ) -> hyper::client::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>> {
     let ca_file =
-        fs::File::open(ca_path).unwrap_or_else(|e| panic!("Failed to open {}: {}", ca_path, e));
+        fs::File::open(ca_path).unwrap_or_else(|e| panic!("failed to open {}: {}", ca_path, e));
     let mut ca = io::BufReader::new(ca_file);
 
     // Build an HTTP connector which supports HTTPS too.
@@ -619,13 +619,13 @@ async fn send_request(
     // Send a request, and wait for the response
     let mut label_bytes = vec![];
     if let Err(err) = request_label.encode(&mut label_bytes) {
-        panic!("Failed to encode label: {}", err);
+        panic!("failed to encode label: {}", err);
     }
     let label_bytes = base64::encode(label_bytes);
 
     let mut sig_bytes = vec![];
     if let Err(err) = signature.encode(&mut sig_bytes) {
-        panic!("Failed to encode signature: {}", err);
+        panic!("failed to encode signature: {}", err);
     }
     let sig_bytes = base64::encode(sig_bytes);
 
@@ -725,10 +725,10 @@ fn create_http_client_communication_channel(
     };
 
     if let Err(error) = init_sender.send(http_invocation_sender, runtime) {
-        panic!("Couldn't write to the `init_sender` channel: {}", error);
+        panic!("couldn't write to the `init_sender` channel: {}", error);
     }
     if let Err(error) = init_sender.close(runtime) {
-        panic!("Couldn't close the `init_sender` channel: {}", error);
+        panic!("couldn't close the `init_sender` channel: {}", error);
     }
 
     (init_receiver, invocation_receiver)
