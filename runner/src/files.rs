@@ -16,7 +16,7 @@
 
 use std::{io::Read, path::PathBuf};
 
-use crate::{diffs::all_affected_crates, internal::Diffs};
+use crate::{diffs::all_affected_crates, internal::Commits};
 
 pub fn read_file(path: &PathBuf) -> String {
     let mut file = std::fs::File::open(path).expect("could not open file");
@@ -51,21 +51,21 @@ pub fn file_contains(path: &PathBuf, pattern: &str) -> bool {
     }
 }
 
-pub fn example_toml_files(diffs: &Diffs) -> Box<dyn Iterator<Item = PathBuf>> {
-    match diffs.commits {
+pub fn example_toml_files(commits: &Commits) -> Box<dyn Iterator<Item = PathBuf>> {
+    match commits.commits {
         None => Box::new(source_files().filter(is_example_toml_file)),
-        _ => affected_example_toml_filles(diffs),
+        _ => affected_example_toml_filles(commits),
     }
 }
 
-fn affected_example_toml_filles(diffs: &Diffs) -> Box<dyn Iterator<Item = PathBuf>> {
+fn affected_example_toml_filles(commits: &Commits) -> Box<dyn Iterator<Item = PathBuf>> {
     // Pattern for matching the path to a file belonging to an example. The pattern has a capturing
     // group after `examples` to capture the name of the example.
     let re = regex::Regex::new(r#"(.*)/examples/([^/]*)/(.*)"#).unwrap();
 
     // Using the regular expression above, find paths to the root folders of all examples that are
     // affected by recent changes.
-    let modified_examples = all_affected_crates(&diffs)
+    let modified_examples = all_affected_crates(&commits)
         .into_iter()
         .map(move |path| {
             re.captures(&path)

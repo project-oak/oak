@@ -47,8 +47,8 @@ pub enum Command {
     BuildFunctionsExample(RunFunctionsExamples),
     BuildServer(BuildServer),
     BuildFunctionsServer(BuildFunctionsServer),
-    Format(Diffs),
-    CheckFormat(Diffs),
+    Format(Commits),
+    CheckFormat(Commits),
     RunTests,
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
@@ -93,8 +93,11 @@ pub struct RunExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
-    #[structopt(flatten, help = "run the command only for the specified diffs")]
-    pub diffs: Diffs,
+    #[structopt(
+        flatten,
+        help = "run the command only for files modified in the specified commits"
+    )]
+    pub commits: Commits,
 }
 
 #[derive(StructOpt, Clone)]
@@ -123,12 +126,15 @@ pub struct RunFunctionsExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
-    #[structopt(flatten, help = "run the command only for the specified diffs")]
-    pub diffs: Diffs,
+    #[structopt(
+        flatten,
+        help = "run the command only for files modified in the specified commits"
+    )]
+    pub commits: Commits,
 }
 
 #[derive(StructOpt, Clone, Debug, Default)]
-pub struct Diffs {
+pub struct Commits {
     #[structopt(long, help = "number of past commits to include in the diff")]
     pub commits: Option<u8>,
 }
@@ -246,7 +252,7 @@ pub struct RunTestsOpt {
     #[structopt(long, help = "run benchmarks")]
     pub benches: bool,
     #[structopt(flatten, help = "run the command only for the specified diffs")]
-    pub diffs: Diffs,
+    pub commits: Commits,
 }
 
 pub trait RustBinaryOptions {

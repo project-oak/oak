@@ -25,7 +25,7 @@ use std::{
 
 use crate::{
     files::*,
-    internal::{CargoManifest, Diffs},
+    internal::{CargoManifest, Commits},
 };
 
 #[derive(Debug)]
@@ -51,12 +51,12 @@ impl IntoIterator for ModifiedContent {
     }
 }
 
-// Get all the files that have been modified in the commits specified by `diffs`. Does not include
-// new files, unless they are added to git. If present, `diffs.commits` must be a positive number.
+// Get all the files that have been modified in the commits specified by `commits`. Does not include
+// new files, unless they are added to git. If present, `commits.commits` must be a positive number.
 // If it is zero or negative, only the last commit will be considered for finding the modified
-// files. If `diffs.commits` is not present, all files will be considered.
-pub fn modified_files(diffs: &Diffs) -> ModifiedContent {
-    match diffs.commits {
+// files. If `commits.commits` is not present, all files will be considered.
+pub fn modified_files(commits: &Commits) -> ModifiedContent {
+    match commits.commits {
         None => ModifiedContent {
             files: vec![],
             all_modified: true,
@@ -88,14 +88,14 @@ pub fn modified_files(diffs: &Diffs) -> ModifiedContent {
 
 /// Returns the list of paths to `Cargo.toml` files for all crates in which at least one file is
 /// modified.
-pub fn directly_modified_crates(diffs: &Diffs) -> ModifiedContent {
-    match diffs.commits {
+pub fn directly_modified_crates(commits: &Commits) -> ModifiedContent {
+    match commits.commits {
         None => ModifiedContent {
             files: vec![],
             all_modified: true,
         },
         _ => {
-            let modified_files = modified_files(diffs);
+            let modified_files = modified_files(commits);
 
             let mut crates = hashset![];
             for str_path in modified_files {
@@ -129,11 +129,11 @@ fn find_crate_toml_file(str_path: String) -> Option<String> {
 }
 
 /// List of paths to all `.proto` files affected by the recent changes.
-fn affected_protos(diffs: &Diffs) -> Vec<String> {
-    match diffs.commits {
+fn affected_protos(commits: &Commits) -> Vec<String> {
+    match commits.commits {
         None => vec![],
         _ => {
-            let mut affected_protos: Vec<String> = modified_files(diffs)
+            let mut affected_protos: Vec<String> = modified_files(commits)
                 .into_iter()
                 .filter(|p| p.ends_with(".proto"))
                 .collect();
@@ -195,8 +195,8 @@ fn imported_proto_files(proto_file_path: String) -> Vec<String> {
 
 /// Path to the `Cargo.toml` files for all crates that are either directly modified or have a
 /// dependency to a modified crate.
-pub fn all_affected_crates(diffs: &Diffs) -> ModifiedContent {
-    match diffs.commits {
+pub fn all_affected_crates(commits: &Commits) -> ModifiedContent {
+    match commits.commits {
         None => ModifiedContent {
             files: vec![],
             all_modified: true,
@@ -204,9 +204,9 @@ pub fn all_affected_crates(diffs: &Diffs) -> ModifiedContent {
         _ => {
             let crate_manifest_files = crate_manifest_files();
             let mut affected_crates =
-                HashSet::<String>::from_iter(directly_modified_crates(diffs).into_iter());
+                HashSet::<String>::from_iter(directly_modified_crates(commits).into_iter());
 
-            let crates_affected_by_protos = crates_affected_by_protos(&affected_protos(diffs));
+            let crates_affected_by_protos = crates_affected_by_protos(&affected_protos(commits));
             affected_crates = affected_crates
                 .union(&crates_affected_by_protos)
                 .cloned()

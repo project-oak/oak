@@ -91,8 +91,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::RunBazelTests => run_bazel_tests(),
             Command::RunTestsTsan => run_tests_tsan(),
             Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
-            Command::Format(ref diffs) => format(diffs),
-            Command::CheckFormat(ref diffs) => check_format(diffs),
+            Command::Format(ref commits) => format(commits),
+            Command::CheckFormat(ref commits) => check_format(commits),
             Command::RunCi => run_ci(),
             Command::Completion => panic!("should have been handled above"),
             Command::RunCargoDeny => run_cargo_deny(),
@@ -157,7 +157,7 @@ fn run_tests() -> Step {
             run_cargo_tests(&RunTestsOpt {
                 cleanup: false,
                 benches: true,
-                diffs: Diffs::default(),
+                commits: Commits::default(),
             }),
             run_bazel_tests(),
         ],
@@ -165,7 +165,7 @@ fn run_tests() -> Step {
 }
 
 fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
-    let all_affected_crates = all_affected_crates(&opt.diffs);
+    let all_affected_crates = all_affected_crates(&opt.commits);
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![
@@ -345,8 +345,8 @@ pub fn run_fuzz_targets_in_crate(path: &PathBuf, opt: &RunCargoFuzz) -> Step {
     }
 }
 
-fn format(diffs: &Diffs) -> Step {
-    let modified_crates = directly_modified_crates(diffs);
+fn format(commits: &Commits) -> Step {
+    let modified_crates = directly_modified_crates(commits);
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
@@ -360,9 +360,9 @@ fn format(diffs: &Diffs) -> Step {
     }
 }
 
-fn check_format(diffs: &Diffs) -> Step {
-    let modified_files = modified_files(diffs);
-    let modified_crates = directly_modified_crates(diffs);
+fn check_format(commits: &Commits) -> Step {
+    let modified_files = modified_files(commits);
+    let modified_crates = directly_modified_crates(commits);
 
     Step::Multiple {
         name: "format".to_string(),
@@ -388,7 +388,7 @@ fn run_ci() -> Step {
     Step::Multiple {
         name: "ci".to_string(),
         steps: vec![
-            check_format(&Diffs::default()),
+            check_format(&Commits::default()),
             run_cargo_deny(),
             run_cargo_udeps(),
             build_server(&BuildServer {
@@ -436,7 +436,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
-                diffs: Diffs::default(),
+                commits: Commits::default(),
             }),
             run_examples(&RunExamples {
                 application_variant: "cpp".to_string(),
@@ -456,7 +456,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
-                diffs: Diffs::default(),
+                commits: Commits::default(),
             }),
             // Package the Hello World application in a Docker image.
             run_examples(&RunExamples {
@@ -477,7 +477,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
-                diffs: Diffs::default(),
+                commits: Commits::default(),
             }),
             run_examples(&RunExamples {
                 application_variant: "rust".to_string(),
@@ -497,7 +497,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
-                diffs: Diffs::default(),
+                commits: Commits::default(),
             }),
             run_functions_examples(&RunFunctionsExamples {
                 application_variant: "rust".to_string(),
@@ -516,7 +516,7 @@ fn run_ci() -> Step {
                     server_rust_toolchain: None,
                     server_rust_target: None,
                 },
-                diffs: Diffs::default(),
+                commits: Commits::default(),
             }),
         ],
     }
