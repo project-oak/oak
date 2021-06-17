@@ -47,8 +47,8 @@ pub enum Command {
     BuildFunctionsExample(RunFunctionsExamples),
     BuildServer(BuildServer),
     BuildFunctionsServer(BuildFunctionsServer),
-    Format,
-    CheckFormat,
+    Format(Commits),
+    CheckFormat(Commits),
     RunTests,
     RunCargoTests(RunTestsOpt),
     RunBazelTests,
@@ -93,6 +93,11 @@ pub struct RunExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
+    #[structopt(
+        flatten,
+        help = "run the command only for files modified in the specified commits"
+    )]
+    pub commits: Commits,
 }
 
 #[derive(StructOpt, Clone)]
@@ -121,6 +126,17 @@ pub struct RunFunctionsExamples {
     pub server_additional_args: Vec<String>,
     #[structopt(long, help = "build a Docker image for the examples")]
     pub build_docker: bool,
+    #[structopt(
+        flatten,
+        help = "run the command only for files modified in the specified commits"
+    )]
+    pub commits: Commits,
+}
+
+#[derive(StructOpt, Clone, Debug, Default)]
+pub struct Commits {
+    #[structopt(long, help = "number of past commits to include in the diff")]
+    pub commits: Option<u8>,
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -235,6 +251,8 @@ pub struct RunTestsOpt {
     pub cleanup: bool,
     #[structopt(long, help = "run benchmarks")]
     pub benches: bool,
+    #[structopt(flatten, help = "run the command only for the specified diffs")]
+    pub commits: Commits,
 }
 
 pub trait RustBinaryOptions {
@@ -327,6 +345,14 @@ pub struct RunCargoFuzz {
 pub struct CargoManifest {
     #[serde(default)]
     pub bin: Vec<CargoBinary>,
+    #[serde(default)]
+    pub dependencies: HashMap<String, Dependency>,
+    #[serde(default)]
+    #[serde(rename = "dev-dependencies")]
+    pub dev_dependencies: HashMap<String, Dependency>,
+    #[serde(default)]
+    #[serde(rename = "build-dependencies")]
+    pub build_dependencies: HashMap<String, Dependency>,
 }
 
 /// Partial information about a Cargo binary, as included in a Cargo manifest.
@@ -334,6 +360,49 @@ pub struct CargoManifest {
 pub struct CargoBinary {
     #[serde(default)]
     pub name: String,
+}
+
+/// Partial representation of a dependency in a `Cargo.toml` file.
+#[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
+#[serde(untagged)]
+pub enum Dependency {
+    /// Plaintext specification of a dependency with only the version number.
+    Text(String),
+    /// Json specification of a dependency.
+    Json(DependencySpec),
+}
+
+/// Partial representation of a Json specification of a dependency in a `Cargo.toml` file.
+#[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
+pub struct DependencySpec {
+    #[serde(default)]
+    pub path: Option<String>,
+}
+
+impl CargoManifest {
+    pub fn all_dependencies_with_toml_path(self) -> Vec<String> {
+        let all_deps = vec![
+            self.dependencies.into_values().collect(),
+            self.dev_dependencies.into_values().collect(),
+            self.build_dependencies.into_values().collect(),
+        ];
+        let all_deps: Vec<Dependency> = itertools::concat(all_deps);
+
+        // Collect all the dependencies that specify a path.
+        all_deps
+            .iter()
+            .map(|dep| match dep {
+                Dependency::Json(spec) => spec.path.clone(),
+                Dependency::Text(_) => None,
+            })
+            .filter(|path| path.is_some())
+            .map(|path| {
+                let mut path = PathBuf::from(path.unwrap());
+                path.push("Cargo.toml");
+                path.to_str().unwrap().to_string()
+            })
+            .collect()
+    }
 }
 
 /// Struct representing config files for fuzzing.

@@ -16,6 +16,8 @@
 
 use std::{io::Read, path::PathBuf};
 
+use crate::{diffs::all_affected_crates, internal::Commits};
+
 pub fn read_file(path: &PathBuf) -> String {
     let mut file = std::fs::File::open(path).expect("could not open file");
     let mut contents = String::new();
@@ -49,8 +51,37 @@ pub fn file_contains(path: &PathBuf, pattern: &str) -> bool {
     }
 }
 
-pub fn example_toml_files() -> impl Iterator<Item = PathBuf> {
-    source_files().filter(is_example_toml_file)
+pub fn example_toml_files(commits: &Commits) -> Box<dyn Iterator<Item = PathBuf>> {
+    all_affected_crates(&commits)
+        .files
+        .map(affected_example_toml_filles)
+        .unwrap_or_else(|| Box::new(source_files().filter(is_example_toml_file)))
+}
+
+fn affected_example_toml_filles(affected_crates: Vec<String>) -> Box<dyn Iterator<Item = PathBuf>> {
+    // Pattern for matching the path to a file belonging to an example. The pattern has a capturing
+    // group after `examples` to capture the name of the example.
+    let re = regex::Regex::new(r#"(.*)/examples/([^/]*)/(.*)"#).unwrap();
+
+    // Using the regular expression above, find paths to the root folders of all examples that are
+    // affected by recent changes.
+    let modified_examples = affected_crates
+        .into_iter()
+        .map(move |path| {
+            re.captures(&path)
+                .map(|caps| format!("{}/examples/{}", caps[1].to_string(), caps[2].to_string()))
+        })
+        .filter(|path| path.is_some())
+        .map(|path| path.unwrap());
+
+    // Iterate through all `example.toml` files and choose and return the ones that belong to the
+    // affected examples
+    let example_toml_files = source_files().filter(is_example_toml_file);
+    Box::new(example_toml_files.filter(move |path| {
+        modified_examples
+            .clone()
+            .any(|example_root| to_string(path.clone()).starts_with(&example_root))
+    }))
 }
 
 pub fn fuzz_config_toml_files() -> impl Iterator<Item = PathBuf> {
@@ -192,7 +223,7 @@ fn is_fuzz_config_toml_file(path: &PathBuf) -> bool {
 fn is_ignored_entry(entry: &walkdir::DirEntry) -> bool {
     let path = entry.clone().into_path();
     // Simple heuristic to try and exclude generated files.
-    is_ignored_path(&path) || file_contains(&path, "DO NOT EDIT")
+    is_ignored_path(&path) || file_contains(&path, &format!("DO NOT {}", "EDIT"))
 }
 
 /// Return whether to ignore the specified path. This is used by the `walker` package to efficiently
