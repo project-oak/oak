@@ -52,20 +52,20 @@ pub fn file_contains(path: &PathBuf, pattern: &str) -> bool {
 }
 
 pub fn example_toml_files(commits: &Commits) -> Box<dyn Iterator<Item = PathBuf>> {
-    match commits.commits {
-        None => Box::new(source_files().filter(is_example_toml_file)),
-        _ => affected_example_toml_filles(commits),
-    }
+    all_affected_crates(&commits)
+        .files
+        .map(affected_example_toml_filles)
+        .unwrap_or_else(|| Box::new(source_files().filter(is_example_toml_file)))
 }
 
-fn affected_example_toml_filles(commits: &Commits) -> Box<dyn Iterator<Item = PathBuf>> {
+fn affected_example_toml_filles(affected_crates: Vec<String>) -> Box<dyn Iterator<Item = PathBuf>> {
     // Pattern for matching the path to a file belonging to an example. The pattern has a capturing
     // group after `examples` to capture the name of the example.
     let re = regex::Regex::new(r#"(.*)/examples/([^/]*)/(.*)"#).unwrap();
 
     // Using the regular expression above, find paths to the root folders of all examples that are
     // affected by recent changes.
-    let modified_examples = all_affected_crates(&commits)
+    let modified_examples = affected_crates
         .into_iter()
         .map(move |path| {
             re.captures(&path)
