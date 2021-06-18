@@ -18,10 +18,8 @@ package com.google.oak.functions.client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.common.base.VerifyException;
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.AttestationEngine;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;

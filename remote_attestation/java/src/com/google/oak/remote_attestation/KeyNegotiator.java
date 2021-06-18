@@ -22,7 +22,6 @@ import com.google.common.primitives.Bytes;
 import com.google.crypto.tink.subtle.Hkdf;
 import com.google.crypto.tink.subtle.X25519;
 import java.security.GeneralSecurityException;
-import java.util.Arrays;
 
 /**
  * Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
