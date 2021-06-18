@@ -16,6 +16,8 @@
 
 package com.google.oak.functions.android.client;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import android.app.Activity;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -60,7 +62,7 @@ public class MainActivity extends Activity {
     String uri = uriInput.getText().toString();
 
     EditText requestInput = findViewById(R.id.requestInput);
-    byte[] requestBody = requestInput.getText().toString().getBytes();
+    byte[] requestBody = requestInput.getText().toString().getBytes(UTF_8);
     Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();
 
     TextView resultTextView = findViewById(R.id.resultTextView);
@@ -69,8 +71,7 @@ public class MainActivity extends Activity {
       Response response = client.send(request);
       StatusCode responseStatus = response.getStatus();
       if (responseStatus != StatusCode.SUCCESS) {
-        throw new VerifyException(
-            String.format("Couldn't receive response: %s", responseStatus.toString()));
+        throw new VerifyException(String.format("Couldn't receive response: %s", responseStatus));
       }
 
       ByteString responseBody = response.getBody().substring(0, (int) response.getLength());
