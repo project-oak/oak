@@ -35,3 +35,9 @@ Class Lattice (A: Type) := {
     bot_is_bot: forall (a:A), bot << a;
 }.
 
+Lemma top_is_top_co {A} {Lat : Lattice A}: forall ell,
+    (ord top ell) -> ell = top.
+Proof.
+    intros. apply ord_anti. apply top_is_top. apply H.
+Qed.
+

@@ -19,6 +19,7 @@ vfiles/NIUtilTheorems.v
 vfiles/Unwind.v
 vfiles/UnwindPS.v
 vfiles/PossibilisticNI_def.v
+vfiles/PossibilisticNI_PS.v
 vfiles/PossibilisticNI.v
 vfiles/RuntimeModelPS.v
 vfiles/LowEqPS.v

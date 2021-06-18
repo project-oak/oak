@@ -104,7 +104,7 @@ Inductive step_node (id: node_id): call -> state -> state -> Prop :=
     | SCreateNode s n nlbl new_id new_lbl h:
         (s.(nodes).[?id]) = Labeled node (Some n) nlbl ->
             (* caller is a real node with label nlbl *)
-        fresh_nid_top s id ->
+        fresh_nid_top s new_id ->
             (* target nid is not in use *)
         nlbl <<L new_lbl ->
             (* create new node with read handle *)

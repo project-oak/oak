@@ -88,12 +88,6 @@ Proof.
     unwind_crush.
 Qed.
 
-Lemma top_is_top_co: forall ell,
-    top <<L ell -> ell = top.
-Proof.
-    intros. apply ord_anti. apply top_is_top. apply H.
-Qed.
-
 Theorem state_upd_chan_unwind: forall ell han ch s1 s2,
     state_low_eq ell s1 s2 ->
     state_low_eq ell (state_upd_chan han ch s1) (state_upd_chan han ch s2).
