@@ -80,12 +80,11 @@ public class MainActivity extends Activity {
       Log.v("Oak", "Received response: " + decodedResponse);
       resultTextView.setTextColor(Color.GREEN);
       resultTextView.setText(decodedResponse);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt(); // Restore the interrupted status
-      Log.v("Oak", "Error: " + e);
-      resultTextView.setTextColor(Color.RED);
-      resultTextView.setText(e.toString());
     } catch (Exception e) {
+      if (e instanceof InterruptedException) {
+        // Restore interrupted status.
+        Thread.currentThread().interrupt();
+      }
       Log.v("Oak", "Error: " + e);
       resultTextView.setTextColor(Color.RED);
       resultTextView.setText(e.toString());
