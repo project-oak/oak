@@ -115,7 +115,7 @@ public class AttestationClient {
     encryptor = attestationEngine.createClientEncryptor(peerIdentity);
   }
 
-  public Boolean verifyAttestation(byte[] unused_attestationInfo) {
+  public Boolean verifyAttestation(byte[] unusedAttestationInfo) {
     // TODO(#1867): Add remote attestation support.
     return true;
   }
