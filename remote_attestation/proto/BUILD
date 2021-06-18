@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_java//java:defs.bzl", "java_lite_proto_library", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 
@@ -33,8 +33,20 @@ java_proto_library(
     deps = [":remote_attestation_proto"],
 )
 
+java_lite_proto_library(
+    name = "remote_attestation_java_proto_lite",
+    deps = [":remote_attestation_proto"],
+)
+
 java_grpc_library(
     name = "remote_attestation_java_grpc",
     srcs = [":remote_attestation_proto"],
+    deps = [":remote_attestation_java_proto"],
+)
+
+java_grpc_library(
+    name = "remote_attestation_java_grpc_lite",
+    srcs = [":remote_attestation_proto"],
+    flavor = "lite",
     deps = [":remote_attestation_java_proto"],
 )
