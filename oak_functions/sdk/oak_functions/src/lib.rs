@@ -96,7 +96,7 @@ pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
 #[macro_export]
 macro_rules! log {
     ($($arg:tt)+) => {
-        $crate::write_log_message(format!($($arg)+))
+        let _ = $crate::write_log_message(format!($($arg)+));
     }
 }
 
