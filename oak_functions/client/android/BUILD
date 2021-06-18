@@ -28,10 +28,9 @@ android_library(
     resource_files = glob(["com/google/oak/functions/android/client/res/**"]),
     deps = [
         "//oak_functions/client/java:client_android",
-        "//oak_functions/proto:invocation_java_proto",
+        "//oak_functions/proto:invocation_java_proto_lite",
         "@com_google_guava_guava",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf//:protobuf_java_util",
+        "@com_google_protobuf//:protobuf_javalite",
     ],
 )
 

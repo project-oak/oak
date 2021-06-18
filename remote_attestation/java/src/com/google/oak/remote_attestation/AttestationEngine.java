@@ -25,74 +25,66 @@ import java.util.Arrays;
 import oak.remote_attestation.AttestationIdentity;
 import oak.remote_attestation.AttestationInfo;
 import oak.remote_attestation.AttestationReport;
-import oak.remote_attestation.EncryptedData;
 
 /** Remote attestation protocol implementation. */
 public class AttestationEngine {
-    private static final String test_tee_measurement = "Test TEE measurement";
-    private final byte[] expected_tee_measurement;
-    private final KeyNegotiator keyNegotiator;
+  private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
+  private final byte[] expectedTeeMeasurement;
+  private final KeyNegotiator keyNegotiator;
 
-    public AttestationEngine(byte[] expected_tee_measurement) throws GeneralSecurityException {
-        this.expected_tee_measurement = expected_tee_measurement;
-        // Generate client private/public key pair.
-        keyNegotiator = new KeyNegotiator();
+  public AttestationEngine(byte[] expectedTeeMeasurement) {
+    this.expectedTeeMeasurement = expectedTeeMeasurement;
+    // Generate client private/public key pair.
+    keyNegotiator = new KeyNegotiator();
+  }
+
+  /** Returns an `AttestationIdentity` corresponding to the `keyNegotiator`. */
+  public AttestationIdentity getIdentity() throws GeneralSecurityException {
+    // Generate `AttestationInfo`.
+    AttestationReport report = AttestationReport.newBuilder()
+                                   .setMeasurement(ByteString.copyFromUtf8(TEST_TEE_MEASUREMENT))
+                                   .build();
+    AttestationInfo attestationInfo = AttestationInfo.newBuilder().setReport(report).build();
+
+    return AttestationIdentity.newBuilder()
+        .setPublicKey(ByteString.copyFrom(keyNegotiator.getPublicKey()))
+        .setAttestationInfo(attestationInfo)
+        .build();
+  }
+
+  /**
+   * Verifies remote attestation, negotiates session keys and creates server [`AeadEncryptor`].
+   *
+   * Server encryptor uses server session key for encryption and client session key for
+   * decryption.
+   */
+  public AeadEncryptor createServerEncryptor(AttestationIdentity peerIdentity)
+      throws GeneralSecurityException {
+    if (!verifyAttestation(peerIdentity.getAttestationInfo())) {
+      throw new VerifyException("Couldn't verify attestation info");
     }
+    return keyNegotiator.createEncryptor(
+        peerIdentity.getPublicKey().toByteArray(), KeyNegotiator.EncryptorType.SERVER);
+  }
 
-    /** Returns an `AttestationIdentity` corresponding to the `keyNegotiator`. */
-    public AttestationIdentity getIdentity() throws GeneralSecurityException {
-        // Generate `AttestationInfo`.
-        AttestationReport report = AttestationReport.newBuilder()
-                .setMeasurement(ByteString.copyFrom(test_tee_measurement.getBytes()))
-                .build();
-        AttestationInfo attestationInfo = AttestationInfo.newBuilder()
-                .setReport(report)
-                .build();
-
-        AttestationIdentity identity = AttestationIdentity.newBuilder()
-                .setPublicKey(ByteString.copyFrom(keyNegotiator.getPublicKey()))
-                .setAttestationInfo(attestationInfo)
-                .build();
-        return identity;
+  /**
+   * Verifies remote attestation, negotiates session keys and creates client [`AeadEncryptor`].
+   *
+   * Client encryptor uses client session key for encryption and server session key for
+   * decryption.
+   */
+  public AeadEncryptor createClientEncryptor(AttestationIdentity peerIdentity)
+      throws GeneralSecurityException {
+    if (!verifyAttestation(peerIdentity.getAttestationInfo())) {
+      throw new VerifyException("Couldn't verify attestation info");
     }
+    return keyNegotiator.createEncryptor(
+        peerIdentity.getPublicKey().toByteArray(), KeyNegotiator.EncryptorType.CLIENT);
+  }
 
-    /**
-     * Verifies remote attestation, negotiates session keys and creates server [`AeadEncryptor`].
-     *
-     * Server encryptor uses server session key for encryption and client session key for
-     * decryption.
-     */
-    public AeadEncryptor createServerEncryptor(AttestationIdentity peerIdentity) throws GeneralSecurityException {
-        if (!verifyAttestation(peerIdentity.getAttestationInfo())) {
-            throw new VerifyException("Couldn't verify attestation info");
-        }
-        return keyNegotiator.createEncryptor(
-            peerIdentity.getPublicKey().toByteArray(),
-            KeyNegotiator.EncryptorType.Server
-        );
-    }
-
-    /**
-     * Verifies remote attestation, negotiates session keys and creates client [`AeadEncryptor`].
-     *
-     * Client encryptor uses client session key for encryption and server session key for
-     * decryption.
-     */
-    public AeadEncryptor createClientEncryptor(AttestationIdentity peerIdentity) throws GeneralSecurityException {
-        if (!verifyAttestation(peerIdentity.getAttestationInfo())) {
-            throw new VerifyException("Couldn't verify attestation info");
-        }
-        return keyNegotiator.createEncryptor(
-            peerIdentity.getPublicKey().toByteArray(),
-            KeyNegotiator.EncryptorType.Client
-        );
-    }
-
-    private Boolean verifyAttestation(AttestationInfo attestationInfo) {
-        // TODO(#1867): Add remote attestation support.
-        return Arrays.equals(
-            expected_tee_measurement,
-            attestationInfo.getReport().getMeasurement().toByteArray()
-        );
-    }
+  private Boolean verifyAttestation(AttestationInfo attestationInfo) {
+    // TODO(#1867): Add remote attestation support.
+    return Arrays.equals(
+        expectedTeeMeasurement, attestationInfo.getReport().getMeasurement().toByteArray());
+  }
 }

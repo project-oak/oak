@@ -9,10 +9,11 @@
   <uses-permission android:name="android.permission.INTERNET"/>
 
   <application
-      android:label="Oak Functions Client">
+      android:label="Oak Functions Client" android:taskAffinity="">
     <activity
         android:name="com.google.oak.functions.android.client.MainActivity"
-        android:label="Oak Functions Client" >
+        android:label="Oak Functions Client"
+        android:exported="true">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
