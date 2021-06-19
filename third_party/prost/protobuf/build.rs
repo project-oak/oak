@@ -40,7 +40,7 @@ static DATASET_PROTOS: &[&str] = &[
 
 fn main() -> Result<()> {
     let out_dir =
-        &PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR environment variable not set"));
+        &PathBuf::from(env::var("OUT_DIR").expect("environment variable OUT_DIR not set"));
     let protobuf_dir = &out_dir.join(format!("protobuf-{}", VERSION));
 
     if !protobuf_dir.exists() {

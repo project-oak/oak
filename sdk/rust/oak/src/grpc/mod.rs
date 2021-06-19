@@ -41,11 +41,11 @@ pub type Invocation = crate::proto::oak::invocation::GrpcInvocation;
 impl Invocation {
     pub fn close(self) -> anyhow::Result<()> {
         self.receiver
-            .expect("Couldn't get receiver")
+            .expect("couldn't get receiver")
             .close()
             .context("Couldn't close the receiver")?;
         self.sender
-            .expect("Couldn't get sender")
+            .expect("couldn't get sender")
             .close()
             .context("Couldn't close the sender")
     }
@@ -359,7 +359,7 @@ where
     fn invoke(&self, target: &mut T, req: &[u8], writer: ChannelResponseWriter) {
         match self {
             ServerMethod::UnaryUnary(server_method) => {
-                let r = R::decode(req).expect("Failed to parse request protobuf message");
+                let r = R::decode(req).expect("failed to parse request protobuf message");
                 let result = match server_method(target, r) {
                     Ok(rsp) => writer.write(&rsp, WriteMode::Close),
                     Err(status) => writer.close(Err(status)),
@@ -369,12 +369,12 @@ where
                 }
             }
             ServerMethod::UnaryStream(server_method) => {
-                let r = R::decode(req).expect("Failed to parse request protobuf message");
+                let r = R::decode(req).expect("failed to parse request protobuf message");
                 server_method(target, r, writer)
             }
             ServerMethod::StreamUnary(server_method) => {
                 // TODO(#97): better client-side streaming
-                let rr = vec![R::decode(req).expect("Failed to parse request protobuf message")];
+                let rr = vec![R::decode(req).expect("failed to parse request protobuf message")];
                 let result = match server_method(target, rr) {
                     Ok(rsp) => writer.write(&rsp, WriteMode::Close),
                     Err(status) => writer.close(Err(status)),
@@ -385,7 +385,7 @@ where
             }
             ServerMethod::StreamStream(server_method) => {
                 // TODO(#97): better client-side streaming
-                let rr = vec![R::decode(req).expect("Failed to parse request protobuf message")];
+                let rr = vec![R::decode(req).expect("failed to parse request protobuf message")];
                 server_method(target, rr, writer)
             }
         }

@@ -91,9 +91,9 @@ impl Database {
             .entries
             .iter()
             .map(|(key, value)| {
-                let location = value.location.as_ref().expect("Empty location");
+                let location = value.location.as_ref().expect("empty location");
                 Station {
-                    id: key.parse().expect("Couldn't parse key"),
+                    id: key.parse().expect("couldn't parse key"),
                     name: value.name.to_string(),
                     latitude_degrees: location.latitude_degrees,
                     longitude_degrees: location.longitude_degrees,
@@ -110,7 +110,7 @@ impl Database {
         // vectors correctly:
         // https://github.com/tafia/quick-xml/issues/204
         let database = quick_xml::se::to_string(&station_database)
-            .expect("Couldn't serialize database")
+            .expect("couldn't serialize database")
             .replace("<station>", "")
             .replace("</station>", "")
             .replace("<Station ", "<station ")
@@ -121,7 +121,7 @@ impl Database {
         // between Oak and native applications.
         let start = Instant::now();
         let parsed_database: StationDatabase =
-            quick_xml::de::from_str(&database).expect("Couldn't deserialize database");
+            quick_xml::de::from_str(&database).expect("couldn't deserialize database");
         let duration = start.elapsed();
         info!(
             "Database parsing time: {:?} for {} entries ({} bytes)",

@@ -20,7 +20,7 @@ use crate::{proto::oak::introspection_events::event::EventDetails, Runtime};
 fn current_timestamp() -> prost_types::Timestamp {
     let duration_since_unix_epoch = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .expect("Time went backwards");
+        .expect("time went backwards");
 
     prost_types::Timestamp {
         seconds: duration_since_unix_epoch.as_secs() as i64,

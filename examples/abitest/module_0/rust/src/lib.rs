@@ -605,10 +605,10 @@ impl OakAbiTestService for FrontendNode {
                 let rsp = GrpcTestResponse { text: ok_text };
                 writer
                     .write(&rsp, grpc::WriteMode::KeepOpen)
-                    .expect("Failed to write response");
+                    .expect("failed to write response");
                 writer
                     .write(&rsp, grpc::WriteMode::Close)
-                    .expect("Failed to write response");
+                    .expect("failed to write response");
             }
             None => panic!("invalid request"),
         };
@@ -664,7 +664,7 @@ impl OakAbiTestService for FrontendNode {
                     rsp.text = ok_text.to_string();
                     writer
                         .write(&rsp, grpc::WriteMode::KeepOpen)
-                        .expect("Failed to write response");
+                        .expect("failed to write response");
                 }
                 None => panic!("invalid request"),
             };
@@ -890,15 +890,15 @@ impl FrontendNode {
         // The linear_handles module expects to read a single init message with exactly one handle:
         // a write handle to return the result message in.
         oak::channel_write(init_wh, &[], &[result_wh.handle])
-            .expect("Failed to write result handle");
+            .expect("failed to write result handle");
 
         // The linear_handles module should return a single result message (without handles), its
         // body a string containing "OK".
         let mut buf = Vec::new();
         let mut handles = Vec::new();
-        oak::wait_on_channels(&[result_rh]).expect("Channel did not become readable");
-        oak::channel_read(result_rh, &mut buf, &mut handles).expect("Failed to read response");
-        let msg = String::from_utf8(buf).expect("Response message is not valid UTF8");
+        oak::wait_on_channels(&[result_rh]).expect("channel did not become readable");
+        oak::channel_read(result_rh, &mut buf, &mut handles).expect("failed to read response");
+        let msg = String::from_utf8(buf).expect("response message is not valid UTF8");
         // "OK" if all tests passed, the error message otherwise.
         expect_eq!(msg, "OK");
 

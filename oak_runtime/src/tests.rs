@@ -107,7 +107,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     };
     let (_write_handle, read_handle) = proxy
         .channel_create("Initial", &Label::public_untrusted())
-        .expect("Could not create init channel");
+        .expect("could not create init channel");
 
     proxy
         .node_register(
@@ -119,7 +119,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
             node_label,
             read_handle,
         )
-        .expect("Could not create Oak node!");
+        .expect("could not create Oak node");
 
     // Wait for the test Node to complete execution before terminating the Runtime.
     let result_value = result_receiver

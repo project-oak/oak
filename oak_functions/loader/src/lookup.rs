@@ -135,7 +135,7 @@ impl LookupData {
     pub fn is_empty(&self) -> bool {
         self.entries
             .read()
-            .expect("Could not lock entries for read")
+            .expect("could not lock entries for read")
             .is_empty()
     }
 }

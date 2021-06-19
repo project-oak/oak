@@ -147,7 +147,7 @@ pub fn block_on<F: Future + 'static>(f: F) -> Result<F::Output, OakStatus> {
     let spawner = pool.spawner();
     let main_join_handle = spawner
         .spawn_local_with_handle(f)
-        .expect("Failed to spawn main future");
+        .expect("failed to spawn main future");
     loop {
         // Poll futures in the pool until none of them can make any progress.
         pool.run_until_stalled();

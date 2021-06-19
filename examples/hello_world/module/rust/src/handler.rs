@@ -61,7 +61,7 @@ impl HelloWorld for Handler {
         res1.reply = format!("HELLO {}!", req.greeting);
         writer
             .write(&res1, grpc::WriteMode::KeepOpen)
-            .expect("Failed to write response");
+            .expect("failed to write response");
 
         // Attempt to also generate a translated response.
         if let Some(salutation) = self.translate(&req.greeting, "en", "fr") {
@@ -70,7 +70,7 @@ impl HelloWorld for Handler {
             res.reply = format!("BONJOUR {}!", salutation);
             writer
                 .write(&res, grpc::WriteMode::KeepOpen)
-                .expect("Failed to write translated response");
+                .expect("failed to write translated response");
         }
 
         info!("say hello again to {}", req.greeting);
@@ -78,7 +78,7 @@ impl HelloWorld for Handler {
         res2.reply = format!("HELLO AGAIN {}!", req.greeting);
         writer
             .write(&res2, grpc::WriteMode::Close)
-            .expect("Failed to write final response");
+            .expect("failed to write final response");
     }
 
     fn lots_of_greetings(&mut self, reqs: Vec<HelloRequest>) -> grpc::Result<HelloResponse> {
@@ -98,12 +98,12 @@ impl HelloWorld for Handler {
         res1.reply = format!("HELLO {}!", msg);
         writer
             .write(&res1, grpc::WriteMode::KeepOpen)
-            .expect("Failed to write response");
+            .expect("failed to write response");
         let mut res2 = HelloResponse::default();
         res2.reply = format!("BONJOUR {}!", msg);
         writer
             .write(&res2, grpc::WriteMode::Close)
-            .expect("Failed to write final response");
+            .expect("failed to write final response");
     }
 }
 

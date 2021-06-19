@@ -46,7 +46,7 @@ fn main() {
     config.field_attribute("Foo.Custom.Attrs.Msg.field.b", "/// Oneof B docs");
 
     config.file_descriptor_set_path(
-        PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR environment variable not set"))
+        PathBuf::from(env::var("OUT_DIR").expect("environment variable OUT_DIR not set"))
             .join("file_descriptor_set.bin"),
     );
 
@@ -118,7 +118,7 @@ fn main() {
         .unwrap();
 
     let out_dir =
-        &PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR environment variable not set"))
+        &PathBuf::from(env::var("OUT_DIR").expect("environment variable OUT_DIR not set"))
             .join("extern_paths");
     fs::create_dir_all(out_dir).expect("failed to create prefix directory");
     config.out_dir(out_dir);

@@ -153,7 +153,7 @@ impl WasmState {
     fn get_memory(&self) -> &wasmi::MemoryRef {
         self.memory
             .as_ref()
-            .expect("WasmState memory not attached!?")
+            .expect("WasmState memory not attached")
     }
 
     /// Validates whether a given address range (inclusive) falls within the currently allocated

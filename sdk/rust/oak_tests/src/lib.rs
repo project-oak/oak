@@ -216,12 +216,12 @@ fn create_http_config() -> Option<oak_runtime::HttpConfiguration> {
 /// connects to a Runtime under test.
 pub async fn channel_and_interceptor(label: &Label) -> (Channel, LabelInterceptor) {
     // Build a channel that connects to the Runtime under test.
-    let uri = RUNTIME_URI.parse().expect("Error parsing URI");
+    let uri = RUNTIME_URI.parse().expect("error parsing URI");
     let tls_config = ClientTlsConfig::new()
         .ca_certificate(Certificate::from_pem(include_str!("../certs/ca.pem")));
     let builder = Channel::builder(uri)
         .tls_config(tls_config)
-        .expect("Couldn't create TLS configuration");
+        .expect("couldn't create TLS configuration");
 
     // The Runtime may have just been started for a test, and may take some time
     // to come fully up, start a gRPC server and accept connections. Allow for
@@ -249,7 +249,7 @@ pub async fn channel_and_interceptor(label: &Label) -> (Channel, LabelIntercepto
     }
 
     // Build an interceptor that will attach the given Oak label to every gRPC request.
-    let interceptor = LabelInterceptor::create(label).expect("Couldn't create label interceptor.");
+    let interceptor = LabelInterceptor::create(label).expect("couldn't create label interceptor");
 
     (channel, interceptor)
 }

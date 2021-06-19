@@ -37,8 +37,8 @@ async fn test_server() {
     manifest_path.push("Cargo.toml");
 
     let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
-            .expect("Couldn't read Wasm module");
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("invalid target dir"))
+            .expect("couldn't read Wasm module");
 
     let logger = Logger::for_test();
 
@@ -71,7 +71,7 @@ async fn test_server() {
         let mut request_bytes = vec![];
         request
             .encode(&mut request_bytes)
-            .expect("Couldn't encode empty instruction list");
+            .expect("couldn't encode empty instruction list");
         let response = make_request(server_port, &request_bytes).await.response;
         assert_eq!(StatusCode::Success as i32, response.status,);
         assert_eq!(b"Done fuzzing!", response.body().unwrap());
@@ -87,7 +87,7 @@ async fn test_server() {
         let mut request_bytes = vec![];
         request
             .encode(&mut request_bytes)
-            .expect("Couldn't encode a single panic instruction");
+            .expect("couldn't encode a single panic instruction");
         let response = make_request(server_port, &request_bytes).await.response;
         assert_eq!(StatusCode::Success as i32, response.status);
 
@@ -112,7 +112,7 @@ async fn test_server() {
         let mut request_bytes = vec![];
         request
             .encode(&mut request_bytes)
-            .expect("Couldn't encode instruction list");
+            .expect("couldn't encode instruction list");
         let response = make_request(server_port, &request_bytes).await.response;
         assert_eq!(StatusCode::Success as i32, response.status);
 

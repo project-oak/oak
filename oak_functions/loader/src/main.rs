@@ -182,7 +182,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 
     notify_sender
         .send(())
-        .expect("Couldn't send completion signal.");
+        .expect("couldn't send completion signal");
 
     server_handle
         .await

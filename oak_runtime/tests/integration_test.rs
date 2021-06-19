@@ -65,7 +65,7 @@ mod common {
             (export "memory" (memory 0))
             (export "oak_main" (func $oak_main)))
         "#;
-        let binary = parse_str(wat).expect("Could not parse wat module.");
+        let binary = parse_str(wat).expect("could not parse wat module");
 
         // Create a runtime with one node
         let application_configuration = ApplicationConfiguration {
@@ -104,7 +104,7 @@ mod common {
 
         let uri = format!("http://localhost:{}/metrics", &super::METRICS_PORT)
             .parse::<Uri>()
-            .expect("Could not parse URI.");
+            .expect("could not parse URI");
 
         let res = client.get(uri).await?;
         info!("status: {}", res.status());
@@ -126,12 +126,12 @@ fn test_metrics_gives_the_correct_number_of_nodes() {
     init_logging();
 
     // Start the Runtime, including a metrics server.
-    let runtime = common::start_runtime().expect("Starting the Runtime failed!");
+    let runtime = common::start_runtime().expect("starting the Runtime failed");
 
-    let rt = tokio::runtime::Runtime::new().expect("Couldn't create Tokio runtime");
+    let rt = tokio::runtime::Runtime::new().expect("couldn't create Tokio runtime");
     let res = rt
         .block_on(common::read_metrics())
-        .expect("Reading the metrics failed.");
+        .expect("reading the metrics failed");
 
     let value = get_int_metric_value(&res, "runtime_nodes_total\\{node_type=\"implicit\"\\}");
     assert_eq!(value, Some(1), "{}", &res);

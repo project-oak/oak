@@ -56,7 +56,7 @@ fn block_on_channel_read_immediate_ready() {
         block_on(do_channel_read(1)).expect("block_on failed");
 
     assert_eq!(
-        read_result.expect("Read returned error"),
+        read_result.expect("read returned error"),
         DummyData::new("data")
     )
 }
@@ -76,7 +76,7 @@ fn block_on_channel_read_ready_after_wait() {
         block_on(do_channel_read(HANDLE_0)).expect("block_on failed");
 
     assert_eq!(
-        read_result.expect("Read returned error"),
+        read_result.expect("read returned error"),
         DummyData::new("data")
     )
 }
@@ -99,10 +99,10 @@ fn block_on_multiple_readers_sequentially() {
     let result = block_on(async {
         let a: DummyData = do_channel_read(HANDLE_0)
             .await
-            .expect("Failed to read channel HANDLE_0");
+            .expect("failed to read channel HANDLE_0");
         let b: DummyData = do_channel_read(HANDLE_1)
             .await
-            .expect("Failed to read channel HANDLE_1");
+            .expect("failed to read channel HANDLE_1");
 
         [a.0, b.0].join(", ")
     })
@@ -133,12 +133,12 @@ fn block_on_multiple_readers_parallel() {
     .expect("block_on failed");
 
     assert_eq!(
-        a.expect("Read from channel HANDLE_0 failed"),
+        a.expect("read from channel HANDLE_0 failed"),
         DummyData::new("Hello")
     );
 
     assert_eq!(
-        b.expect("Read from channel HANDLE_1 failed"),
+        b.expect("read from channel HANDLE_1 failed"),
         DummyData::new("world!")
     );
 }
@@ -187,7 +187,7 @@ fn block_on_drop_channel_read_after_wait() {
     .expect("block_on failed");
 
     assert_eq!(
-        result.expect("Channel read failed"),
+        result.expect("channel read failed"),
         DummyData::new("hello")
     );
 }
@@ -277,7 +277,7 @@ fn many_reads_parallel() {
     .expect("block_on failed");
 
     let mut data: Vec<String> = results
-        .expect("One of the channel reads failed")
+        .expect("one of the channel reads failed")
         .into_iter()
         .map(|d| d.0)
         .collect();
@@ -315,7 +315,7 @@ fn stream_read_multiple() {
 
     let data_received: Vec<DummyData> = block_on(do_channel_read_stream(HANDLE_0).try_collect())
         .expect("block_on failed")
-        .expect("Failed to read from stream");
+        .expect("failed to read from stream");
 
     assert_eq!(data_received, reference_data);
 }
@@ -336,7 +336,7 @@ fn stream_nothing() {
 
     let data_received: Vec<DummyData> = block_on(do_channel_read_stream(HANDLE_0).try_collect())
         .expect("block_on failed")
-        .expect("Failed to read from stream");
+        .expect("failed to read from stream");
 
     assert_eq!(data_received, vec![]);
 }

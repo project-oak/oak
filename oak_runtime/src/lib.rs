@@ -463,7 +463,7 @@ impl Runtime {
     /// Register a [`ChannelHalf`] with a Node, returning the new handle value for it.
     fn new_abi_handle(&self, node_id: NodeId, half: ChannelHalf) -> oak_abi::Handle {
         let mut node_infos = self.node_infos.write().unwrap();
-        let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
+        let node_info = node_infos.get_mut(&node_id).expect("invalid node_id");
         loop {
             let candidate = rand::thread_rng().next_u64();
             if node_info.abi_handles.get(&candidate).is_none() {
@@ -495,7 +495,7 @@ impl Runtime {
     /// Remove the handle from the Node's handle table.
     fn drop_abi_handle(&self, node_id: NodeId, handle: oak_abi::Handle) -> Result<(), OakStatus> {
         let mut node_infos = self.node_infos.write().unwrap();
-        let node_info = node_infos.get_mut(&node_id).expect("Invalid node_id");
+        let node_info = node_infos.get_mut(&node_id).expect("invalid node_id");
 
         match node_info.abi_handles.remove(&handle) {
             Some(half) => {
@@ -521,7 +521,7 @@ impl Runtime {
         handle: oak_abi::Handle,
     ) -> Result<ChannelHalf, OakStatus> {
         let node_infos = self.node_infos.read().unwrap();
-        let node_info = node_infos.get(&node_id).expect("Invalid node_id");
+        let node_info = node_infos.get(&node_id).expect("invalid node_id");
         let half = node_info
             .abi_handles
             .get(&handle)
@@ -699,7 +699,7 @@ impl Runtime {
         let node_infos = self.node_infos.read().unwrap();
         node_infos
             .get(&node_id)
-            .expect("Invalid node_id")
+            .expect("invalid node_id")
             .get_debug_id(node_id)
     }
 
@@ -1177,7 +1177,7 @@ impl Runtime {
                         )))
                     } else {
                         Ok(Some(ReadStatus::Success(messages.pop_front().expect(
-                            "Front element disappeared while we were holding the write lock!",
+                            "front element disappeared while we were holding the write lock",
                         ))))
                     }
                 }
@@ -1255,14 +1255,14 @@ impl Runtime {
 
         for handle in remaining_handles {
             self.channel_close(node_id, handle)
-                .expect("remove_node_id: Unable to close hanging channel!");
+                .expect("remove_node_id: Unable to close hanging channel");
         }
 
         self.node_infos
             .write()
             .unwrap()
             .remove(&node_id)
-            .expect("remove_node_id: Node didn't exist!");
+            .expect("remove_node_id: Node didn't exist");
         self.update_nodes_count_metric(node_type, -1);
 
         self.introspection_event(EventDetails::NodeDestroyed(NodeDestroyed {

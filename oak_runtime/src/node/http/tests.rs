@@ -78,7 +78,7 @@ impl Node for RouterNode {
             // Create a public init channel to send the invocation to the `EchoNode`.
             let (echo_sender, echo_receiver) =
                 channel_create(&runtime, "echo-init", &Label::public_untrusted())
-                    .expect("Couldn't create invocation channel");
+                    .expect("couldn't create invocation channel");
 
             // Send the newly created invocation to the request channel.
             echo_sender.send(invocation.clone(), &runtime).unwrap();
@@ -106,7 +106,7 @@ impl Node for RouterNode {
                 };
                 invocation
                     .sender
-                    .expect("Empty sender on invocation.")
+                    .expect("empty sender on invocation")
                     .send(resp, &runtime)
                     .unwrap();
             }
@@ -142,7 +142,7 @@ impl Node for EchoNode {
                 .receiver
                 .unwrap()
                 .receive(&runtime)
-                .expect("Couldn't receive the request");
+                .expect("couldn't receive the request");
 
             info!("got the request: {:?}", request);
             if self.can_reply {
@@ -153,7 +153,7 @@ impl Node for EchoNode {
                 };
                 invocation
                     .sender
-                    .expect("Empty sender on invocation.")
+                    .expect("empty sender on invocation")
                     .send(resp, &runtime)
                     .unwrap();
             }
@@ -171,7 +171,7 @@ impl HttpServerTester {
     fn new(port: u32) -> HttpServerTester {
         let runtime = create_runtime(get_permissions());
         let invocation_receiver =
-            create_server_node(&runtime, port).expect("Couldn't create HTTP server node!");
+            create_server_node(&runtime, port).expect("couldn't create HTTP server node");
         let _ = env_logger::builder().is_test(true).try_init();
 
         // Create an Oak node that responds with 200 (OK) to every request it receives.
@@ -185,7 +185,7 @@ impl HttpServerTester {
                 &Label::public_untrusted(),
                 invocation_receiver.handle.handle,
             )
-            .expect("Couldn't create Oak node!");
+            .expect("couldn't create Oak node");
 
         HttpServerTester { runtime }
     }
@@ -389,7 +389,7 @@ fn test_https_client_can_handle_https_requests_to_an_external_service() {
     // HTTP client pseudo-node.
     let authority = "www.google.com";
     let oak_node_init_receiver = create_client_node(&runtime, authority.to_string())
-        .expect("Couldn't create HTTP client node!");
+        .expect("couldn't create HTTP client node");
 
     // Create a sync_channel to be notified when the Oak Node is completed.
     let (result_sender, result_receiver) = mpsc::sync_channel(1);
@@ -441,7 +441,7 @@ fn test_https_client_can_handle_http_requests_to_an_external_service() {
     let empty_authority = "".to_string();
     // Create an HTTP client pseudo-node to serve `HTTP` requests`.
     let oak_node_init_receiver =
-        create_client_node(&runtime, empty_authority).expect("Couldn't create HTTP client node!");
+        create_client_node(&runtime, empty_authority).expect("couldn't create HTTP client node");
 
     // Create a sync_channel to be notified when the Oak Node is completed.
     let (result_sender, result_receiver) = mpsc::sync_channel(1);
@@ -485,7 +485,7 @@ fn create_runtime(permissions: PermissionsConfiguration) -> RuntimeProxy {
         "../examples/certs/local/local.pem",
         "../examples/certs/local/local.key",
     )
-    .expect("Couldn't create TLS config from local certs.");
+    .expect("couldn't create TLS config from local certs");
     let secure_server_config = crate::SecureServerConfiguration {
         grpc_config: None,
         http_config: Some(crate::HttpConfiguration {
@@ -551,7 +551,7 @@ fn create_communication_channel(
         "HTTP server init",
         &Label::public_untrusted(),
     )
-    .expect("Couldn't create channel");
+    .expect("couldn't create channel");
 
     // At the start the HTTP server pseudo-Node expects to receive an invocation channel, with
     // exactly one handle in it.
@@ -562,7 +562,7 @@ fn create_communication_channel(
         "HTTP server invocation",
         &Label::public_untrusted(),
     )
-    .expect("Couldn't create channel");
+    .expect("couldn't create channel");
     let http_invocation_sender = HttpInvocationSender {
         sender: Some(invocation_sender),
     };
@@ -592,7 +592,7 @@ fn create_client(
     let mut tls = rustls::ClientConfig::new();
     tls.root_store
         .add_pem_file(&mut ca)
-        .expect("Failed to load custom CA store");
+        .expect("failed to load custom CA store");
     // Join the above part into an HTTPS connector.
     let https = hyper_rustls::HttpsConnector::from((http, tls));
 
@@ -708,7 +708,7 @@ fn create_http_client_communication_channel(
         "Oak node init",
         &Label::public_untrusted(),
     )
-    .expect("Couldn't create channel");
+    .expect("couldn't create channel");
 
     // Create HttpInvocationSender channel: At the start, the Oak Node expects to receive an
     // invocation channel, with exactly one handle in it.
@@ -719,7 +719,7 @@ fn create_http_client_communication_channel(
         "HTTP client invocation",
         &Label::public_untrusted(),
     )
-    .expect("Couldn't create channel");
+    .expect("couldn't create channel");
     let http_invocation_sender = HttpInvocationSender {
         sender: Some(invocation_sender),
     };
@@ -768,10 +768,10 @@ impl Node for ClientTesterNode {
                     .sender
                     .ok_or(OakError::OakStatus(OakStatus::ErrBadHandle))
             })
-            .expect("Failed to retrieve invocation channel write handle");
+            .expect("failed to retrieve invocation channel write handle");
         if let Err(err) = startup_receiver.close(&runtime) {
             error!(
-                "Failed to close initial inbound channel {}: {:?}",
+                "failed to close initial inbound channel {}: {:?}",
                 handle, err
             );
         }
@@ -790,15 +790,15 @@ impl Node for ClientTesterNode {
             confidentiality_label(tls_endpoint_tag(&self.authority))
         };
         // create channel
-        let pipe = Pipe::new(&runtime, &label, &label).expect("Couldn't create the Pipe");
+        let pipe = Pipe::new(&runtime, &label, &label).expect("couldn't create the Pipe");
 
         // send the request on invocation_sender
         pipe.insert_message(&runtime, request)
-            .expect("Couldn't insert HTTP request in the pipe");
+            .expect("couldn't insert HTTP request in the pipe");
 
         // send the invocation to the HTTP client pseudo-node
         pipe.send_invocation(&runtime, invocation_sender.handle)
-            .expect("Couldn't send the invocation");
+            .expect("couldn't send the invocation");
 
         // wait for the response to come
         let response = pipe.response_receiver.receive(&runtime);

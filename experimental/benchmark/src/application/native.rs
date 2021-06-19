@@ -106,7 +106,7 @@ impl NativeApplication {
     ) {
         let address = format!("[::]:{}", port)
             .parse()
-            .expect("Couldn't parse address");
+            .expect("couldn't parse address");
         let handler = TrustedDatabaseService {
             points_of_interest: database,
         };
@@ -114,20 +114,20 @@ impl NativeApplication {
             .add_service(TrustedDatabaseServer::new(handler))
             .serve_with_shutdown(address, termination_notification_receiver.map(drop))
             .await
-            .expect("Couldn't start server");
+            .expect("couldn't start server");
     }
 
     async fn create_client(port: u16) -> TrustedDatabaseClient<tonic::transport::channel::Channel> {
         let address = format!("https://localhost:{}", port)
             .parse()
-            .expect("Couldn't parse address");
+            .expect("couldn't parse address");
         let channel = Channel::builder(address)
             .connect()
             .await
-            .expect("Couldn't connect to Oak Application");
+            .expect("couldn't connect to Oak Application");
         let label = Label::public_untrusted();
         let interceptor =
-            LabelInterceptor::create(&label).expect("Couldn't create gRPC interceptor");
+            LabelInterceptor::create(&label).expect("couldn't create gRPC interceptor");
 
         TrustedDatabaseClient::with_interceptor(channel, interceptor)
     }

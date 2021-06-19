@@ -22,7 +22,7 @@ fn main() {
         "../proto/lookup_data.proto",
         "../proto/invocation.proto",
     ];
-    prost_build::compile_protos(&file_paths, &["../proto"]).expect("Proto compilation failed");
+    prost_build::compile_protos(&file_paths, &["../proto"]).expect("proto compilation failed");
 
     // Tell cargo to rerun this build script if the proto file has changed.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath

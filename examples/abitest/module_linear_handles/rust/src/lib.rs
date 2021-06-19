@@ -30,7 +30,7 @@ fn run_tests() {
 #[allow(clippy::clone_on_copy)]
 fn test_cloned_handles_are_valid_and_distinct() {
     let (w, r) =
-        oak::channel_create("test", &Label::public_untrusted()).expect("Failed to create channel");
+        oak::channel_create("test", &Label::public_untrusted()).expect("failed to create channel");
     let w2 = w.clone();
     let r2 = r.clone();
 
@@ -46,25 +46,25 @@ fn test_cloned_handles_are_valid_and_distinct() {
 #[allow(clippy::clone_on_copy)]
 fn test_original_and_clone_are_connected() {
     let (w, r) =
-        oak::channel_create("test", &Label::public_untrusted()).expect("Failed to create channel");
+        oak::channel_create("test", &Label::public_untrusted()).expect("failed to create channel");
     let w2 = w.clone();
     let r2 = r.clone();
 
     // Write from original, read from clone
-    channel_write(&w, "msg1").expect("Failed to write to w");
-    let msg1 = channel_read(&r2).expect("Failed to read from r2");
+    channel_write(&w, "msg1").expect("failed to write to w");
+    let msg1 = channel_read(&r2).expect("failed to read from r2");
     assert_eq!(msg1, "msg1");
 
     // Write from clone, read from original
-    channel_write(&w2, "msg2").expect("Failed to write to w2");
-    let msg2 = channel_read(&r).expect("Failed to read from r");
+    channel_write(&w2, "msg2").expect("failed to write to w2");
+    let msg2 = channel_read(&r).expect("failed to read from r");
     assert_eq!(msg2, "msg2");
 }
 
 #[allow(clippy::drop_copy)]
 fn test_drop_closes_handle() {
     let (w, r) =
-        oak::channel_create("test", &Label::public_untrusted()).expect("Failed to create channel");
+        oak::channel_create("test", &Label::public_untrusted()).expect("failed to create channel");
     assert_eq!(channel_read(&r), Err(OakStatus::ErrChannelEmpty));
 
     // Explicitly drop the handle
@@ -102,7 +102,7 @@ fn write_result(init_handle: u64, msg: &str) {
     assert_eq!(handles.len(), 1);
 
     let result_handle = WriteHandle { handle: handles[0] };
-    channel_write(&result_handle, msg).expect("Failed to write result message");
+    channel_write(&result_handle, msg).expect("failed to write result message");
 }
 
 // Convenience functions to send and receive strings over a channel.

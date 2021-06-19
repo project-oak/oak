@@ -25,7 +25,7 @@ fn main() {
             ..Default::default()
         },
     )
-    .expect("Proto compilation failed.");
+    .expect("proto compilation failed");
 
     compile_protos_with_options(
         &[

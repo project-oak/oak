@@ -292,7 +292,7 @@ fn create_async_runtime(runtime: RuntimeProxy) -> tokio::runtime::Runtime {
         .enable_time()
         .on_thread_start(move || runtime.set_as_current())
         .build()
-        .expect("Couldn't create Async runtime")
+        .expect("couldn't create Async runtime")
 }
 
 /// [`HttpRequestHandler`] handles HTTP requests from a client and sends HTTP responses back.

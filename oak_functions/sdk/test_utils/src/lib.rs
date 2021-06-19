@@ -209,7 +209,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     // Create client
     let mut client = oak_functions_client::Client::new(&uri)
         .await
-        .expect("Could not create client");
+        .expect("could not create client");
 
     let request = Request {
         body: request_body.to_vec(),
@@ -220,7 +220,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let response = client
         .invoke(request)
         .await
-        .expect("Error while awaiting response");
+        .expect("error while awaiting response");
     let elapsed = start.elapsed();
 
     TestResult { elapsed, response }

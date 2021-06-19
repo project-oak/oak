@@ -224,7 +224,7 @@ impl GrpcClientNode {
         // Connect to a remote gRPC service.
         let connection = Channel::builder(self.uri.clone())
             .tls_config(tls_config)
-            .expect("Couldn't create TLS configuration")
+            .expect("couldn't create TLS configuration")
             .connect()
             .await?;
 
@@ -382,7 +382,7 @@ impl Node for GrpcClientNode {
             // Necessary for creating a Tokio Runtime.
             .enable_time()
             .build()
-            .expect("Couldn't create an Async runtime");
+            .expect("couldn't create an Async runtime");
 
         // Listen to incoming gRPC invocations.
         info!(

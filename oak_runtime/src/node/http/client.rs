@@ -292,7 +292,7 @@ fn create_async_runtime() -> tokio::runtime::Runtime {
         // Necessary for creating a Tokio Runtime.
         .enable_time()
         .build()
-        .expect("Couldn't create Async runtime")
+        .expect("couldn't create Async runtime")
 }
 
 /// Creates a client that allows `Uri`s with either the `HTTP` or the `HTTPS` scheme.

@@ -64,7 +64,7 @@ impl Decoder for VecDecoder {
 
     fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
         let mut item = vec![];
-        copy(&mut src.reader(), &mut item).expect("Couldn't copy from buffer");
+        copy(&mut src.reader(), &mut item).expect("couldn't copy from buffer");
         Ok(Some(item))
     }
 }

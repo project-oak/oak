@@ -102,10 +102,10 @@ impl AttestationClient {
         client: &mut Client,
         expected_tee_measurement: &[u8],
     ) -> anyhow::Result<AeadEncryptor> {
-        let key_negotiator = KeyNegotiator::create().expect("Couldn't create key negotiator");
+        let key_negotiator = KeyNegotiator::create().expect("couldn't create key negotiator");
         let public_key = key_negotiator
             .public_key()
-            .expect("Couldn't get public key");
+            .expect("couldn't get public key");
 
         // Create attestation request with client's public key.
         let request = AttestedInvokeRequest {

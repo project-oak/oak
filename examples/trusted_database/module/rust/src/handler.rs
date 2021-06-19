@@ -38,7 +38,7 @@ impl oak::WithInit for Handler {
 
     fn create(init: Self::Init) -> Self {
         oak::logger::init(init.log_sender.unwrap(), log::Level::Debug).unwrap();
-        let points_of_interest = init.points_of_interest.expect("Couldn't receive database");
+        let points_of_interest = init.points_of_interest.expect("couldn't receive database");
         Self { points_of_interest }
     }
 }
@@ -83,7 +83,7 @@ impl TrustedDatabase for Handler {
                 let point_location = point
                     .location
                     .as_ref()
-                    .expect("Non-existing location")
+                    .expect("non-existing location")
                     .clone();
                 let distance = distance(request_location.clone(), point_location);
                 if distance < current_closest_point_distance {

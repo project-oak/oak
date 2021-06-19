@@ -34,8 +34,8 @@ async fn test_server() {
     manifest_path.push("Cargo.toml");
 
     let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
-            .expect("Couldn't read Wasm module");
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("invalid target dir"))
+            .expect("couldn't read Wasm module");
 
     let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
 

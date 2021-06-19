@@ -105,7 +105,7 @@ impl Proxy {
         let connection_status = self
             .connection_status
             .lock()
-            .expect("Couldn't lock connection status mutex");
+            .expect("couldn't lock connection status mutex");
         connection_status.clone()
     }
 
@@ -114,7 +114,7 @@ impl Proxy {
         let mut connection_status = self
             .connection_status
             .lock()
-            .expect("Couldn't lock connection status mutex");
+            .expect("couldn't lock connection status mutex");
         *connection_status = ConnectionStatus::Attested;
     }
 }

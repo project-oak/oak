@@ -28,7 +28,7 @@ async fn test_translate() {
     };
 
     let runtime = oak_tests::run_single_module_default(permissions)
-        .expect("Unable to configure runtime with test wasm!");
+        .expect("unable to configure runtime with test wasm");
 
     let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
     let mut client = TranslatorClient::with_interceptor(channel, interceptor);

@@ -217,7 +217,7 @@ fn sane_handle_order() {
     let mut message = reference.clone();
 
     let handles = extract_handles(&mut message);
-    inject_handles(&mut message, &handles).expect("Failed to re-inject handles");
+    inject_handles(&mut message, &handles).expect("failed to re-inject handles");
 
     assert_eq!(handles, vec![1, 2, 3, 4, 5, 6, 7, 8]);
     assert_eq!(reference, message);
@@ -265,7 +265,7 @@ fn roundtrip() {
     let mut message = reference.clone();
 
     let handles = extract_handles(&mut message);
-    inject_handles(&mut message, &handles).expect("Failed to inject handles back");
+    inject_handles(&mut message, &handles).expect("failed to inject handles back");
 
     assert_eq!(reference, message);
 }

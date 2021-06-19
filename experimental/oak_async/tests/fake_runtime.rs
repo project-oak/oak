@@ -140,7 +140,7 @@ std::thread_local! {
 }
 
 pub fn add_ready_data<T: Encodable>(handle: Handle, data: &T) {
-    let msg = data.encode().expect("Failed to encode ready data");
+    let msg = data.encode().expect("failed to encode ready data");
     READY_DATA.with(|ready_data| {
         ready_data
             .borrow_mut()

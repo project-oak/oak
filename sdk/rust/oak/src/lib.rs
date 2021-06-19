@@ -499,7 +499,7 @@ where
                     // actual length.
                     bytes.set_len(actual_size as usize);
                 }
-                return Ok(Label::deserialize(&bytes).expect("Could not deserialize label."));
+                return Ok(Label::deserialize(&bytes).expect("could not deserialize label"));
             }
 
             OakStatus::ErrBufferTooSmall if !(*resized) => {

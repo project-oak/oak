@@ -93,7 +93,7 @@ impl WasmInterface {
     fn get_memory(&self) -> &wasmi::MemoryRef {
         self.memory
             .as_ref()
-            .expect("WasmInterface memory not attached!?")
+            .expect("WasmInterface memory not attached")
     }
 
     /// Validates whether a given address range falls within the currently allocated range of guest
@@ -1419,7 +1419,7 @@ pub(crate) fn get_privilege(
     debug!("wasm module SHA-256 hash: {:?}", module_hash);
 
     // Create hash tags.
-    let module_hash_bytes = hex::decode(&module_hash).expect("Couldn't decode SHA-256 hex value");
+    let module_hash_bytes = hex::decode(&module_hash).expect("couldn't decode SHA-256 hex value");
     let hash_tag = oak_abi::label::web_assembly_module_tag(&module_hash_bytes);
 
     let mut confidentiality_tags = hashset! { hash_tag.clone() };

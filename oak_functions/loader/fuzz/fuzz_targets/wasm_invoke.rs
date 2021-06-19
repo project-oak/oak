@@ -77,7 +77,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     let mut body = vec![];
     instructions
         .encode(&mut body)
-        .expect("Error encoding abi_function");
+        .expect("error encoding abi_function");
     let request = Request { body };
 
     let wasm_handler = WasmHandler::create(
@@ -85,7 +85,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
         Arc::new(LookupData::new_empty("", Logger::for_test())),
         Logger::for_test(),
     )
-    .expect("Could instantiate WasmHandler");
+    .expect("could instantiate WasmHandler");
 
     let result = RUNTIME.block_on(wasm_handler.handle_invoke(request));
     assert!(result.is_ok());
@@ -125,8 +125,8 @@ impl From<&ArbitraryInstruction> for crate::proto::Instruction {
 fn get_wasm_module_bytes() -> Vec<u8> {
     let module_path = Path::new(OSS_FUZZ_WASM_MODULE_PATH);
     if module_path.exists() {
-        std::fs::read(module_path).expect("Couldn't read wasm module")
+        std::fs::read(module_path).expect("couldn't read wasm module")
     } else {
-        test_utils::compile_rust_wasm(&MANIFEST_PATH).expect("Couldn't read Wasm module")
+        test_utils::compile_rust_wasm(&MANIFEST_PATH).expect("couldn't read Wasm module")
     }
 }

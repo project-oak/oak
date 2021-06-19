@@ -634,7 +634,7 @@ impl RuntimeProxy {
             proxy
                 .borrow()
                 .as_ref()
-                .expect("No RuntimeProxy configured for the current thread")
+                .expect("no RuntimeProxy configured for the current thread")
                 .clone()
         })
     }

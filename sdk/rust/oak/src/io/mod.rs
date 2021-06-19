@@ -194,9 +194,9 @@ pub fn forward_invocation(
                 // Close the receiver channel separately.
                 invocation
                     .receiver
-                    .expect("Couldn't get receiver")
+                    .expect("couldn't get receiver")
                     .close()
-                    .expect("Couldn't close the receiver");
+                    .expect("couldn't close the receiver");
                 // Return an error through `response_sender`.
                 let grpc_response_writer =
                     crate::grpc::ChannelResponseWriter::new(response_sender.clone());

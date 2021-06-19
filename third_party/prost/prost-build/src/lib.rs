@@ -570,7 +570,7 @@ impl Config {
     /// # use std::path::PathBuf;
     /// # let mut config = prost_build::Config::new();
     /// config.file_descriptor_set_path(
-    ///     PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR environment variable not set"))
+    ///     PathBuf::from(env::var("OUT_DIR").expect("environment variable OUT_DIR not set"))
     ///         .join("file_descriptor_set.bin"));
     /// ```
     ///

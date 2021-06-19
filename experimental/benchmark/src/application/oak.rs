@@ -48,7 +48,7 @@ impl OakApplication {
         let config_map = ConfigMap {
             items: hashmap! {"database".to_string() => database.as_bytes().to_vec()},
         };
-        let wasm_modules = build_wasm().expect("Couldn't build wasm modules");
+        let wasm_modules = build_wasm().expect("couldn't build wasm modules");
         let permissions = oak_runtime::permissions::PermissionsConfiguration {
             allow_grpc_server_nodes: true,
             allow_log_nodes: true,
@@ -63,7 +63,7 @@ impl OakApplication {
             oak_runtime::SignatureTable::default(),
         );
         let runtime = oak_runtime::configure_and_run(config)
-            .expect("Couldn't configure runtime with test wasm");
+            .expect("couldn't configure runtime with test wasm");
 
         let (channel, interceptor) = oak_tests::public_channel_and_interceptor().await;
         let client = TrustedDatabaseClient::with_interceptor(channel, interceptor);

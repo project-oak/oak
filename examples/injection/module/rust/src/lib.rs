@@ -98,13 +98,13 @@ fn grpc_fe_entrypoint() {
         &Label::public_untrusted(),
         to_provider_read_handle,
     )
-    .expect("Failed to create provider");
+    .expect("failed to create provider");
 
     Sender::new(to_provider_write_handle.clone())
         .send(&BlobStoreProviderSender {
             sender: Some(Sender::new(from_provider_write_handle)),
         })
-        .expect("Failed to send handle to provider");
+        .expect("failed to send handle to provider");
 
     let frontend = BlobStoreFrontend::new(
         Sender::new(to_provider_write_handle),
@@ -132,9 +132,9 @@ fn provider_entrypoint(receiver: Receiver<BlobStoreRequest>) {
     // TODO(#1584): Replace this with a more type safe pattern.
     let frontend_sender = Receiver::<BlobStoreProviderSender>::new(receiver.handle.clone())
         .receive()
-        .expect("Did not receive a decodable message")
+        .expect("did not receive a decodable message")
         .sender
-        .expect("No sender in received message");
+        .expect("no sender in received message");
     oak::run_command_loop(BlobStoreProvider::new(frontend_sender), receiver.iter());
 }
 
@@ -154,9 +154,9 @@ fn store_entrypoint(receiver: Receiver<BlobRequest>) {
     // TODO(#1584): Replace this with a more type safe pattern.
     let sender = Receiver::<BlobStoreSender>::new(receiver.handle.clone())
         .receive()
-        .expect("Did not receive a write handle")
+        .expect("did not receive a write handle")
         .sender
-        .expect("No write handle in received message");
+        .expect("no write handle in received message");
     oak::run_command_loop(BlobStoreImpl::new(sender), receiver.iter());
 }
 
@@ -189,11 +189,11 @@ impl BlobStoreFrontend {
         if let BlobStoreAccess::BlobStoreProvider { sender, receiver } = &self.store {
             sender
                 .send(&BlobStoreRequest {})
-                .expect("Failed to send BlobStoreRequest");
+                .expect("failed to send BlobStoreRequest");
 
             let iface = receiver
                 .receive()
-                .expect("Failed to receive BlobStoreInterface");
+                .expect("failed to receive BlobStoreInterface");
 
             self.store = BlobStoreAccess::BlobStore(iface);
         };
@@ -209,15 +209,15 @@ impl BlobStoreFrontend {
         iface
             .sender
             .as_ref()
-            .expect("No sender present on interface")
+            .expect("no sender present on interface")
             .send(request)
-            .expect("Could not send request");
+            .expect("could not send request");
         iface
             .receiver
             .as_ref()
-            .expect("No receiver present on interface")
+            .expect("no receiver present on interface")
             .receive()
-            .expect("Could not receive response")
+            .expect("could not receive response")
     }
 }
 
