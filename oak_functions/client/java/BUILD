@@ -35,6 +35,7 @@ java_library(
         "//remote_attestation/proto:remote_attestation_java_proto",
         "@com_google_protobuf//:protobuf_java",
         "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//netty",
         "@io_grpc_grpc_java//stub",
     ],
 )
@@ -53,6 +54,7 @@ android_library(
         "//remote_attestation/proto:remote_attestation_java_proto_lite",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//okhttp",
         "@io_grpc_grpc_java//stub",
     ],
 )
