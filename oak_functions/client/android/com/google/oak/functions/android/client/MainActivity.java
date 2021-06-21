@@ -26,7 +26,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import com.google.common.base.VerifyException;
-import com.google.oak.functions.android.client.R;
 import com.google.oak.functions.client.AttestationClient;
 import com.google.protobuf.ByteString;
 import oak.functions.invocation.Request;
@@ -71,7 +70,8 @@ public class MainActivity extends Activity {
       Response response = client.send(request);
       StatusCode responseStatus = response.getStatus();
       if (responseStatus != StatusCode.SUCCESS) {
-        throw new VerifyException(String.format("Couldn't receive response: %s", responseStatus));
+        throw new VerifyException(
+            String.format("Couldn't receive response: %s", responseStatus.name()));
       }
 
       ByteString responseBody = response.getBody().substring(0, (int) response.getLength());

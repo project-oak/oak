@@ -28,7 +28,7 @@ import oak.functions.invocation.Response;
 
 public class Main {
   private static Logger logger = Logger.getLogger(Main.class.getName());
-  private static final String EXPECTED_RESPONSE = "{\"temperature_degrees_celsius\":16}";
+  private static final String EXPECTED_RESPONSE = "{\"temperature_degrees_celsius\":23}";
 
   public static void main(String[] args) throws Exception {
     AttestationClient client = new AttestationClient("http://localhost:8080");

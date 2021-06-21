@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="empty" description="An empty string."></string>
-  <string name="uri" description="The URI used for accessing the service.">URI</string>
-  <string name="request" description="The content of the request that will be sent to the service.">Request</string>
-  <string name="invoke_button" description="The label of the button that invokes the service.">Invoke</string>
+  <string name="empty" description="An empty string. [CHAR_LIMIT=NONE]"></string>
+  <string name="uri" description="The URI used for accessing the service. [CHAR_LIMIT=NONE]">URI</string>
+  <string name="request" description="The content of the request that will be sent to the service. [CHAR_LIMIT=NONE]">Request</string>
+  <string name="invoke_button" description="The label of the button that invokes the service. [CHAR_LIMIT=NONE]">Invoke</string>
 </resources>
