@@ -24,6 +24,10 @@ docker push "${FUNCTIONS_DOCKER_IMAGE_NAME}:latest"
 
 # Build and push the example application built on Oak Functions.
 
+# Copy the `.wasm` file to the example's directory
+mkdir --parents ./oak_functions/examples/"${EXAMPLE_NAME}"/bin/
+cp ./oak_functions/examples/bin/"${EXAMPLE_NAME}".wasm ./oak_functions/examples/"${EXAMPLE_NAME}"/bin/"${EXAMPLE_NAME}".wasm 
+
 readonly FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME="gcr.io/oak-ci/${FUNCTIONS_INSTANCE_NAME}"
 
 docker build \
@@ -46,7 +50,7 @@ gcloud auth activate-service-account \
 gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --region="${GCP_REGION}" \
   --image="${FUNCTIONS_EXAMPLE_DOCKER_IMAGE_NAME}:latest" \
-  --allow-unauthenticated \
+  --no-allow-unauthenticated \
   --use-http2 \
   --concurrency=20 \
   --memory=8G \

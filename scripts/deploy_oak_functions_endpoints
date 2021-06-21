@@ -86,5 +86,5 @@ gcloud beta run deploy "${CLOUD_RUN_SERVICE_NAME}" \
   --image="gcr.io/oak-ci/endpoints-runtime-serverless:${IMAGE_TAG}" \
   --use-http2 \
   --allow-unauthenticated \
-  --platform managed \
+  --platform=managed \
   --project=oak-ci

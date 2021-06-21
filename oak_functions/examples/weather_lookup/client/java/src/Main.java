@@ -20,7 +20,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.oak.functions.client.AttestationClient;
 import com.google.protobuf.ByteString;
-import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.functions.invocation.Request;
@@ -28,7 +27,8 @@ import oak.functions.invocation.Response;
 
 public class Main {
   private static Logger logger = Logger.getLogger(Main.class.getName());
-  private static final String EXPECTED_RESPONSE = "{\"temperature_degrees_celsius\":23}";
+  private static final String EXPECTED_RESPONSE_PATTERN =
+      "\\{\"temperature_degrees_celsius\":.*\\}";
 
   public static void main(String[] args) throws Exception {
     AttestationClient client = new AttestationClient("http://localhost:8080");
@@ -39,11 +39,12 @@ public class Main {
     ByteString responseBody = response.getBody().substring(0, (int) response.getLength());
     String decodedResponse = responseBody.toStringUtf8();
 
-    if (EXPECTED_RESPONSE.equals(decodedResponse)) {
+    if (decodedResponse.matches(EXPECTED_RESPONSE_PATTERN)) {
       logger.log(Level.INFO, "Client received the expected response: " + decodedResponse);
     } else {
       logger.log(Level.INFO,
-          String.format("Expected %s, received %s.", EXPECTED_RESPONSE, decodedResponse));
+          String.format(
+              "Expected pattern %s, received %s.", EXPECTED_RESPONSE_PATTERN, decodedResponse));
       System.exit(1);
     }
   }
