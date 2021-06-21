@@ -117,7 +117,10 @@ pub fn is_source_code_file(path: &PathBuf) -> bool {
 /// Return whether the provided path refers to a source file that can be formatted by clang-tidy.
 pub fn is_clang_format_file(path: &PathBuf) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    filename.ends_with(".cc") || filename.ends_with(".h") || filename.ends_with(".proto")
+    filename.ends_with(".cc")
+        || filename.ends_with(".h")
+        || filename.ends_with(".proto")
+        || filename.ends_with(".java")
 }
 
 /// Return whether the provided path refers to a Bazel file (`BUILD`, `WORKSPACE`, or `*.bzl`)
