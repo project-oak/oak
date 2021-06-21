@@ -57,7 +57,5 @@ gcloud beta run deploy "${FUNCTIONS_INSTANCE_NAME}" \
   --cpu=4 \
   --min-instances=1 \
   --max-instances=10 \
-  --platform=managed \
-  --ingress=all \
-  --vpc-connector="${CONNECTOR_NAME}"
+  --platform=managed 
 

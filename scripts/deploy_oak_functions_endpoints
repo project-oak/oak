@@ -81,18 +81,10 @@ readonly CONFIG_ID="$(gcloud endpoints configs list --service="${CLOUD_RUN_HOSTN
 # Get the image tag for the newly created container 
 readonly IMAGE_TAG="$(gcloud container images list-tags gcr.io/oak-ci/endpoints-runtime-serverless --limit=1 --format='value(tags)')"
 
-# Deploy VPC connector, if it does not exist already (see https://cloud.google.com/vpc/docs/configure-serverless-vpc-access#creating_a_connector)
-readonly CONNECTOR_STATE="$(gcloud compute networks vpc-access connectors describe "${CONNECTOR_NAME}" --region="${GCP_REGION}" --format='value(state)')"
-if [[ $CONNECTOR_STATE != "READY" ]]; then
-  gcloud compute networks vpc-access connectors create "${CONNECTOR_NAME}" --region="${GCP_REGION}"  --subnet=default
-fi
-
 # Deploying the ESPv2 container
 gcloud beta run deploy "${CLOUD_RUN_SERVICE_NAME}" \
   --image="gcr.io/oak-ci/endpoints-runtime-serverless:${IMAGE_TAG}" \
   --use-http2 \
   --allow-unauthenticated \
   --platform=managed \
-  --project=oak-ci \
-  --vpc-connector="${CONNECTOR_NAME}" \
-  --vpc-egress=private-ranges-only
+  --project=oak-ci 
