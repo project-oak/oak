@@ -87,4 +87,4 @@ gcloud beta run deploy "${CLOUD_RUN_SERVICE_NAME}" \
   --use-http2 \
   --allow-unauthenticated \
   --platform=managed \
-  --project=oak-ci 
+  --project=oak-ci

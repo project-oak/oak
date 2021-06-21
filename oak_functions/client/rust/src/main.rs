@@ -20,6 +20,7 @@
 use anyhow::Context;
 use oak_functions_abi::proto::Request;
 use oak_functions_client::Client;
+use regex::Regex;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Clone)]
@@ -35,7 +36,7 @@ pub struct Opt {
     request: String,
     /// Optional, only for testing.
     #[structopt(long, help = "expected response body, for testing")]
-    expected_response: Option<String>,
+    expected_response_pattern: Option<String>,
 }
 
 #[tokio::main]
@@ -57,8 +58,11 @@ async fn main() -> anyhow::Result<()> {
         .context("Could not invoke Oak Functions")?;
 
     let response_body = std::str::from_utf8(response.body().unwrap()).unwrap();
-    match opt.expected_response {
-        Some(expected) => assert_eq!(expected, response_body),
+    match opt.expected_response_pattern {
+        Some(expected) => {
+            let re = Regex::new(&expected).unwrap();
+            assert!(re.is_match(response_body));
+        }
         None => println!("{}", response_body),
     }
 
