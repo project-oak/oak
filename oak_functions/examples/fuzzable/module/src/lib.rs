@@ -25,38 +25,48 @@ use crate::proto::{
 };
 use prost::Message;
 
+/// To avoid timeouts, allow only requests that are less than 64KB.
+const MAX_REQUEST_SIZE: usize = 64 * 1024;
+
 #[cfg(test)]
 mod tests;
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     let request = oak_functions::read_request().expect("Couldn't read request body.");
-    let request = Instructions::decode(&*request).expect("Couldn't decode request.");
 
-    // Run all the instructions given in the request
-    for instruction in request.instructions {
-        match instruction.instruction_variant {
-            Some(InstructionVariant::Panic(Panic {})) => panic!("panic"),
-            Some(InstructionVariant::ReadRequest(ReadRequest {})) => {
-                let _req = oak_functions::read_request().expect("Couldn't read request body.");
+    // If the request is too large, send a response and terminate.
+    if request.len() > MAX_REQUEST_SIZE {
+        oak_functions::write_response(br"Request is too large.")
+            .expect("Couldn't write response body.");
+    } else {
+        let request = Instructions::decode(&*request).expect("Couldn't decode request.");
+
+        // Run all the instructions given in the request
+        for instruction in request.instructions {
+            match instruction.instruction_variant {
+                Some(InstructionVariant::Panic(Panic {})) => panic!("panic"),
+                Some(InstructionVariant::ReadRequest(ReadRequest {})) => {
+                    let _req = oak_functions::read_request().expect("Couldn't read request body.");
+                }
+                Some(InstructionVariant::WriteResponse(WriteResponse { response })) => {
+                    oak_functions::write_response(&response).expect("Couldn't write response body.")
+                }
+                Some(InstructionVariant::StorageGetItem(StorageGetItem { key })) => {
+                    let _value = oak_functions::storage_get_item(&key)
+                        .expect("Couldn't find key in the storage")
+                        .unwrap_or_default();
+                }
+                Some(InstructionVariant::WriteLogMessage(WriteLogMessage { message })) => {
+                    oak_functions::write_log_message(
+                        std::str::from_utf8(&message).expect("Couldn't convert bytes to string"),
+                    )
+                    .expect("Couldn't write log message.")
+                }
+                None => (),
             }
-            Some(InstructionVariant::WriteResponse(WriteResponse { response })) => {
-                oak_functions::write_response(&response).expect("Couldn't write response body.")
-            }
-            Some(InstructionVariant::StorageGetItem(StorageGetItem { key })) => {
-                let _value = oak_functions::storage_get_item(&key)
-                    .expect("Couldn't find key in the storage")
-                    .unwrap_or_default();
-            }
-            Some(InstructionVariant::WriteLogMessage(WriteLogMessage { message })) => {
-                oak_functions::write_log_message(
-                    std::str::from_utf8(&message).expect("Couldn't convert bytes to string"),
-                )
-                .expect("Couldn't write log message.")
-            }
-            None => (),
         }
-    }
 
-    oak_functions::write_response(br"Done fuzzing!").expect("Couldn't write response body.");
+        oak_functions::write_response(br"Done fuzzing!").expect("Couldn't write response body.");
+    }
 }
