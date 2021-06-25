@@ -25,8 +25,8 @@ use crate::proto::{
 };
 use prost::Message;
 
-/// To avoid timeouts, allow only requests that are less than 64KB.
-const MAX_REQUEST_SIZE: usize = 64 * 1024;
+/// To avoid timeouts, allow executing a limited number of instructions.
+const MAX_INSTRUCTIONS_COUNT: usize = 50_000;
 
 #[cfg(test)]
 mod tests;
@@ -34,14 +34,13 @@ mod tests;
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     let request = oak_functions::read_request().expect("Couldn't read request body.");
+    let request = Instructions::decode(&*request).expect("Couldn't decode request.");
 
     // If the request is too large, send a response and terminate.
-    if request.len() > MAX_REQUEST_SIZE {
-        oak_functions::write_response(br"Request is too large.")
+    if request.instructions.len() > MAX_INSTRUCTIONS_COUNT {
+        oak_functions::write_response(br"Too many instructions in the request.")
             .expect("Couldn't write response body.");
     } else {
-        let request = Instructions::decode(&*request).expect("Couldn't decode request.");
-
         // Run all the instructions given in the request
         for instruction in request.instructions {
             match instruction.instruction_variant {
