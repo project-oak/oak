@@ -1421,9 +1421,9 @@
     <span class="kw">pub</span> <span class="ident">target_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">structopt</span>(
         <span class="ident">long</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;weather to run additional config steps for fuzz targets.&quot;</span>
+        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;weather to rebuild the dependencies, including any required .wasm files.&quot;</span>
     )]</span>
-    <span class="kw">pub</span> <span class="ident">run_config</span>: <span class="ident">bool</span>,
+    <span class="kw">pub</span> <span class="ident">build_deps</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// Additional `libFuzzer` arguments passed through to the binary</span>
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">last</span>(<span class="bool-val">true</span>))]</span>
     <span class="kw">pub</span> <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
