@@ -329,9 +329,9 @@ pub struct RunCargoFuzz {
     pub target_name: Option<String>,
     #[structopt(
         long,
-        help = "weather to run additional config steps for fuzz targets."
+        help = "weather to rebuild the dependencies, including any required .wasm files."
     )]
-    pub run_config: bool,
+    pub build_deps: bool,
     /// Additional `libFuzzer` arguments passed through to the binary
     #[structopt(last(true))]
     pub args: Vec<String>,
