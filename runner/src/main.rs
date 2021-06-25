@@ -191,8 +191,8 @@ fn run_tests_tsan() -> Step {
 }
 
 pub fn run_cargo_fuzz(opt: &RunCargoFuzz) -> Step {
-    let steps = if opt.run_config {
-        vec![configure_fuzz_targets(opt), run_fuzz_targets(opt)]
+    let steps = if opt.build_deps {
+        vec![build_fuzz_dependencies(opt), run_fuzz_targets(opt)]
     } else {
         vec![run_fuzz_targets(opt)]
     };
@@ -203,7 +203,7 @@ pub fn run_cargo_fuzz(opt: &RunCargoFuzz) -> Step {
     }
 }
 
-pub fn configure_fuzz_targets(opt: &RunCargoFuzz) -> Step {
+pub fn build_fuzz_dependencies(opt: &RunCargoFuzz) -> Step {
     let fuzz_configs: Vec<FuzzConfig> = fuzz_config_toml_files()
         .filter(|path| match &opt.crate_name {
             Some(crate_name) => {
