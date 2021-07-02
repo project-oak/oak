@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+# This script prepares the repository for a release process. The goal is to ensure that all the
+# dependencies are vendored inside the working tree, so that a hermetic offline build can be kicked
+# off. In principle this build should produce the same exact artifacts as the usual online builds
+# (e.g. from GitHub actions, or locally), but during the release process we want extra guarantees,
+# and we also want to guarantee that we have a snapshot of all the code that contributes to the
+# release, for future reference.
+#
+# This script is not idempotent, and should be run from a clean commit of the `main` branch, then
+# the resulting tree committed and pushed to a separate branch, for future reference. Development
+# should then continue from the `main` branch, which is left unaffected.
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+# Ensure that the working tree is clean.
+# Copied from /scripts/git_check_diff.
+if [[ $(git status --short) ]]; then
+    echo 'Please re-run this script from a clean commit'
+    exit 1
+fi
+
+# Before doing anything else, store the current commit id to a file, for future reference during the
+# release process.
+git rev-parse --verify HEAD > RELEASE_COMMIT
+
+# The outputs of the following commands are all appended to the `.cargo/config.toml` file.
+{
+  echo ''
+
+  # Vendor all the crates necessary to build oak_functions_loader and runner, and make Cargo use the
+  # newly vendored versions by default.
+  #
+  # See https://doc.rust-lang.org/cargo/commands/cargo-vendor.html; in particular:
+  #
+  # > The `cargo vendor` command will also print out the configuration necessary to use the vendored
+  # > sources, which you will need to add to `.cargo/config.toml`.
+  cargo vendor \
+    --locked \
+    --versioned-dirs \
+    --manifest-path=./oak_functions/loader/Cargo.toml \
+    --sync=./runner/Cargo.toml \
+    ./third_party/vendor
+
+  # Also prevent Cargo from accessing the network for any subsequent operation, so that it is
+  # guaranteed to only rely on the local source files and vendored crates.
+  echo ''
+  echo '[net]'
+  echo 'offline = true'
+} >> .cargo/config.toml

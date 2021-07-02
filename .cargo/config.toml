@@ -19,4 +19,4 @@ rustflags = ["-C", "link-args=-Xlinker --build-id=none"]
 # Workaround for 'unable to find __addtf3, __multf3 and __subtf3'
 # Related issue: https://github.com/rust-lang/compiler-builtins/issues/201
 [target.aarch64-unknown-linux-musl]
-rustflags = [ "-C", "target-feature=+crt-static", "-C", "link-arg=-lgcc"]
+rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=-lgcc"]

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+readonly SCRIPTS_DIR="$(dirname "$0")"
+# shellcheck source=scripts/common
+source "$SCRIPTS_DIR/common"
+
+./scripts/runner \
+  --commands \
+  build-functions-server \
+  --server-variant=base
+
+# If the release was built from the latest upstream commit, then this hash should match that from
+# https://github.com/project-oak/oak/blob/hashes/reproducibility_index.
+sha256sum ./oak_functions/loader/bin/oak_functions_loader
