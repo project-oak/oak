@@ -10,6 +10,8 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
+# TODO(#2231): Remove once prost-types is updated
+ignore = ["RUSTSEC-2021-0073"]
 
 # Deny multiple versions unless explicitly skipped.
 [bans]
