@@ -14,5 +14,9 @@
     "rust-analyzer.serverPath": "rust-analyzer",
     // Ensure protobuf generated files are loaded correctly.
     "rust-analyzer.cargo.loadOutDirsFromCheck": true
-  }
+  },
+  // Ensure that the workspace is mounted consistently with the `/docker_run` script.
+  // See https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount.
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace",
 }
