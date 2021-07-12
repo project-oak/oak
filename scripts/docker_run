@@ -29,8 +29,8 @@ docker_run_flags=(
   '--env=BAZEL_GOOGLE_CREDENTIALS'
   "--volume=$PWD/bazel-cache:/.cache/bazel"
   "--volume=$PWD/cargo-cache:/usr/local/cargo/registry"
-  "--volume=$PWD:/workspaces/oak"
-  '--workdir=/workspaces/oak'
+  "--volume=$PWD:/workspace"
+  '--workdir=/workspace'
   '--network=host'
   # We need to use Docker from inside the container, but only for build.
   # To do that, we map the socket from the host and add the right group

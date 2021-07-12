@@ -89,7 +89,7 @@ RUN mkdir --parents ${ANDROID_NDK_HOME} \
 
 # Bazel requires HOME variable to be set.
 # https://github.com/bazelbuild/bazel/issues/471
-ENV HOME /workspaces/oak
+ENV HOME /workspace
 
 # We use the `docker` user in order to maintain library paths on different
 # machines and to make Wasm modules reproducible.
@@ -105,7 +105,7 @@ ARG USER_GID=${USER_UID}
 # Ignore errors if the user or group already exist (it should only happen if the image is being
 # built as root, which happens on GCB).
 RUN (groupadd --gid=${USER_GID} ${USERNAME} || true) \
-  && (useradd --shell=/bin/bash --uid=${USER_UID} --gid=${USER_GID} --create-home ${USERNAME} || true)
+    && (useradd --shell=/bin/bash --uid=${USER_UID} --gid=${USER_GID} --create-home ${USERNAME} || true)
 
 # Set the default user as the newly created one, so that any operations performed from within the
 # Docker container will appear as if performed by the outside user, instead of root.

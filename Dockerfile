@@ -220,7 +220,7 @@ RUN rustup component add \
 ARG deadlinks_version=0.5.0
 RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 
-# Install cargo-fuzz. 
+# Install cargo-fuzz.
 # To allow local testing of the fuzzing functionality.
 ARG cargo_fuzz_version=0.10.1
 RUN cargo install --version=${cargo_fuzz_version} cargo-fuzz
@@ -298,7 +298,7 @@ RUN mkdir --parents ${sccache_dir} \
   && chmod +x ${sccache_dir}/sccache
 
 ENV SCCACHE_GCS_BUCKET sccache-1
-ENV SCCACHE_GCS_KEY_PATH /workspaces/oak/.oak_remote_cache_key.json
+ENV SCCACHE_GCS_KEY_PATH /workspace/.oak_remote_cache_key.json
 ENV SCCACHE_GCS_RW_MODE READ_WRITE
 
 # TODO(#2014): Re-enable sccache once runner runs backend binaries directly rather than using `cargo run`.
