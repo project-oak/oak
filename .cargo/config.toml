@@ -20,3 +20,12 @@ rustflags = ["-C", "link-args=-Xlinker --build-id=none"]
 # Related issue: https://github.com/rust-lang/compiler-builtins/issues/201
 [target.aarch64-unknown-linux-musl]
 rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=-lgcc"]
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "./third_party/vendor"
+
+[net]
+offline = true
