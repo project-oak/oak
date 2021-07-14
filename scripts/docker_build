@@ -13,8 +13,13 @@ readonly DOCKER_UID="${UID:-0}"
 readonly DOCKER_GID="$(id -g)"
 
 docker build \
-  --cache-from="$DOCKER_IMAGE_NAME:latest" \
-  --tag="$DOCKER_IMAGE_NAME:latest" \
+  --cache-from="$DOCKER_CI_IMAGE_NAME:latest" \
+  --tag="$DOCKER_CI_IMAGE_NAME:latest" \
+  . 1>&2
+
+docker build \
+  --cache-from="$DOCKER_CI_IMAGE_NAME:latest" \
+  --tag="$DOCKER_DEV_IMAGE_NAME:latest" \
   --build-arg=USER_UID="$DOCKER_UID" \
   --build-arg=USER_GID="$DOCKER_GID" \
   . 1>&2

@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  DOCKER_CI_IMAGE: gcr.io/oak-ci/oak:latest
+
 jobs:
   runner:
     runs-on: ubuntu-20.04
@@ -59,26 +62,24 @@ jobs:
           sudo rm --force /swapfile
           df --human-readable
 
-      # Build Docker image, caching from the latest version from the remote repository.
-      - name: Docker build
-        timeout-minutes: 30
-        run: |
-          docker pull gcr.io/oak-ci/oak:latest
-          docker build --pull --cache-from=gcr.io/oak-ci/oak:latest --tag=gcr.io/oak-ci/oak:latest .
-          df --human-readable
-
       - name: Run command
-        run: |
-          ./scripts/docker_run ./scripts/runner --commands ${{ matrix.cmd }}
-          df --human-readable
+        uses: docker://gcr.io/oak-ci/oak:latest
+        with:
+          entrypoint: |
+            ./scripts/runner --commands ${{ matrix.cmd }}
+            df --human-readable
 
       - name: Generate root CA certs
-        run: ./scripts/docker_run ./scripts/generate_root_ca_certs
+        uses: docker://gcr.io/oak-ci/oak:latest
+        with:
+          entrypoint: ./scripts/generate_root_ca_certs
 
       # Check whether any of the previous steps resulted in file diffs that were not checked in or
       # ignored by git.
       - name: Git check diff
-        run: ./scripts/docker_run ./scripts/git_check_diff
+        uses: docker://gcr.io/oak-ci/oak:latest
+        with:
+          entrypoint: ./scripts/git_check_diff
 
   android-runner:
     runs-on: ubuntu-20.04

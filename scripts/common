@@ -10,9 +10,15 @@ set -o pipefail
 # https://docs.rs/env_logger
 export RUST_LOG="${RUST_LOG:-info}"
 
+# Image for CI and reproducible builds, with a predefined user that in general may not exist
+# locally.
 # See https://pantheon.corp.google.com/gcr/images/oak-ci/GLOBAL/oak
-readonly DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak'
-readonly SERVER_DOCKER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
+readonly DOCKER_CI_IMAGE_NAME='gcr.io/oak-ci/oak'
+
+# Image for local development, in which the predefined user is mapped to the local user.
+readonly DOCKER_DEV_IMAGE_NAME='gcr.io/oak-ci/oak-dev'
+
+readonly DOCKER_SERVER_IMAGE_NAME='gcr.io/oak-ci/oak-server'
 
 readonly CACHE_DIR='bazel-cache'
 readonly SERVER_BIN_DIR="${PWD}/oak_loader/bin"
