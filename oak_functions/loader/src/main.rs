@@ -48,6 +48,10 @@ struct Config {
     /// How often to refresh the lookup data. If not provided, data is only loaded once at startup.
     #[serde(with = "humantime_serde")]
     lookup_data_download_period: Option<Duration>,
+    /// Whether to use the GCP metadata service to obtain an authentication token for downloading
+    /// the lookup data.
+    #[serde(default)]
+    use_gcp_metadata_auth: bool,
     /// Number of worker threads available to the async runtime.
     ///
     /// Defaults to 4 if unset.
@@ -186,6 +190,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc<LookupData>> {
     let lookup_data = Arc::new(LookupData::new_empty(
         &config.lookup_data_url,
+        config.use_gcp_metadata_auth,
         logger.clone(),
     ));
     if !config.lookup_data_url.is_empty() {

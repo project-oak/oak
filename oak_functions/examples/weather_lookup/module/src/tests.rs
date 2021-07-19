@@ -69,6 +69,7 @@ async fn test_server() {
 
     let lookup_data = Arc::new(LookupData::new_empty(
         &format!("http://localhost:{}", static_server_port),
+        false,
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();

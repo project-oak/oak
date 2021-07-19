@@ -15,7 +15,7 @@
 //
 
 use crate::logger::Logger;
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use hyper::{body::Bytes, client::connect::Connect, Body, Client, Request};
 use hyper_rustls::HttpsConnector;
 use log::Level;
@@ -29,6 +29,7 @@ use std::{collections::HashMap, sync::RwLock, time::Instant};
 /// protobuf messages according to the definition in `/oak_functions/proto/lookup_data.proto`.
 pub struct LookupData {
     lookup_data_url: String,
+    use_gcp_metadata_auth: bool,
     entries: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
     logger: Logger,
 }
@@ -39,9 +40,14 @@ impl LookupData {
     ///
     /// The returned instance is empty, and must be populated by calling the [`LookupData::refresh`]
     /// method at least once.
-    pub fn new_empty(lookup_data_url: &str, logger: Logger) -> LookupData {
+    pub fn new_empty(
+        lookup_data_url: &str,
+        use_gcp_metadata_auth: bool,
+        logger: Logger,
+    ) -> LookupData {
         LookupData {
             lookup_data_url: lookup_data_url.to_string(),
+            use_gcp_metadata_auth,
             entries: RwLock::new(HashMap::new()),
             logger,
         }
@@ -50,9 +56,9 @@ impl LookupData {
     /// Refreshes the internal entries of this struct from the data file URL provided at
     /// construction time.
     ///
-    /// If the `gcp-metadata-auth` feature is enabled a service account access token token will be
-    /// downloaded first from the GCP metadata service and used to authenticate the lookup data
-    /// download request.
+    /// If the `use_gcp_metadata_auth` config setting is set to `true` a service account access
+    /// token token will be downloaded first from the GCP metadata service and used to authenticate
+    /// the lookup data download request.
     ///
     /// If successful, entries are completely replaced (i.e. not merged).
     ///
@@ -112,6 +118,7 @@ impl LookupData {
     pub fn for_test(entries: HashMap<Vec<u8>, Vec<u8>>) -> Self {
         LookupData {
             lookup_data_url: "".to_string(),
+            use_gcp_metadata_auth: false,
             entries: RwLock::new(entries),
             logger: Logger::for_test(),
         }
@@ -146,10 +153,10 @@ impl LookupData {
     async fn build_download_request(&self) -> anyhow::Result<Request<Body>> {
         let url: &str = &self.lookup_data_url;
         let mut builder = Request::builder().method("GET").uri(url);
-        if let Some(access_token) = get_access_token()
-            .await
-            .context("could not get access token")?
-        {
+        if self.use_gcp_metadata_auth {
+            let access_token = get_access_token()
+                .await
+                .context("could not get access token")?;
             builder = builder.header("Authorization", format!("Bearer {}", access_token));
         }
         builder
@@ -186,24 +193,21 @@ where
 }
 
 /// Gets a service account access token from the GCP metadata service.
-#[cfg(feature = "gcp-metadata-auth")]
-async fn get_access_token() -> anyhow::Result<Option<String>> {
+async fn get_access_token() -> anyhow::Result<String> {
     let client = Client::new();
     let request = Request::builder()
         .method("GET")
         .uri("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
         .header("Metadata-Flavor", "Google")
-        .body(())
+        .body(Body::empty())
         .context("could not create auth token request")?;
     let result = request_bytes(&client, request).await?;
     let token_json =
         std::str::from_utf8(result.as_ref()).context("could not decode response as a string")?;
     let token: serde_json::Value =
         serde_json::from_str(token_json).context("could not decode response as JSON")?;
-    Ok(token["access_token"].as_str().map(String::from))
-}
-
-#[cfg(not(feature = "gcp-metadata-auth"))]
-async fn get_access_token() -> anyhow::Result<Option<String>> {
-    Ok(None)
+    token["access_token"]
+        .as_str()
+        .ok_or(anyhow!("access token not found"))
+        .map(String::from)
 }

@@ -42,7 +42,7 @@ async fn test_server() {
 
     let logger = Logger::for_test();
 
-    let lookup_data = Arc::new(LookupData::new_empty("", logger.clone()));
+    let lookup_data = Arc::new(LookupData::new_empty("", false, logger.clone()));
 
     let policy = Policy {
         constant_response_size_bytes: 100,
