@@ -208,6 +208,6 @@ async fn get_access_token() -> anyhow::Result<String> {
         serde_json::from_str(token_json).context("could not decode response as JSON")?;
     token["access_token"]
         .as_str()
-        .ok_or(anyhow!("access token not found"))
+        .ok_or_else(|| anyhow!("access token not found"))
         .map(String::from)
 }
