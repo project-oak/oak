@@ -20,7 +20,20 @@ use hyper::{body::Bytes, client::connect::Connect, Body, Client, Request};
 use hyper_rustls::HttpsConnector;
 use log::Level;
 use prost::Message;
+use serde_derive::Deserialize;
 use std::{collections::HashMap, sync::RwLock, time::Instant};
+
+#[derive(Copy, Clone, Deserialize, Debug)]
+pub enum LookupDataAuth {
+    None,
+    GcpMetadataToken,
+}
+
+impl LookupDataAuth {
+    pub fn default() -> Self {
+        LookupDataAuth::None
+    }
+}
 
 /// An in-memory lookup store instance that can refresh its internal entries from the provided data
 /// file URL.
@@ -29,7 +42,7 @@ use std::{collections::HashMap, sync::RwLock, time::Instant};
 /// protobuf messages according to the definition in `/oak_functions/proto/lookup_data.proto`.
 pub struct LookupData {
     lookup_data_url: String,
-    use_gcp_metadata_auth: bool,
+    lookup_data_auth: LookupDataAuth,
     entries: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
     logger: Logger,
 }
@@ -42,12 +55,12 @@ impl LookupData {
     /// method at least once.
     pub fn new_empty(
         lookup_data_url: &str,
-        use_gcp_metadata_auth: bool,
+        lookup_data_auth: LookupDataAuth,
         logger: Logger,
     ) -> LookupData {
         LookupData {
             lookup_data_url: lookup_data_url.to_string(),
-            use_gcp_metadata_auth,
+            lookup_data_auth,
             entries: RwLock::new(HashMap::new()),
             logger,
         }
@@ -56,9 +69,9 @@ impl LookupData {
     /// Refreshes the internal entries of this struct from the data file URL provided at
     /// construction time.
     ///
-    /// If the `use_gcp_metadata_auth` config setting is set to `true` a service account access
-    /// token token will be downloaded first from the GCP metadata service and used to authenticate
-    /// the lookup data download request.
+    /// If the `lookup_data_auth` config setting is set to `GcpMetadataToken` a service account
+    /// access token token will be downloaded from the GCP metadata service first and then used to
+    /// authenticate the lookup data download request.
     ///
     /// If successful, entries are completely replaced (i.e. not merged).
     ///
@@ -118,7 +131,7 @@ impl LookupData {
     pub fn for_test(entries: HashMap<Vec<u8>, Vec<u8>>) -> Self {
         LookupData {
             lookup_data_url: "".to_string(),
-            use_gcp_metadata_auth: false,
+            lookup_data_auth: LookupDataAuth::default(),
             entries: RwLock::new(entries),
             logger: Logger::for_test(),
         }
@@ -152,13 +165,18 @@ impl LookupData {
 
     async fn build_download_request(&self) -> anyhow::Result<Request<Body>> {
         let url: &str = &self.lookup_data_url;
-        let mut builder = Request::builder().method("GET").uri(url);
-        if self.use_gcp_metadata_auth {
-            let access_token = get_access_token()
-                .await
-                .context("could not get access token")?;
-            builder = builder.header("Authorization", format!("Bearer {}", access_token));
-        }
+        let builder = match self.lookup_data_auth {
+            LookupDataAuth::None => Request::builder().method("GET").uri(url),
+            LookupDataAuth::GcpMetadataToken => {
+                let access_token = get_access_token()
+                    .await
+                    .context("could not get access token")?;
+                Request::builder()
+                    .method("GET")
+                    .uri(url)
+                    .header("Authorization", format!("Bearer {}", access_token))
+            }
+        };
         builder
             .body(Body::empty())
             .context("could not create lookup data request")
