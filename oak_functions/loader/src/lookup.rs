@@ -166,13 +166,13 @@ impl LookupData {
     async fn build_download_request(&self) -> anyhow::Result<Request<Body>> {
         let url: &str = &self.lookup_data_url;
         let builder = match self.lookup_data_auth {
-            LookupDataAuth::None => Request::builder().method("GET").uri(url),
+            LookupDataAuth::None => Request::builder().method(http::Method::GET).uri(url),
             LookupDataAuth::GcpMetadataToken => {
                 let access_token = get_access_token()
                     .await
                     .context("could not get access token")?;
                 Request::builder()
-                    .method("GET")
+                    .method(http::Method::GET)
                     .uri(url)
                     .header("Authorization", format!("Bearer {}", access_token))
             }
@@ -214,7 +214,7 @@ where
 async fn get_access_token() -> anyhow::Result<String> {
     let client = Client::new();
     let request = Request::builder()
-        .method("GET")
+        .method(http::Method::GET)
         // See https://cloud.google.com/run/docs/securing/service-identity#access_tokens for details.
         .uri("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
         .header("Metadata-Flavor", "Google")
