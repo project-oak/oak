@@ -197,6 +197,7 @@ async fn get_access_token() -> anyhow::Result<String> {
     let client = Client::new();
     let request = Request::builder()
         .method("GET")
+        // See https://cloud.google.com/run/docs/securing/service-identity#access_tokens for details.
         .uri("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
         .header("Metadata-Flavor", "Google")
         .body(Body::empty())
