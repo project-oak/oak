@@ -70,7 +70,7 @@ impl LookupData {
         let https = HttpsConnector::with_native_roots();
         let client = Client::builder().build::<_, Body>(https);
         let start = Instant::now();
-        let lookup_data_buf = request_bytes(&client, self.build_download_request().await?).await?;
+        let lookup_data_buf = send_request(&client, self.build_download_request().await?).await?;
         self.logger.log_public(
             Level::Info,
             &format!(
@@ -179,7 +179,7 @@ pub fn parse_lookup_entries<B: prost::bytes::Buf>(
     Ok(entries)
 }
 
-async fn request_bytes<C>(client: &Client<C, Body>, request: Request<Body>) -> anyhow::Result<Bytes>
+async fn send_request<C>(client: &Client<C, Body>, request: Request<Body>) -> anyhow::Result<Bytes>
 where
     C: Connect + Clone + Send + Sync + 'static,
 {
@@ -201,7 +201,7 @@ async fn get_access_token() -> anyhow::Result<String> {
         .header("Metadata-Flavor", "Google")
         .body(Body::empty())
         .context("could not create auth token request")?;
-    let result = request_bytes(&client, request).await?;
+    let result = send_request(&client, request).await?;
     let token_json =
         std::str::from_utf8(result.as_ref()).context("could not decode response as a string")?;
     let token: serde_json::Value =
