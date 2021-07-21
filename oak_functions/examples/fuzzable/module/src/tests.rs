@@ -18,7 +18,10 @@ use crate::proto::{
 };
 use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
-    grpc::create_and_start_grpc_server, logger::Logger, lookup::LookupData, server::Policy,
+    grpc::create_and_start_grpc_server,
+    logger::Logger,
+    lookup::{LookupData, LookupDataAuth},
+    server::Policy,
 };
 use prost::Message;
 use std::{
@@ -42,7 +45,11 @@ async fn test_server() {
 
     let logger = Logger::for_test();
 
-    let lookup_data = Arc::new(LookupData::new_empty("", logger.clone()));
+    let lookup_data = Arc::new(LookupData::new_empty(
+        "",
+        LookupDataAuth::default(),
+        logger.clone(),
+    ));
 
     let policy = Policy {
         constant_response_size_bytes: 100,

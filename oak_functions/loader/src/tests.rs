@@ -20,7 +20,7 @@ use oak_functions_abi::proto::{Request, Response, StatusCode};
 use oak_functions_loader::{
     grpc::create_and_start_grpc_server,
     logger::Logger,
-    lookup::{parse_lookup_entries, LookupData},
+    lookup::{parse_lookup_entries, LookupData, LookupDataAuth},
     server::{apply_policy, format_bytes, Policy, WasmHandler},
 };
 use prost::Message;
@@ -138,6 +138,7 @@ where
 
     let lookup_data = Arc::new(LookupData::new_empty(
         &format!("http://localhost:{}", static_server_port),
+        LookupDataAuth::default(),
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();
@@ -183,6 +184,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         let static_server_port = test_utils::free_port();
         let lookup_data = Arc::new(LookupData::new_empty(
             &format!("http://localhost:{}", static_server_port),
+            LookupDataAuth::default(),
             logger.clone(),
         ));
         let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data.clone(), logger)
@@ -336,6 +338,7 @@ async fn lookup_data_refresh() {
 
     let lookup_data = crate::LookupData::new_empty(
         &format!("http://localhost:{}", static_server_port),
+        LookupDataAuth::default(),
         Logger::for_test(),
     );
     assert!(lookup_data.is_empty());

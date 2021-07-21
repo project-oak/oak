@@ -17,7 +17,10 @@ use crate::Location;
 use maplit::hashmap;
 use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
-    grpc::create_and_start_grpc_server, logger::Logger, lookup::LookupData, server::Policy,
+    grpc::create_and_start_grpc_server,
+    logger::Logger,
+    lookup::{LookupData, LookupDataAuth},
+    server::Policy,
 };
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -69,6 +72,7 @@ async fn test_server() {
 
     let lookup_data = Arc::new(LookupData::new_empty(
         &format!("http://localhost:{}", static_server_port),
+        LookupDataAuth::default(),
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();

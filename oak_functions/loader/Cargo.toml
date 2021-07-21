@@ -37,6 +37,7 @@ oak_remote_attestation = { path = "../../remote_attestation/rust/" }
 prost = "*"
 serde = "*"
 serde_derive = "*"
+serde_json = "*"
 structopt = "*"
 tokio = { version = "*", features = [
   "fs",

@@ -21,7 +21,10 @@
 use anyhow::Context;
 use log::Level;
 use oak_functions_loader::{
-    grpc::create_and_start_grpc_server, logger::Logger, lookup::LookupData, server::Policy,
+    grpc::create_and_start_grpc_server,
+    logger::Logger,
+    lookup::{LookupData, LookupDataAuth},
+    server::Policy,
 };
 use serde_derive::Deserialize;
 use std::{
@@ -48,6 +51,10 @@ struct Config {
     /// How often to refresh the lookup data. If not provided, data is only loaded once at startup.
     #[serde(with = "humantime_serde")]
     lookup_data_download_period: Option<Duration>,
+    /// Whether to use the GCP metadata service to obtain an authentication token for downloading
+    /// the lookup data.
+    #[serde(default = "LookupDataAuth::default")]
+    lookup_data_auth: LookupDataAuth,
     /// Number of worker threads available to the async runtime.
     ///
     /// Defaults to 4 if unset.
@@ -186,6 +193,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc<LookupData>> {
     let lookup_data = Arc::new(LookupData::new_empty(
         &config.lookup_data_url,
+        config.lookup_data_auth,
         logger.clone(),
     ));
     if !config.lookup_data_url.is_empty() {
