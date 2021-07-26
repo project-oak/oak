@@ -720,13 +720,9 @@ fn run_example_server(
             "--http-tls-private-key=./examples/certs/local/local.key".to_string(),
             // TODO(#396): Add `--oidc-client` support.
             format!("--application={}", application_file),
-            match opt.server_variant {
-                ServerVariant::Base => format!("--permissions={}", permissions_file),
-                // server variants that have `oak-unsafe` cannot accept a `permissions` file
-                _ => "".to_string(),
-            },
             ...match opt.server_variant {
-                ServerVariant::Base => vec![],
+                // server variants that don't have `oak-unsafe` require a `permissions` file
+                ServerVariant::Base => vec![format!("--permissions={}", permissions_file)],
                 // server variants that have `oak-unsafe` need to specify `root-tls-certificate`
                 _ => vec!["--root-tls-certificate=./examples/certs/local/ca.pem".to_string()],
             },

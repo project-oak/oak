@@ -49,6 +49,7 @@ pub struct Opt {
         not(feature = "oak-unsafe"),
         structopt(long, help = "Permissions configuration file.")
     )]
+    #[cfg(not(feature = "oak-unsafe"))]
     permissions: String,
     #[structopt(long, help = "Private RSA key file used by gRPC server pseudo-Nodes.")]
     grpc_tls_private_key: Option<String>,
@@ -381,17 +382,19 @@ fn create_app_config(opt: &Opt) -> anyhow::Result<ApplicationConfiguration> {
         .context("could not parse application configuration")?)
 }
 
-/// Parse permissions configuration into an instance of [`PermissionsConfiguration`], if
-/// `oak-unsafe` is not enabled. Otherwise, use a default [`PermissionsConfiguration`].
+/// Parse permissions configuration into an instance of [`PermissionsConfiguration`].
+#[cfg(not(feature = "oak-unsafe"))]
 fn create_permissions_config(opt: &Opt) -> anyhow::Result<PermissionsConfiguration> {
-    if cfg!(feature = "oak-unsafe") {
-        Ok(PermissionsConfiguration::default())
-    } else {
-        let permissions_config_data =
-            read(&opt.permissions).context("could not read permissions configuration")?;
-        let permissions: PermissionsConfiguration =
-            toml::from_str(std::str::from_utf8(permissions_config_data.as_ref())?)
-                .context("could not parse permissions configuration")?;
-        Ok(permissions)
-    }
+    let permissions_config_data =
+        read(&opt.permissions).context("could not read permissions configuration")?;
+    let permissions: PermissionsConfiguration =
+        toml::from_str(std::str::from_utf8(permissions_config_data.as_ref())?)
+            .context("could not parse permissions configuration")?;
+    Ok(permissions)
+}
+
+/// Use a default [`PermissionsConfiguration`].
+#[cfg(feature = "oak-unsafe")]
+fn create_permissions_config(_opt: &Opt) -> anyhow::Result<PermissionsConfiguration> {
+    Ok(PermissionsConfiguration::default())
 }
