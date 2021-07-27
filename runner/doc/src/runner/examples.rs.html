@@ -994,10 +994,6 @@
 <span id="991">991</span>
 <span id="992">992</span>
 <span id="993">993</span>
-<span id="994">994</span>
-<span id="995">995</span>
-<span id="996">996</span>
-<span id="997">997</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -1721,13 +1717,9 @@
             <span class="string">&quot;--http-tls-private-key=./examples/certs/local/local.key&quot;</span>.<span class="ident">to_string</span>(),
             <span class="comment">// TODO(#396): Add `--oidc-client` support.</span>
             <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--application={}&quot;</span>, <span class="ident">application_file</span>),
-            <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
-                <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--permissions={}&quot;</span>, <span class="ident">permissions_file</span>),
-                <span class="comment">// server variants that have `oak-unsafe` cannot accept a `permissions` file</span>
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
-            },
             ...<span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">server_variant</span> {
-                <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[],
+                <span class="comment">// server variants that don&#39;t have `oak-unsafe` require a `permissions` file</span>
+                <span class="ident">ServerVariant</span>::<span class="ident">Base</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--permissions={}&quot;</span>, <span class="ident">permissions_file</span>)],
                 <span class="comment">// server variants that have `oak-unsafe` need to specify `root-tls-certificate`</span>
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;--root-tls-certificate=./examples/certs/local/ca.pem&quot;</span>.<span class="ident">to_string</span>()],
             },
