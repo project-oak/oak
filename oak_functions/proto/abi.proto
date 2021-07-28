@@ -29,4 +29,13 @@ enum OakStatus {
   ERR_INTERNAL = 3;
   // Lookup storage item not found.
   ERR_STORAGE_ITEM_NOT_FOUND = 4;
+  // TensorFlow model not found.
+  ERR_TENSOR_FLOW_MODEL_NOT_FOUND = 5;
+}
+
+// The inference from a TensorFlow model, containing an inference vector of floats, and a shape
+// vector specifying the dimensions of the inference vector.
+message Inference {
+  repeated uint64 shape = 1;
+  repeated float inference_vec = 2;
 }

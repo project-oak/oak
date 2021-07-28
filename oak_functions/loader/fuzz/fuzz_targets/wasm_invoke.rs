@@ -98,6 +98,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
         Arc::new(LookupData::for_test(entries)),
+        Arc::new(None),
         Logger::for_test(),
     )
     .expect("Could instantiate WasmHandler");

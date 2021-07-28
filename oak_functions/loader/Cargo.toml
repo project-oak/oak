@@ -47,6 +47,7 @@ tokio = { version = "*", features = [
 ] }
 toml = "*"
 tonic = "*"
+tract-tensorflow = "*"
 wasmi = "*"
 signal-hook = "*"
 

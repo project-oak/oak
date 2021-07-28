@@ -25,6 +25,7 @@ use oak_functions_loader::{
     logger::Logger,
     lookup::{LookupData, LookupDataAuth},
     server::Policy,
+    tf::{read_model, TensorFlowModel},
 };
 use serde_derive::Deserialize;
 use std::{
@@ -67,6 +68,20 @@ struct Config {
     worker_threads: Option<usize>,
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
+    /// Configuration for TensorFlow model
+    #[serde(default)]
+    tf_model: Option<TensorFlowModelConfig>,
+}
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+struct TensorFlowModelConfig {
+    /// URL to the TensorFlow model to GET over HTTP.
+    #[serde(default)]
+    url: String,
+    /// Shape of the Tensors expected by the model.
+    #[serde(default)]
+    shape: Vec<u8>,
 }
 
 /// Command line options for the Oak loader.
@@ -138,6 +153,8 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 
     let lookup_data = load_lookup_data(&config, logger.clone()).await?;
 
+    let tf_model = load_tensorflow_model(&config).await?;
+
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
@@ -158,6 +175,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             tee_certificate,
             &wasm_module_bytes,
             lookup_data,
+            tf_model,
             config.policy.unwrap(),
             async { notify_receiver.await.unwrap() },
             logger,
@@ -214,4 +232,16 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
         };
     }
     Ok(lookup_data)
+}
+
+/// Load the TensorFlow model from the URL in the config, or return `None` if a URL is not provided.
+async fn load_tensorflow_model(config: &Config) -> anyhow::Result<Option<TensorFlowModel>> {
+    match &config.tf_model {
+        Some(tf_model_config) => {
+            let model = read_model(&tf_model_config.url).await?;
+            let tf_model = TensorFlowModel::create(model, tf_model_config.shape.clone())?;
+            Ok(Some(tf_model))
+        }
+        None => Ok(None),
+    }
 }

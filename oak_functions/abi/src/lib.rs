@@ -72,4 +72,15 @@ extern "C" {
         value_ptr_ptr: *mut *mut u8,
         value_len_ptr: *mut usize,
     ) -> u32;
+
+    /// See [`tf_model_get_shape`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_get_shape).
+    pub fn tf_model_get_shape(shape_ptr_ptr: *mut *mut u8, shape_len_ptr: *mut usize) -> u32;
+
+    /// See [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
+    pub fn tf_model_infer(
+        input_ptr: *const u8,
+        input_len: usize,
+        inference_ptr_ptr: *mut *mut u8,
+        inference_len_ptr: *mut usize,
+    ) -> u32;
 }
