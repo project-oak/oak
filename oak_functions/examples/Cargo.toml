@@ -2,5 +2,7 @@
 members = [
   "fuzzable/module",
   "key_value_lookup/module",
+  "mobilenet/client/rust",
+  "mobilenet/module",
   "weather_lookup/module",
 ]
