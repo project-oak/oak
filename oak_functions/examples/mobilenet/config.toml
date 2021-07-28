@@ -1,0 +1,11 @@
+lookup_data_url = ""
+lookup_data_download_period = "10m"
+worker_threads = 4
+
+[tf_model]
+url = "https://storage.googleapis.com/oak-tensorflow-models/mobilenet_v2_1.4_224_frozen"
+shape = [1, 224, 224, 3]
+
+[policy]
+constant_response_size_bytes = 4096
+constant_processing_time = "4s"
