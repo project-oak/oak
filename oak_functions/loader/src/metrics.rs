@@ -14,16 +14,13 @@
 // limitations under the License.
 //
 
-#![feature(async_closure)]
+use serde::Deserialize;
 
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
+// Configuration for differentially-private metrics reporting
+#[derive(Deserialize, Debug, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct PrivateMetricsConfig {
+    pub epsilon: f32,
+    pub batch_size: usize,
+    pub allowed_labels: Vec<String>,
 }
-
-pub mod attestation;
-pub mod grpc;
-pub mod logger;
-pub mod lookup;
-pub mod metrics;
-pub mod server;
-pub mod tf;

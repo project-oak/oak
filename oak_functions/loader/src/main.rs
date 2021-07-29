@@ -24,6 +24,7 @@ use oak_functions_loader::{
     grpc::create_and_start_grpc_server,
     logger::Logger,
     lookup::{LookupData, LookupDataAuth},
+    metrics::PrivateMetricsConfig,
     server::Policy,
     tf::{read_model_from_path, TensorFlowModel},
 };
@@ -71,6 +72,8 @@ struct Config {
     /// Configuration for TensorFlow model
     #[serde(default)]
     tf_model: Option<TensorFlowModelConfig>,
+    /// Differentially private metrics configuration.
+    metrics: Option<PrivateMetricsConfig>,
 }
 
 #[derive(Deserialize, Debug, Default)]
