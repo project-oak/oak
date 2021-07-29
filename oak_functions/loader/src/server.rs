@@ -34,6 +34,7 @@ const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
 const TF_MODEL_INFER: usize = 4;
+const REPORT_EVENT: usize = 5;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -268,6 +269,41 @@ impl WasmState {
         Ok(())
     }
 
+    /// Corresponds to the host ABI function [`report_event`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_event).
+    pub fn report_event(
+        &mut self,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -> Result<(), OakStatus> {
+        let raw_label = self
+            .get_memory()
+            .get(buf_ptr, buf_len as usize)
+            .map_err(|err| {
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!(
+                        "report_event(): Unable to read label from guest memory: {:?}",
+                        err
+                    ),
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+        let label = str::from_utf8(raw_label.as_slice()).map_err(|err| {
+            self.logger.log_sensitive(
+                Level::Warn,
+                &format!(
+                    "report_event(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
+                    err, raw_label
+                ),
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
+        self.logger
+            .log_sensitive(Level::Debug, &format!("report_event(): {}", label));
+        // TODO: Count event.
+        Ok(())
+    }
+
     /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(
         &mut self,
@@ -406,6 +442,9 @@ impl wasmi::Externals for WasmState {
             }
             WRITE_LOG_MESSAGE => {
                 map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
+            }
+            REPORT_EVENT => {
+                map_host_errors(self.report_event(args.nth_checked(0)?, args.nth_checked(1)?))
             }
             STORAGE_GET_ITEM => map_host_errors(self.storage_get_item(
                 args.nth_checked(0)?,
@@ -662,6 +701,16 @@ fn oak_functions_resolve_func(
         ),
         "write_log_message" => (
             WRITE_LOG_MESSAGE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // buf_ptr
+                    ABI_USIZE, // buf_len
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "report_event" => (
+            REPORT_EVENT,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // buf_ptr

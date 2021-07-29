@@ -65,6 +65,9 @@ extern "C" {
     /// See [`write_log_message`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_log_message).
     pub fn write_log_message(buf_ptr: *const u8, buf_len: usize) -> u32;
 
+    /// See [`report_event`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_event).
+    pub fn report_event(buf_ptr: *const u8, buf_len: usize) -> u32;
+
     /// See [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(
         key_ptr: *const u8,
