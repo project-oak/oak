@@ -5,6 +5,9 @@ TensorFlow API for machine learning inference. The example uses the MobilenetV2
 model and is based on
 https://github.com/sonos/tract/tree/main/examples/tensorflow-mobilenet-v2.
 
+In this example, we use the project Oak logo as input to the model. MobilenetV2
+categorizes this image a shield (label #789) with confidence 0.18.
+
 ## Configuration
 
 The configuration for this example specifies the URL to a TensorFlow model on
@@ -28,4 +31,4 @@ the image, and resize it.
 
 The response contains an `Inference` as specified in
 `oak_functions/protos/abi/proto`. It consists of a vector of floats, and an
-additional filed specifying the desired shape of the inference vector.
+additional field specifying the desired shape of the inference vector.
