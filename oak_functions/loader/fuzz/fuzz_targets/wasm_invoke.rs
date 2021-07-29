@@ -43,6 +43,9 @@ enum ArbitraryInstruction {
     WriteLogMessage {
         message: Vec<u8>,
     },
+    ReportEvent {
+        label: Vec<u8>,
+    },
 }
 
 /// Enum to allow simulating both hit and miss lookup scenarios.
@@ -131,6 +134,11 @@ impl From<&ArbitraryInstruction> for crate::proto::Instruction {
                     message: message.clone(),
                 }),
             ),
+            ArbitraryInstruction::ReportEvent { label } => {
+                Some(InstructionVariant::ReportEvent(crate::proto::ReportEvent {
+                    label: label.clone(),
+                }))
+            }
         };
         crate::proto::Instruction {
             instruction_variant,

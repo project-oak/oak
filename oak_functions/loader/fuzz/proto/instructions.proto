@@ -29,6 +29,7 @@ message Instruction {
     WriteResponse write_response = 3;
     StorageGetItem storage_get_item = 4;
     WriteLogMessage write_log_message = 5;
+    ReportEvent report_event = 5;
   }
 }
 
@@ -46,4 +47,8 @@ message StorageGetItem {
 
 message WriteLogMessage {
   bytes message = 1;
+}
+
+message ReportEvent {
+  bytes label = 1;
 }

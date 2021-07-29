@@ -20,7 +20,7 @@ pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/loader.fuzz.instructions.rs"));
 }
 use crate::proto::{
-    instruction::InstructionVariant, Instructions, Panic, ReadRequest, StorageGetItem,
+    instruction::InstructionVariant, Instructions, Panic, ReadRequest, ReportEvent, StorageGetItem,
     WriteLogMessage, WriteResponse,
 };
 use prost::Message;
@@ -61,6 +61,12 @@ pub extern "C" fn main() {
                         std::str::from_utf8(&message).expect("Couldn't convert bytes to string"),
                     )
                     .expect("Couldn't write log message.")
+                }
+                Some(InstructionVariant::ReportEvent(ReportEvent { label })) => {
+                    oak_functions::report_event(
+                        std::str::from_utf8(&label).expect("Couldn't convert bytes to string"),
+                    )
+                    .expect("Couldn't report event.")
                 }
                 None => (),
             }
