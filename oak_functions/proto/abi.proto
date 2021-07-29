@@ -31,6 +31,8 @@ enum OakStatus {
   ERR_STORAGE_ITEM_NOT_FOUND = 4;
   // TensorFlow model not found.
   ERR_TENSOR_FLOW_MODEL_NOT_FOUND = 5;
+  // Error when running the TensorFlow model, due to bad input tensor.
+  ERR_BAD_TENSOR_FLOW_MODEL_INPUT = 6;
 }
 
 // The inference from a TensorFlow model, containing an inference vector of floats, and a shape

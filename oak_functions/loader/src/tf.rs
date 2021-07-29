@@ -52,14 +52,32 @@ impl TensorFlowModel {
         Ok(TensorFlowModel { model, shape })
     }
 
-    /// Run the model for the given input and return the resulting inference vector.
-    pub fn get_inference(&self, tensor_bytes: &[u8], tensor_shape: &[usize]) -> Inference {
-        // Reshape the input
-        let tensor: Tensor =
-            unsafe { Tensor::from_raw::<f32>(tensor_shape, tensor_bytes).unwrap() };
+    /// Run the model for the given input and return the resulting inference vector. Returns an
+    /// error if the input vector does not have the desired shape, or the model fails to produce an
+    /// inference.
+    pub fn get_inference(
+        &self,
+        tensor_bytes: &[u8],
+        tensor_shape: &[usize],
+    ) -> anyhow::Result<Inference> {
+        // Reshape the input, if the given shape matches the size of the given byte vector.
+        let tensor = if (tensor_shape.iter().cloned().product::<usize>() * 4) == tensor_bytes.len()
+        {
+            unsafe {
+                Tensor::from_raw::<f32>(tensor_shape, tensor_bytes)
+                    .context("could not convert bytes into tensor")?
+            }
+        } else {
+            anyhow::bail!("tensor bytes don't match the given shape");
+        };
 
         // Get the inference
-        let inference = self.model.run(tvec!(tensor)).unwrap().into_vec();
+        let inference = self
+            .model
+            .run(tvec!(tensor))
+            .context("could not get inference")?
+            .into_vec();
+
         let mut shape = vec![inference.len() as u64];
         shape.append(&mut inference[0].shape().iter().map(|u| *u as u64).collect());
         let inference_vec = inference
@@ -68,10 +86,10 @@ impl TensorFlowModel {
             .cloned()
             .collect::<Vec<f32>>();
 
-        Inference {
+        Ok(Inference {
             shape,
             inference_vec,
-        }
+        })
     }
 }
 

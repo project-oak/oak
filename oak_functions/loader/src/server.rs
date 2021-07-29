@@ -349,7 +349,13 @@ impl WasmState {
                     .collect::<Vec<usize>>();
 
                 // Get the inference, and convert it into a protobuf-encoded byte array
-                let inference = tf_model.get_inference(&input, &shape);
+                let inference = tf_model.get_inference(&input, &shape).map_err(|err| {
+                    self.logger.log_sensitive(
+                        Level::Error,
+                        &format!("tf_model_infer(): Unable to run inference: {:?}", err),
+                    );
+                    OakStatus::ErrBadTensorFlowModelInput
+                })?;
                 let mut encoded_inference = vec![];
                 inference.encode(&mut encoded_inference).unwrap();
 
