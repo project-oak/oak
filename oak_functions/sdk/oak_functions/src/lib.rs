@@ -90,27 +90,6 @@ pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
     result_from_status(status as i32, ())
 }
 
-/// Returns the shape of the Tensors accepted by the TensorFlow model. The shape is a vector, where
-/// each element indicates the size of a dimension of the Tensor.
-///
-/// This function is idempotent. Multiple calls to this function all return the same value.
-///
-/// See [`tf_model_get_shape`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_get_shape).
-pub fn tf_model_get_shape() -> Result<Vec<u8>, OakStatus> {
-    let mut shape_ptr: *mut u8 = std::ptr::null_mut();
-    let mut shape_len: usize = 0;
-    let status_code =
-        unsafe { oak_functions_abi::tf_model_get_shape(&mut shape_ptr, &mut shape_len) };
-    let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
-    match status {
-        OakStatus::Ok => {
-            let shape = from_alloc_buffer(shape_ptr, shape_len);
-            Ok(shape)
-        }
-        status => Err(status),
-    }
-}
-
 /// Uses the TensorFlow model to perform inference for the given input.
 ///
 /// See [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).

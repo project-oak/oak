@@ -33,8 +33,7 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
-const TF_MODEL_GET_SHAPE: usize = 4;
-const TF_MODEL_INFER: usize = 5;
+const TF_MODEL_INFER: usize = 4;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -316,25 +315,6 @@ impl WasmState {
         }
     }
 
-    /// Corresponds to the host ABI function [`tf_model_get_shape`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_get_shape).
-    pub fn tf_model_get_shape(
-        &mut self,
-        shape_ptr_ptr: AbiPointer,
-        shape_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        match *self.tf_model {
-            None => Err(OakStatus::ErrTensorFlowModelNotFound),
-            Some(ref tf_model) => {
-                let shape = tf_model.shape.clone();
-                let shape_ptr = self.alloc(shape.len() as u32);
-                self.write_buffer_to_wasm_memory(&shape, shape_ptr)?;
-                self.write_u32_to_wasm_memory(shape_ptr, shape_ptr_ptr)?;
-                self.write_u32_to_wasm_memory(shape.len() as u32, shape_len_ptr)?;
-                Ok(())
-            }
-        }
-    }
-
     /// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
     pub fn tf_model_infer(
         &mut self,
@@ -427,9 +407,6 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
             )),
-            TF_MODEL_GET_SHAPE => {
-                map_host_errors(self.tf_model_get_shape(args.nth_checked(0)?, args.nth_checked(1)?))
-            }
             TF_MODEL_INFER => map_host_errors(self.tf_model_infer(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
@@ -695,16 +672,6 @@ fn oak_functions_resolve_func(
                     ABI_USIZE, // key_len
                     ABI_USIZE, // value_ptr_ptr
                     ABI_USIZE, // value_len_ptr
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        "tf_model_get_shape" => (
-            TF_MODEL_GET_SHAPE,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // shape_ptr_ptr
-                    ABI_USIZE, // shape_len_ptr
                 ][..],
                 Some(ValueType::I32),
             ),

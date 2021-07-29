@@ -27,6 +27,12 @@ use oak_functions_abi::proto::Inference;
 use prost::Message;
 use tract_tensorflow::prelude::*;
 
+// Shape of the input tensor
+const BATCH_SIZE: usize = 1;
+const WIDTH: u32 = 224;
+const HEIGHT: u32 = 224;
+const CHANNELS: usize = 3;
+
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     let response = match handle_request() {
@@ -56,25 +62,18 @@ fn handle_request() -> anyhow::Result<Inference> {
         proto::MobilenetImage::decode(&*request_bytes).expect("could not decode MobilenetImage");
 
     // Resize the image
-    let shape =
-        oak_functions::tf_model_get_shape().expect("could not get shape of the TensorFlow model");
     let recreated_image = image::RgbImage::from_raw(image.width, image.height, image.image)
         .ok_or_else(|| anyhow::anyhow!("could not recreate image"))?;
     let resized = image::imageops::resize(
         &recreated_image,
-        shape[1] as u32,
-        shape[2] as u32,
+        WIDTH,
+        HEIGHT,
         ::image::imageops::FilterType::Triangle,
     );
 
     // Convert to tensor
     let tensor: Tensor = tract_ndarray::Array4::from_shape_fn(
-        (
-            shape[0] as usize,
-            shape[1] as usize,
-            shape[2] as usize,
-            shape[3] as usize,
-        ),
+        (BATCH_SIZE, WIDTH as usize, HEIGHT as usize, CHANNELS),
         |(_, y, x, c)| resized[(x as _, y as _)][c] as f32 / 255.0,
     )
     .into();
