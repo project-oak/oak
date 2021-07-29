@@ -16,14 +16,16 @@
 
 //! Sends an image to the mobilenet application and checks that the response is correct.
 
-mod proto {
-    include!(concat!(env!("OUT_DIR"), "/oak.examples.mobilenet.rs"));
-}
-
 use anyhow::Context;
 use oak_functions_abi::proto::Request;
 use oak_functions_client::Client;
-use prost::Message;
+use tract_tensorflow::prelude::*;
+
+// Shape of the input tensor
+const BATCH_SIZE: usize = 1;
+const WIDTH: u32 = 224;
+const HEIGHT: u32 = 224;
+const CHANNELS: usize = 3;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -37,19 +39,24 @@ async fn main() -> anyhow::Result<()> {
         .unwrap()
         .to_rgb8();
 
-    let image = proto::MobilenetImage {
-        width: image_buffer.width(),
-        height: image_buffer.height(),
-        image: image_buffer.to_vec(),
-    };
+    // Resize the image
+    let resized = image::imageops::resize(
+        &image_buffer,
+        WIDTH,
+        HEIGHT,
+        ::image::imageops::FilterType::Triangle,
+    );
 
-    let mut encoded_image = Vec::new();
-    image
-        .encode(&mut encoded_image)
-        .context("Error encoding the image")?;
+    // Convert to tensor
+    let tensor: Tensor = tract_ndarray::Array4::from_shape_fn(
+        (BATCH_SIZE, WIDTH as usize, HEIGHT as usize, CHANNELS),
+        |(_, y, x, c)| resized[(x as _, y as _)][c] as f32 / 255.0,
+    )
+    .into();
+    let bytes = unsafe { tensor.as_bytes() };
 
     let request = Request {
-        body: encoded_image,
+        body: bytes.to_vec(),
     };
 
     let response = client

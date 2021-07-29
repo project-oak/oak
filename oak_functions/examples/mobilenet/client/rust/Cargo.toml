@@ -18,6 +18,4 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread"
 ] }
-
-[build-dependencies]
-oak_utils = { path = "../../../../../oak_utils" }
+tract-tensorflow = "*"

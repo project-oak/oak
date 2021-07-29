@@ -19,19 +19,7 @@
 
 #![feature(try_blocks)]
 
-mod proto {
-    include!(concat!(env!("OUT_DIR"), "/oak.examples.mobilenet.rs"));
-}
-
 use oak_functions_abi::proto::Inference;
-use prost::Message;
-use tract_tensorflow::prelude::*;
-
-// Shape of the input tensor
-const BATCH_SIZE: usize = 1;
-const WIDTH: u32 = 224;
-const HEIGHT: u32 = 224;
-const CHANNELS: usize = 3;
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
@@ -52,34 +40,14 @@ pub extern "C" fn main() {
     oak_functions::write_response(response.as_bytes()).expect("Couldn't write the response body.");
 }
 
-/// Reads the request containing an image. Reshapes and converts the image into the format expected
-/// by the MobilenetV2 model. Gets the inference from the TensorFlow model using Oak Functions ABI,
-/// and returns the resulting inference vector.
+/// Reads the request containing an image, gets the inference from the TensorFlow model using Oak
+/// Functions ABI, and returns the resulting inference vector.
 fn handle_request() -> anyhow::Result<Inference> {
     // Get the image from the request
-    let request_bytes = oak_functions::read_request().expect("could not read request body");
-    let image =
-        proto::MobilenetImage::decode(&*request_bytes).expect("could not decode MobilenetImage");
-
-    // Resize the image
-    let recreated_image = image::RgbImage::from_raw(image.width, image.height, image.image)
-        .ok_or_else(|| anyhow::anyhow!("could not recreate image"))?;
-    let resized = image::imageops::resize(
-        &recreated_image,
-        WIDTH,
-        HEIGHT,
-        ::image::imageops::FilterType::Triangle,
-    );
-
-    // Convert to tensor
-    let tensor: Tensor = tract_ndarray::Array4::from_shape_fn(
-        (BATCH_SIZE, WIDTH as usize, HEIGHT as usize, CHANNELS),
-        |(_, y, x, c)| resized[(x as _, y as _)][c] as f32 / 255.0,
-    )
-    .into();
-    let bytes = unsafe { tensor.as_bytes() };
+    let request_bytes = oak_functions::read_request()
+        .map_err(|err| anyhow::anyhow!("could not read request body: {:?}", err))?;
 
     // Get image category
-    let inference = oak_functions::tf_model_infer(bytes).expect("could not get inference");
-    Ok(inference)
+    oak_functions::tf_model_infer(&request_bytes)
+        .map_err(|err| anyhow::anyhow!("could not get inference: {:?}", err))
 }

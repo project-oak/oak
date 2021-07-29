@@ -7,5 +7,5 @@ url = "https://storage.googleapis.com/oak-tensorflow-models/mobilenet_v2_1.4_224
 shape = [1, 224, 224, 3]
 
 [policy]
-constant_response_size_bytes = 4096
-constant_processing_time = "4s"
+constant_response_size_bytes = 100
+constant_processing_time = "500ms"

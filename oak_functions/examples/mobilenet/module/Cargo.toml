@@ -16,7 +16,3 @@ oak_functions_abi = { path = "../../../abi" }
 prost = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
-tract-tensorflow = "*"
-
-[build-dependencies]
-oak_utils = { path = "../../../../oak_utils" }

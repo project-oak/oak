@@ -1077,11 +1077,9 @@ dependencies = [
  "image",
  "oak_functions",
  "oak_functions_abi",
- "oak_utils",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
- "tract-tensorflow",
 ]
 
 [[package]]
@@ -1093,9 +1091,9 @@ dependencies = [
  "image",
  "oak_functions_abi",
  "oak_functions_client",
- "oak_utils",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
+ "tract-tensorflow",
 ]
 
 [[package]]
