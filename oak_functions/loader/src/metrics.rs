@@ -16,6 +16,7 @@
 
 use crate::logger::Logger;
 use log::Level;
+use rand::{distributions::Open01, thread_rng, Rng};
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -26,7 +27,7 @@ use std::{
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct PrivateMetricsConfig {
-    pub epsilon: f32,
+    pub epsilon: f64,
     pub batch_size: usize,
     pub allowed_labels: Vec<String>,
 }
@@ -34,7 +35,7 @@ pub struct PrivateMetricsConfig {
 /// Aggregator for count-based differentially private metrics.
 pub struct PrivateMetricsAggregator {
     count: usize,
-    epsilon: f32,
+    epsilon: f64,
     batch_size: usize,
     allowed_labels: HashSet<String>,
     events: HashMap<String, usize>,
@@ -57,6 +58,7 @@ impl PrivateMetricsAggregator {
         }
     }
 
+    /// Reports new events that should be included in the aggregated counts.
     pub fn report_events(&mut self, events: HashSet<String>) {
         self.count += 1;
         for label in self.allowed_labels.intersection(&events) {
@@ -72,6 +74,8 @@ impl PrivateMetricsAggregator {
         }
     }
 
+    /// Logs the current counts after adding appropriate noise, resets the batch count to 0 and
+    /// clears the aggregated data.
     fn export_events(&mut self) {
         let mut counts = Vec::new();
         for label in &self.allowed_labels {
@@ -90,9 +94,31 @@ impl PrivateMetricsAggregator {
         self.events.clear();
     }
 
+    /// Adds Laplacian noise to a count. The Laplacian noise is sampled by sampling from a uniform
+    /// distribution and calculating inverse the of the Laplace cummulative distribution function on
+    /// the sampled value. Rounding of the noise is allowed as post-processing.
     fn add_laplace_noise(&self, count: usize) -> i64 {
-        // TODO: Add Laplace noise based on epsilon.
-        count as i64 + self.epsilon.round() as i64
+        // If epsilon is 0 (or smaller), always return a fixed value so we don't leak any
+        // information.
+        if self.epsilon <= 0.0 {
+            return 0;
+        }
+        let p: f64 = thread_rng().sample(Open01);
+        count as i64 + Self::inverse_laplace(1.0 / self.epsilon, p).round() as i64
+    }
+
+    /// Applies the inverse of the Laplace cummulative distribution function with mu = 0.
+    ///
+    /// See https://en.wikipedia.org/wiki/Laplace_distribution
+    fn inverse_laplace(beta: f64, p: f64) -> f64 {
+        if p >= 1.0 {
+            return f64::NEG_INFINITY;
+        }
+        if p <= 0.0 {
+            return f64::INFINITY;
+        }
+        let u = p - 0.5;
+        -beta * u.signum() * (1.0 - 2.0 * u.abs()).ln()
     }
 }
 
