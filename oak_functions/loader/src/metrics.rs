@@ -38,6 +38,7 @@ pub struct PrivateMetricsAggregator {
     epsilon: f64,
     batch_size: usize,
     allowed_labels: HashSet<String>,
+    label_count: f64,
     events: HashMap<String, usize>,
     logger: Logger,
 }
@@ -53,6 +54,7 @@ impl PrivateMetricsAggregator {
                 .iter()
                 .map(|label| label.clone())
                 .collect(),
+            label_count: config.allowed_labels.iter().count() as f64,
             events: HashMap::new(),
             logger,
         }
@@ -77,11 +79,14 @@ impl PrivateMetricsAggregator {
     /// Logs the current counts after adding appropriate noise, resets the batch count to 0 and
     /// clears the aggregated data.
     fn export_events(&mut self) {
-        let mut counts = Vec::new();
-        for label in &self.allowed_labels {
-            let value = self.add_laplace_noise(*self.events.get(label).unwrap_or(&0));
-            counts.push(format!("{}={}", label, value));
-        }
+        let counts: Vec<String> = self
+            .allowed_labels
+            .iter()
+            .map(|label| {
+                let value = self.add_laplace_noise(*self.events.get(label).unwrap_or(&0));
+                format!("{}={}", label, value)
+            })
+            .collect();
         self.logger.log_public(
             Level::Info,
             &format!(
@@ -94,17 +99,33 @@ impl PrivateMetricsAggregator {
         self.events.clear();
     }
 
+    /// Exports the batch count and bucket counts without adding any noise for use in testing. Also
+    /// resets the batch count to 0 and clears the aggregated data.
+    pub fn export_events_for_test(&mut self) -> (usize, Vec<(String, usize)>) {
+        let count = self.count;
+        let buckets = self
+            .allowed_labels
+            .iter()
+            .map(|label| (label.to_string(), *self.events.get(label).unwrap_or(&0)))
+            .collect();
+        self.count = 0;
+        self.events.clear();
+        (count, buckets)
+    }
+
     /// Adds Laplacian noise to a count. The Laplacian noise is sampled by sampling from a uniform
     /// distribution and calculating inverse the of the Laplace cummulative distribution function on
-    /// the sampled value. Rounding of the noise is allowed as post-processing.
-    fn add_laplace_noise(&self, count: usize) -> i64 {
+    /// the sampled value. Rounding of the noise is allowed as acceptable post-processing.
+    pub fn add_laplace_noise(&self, count: usize) -> i64 {
         // If epsilon is 0 (or smaller), always return a fixed value so we don't leak any
         // information.
         if self.epsilon <= 0.0 {
-            return 0;
+            return i64::MIN;
         }
+        // Split the budget evenly over all of the labeled buckets.
+        let beta = self.label_count / self.epsilon;
         let p: f64 = thread_rng().sample(Open01);
-        count as i64 + Self::inverse_laplace(1.0 / self.epsilon, p).round() as i64
+        count as i64 + Self::inverse_laplace(beta, p).round() as i64
     }
 
     /// Applies the inverse of the Laplace cummulative distribution function with mu = 0.
@@ -112,10 +133,10 @@ impl PrivateMetricsAggregator {
     /// See https://en.wikipedia.org/wiki/Laplace_distribution
     fn inverse_laplace(beta: f64, p: f64) -> f64 {
         if p >= 1.0 {
-            return f64::NEG_INFINITY;
+            return f64::INFINITY;
         }
         if p <= 0.0 {
-            return f64::INFINITY;
+            return f64::NEG_INFINITY;
         }
         let u = p - 0.5;
         -beta * u.signum() * (1.0 - 2.0 * u.abs()).ln()
@@ -129,8 +150,11 @@ pub struct PrivateMetricsProxy {
 }
 
 impl PrivateMetricsProxy {
-    pub fn new(aggregator: Arc<Mutex<PrivateMetricsAggregator>>, events: HashSet<String>) -> Self {
-        Self { aggregator, events }
+    pub fn new(aggregator: Arc<Mutex<PrivateMetricsAggregator>>) -> Self {
+        Self {
+            aggregator,
+            events: HashSet::new(),
+        }
     }
 
     /// Adds an event to the set of reported events if it was not previously added.
