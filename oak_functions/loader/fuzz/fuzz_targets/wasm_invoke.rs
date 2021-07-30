@@ -103,6 +103,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
         Arc::new(LookupData::for_test(entries)),
         Arc::new(None),
         Logger::for_test(),
+        None,
     )
     .expect("Could instantiate WasmHandler");
 

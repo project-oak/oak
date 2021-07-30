@@ -24,7 +24,7 @@ use oak_functions_loader::{
     grpc::create_and_start_grpc_server,
     logger::Logger,
     lookup::{LookupData, LookupDataAuth},
-    metrics::PrivateMetricsConfig,
+    metrics::{PrivateMetricsAggregator, PrivateMetricsConfig},
     server::Policy,
     tf::{read_model_from_path, TensorFlowModel},
 };
@@ -34,7 +34,7 @@ use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     time::Duration,
 };
@@ -181,7 +181,13 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             tf_model,
             config.policy.unwrap(),
             async { notify_receiver.await.unwrap() },
-            logger,
+            logger.clone(),
+            config.metrics.as_ref().map(|metrics_config| {
+                Arc::new(Mutex::new(PrivateMetricsAggregator::new(
+                    metrics_config,
+                    logger,
+                )))
+            }),
         )
         .await
         .context("error while waiting for the server to terminate")

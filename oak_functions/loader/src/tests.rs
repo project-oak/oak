@@ -155,6 +155,7 @@ where
             policy,
             term,
             logger,
+            None,
         )
         .await
     });
@@ -194,6 +195,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             lookup_data.clone(),
             Arc::new(None),
             logger,
+            None,
         )
         .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();

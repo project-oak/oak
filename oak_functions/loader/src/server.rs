@@ -13,7 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{logger::Logger, lookup::LookupData, tf::TensorFlowModel};
+use crate::{
+    logger::Logger,
+    lookup::LookupData,
+    metrics::{PrivateMetricsAggregator, PrivateMetricsProxy},
+    tf::TensorFlowModel,
+};
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
@@ -21,7 +26,12 @@ use log::Level;
 use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode};
 use prost::Message;
 use serde::Deserialize;
-use std::{convert::TryFrom, str, sync::Arc, time::Duration};
+use std::{
+    convert::TryFrom,
+    str,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -150,6 +160,7 @@ struct WasmState {
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
+    metrics_proxy: Option<PrivateMetricsProxy>,
 }
 
 impl WasmState {
@@ -300,7 +311,9 @@ impl WasmState {
         })?;
         self.logger
             .log_sensitive(Level::Debug, &format!("report_event(): {}", label));
-        // TODO: Count event.
+        if let Some(proxy) = self.metrics_proxy.as_mut() {
+            proxy.report_event(label);
+        }
         Ok(())
     }
 
@@ -420,6 +433,12 @@ impl WasmState {
             _ => panic!("invalid value type returned from `alloc`"),
         }
     }
+
+    pub fn publish_metrics(&mut self) {
+        if let Some(proxy) = self.metrics_proxy.take() {
+            proxy.publish();
+        }
+    }
 }
 
 impl wasmi::Externals for WasmState {
@@ -480,6 +499,7 @@ impl WasmState {
         lookup_data: Arc<LookupData>,
         tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
+        metrics_proxy: Option<PrivateMetricsProxy>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -489,6 +509,7 @@ impl WasmState {
             instance: None,
             memory: None,
             logger,
+            metrics_proxy,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -635,6 +656,7 @@ pub struct WasmHandler {
     lookup_data: Arc<LookupData>,
     tf_model: Arc<Option<TensorFlowModel>>,
     logger: Logger,
+    aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
 }
 
 impl WasmHandler {
@@ -643,6 +665,7 @@ impl WasmHandler {
         lookup_data: Arc<LookupData>,
         tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
+        aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     ) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
         Ok(WasmHandler {
@@ -650,6 +673,7 @@ impl WasmHandler {
             lookup_data,
             tf_model,
             logger,
+            aggregator,
         })
     }
 
@@ -661,8 +685,12 @@ impl WasmHandler {
             self.lookup_data.clone(),
             self.tf_model.clone(),
             self.logger.clone(),
+            self.aggregator
+                .clone()
+                .map(|aggregator| PrivateMetricsProxy::new(aggregator)),
         )?;
         wasm_state.invoke();
+        wasm_state.publish_metrics();
         Ok(Response::create(
             StatusCode::Success,
             wasm_state.get_response_bytes(),

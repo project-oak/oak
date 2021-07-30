@@ -67,6 +67,7 @@ async fn test_server() {
             policy,
             term,
             logger,
+            None,
         )
         .await
     });
