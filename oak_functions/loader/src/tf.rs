@@ -18,7 +18,10 @@ use anyhow::Context;
 use bytes::{Buf, Bytes};
 use oak_functions_abi::proto::Inference;
 use std::{fs::File, io::Read};
-use tract_tensorflow::prelude::*;
+use tract_tensorflow::prelude::{
+    tract_ndarray::{ArrayBase, Dim, IxDynImpl, ViewRepr},
+    *,
+};
 
 /// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`
 /// is not required, InferenceModel with [`InferenceFact`] and [`InferenceOp`] could be used
@@ -86,7 +89,13 @@ impl TensorFlowModel {
         shape.append(&mut inference[0].shape().iter().map(|u| *u as u64).collect());
         let inference_vec = inference
             .iter()
-            .flat_map(|item| item.to_array_view::<f32>().unwrap())
+            .map(|item| {
+                item.to_array_view::<f32>()
+                    .context("could not map byte array to float")
+            })
+            .collect::<anyhow::Result<Vec<ArrayBase<ViewRepr<&f32>, Dim<IxDynImpl>>>>>()?
+            .into_iter()
+            .flatten()
             .cloned()
             .collect::<Vec<f32>>();
 
