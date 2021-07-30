@@ -25,7 +25,7 @@ use oak_functions_loader::{
     logger::Logger,
     lookup::{LookupData, LookupDataAuth},
     server::Policy,
-    tf::{read_model, TensorFlowModel},
+    tf::{read_model_from_path, TensorFlowModel},
 };
 use serde_derive::Deserialize;
 use std::{
@@ -76,10 +76,10 @@ struct Config {
 #[derive(Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields)]
 struct TensorFlowModelConfig {
-    /// URL to the TensorFlow model to GET over HTTP.
+    /// Path to a TensorFlow model file.
     #[serde(default)]
-    url: String,
-    /// Shape of the Tensors expected by the model.
+    path: String,
+    /// Shape of the input Tensors expected by the model.
     #[serde(default)]
     shape: Vec<u8>,
 }
@@ -234,11 +234,12 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
     Ok(lookup_data)
 }
 
-/// Load the TensorFlow model from the URL in the config, or return `None` if a URL is not provided.
+/// Load the TensorFlow model from the given path in the config, or return `None` if a path is not
+/// provided.
 async fn load_tensorflow_model(config: &Config) -> anyhow::Result<Option<TensorFlowModel>> {
     match &config.tf_model {
         Some(tf_model_config) => {
-            let model = read_model(&tf_model_config.url).await?;
+            let model = read_model_from_path(&tf_model_config.path).await?;
             let tf_model = TensorFlowModel::create(model, tf_model_config.shape.clone())?;
             Ok(Some(tf_model))
         }

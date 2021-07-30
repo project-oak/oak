@@ -16,9 +16,8 @@
 
 use anyhow::Context;
 use bytes::{Buf, Bytes};
-use hyper::{Body, Client, Request};
-use hyper_rustls::HttpsConnector;
 use oak_functions_abi::proto::Inference;
+use std::{fs::File, io::Read};
 use tract_tensorflow::prelude::*;
 
 /// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`
@@ -33,8 +32,8 @@ pub struct TensorFlowModel {
 }
 
 impl TensorFlowModel {
-    /// Creates an instance of TensorFlowModel, by loading the model in the specified path, and
-    /// configuring it with the given shape.
+    /// Creates an instance of TensorFlowModel, by loading the model from the given byte array and
+    /// optimizing it using the given shape.
     pub fn create(bytes: Bytes, shape: Vec<u8>) -> anyhow::Result<Self> {
         let dim = shape
             .iter()
@@ -98,30 +97,12 @@ impl TensorFlowModel {
     }
 }
 
-/// Read the tensorFlow model from the given URL, into a byte array.
-pub async fn read_model(url: &str) -> anyhow::Result<Bytes> {
-    let https = HttpsConnector::with_native_roots();
-    let client = Client::builder().build::<_, Body>(https);
-    let request = Request::builder()
-        .method(http::Method::GET)
-        .uri(url)
-        .body(Body::empty())
-        .context("could not create request to read TensorFlow model")?;
-    let response = client
-        .request(request)
-        .await
-        .context("could not execute request to read TensorFlow model")?;
+/// Read a tensorFlow model from the given path, into a byte array.
+pub async fn read_model_from_path(path: &str) -> anyhow::Result<Bytes> {
+    let mut f = File::open(path).context("could not open TensorFlow model file")?;
+    let mut buf = vec![];
+    f.read_to_end(&mut buf)
+        .context("could not read TensorFlow model from file")?;
 
-    match response.status() {
-        http::StatusCode::OK => {
-            let bytes = hyper::body::to_bytes(response.into_body())
-                .await
-                .context("could not read response body")?;
-            Ok(bytes)
-        }
-        status => anyhow::bail!(
-            "unexpected response with status `{}` from model server, ",
-            status,
-        ),
-    }
+    Ok(Bytes::from(buf))
 }

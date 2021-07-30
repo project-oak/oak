@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Could not create Oak Functions client")?;
 
-    let image_buffer = image::open("oak_functions/examples/mobilenet/oak.jpg")
+    let image_buffer = image::open("oak_functions/examples/mobilenet/files/oak.jpg")
         .unwrap()
         .to_rgb8();
 
