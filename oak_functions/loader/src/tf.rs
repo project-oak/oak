@@ -20,6 +20,11 @@ use hyper::{Body, Client, Request};
 use hyper_rustls::HttpsConnector;
 use oak_functions_abi::proto::Inference;
 use tract_tensorflow::prelude::*;
+
+/// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`
+/// is not required, InferenceModel with [`InferenceFact`] and [`InferenceOp`] could be used
+/// instead. These traits are available from the `tract-hir` crate.
+/// More information: https://github.com/sonos/tract/blob/main/doc/graph.md
 type Model = RunnableModel<TypedFact, Box<dyn TypedOp>, Graph<TypedFact, Box<dyn TypedOp>>>;
 
 pub struct TensorFlowModel {
@@ -42,7 +47,7 @@ impl TensorFlowModel {
         let model = tract_tensorflow::tensorflow()
             // load the model
             .model_for_read(&mut reader)?
-            // specify input type and shape
+            // specify input type and shape to be able to optimize the model
             .with_input_fact(0, InferenceFact::dt_shape(f32::datum_type(), dim))?
             // optimize the model
             .into_optimized()?
