@@ -63,6 +63,7 @@ async fn test_server() {
             tee_certificate,
             &wasm_module_bytes,
             lookup_data,
+            #[cfg(feature = "oak-tf")]
             None,
             policy,
             term,

@@ -189,3 +189,6 @@ and `inference_len_ptr`.
 
 - `result[0]: i32`: Status of operation as
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
+
+  This ABI function is experimental, and is only available when the `oak-tf`
+  feature is enabled.

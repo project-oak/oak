@@ -228,7 +228,11 @@ impl std::str::FromStr for FunctionsServerVariant {
 
 #[derive(StructOpt, Clone)]
 pub struct BuildFunctionsServer {
-    #[structopt(long, help = "server variant: [base, unsafe]", default_value = "base")]
+    #[structopt(
+        long,
+        help = "server variant: [base, unsafe]",
+        default_value = "unsafe"
+    )]
     pub server_variant: FunctionsServerVariant,
     #[structopt(
         long,

@@ -16,6 +16,8 @@
 
 //! gRPC server for Oak Functions.
 
+#[cfg(feature = "oak-tf")]
+use crate::tf::TensorFlowModel;
 use crate::{
     attestation::AttestationServer,
     logger::Logger,
@@ -23,7 +25,6 @@ use crate::{
     metrics::PrivateMetricsAggregator,
     proto::remote_attestation_server::RemoteAttestationServer,
     server::{apply_policy, Policy, WasmHandler},
-    tf::TensorFlowModel,
 };
 use anyhow::Context;
 use log::Level;
@@ -60,7 +61,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     tee_certificate: Vec<u8>,
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,
-    tf_model: Option<TensorFlowModel>,
+    #[cfg(feature = "oak-tf")] tf_model: Option<TensorFlowModel>,
     policy: Policy,
     terminate: F,
     logger: Logger,
@@ -69,6 +70,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     let wasm_handler = WasmHandler::create(
         wasm_module_bytes,
         lookup_data,
+        #[cfg(feature = "oak-tf")]
         Arc::new(tf_model),
         logger.clone(),
         aggregator,

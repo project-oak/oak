@@ -13,18 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[cfg(feature = "oak-tf")]
+use crate::tf::TensorFlowModel;
+#[cfg(feature = "oak-tf")]
+use prost::Message;
+
 use crate::{
     logger::Logger,
     lookup::LookupData,
     metrics::{PrivateMetricsAggregator, PrivateMetricsProxy},
-    tf::TensorFlowModel,
 };
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
 use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode};
-use prost::Message;
 use serde::Deserialize;
 use std::{
     convert::TryFrom,
@@ -43,6 +46,7 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
+#[cfg(feature = "oak-tf")]
 const TF_MODEL_INFER: usize = 4;
 const REPORT_METRIC: usize = 5;
 
@@ -156,6 +160,7 @@ struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
     lookup_data: Arc<LookupData>,
+    #[cfg(feature = "oak-tf")]
     tf_model: Arc<Option<TensorFlowModel>>,
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
@@ -366,6 +371,7 @@ impl WasmState {
     }
 
     /// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
+    #[cfg(feature = "oak-tf")]
     pub fn tf_model_infer(
         &mut self,
         input_ptr: AbiPointer,
@@ -491,6 +497,7 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
             )),
+            #[cfg(feature = "oak-tf")]
             TF_MODEL_INFER => map_host_errors(self.tf_model_infer(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
@@ -517,7 +524,7 @@ impl WasmState {
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
         lookup_data: Arc<LookupData>,
-        tf_model: Arc<Option<TensorFlowModel>>,
+        #[cfg(feature = "oak-tf")] tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
         metrics_proxy: Option<PrivateMetricsProxy>,
     ) -> anyhow::Result<WasmState> {
@@ -525,6 +532,7 @@ impl WasmState {
             request_bytes,
             response_bytes: vec![],
             lookup_data,
+            #[cfg(feature = "oak-tf")]
             tf_model,
             instance: None,
             memory: None,
@@ -674,6 +682,7 @@ pub struct WasmHandler {
     // cloneable.
     module: Arc<wasmi::Module>,
     lookup_data: Arc<LookupData>,
+    #[cfg(feature = "oak-tf")]
     tf_model: Arc<Option<TensorFlowModel>>,
     logger: Logger,
     aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
@@ -683,7 +692,7 @@ impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
         lookup_data: Arc<LookupData>,
-        tf_model: Arc<Option<TensorFlowModel>>,
+        #[cfg(feature = "oak-tf")] tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
         aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     ) -> anyhow::Result<Self> {
@@ -691,6 +700,7 @@ impl WasmHandler {
         Ok(WasmHandler {
             module: Arc::new(module),
             lookup_data,
+            #[cfg(feature = "oak-tf")]
             tf_model,
             logger,
             aggregator,
@@ -703,6 +713,7 @@ impl WasmHandler {
             &self.module,
             request_bytes,
             self.lookup_data.clone(),
+            #[cfg(feature = "oak-tf")]
             self.tf_model.clone(),
             self.logger.clone(),
             self.aggregator.clone().map(PrivateMetricsProxy::new),
@@ -778,6 +789,7 @@ fn oak_functions_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
+        #[cfg(feature = "oak-tf")]
         "tf_model_infer" => (
             TF_MODEL_INFER,
             wasmi::Signature::new(

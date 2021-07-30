@@ -1327,7 +1327,6 @@ dependencies = [
  "tokio",
  "toml",
  "tonic",
- "tract-tensorflow",
  "wasmi",
 ]
 

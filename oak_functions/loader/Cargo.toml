@@ -10,8 +10,9 @@ license = "Apache-2.0"
 [features]
 # Feature that allows logging of potentially sensitive content.
 # Should only be used for debugging purposes.
-oak-unsafe = []
+oak-unsafe = ["oak-tf"]
 default = []
+oak-tf = ["tract-tensorflow"]
 
 [dependencies]
 anyhow = "*"
@@ -48,7 +49,7 @@ tokio = { version = "*", features = [
 ] }
 toml = "*"
 tonic = "*"
-tract-tensorflow = "*"
+tract-tensorflow = { version = "*", optional = true }
 wasmi = "*"
 signal-hook = "*"
 
