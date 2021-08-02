@@ -685,9 +685,7 @@ impl WasmHandler {
             self.lookup_data.clone(),
             self.tf_model.clone(),
             self.logger.clone(),
-            self.aggregator
-                .clone()
-                .map(|aggregator| PrivateMetricsProxy::new(aggregator)),
+            self.aggregator.clone().map(PrivateMetricsProxy::new),
         )?;
         wasm_state.invoke();
         wasm_state.publish_metrics();

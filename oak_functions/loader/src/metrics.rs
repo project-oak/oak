@@ -49,11 +49,7 @@ impl PrivateMetricsAggregator {
             count: 0,
             epsilon: config.epsilon,
             batch_size: config.batch_size,
-            allowed_labels: config
-                .allowed_labels
-                .iter()
-                .map(|label| label.clone())
-                .collect(),
+            allowed_labels: config.allowed_labels.iter().cloned().collect(),
             label_count: config.allowed_labels.iter().count() as f64,
             events: HashMap::new(),
             logger,
