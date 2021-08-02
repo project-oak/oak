@@ -23,7 +23,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-/// Configuration for differentially-private metrics reporting
+/// Configuration for differentially-private metrics reporting.
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct PrivateMetricsConfig {
@@ -110,7 +110,7 @@ impl PrivateMetricsAggregator {
     }
 
     /// Adds Laplacian noise to a count. The Laplacian noise is sampled by sampling from a uniform
-    /// distribution and calculating inverse the of the Laplace cummulative distribution function on
+    /// distribution and calculating the inverse of the Laplace cummulative distribution function on
     /// the sampled value. Rounding of the noise is allowed as acceptable post-processing.
     pub fn add_laplace_noise(&self, count: usize) -> i64 {
         // If epsilon is 0 (or smaller), always return a fixed value so we don't leak any

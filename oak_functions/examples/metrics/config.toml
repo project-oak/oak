@@ -3,7 +3,7 @@ lookup_data_download_period = "10m"
 worker_threads = 4
 
 [metrics]
-epsilon = 1.1
+epsilon = 1.0
 batch_size = 20
 allowed_labels = ["a"]
 
