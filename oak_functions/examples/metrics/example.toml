@@ -11,6 +11,6 @@ target = { Cargo = { cargo_manifest = "oak_functions/examples/metrics/module/Car
 additional_args = ["--config-path=./oak_functions/examples/metrics/config.toml"]
 
 [clients]
-rust = { Cargo = { cargo_manifest = "oak_functions/examples/metrics/client/Cargo.toml" }, additional_args = [
+rust = { Cargo = { cargo_manifest = "oak_functions/examples/metrics/client/rust/Cargo.toml" }, additional_args = [
   "--uri=http://localhost:8080"
 ] }
