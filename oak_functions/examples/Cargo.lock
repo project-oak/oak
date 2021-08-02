@@ -1045,6 +1045,22 @@ checksum = "a92518e98c078586bc6c934028adcca4c92a53d6a958196de835170a01d84e4b"
 dependencies = [
  "adler",
  "autocfg",
+name = "metrics"
+version = "0.1.0"
+dependencies = [
+ "oak_functions",
+]
+
+[[package]]
+name = "metrics_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_functions_abi",
+ "oak_functions_client",
+ "structopt",
+ "tokio",
+ "tonic",
 ]
 
 [[package]]

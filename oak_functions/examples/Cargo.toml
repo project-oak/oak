@@ -4,5 +4,7 @@ members = [
   "key_value_lookup/module",
   "mobilenet/client/rust",
   "mobilenet/module",
+  "metrics/client",
+  "metrics/module",
   "weather_lookup/module",
 ]
