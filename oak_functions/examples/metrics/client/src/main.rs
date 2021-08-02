@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Sends 20 requests to the metrics backend, 10 containing "a" and 10 cotaining "b".
+//! Sends 200 requests to the metrics backend alternating between "a" and "b".
 
 use anyhow::Context;
 use oak_functions_abi::proto::Request;
@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Could not create Oak Functions client")?;
 
-    for i in 0..20 {
+    for i in 0..200 {
         let body = if i % 2 == 0 { b"a" } else { b"b" };
         let request = Request {
             body: body.to_vec(),
