@@ -16,7 +16,7 @@
 
 //! Oak Functions differentially private metrics example.
 
-#[no_mangle]
+#[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
     let request = oak_functions::read_request().expect("Couldn't read request body.");
     if request == b"a" {
