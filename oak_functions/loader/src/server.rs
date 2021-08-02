@@ -13,16 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "oak-tf")]
-use crate::tf::TensorFlowModel;
-#[cfg(feature = "oak-tf")]
-use prost::Message;
-
 use crate::{
     logger::Logger,
     lookup::LookupData,
     metrics::{PrivateMetricsAggregator, PrivateMetricsProxy},
+    tf::TensorFlowModel,
 };
+
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
@@ -160,7 +157,7 @@ struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
     lookup_data: Arc<LookupData>,
-    #[cfg(feature = "oak-tf")]
+    #[allow(dead_code)]
     tf_model: Arc<Option<TensorFlowModel>>,
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
@@ -379,6 +376,8 @@ impl WasmState {
         inference_ptr_ptr: AbiPointer,
         inference_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
+        use prost::Message;
+
         match *self.tf_model {
             None => Err(OakStatus::ErrTensorFlowModelNotFound),
             Some(ref tf_model) => {
@@ -524,7 +523,7 @@ impl WasmState {
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
         lookup_data: Arc<LookupData>,
-        #[cfg(feature = "oak-tf")] tf_model: Arc<Option<TensorFlowModel>>,
+        tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
         metrics_proxy: Option<PrivateMetricsProxy>,
     ) -> anyhow::Result<WasmState> {
@@ -532,7 +531,6 @@ impl WasmState {
             request_bytes,
             response_bytes: vec![],
             lookup_data,
-            #[cfg(feature = "oak-tf")]
             tf_model,
             instance: None,
             memory: None,
@@ -682,7 +680,6 @@ pub struct WasmHandler {
     // cloneable.
     module: Arc<wasmi::Module>,
     lookup_data: Arc<LookupData>,
-    #[cfg(feature = "oak-tf")]
     tf_model: Arc<Option<TensorFlowModel>>,
     logger: Logger,
     aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
@@ -692,7 +689,7 @@ impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
         lookup_data: Arc<LookupData>,
-        #[cfg(feature = "oak-tf")] tf_model: Arc<Option<TensorFlowModel>>,
+        tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
         aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     ) -> anyhow::Result<Self> {
@@ -700,7 +697,6 @@ impl WasmHandler {
         Ok(WasmHandler {
             module: Arc::new(module),
             lookup_data,
-            #[cfg(feature = "oak-tf")]
             tf_model,
             logger,
             aggregator,
@@ -713,7 +709,6 @@ impl WasmHandler {
             &self.module,
             request_bytes,
             self.lookup_data.clone(),
-            #[cfg(feature = "oak-tf")]
             self.tf_model.clone(),
             self.logger.clone(),
             self.aggregator.clone().map(PrivateMetricsProxy::new),

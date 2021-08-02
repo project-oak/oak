@@ -28,10 +28,9 @@ use oak_functions_loader::{
     lookup::{LookupData, LookupDataAuth},
     metrics::{PrivateMetricsAggregator, PrivateMetricsConfig},
     server::Policy,
+    tf::TensorFlowModel,
 };
 
-#[cfg(feature = "oak-tf")]
-use oak_functions_loader::tf::{read_model_from_path, TensorFlowModel};
 use serde_derive::Deserialize;
 use std::{
     fs,
@@ -81,7 +80,6 @@ struct Config {
     metrics: Option<PrivateMetricsConfig>,
 }
 
-#[cfg(feature = "oak-tf")]
 #[derive(Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields)]
 struct TensorFlowModelConfig {
@@ -162,7 +160,6 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 
     let lookup_data = load_lookup_data(&config, logger.clone()).await?;
 
-    #[cfg(feature = "oak-tf")]
     let tf_model = load_tensorflow_model(&config).await?;
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
@@ -195,7 +192,6 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             tee_certificate,
             &wasm_module_bytes,
             lookup_data,
-            #[cfg(feature = "oak-tf")]
             tf_model,
             config.policy.unwrap(),
             async { notify_receiver.await.unwrap() },
@@ -262,10 +258,16 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
 async fn load_tensorflow_model(config: &Config) -> anyhow::Result<Option<TensorFlowModel>> {
     match &config.tf_model {
         Some(tf_model_config) => {
-            let model = read_model_from_path(&tf_model_config.path).await?;
+            let model =
+                oak_functions_loader::tf::read_model_from_path(&tf_model_config.path).await?;
             let tf_model = TensorFlowModel::create(model, tf_model_config.shape.clone())?;
             Ok(Some(tf_model))
         }
         None => Ok(None),
     }
+}
+
+#[cfg(not(feature = "oak-tf"))]
+async fn load_tensorflow_model(_config: &Config) -> anyhow::Result<Option<TensorFlowModel>> {
+    Ok(None)
 }

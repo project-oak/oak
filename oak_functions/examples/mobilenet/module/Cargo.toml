@@ -8,13 +8,12 @@ license = "Apache-2.0"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[features]
-default = ["oak_functions/oak-unsafe"]
-
 [dependencies]
 anyhow = "*"
 image = "*"
-oak_functions = { path = "../../../sdk/oak_functions" }
+oak_functions = { path = "../../../sdk/oak_functions", features = [
+  "oak-unsafe"
+] }
 oak_functions_abi = { path = "../../../abi" }
 prost = "*"
 serde = { version = "*", features = ["derive"] }

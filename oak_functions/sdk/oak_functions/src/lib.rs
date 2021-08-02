@@ -17,11 +17,10 @@
 //! SDK functionality that provides idiomatic Rust wrappers around the underlying Oak Functions
 //! platform functionality.
 
-use oak_functions_abi::proto::OakStatus;
-use std::convert::AsRef;
-
 #[cfg(feature = "oak-tf")]
 use oak_functions_abi::proto::Inference;
+use oak_functions_abi::proto::OakStatus;
+use std::convert::AsRef;
 
 /// Reads and returns the user request.
 ///

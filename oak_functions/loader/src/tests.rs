@@ -150,7 +150,6 @@ where
             tee_certificate,
             &wasm_module_bytes,
             lookup_data,
-            #[cfg(feature = "oak-tf")]
             None,
             policy,
             term,
@@ -193,7 +192,6 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         let wasm_handler = WasmHandler::create(
             &wasm_module_bytes,
             lookup_data.clone(),
-            #[cfg(feature = "oak-tf")]
             Arc::new(None),
             logger,
             None,

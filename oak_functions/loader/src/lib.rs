@@ -28,5 +28,4 @@ pub mod logger;
 pub mod lookup;
 pub mod metrics;
 pub mod server;
-#[cfg(feature = "oak-tf")]
 pub mod tf;

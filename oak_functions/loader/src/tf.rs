@@ -15,9 +15,10 @@
 //
 
 use anyhow::Context;
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use oak_functions_abi::proto::Inference;
 use std::{fs::File, io::Read};
+#[cfg(feature = "oak-tf")]
 use tract_tensorflow::prelude::{
     tract_ndarray::{ArrayBase, Dim, IxDynImpl, ViewRepr},
     *,
@@ -27,17 +28,22 @@ use tract_tensorflow::prelude::{
 /// is not required, InferenceModel with [`InferenceFact`] and [`InferenceOp`] could be used
 /// instead. These traits are available from the `tract-hir` crate.
 /// More information: https://github.com/sonos/tract/blob/main/doc/graph.md
+#[cfg(feature = "oak-tf")]
 type Model = RunnableModel<TypedFact, Box<dyn TypedOp>, Graph<TypedFact, Box<dyn TypedOp>>>;
 
+#[cfg(feature = "oak-tf")]
 pub struct TensorFlowModel {
     model: Model,
     pub shape: Vec<u8>,
 }
 
+#[cfg(feature = "oak-tf")]
 impl TensorFlowModel {
     /// Creates an instance of TensorFlowModel, by loading the model from the given byte array and
     /// optimizing it using the given shape.
     pub fn create(bytes: Bytes, shape: Vec<u8>) -> anyhow::Result<Self> {
+        use bytes::Buf;
+
         let dim = shape
             .iter()
             .cloned()
@@ -114,4 +120,21 @@ pub async fn read_model_from_path(path: &str) -> anyhow::Result<Bytes> {
         .context("could not read TensorFlow model from file")?;
 
     Ok(Bytes::from(buf))
+}
+
+#[cfg(not(feature = "oak-tf"))]
+pub struct TensorFlowModel;
+
+#[cfg(not(feature = "oak-tf"))]
+impl TensorFlowModel {
+    pub fn create(_bytes: Bytes, _shape: Vec<u8>) -> anyhow::Result<Self> {
+        anyhow::bail!("Unreachable: cannot create an instance of TensorFlowModel when `oak-tf` is not enabled")
+    }
+    pub fn get_inference(
+        &self,
+        _tensor_bytes: &[u8],
+        _tensor_shape: &[usize],
+    ) -> anyhow::Result<Inference> {
+        anyhow::bail!("Unreachable: inference is not supported when `oak-tf` is not enabled")
+    }
 }
