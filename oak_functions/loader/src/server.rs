@@ -13,12 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{logger::Logger, lookup::LookupData};
+use crate::{logger::Logger, lookup::LookupData, tf::TensorFlowModel};
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
 use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode};
+use prost::Message;
 use serde::Deserialize;
 use std::{convert::TryFrom, str, sync::Arc, time::Duration};
 use wasmi::ValueType;
@@ -32,6 +33,7 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
+const TF_MODEL_INFER: usize = 4;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -143,6 +145,7 @@ struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
     lookup_data: Arc<LookupData>,
+    tf_model: Arc<Option<TensorFlowModel>>,
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
@@ -312,6 +315,59 @@ impl WasmState {
         }
     }
 
+    /// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
+    pub fn tf_model_infer(
+        &mut self,
+        input_ptr: AbiPointer,
+        input_len: AbiPointerOffset,
+        inference_ptr_ptr: AbiPointer,
+        inference_len_ptr: AbiPointer,
+    ) -> Result<(), OakStatus> {
+        match *self.tf_model {
+            None => Err(OakStatus::ErrTensorFlowModelNotFound),
+            Some(ref tf_model) => {
+                let input = self
+                    .get_memory()
+                    .get(input_ptr, input_len as usize)
+                    .map_err(|err| {
+                        self.logger.log_sensitive(
+                            Level::Error,
+                            &format!(
+                                "tf_model_infer(): Unable to read input from guest memory: {:?}",
+                                err
+                            ),
+                        );
+                        OakStatus::ErrInvalidArgs
+                    })?;
+
+                let shape = tf_model
+                    .shape
+                    .clone()
+                    .iter()
+                    .cloned()
+                    .map(|u| u.into())
+                    .collect::<Vec<usize>>();
+
+                // Get the inference, and convert it into a protobuf-encoded byte array
+                let inference = tf_model.get_inference(&input, &shape).map_err(|err| {
+                    self.logger.log_sensitive(
+                        Level::Error,
+                        &format!("tf_model_infer(): Unable to run inference: {:?}", err),
+                    );
+                    OakStatus::ErrBadTensorFlowModelInput
+                })?;
+                let mut encoded_inference = vec![];
+                inference.encode(&mut encoded_inference).unwrap();
+
+                let inference_ptr = self.alloc(encoded_inference.len() as u32);
+                self.write_buffer_to_wasm_memory(&encoded_inference, inference_ptr)?;
+                self.write_u32_to_wasm_memory(inference_ptr, inference_ptr_ptr)?;
+                self.write_u32_to_wasm_memory(encoded_inference.len() as u32, inference_len_ptr)?;
+                Ok(())
+            }
+        }
+    }
+
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
         let result = self.instance.as_ref().unwrap().invoke_export(
             ALLOC_FUNCTION_NAME,
@@ -357,6 +413,12 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
             )),
+            TF_MODEL_INFER => map_host_errors(self.tf_model_infer(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+                args.nth_checked(3)?,
+            )),
             _ => panic!("Unimplemented function at {}", index),
         }
     }
@@ -377,12 +439,14 @@ impl WasmState {
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
         lookup_data: Arc<LookupData>,
+        tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
             response_bytes: vec![],
             lookup_data,
+            tf_model,
             instance: None,
             memory: None,
             logger,
@@ -530,6 +594,7 @@ pub struct WasmHandler {
     // cloneable.
     module: Arc<wasmi::Module>,
     lookup_data: Arc<LookupData>,
+    tf_model: Arc<Option<TensorFlowModel>>,
     logger: Logger,
 }
 
@@ -537,12 +602,14 @@ impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
         lookup_data: Arc<LookupData>,
+        tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
     ) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
         Ok(WasmHandler {
             module: Arc::new(module),
             lookup_data,
+            tf_model,
             logger,
         })
     }
@@ -553,6 +620,7 @@ impl WasmHandler {
             &self.module,
             request_bytes,
             self.lookup_data.clone(),
+            self.tf_model.clone(),
             self.logger.clone(),
         )?;
         wasm_state.invoke();
@@ -610,6 +678,18 @@ fn oak_functions_resolve_func(
                     ABI_USIZE, // key_len
                     ABI_USIZE, // value_ptr_ptr
                     ABI_USIZE, // value_len_ptr
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "tf_model_infer" => (
+            TF_MODEL_INFER,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // input_ptr
+                    ABI_USIZE, // input_len
+                    ABI_USIZE, // inference_ptr_ptr
+                    ABI_USIZE, // inference_len_ptr
                 ][..],
                 Some(ValueType::I32),
             ),

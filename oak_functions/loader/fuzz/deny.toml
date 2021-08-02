@@ -10,8 +10,12 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
-# TODO(#2231): Remove once prost-types is updated
-ignore = ["RUSTSEC-2021-0073"]
+ignore = [
+  # TODO(#2231): Remove once prost-types is updated
+  "RUSTSEC-2021-0073",
+  # Remove once tract-tensorflow is updated
+  "RUSTSEC-2021-0065"
+]
 
 # Deny multiple versions unless explicitly skipped.
 [bans]

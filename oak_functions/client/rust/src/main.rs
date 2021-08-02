@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Sends a gRPC request to the weather lookup application and checks that the response has the
+//! Sends a gRPC request to an Oak Functions application and checks that the response has the
 //! correct format.
 
 use anyhow::Context;

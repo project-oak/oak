@@ -139,3 +139,25 @@ the value in that buffer, and returns it as part of `value_ptr_ptr` and
 
 - `result[0]: i32`: Status of operation as
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
+
+### `tf_model_infer`
+
+Runs the TensorFlow model for the given input and returns the inference vector.
+
+If a TensorFlow model is not present, returns `ERR_TENSOR_FLOW_MODEL_NOT_FOUND`.
+
+If a TensorFlow model is present, gets the inference from the model, and
+allocates a buffer of the exact size of the inference vector, writes the
+inference vector in that buffer, and returns it as part of `inference_ptr_ptr`
+and `inference_len_ptr`.
+
+- `param[0]: input_ptr: i32`: Address of the input buffer.
+- `param[1]: input_len: i32`: Number of bytes of the input buffer.
+- `param[2]: inference_ptr_ptr: i32`: Address of a location that will receive
+  the address of the newly allocated inference buffer.
+- `param[3]: inference_len_ptr: i32`: Address of a location that will receive
+  the number of bytes of the newly allocated inference buffer (as a
+  little-endian u32).
+
+- `result[0]: i32`: Status of operation as
+  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)

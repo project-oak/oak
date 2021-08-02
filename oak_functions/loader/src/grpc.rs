@@ -22,6 +22,7 @@ use crate::{
     lookup::LookupData,
     proto::remote_attestation_server::RemoteAttestationServer,
     server::{apply_policy, Policy, WasmHandler},
+    tf::TensorFlowModel,
 };
 use anyhow::Context;
 use log::Level;
@@ -47,16 +48,23 @@ async fn handle_request(
 }
 
 /// Starts a gRPC server on the given address, serving the `main` function of the given Wasm module.
+#[allow(clippy::too_many_arguments)]
 pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     tee_certificate: Vec<u8>,
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,
+    tf_model: Option<TensorFlowModel>,
     policy: Policy,
     terminate: F,
     logger: Logger,
 ) -> anyhow::Result<()> {
-    let wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, logger.clone())?;
+    let wasm_handler = WasmHandler::create(
+        wasm_module_bytes,
+        lookup_data,
+        Arc::new(tf_model),
+        logger.clone(),
+    )?;
 
     logger.log_public(
         Level::Info,
