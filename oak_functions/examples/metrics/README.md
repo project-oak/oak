@@ -1,9 +1,9 @@
 # Differentially Private Metrics example
 
-This example show the use of differentially private metrics by a wasm module.
+This example show the use of differentially private metrics by a Wasm module.
 The client repeatedly sends either "a" or "b" to the server. The server reports
 event "a" when it receives "a", and does not report any events if it receives
-"b". A requests still counts towards that batch count even if no events are
+"b". A request still counts towards that batch count even if no events are
 reported.
 
 The resulting exported metrics should provide a relatively accurate count of how
@@ -14,7 +14,7 @@ one, they should not be able to deduce with high certainty what was sent in the
 remaining request. The addition of Laplacian noise to the batch counts ensures
 this property, assuming appropriate settings are chosen.
 
-The allowed list of events labels, the privacy budget and the batch size are set
+The allowed list of event labels, the privacy budget and the batch size are set
 in the server configuration file ('config.toml'). If multiple different event
 labels are allowed the budget would be evenly split across all of them.
 
