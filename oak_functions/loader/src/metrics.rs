@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-use crate::logger::Logger;
-use log::Level;
 use rand::{distributions::Open01, thread_rng, Rng};
 use serde::Deserialize;
 use std::{
@@ -50,11 +48,10 @@ pub struct PrivateMetricsAggregator {
     batch_size: usize,
     /// The storage for event count buckets.
     events: HashMap<String, usize>,
-    logger: Logger,
 }
 
 impl PrivateMetricsAggregator {
-    pub fn new(config: &PrivateMetricsConfig, logger: Logger) -> anyhow::Result<Self> {
+    pub fn new(config: &PrivateMetricsConfig) -> anyhow::Result<Self> {
         anyhow::ensure!(config.epsilon > 0.0, "Epsilon must be positive.");
         Ok(Self {
             count: 0,
@@ -65,13 +62,22 @@ impl PrivateMetricsAggregator {
                 .iter()
                 .map(|label| (label.clone(), 0))
                 .collect(),
-            logger,
         })
     }
 
-    /// Reports new events that should be included in the aggregated counts. If the batch threshold
-    /// is reached the metrics batch is logged and the request count and bucket counts are reset.
-    pub fn report_events(&mut self, events: HashSet<String>) {
+    /// Reports new events that should be included in the aggregated counts. If the number of
+    /// requests do not yet match the batch size `None` is returned. If the batch threshold
+    /// is reached the aggregated metrics for the batch are returned and the request count and
+    /// bucket counts are reset to 0. By default Laplacian noise is added to each of the aggregated
+    /// bucket counts that are returned. The metrics are returned as a tuple containing the batch
+    /// size and a vector of tuples cotaining the label and count for each bucket.
+    ///
+    /// If the `oak-unsafe` feature is enabled, or this function is called from a unit test, no
+    /// noise is added.
+    pub fn report_events(
+        &mut self,
+        events: HashSet<String>,
+    ) -> Option<(usize, Vec<(String, i64)>)> {
         self.count += 1;
         for (label, count) in self.events.iter_mut() {
             if events.contains(label) {
@@ -80,34 +86,28 @@ impl PrivateMetricsAggregator {
         }
 
         if self.count == self.batch_size {
-            self.log_events();
+            let metrics = self
+                .events
+                .iter()
+                .map(|(label, count)| (label.to_string(), self.add_noise(*count)))
+                .collect();
+            self.reset();
+            Some((self.batch_size, metrics))
+        } else {
+            None
         }
     }
 
-    /// Logs the current bucket counts after adding appropriate noise, resets the request count and
-    /// bucket counts to 0.
-    fn log_events(&mut self) {
-        let counts: Vec<String> = self
-            .events
-            .iter()
-            .map(|(label, count)| {
-                let value = self.add_laplace_noise(*count);
-                format!("{}={}", label, value)
-            })
-            .collect();
-        // The differentially private metrics can be treated as non-sensitive information and
-        // therefore logged as public. This assumes that the client has validated that the
-        // configured privacy budget provides sufficient privacy protection before sending any data
-        // to the server.
-        self.logger.log_public(
-            Level::Info,
-            &format!(
-                "metrics export: batch size: {}; counts: {}",
-                self.count,
-                counts.join(";"),
-            ),
-        );
-        self.reset();
+    /// Adds no noise when the `oak-unsafe` feature is enabled or running as part of a unit test.
+    #[cfg(any(feature = "oak-unsafe", test))]
+    fn add_noise(&self, count: usize) -> i64 {
+        count as i64
+    }
+
+    /// Adds Laplacian noise by default.
+    #[cfg(all(not(feature = "oak-unsafe"), not(test)))]
+    fn add_noise(&self, count: usize) -> i64 {
+        self.add_laplace_noise(count)
     }
 
     /// Resets the request count and all the bucket counts to 0.
@@ -116,20 +116,6 @@ impl PrivateMetricsAggregator {
         for (_, count) in self.events.iter_mut() {
             *count = 0;
         }
-    }
-
-    /// Exports the request count and bucket counts without adding any noise for use in testing.
-    /// Also resets the request count and bucket counts to 0.
-    #[cfg(test)]
-    pub fn get_events_for_test(&mut self) -> (usize, Vec<(String, usize)>) {
-        let count = self.count;
-        let buckets = self
-            .events
-            .iter()
-            .map(|(label, count)| (label.to_string(), *count))
-            .collect();
-        self.reset();
-        (count, buckets)
     }
 
     /// Adds Laplacian noise to a count. The Laplacian noise is sampled by sampling from a uniform
@@ -178,10 +164,15 @@ impl PrivateMetricsProxy {
         }
     }
 
-    /// Consumes the proxy and publishes the data to the aggregator.
-    pub fn publish(self) {
+    /// Consumes the proxy and publishes the data to the aggregator. If publishing the events to the
+    /// aggregator causes the batch threshold to be reached the aggregated metrics are returned.
+    ///
+    /// See [PrivateMetricsAggregator::report_events] for more information.
+    pub fn publish(self) -> Option<(usize, Vec<(String, i64)>)> {
         if let Ok(mut aggregator) = self.aggregator.lock() {
-            aggregator.report_events(self.events);
+            aggregator.report_events(self.events)
+        } else {
+            None
         }
     }
 }
@@ -192,28 +183,34 @@ mod tests {
 
     #[test]
     fn test_private_metrics_aggregator() {
-        let config = new_metrics_config(1.0, vec!["a", "b", "c", "d"]);
-        let aggregator = Arc::new(Mutex::new(
-            PrivateMetricsAggregator::new(&config, Logger::for_test()).unwrap(),
-        ));
+        let config = PrivateMetricsConfig {
+            epsilon: 1.0,
+            batch_size: 4,
+            allowed_labels: vec![
+                "a".to_string(),
+                "b".to_string(),
+                "c".to_string(),
+                "d".to_string(),
+            ],
+        };
+        let aggregator = Arc::new(Mutex::new(PrivateMetricsAggregator::new(&config).unwrap()));
 
         let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
         proxy1.report_event("a");
-        proxy1.publish();
+        assert_eq!(proxy1.publish(), None);
         let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
         proxy2.report_event("a");
         proxy2.report_event("b");
-        proxy2.publish();
+        assert_eq!(proxy2.publish(), None);
         let mut proxy3 = PrivateMetricsProxy::new(aggregator.clone());
         proxy3.report_event("c");
         proxy3.report_event("b");
         proxy3.report_event("c");
-        proxy3.publish();
-        let mut proxy4 = PrivateMetricsProxy::new(aggregator.clone());
+        assert_eq!(proxy3.publish(), None);
+        let mut proxy4 = PrivateMetricsProxy::new(aggregator);
         proxy4.report_event("a");
         proxy4.report_event("e");
-        proxy4.publish();
-        let (count, mut buckets) = aggregator.lock().unwrap().get_events_for_test();
+        let (count, mut buckets) = proxy4.publish().unwrap();
         buckets.sort();
 
         assert_eq!(4, count);
@@ -228,17 +225,6 @@ mod tests {
         );
     }
 
-    fn new_metrics_config<'a, T>(epsilon: f64, labels: T) -> PrivateMetricsConfig
-    where
-        T: IntoIterator<Item = &'a str>,
-    {
-        PrivateMetricsConfig {
-            epsilon,
-            batch_size: usize::MAX,
-            allowed_labels: labels.into_iter().map(|label| label.to_owned()).collect(),
-        }
-    }
-
     #[test]
     fn test_laplace_noise() {
         // Run many times and make sure the shape of the histogram looks roughly right.
@@ -248,8 +234,12 @@ mod tests {
         // Bucket is allowed up to 10% above or below expected size.
         let margin = 0.1_f64;
         let epsilon = 1.0_f64;
-        let config = new_metrics_config(epsilon, vec!["a"]);
-        let aggregator = PrivateMetricsAggregator::new(&config, Logger::for_test()).unwrap();
+        let config = PrivateMetricsConfig {
+            epsilon,
+            batch_size: usize::MAX,
+            allowed_labels: vec!["a".to_string()],
+        };
+        let aggregator = PrivateMetricsAggregator::new(&config).unwrap();
 
         let beta = 1.0 / epsilon;
         // Calculate expected bucket counts using the cummulative distribution function.

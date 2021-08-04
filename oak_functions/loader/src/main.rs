@@ -174,7 +174,6 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let aggregator = match &config.metrics {
         Some(metrics_config) => Some(Arc::new(Mutex::new(PrivateMetricsAggregator::new(
             metrics_config,
-            logger.clone(),
         )?))),
         None => None,
     };

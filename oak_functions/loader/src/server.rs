@@ -436,7 +436,35 @@ impl WasmState {
 
     pub fn publish_metrics(&mut self) {
         if let Some(proxy) = self.metrics_proxy.take() {
-            proxy.publish();
+            if let Some((batch_size, metrics)) = proxy.publish() {
+                let buckets: Vec<String> = metrics
+                    .iter()
+                    .map(|(label, count)| format!("{}={}", label, count))
+                    .collect();
+                let message = format!(
+                    "metrics export: batch size: {}; counts: {}",
+                    batch_size,
+                    buckets.join(";"),
+                );
+
+                #[cfg(all(not(feature = "oak-unsafe"), not(test)))]
+                {
+                    // The differentially private metrics can be treated as non-sensitive
+                    // information and therefore logged as public. This assumes
+                    // that the client has validated that the configured privacy
+                    // budget provides sufficient privacy protection before
+                    // sending any data to the server.
+                    self.logger.log_public(Level::Info, &message);
+                }
+                #[cfg(any(feature = "oak-unsafe", test))]
+                {
+                    // If Laplacian noise has not been added the metrics should be treated as
+                    // sensitive. If the `oak-unsafe` feature is enabled the current implementation
+                    // of the logger means that the message will still be logged, but this is
+                    // expilcilty split out in case the implementation diverges in future.
+                    self.logger.log_sensitive(Level::Info, &message);
+                }
+            }
         }
     }
 }
