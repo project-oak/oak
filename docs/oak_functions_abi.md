@@ -135,6 +135,12 @@ a valid UTF-8 string the event will be ignored.
 Only the first call for each label is counted per request. Any subsequent calls
 for the same label are ignored.
 
+- `param[0]: buf_ptr: i32`: Address of the label buffer.
+- `param[1]: buf_len: i32`: Number of bytes of the label buffer.
+
+- `result[0]: i32`: Status of operation as
+  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
+
 ### `storage_get_item`
 
 Retrieves a single item by key from the lookup data in-memory store.

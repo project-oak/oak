@@ -21,14 +21,13 @@ use oak_functions_loader::{
     grpc::create_and_start_grpc_server,
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData, LookupDataAuth},
-    metrics::{PrivateMetricsAggregator, PrivateMetricsConfig, PrivateMetricsProxy},
     server::{apply_policy, format_bytes, Policy, WasmHandler},
 };
 use prost::Message;
 use std::{
     convert::TryInto,
     net::{Ipv6Addr, SocketAddr},
-    sync::{Arc, Mutex},
+    sync::Arc,
     time::Duration,
 };
 use test::Bencher;
@@ -427,105 +426,4 @@ fn test_format_bytes() {
     assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
     // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
     assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
-}
-
-#[test]
-fn test_private_metrics_aggregator() {
-    let config = new_metrics_config(1.0, vec!["a", "b", "c", "d"]);
-    let aggregator = Arc::new(Mutex::new(PrivateMetricsAggregator::new(
-        &config,
-        Logger::for_test(),
-    )));
-
-    let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
-    proxy1.report_event("a");
-    proxy1.publish();
-    let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
-    proxy2.report_event("a");
-    proxy2.report_event("b");
-    proxy2.publish();
-    let mut proxy3 = PrivateMetricsProxy::new(aggregator.clone());
-    proxy3.report_event("c");
-    proxy3.report_event("b");
-    proxy3.report_event("c");
-    proxy3.publish();
-    let mut proxy4 = PrivateMetricsProxy::new(aggregator.clone());
-    proxy4.report_event("a");
-    proxy4.report_event("e");
-    proxy4.publish();
-    let (count, mut buckets) = aggregator.lock().unwrap().export_events_for_test();
-    buckets.sort();
-
-    assert_eq!(4, count);
-    assert_eq!(
-        vec![
-            ("a".to_string(), 3),
-            ("b".to_string(), 2),
-            ("c".to_string(), 1),
-            ("d".to_string(), 0),
-        ],
-        buckets
-    );
-}
-
-fn new_metrics_config<'a, T>(epsilon: f64, labels: T) -> PrivateMetricsConfig
-where
-    T: IntoIterator<Item = &'a str>,
-{
-    PrivateMetricsConfig {
-        epsilon,
-        batch_size: usize::MAX,
-        allowed_labels: labels.into_iter().map(|label| label.to_owned()).collect(),
-    }
-}
-
-#[test]
-fn test_laplace_noise() {
-    // Run many times and make sure the shape of the histogram looks roughly right.
-    let iterations = 1_000_000;
-    // Check the 0 bucket and 5 buckets either side.
-    let offset = 5;
-    // Bucket is allowed up to 10% above or below expected size.
-    let margin = 0.1_f64;
-    let epsilon = 1.0_f64;
-    let config = new_metrics_config(epsilon, vec!["a"]);
-    let aggregator = PrivateMetricsAggregator::new(&config, Logger::for_test());
-
-    let beta = 1.0 / epsilon;
-    // Calculate expected bucket counts using the cummulative distribution function.
-    let expected: Vec<f64> = (-offset..=offset)
-        .map(|index| {
-            iterations as f64
-                * (laplace_cdf(beta, index as f64 + 0.5) - laplace_cdf(beta, index as f64 - 0.5))
-        })
-        .collect();
-
-    // Build a histogram of the actual noise.
-    let mut histogram: Vec<usize> = (-offset..=offset).map(|_| 0).collect();
-    for _ in 0..iterations {
-        let noise = aggregator.add_laplace_noise(0);
-        if (-offset..=offset).contains(&noise) {
-            let index = (noise + offset) as usize;
-            histogram[index] += 1;
-        }
-    }
-
-    println!("Expected: {:?}", expected);
-    println!("Actual: {:?}", histogram);
-    let mut max_diff = 0.0;
-    for (index, actual) in histogram.iter().enumerate() {
-        let test = expected[index];
-        let diff = (test - *actual as f64).abs() / test;
-        assert!(diff >= 0.0 && diff <= margin);
-        if diff > max_diff {
-            max_diff = diff;
-        }
-    }
-    println!("Maximum required margin: {}", max_diff);
-}
-
-fn laplace_cdf(beta: f64, x: f64) -> f64 {
-    // We assume mu = 0.
-    // See https://en.wikipedia.org/wiki/Laplace_distribution
-    0.5 + 0.5 * x.signum() * (1.0 - (-x.abs() / beta).exp())
 }

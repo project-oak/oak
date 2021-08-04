@@ -171,6 +171,14 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let tee_certificate = vec![];
 
+    let aggregator = match &config.metrics {
+        Some(metrics_config) => Some(Arc::new(Mutex::new(PrivateMetricsAggregator::new(
+            metrics_config,
+            logger.clone(),
+        )?))),
+        None => None,
+    };
+
     // Start server.
     let server_handle = tokio::spawn(async move {
         create_and_start_grpc_server(
@@ -181,13 +189,8 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             tf_model,
             config.policy.unwrap(),
             async { notify_receiver.await.unwrap() },
-            logger.clone(),
-            config.metrics.as_ref().map(|metrics_config| {
-                Arc::new(Mutex::new(PrivateMetricsAggregator::new(
-                    metrics_config,
-                    logger,
-                )))
-            }),
+            logger,
+            aggregator,
         )
         .await
         .context("error while waiting for the server to terminate")

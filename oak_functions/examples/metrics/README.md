@@ -1,25 +1,43 @@
 # Differentially Private Metrics example
 
-This example show the use of differentially private metrics by a Wasm module.
+This example shows the use of differentially private metrics by a Wasm module.
 The client repeatedly sends either "a" or "b" to the server. The server reports
 event "a" when it receives "a", and does not report any events if it receives
-"b". A request still counts towards that batch count even if no events are
-reported.
+"b", seeing that "b" is not in the list of allowed labels. A request still
+counts towards the overall request count even if no events are reported.
 
 The resulting exported metrics should provide a relatively accurate count of how
-many times 'a' was received, but importantly it should not be possible to know
+many times "a" was received, but importantly it should not be possible to know
 which of the individual client sessions sent "a" by looking at the output. Even
 if an attacker knows what was sent in all the requests in the batch except for
 one, they should not be able to deduce with high certainty what was sent in the
-remaining request. The addition of Laplacian noise to the batch counts ensures
-this property, assuming appropriate settings are chosen.
+remaining request. The addition of Laplacian noise to the bucket counts ensures
+this property, assuming appropriate parameter values are chosen. For more
+information on using Laplacian noise in differential privacy, see
+https://desfontain.es/privacy/differential-privacy-in-practice.html
 
-The allowed list of event labels, the privacy budget and the batch size are set
-in the server configuration file ('config.toml'). If multiple different event
-labels are allowed the budget would be evenly split across all of them.
+The allowed list of event labels (in this case `["a"]`), the privacy budget and
+the batch size are set in the server configuration file ('config.toml'). If
+multiple different event labels are allowed the budget would be evenly split
+across all of them.
+
+The probability of a specific integer noise value being added can be calculated
+using the cummulative distribution function:
+
+```math
+Pr[noise=i] = laplace_cdf(1/epsilon, i + 0.5) - laplace_cdf(1/epsilon, i - 0.5)
+```
+
+where (assuming `mu=0`, seeing that we are centering the noise around `0`)
+
+```math
+laplace_cdf(beta, x) = 0.5 + 0.5 * sign(x) * (1 - exp(-abs(x) / beta))
+```
+
+See https://en.wikipedia.org/wiki/Laplace_distribution for more information.
 
 Using a privacy budget value (epsilon) of 1.0 and only one allowed label means
-that approximately 39% of the time the batch count will be accurate.
+that approximately 39% of the time the bucket count will be accurate.
 Approximately 19% of the time it would be 1 above and 19% of the time 1 below
 the actual value. The probability of being even further away from the actual
 value drops away exponentially from there.
