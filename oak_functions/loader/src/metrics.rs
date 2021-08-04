@@ -110,7 +110,7 @@ impl PrivateMetricsAggregator {
         self.reset();
     }
 
-    /// Resets the request count all the bucket counts to 0 and the batch.
+    /// Resets the request count and all the bucket counts to 0.
     fn reset(&mut self) {
         self.count = 0;
         for (_, count) in self.events.iter_mut() {
