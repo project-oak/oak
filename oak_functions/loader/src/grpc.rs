@@ -20,6 +20,7 @@ use crate::{
     attestation::AttestationServer,
     logger::Logger,
     lookup::LookupData,
+    metrics::PrivateMetricsAggregator,
     proto::remote_attestation_server::RemoteAttestationServer,
     server::{apply_policy, Policy, WasmHandler},
     tf::TensorFlowModel,
@@ -28,7 +29,12 @@ use anyhow::Context;
 use log::Level;
 use oak_functions_abi::proto::Request;
 use prost::Message;
-use std::{convert::TryInto, future::Future, net::SocketAddr, sync::Arc};
+use std::{
+    convert::TryInto,
+    future::Future,
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
 
 async fn handle_request(
     wasm_handler: WasmHandler,
@@ -58,12 +64,14 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     policy: Policy,
     terminate: F,
     logger: Logger,
+    aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
 ) -> anyhow::Result<()> {
     let wasm_handler = WasmHandler::create(
         wasm_module_bytes,
         lookup_data,
         Arc::new(tf_model),
         logger.clone(),
+        aggregator,
     )?;
 
     logger.log_public(

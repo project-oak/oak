@@ -78,6 +78,19 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
     }
 }
 
+/// Reports an event.
+///
+/// If differentially-private metrics are enabled in the configuration the event counts per label
+/// will be logged in batches after sufficient noise has been added. Events can be reported at most
+/// once per label per request.
+///
+/// See [`report_event`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_event).
+pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
+    let buf = label.as_ref().as_bytes();
+    let status = unsafe { oak_functions_abi::report_event(buf.as_ptr(), buf.len()) };
+    result_from_status(status as i32, ())
+}
+
 /// Writes a debug log message.
 ///
 /// These log messages are considered sensitive, so will only be logged by the runtime if the

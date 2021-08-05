@@ -14,16 +14,12 @@
 // limitations under the License.
 //
 
-#![feature(async_closure)]
+//! Oak Functions differentially private metrics example.
 
-pub mod proto {
-    tonic::include_proto!("oak.functions.server");
+#[cfg_attr(not(test), no_mangle)]
+pub extern "C" fn main() {
+    let request = oak_functions::read_request().expect("Couldn't read request body.");
+    let label =
+        std::str::from_utf8(request.as_ref()).expect("Request body is not a valid UTF-8 string.");
+    oak_functions::report_event(label).expect("Couldn't report event.");
 }
-
-pub mod attestation;
-pub mod grpc;
-pub mod logger;
-pub mod lookup;
-pub mod metrics;
-pub mod server;
-pub mod tf;

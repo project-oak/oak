@@ -24,6 +24,7 @@ use oak_functions_loader::{
     grpc::create_and_start_grpc_server,
     logger::Logger,
     lookup::{LookupData, LookupDataAuth},
+    metrics::{PrivateMetricsAggregator, PrivateMetricsConfig},
     server::Policy,
     tf::{read_model_from_path, TensorFlowModel},
 };
@@ -33,7 +34,7 @@ use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     time::Duration,
 };
@@ -71,6 +72,8 @@ struct Config {
     /// Configuration for TensorFlow model
     #[serde(default)]
     tf_model: Option<TensorFlowModelConfig>,
+    /// Differentially private metrics configuration.
+    metrics: Option<PrivateMetricsConfig>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -168,6 +171,13 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let tee_certificate = vec![];
 
+    let aggregator = match &config.metrics {
+        Some(metrics_config) => Some(Arc::new(Mutex::new(PrivateMetricsAggregator::new(
+            metrics_config,
+        )?))),
+        None => None,
+    };
+
     // Start server.
     let server_handle = tokio::spawn(async move {
         create_and_start_grpc_server(
@@ -179,6 +189,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             config.policy.unwrap(),
             async { notify_receiver.await.unwrap() },
             logger,
+            aggregator,
         )
         .await
         .context("error while waiting for the server to terminate")

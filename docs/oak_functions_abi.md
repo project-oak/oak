@@ -119,6 +119,28 @@ Multiple calls are each treated as a different log message.
 - `result[0]: i32`: Status of operation as
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
 
+### `report_event`
+
+Reports that an event happened. The event is identified by a label in the form
+of a UTF-8 encoded string. If differentially-private metrics are enabled in the
+configuration the event counts per label will be logged in batches after the
+required amount of noise has been added. Only events with labels that are
+explicitly allowed in the configuration will be included in the counts.
+
+The low-level operation involves reading the label from the WebAssembly module's
+memory. The system attempts to interpret the bytes as a UTF-8 encoded string. If
+the decoding is successful, the string is used as a label. If the bytes are not
+a valid UTF-8 string the event will be ignored.
+
+Only the first call for each label is counted per request. Any subsequent calls
+for the same label are ignored.
+
+- `param[0]: buf_ptr: i32`: Address of the label buffer.
+- `param[1]: buf_len: i32`: Number of bytes of the label buffer.
+
+- `result[0]: i32`: Status of operation as
+  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
+
 ### `storage_get_item`
 
 Retrieves a single item by key from the lookup data in-memory store.

@@ -43,6 +43,9 @@ enum ArbitraryInstruction {
     WriteLogMessage {
         message: Vec<u8>,
     },
+    ReportEvent {
+        label: Vec<u8>,
+    },
 }
 
 /// Enum to allow simulating both hit and miss lookup scenarios.
@@ -100,6 +103,8 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
         Arc::new(LookupData::for_test(entries)),
         Arc::new(None),
         Logger::for_test(),
+        // TODO(#2252): Use `Arbitrary` to generate metrics configuration.
+        None,
     )
     .expect("Could instantiate WasmHandler");
 
@@ -131,6 +136,11 @@ impl From<&ArbitraryInstruction> for crate::proto::Instruction {
                     message: message.clone(),
                 }),
             ),
+            ArbitraryInstruction::ReportEvent { label } => {
+                Some(InstructionVariant::ReportEvent(crate::proto::ReportEvent {
+                    label: label.clone(),
+                }))
+            }
         };
         crate::proto::Instruction {
             instruction_variant,

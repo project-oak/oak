@@ -13,7 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{logger::Logger, lookup::LookupData, tf::TensorFlowModel};
+use crate::{
+    logger::Logger,
+    lookup::LookupData,
+    metrics::{PrivateMetricsAggregator, PrivateMetricsProxy},
+    tf::TensorFlowModel,
+};
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
@@ -21,7 +26,12 @@ use log::Level;
 use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode};
 use prost::Message;
 use serde::Deserialize;
-use std::{convert::TryFrom, str, sync::Arc, time::Duration};
+use std::{
+    convert::TryFrom,
+    str,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -34,6 +44,7 @@ const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
 const TF_MODEL_INFER: usize = 4;
+const REPORT_EVENT: usize = 5;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -149,6 +160,7 @@ struct WasmState {
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
+    metrics_proxy: Option<PrivateMetricsProxy>,
 }
 
 impl WasmState {
@@ -268,6 +280,43 @@ impl WasmState {
         Ok(())
     }
 
+    /// Corresponds to the host ABI function [`report_event`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_event).
+    pub fn report_event(
+        &mut self,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -> Result<(), OakStatus> {
+        let raw_label = self
+            .get_memory()
+            .get(buf_ptr, buf_len as usize)
+            .map_err(|err| {
+                self.logger.log_sensitive(
+                    Level::Error,
+                    &format!(
+                        "report_event(): Unable to read label from guest memory: {:?}",
+                        err
+                    ),
+                );
+                OakStatus::ErrInvalidArgs
+            })?;
+        let label = str::from_utf8(raw_label.as_slice()).map_err(|err| {
+            self.logger.log_sensitive(
+                Level::Warn,
+                &format!(
+                    "report_event(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
+                    err, raw_label
+                ),
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
+        self.logger
+            .log_sensitive(Level::Debug, &format!("report_event(): {}", label));
+        if let Some(proxy) = self.metrics_proxy.as_mut() {
+            proxy.report_event(label);
+        }
+        Ok(())
+    }
+
     /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(
         &mut self,
@@ -384,6 +433,29 @@ impl WasmState {
             _ => panic!("invalid value type returned from `alloc`"),
         }
     }
+
+    pub fn publish_metrics(&mut self) {
+        if let Some(proxy) = self.metrics_proxy.take() {
+            if let Some((batch_size, metrics)) = proxy.publish() {
+                let buckets: Vec<String> = metrics
+                    .iter()
+                    .map(|(label, count)| format!("{}={}", label, count))
+                    .collect();
+                let message = format!(
+                    "metrics export: batch size: {}; counts: {}",
+                    batch_size,
+                    buckets.join(";"),
+                );
+
+                // The differentially private metrics can be treated as non-sensitive
+                // information and therefore logged as public. This assumes
+                // that the client has validated that the configured privacy
+                // budget provides sufficient privacy protection before
+                // sending any data to the server.
+                self.logger.log_public(Level::Info, &message);
+            }
+        }
+    }
 }
 
 impl wasmi::Externals for WasmState {
@@ -406,6 +478,9 @@ impl wasmi::Externals for WasmState {
             }
             WRITE_LOG_MESSAGE => {
                 map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
+            }
+            REPORT_EVENT => {
+                map_host_errors(self.report_event(args.nth_checked(0)?, args.nth_checked(1)?))
             }
             STORAGE_GET_ITEM => map_host_errors(self.storage_get_item(
                 args.nth_checked(0)?,
@@ -441,6 +516,7 @@ impl WasmState {
         lookup_data: Arc<LookupData>,
         tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
+        metrics_proxy: Option<PrivateMetricsProxy>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -450,6 +526,7 @@ impl WasmState {
             instance: None,
             memory: None,
             logger,
+            metrics_proxy,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -596,6 +673,7 @@ pub struct WasmHandler {
     lookup_data: Arc<LookupData>,
     tf_model: Arc<Option<TensorFlowModel>>,
     logger: Logger,
+    aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
 }
 
 impl WasmHandler {
@@ -604,6 +682,7 @@ impl WasmHandler {
         lookup_data: Arc<LookupData>,
         tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
+        aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     ) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
         Ok(WasmHandler {
@@ -611,6 +690,7 @@ impl WasmHandler {
             lookup_data,
             tf_model,
             logger,
+            aggregator,
         })
     }
 
@@ -622,8 +702,10 @@ impl WasmHandler {
             self.lookup_data.clone(),
             self.tf_model.clone(),
             self.logger.clone(),
+            self.aggregator.clone().map(PrivateMetricsProxy::new),
         )?;
         wasm_state.invoke();
+        wasm_state.publish_metrics();
         Ok(Response::create(
             StatusCode::Success,
             wasm_state.get_response_bytes(),
@@ -662,6 +744,16 @@ fn oak_functions_resolve_func(
         ),
         "write_log_message" => (
             WRITE_LOG_MESSAGE,
+            wasmi::Signature::new(
+                &[
+                    ABI_USIZE, // buf_ptr
+                    ABI_USIZE, // buf_len
+                ][..],
+                Some(ValueType::I32),
+            ),
+        ),
+        "report_event" => (
+            REPORT_EVENT,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // buf_ptr

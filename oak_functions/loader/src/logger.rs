@@ -34,7 +34,6 @@ impl Logger {
     }
 
     /// Creates a new logger for testing using the debug `LevelFilter`.
-    #[allow(dead_code)]
     pub fn for_test() -> Self {
         Self::new(LevelFilter::Debug)
     }
