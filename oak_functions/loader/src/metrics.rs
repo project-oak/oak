@@ -55,22 +55,18 @@ pub struct PrivateMetricsAggregator {
 
 impl PrivateMetricsAggregator {
     pub fn new(config: &PrivateMetricsConfig) -> anyhow::Result<Self> {
-        anyhow::ensure!(config.epsilon > 0.0, "Epsilon must be positive.");
-        Ok(Self {
-            count: 0,
-            epsilon: config.epsilon,
-            batch_size: config.batch_size,
-            events: config
-                .allowed_labels
-                .iter()
-                .map(|label| (label.clone(), 0))
-                .collect(),
-            rng: StdRng::from_rng(thread_rng()).context("Couldn't create rng")?,
-        })
+        Self::new_with_rng(
+            config,
+            StdRng::from_rng(thread_rng()).context("Couldn't create rng")?,
+        )
     }
 
     #[cfg(test)]
     pub fn new_for_test(config: &PrivateMetricsConfig, rng: StdRng) -> anyhow::Result<Self> {
+        Self::new_with_rng(config, rng)
+    }
+
+    fn new_with_rng(config: &PrivateMetricsConfig, rng: StdRng) -> anyhow::Result<Self> {
         anyhow::ensure!(config.epsilon > 0.0, "Epsilon must be positive.");
         Ok(Self {
             count: 0,
@@ -91,9 +87,6 @@ impl PrivateMetricsAggregator {
     /// bucket counts are reset to 0. By default Laplacian noise is added to each of the aggregated
     /// bucket counts that are returned. The metrics are returned as a tuple containing the batch
     /// size and a vector of tuples cotaining the label and count for each bucket.
-    ///
-    /// If the `oak-unsafe` feature is enabled, or this function is called from a unit test, no
-    /// noise is added.
     pub fn report_events(
         &mut self,
         events: HashSet<String>,
