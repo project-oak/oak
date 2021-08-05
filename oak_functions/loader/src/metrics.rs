@@ -176,12 +176,7 @@ impl PrivateMetricsAggregator {
                     };
                     (
                         label.to_string(),
-                        add_laplace_noise(
-                            rng,
-                            beta,
-                            bucket.value,
-                            scale,
-                        ),
+                        add_laplace_noise(rng, beta, bucket.value, scale),
                     )
                 })
                 .collect();

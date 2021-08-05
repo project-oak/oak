@@ -5,7 +5,9 @@ worker_threads = 4
 [metrics]
 epsilon = 1.0
 batch_size = 20
-allowed_labels = ["a"]
+
+[metrics.buckets]
+a = { Count = {  } }
 
 [policy]
 constant_response_size_bytes = 90
