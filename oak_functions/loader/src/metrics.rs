@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use rand::{distributions::Open01, thread_rng, Rng};
+use anyhow::Context;
+use rand::{distributions::Open01, rngs::StdRng, thread_rng, Rng, SeedableRng};
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -48,6 +49,8 @@ pub struct PrivateMetricsAggregator {
     batch_size: usize,
     /// The storage for event count buckets.
     events: HashMap<String, usize>,
+    /// The random number generator used for sampling the noise.
+    rng: StdRng,
 }
 
 impl PrivateMetricsAggregator {
@@ -62,6 +65,23 @@ impl PrivateMetricsAggregator {
                 .iter()
                 .map(|label| (label.clone(), 0))
                 .collect(),
+            rng: StdRng::from_rng(thread_rng()).context("Couldn't create rng")?,
+        })
+    }
+
+    #[cfg(test)]
+    pub fn new_for_test(config: &PrivateMetricsConfig, rng: StdRng) -> anyhow::Result<Self> {
+        anyhow::ensure!(config.epsilon > 0.0, "Epsilon must be positive.");
+        Ok(Self {
+            count: 0,
+            epsilon: config.epsilon,
+            batch_size: config.batch_size,
+            events: config
+                .allowed_labels
+                .iter()
+                .map(|label| (label.clone(), 0))
+                .collect(),
+            rng,
         })
     }
 
@@ -86,28 +106,18 @@ impl PrivateMetricsAggregator {
         }
 
         if self.count == self.batch_size {
+            let beta = self.events.len() as f64 / self.epsilon;
+            let rng = &mut self.rng;
             let metrics = self
                 .events
                 .iter()
-                .map(|(label, count)| (label.to_string(), self.add_noise(*count)))
+                .map(|(label, count)| (label.to_string(), add_laplace_noise(rng, beta, *count)))
                 .collect();
             self.reset();
             Some((self.batch_size, metrics))
         } else {
             None
         }
-    }
-
-    /// Adds no noise when the `oak-unsafe` feature is enabled or running as part of a unit test.
-    #[cfg(any(feature = "oak-unsafe", test))]
-    fn add_noise(&self, count: usize) -> i64 {
-        count as i64
-    }
-
-    /// Adds Laplacian noise by default.
-    #[cfg(all(not(feature = "oak-unsafe"), not(test)))]
-    fn add_noise(&self, count: usize) -> i64 {
-        self.add_laplace_noise(count)
     }
 
     /// Resets the request count and all the bucket counts to 0.
@@ -117,30 +127,29 @@ impl PrivateMetricsAggregator {
             *count = 0;
         }
     }
+}
 
-    /// Adds Laplacian noise to a count. The Laplacian noise is sampled by sampling from a uniform
-    /// distribution and calculating the inverse of the Laplace cummulative distribution function on
-    /// the sampled value. Rounding of the noise is allowed as acceptable post-processing.
-    pub fn add_laplace_noise(&self, count: usize) -> i64 {
-        // Split the budget evenly over all of the labeled buckets.
-        let beta = self.events.len() as f64 / self.epsilon;
-        let p: f64 = thread_rng().sample(Open01);
-        count as i64 + Self::inverse_laplace(beta, p).round() as i64
-    }
+/// Adds Laplacian noise to a count. The Laplacian noise is sampled by sampling from a uniform
+/// distribution and calculating the inverse of the Laplace cummulative distribution function on
+/// the sampled value. Rounding of the noise is allowed as acceptable post-processing.
+pub fn add_laplace_noise(rng: &mut StdRng, beta: f64, count: usize) -> i64 {
+    // Split the budget evenly over all of the labeled buckets.
+    let p: f64 = rng.sample(Open01);
+    count as i64 + inverse_laplace(beta, p).round() as i64
+}
 
-    /// Applies the inverse of the Laplace cummulative distribution function with mu = 0.
-    ///
-    /// See https://en.wikipedia.org/wiki/Laplace_distribution
-    fn inverse_laplace(beta: f64, p: f64) -> f64 {
-        if p >= 1.0 {
-            return f64::INFINITY;
-        }
-        if p <= 0.0 {
-            return f64::NEG_INFINITY;
-        }
-        let u = p - 0.5;
-        -beta * u.signum() * (1.0 - 2.0 * u.abs()).ln()
+/// Applies the inverse of the Laplace cummulative distribution function with mu = 0.
+///
+/// See https://en.wikipedia.org/wiki/Laplace_distribution
+fn inverse_laplace(beta: f64, p: f64) -> f64 {
+    if p >= 1.0 {
+        return f64::INFINITY;
     }
+    if p <= 0.0 {
+        return f64::NEG_INFINITY;
+    }
+    let u = p - 0.5;
+    -beta * u.signum() * (1.0 - 2.0 * u.abs()).ln()
 }
 
 /// Proxy for use by request handler instances to push metrics to the `PrivateMetricsAggregator`.
@@ -180,12 +189,15 @@ impl PrivateMetricsProxy {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use maplit::hashmap;
 
     #[test]
     fn test_private_metrics_aggregator() {
+        let epsilon = 1.0;
+        let batch_size = 4;
         let config = PrivateMetricsConfig {
-            epsilon: 1.0,
-            batch_size: 4,
+            epsilon,
+            batch_size,
             allowed_labels: vec![
                 "a".to_string(),
                 "b".to_string(),
@@ -193,7 +205,24 @@ mod tests {
                 "d".to_string(),
             ],
         };
-        let aggregator = Arc::new(Mutex::new(PrivateMetricsAggregator::new(&config).unwrap()));
+        // Use a fixed seed for the random number generators so the errors are predicatable.
+        let seed = 0;
+        let rng = StdRng::seed_from_u64(seed);
+        let aggregator = Arc::new(Mutex::new(
+            PrivateMetricsAggregator::new_for_test(&config, rng).unwrap(),
+        ));
+
+        let expected = hashmap! {
+            "a".to_string() => 3,
+            "b".to_string() => 2,
+            "c".to_string() => 1,
+            "d".to_string() => 0,
+        };
+        // Calculate expected noise using a fixed seeded rng.
+        let mut rng = StdRng::seed_from_u64(seed);
+        let noise: Vec<i64> = (0..4)
+            .map(|_| add_laplace_noise(&mut rng, batch_size as f64 / epsilon, 0))
+            .collect();
 
         let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
         proxy1.report_event("a");
@@ -210,19 +239,19 @@ mod tests {
         let mut proxy4 = PrivateMetricsProxy::new(aggregator);
         proxy4.report_event("a");
         proxy4.report_event("e");
-        let (count, mut buckets) = proxy4.publish().unwrap();
-        buckets.sort();
+        let (count, buckets) = proxy4.publish().unwrap();
 
         assert_eq!(4, count);
-        assert_eq!(
-            vec![
-                ("a".to_string(), 3),
-                ("b".to_string(), 2),
-                ("c".to_string(), 1),
-                ("d".to_string(), 0),
-            ],
-            buckets
-        );
+        for (index, (label, value)) in buckets.iter().enumerate() {
+            println!(
+                "Label: {}, Actual: {}, Expected: {}, Noise: {}",
+                label,
+                value,
+                expected.get(label).unwrap(),
+                noise[index]
+            );
+            assert_eq!(*value, expected.get(label).unwrap() + noise[index]);
+        }
     }
 
     #[test]
@@ -231,17 +260,12 @@ mod tests {
         let iterations = 1_000_000;
         // Check the 0 bucket and 5 buckets either side.
         let offset = 5;
-        // Bucket is allowed up to 10% above or below expected size.
-        let margin = 0.1_f64;
+        // Bucket is allowed up to 2% above or below expected size.
+        let margin = 0.02_f64;
         let epsilon = 1.0_f64;
-        let config = PrivateMetricsConfig {
-            epsilon,
-            batch_size: usize::MAX,
-            allowed_labels: vec!["a".to_string()],
-        };
-        let aggregator = PrivateMetricsAggregator::new(&config).unwrap();
-
         let beta = 1.0 / epsilon;
+        // Use a fixed seed for the random number generator to avoid potential flakiness.
+        let mut rng = StdRng::seed_from_u64(0);
         // Calculate expected bucket counts using the cummulative distribution function.
         let expected: Vec<f64> = (-offset..=offset)
             .map(|index| {
@@ -254,7 +278,7 @@ mod tests {
         // Build a histogram of the actual noise.
         let mut histogram: Vec<usize> = (-offset..=offset).map(|_| 0).collect();
         for _ in 0..iterations {
-            let noise = aggregator.add_laplace_noise(0);
+            let noise = add_laplace_noise(&mut rng, beta, 0);
             if (-offset..=offset).contains(&noise) {
                 let index = (noise + offset) as usize;
                 histogram[index] += 1;
