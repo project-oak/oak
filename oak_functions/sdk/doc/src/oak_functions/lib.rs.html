@@ -162,6 +162,19 @@
 <span id="159">159</span>
 <span id="160">160</span>
 <span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -241,6 +254,19 @@
         <span class="ident">OakStatus</span>::<span class="ident">ErrStorageItemNotFound</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
         <span class="ident">status</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>),
     }
+}
+
+<span class="doccomment">/// Reports an event.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// If differentially-private metrics are enabled in the configuration the event counts per label</span>
+<span class="doccomment">/// will be logged in batches after sufficient noise has been added. Events can be reported at most</span>
+<span class="doccomment">/// once per label per request.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See [`report_event`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_event).</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">report_event</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">label</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">label</span>.<span class="ident">as_ref</span>().<span class="ident">as_bytes</span>();
+    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">oak_functions_abi</span>::<span class="ident">report_event</span>(<span class="ident">buf</span>.<span class="ident">as_ptr</span>(), <span class="ident">buf</span>.<span class="ident">len</span>()) };
+    <span class="ident">result_from_status</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">i32</span>, ())
 }
 
 <span class="doccomment">/// Writes a debug log message.</span>
