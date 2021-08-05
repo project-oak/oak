@@ -312,7 +312,7 @@ impl WasmState {
         self.logger
             .log_sensitive(Level::Debug, &format!("report_event(): {}", label));
         if let Some(proxy) = self.metrics_proxy.as_mut() {
-            proxy.report_event(label);
+            proxy.report_metric(label, 1);
         }
         Ok(())
     }

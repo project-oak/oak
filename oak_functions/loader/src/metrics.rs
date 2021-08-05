@@ -18,7 +18,7 @@ use anyhow::Context;
 use rand::{distributions::Open01, rngs::StdRng, thread_rng, Rng, SeedableRng};
 use serde::Deserialize;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     sync::{Arc, Mutex},
 };
 
@@ -32,14 +32,64 @@ pub struct PrivateMetricsConfig {
     pub epsilon: f64,
     /// The number of requests that will be aggregated into each batch.
     pub batch_size: usize,
-    /// The labels for events that can be reported. Any other events will be ignored.
-    pub allowed_labels: Vec<String>,
+    /// The bucket for which metrics that can be reported.
+    pub buckets: HashMap<String, BucketConfig>,
 }
 
-/// Aggregator for count-based differentially private metrics. The request metrics are released in
-/// aggregated batches after differentially private noise has been added. Once the number of
-/// requests reaches the batch threshold the metrics are logged and the request count and bucket
-/// counts are reset to 0.
+impl PrivateMetricsConfig {
+    pub fn validate(&self) -> anyhow::Result<()> {
+        anyhow::ensure!(self.epsilon > 0.0, "Epsilon must be positive",);
+        for (label, bucket_config) in &self.buckets {
+            if let BucketConfig::Sum { min, max } = bucket_config {
+                anyhow::ensure!(max > min, "Max not bigger than min for bucket {}", label,);
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Configuration for metrics buckets.
+#[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub enum BucketConfig {
+    /// A bucket used for counting of events. This is equivalent to `Sum { min: 0, max: 1}`.
+    Count,
+    /// A bucket used for summing integer values in a range. Values outside of the range will be
+    /// clamped at the minimum or maximum values. The noise added to the bucket will be scaled by
+    /// the size of the range (`max - min`).
+    Sum { min: i64, max: i64 },
+}
+
+/// Combined configuration and storage for a metrics bucket.
+struct Bucket {
+    config: BucketConfig,
+    value: i64,
+}
+
+impl Bucket {
+    /// Adds the input value to the bucket value. If the value is outside of the configured range it
+    /// is clamped to the minimum or maximum.
+    fn add(&mut self, input: i64) {
+        self.value += match self.config {
+            BucketConfig::Count => clamp(input, 0, 1),
+            BucketConfig::Sum { min, max } => clamp(input, min, max),
+        }
+    }
+}
+
+/// Clamps `value` to the range defined by `min` and `max`.
+fn clamp(value: i64, min: i64, max: i64) -> i64 {
+    match value {
+        x if x < min => min,
+        x if x > max => max,
+        _ => value,
+    }
+}
+
+/// Aggregator for count- and sum-based differentially private metrics. The request metrics are
+/// released in aggregated batches after differentially private noise has been added. Once the
+/// number of requests reaches the batch threshold the metrics are logged and the request count and
+/// bucket counts are reset to 0.
 pub struct PrivateMetricsAggregator {
     /// The request count.
     count: usize,
@@ -47,8 +97,8 @@ pub struct PrivateMetricsAggregator {
     epsilon: f64,
     /// The number of requests that will be aggregated into each batch.
     batch_size: usize,
-    /// The storage for event count buckets.
-    events: HashMap<String, usize>,
+    /// The storage for the buckets.
+    buckets: HashMap<String, Bucket>,
     /// The random number generator used for sampling the noise.
     rng: StdRng,
 }
@@ -72,39 +122,68 @@ impl PrivateMetricsAggregator {
             count: 0,
             epsilon: config.epsilon,
             batch_size: config.batch_size,
-            events: config
-                .allowed_labels
+            buckets: config
+                .buckets
                 .iter()
-                .map(|label| (label.clone(), 0))
+                .map(|(label, bucket_config)| {
+                    (
+                        label.clone(),
+                        Bucket {
+                            config: bucket_config.clone(),
+                            value: 0,
+                        },
+                    )
+                })
                 .collect(),
             rng,
         })
     }
 
-    /// Reports new events that should be included in the aggregated counts. If the number of
-    /// requests do not yet match the batch size `None` is returned. If the batch threshold
-    /// is reached the aggregated metrics for the batch are returned and the request count and
-    /// bucket counts are reset to 0. By default Laplacian noise is added to each of the aggregated
-    /// bucket counts that are returned. The metrics are returned as a tuple containing the batch
-    /// size and a vector of tuples cotaining the label and count for each bucket.
-    pub fn report_events(
+    /// Reports new metrics for a single request that should be included in the aggregated counts.
+    ///
+    /// If the data contains entries with labels for buckets that are not configured those entries
+    /// are ignored. If data does not include entries for some configured buckets, it will be
+    /// treated as if values of 0 was included for those buckets.
+    ///
+    /// If the number of requests do not yet match the batch size `None` is returned. If the
+    /// batch threshold is reached the aggregated metrics for the batch are returned and the
+    /// request count and bucket counts are reset to 0.
+    ///
+    /// Laplacian noise is added to each of the aggregated bucket counts that are returned. The
+    /// noise is scaled by the size of the range allowed for the bucket.
+    ///
+    /// The metrics are returned as a tuple containing the batch size and a vector of tuples
+    /// cotaining the label and sum for each bucket.
+    pub fn report_metrics(
         &mut self,
-        events: HashSet<String>,
+        data: HashMap<String, i64>,
     ) -> Option<(usize, Vec<(String, i64)>)> {
         self.count += 1;
-        for (label, count) in self.events.iter_mut() {
-            if events.contains(label) {
-                *count += 1;
-            }
+        for (label, bucket) in self.buckets.iter_mut() {
+            bucket.add(*data.get(label).unwrap_or(&0));
         }
 
         if self.count == self.batch_size {
-            let beta = self.events.len() as f64 / self.epsilon;
+            let beta = self.buckets.len() as f64 / self.epsilon;
             let rng = &mut self.rng;
             let metrics = self
-                .events
+                .buckets
                 .iter()
-                .map(|(label, count)| (label.to_string(), add_laplace_noise(rng, beta, *count)))
+                .map(|(label, bucket)| {
+                    let scale = match bucket.config {
+                        BucketConfig::Count => 1.0,
+                        BucketConfig::Sum { min, max } => (max - min) as f64,
+                    };
+                    (
+                        label.to_string(),
+                        add_laplace_noise(
+                            rng,
+                            beta,
+                            bucket.value,
+                            scale,
+                        ),
+                    )
+                })
                 .collect();
             self.reset();
             Some((self.batch_size, metrics))
@@ -116,19 +195,19 @@ impl PrivateMetricsAggregator {
     /// Resets the request count and all the bucket counts to 0.
     fn reset(&mut self) {
         self.count = 0;
-        for (_, count) in self.events.iter_mut() {
-            *count = 0;
+        for (_, bucket) in self.buckets.iter_mut() {
+            bucket.value = 0;
         }
     }
 }
 
-/// Adds Laplacian noise to a count. The Laplacian noise is sampled by sampling from a uniform
+/// Adds Laplacian noise to a value. The Laplacian noise is sampled by sampling from a uniform
 /// distribution and calculating the inverse of the Laplace cummulative distribution function on
 /// the sampled value. Rounding of the noise is allowed as acceptable post-processing.
-pub fn add_laplace_noise(rng: &mut StdRng, beta: f64, count: usize) -> i64 {
+pub fn add_laplace_noise(rng: &mut StdRng, beta: f64, value: i64, scale: f64) -> i64 {
     // Split the budget evenly over all of the labeled buckets.
     let p: f64 = rng.sample(Open01);
-    count as i64 + inverse_laplace(beta, p).round() as i64
+    value + (scale * inverse_laplace(beta, p)).round() as i64
 }
 
 /// Applies the inverse of the Laplace cummulative distribution function with mu = 0.
@@ -145,34 +224,35 @@ fn inverse_laplace(beta: f64, p: f64) -> f64 {
     -beta * u.signum() * (1.0 - 2.0 * u.abs()).ln()
 }
 
-/// Proxy for use by request handler instances to push metrics to the `PrivateMetricsAggregator`.
+/// Proxy for use by request handler instances to push per-request metrics to the
+/// `PrivateMetricsAggregator`.
 pub struct PrivateMetricsProxy {
     aggregator: Arc<Mutex<PrivateMetricsAggregator>>,
-    events: HashSet<String>,
+    data: HashMap<String, i64>,
 }
 
 impl PrivateMetricsProxy {
     pub fn new(aggregator: Arc<Mutex<PrivateMetricsAggregator>>) -> Self {
         Self {
             aggregator,
-            events: HashSet::new(),
+            data: HashMap::new(),
         }
     }
 
-    /// Adds an event to the set of reported events if it was not previously added.
-    pub fn report_event(&mut self, label: &str) {
-        if !self.events.contains(label) {
-            self.events.insert(label.to_owned());
-        }
+    /// Sets the value for the labeled metric. If a value was previously set for the label it will
+    /// be overwritten.
+    pub fn report_metric(&mut self, label: &str, value: i64) {
+        self.data.insert(label.to_owned(), value);
     }
 
-    /// Consumes the proxy and publishes the data to the aggregator. If publishing the events to the
-    /// aggregator causes the batch threshold to be reached the aggregated metrics are returned.
+    /// Consumes the proxy and publishes the local request-specific data to the aggregator. If
+    /// publishing the metrics to the aggregator causes the batch threshold to be reached the
+    /// aggregated metrics are returned.
     ///
-    /// See [PrivateMetricsAggregator::report_events] for more information.
+    /// See [PrivateMetricsAggregator::report_metrics] for more information.
     pub fn publish(self) -> Option<(usize, Vec<(String, i64)>)> {
         if let Ok(mut aggregator) = self.aggregator.lock() {
-            aggregator.report_events(self.events)
+            aggregator.report_metrics(self.data)
         } else {
             None
         }
@@ -191,12 +271,12 @@ mod tests {
         let config = PrivateMetricsConfig {
             epsilon,
             batch_size,
-            allowed_labels: vec![
-                "a".to_string(),
-                "b".to_string(),
-                "c".to_string(),
-                "d".to_string(),
-            ],
+            buckets: hashmap! {
+                "a".to_string() => BucketConfig::Count,
+                "b".to_string() => BucketConfig::Count,
+                "c".to_string() => BucketConfig::Count,
+                "d".to_string() => BucketConfig::Count,
+            },
         };
         // Use a fixed seed for the random number generators so the errors are predicatable.
         let seed = 0;
@@ -214,24 +294,24 @@ mod tests {
         // Calculate expected noise using a fixed seeded rng.
         let mut rng = StdRng::seed_from_u64(seed);
         let noise: Vec<i64> = (0..4)
-            .map(|_| add_laplace_noise(&mut rng, batch_size as f64 / epsilon, 0))
+            .map(|_| add_laplace_noise(&mut rng, batch_size as f64 / epsilon, 0, 1.0))
             .collect();
 
         let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy1.report_event("a");
+        proxy1.report_metric("a", 1);
         assert_eq!(proxy1.publish(), None);
         let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy2.report_event("a");
-        proxy2.report_event("b");
+        proxy2.report_metric("a", 2);
+        proxy2.report_metric("b", 3);
         assert_eq!(proxy2.publish(), None);
         let mut proxy3 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy3.report_event("c");
-        proxy3.report_event("b");
-        proxy3.report_event("c");
+        proxy3.report_metric("c", 1);
+        proxy3.report_metric("b", 1);
+        proxy3.report_metric("c", 3);
         assert_eq!(proxy3.publish(), None);
         let mut proxy4 = PrivateMetricsProxy::new(aggregator);
-        proxy4.report_event("a");
-        proxy4.report_event("e");
+        proxy4.report_metric("a", 1);
+        proxy4.report_metric("e", 1);
         let (count, buckets) = proxy4.publish().unwrap();
 
         assert_eq!(4, count);
@@ -271,7 +351,7 @@ mod tests {
         // Build a histogram of the actual noise.
         let mut histogram: Vec<usize> = (-offset..=offset).map(|_| 0).collect();
         for _ in 0..iterations {
-            let noise = add_laplace_noise(&mut rng, beta, 0);
+            let noise = add_laplace_noise(&mut rng, beta, 0, 1.0);
             if (-offset..=offset).contains(&noise) {
                 let index = (noise + offset) as usize;
                 histogram[index] += 1;

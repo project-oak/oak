@@ -172,9 +172,12 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let tee_certificate = vec![];
 
     let aggregator = match &config.metrics {
-        Some(metrics_config) => Some(Arc::new(Mutex::new(PrivateMetricsAggregator::new(
-            metrics_config,
-        )?))),
+        Some(metrics_config) => {
+            metrics_config.validate()?;
+            Some(Arc::new(Mutex::new(PrivateMetricsAggregator::new(
+                metrics_config,
+            )?)))
+        }
         None => None,
     };
 
