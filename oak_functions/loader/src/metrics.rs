@@ -196,9 +196,11 @@ impl PrivateMetricsAggregator {
     }
 }
 
-/// Adds Laplacian noise to a value. The Laplacian noise is sampled by sampling from a uniform
-/// distribution and calculating the inverse of the Laplace cummulative distribution function on
-/// the sampled value. Rounding of the noise is allowed as acceptable post-processing.
+/// Adds Laplacian noise with parameter `beta` scaled by `scale` to a `value`. The Laplacian noise
+/// is sampled by sampling from a uniform distribution and calculating the inverse of the Laplace
+/// cummulative distribution function on the sampled value.
+///
+/// Rounding of the noise is allowed as acceptable post-processing.
 pub fn add_laplace_noise(rng: &mut StdRng, beta: f64, value: i64, scale: f64) -> i64 {
     // Split the budget evenly over all of the labeled buckets.
     let p: f64 = rng.sample(Open01);
@@ -353,8 +355,8 @@ mod tests {
 
         let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
         proxy1.report_metric("a", -100);
-        // Note: even though no metric value is reported for bucket "b" in this request the minimum
-        // bucket value means that 10 will be added for this request to bucket "b".
+        // Note: even though no metric value is reported for bucket "b" in this request, the minimum
+        // bucket value means that 10 will be added here to bucket "b".
         assert_eq!(proxy1.publish(), None);
         let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
         proxy2.report_metric("a", 5);
