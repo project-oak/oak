@@ -1,17 +1,17 @@
 # Differentially Private Metrics example
 
 This example shows the use of differentially private count-based metrics by a
-Wasm module. The client repeatedly sends either "a" or "b" to the server. The
-server reports event "a" when it receives "a", and does not report any events if
-it receives "b", seeing that "b" is not in the list of allowed labels. A request
+Wasm module. Each request to the server contains either "a" or "b". The server
+reports event "a" when it receives "a", and does not report any events if it
+receives "b", seeing that "b" is not in the list of allowed labels. A request
 still counts towards the overall request count even if no events are reported. A
 single request can report an event for a single count-based bucket at most once.
 
 The resulting exported metrics should provide a relatively accurate count of how
-many times "a" was received, but importantly it should not be possible to know
-which of the individual client sessions sent "a" by looking at the output. Even
-if an attacker knows what was sent in all the requests in the batch except for
-one, they should not be able to deduce with high certainty what was sent in the
+many requests reported "a", but importantly it should not be possible to know
+which of the individual requests sent "a" by looking at the output. Even if an
+attacker knows what was sent in all the requests in the batch except for one,
+they should not be able to deduce with high certainty what was sent in the
 remaining request. The addition of Laplacian noise to the bucket counts ensures
 this property, assuming appropriate parameter values are chosen. For more
 information on using Laplacian noise in differential privacy, see
