@@ -260,7 +260,7 @@ mod tests {
     use maplit::hashmap;
 
     #[test]
-    fn test_private_metrics_aggregator() {
+    fn test_private_metrics_aggregator_count() {
         let epsilon = 1.0;
         let batch_size = 4;
         let config = PrivateMetricsConfig {
@@ -289,7 +289,7 @@ mod tests {
         // Calculate expected noise using a fixed seeded rng.
         let mut rng = StdRng::seed_from_u64(seed);
         let noise: Vec<i64> = (0..4)
-            .map(|_| add_laplace_noise(&mut rng, batch_size as f64 / epsilon, 0, 1.0))
+            .map(|_| add_laplace_noise(&mut rng, config.buckets.len() as f64 / epsilon, 0, 1.0))
             .collect();
 
         let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
@@ -309,7 +309,62 @@ mod tests {
         proxy4.report_metric("e", 1);
         let (count, buckets) = proxy4.publish().unwrap();
 
-        assert_eq!(4, count);
+        assert_eq!(batch_size, count);
+        for (index, (label, value)) in buckets.iter().enumerate() {
+            println!(
+                "Label: {}, Actual: {}, Expected: {}, Noise: {}",
+                label,
+                value,
+                expected.get(label).unwrap(),
+                noise[index]
+            );
+            assert_eq!(*value, expected.get(label).unwrap() + noise[index]);
+        }
+    }
+
+    #[test]
+    fn test_private_metrics_aggregator_sum() {
+        let epsilon = 1.0;
+        let batch_size = 3;
+        let config = PrivateMetricsConfig {
+            epsilon,
+            batch_size,
+            buckets: hashmap! {
+                "a".to_string() => BucketConfig::Sum { min: 0, max: 10 },
+                "b".to_string() => BucketConfig::Sum { min: 10, max: 20 },
+            },
+        };
+        // Use a fixed seed for the random number generators so the errors are predicatable.
+        let seed = 0;
+        let rng = StdRng::seed_from_u64(seed);
+        let aggregator = Arc::new(Mutex::new(
+            PrivateMetricsAggregator::new_for_test(&config, rng).unwrap(),
+        ));
+
+        let expected = hashmap! {
+            "a".to_string() => 13,
+            "b".to_string() => 32,
+        };
+        // Calculate expected noise using a fixed seeded rng.
+        let mut rng = StdRng::seed_from_u64(seed);
+        let noise: Vec<i64> = (0..2)
+            .map(|_| add_laplace_noise(&mut rng, config.buckets.len() as f64 / epsilon, 0, 10.0))
+            .collect();
+
+        let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
+        proxy1.report_metric("a", -10);
+        assert_eq!(proxy1.publish(), None);
+        let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
+        proxy2.report_metric("a", 5);
+        proxy2.report_metric("a", 3);
+        proxy2.report_metric("b", 12);
+        assert_eq!(proxy2.publish(), None);
+        let mut proxy3 = PrivateMetricsProxy::new(aggregator);
+        proxy3.report_metric("a", 100);
+        proxy3.report_metric("b", 5);
+        let (count, buckets) = proxy3.publish().unwrap();
+
+        assert_eq!(batch_size, count);
         for (index, (label, value)) in buckets.iter().enumerate() {
             println!(
                 "Label: {}, Actual: {}, Expected: {}, Noise: {}",
