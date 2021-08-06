@@ -352,7 +352,9 @@ mod tests {
             .collect();
 
         let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy1.report_metric("a", -10);
+        proxy1.report_metric("a", -100);
+        // Note: even though no metric value is reported for bucket "b" in this request the minimum
+        // bucket value means that 10 will be added for this request to bucket "b".
         assert_eq!(proxy1.publish(), None);
         let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
         proxy2.report_metric("a", 5);
