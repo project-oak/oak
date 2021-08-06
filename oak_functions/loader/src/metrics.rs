@@ -295,20 +295,20 @@ mod tests {
             .collect();
 
         let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy1.report_metric("a", 1);
+        proxy1.report_metric("a", 1); // Expect +1 for "a".
         assert_eq!(proxy1.publish(), None);
         let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy2.report_metric("a", 2);
-        proxy2.report_metric("b", 3);
+        proxy2.report_metric("a", 2); // Expect +1 for "a".
+        proxy2.report_metric("b", 3); // Expect +1 for "b".
         assert_eq!(proxy2.publish(), None);
         let mut proxy3 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy3.report_metric("c", 1);
-        proxy3.report_metric("b", 1);
-        proxy3.report_metric("c", 3);
+        proxy3.report_metric("c", 1); // Ignored.
+        proxy3.report_metric("b", 1); // Expect +1 for "b".
+        proxy3.report_metric("c", 3); // Expect +1 for "c".
         assert_eq!(proxy3.publish(), None);
         let mut proxy4 = PrivateMetricsProxy::new(aggregator);
-        proxy4.report_metric("a", 1);
-        proxy4.report_metric("e", 1);
+        proxy4.report_metric("a", 1); // Expect +1 for "a".
+        proxy4.report_metric("e", 1); // Ignored.
         let (count, buckets) = proxy4.publish().unwrap();
 
         assert_eq!(batch_size, count);
@@ -354,18 +354,18 @@ mod tests {
             .collect();
 
         let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy1.report_metric("a", -100);
-        // Note: even though no metric value is reported for bucket "b" in this request, the minimum
-        // bucket value means that 10 will be added here to bucket "b".
+        proxy1.report_metric("a", -100); // Expect +0 for "a", +10 for "b".
+                                         // Note: even though no metric value is reported for "b" in this request, the minimum
+                                         // configured value means that 10 will be added to bucket "b".
         assert_eq!(proxy1.publish(), None);
         let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy2.report_metric("a", 5);
-        proxy2.report_metric("a", 3);
-        proxy2.report_metric("b", 12);
+        proxy2.report_metric("a", 5); // Ignored.
+        proxy2.report_metric("a", 3); // Expect +3 for "a".
+        proxy2.report_metric("b", 12); // Expect +12 for "b".
         assert_eq!(proxy2.publish(), None);
         let mut proxy3 = PrivateMetricsProxy::new(aggregator);
-        proxy3.report_metric("a", 100);
-        proxy3.report_metric("b", 5);
+        proxy3.report_metric("a", 100); // Expect +10 for "a".
+        proxy3.report_metric("b", 5); // Expect +10 for "b".
         let (count, buckets) = proxy3.publish().unwrap();
 
         assert_eq!(batch_size, count);
@@ -391,6 +391,7 @@ mod tests {
         let margin = 0.02_f64;
         let epsilon = 1.0_f64;
         let beta = 1.0 / epsilon;
+        let scale = 1.0;
         // Use a fixed seed for the random number generator to avoid potential flakiness.
         let mut rng = StdRng::seed_from_u64(0);
         // Calculate expected bucket counts using the cummulative distribution function.
@@ -405,7 +406,7 @@ mod tests {
         // Build a histogram of the actual noise.
         let mut histogram: Vec<usize> = (-offset..=offset).map(|_| 0).collect();
         for _ in 0..iterations {
-            let noise = add_laplace_noise(&mut rng, beta, 0, 1.0);
+            let noise = add_laplace_noise(&mut rng, beta, 0, scale);
             if (-offset..=offset).contains(&noise) {
                 let index = (noise + offset) as usize;
                 histogram[index] += 1;
