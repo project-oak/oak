@@ -4,7 +4,8 @@ This example shows the use of differentially private count-based metrics by a
 Wasm module. The client repeatedly sends either "a" or "b" to the server. The
 server reports event "a" when it receives "a", and does not report any events if
 it receives "b", seeing that "b" is not in the list of allowed labels. A request
-still counts towards the overall request count even if no events are reported.
+still counts towards the overall request count even if no events are reported. A
+single request can report an event for a single count-based bucket at most once.
 
 The resulting exported metrics should provide a relatively accurate count of how
 many times "a" was received, but importantly it should not be possible to know
