@@ -32,7 +32,7 @@ pub struct PrivateMetricsConfig {
     pub epsilon: f64,
     /// The number of requests that will be aggregated into each batch.
     pub batch_size: usize,
-    /// The bucket for which metrics that can be reported.
+    /// The buckets for which metrics that can be reported.
     pub buckets: HashMap<String, BucketConfig>,
 }
 
@@ -52,15 +52,15 @@ impl PrivateMetricsConfig {
 #[derive(Clone, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub enum BucketConfig {
-    /// A bucket used for counting of events. This is equivalent to `Sum { min: 0, max: 1}`.
+    /// A bucket used for counting of events. This is equivalent to `Sum { min: 0, max: 1 }`.
     Count,
-    /// A bucket used for summing integer values in a range. Values outside of the range will be
-    /// clamped at the minimum or maximum values. The noise added to the bucket will be scaled by
-    /// the size of the range (`max - min`).
+    /// A bucket used for summing integer values in a range. Values outside of the range are
+    /// clamped at the minimum or maximum values. The noise added to the bucket is scaled by the
+    /// size of the range (`max - min`).
     Sum { min: i64, max: i64 },
 }
 
-/// Combined configuration and storage for a metrics bucket.
+/// Combined configuration and data storage for a metrics bucket.
 struct Bucket {
     config: BucketConfig,
     value: i64,
@@ -143,17 +143,17 @@ impl PrivateMetricsAggregator {
     ///
     /// If the data contains entries with labels for buckets that are not configured those entries
     /// are ignored. If data does not include entries for some configured buckets, it will be
-    /// treated as if values of 0 was included for those buckets.
+    /// treated as if values of 0 were included for those buckets.
     ///
     /// If the number of requests do not yet match the batch size `None` is returned. If the
     /// batch threshold is reached the aggregated metrics for the batch are returned and the
-    /// request count and bucket counts are reset to 0.
+    /// request count and bucket values are reset to 0.
     ///
-    /// Laplacian noise is added to each of the aggregated bucket counts that are returned. The
+    /// Laplacian noise is added to each of the aggregated bucket values that are returned. The
     /// noise is scaled by the size of the range allowed for the bucket.
     ///
     /// The metrics are returned as a tuple containing the batch size and a vector of tuples
-    /// cotaining the label and sum for each bucket.
+    /// cotaining the label and value for each bucket.
     pub fn report_metrics(
         &mut self,
         data: HashMap<String, i64>,
@@ -187,7 +187,7 @@ impl PrivateMetricsAggregator {
         }
     }
 
-    /// Resets the request count and all the bucket counts to 0.
+    /// Resets the request count and all the bucket values to 0.
     fn reset(&mut self) {
         self.count = 0;
         for (_, bucket) in self.buckets.iter_mut() {
@@ -244,7 +244,7 @@ impl PrivateMetricsProxy {
     /// publishing the metrics to the aggregator causes the batch threshold to be reached the
     /// aggregated metrics are returned.
     ///
-    /// See [PrivateMetricsAggregator::report_metrics] for more information.
+    /// See [PrivateMetricsAggregator::report_metrics] for more details.
     pub fn publish(self) -> Option<(usize, Vec<(String, i64)>)> {
         if let Ok(mut aggregator) = self.aggregator.lock() {
             aggregator.report_metrics(self.data)
