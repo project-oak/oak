@@ -17,6 +17,8 @@
 // Required for enabling benchmark tests.
 #![feature(test)]
 #![feature(async_closure)]
+// Required by https://doc.rust-lang.org/std/cmp/trait.Ord.html#method.clamp
+#![feature(clamp)]
 
 use anyhow::Context;
 use log::Level;

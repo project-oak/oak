@@ -75,18 +75,9 @@ impl Bucket {
     /// is clamped to the minimum or maximum.
     fn add(&mut self, input: i64) {
         self.value += match self.config {
-            BucketConfig::Count => clamp(input, 0, 1),
-            BucketConfig::Sum { min, max } => clamp(input, min, max),
+            BucketConfig::Count => input.clamp(0, 1),
+            BucketConfig::Sum { min, max } => input.clamp(min, max),
         }
-    }
-}
-
-/// Clamps `value` to the range defined by `min` and `max`.
-fn clamp(value: i64, min: i64, max: i64) -> i64 {
-    match value {
-        x if x < min => min,
-        x if x > max => max,
-        _ => value,
     }
 }
 
