@@ -1,25 +1,26 @@
 # Differentially Private Metrics example
 
-This example shows the use of differentially private metrics by a Wasm module.
-The client repeatedly sends either "a" or "b" to the server. The server reports
-event "a" when it receives "a", and does not report any events if it receives
-"b", seeing that "b" is not in the list of allowed labels. A request still
-counts towards the overall request count even if no events are reported.
+This example shows the use of differentially private count-based metrics by a
+Wasm module. Each request to the server contains either "a" or "b". The server
+reports event "a" when it receives "a", and does not report any events if it
+receives "b", seeing that "b" is not in the list of allowed labels. A request
+still counts towards the overall request count even if no events are reported. A
+single request can report an event for a single count-based bucket at most once.
 
 The resulting exported metrics should provide a relatively accurate count of how
-many times "a" was received, but importantly it should not be possible to know
-which of the individual client sessions sent "a" by looking at the output. Even
-if an attacker knows what was sent in all the requests in the batch except for
-one, they should not be able to deduce with high certainty what was sent in the
+many requests reported "a", but importantly it should not be possible to know
+which of the individual requests sent "a" by looking at the output. Even if an
+attacker knows what was sent in all the requests in the batch except for one,
+they should not be able to deduce with high certainty what was sent in the
 remaining request. The addition of Laplacian noise to the bucket counts ensures
 this property, assuming appropriate parameter values are chosen. For more
 information on using Laplacian noise in differential privacy, see
 https://desfontain.es/privacy/differential-privacy-in-practice.html
 
-The allowed list of event labels (in this case `["a"]`), the privacy budget and
-the batch size are set in the server configuration file ('config.toml'). If
-multiple different event labels are allowed the budget would be evenly split
-across all of them.
+The allowed list of metrics buckets (in this case a count-based bucket with
+label `"a"`), the privacy budget and the batch size are set in the server
+configuration file ('config.toml'). If multiple different buckets are allowed
+the budget would be evenly split across all of them.
 
 The probability of a specific integer noise value being added can be calculated
 using the cummulative distribution function:

@@ -16,6 +16,10 @@ notice = "deny"
 ignore = [
   # TODO(#2055): Remove once tink dependencies are updated.
   "RUSTSEC-2021-0064",
+  # TODO(#2257): Remove once hyper is updated.
+  "RUSTSEC-2021-0079",
+  # TODO(#2257): Remove once hyper is updated.
+  "RUSTSEC-2021-0078",
 ]
 
 # Deny multiple versions unless explicitly skipped.

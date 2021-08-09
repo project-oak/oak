@@ -44,7 +44,7 @@ const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
 const TF_MODEL_INFER: usize = 4;
-const REPORT_EVENT: usize = 5;
+const REPORT_METRIC: usize = 5;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -280,11 +280,12 @@ impl WasmState {
         Ok(())
     }
 
-    /// Corresponds to the host ABI function [`report_event`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_event).
-    pub fn report_event(
+    /// Corresponds to the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
+    pub fn report_metric(
         &mut self,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
+        value: i64,
     ) -> Result<(), OakStatus> {
         let raw_label = self
             .get_memory()
@@ -293,7 +294,7 @@ impl WasmState {
                 self.logger.log_sensitive(
                     Level::Error,
                     &format!(
-                        "report_event(): Unable to read label from guest memory: {:?}",
+                        "report_metric(): Unable to read label from guest memory: {:?}",
                         err
                     ),
                 );
@@ -303,16 +304,16 @@ impl WasmState {
             self.logger.log_sensitive(
                 Level::Warn,
                 &format!(
-                    "report_event(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
+                    "report_metric(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
                     err, raw_label
                 ),
             );
             OakStatus::ErrInvalidArgs
         })?;
         self.logger
-            .log_sensitive(Level::Debug, &format!("report_event(): {}", label));
+            .log_sensitive(Level::Debug, &format!("report_metric(): {}", label));
         if let Some(proxy) = self.metrics_proxy.as_mut() {
-            proxy.report_event(label);
+            proxy.report_metric(label, value);
         }
         Ok(())
     }
@@ -479,9 +480,11 @@ impl wasmi::Externals for WasmState {
             WRITE_LOG_MESSAGE => {
                 map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
             }
-            REPORT_EVENT => {
-                map_host_errors(self.report_event(args.nth_checked(0)?, args.nth_checked(1)?))
-            }
+            REPORT_METRIC => map_host_errors(self.report_metric(
+                args.nth_checked(0)?,
+                args.nth_checked(1)?,
+                args.nth_checked(2)?,
+            )),
             STORAGE_GET_ITEM => map_host_errors(self.storage_get_item(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
@@ -752,12 +755,13 @@ fn oak_functions_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
-        "report_event" => (
-            REPORT_EVENT,
+        "report_metric" => (
+            REPORT_METRIC,
             wasmi::Signature::new(
                 &[
                     ABI_USIZE, // buf_ptr
                     ABI_USIZE, // buf_len
+                    ValueType::I64,
                 ][..],
                 Some(ValueType::I32),
             ),
