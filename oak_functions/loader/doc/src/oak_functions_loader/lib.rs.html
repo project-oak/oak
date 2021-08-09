@@ -30,6 +30,8 @@
 <span id="27">27</span>
 <span id="28">28</span>
 <span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -48,6 +50,8 @@
 <span class="comment">//</span>
 
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">async_closure</span>)]</span>
+<span class="comment">// Required by https://doc.rust-lang.org/std/cmp/trait.Ord.html#method.clamp</span>
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">clamp</span>)]</span>
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proto</span> {
     <span class="ident">tonic</span>::<span class="macro">include_proto</span><span class="macro">!</span>(<span class="string">&quot;oak.functions.server&quot;</span>);

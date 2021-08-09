@@ -175,6 +175,24 @@
 <span id="172">172</span>
 <span id="173">173</span>
 <span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -256,16 +274,34 @@
     }
 }
 
-<span class="doccomment">/// Reports an event.</span>
+<span class="doccomment">/// Reports an event for a count-based metrics bucket.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// If differentially-private metrics are enabled in the configuration the event counts per label</span>
-<span class="doccomment">/// will be logged in batches after sufficient noise has been added. Events can be reported at most</span>
-<span class="doccomment">/// once per label per request.</span>
+<span class="doccomment">/// If differentially-private metrics are enabled in the configuration the metrics bucket totals</span>
+<span class="doccomment">/// will be logged in batches after sufficient noise has been added. If events for the same bucket</span>
+<span class="doccomment">/// are reported multiple times in a single request it will be counted only once.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// See [`report_event`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_event).</span>
+<span class="doccomment">/// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">report_event</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">label</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="ident">report_metric</span>(<span class="ident">label</span>, <span class="number">1</span>)
+}
+
+<span class="doccomment">/// Reports a metric value for a sum-based metrics bucket.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// If differentially-private metrics are enabled in the configuration the metrics bucket totals</span>
+<span class="doccomment">/// will be logged in batches after sufficient noise has been added. If multiple values are reported</span>
+<span class="doccomment">/// for the same bucket during a single request only the last value will be used. If the reported</span>
+<span class="doccomment">/// value falls outside of the configured range for the bucket, it will be clamped to the minimum or</span>
+<span class="doccomment">/// maximum value.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// If no values are reported for a configured bucket during a request, it will be treated as if 0</span>
+<span class="doccomment">/// was reported. If the minimum value of the bucket is larger than 0 it would then be clamped to</span>
+<span class="doccomment">/// the configured minimum. This could lead to unexpected bias in the results, so minimum values</span>
+<span class="doccomment">/// above 0 should be used with care.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">report_metric</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">label</span>: <span class="ident">T</span>, <span class="ident">value</span>: <span class="ident">i64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">label</span>.<span class="ident">as_ref</span>().<span class="ident">as_bytes</span>();
-    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">oak_functions_abi</span>::<span class="ident">report_event</span>(<span class="ident">buf</span>.<span class="ident">as_ptr</span>(), <span class="ident">buf</span>.<span class="ident">len</span>()) };
+    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">oak_functions_abi</span>::<span class="ident">report_metric</span>(<span class="ident">buf</span>.<span class="ident">as_ptr</span>(), <span class="ident">buf</span>.<span class="ident">len</span>(), <span class="ident">value</span>) };
     <span class="ident">result_from_status</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">i32</span>, ())
 }
 
