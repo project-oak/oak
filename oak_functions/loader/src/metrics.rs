@@ -32,7 +32,7 @@ pub struct PrivateMetricsConfig {
     pub epsilon: f64,
     /// The number of requests that will be aggregated into each batch.
     pub batch_size: usize,
-    /// The buckets for which metrics that can be reported.
+    /// The labels and configurations of buckets for which metrics can be reported.
     pub buckets: HashMap<String, BucketConfig>,
 }
 
@@ -41,7 +41,11 @@ impl PrivateMetricsConfig {
         anyhow::ensure!(self.epsilon > 0.0, "Epsilon must be positive",);
         for (label, bucket_config) in &self.buckets {
             if let BucketConfig::Sum { min, max } = bucket_config {
-                anyhow::ensure!(max > min, "Max not bigger than min for bucket {}", label,);
+                anyhow::ensure!(
+                    max > min,
+                    "Max must be bigger than min for bucket {}",
+                    label,
+                );
             }
         }
         Ok(())
@@ -143,11 +147,13 @@ impl PrivateMetricsAggregator {
     ///
     /// If the data contains entries with labels for buckets that are not configured those entries
     /// are ignored. If data does not include entries for some configured buckets, it will be
-    /// treated as if values of 0 were included for those buckets.
+    /// treated as if values of 0 (or the minimum values where the minimum values are larger than 0)
+    /// were included for those buckets.
     ///
     /// If the number of requests do not yet match the batch size `None` is returned. If the
     /// batch threshold is reached the aggregated metrics for the batch are returned and the
-    /// request count and bucket values are reset to 0.
+    /// request count and bucket values are reset to 0. Each Wasm instance can only call this
+    /// function once, as it consumes its PrivateMetricsProxy in the process of reporting metrics.
     ///
     /// Laplacian noise is added to each of the aggregated bucket values that are returned. The
     /// noise is scaled by the size of the range allowed for the bucket.
@@ -302,7 +308,7 @@ mod tests {
         proxy2.report_metric("b", 3); // Expect +1 for "b".
         assert_eq!(proxy2.publish(), None);
         let mut proxy3 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy3.report_metric("c", 1); // Ignored.
+        proxy3.report_metric("c", 1); // Overwritten.
         proxy3.report_metric("b", 1); // Expect +1 for "b".
         proxy3.report_metric("c", 3); // Expect +1 for "c".
         assert_eq!(proxy3.publish(), None);
@@ -359,7 +365,7 @@ mod tests {
                                          // configured value means that 10 will be added to bucket "b".
         assert_eq!(proxy1.publish(), None);
         let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
-        proxy2.report_metric("a", 5); // Ignored.
+        proxy2.report_metric("a", 5); // Overwritten.
         proxy2.report_metric("a", 3); // Expect +3 for "a".
         proxy2.report_metric("b", 12); // Expect +12 for "b".
         assert_eq!(proxy2.publish(), None);

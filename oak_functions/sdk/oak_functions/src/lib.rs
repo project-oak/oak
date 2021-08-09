@@ -84,7 +84,7 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
 /// will be logged in batches after sufficient noise has been added. If events for the same bucket
 /// are reported multiple times in a single request it will be counted only once.
 ///
-/// See [`report_event`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_event).
+/// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
     report_metric(label, 1)
 }
@@ -93,7 +93,7 @@ pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
 ///
 /// If differentially-private metrics are enabled in the configuration the metrics bucket totals
 /// will be logged in batches after sufficient noise has been added. If multiple values are reported
-/// for the same bucket during a single requtes only the last value will be used. If the reported
+/// for the same bucket during a single request only the last value will be used. If the reported
 /// value falls outside of the configured range for the bucket, it will be clamped to the minimum or
 /// maximum value.
 ///
@@ -102,7 +102,7 @@ pub fn report_event<T: AsRef<str>>(label: T) -> Result<(), OakStatus> {
 /// the configured minimum. This could lead to unexpected bias in the results, so minimum values
 /// above 0 should be used with care.
 ///
-/// See [`report_event`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_event).
+/// See [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
 pub fn report_metric<T: AsRef<str>>(label: T, value: i64) -> Result<(), OakStatus> {
     let buf = label.as_ref().as_bytes();
     let status = unsafe { oak_functions_abi::report_metric(buf.as_ptr(), buf.len(), value) };

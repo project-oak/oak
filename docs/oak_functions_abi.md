@@ -131,8 +131,8 @@ included in the results.
 The low-level operation involves reading the label from the WebAssembly module's
 memory. The system attempts to interpret the bytes as a UTF-8 encoded string. If
 the decoding is successful, the string is used as a label to identify the
-bucket. If the bytes are not a valid UTF-8 string or does not match the label of
-a configured bucket the metric value will be ignored.
+bucket. If the bytes are not a valid UTF-8 string or the string does not match
+the label of a configured bucket the metric value will be ignored.
 
 If metrics are reported for the same bucket multiple times in a single request
 only the last reported value will be used for that request.
