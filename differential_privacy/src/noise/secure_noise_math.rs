@@ -76,3 +76,452 @@ pub fn round_to_multiple(x: i64, granularity: i64) -> i64 {
     // round down
     result - granularity
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Tests based on upstream code at https://github.com/google/differential-privacy/blob/main/go/noise/secure_noise_math_test.go
+
+    #[test]
+    fn test_ceil_power_of_two_input_is_not_in_domain() {
+        for &x in &[
+            0.0,
+            -1.0,
+            f64::NEG_INFINITY,
+            f64::INFINITY,
+            f64::NAN,
+            f64::MAX,
+            2.001_f64.powf(1023.0),
+        ] {
+            let got = ceil_power_of_two(x);
+            assert!(got.is_nan(), "ceil_power_of_two({}) = {}, want NAN", x, got);
+        }
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_ceil_power_of_two_input_is_power_of_two() {
+        // Verify that ceil_power_of_two returns its input if the input is a power
+        // of 2. The test is done exhaustively for all possible exponents of a
+        // float64 value.
+        for exponent in -1022..=1023 {
+            let x = 2.0_f64.powf(exponent as f64);
+            let got = ceil_power_of_two(x);
+            let want = x;
+            assert_eq!(
+                got, want,
+                "ceil_power_of_two({}) = {}, want {}",
+                x, got, want
+            );
+        }
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_ceil_power_of_two_input_is_not_power_of_two() {
+        // Verify that ceil_power_of_two returns the next power of two for inputs
+        // that are different from a power of 2. The test is done exhaustively
+        // for all possible exponents of a float64 value.
+        for exponent in -1022..=-1 {
+            let x = 2.001_f64.powf(exponent as f64);
+            let got = ceil_power_of_two(x);
+            let want = 2.0_f64.powf(exponent as f64);
+            assert_eq!(
+                got, want,
+                "ceil_power_of_two({}) = {}, want {}",
+                x, got, want
+            );
+        }
+        let x = 0.99_f64;
+        let got = ceil_power_of_two(x);
+        let want = 1.0_f64;
+        assert_eq!(
+            got, want,
+            "ceil_power_of_two({}) = {}, want {}",
+            x, got, want
+        );
+        for exponent in 1..=1022 {
+            let x = 2.001_f64.powf(exponent as f64);
+            let got = ceil_power_of_two(x);
+            let want = 2.0_f64.powf((exponent + 1) as f64);
+            assert_eq!(
+                got, want,
+                "ceil_power_of_two({}) = {}, want {}",
+                x, got, want
+            );
+        }
+    }
+
+    #[test]
+    fn test_round_to_multiple_granularity_is_one() {
+        // Verify that round_to_multiple returns x if granularity is 1.
+        for &x in &[0, 1, -1, 2, -2, 648391, -648391] {
+            let got = round_to_multiple(x, 1);
+            assert_eq!(got, x, "round_to_multiple({}, 1) = {}, want {}", x, got, x,);
+        }
+    }
+
+    #[test]
+    fn test_round_to_multiple_x_is_even() {
+        struct TestCase {
+            x: i64,
+            granularity: i64,
+            want: i64,
+        }
+        for tc in vec![
+            TestCase {
+                x: 0,
+                granularity: 4,
+                want: 0,
+            },
+            TestCase {
+                x: 1,
+                granularity: 4,
+                want: 0,
+            },
+            TestCase {
+                x: 2,
+                granularity: 4,
+                want: 4,
+            },
+            TestCase {
+                x: 3,
+                granularity: 4,
+                want: 4,
+            },
+            TestCase {
+                x: 4,
+                granularity: 4,
+                want: 4,
+            },
+            TestCase {
+                x: -1,
+                granularity: 4,
+                want: 0,
+            },
+            TestCase {
+                x: -2,
+                granularity: 4,
+                want: 0,
+            },
+            TestCase {
+                x: -3,
+                granularity: 4,
+                want: -4,
+            },
+            TestCase {
+                x: -4,
+                granularity: 4,
+                want: -4,
+            },
+            TestCase {
+                x: 648389,
+                granularity: 4,
+                want: 648388,
+            },
+            TestCase {
+                x: 648390,
+                granularity: 4,
+                want: 648392,
+            },
+            TestCase {
+                x: 648391,
+                granularity: 4,
+                want: 648392,
+            },
+            TestCase {
+                x: 648392,
+                granularity: 4,
+                want: 648392,
+            },
+            TestCase {
+                x: -648389,
+                granularity: 4,
+                want: -648388,
+            },
+            TestCase {
+                x: -648390,
+                granularity: 4,
+                want: -648388,
+            },
+            TestCase {
+                x: -648391,
+                granularity: 4,
+                want: -648392,
+            },
+            TestCase {
+                x: -648392,
+                granularity: 4,
+                want: -648392,
+            },
+        ] {
+            let got = round_to_multiple(tc.x, tc.granularity);
+            assert_eq!(
+                got, tc.want,
+                "round_to_multiple({}, {}) = {}, want {}",
+                tc.x, tc.granularity, got, tc.want,
+            );
+        }
+    }
+
+    #[test]
+    fn test_round_to_multiple_x_is_odd() {
+        struct TestCase {
+            x: i64,
+            granularity: i64,
+            want: i64,
+        }
+        for tc in vec![
+            TestCase {
+                x: 0,
+                granularity: 3,
+                want: 0,
+            },
+            TestCase {
+                x: 1,
+                granularity: 3,
+                want: 0,
+            },
+            TestCase {
+                x: 2,
+                granularity: 3,
+                want: 3,
+            },
+            TestCase {
+                x: 3,
+                granularity: 3,
+                want: 3,
+            },
+            TestCase {
+                x: -1,
+                granularity: 3,
+                want: 0,
+            },
+            TestCase {
+                x: -2,
+                granularity: 3,
+                want: -3,
+            },
+            TestCase {
+                x: -3,
+                granularity: 3,
+                want: -3,
+            },
+            TestCase {
+                x: 648391,
+                granularity: 3,
+                want: 648390,
+            },
+            TestCase {
+                x: 648392,
+                granularity: 3,
+                want: 648393,
+            },
+            TestCase {
+                x: 648393,
+                granularity: 3,
+                want: 648393,
+            },
+            TestCase {
+                x: -648391,
+                granularity: 3,
+                want: -648390,
+            },
+            TestCase {
+                x: -648392,
+                granularity: 3,
+                want: -648393,
+            },
+            TestCase {
+                x: -648393,
+                granularity: 3,
+                want: -648393,
+            },
+        ] {
+            let got = round_to_multiple(tc.x, tc.granularity);
+            assert_eq!(
+                got, tc.want,
+                "round_to_multiple({}, {}) = {}, want {}",
+                tc.x, tc.granularity, got, tc.want,
+            );
+        }
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_round_to_multiple_of_power_of_two_x_is_a_multiple() {
+        // Verify that round_to_multiple_of_power_of_two returns x if x is a
+        // multiple of granularity.
+        struct TestCase {
+            x: f64,
+            granularity: f64,
+            want: f64,
+        }
+        for tc in vec![
+            TestCase {
+                x: 0.0,
+                granularity: 0.5,
+                want: 0.0,
+            },
+            TestCase {
+                x: 0.125,
+                granularity: 0.125,
+                want: 0.125,
+            },
+            TestCase {
+                x: -0.125,
+                granularity: 0.125,
+                want: -0.125,
+            },
+            TestCase {
+                x: 16512.0,
+                granularity: 1.0,
+                want: 16512.0,
+            },
+            TestCase {
+                x: -16512.0,
+                granularity: 1.0,
+                want: -16512.0,
+            },
+            TestCase {
+                x: 3936.0,
+                granularity: 32.0,
+                want: 3936.0,
+            },
+            TestCase {
+                x: -3936.0,
+                granularity: 32.0,
+                want: -3936.0,
+            },
+            TestCase {
+                x: 7.9990234375,
+                granularity: 0.0009765625,
+                want: 7.9990234375,
+            },
+            TestCase {
+                x: -7.9990234375,
+                granularity: 0.0009765625,
+                want: -7.9990234375,
+            },
+            TestCase {
+                x: i64::MAX as f64,
+                granularity: 0.125,
+                want: i64::MAX as f64,
+            },
+            TestCase {
+                x: i64::MIN as f64,
+                granularity: 0.125,
+                want: i64::MIN as f64,
+            },
+        ] {
+            let got = round_to_multiple_of_power_of_two(tc.x, tc.granularity);
+            assert_eq!(
+                got, tc.want,
+                "round_to_multiple_of_power_of_two({}, {}) = {}, want {}",
+                tc.x, tc.granularity, got, tc.want,
+            );
+        }
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_round_to_multiple_of_power_of_two_x_is_not_a_multiple() {
+        // Verify that round_to_multiple_of_power_of_two returns the next closest
+        // multiple of granularity if x is not already a multiple.
+        struct TestCase {
+            x: f64,
+            granularity: f64,
+            want: f64,
+        }
+        for tc in vec![
+            TestCase {
+                x: 0.124,
+                granularity: 0.125,
+                want: 0.125,
+            },
+            TestCase {
+                x: -0.124,
+                granularity: 0.125,
+                want: -0.125,
+            },
+            TestCase {
+                x: 0.126,
+                granularity: 0.125,
+                want: 0.125,
+            },
+            TestCase {
+                x: -0.126,
+                granularity: 0.125,
+                want: -0.125,
+            },
+            TestCase {
+                x: 16512.499,
+                granularity: 1.0,
+                want: 16512.0,
+            },
+            TestCase {
+                x: -16512.499,
+                granularity: 1.0,
+                want: -16512.0,
+            },
+            TestCase {
+                x: 16511.501,
+                granularity: 1.0,
+                want: 16512.0,
+            },
+            TestCase {
+                x: -16511.501,
+                granularity: 1.0,
+                want: -16512.0,
+            },
+            TestCase {
+                x: 3920.3257,
+                granularity: 32.0,
+                want: 3936.0,
+            },
+            TestCase {
+                x: -3920.3257,
+                granularity: 32.0,
+                want: -3936.0,
+            },
+            TestCase {
+                x: 3951.7654,
+                granularity: 32.0,
+                want: 3936.0,
+            },
+            TestCase {
+                x: -3951.7654,
+                granularity: 32.0,
+                want: -3936.0,
+            },
+            TestCase {
+                x: 7.9990232355,
+                granularity: 0.0009765625,
+                want: 7.9990234375,
+            },
+            TestCase {
+                x: -7.9990232355,
+                granularity: 0.0009765625,
+                want: -7.9990234375,
+            },
+            TestCase {
+                x: 7.9990514315,
+                granularity: 0.0009765625,
+                want: 7.9990234375,
+            },
+            TestCase {
+                x: -7.9990514315,
+                granularity: 0.0009765625,
+                want: -7.9990234375,
+            },
+        ] {
+            let got = round_to_multiple_of_power_of_two(tc.x, tc.granularity);
+            assert_eq!(
+                got, tc.want,
+                "round_to_multiple_of_power_of_two({}, {}) = {}, want {}",
+                tc.x, tc.granularity, got, tc.want,
+            );
+        }
+    }
+}

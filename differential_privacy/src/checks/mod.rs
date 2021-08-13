@@ -20,6 +20,9 @@
 
 use crate::Error;
 
+#[cfg(test)]
+mod tests;
+
 /// Returns an error if ε is +∞ or less than 2⁻⁵⁰.
 pub fn check_epsilon_very_strict(label: &str, epsilon: f64) -> crate::Result<()> {
     if epsilon < (-50.0_f64).exp2() || epsilon.is_infinite() || epsilon.is_nan() {

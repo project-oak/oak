@@ -101,7 +101,7 @@ impl Laplace {
     #[cfg(test)]
     pub fn new_for_test(rng: rand::rngs::StdRng) -> Self {
         Self {
-            rand: Rand::new_with_rng(rng),
+            rand: Rand::new_for_test(rng),
         }
     }
 
@@ -210,4 +210,368 @@ fn check_args_laplace(
     checks::check_l_inf_sensitivity(label, l_inf_sensitivity)?;
     checks::check_epsilon_very_strict(label, epsilon)?;
     checks::check_no_delta(label, delta)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::{rngs::StdRng, Rng, SeedableRng};
+
+    // Tests based on upstream code at https://github.com/google/differential-privacy/blob/main/go/noise/gaussian_noise_test.go
+
+    #[test]
+    fn test_laplace_statistics() {
+        let number_of_samples: usize = 125000;
+        let ln3 = 3.0_f64.ln();
+        // Use a fixed seed for the random number generator to avoid potential flakiness.
+        let mut lap = Laplace::new_for_test(StdRng::seed_from_u64(0));
+
+        #[derive(Debug)]
+        struct TestCase {
+            l_0_ensitivity: i64,
+            l_inf_sensitivity: f64,
+            epsilon: f64,
+            mean: f64,
+            variance: f64,
+        }
+
+        for tc in vec![
+            TestCase {
+                l_0_ensitivity: 1,
+                l_inf_sensitivity: 1.0,
+                epsilon: 1.0,
+                mean: 0.0,
+                variance: 2.0,
+            },
+            TestCase {
+                l_0_ensitivity: 1,
+                l_inf_sensitivity: 1.0,
+                epsilon: ln3,
+                mean: 0.0,
+                variance: 2.0 / (ln3 * ln3),
+            },
+            TestCase {
+                l_0_ensitivity: 1,
+                l_inf_sensitivity: 1.0,
+                epsilon: ln3,
+                mean: 45941223.02107,
+                variance: 2.0 / (ln3 * ln3),
+            },
+            TestCase {
+                l_0_ensitivity: 1,
+                l_inf_sensitivity: 1.0,
+                epsilon: 2.0 * ln3,
+                mean: 0.0,
+                variance: 2.0 / (2.0 * ln3 * 2.0 * ln3),
+            },
+            TestCase {
+                l_0_ensitivity: 1,
+                l_inf_sensitivity: 2.0,
+                epsilon: 2.0 * ln3,
+                mean: 0.0,
+                variance: 2.0 / (ln3 * ln3),
+            },
+            TestCase {
+                l_0_ensitivity: 2,
+                l_inf_sensitivity: 1.0,
+                epsilon: 2.0 * ln3,
+                mean: 0.0,
+                variance: 2.0 / (ln3 * ln3),
+            },
+        ] {
+            let mut noised_samples = vec![0.0_f64; number_of_samples];
+            for sample in noised_samples.iter_mut().take(number_of_samples) {
+                *sample = lap
+                    .add_noise_f64(
+                        tc.mean,
+                        tc.l_0_ensitivity,
+                        tc.l_inf_sensitivity,
+                        tc.epsilon,
+                        0.0,
+                    )
+                    .unwrap();
+            }
+            let sample_mean = statistical::mean(&noised_samples);
+            let sample_variance = statistical::variance(&noised_samples, None);
+
+            // Assuming that the Laplace samples have a mean of 0 and the specified variance of
+            // tc.variance, sample_mean_float64 and sample_mean_i64 are approximately
+            // Gaussian distributed with a mean of 0 and standard deviation of
+            // sqrt(tc.variance⁻ / number_of_samples).
+            //
+            // The mean_error_tolerance is set to the 99.9995% quantile of the anticipated
+            // distribution. Thus, the test falsely rejects with a probability of 10⁻⁵.
+            let mean_error_tolerance =
+                4.41717_f64 * (tc.variance / (number_of_samples as f64)).sqrt();
+            // Assuming that the Laplace samples have the specified variance of tc.variance,
+            // sample_variance_f64 and sample_variance_int64 are approximately Gaussian
+            // distributed with a mean of tc.variance and a standard deviation of
+            // sqrt(5) * tc.variance / sqrt(number_of_samples).
+            //
+            // The variance_error_tolerance is set to the 99.9995% quantile of the anticipated
+            // distribution. Thus, the test falsely rejects with a probability of 10⁻⁵.
+            let variance_error_tolerance =
+                4.41717_f64 * 5.0_f64.sqrt() * tc.variance / (number_of_samples as f64).sqrt();
+
+            assert!(
+                (sample_mean - tc.mean).abs() < mean_error_tolerance,
+                "f4 got mean = {}, want {} (parameters {:?})",
+                sample_mean,
+                tc.mean,
+                tc
+            );
+            assert!(
+                (sample_variance - tc.variance).abs() < variance_error_tolerance,
+                "f64 got variance = {}, want {} (parameters {:?})",
+                sample_variance,
+                tc.variance,
+                tc
+            );
+        }
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_add_laplace_f64_rounds_to_granularity() {
+        let number_of_trials = 1000;
+        // Use a fixed seed for the random number generators to avoid potential flakiness.
+        let mut lap = Laplace::new_for_test(StdRng::seed_from_u64(0));
+        let mut rng = StdRng::seed_from_u64(0);
+
+        struct TestCase {
+            epsilon: f64,
+            l_1_sensitivity: f64,
+            want_granularity: f64,
+        }
+        for tc in vec![
+            TestCase {
+                epsilon: 9.6e-7,
+                l_1_sensitivity: 1.0,
+                want_granularity: 1.0 / 1048576.0,
+            },
+            TestCase {
+                epsilon: 4.7e-10,
+                l_1_sensitivity: 1.0,
+                want_granularity: 1.0 / 1024.0,
+            },
+            TestCase {
+                epsilon: 1.5e-11,
+                l_1_sensitivity: 1.0,
+                want_granularity: 1.0 / 32.0,
+            },
+            TestCase {
+                epsilon: 3.7e-12,
+                l_1_sensitivity: 1.0,
+                want_granularity: 1.0 / 4.0,
+            },
+            TestCase {
+                epsilon: 1.9e-12,
+                l_1_sensitivity: 1.0,
+                want_granularity: 1.0 / 2.0,
+            },
+            TestCase {
+                epsilon: 9.1e-13,
+                l_1_sensitivity: 1.0,
+                want_granularity: 1.0,
+            },
+            TestCase {
+                epsilon: 4.6e-13,
+                l_1_sensitivity: 1.0,
+                want_granularity: 2.0,
+            },
+            TestCase {
+                epsilon: 2.8e-13,
+                l_1_sensitivity: 1.0,
+                want_granularity: 4.0,
+            },
+            TestCase {
+                epsilon: 2.9e-14,
+                l_1_sensitivity: 1.0,
+                want_granularity: 32.0,
+            },
+            TestCase {
+                epsilon: 8.9e-16,
+                l_1_sensitivity: 1.0,
+                want_granularity: 1024.0,
+            },
+            TestCase {
+                epsilon: 8.7e-19,
+                l_1_sensitivity: 1.0,
+                want_granularity: 1048576.0,
+            },
+        ] {
+            for _ in 0..number_of_trials {
+                // The input x of add_laplace_f64 can be arbitrary.
+                let random: f64 = rng.sample(rand::distributions::Standard);
+                let x = random * tc.want_granularity * 10.0 - tc.want_granularity * 5.0;
+                let noised_x = lap.add_laplace_f64(x, tc.epsilon, tc.l_1_sensitivity);
+                assert_eq!(
+                    (noised_x / tc.want_granularity).round(),
+                    noised_x / tc.want_granularity,
+                    "Got noised x: {}, not a multiple of: {}",
+                    noised_x,
+                    tc.want_granularity
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_add_laplace_i64_rounds_to_granularity() {
+        let number_of_trials = 1000;
+        // Use a fixed seed for the random number generators to avoid potential flakiness.
+        let mut lap = Laplace::new_for_test(StdRng::seed_from_u64(0));
+        let mut rng = crate::rand::Rand::new_for_test(StdRng::seed_from_u64(0));
+
+        struct TestCase {
+            epsilon: f64,
+            l_1_sensitivity: i64,
+            want_granularity: i64,
+        }
+        for tc in vec![
+            TestCase {
+                epsilon: 4.6e-13,
+                l_1_sensitivity: 1,
+                want_granularity: 2,
+            },
+            TestCase {
+                epsilon: 2.8e-13,
+                l_1_sensitivity: 1,
+                want_granularity: 4,
+            },
+            TestCase {
+                epsilon: 2.9e-14,
+                l_1_sensitivity: 1,
+                want_granularity: 32,
+            },
+            TestCase {
+                epsilon: 8.9e-16,
+                l_1_sensitivity: 1,
+                want_granularity: 1024,
+            },
+            // Last upstream test case skipped as it causes an overflow on multiplication.
+        ] {
+            for _ in 0..number_of_trials {
+                // The input x of add_laplace_i64 can be arbitrary but should cover all congruence
+                // classes of the anticipated granularity.
+                let x = rng.i63n(tc.want_granularity * 10) - tc.want_granularity * 5;
+                let noised_x = lap.add_laplace_i64(x, tc.epsilon, tc.l_1_sensitivity);
+                assert_eq!(
+                    noised_x % tc.want_granularity,
+                    0,
+                    "Got noised x: {}, not devisible by: {}",
+                    noised_x,
+                    tc.want_granularity
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_geometric_statistics() {
+        let number_of_samples = 125000;
+        let mut lap = Laplace::new_for_test(StdRng::seed_from_u64(0));
+
+        #[derive(Debug)]
+        struct TestCase {
+            lambda: f64,
+            mean: f64,
+            std_dev: f64,
+        }
+        for tc in vec![
+            TestCase {
+                lambda: 0.1,
+                mean: 10.50833,
+                std_dev: 9.99583,
+            },
+            TestCase {
+                lambda: 0.0001,
+                mean: 10000.50001,
+                std_dev: 9999.99999,
+            },
+            TestCase {
+                lambda: 0.0000001,
+                mean: 10000000.5,
+                std_dev: 9999999.99999,
+            },
+        ] {
+            let mut geometric_samples = vec![0.0_f64; number_of_samples];
+            for sample in geometric_samples.iter_mut().take(number_of_samples) {
+                *sample = lap.geometric(tc.lambda) as f64;
+            }
+            let sample_mean = statistical::mean(&geometric_samples);
+            // Assuming that the geometric samples are distributed according to the specified
+            // lambda, the sample_mean is approximately Gaussian distributed with a mean
+            // of tc.mean and standard deviation of tc.std_dev /
+            // sqrt(number_of_samples).
+            //
+            // The mean_error_tolerance is set to the 99.9995% quantile of the anticipated
+            // distribution of sample_ean. Thus, the test falsely rejects with a
+            // probability of 10⁻⁵.
+            let mean_error_tolerance = 4.41717_f64 * tc.std_dev / (number_of_samples as f64).sqrt();
+            assert!(
+                (sample_mean - tc.mean).abs() < mean_error_tolerance,
+                "got mean = {}, want {} (parameters {:?})",
+                sample_mean,
+                tc.mean,
+                tc
+            );
+        }
+    }
+
+    #[test]
+    fn test_laplace_i64_noise() {
+        // Note: this last test is not from the upstream code. It is just an additional validation
+        // of the structure of the noise to feel more confident that the port of `add_laplace_i64`
+        // was accurate.
+        //
+        // Run many times and make sure the shape of the histogram looks roughly right.
+        let iterations = 1_000_000;
+        // Check the 0 bucket and 5 buckets either side.
+        let offset = 5;
+        // Bucket is allowed up to 3% above or below expected size.
+        let margin = 0.03_f64;
+        let epsilon = 1.0_f64;
+        let beta = 1.0_f64 / epsilon;
+        let l_1_sensitivity = 1i64;
+        // Use a fixed seed for the random number generator to avoid potential flakiness.
+        let mut laplace = Laplace::new_for_test(StdRng::seed_from_u64(0));
+        // Calculate expected bucket counts using the cummulative distribution function.
+        let expected: Vec<f64> = (-offset..=offset)
+            .map(|index| {
+                iterations as f64
+                    * (laplace_cdf(beta, index as f64 + 0.5)
+                        - laplace_cdf(beta, index as f64 - 0.5))
+            })
+            .collect();
+
+        // Build a histogram of the actual noise.
+        let mut histogram: Vec<usize> = (-offset..=offset).map(|_| 0).collect();
+        for _ in 0..iterations {
+            let noise = laplace.add_laplace_i64(0, epsilon, l_1_sensitivity);
+            if (-offset..=offset).contains(&noise) {
+                let index = (noise + offset) as usize;
+                histogram[index] += 1;
+            }
+        }
+
+        println!("Expected: {:?}", expected);
+        println!("Actual: {:?}", histogram);
+        let mut max_diff = 0.0;
+        for (index, actual) in histogram.iter().enumerate() {
+            let test = expected[index];
+            let diff = (test - *actual as f64).abs() / test;
+            assert!(diff >= 0.0 && diff <= margin);
+            if diff > max_diff {
+                max_diff = diff;
+            }
+        }
+        println!("Maximum required margin: {}", max_diff);
+    }
+
+    fn laplace_cdf(beta: f64, x: f64) -> f64 {
+        // We assume mu = 0.
+        // See https://en.wikipedia.org/wiki/Laplace_distribution
+        0.5 + 0.5 * x.signum() * (1.0 - (-x.abs() / beta).exp())
+    }
 }

@@ -61,7 +61,7 @@ impl Rand {
         if self.boolean() {
             return 1.0;
         }
-        return -1.0;
+        -1.0
     }
 
     /// Returns true or false with equal probability.
@@ -71,9 +71,25 @@ impl Rand {
             self.rand_bit_buf = self.rng.next_u32();
             self.rand_bit_pos = 0
         }
-        let res = self.rand_bit_buf & (1 << self.rand_bit_pos) > 0;
+        let res = self.rand_bit_buf & (1u32 << self.rand_bit_pos) > 0;
         self.rand_bit_pos += 1;
         res
+    }
+
+    // Returns an integer from the set {0,...,n-1} uniformly at random.
+    // The value of n must be positive.
+    pub fn i63n(&mut self, n: i64) -> i64 {
+        assert!(n > 0);
+        let largest_multiple_of_n = (i64::MAX / n) * n;
+        let mut positive_random_integer: i64;
+        loop {
+            // Draw random 64 bit sequence and set sign bit to 0.
+            positive_random_integer = self.u64() as i64 & 0x7fffffffffffffff;
+            if positive_random_integer < largest_multiple_of_n {
+                break;
+            }
+        }
+        positive_random_integer % n
     }
 
     /// Returns an f64 from the interval (0,1] such that each float  in the interval is returned
@@ -82,8 +98,8 @@ impl Rand {
     ///
     /// See http://g/go-nuts/GndbDnHKHuw/VNSrkl9vBQAJ for details.
     pub fn uniform(&mut self) -> f64 {
-        let i = self.u64() % (1 << 53);
-        let r = (1.0 + (i as f64) / ((1 << 53) as f64)) / 2.0_f64.powf(self.geometric());
+        let i = self.u64() % (1u64 << 53);
+        let r = (1.0 + (i as f64) / ((1u64 << 53) as f64)) / 2.0_f64.powf(self.geometric());
         // We want to avoid returning 0, since we're taking the log of the output.
         if r == 0.0 {
             return 1.0;
@@ -103,5 +119,41 @@ impl Rand {
             b += r.leading_zeros();
         }
         b as f64
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::rngs::StdRng;
+
+    // Note: test diverges from upstream code at
+    // https://github.com/google/differential-privacy/blob/main/go/noise/secure_noise_math_test.go
+    // because of the different impelemtation in the `rand` module.
+
+    #[test]
+    fn test_boolean_buf_is_shifting() {
+        // Use a fixed seed for the random number generator to so ensure a predictable stream of
+        // random bits.
+        let mut rng = Rand::new_for_test(StdRng::seed_from_u64(0));
+        // Run through 2 u32 random values to check random bits and ensure that the 2 random u32
+        // values are different.
+        for (pos, want) in [
+            true, true, true, true, true, true, true, false, true, true, true, true, false, true,
+            true, false, false, false, true, true, false, true, false, false, true, false, true,
+            true, false, false, true, true, false, true, false, false, true, true, false, true,
+            true, true, true, true, true, true, false, false, false, true, false, true, false,
+            true, false, false, true, true, false, true, true, true, false, true,
+        ]
+        .iter()
+        .enumerate()
+        {
+            let got = rng.boolean();
+            assert_eq!(
+                got, *want,
+                "Boolean: got {}, want {} in {}-th iteration",
+                got, want, pos
+            );
+        }
     }
 }
