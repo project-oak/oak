@@ -17,6 +17,8 @@
 //! Oak Functions weather lookup example.
 
 #![feature(try_blocks)]
+// Required for enabling benchmark tests.
+#![feature(test)]
 
 use oak_functions::log;
 use serde::Deserialize;

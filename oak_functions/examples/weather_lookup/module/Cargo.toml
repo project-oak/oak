@@ -5,6 +5,9 @@ authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[features]
+run-internal-bench = []
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -15,10 +18,12 @@ serde_json = "*"
 
 [dev-dependencies]
 http = "*"
+lookup_data_generator = { path = "../../../lookup_data_generator" }
 oak_functions_abi = { path = "../../../abi" }
 oak_functions_loader = { path = "../../../loader" }
 maplit = "*"
 prost = "*"
+rand = "*"
 test_utils = { path = "../../../sdk/test_utils" }
 tokio = { version = "*", features = [
   "fs",

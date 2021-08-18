@@ -983,6 +983,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "lookup_data_generator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "oak_functions_abi",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand",
+ "serde",
+ "serde_json",
+ "structopt",
+]
+
+[[package]]
 name = "maplit"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2706,11 +2720,13 @@ name = "weather_lookup"
 version = "0.1.0"
 dependencies = [
  "http",
+ "lookup_data_generator",
  "maplit",
  "oak_functions",
  "oak_functions_abi",
  "oak_functions_loader",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand",
  "serde",
  "serde_json",
  "test_utils",
