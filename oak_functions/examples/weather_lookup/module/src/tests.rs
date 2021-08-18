@@ -170,7 +170,6 @@ fn test_location_from_slice() {
 fn bench_wasm_handler(bencher: &mut Bencher) {
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.push("Cargo.toml");
-
     let wasm_module_bytes =
         test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
             .expect("Couldn't read Wasm module");
@@ -201,8 +200,6 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         });
     });
 
-    // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
-    // in that case. So, here we first check that `summary` is not empty.
     if let Some(summary) = summary {
         println!("Summary statistics: {:?}", summary);
         // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
