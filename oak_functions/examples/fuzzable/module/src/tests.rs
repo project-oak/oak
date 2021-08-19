@@ -40,7 +40,7 @@ async fn test_server() {
     manifest_path.push("Cargo.toml");
 
     let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
             .expect("Couldn't read Wasm module");
 
     let logger = Logger::for_test();

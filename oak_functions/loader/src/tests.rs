@@ -115,7 +115,7 @@ where
     manifest_path.pop();
     manifest_path.push(MANIFEST_PATH);
     let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
             .expect("Couldn't read Wasm module");
 
     let logger = Logger::for_test();
@@ -178,7 +178,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     manifest_path.pop();
     manifest_path.push(MANIFEST_PATH);
     let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), true)
             .expect("Couldn't read Wasm module");
 
     let summary = bencher.bench(|bencher| {

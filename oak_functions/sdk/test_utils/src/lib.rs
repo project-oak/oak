@@ -46,14 +46,14 @@ fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
 
 // TODO(#1965): Move this and the similar function in `oak/sdk` to a common crate.
 /// Uses cargo to compile a Rust manifest to Wasm bytes.
-pub fn compile_rust_wasm(manifest_path: &str) -> anyhow::Result<Vec<u8>> {
+pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<Vec<u8>> {
     let metadata = cargo_metadata::MetadataCommand::new()
         .manifest_path(manifest_path)
         .exec()
         .unwrap();
     // Keep this in sync with `/runner/src/main.rs`.
     // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
-    let args = vec![
+    let mut args = vec![
         // `--out-dir` is unstable and requires `-Zunstable-options`.
         "-Zunstable-options".to_string(),
         "build".to_string(),
@@ -62,6 +62,10 @@ pub fn compile_rust_wasm(manifest_path: &str) -> anyhow::Result<Vec<u8>> {
         format!("--out-dir={}/bin", metadata.workspace_root),
         format!("--manifest-path={}", manifest_path),
     ];
+
+    if release {
+        args.push("--release".to_string());
+    }
 
     Command::new("cargo")
         .args(args)

@@ -42,7 +42,7 @@ async fn test_server() {
     manifest_path.push("Cargo.toml");
 
     let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
             .expect("Couldn't read Wasm module");
 
     let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
@@ -165,18 +165,18 @@ fn test_location_from_slice() {
 
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
-    // This benchmark test takes a very long time when running with a realistic amount of lookup
-    // data. By default it uses a much smaller number. To actually run the bench with realistic
-    // data size, use `cargo bench --features large-bench`.
+    // This benchmark test takes quite a long time when running with a realistic amount of lookup
+    // data. By default it uses a smaller number of entries. To run the bench with realistic data
+    // size, use `cargo bench --features large-bench`.
     #[cfg(not(feature = "large-bench"))]
-    let (entry_count, elapsed_limit_milis) = (1000, 100);
+    let (entry_count, elapsed_limit_millis) = (10_000, 25);
     #[cfg(feature = "large-bench")]
-    let (entry_count, elapsed_limit_milis) = (200_000, 20_000);
+    let (entry_count, elapsed_limit_millis) = (200_000, 500);
 
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.push("Cargo.toml");
     let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), true)
             .expect("Couldn't read Wasm module");
     let mut rng = rand::thread_rng();
     let buf = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
@@ -215,7 +215,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         // We expect the `mean` time for loading the test Wasm module and running its main function
         // to be less than a fixed threshold.
         assert!(
-            elapsed < Duration::from_millis(elapsed_limit_milis),
+            elapsed < Duration::from_millis(elapsed_limit_millis),
             "elapsed time: {:.0?}",
             elapsed
         );
