@@ -228,6 +228,10 @@
 <span id="225">225</span>
 <span id="226">226</span>
 <span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -277,14 +281,14 @@
 
 <span class="comment">// TODO(#1965): Move this and the similar function in `oak/sdk` to a common crate.</span>
 <span class="doccomment">/// Uses cargo to compile a Rust manifest to Wasm bytes.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_rust_wasm</span>(<span class="ident">manifest_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_rust_wasm</span>(<span class="ident">manifest_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">release</span>: <span class="ident">bool</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">cargo_metadata</span>::<span class="ident">MetadataCommand</span>::<span class="ident">new</span>()
         .<span class="ident">manifest_path</span>(<span class="ident">manifest_path</span>)
         .<span class="ident">exec</span>()
         .<span class="ident">unwrap</span>();
     <span class="comment">// Keep this in sync with `/runner/src/main.rs`.</span>
     <span class="comment">// Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.</span>
-    <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">args</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
         <span class="comment">// `--out-dir` is unstable and requires `-Zunstable-options`.</span>
         <span class="string">&quot;-Zunstable-options&quot;</span>.<span class="ident">to_string</span>(),
         <span class="string">&quot;build&quot;</span>.<span class="ident">to_string</span>(),
@@ -293,6 +297,10 @@
         <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--out-dir={}/bin&quot;</span>, <span class="ident">metadata</span>.<span class="ident">workspace_root</span>),
         <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;--manifest-path={}&quot;</span>, <span class="ident">manifest_path</span>),
     ];
+
+    <span class="kw">if</span> <span class="ident">release</span> {
+        <span class="ident">args</span>.<span class="ident">push</span>(<span class="string">&quot;--release&quot;</span>.<span class="ident">to_string</span>());
+    }
 
     <span class="ident">Command</span>::<span class="ident">new</span>(<span class="string">&quot;cargo&quot;</span>)
         .<span class="ident">args</span>(<span class="ident">args</span>)
