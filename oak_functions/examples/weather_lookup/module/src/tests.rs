@@ -13,20 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate test;
+
 use crate::Location;
+use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
-use oak_functions_abi::proto::StatusCode;
+use oak_functions_abi::proto::{Request, StatusCode};
 use oak_functions_loader::{
     grpc::create_and_start_grpc_server,
     logger::Logger,
-    lookup::{LookupData, LookupDataAuth},
-    server::Policy,
+    lookup::{parse_lookup_entries, LookupData, LookupDataAuth},
+    server::{Policy, WasmHandler},
 };
 use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
     time::Duration,
 };
+use test::Bencher;
 use test_utils::make_request;
 
 #[tokio::test]
@@ -38,7 +42,7 @@ async fn test_server() {
     manifest_path.push("Cargo.toml");
 
     let wasm_module_bytes =
-        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), false)
             .expect("Couldn't read Wasm module");
 
     let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
@@ -157,4 +161,63 @@ fn test_location_from_slice() {
     let bytes = vec![0x00, 0x00, 0x37, 0x28, 0xFF, 0xFF, 0xB2, 0x58];
     assert_eq!(bytes, value.to_bytes(),);
     assert_eq!(value, Location::from_bytes(&bytes));
+}
+
+#[bench]
+fn bench_wasm_handler(bencher: &mut Bencher) {
+    // This benchmark test takes quite a long time when running with a realistic amount of lookup
+    // data. By default it uses a smaller number of entries. To run the bench with realistic data
+    // size, use `cargo bench --features large-bench`.
+    #[cfg(not(feature = "large-bench"))]
+    let (entry_count, elapsed_limit_millis) = (10_000, 25);
+    #[cfg(feature = "large-bench")]
+    let (entry_count, elapsed_limit_millis) = (200_000, 500);
+
+    let mut manifest_path = std::env::current_dir().unwrap();
+    manifest_path.push("Cargo.toml");
+    let wasm_module_bytes =
+        test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"), true)
+            .expect("Couldn't read Wasm module");
+    let mut rng = rand::thread_rng();
+    let buf = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
+    let entries = parse_lookup_entries(buf).unwrap();
+
+    let lookup_data = Arc::new(LookupData::for_test(entries));
+    let logger = Logger::for_test();
+    let wasm_handler = WasmHandler::create(
+        &wasm_module_bytes,
+        lookup_data,
+        Arc::new(None),
+        logger,
+        None,
+    )
+    .expect("Couldn't create the server");
+    let rt = tokio::runtime::Runtime::new().unwrap();
+
+    let summary = bencher.bench(|bencher| {
+        bencher.iter(|| {
+            let request = Request {
+                body: br#"{"lat":52.1,"lon":-0.1}"#.to_vec(),
+            };
+            let resp = rt
+                .block_on(wasm_handler.clone().handle_invoke(request))
+                .unwrap();
+            assert_eq!(resp.status, StatusCode::Success as i32);
+        });
+    });
+
+    // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
+    // in that case. So, here we first check that `summary` is not empty.
+    if let Some(summary) = summary {
+        // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
+        // https://doc.rust-lang.org/test/stats/struct.Summary.html.
+        let elapsed = Duration::from_nanos(summary.mean as u64);
+        // We expect the `mean` time for loading the test Wasm module and running its main function
+        // to be less than a fixed threshold.
+        assert!(
+            elapsed < Duration::from_millis(elapsed_limit_millis),
+            "elapsed time: {:.0?}",
+            elapsed
+        );
+    }
 }
