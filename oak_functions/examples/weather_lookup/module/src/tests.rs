@@ -163,32 +163,38 @@ fn test_location_from_slice() {
     assert_eq!(value, Location::from_bytes(&bytes));
 }
 
-// This benchmark test takes a very long time, so is not run during tests.
-// To actually run the bench, use `cargo bench --features run-internal-bench`.
-#[cfg_attr(feature = "run-internal-bench", bench)]
-#[cfg_attr(not(feature = "run-internal-bench"), allow(dead_code))]
+#[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
+    // This benchmark test takes a very long time when running with a realistic amount of lookup
+    // data. By default it uses a much smaller number. To actually run the bench with realistic
+    // data size, use `cargo bench --features large-bench`.
+    #[cfg(not(feature = "large-bench"))]
+    let (entry_count, elapsed_limit_milis) = (1000, 100);
+    #[cfg(feature = "large-bench")]
+    let (entry_count, elapsed_limit_milis) = (200_000, 20_000);
+
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.push("Cargo.toml");
     let wasm_module_bytes =
         test_utils::compile_rust_wasm(manifest_path.to_str().expect("Invalid target dir"))
             .expect("Couldn't read Wasm module");
     let mut rng = rand::thread_rng();
-    let buf = generate_and_serialize_sparse_weather_entries(&mut rng, 10_000).unwrap();
+    let buf = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
     let entries = parse_lookup_entries(buf).unwrap();
+
     let lookup_data = Arc::new(LookupData::for_test(entries));
+    let logger = Logger::for_test();
+    let wasm_handler = WasmHandler::create(
+        &wasm_module_bytes,
+        lookup_data,
+        Arc::new(None),
+        logger,
+        None,
+    )
+    .expect("Couldn't create the server");
+    let rt = tokio::runtime::Runtime::new().unwrap();
 
     let summary = bencher.bench(|bencher| {
-        let logger = Logger::for_test();
-        let wasm_handler = WasmHandler::create(
-            &wasm_module_bytes,
-            lookup_data.clone(),
-            Arc::new(None),
-            logger,
-            None,
-        )
-        .expect("Couldn't create the server");
-        let rt = tokio::runtime::Runtime::new().unwrap();
         bencher.iter(|| {
             let request = Request {
                 body: br#"{"lat":52.1,"lon":-0.1}"#.to_vec(),
@@ -200,15 +206,16 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         });
     });
 
+    // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
+    // in that case. So, here we first check that `summary` is not empty.
     if let Some(summary) = summary {
-        println!("Summary statistics: {:?}", summary);
         // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
         // https://doc.rust-lang.org/test/stats/struct.Summary.html.
         let elapsed = Duration::from_nanos(summary.mean as u64);
         // We expect the `mean` time for loading the test Wasm module and running its main function
         // to be less than a fixed threshold.
         assert!(
-            elapsed < Duration::from_millis(1000),
+            elapsed < Duration::from_millis(elapsed_limit_milis),
             "elapsed time: {:.0?}",
             elapsed
         );

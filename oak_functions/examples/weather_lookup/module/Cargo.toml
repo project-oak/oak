@@ -6,7 +6,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [features]
-run-internal-bench = []
+large-bench = []
 
 [lib]
 crate-type = ["cdylib", "rlib"]

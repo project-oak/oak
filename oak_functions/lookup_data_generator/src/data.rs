@@ -21,13 +21,13 @@ use prost::Message;
 use rand::Rng;
 use serde::Serialize;
 
-pub fn create_bytes<R: Rng>(rng: &mut R, size_bytes: usize) -> Vec<u8> {
+fn create_bytes<R: Rng>(rng: &mut R, size_bytes: usize) -> Vec<u8> {
     let mut buf = vec![0u8; size_bytes];
     rng.fill(buf.as_mut_slice());
     buf
 }
 
-pub fn create_random_entry<R: Rng>(
+fn create_random_entry<R: Rng>(
     rng: &mut R,
     key_size_bytes: usize,
     value_size_bytes: usize,
@@ -38,6 +38,8 @@ pub fn create_random_entry<R: Rng>(
     }
 }
 
+/// Generates random lookup entries with the specified sizes for keys and values and serializes it
+/// to bytes.
 pub fn generate_and_serialize_random_entries<R: Rng>(
     rng: &mut R,
     key_size_bytes: usize,
@@ -55,11 +57,11 @@ pub fn generate_and_serialize_random_entries<R: Rng>(
 }
 
 #[derive(Serialize)]
-pub struct WeatherValue {
+struct WeatherValue {
     temperature_degrees_celsius: i32,
 }
 
-pub fn create_weather_entry<R: Rng>(rng: &mut R, lat: i32, lon: i32) -> Entry {
+fn create_weather_entry<R: Rng>(rng: &mut R, lat: i32, lon: i32) -> Entry {
     let key = format!("{},{}", lat, lon);
     let value = serde_json::to_string(&create_weather_value(rng)).unwrap();
     Entry {
@@ -68,13 +70,15 @@ pub fn create_weather_entry<R: Rng>(rng: &mut R, lat: i32, lon: i32) -> Entry {
     }
 }
 
-pub fn create_weather_value<R: Rng>(rng: &mut R) -> WeatherValue {
+fn create_weather_value<R: Rng>(rng: &mut R) -> WeatherValue {
     let dist = rand::distributions::Uniform::new(-30, 40);
     WeatherValue {
         temperature_degrees_celsius: rng.sample(dist),
     }
 }
 
+/// Generates a dense set of random weather lookup entries with one entry for each comibnation of
+/// full degree of longitude and latitude.
 pub fn generate_and_serialize_weather_entries<R: Rng>(rng: &mut R) -> anyhow::Result<BytesMut> {
     let mut buf = BytesMut::new();
     for lat in -90..=90 {
@@ -88,6 +92,7 @@ pub fn generate_and_serialize_weather_entries<R: Rng>(rng: &mut R) -> anyhow::Re
     Ok(buf)
 }
 
+/// Generates a sparse set of random weather lookup entries with a random location for each entry.
 pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
     rng: &mut R,
     entries: usize,
