@@ -17,6 +17,7 @@
 load("@rules_java//java:defs.bzl", "java_lite_proto_library", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_grpc_library", "go_proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -69,4 +70,14 @@ java_proto_library(
 java_lite_proto_library(
     name = "invocation_java_proto_lite",
     deps = [":invocation_proto"],
+)
+
+go_proto_library(
+    name = "server_go_proto",
+    deps = [":server_proto"],
+)
+
+go_grpc_library(
+    name = "server_go_grpc",
+    deps = [":server_go_proto"],
 )
