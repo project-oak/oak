@@ -1107,7 +1107,6 @@ name = "mobilenet"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "image",
  "oak_functions",
  "oak_functions_abi",
  "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",

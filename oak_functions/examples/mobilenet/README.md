@@ -8,12 +8,8 @@ https://github.com/sonos/tract/tree/main/examples/tensorflow-mobilenet-v2.
 In this example, we use the project Oak logo as input to the model. MobilenetV2
 categorizes this image as a shield (label #789) with a confidence of about 0.18.
 
-This examples requires the `oak-unsafe` feature to be enabled. Using the
-`runner` the `server-variant` flag must be set to `unsafe`:
-
-```shell
-./scripts/runner run-functions-examples --example-name=mobilenet --server-variant=unsafe
-```
+This examples requires the `oak-unsafe` feature to be enabled. This is specified
+in `oak_functions/examples/mobilenet/example.toml`.
 
 ## Configuration
 

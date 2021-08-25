@@ -228,11 +228,7 @@ impl std::str::FromStr for FunctionsServerVariant {
 
 #[derive(StructOpt, Clone)]
 pub struct BuildFunctionsServer {
-    #[structopt(
-        long,
-        help = "server variant: [base, unsafe]",
-        default_value = "unsafe"
-    )]
+    #[structopt(long, help = "server variant: [base, unsafe]", default_value = "base")]
     pub server_variant: FunctionsServerVariant,
     #[structopt(
         long,
@@ -260,17 +256,17 @@ pub struct RunTestsOpt {
 }
 
 pub trait RustBinaryOptions {
-    fn features(&self) -> String;
+    fn features(&self) -> Vec<&str>;
     fn server_rust_toolchain(&self) -> &Option<String>;
     fn server_rust_target(&self) -> &Option<String>;
     fn build_release(&self) -> bool;
 }
 
 impl RustBinaryOptions for BuildFunctionsServer {
-    fn features(&self) -> String {
+    fn features(&self) -> Vec<&str> {
         match self.server_variant {
-            FunctionsServerVariant::Unsafe => "oak-unsafe".to_string(),
-            FunctionsServerVariant::Base => "".to_string(),
+            FunctionsServerVariant::Unsafe => vec!["oak-unsafe"],
+            FunctionsServerVariant::Base => vec![],
         }
     }
     fn server_rust_toolchain(&self) -> &Option<String> {
@@ -285,19 +281,22 @@ impl RustBinaryOptions for BuildFunctionsServer {
 }
 
 impl RustBinaryOptions for BuildServer {
-    fn features(&self) -> String {
-        let features = match self.server_variant {
-            ServerVariant::Base => "",
-            ServerVariant::NoIntrospectionClient => "oak-unsafe",
-            ServerVariant::Unsafe => "oak-unsafe,oak-introspection-client",
+    fn features(&self) -> Vec<&str> {
+        match self.server_variant {
+            ServerVariant::Base => vec![],
+            ServerVariant::NoIntrospectionClient => vec!["oak-unsafe"],
+            ServerVariant::Unsafe => vec!["oak-unsafe", "oak-introspection-client"],
             // If building in coverage mode, use the default target from the host, and build
             // in unsafe (debug) mode.
-            ServerVariant::Coverage => "oak-unsafe,oak-introspection-client",
-            ServerVariant::Experimental => {
-                "oak-attestation,awskms,gcpkms,oak-unsafe,oak-introspection-client"
-            }
-        };
-        features.to_string()
+            ServerVariant::Coverage => vec!["oak-unsafe", "oak-introspection-client"],
+            ServerVariant::Experimental => vec![
+                "oak-attestation",
+                "awskms",
+                "gcpkms",
+                "oak-unsafe",
+                "oak-introspection-client",
+            ],
+        }
     }
     fn server_rust_toolchain(&self) -> &Option<String> {
         &self.server_rust_toolchain
