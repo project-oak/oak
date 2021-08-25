@@ -21,7 +21,7 @@ use crate::proto::{
 };
 use anyhow::{anyhow, Context};
 use oak_remote_attestation::{
-    attestation::{AttestationEngine, UnattestedPeer},
+    attestation::{self, AttestationBehavior, AttestationEngine, Initializing},
     crypto::AeadEncryptor,
 };
 use tokio::sync::mpsc::Sender;
@@ -30,12 +30,12 @@ use tonic::{transport::Channel, Request, Streaming};
 const MESSAGE_BUFFER_SIZE: usize = 1;
 
 /// Convenience structure for sending requests and receiving responses from the server.
-struct Client {
+struct GrpcChannel {
     sender: Sender<AttestedInvokeRequest>,
     response_stream: Streaming<AttestedInvokeResponse>,
 }
 
-impl Client {
+impl GrpcChannel {
     async fn create(uri: &str) -> anyhow::Result<Self> {
         let channel = Channel::from_shared(uri.to_string())
             .context("Couldn't create gRPC channel")?
@@ -64,14 +64,14 @@ impl Client {
         })
     }
 
-    async fn send(
-        &mut self,
-        request: AttestedInvokeRequest,
-    ) -> anyhow::Result<Option<AttestedInvokeResponse>> {
+    async fn send(&mut self, request: AttestedInvokeRequest) -> anyhow::Result<()> {
         self.sender
             .send(request)
             .await
-            .context("Couldn't send request")?;
+            .context("Couldn't send request")
+    }
+
+    async fn receive(&mut self) -> anyhow::Result<Option<AttestedInvokeResponse>> {
         self.response_stream
             .message()
             .await
@@ -81,45 +81,50 @@ impl Client {
 
 /// gRPC Attestation Service client implementation.
 pub struct AttestationClient {
-    client: Client,
+    channel: GrpcChannel,
     encryptor: AeadEncryptor,
 }
 
 impl AttestationClient {
     pub async fn create(uri: &str, expected_tee_measurement: &[u8]) -> anyhow::Result<Self> {
-        let mut client = Client::create(uri)
+        let mut channel = GrpcChannel::create(uri)
             .await
             .context("Couldn't create gRPC client")?;
-        let encryptor = Self::attest(&mut client, expected_tee_measurement)
+        let encryptor = Self::attest_server(&mut channel, expected_tee_measurement)
             .await
             .context("Couldn't attest server")?;
 
-        Ok(Self { client, encryptor })
+        Ok(Self { channel, encryptor })
     }
 
     /// Attests server for a single gRPC streaming request.
-    async fn attest(
-        client: &mut Client,
+    async fn attest_server(
+        channel: &mut GrpcChannel,
         expected_tee_measurement: &[u8],
     ) -> anyhow::Result<AeadEncryptor> {
-        let attestation_engine =
-            AttestationEngine::<UnattestedPeer>::create(expected_tee_measurement)
-                .context("Couldn't create attestation state machine")?;
-        let identity = attestation_engine
-            .identity()
-            .context("Couldn't get server identity")?;
+        let attestation_engine = AttestationEngine::<attestation::Client, Initializing>::new(
+            AttestationBehavior::create_peer_attestation(expected_tee_measurement)
+                .context("Couldn't create peer attestation behavior")?,
+        );
 
-        // Create attestation request with client's public key.
+        // Send attestation initialization message.
+        let (attestation_init, attestation_engine) = attestation_engine
+            .attestation_init()
+            .context("Couldn't create attestation init")?;
         let request = AttestedInvokeRequest {
-            request_type: Some(RequestType::ClientIdentity(identity)),
+            request_type: Some(RequestType::AttestationInit(attestation_init)),
         };
-        let response = client
+        channel
             .send(request)
             .await
-            .context("Couldn't send attestation request")?
-            .context("Stream stopped preemptively")?;
+            .context("Couldn't send attestation init")?;
 
-        // Receive server's attestation containing public key.
+        // Receive server attestation identity containing server's ephemeral public key.
+        let response = channel
+            .receive()
+            .await
+            .context("Couldn't receive server identity")?
+            .context("Stream stopped preemptively")?;
         let response_type = response
             .response_type
             .context("Couldn't read response type")?;
@@ -130,11 +135,21 @@ impl AttestationClient {
                 Err(anyhow!("Received incorrect message type"))
             }?;
 
-        // Remotely attest server.
-        let encryptor = attestation_engine
-            .create_client_encryptor(&server_identity)
-            .context("Couldn't attest server")?;
+        // Remotely attest the server and create:
+        // - Client attestation identity containing client's ephemeral public key
+        // - Encryptor used for for decrypting/encrypting messages between client and server
+        let (client_identity, attestation_engine) = attestation_engine
+            .process_server_identity(&server_identity)
+            .context("Couldn't process server identity")?;
+        let request = AttestedInvokeRequest {
+            request_type: Some(RequestType::ClientIdentity(client_identity)),
+        };
+        channel
+            .send(request)
+            .await
+            .context("Couldn't send client identity")?;
 
+        let encryptor = attestation_engine.get_encryptor();
         Ok(encryptor)
     }
 
@@ -155,11 +170,15 @@ impl AttestationClient {
             })),
         };
 
-        let response = self
-            .client
+        self.channel
             .send(data_request)
             .await
-            .context("Couldn't send data request")?;
+            .context("Couldn't send encrypted data request")?;
+        let response = self
+            .channel
+            .receive()
+            .await
+            .context("Couldn't send encrypted data request")?;
         let data = if let Some(response) = response {
             let response_type = response
                 .response_type

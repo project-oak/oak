@@ -45,7 +45,7 @@ http_archive(
     ],
 )
 
-# Java rules
+# Java rules.
 http_archive(
     name = "rules_java",
     sha256 = "7f4772b0ee2b46a042870c844e9c208e8a0960a953a079236a4bbd785e471275",
@@ -53,6 +53,29 @@ http_archive(
     urls = [
         # Head commit on 2020-02-18.
         "https://github.com/bazelbuild/rules_java/archive/9eb38ebffbaf4414fa3d2292b28e604a256dd5a5.zip",
+    ],
+)
+
+# External Java rules.
+http_archive(
+    name = "rules_jvm_external",
+    strip_prefix = "rules_jvm_external-4.1",
+    sha256 = "f36441aa876c4f6427bfb2d1f2d723b48e9d930b62662bf723ddfb8fc80f0140",
+    url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.1.zip",
+)
+
+# Maven for Tink crypto library.
+load("@rules_jvm_external//:defs.bzl", "maven_install")
+
+maven_install(
+    artifacts = [
+        "com.google.code.findbugs:jsr305:1.3.9",
+        "com.google.errorprone:error_prone_annotations:2.0.18",
+        "com.google.j2objc:j2objc-annotations:1.1",
+    ],
+    repositories = [
+        "https://maven.google.com",
+        "https://repo1.maven.org/maven2",
     ],
 )
 

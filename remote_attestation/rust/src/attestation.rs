@@ -15,238 +15,545 @@
 //
 
 use crate::{
-    crypto::{get_sha256, AeadEncryptor, EncryptorType, KeyNegotiator},
-    proto::{AttestationIdentity, AttestationInfo, AttestationReport},
+    crypto::{
+        get_random, get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier,
+        Signer,
+    },
+    proto::{AttestationInfo, AttestationInit, AttestationReport, ClientIdentity, ServerIdentity},
 };
 use anyhow::{anyhow, Context};
 
-/// Remote attestation protocol implementation.
-/// Template `S` defines the type of attestation used. It can be one of:
-/// - [`UnattestedSelf`]: represents an attestation process, where current machine remotely attests
-///   to a remote peer and sends attestation info to it.
-/// - [`UnattestedPeer`]: represents an attestation process, where current machine remotely attests
-///   a remote peer and verifies its attestation info.
-/// - [`MutuallyUnattested`]: represents an attestation process, where current machine and a remote
-///   peer remotely attest each other.
-pub struct AttestationEngine<S>
+const ATTESTATION_PROTOCOL_VERSION: u8 = 1;
+/// Size (in bytes) of a random array sent in messages to prevent replay attacks.
+const REPLAY_PROTECTION_ARRAY_SIZE_BYTES: usize = 32;
+
+/// Convenience trait for transitioning between states in the state machine.
+pub trait StateMachine<T, A> {
+    fn transition(self, argument: A) -> anyhow::Result<T>;
+}
+
+impl<P> StateMachine<AttestationEngine<P, Attesting>, KeyNegotiator>
+    for AttestationEngine<P, Initializing>
 where
-    S: AttestationType,
+    P: AttestationParticipant,
 {
-    /// Type of the remote attestation process.
-    attestation_type: S,
+    fn transition(
+        self,
+        key_negotiator: KeyNegotiator,
+    ) -> anyhow::Result<AttestationEngine<P, Attesting>> {
+        let next_state =
+            Attesting::create(key_negotiator).context("Couldn't create attesting state")?;
+        Ok(AttestationEngine {
+            participant: self.participant,
+            behavior: self.behavior,
+            state: next_state,
+            transcript: self.transcript,
+        })
+    }
+}
+
+impl<P> StateMachine<AttestationEngine<P, Attested>, &[u8]> for AttestationEngine<P, Attesting>
+where
+    P: AttestationParticipant,
+{
+    fn transition(
+        self,
+        peer_ephemeral_public_key: &[u8],
+    ) -> anyhow::Result<AttestationEngine<P, Attested>> {
+        let next_state = Attested::create(self.state.key_negotiator, peer_ephemeral_public_key)
+            .context("Couldn't create attested state")?;
+        Ok(AttestationEngine {
+            participant: self.participant,
+            behavior: self.behavior,
+            state: next_state,
+            transcript: self.transcript,
+        })
+    }
+}
+
+/// Remote attestation protocol handshake implementation.
+/// During the attestation protocol handshake participants send the following messages:
+/// - [`Client`] -> [`Server`]: [`AttestationInit`]
+/// - [`Server`] -> [`Client`]: [`ServerIdentity`]
+/// - [`Client`] -> [`Server`]: [`ClientIdentity`]
+///
+/// After the protocol handshake both sides create [`AeadEncryptor`] for exchanging encrypted
+/// messages.
+///
+/// Generic argument `P` defines the participant of attestation used.
+/// It can be either [`Client`] or [`Server`].
+///
+/// Generic argument `S` defines current attestation state. It can be one of:
+/// - [`Initializing`]: represents the starting state of the attestation handshake.
+///     - Client is preparing to send `AttestationInit`.
+/// - [`Attesting`]: represents an ongoing state of the attestation handshake.
+///     - Client has sent `AttestationInit`.
+///     - Server has sent `ServerIdentity`.
+/// - [`Attested`]: represents a finished state of the attestation handshake.
+///     - Client has sent `ClientIdentity`.
+///     - Both Client and Server agreed on session keys.
+///
+/// [`AttestationEngine::behavior`] defines the behavior of the remote attestation protocol.
+/// It can be one of:
+/// - Peer Attestation:
+///   - Represents an attestation process, where current machine remotely attests a remote peer and
+///     verifies its attestation info.
+/// - Self Attestation:
+///   - Represents an attestation process, where current machine remotely attests to a remote peer
+///     and sends attestation info to it.
+/// - Bidirectional Attestation:
+///   - Represents an attestation process, where current machine and a remote peer remotely attest
+///     each other.
+pub struct AttestationEngine<P, S>
+where
+    P: AttestationParticipant,
+    S: AttestationState,
+{
+    /// Participant of the remote attestation protocol.
+    participant: std::marker::PhantomData<P>,
+    /// Behavior of the remote attestation protocol.
+    behavior: AttestationBehavior,
+    /// Current state of the remote attestation protocol.
+    state: S,
+    /// Collection of previously send and received messaged.
+    /// Signed transcript is sent in messaged to prevent replay attacks.
+    transcript: Transcript,
+}
+
+impl AttestationEngine<Client, Initializing> {
+    pub fn new(behavior: AttestationBehavior) -> Self {
+        Self {
+            participant: std::marker::PhantomData,
+            behavior,
+            state: Initializing::new(),
+            transcript: Transcript::new(),
+        }
+    }
+
+    /// Initializes the Remote Attestation handshake by creating an `AttestationInit` message.
+    ///
+    /// Transitions [`AttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
+    pub fn attestation_init(
+        mut self,
+    ) -> anyhow::Result<(AttestationInit, AttestationEngine<Client, Attesting>)> {
+        let attestation_init = AttestationInit {
+            random: self.state.random.to_vec(),
+        };
+
+        // Update current transcript.
+        self.transcript
+            .append(&attestation_init)
+            .context("Couldn't append attestation init to transcript")?;
+
+        let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Client)
+            .context("Couldn't create key negotiator")?;
+        let attestation_engine = self
+            .transition(key_negotiator)
+            .context("Couldn't transition from Initializing to Attesting state")?;
+        Ok((attestation_init, attestation_engine))
+    }
+}
+
+impl AttestationEngine<Server, Initializing> {
+    pub fn new(behavior: AttestationBehavior) -> Self {
+        Self {
+            participant: std::marker::PhantomData,
+            behavior,
+            state: Initializing::new(),
+            transcript: Transcript::new(),
+        }
+    }
+
+    /// Responds to `AttestationInit` message by creating a `ServerIdentity` message.
+    ///
+    /// `ServerIdentity` message contains an ephemeral public key for negotiating session keys.
+    /// If self attestation is enabled this message also provides necessary information to perform
+    /// remote attestation.
+    ///
+    /// Transitions [`AttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
+    pub fn process_attestation_init(
+        mut self,
+        attestation_init: &AttestationInit,
+    ) -> anyhow::Result<(ServerIdentity, AttestationEngine<Server, Attesting>)> {
+        // Create server identity message.
+        let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Server)
+            .context("Couldn't create key negotiator")?;
+        let ephemeral_public_key = key_negotiator
+            .public_key()
+            .context("Couldn't get ephemeral public key")?;
+        let server_identity = if self.behavior.contains_self_attestation() {
+            let signer = self
+                .behavior
+                .get_signer()
+                .as_ref()
+                .context("Couldn't get attestation signer")?;
+            let tee_certificate = self
+                .behavior
+                .get_tee_certificate()
+                .as_ref()
+                .context("Couldn't get TEE certificate")?;
+
+            let attestation_info = create_attestation_info(&signer, &tee_certificate)
+                .context("Couldn't get attestation info")?;
+
+            let mut server_identity = ServerIdentity {
+                version: ATTESTATION_PROTOCOL_VERSION as i32,
+                ephemeral_public_key,
+                random: self.state.random.to_vec(),
+                transcript_signature: vec![],
+                signing_public_key: signer.public_key(),
+                attestation_info: Some(attestation_info),
+            };
+
+            // Update current transcript.
+            // Transcript doesn't include transcript signature from the server identity message.
+            self.transcript
+                .append(attestation_init)
+                .context("Couldn't append attestation init to transcript")?;
+            self.transcript
+                .append(&server_identity)
+                .context("Couldn't append server identity to transcript")?;
+
+            // Add transcript signature to the server identity message.
+            let transcript_signature = signer
+                .sign(&self.transcript.get_sha256())
+                .context("Couldn't create transcript signature")?;
+            server_identity.transcript_signature = transcript_signature;
+            server_identity
+        } else {
+            ServerIdentity {
+                version: ATTESTATION_PROTOCOL_VERSION as i32,
+                ephemeral_public_key,
+                random: self.state.random.to_vec(),
+                transcript_signature: vec![],
+                signing_public_key: vec![],
+                attestation_info: None,
+            }
+        };
+
+        let attestation_engine = self
+            .transition(key_negotiator)
+            .context("Couldn't transition from Initializing to Attesting state")?;
+        Ok((server_identity, attestation_engine))
+    }
+}
+
+impl AttestationEngine<Client, Attesting> {
+    /// Responds to `AttestationInit` message by creating a `ClientIdentity` message and derives
+    /// session keys for encrypting/decrypting messages from the server.
+    ///
+    /// `ClientIdentity` message contains an ephemeral public key for negotiating session keys.
+    /// If self attestation is enabled this message also provides necessary information to perform
+    /// remote attestation.
+    ///
+    /// Transitions [`AttestationEngine`] state from [`Attesting`] to [`Attested`] state.
+    pub fn process_server_identity(
+        mut self,
+        server_identity: &ServerIdentity,
+    ) -> anyhow::Result<(ClientIdentity, AttestationEngine<Client, Attested>)> {
+        if self.behavior.contains_peer_attestation() {
+            // Verify server transcript signature.
+            // Transcript doesn't include transcript signature from the server identity message.
+            let mut server_identity_no_signature = server_identity.clone();
+            server_identity_no_signature.transcript_signature = vec![];
+            self.transcript
+                .append(&server_identity_no_signature)
+                .context("Couldn't append server identity to transcript")?;
+            let verifier = SignatureVerifier::new(&server_identity.signing_public_key);
+            verifier
+                .verify(
+                    &self.transcript.get_sha256(),
+                    &server_identity.transcript_signature,
+                )
+                .context("Couldn't verify server transcript")?;
+
+            // Verify server attestation info.
+            let server_attestation_info = &server_identity
+                .attestation_info
+                .as_ref()
+                .context("Couldn't get server attestation info")?;
+            let expected_tee_measurement = self
+                .behavior
+                .get_expected_tee_measurement()
+                .as_ref()
+                .context("Couldn't get expected TEE measurement")?;
+            verify_attestation_info(&server_attestation_info, &expected_tee_measurement)
+                .context("Couldn't verify server attestation info")?;
+        }
+
+        // Create client identity message.
+        let ephemeral_public_key = self
+            .state
+            .key_negotiator
+            .public_key()
+            .context("Couldn't get ephemeral public key")?;
+        let client_identity = if self.behavior.contains_self_attestation() {
+            let signer = self
+                .behavior
+                .get_signer()
+                .as_ref()
+                .context("Couldn't access attestation signer")?;
+            let tee_certificate = self
+                .behavior
+                .get_tee_certificate()
+                .as_ref()
+                .context("Couldn't access TEE certificate")?;
+
+            let attestation_info = create_attestation_info(&signer, &tee_certificate)
+                .context("Couldn't create attestation info")?;
+
+            let mut client_identity = ClientIdentity {
+                ephemeral_public_key,
+                transcript_signature: vec![],
+                signing_public_key: signer.public_key(),
+                attestation_info: Some(attestation_info),
+            };
+
+            // Update current transcript.
+            // Transcript doesn't include transcript signature from the client identity message.
+            self.transcript
+                .append(&client_identity)
+                .context("Couldn't append client identity to transcript")?;
+
+            // Add transcript signature to the client identity message.
+            let transcript_signature = signer
+                .sign(&self.transcript.get_sha256())
+                .context("Couldn't create transcript signature")?;
+            client_identity.transcript_signature = transcript_signature;
+            client_identity
+        } else {
+            ClientIdentity {
+                ephemeral_public_key,
+                transcript_signature: vec![],
+                signing_public_key: vec![],
+                attestation_info: None,
+            }
+        };
+
+        // Agree on session keys and create an encryptor.
+        let attestation_engine = self
+            .transition(&server_identity.ephemeral_public_key)
+            .context("Couldn't transition from Attesting to Attested state")?;
+        Ok((client_identity, attestation_engine))
+    }
+}
+
+impl AttestationEngine<Server, Attesting> {
+    /// Finishes the remote attestation protocol handshake and derives session keys for
+    /// encrypting/decrypting messages from the client.
+    ///
+    /// Transitions [`AttestationEngine`] state from [`Attesting`] to [`Attested`] state.
+    pub fn process_client_identity(
+        mut self,
+        client_identity: &ClientIdentity,
+    ) -> anyhow::Result<AttestationEngine<Server, Attested>> {
+        if self.behavior.contains_peer_attestation() {
+            // Verify client transcript signature.
+            // Transcript doesn't include transcript signature from the client identity message.
+            let mut client_identity_no_signature = client_identity.clone();
+            client_identity_no_signature.transcript_signature = vec![];
+            self.transcript
+                .append(&client_identity_no_signature)
+                .context("Couldn't append client identity to transcript")?;
+            let verifier = SignatureVerifier::new(&client_identity.signing_public_key);
+            verifier
+                .verify(
+                    &self.transcript.get_sha256(),
+                    &client_identity.transcript_signature,
+                )
+                .context("Couldn't verify client transcript")?;
+
+            // Verify client attestation info.
+            let client_attestation_info = &client_identity
+                .attestation_info
+                .as_ref()
+                .context("Couldn't get client attestation info")?;
+            let expected_tee_measurement = self
+                .behavior
+                .get_expected_tee_measurement()
+                .as_ref()
+                .context("Couldn't get expected TEE measurement")?;
+            verify_attestation_info(&client_attestation_info, &expected_tee_measurement)
+                .context("Couldn't verify client attestation info")?;
+        }
+
+        // Agree on session keys and create an encryptor.
+        let attestation_engine = self
+            .transition(&client_identity.ephemeral_public_key)
+            .context("Couldn't transition from Attesting to Attested state")?;
+        Ok(attestation_engine)
+    }
+}
+
+impl<P> AttestationEngine<P, Attested>
+where
+    P: AttestationParticipant,
+{
+    /// Returns an encryptor created based on the negotiated ephemeral keys.
+    pub fn get_encryptor(self) -> AeadEncryptor {
+        self.state.encryptor
+    }
+}
+
+pub trait AttestationParticipant {}
+impl AttestationParticipant for Client {}
+impl AttestationParticipant for Server {}
+
+pub struct Client {}
+pub struct Server {}
+
+pub struct AttestationBehavior {
+    /// Expected value of the peer's TEE measurement.
+    expected_tee_measurement: Option<Vec<u8>>,
+    /// PEM encoded X.509 certificate that signs TEE firmware key.
+    tee_certificate: Option<Vec<u8>>,
+    /// Signer containing a key which public part is signed by the TEE firmware key.
+    /// Used for signing protocol transcripts and preventing replay attacks.
+    signer: Option<Signer>,
+}
+
+impl AttestationBehavior {
+    /// Represents an attestation process, where current machine remotely attests a remote peer and
+    /// verifies its attestation info.
+    pub fn create_peer_attestation(expected_tee_measurement: &[u8]) -> anyhow::Result<Self> {
+        Ok(Self {
+            expected_tee_measurement: Some(expected_tee_measurement.to_vec()),
+            tee_certificate: None,
+            signer: None,
+        })
+    }
+
+    /// Represents an attestation process, where current machine remotely attests to a remote peer
+    /// and sends attestation info to it.
+    pub fn create_self_attestation(tee_certificate: &[u8]) -> anyhow::Result<Self> {
+        Ok(Self {
+            expected_tee_measurement: None,
+            tee_certificate: Some(tee_certificate.to_vec()),
+            signer: Some(Signer::create().context("Couldn't create signer")?),
+        })
+    }
+
+    /// Represents an attestation process, where current machine and a remote peer remotely attest
+    /// each other.
+    pub fn create_bidirectional_attestation(
+        tee_certificate: &[u8],
+        expected_tee_measurement: &[u8],
+    ) -> anyhow::Result<Self> {
+        Ok(Self {
+            expected_tee_measurement: Some(expected_tee_measurement.to_vec()),
+            tee_certificate: Some(tee_certificate.to_vec()),
+            signer: Some(Signer::create().context("Couldn't create signer")?),
+        })
+    }
+
+    pub fn contains_peer_attestation(&self) -> bool {
+        self.expected_tee_measurement.is_some()
+    }
+
+    pub fn contains_self_attestation(&self) -> bool {
+        self.tee_certificate.is_some() && self.signer.is_some()
+    }
+
+    pub fn get_expected_tee_measurement<'a>(&'a self) -> &'a Option<Vec<u8>> {
+        &self.expected_tee_measurement
+    }
+
+    pub fn get_tee_certificate<'a>(&'a self) -> &'a Option<Vec<u8>> {
+        &self.tee_certificate
+    }
+
+    pub fn get_signer<'a>(&'a self) -> &'a Option<Signer> {
+        &self.signer
+    }
+}
+
+pub trait AttestationState {}
+impl AttestationState for Initializing {}
+impl AttestationState for Attesting {}
+impl AttestationState for Attested {}
+
+/// Represents the starting state of the attestation handshake.
+pub struct Initializing {
+    /// Random vector sent in messages for preventing replay attacks.
+    random: Vec<u8>,
+}
+
+impl Initializing {
+    pub fn new() -> Self {
+        Self {
+            random: get_random(REPLAY_PROTECTION_ARRAY_SIZE_BYTES),
+        }
+    }
+}
+
+/// Represents an ongoing state of the attestation handshake.
+pub struct Attesting {
     /// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
     key_negotiator: KeyNegotiator,
 }
 
-impl<S> AttestationEngine<S>
-where
-    S: AttestationType,
-{
-    /// Returns an [`AttestationIdentity`] that contains a public key and possibly an attestation
-    /// info (depending on `Self::attestation_type`).
-    pub fn identity(&self) -> anyhow::Result<AttestationIdentity> {
-        let public_key = self
-            .key_negotiator
-            .public_key()
-            .context("Couldn't get public key")?;
-        let public_key_hash = get_sha256(&public_key);
-        let attestation_info = self
-            .attestation_type
-            .generate_attestation_info(&public_key_hash);
-
-        Ok(AttestationIdentity {
-            public_key,
-            attestation_info,
-        })
-    }
-
-    /// Verifies remote attestation, negotiates session keys and creates server [`AeadEncryptor`].
-    ///
-    /// Server encryptor uses server session key for encryption and client session key for
-    /// decryption.
-    pub fn create_server_encryptor(
-        self,
-        peer_identity: &AttestationIdentity,
-    ) -> anyhow::Result<AeadEncryptor> {
-        // Verify peer attestation info.
-        let peer_attestation_info = &peer_identity.attestation_info;
-        self.attestation_type
-            .verify_attestation_info(&peer_attestation_info)
-            .context("Couldn't verify peer attestation info")?;
-
-        // Agree on session keys and create encryptor.
-        self.key_negotiator
-            .create_encryptor(peer_identity.public_key.as_ref(), EncryptorType::Server)
-            .context("Couldn't derive session key")
-    }
-
-    /// Verifies remote attestation, negotiates session keys and creates client [`AeadEncryptor`].
-    ///
-    /// Client encryptor uses client session key for encryption and server session key for
-    /// decryption.
-    pub fn create_client_encryptor(
-        self,
-        peer_identity: &AttestationIdentity,
-    ) -> anyhow::Result<AeadEncryptor> {
-        // Verify peer attestation info.
-        let peer_attestation_info = &peer_identity.attestation_info;
-        self.attestation_type
-            .verify_attestation_info(&peer_attestation_info)
-            .context("Couldn't verify peer attestation info")?;
-
-        // Agree on session keys and create encryptor.
-        self.key_negotiator
-            .create_encryptor(peer_identity.public_key.as_ref(), EncryptorType::Client)
-            .context("Couldn't derive session key")
+impl Attesting {
+    pub fn create(key_negotiator: KeyNegotiator) -> anyhow::Result<Self> {
+        Ok(Self { key_negotiator })
     }
 }
 
-impl AttestationEngine<UnattestedSelf> {
-    pub fn create(tee_certificate: &[u8]) -> anyhow::Result<Self> {
-        let key_negotiator = KeyNegotiator::create().context("Couldn't create key negotiator")?;
-        Ok(Self {
-            key_negotiator,
-            attestation_type: UnattestedSelf::new(tee_certificate),
-        })
+/// Represents a finished state of the attestation handshake.
+pub struct Attested {
+    /// Encryptor that was created during the attestation handshake.
+    encryptor: AeadEncryptor,
+}
+
+impl Attested {
+    pub fn create(
+        key_negotiator: KeyNegotiator,
+        peer_ephemeral_public_key: &[u8],
+    ) -> anyhow::Result<Self> {
+        let encryptor = key_negotiator
+            .create_encryptor(peer_ephemeral_public_key)
+            .context("Couldn't derive session key")?;
+        Ok(Self { encryptor })
     }
 }
 
-impl AttestationEngine<UnattestedPeer> {
-    pub fn create(expected_tee_measurement: &[u8]) -> anyhow::Result<Self> {
-        let key_negotiator = KeyNegotiator::create().context("Couldn't create key negotiator")?;
-        Ok(Self {
-            key_negotiator,
-            attestation_type: UnattestedPeer::new(expected_tee_measurement),
-        })
-    }
+/// Convenience struct for managing protocol transcripts.
+/// Transcript is a concatenation of all sent and received messages, which is used for preventing
+/// replay attacks.
+struct Transcript {
+    value: Vec<u8>,
 }
 
-impl AttestationEngine<MutuallyUnattested> {
-    pub fn create(tee_certificate: &[u8], expected_tee_measurement: &[u8]) -> anyhow::Result<Self> {
-        let key_negotiator = KeyNegotiator::create().context("Couldn't create key negotiator")?;
-        Ok(Self {
-            key_negotiator,
-            attestation_type: MutuallyUnattested::new(tee_certificate, expected_tee_measurement),
-        })
-    }
-}
-
-/// Represents an attestation process, where current machine remotely attests to a remote peer and
-/// sends attestation info to it.
-pub struct UnattestedSelf {
-    /// PEM encoded X.509 certificate that signs TEE firmware key.
-    tee_certificate: Vec<u8>,
-}
-
-impl UnattestedSelf {
-    pub fn new(tee_certificate: &[u8]) -> Self {
-        Self {
-            tee_certificate: tee_certificate.to_vec(),
-        }
-    }
-}
-
-/// Represents an attestation process, where current machine remotely attests a remote peer and
-/// verifies its attestation info.
-pub struct UnattestedPeer {
-    /// Expected value of the peer's TEE measurement.
-    expected_tee_measurement: Vec<u8>,
-}
-
-impl UnattestedPeer {
-    pub fn new(expected_tee_measurement: &[u8]) -> Self {
-        Self {
-            expected_tee_measurement: expected_tee_measurement.to_vec(),
-        }
-    }
-}
-
-/// Represents an attestation process, where current machine and a remote peer remotely attest each
-/// other.
-pub struct MutuallyUnattested {
-    /// PEM encoded X.509 certificate that signs TEE firmware key.
-    tee_certificate: Vec<u8>,
-    /// Expected value of the peer's TEE measurement.
-    expected_tee_measurement: Vec<u8>,
-}
-
-impl MutuallyUnattested {
-    pub fn new(tee_certificate: &[u8], expected_tee_measurement: &[u8]) -> Self {
-        Self {
-            tee_certificate: tee_certificate.to_vec(),
-            expected_tee_measurement: expected_tee_measurement.to_vec(),
-        }
-    }
-}
-
-/// Defines remote attestation behavior between this machine and a peer.
-pub trait AttestationType {
-    /// Generates attestation info if trait implementor can be remotely attested a peer.
-    fn generate_attestation_info(&self, public_key_hash: &[u8]) -> Option<AttestationInfo>;
-    /// Verifies peer attestation info if trait implementor can remotely attest a peer.
-    fn verify_attestation_info(
-        self,
-        peer_attestation_info: &Option<AttestationInfo>,
-    ) -> anyhow::Result<()>;
-}
-
-impl AttestationType for UnattestedSelf {
-    fn generate_attestation_info(&self, public_key_hash: &[u8]) -> Option<AttestationInfo> {
-        // Generate attestation info with a TEE report.
-        // TEE report contains a hash of the public key.
-        Some(AttestationInfo {
-            report: Some(AttestationReport::new(&public_key_hash)),
-            certificate: self.tee_certificate.clone(),
-        })
+impl Transcript {
+    pub fn new() -> Self {
+        Self { value: vec![] }
     }
 
-    /// This type of attestation doesn't need to verify peer attestation, since it will be attested
-    /// by peer.
-    fn verify_attestation_info(
-        self,
-        _peer_attestation_info: &Option<AttestationInfo>,
-    ) -> anyhow::Result<()> {
+    /// Append `message` to the and of [`Transcript::value`].
+    pub fn append<M: prost::Message>(&mut self, message: &M) -> anyhow::Result<()> {
+        let bytes = serialize_protobuf(message).context("Couldn't serialize message")?;
+        self.value.extend(bytes);
         Ok(())
     }
-}
 
-impl AttestationType for UnattestedPeer {
-    fn generate_attestation_info(&self, _public_key_hash: &[u8]) -> Option<AttestationInfo> {
-        None
-    }
-
-    fn verify_attestation_info(
-        self,
-        peer_attestation_info: &Option<AttestationInfo>,
-    ) -> anyhow::Result<()> {
-        let peer_attestation_info = peer_attestation_info
-            .as_ref()
-            .context("No attestation info provided")?;
-        verify_attestation(&peer_attestation_info, &self.expected_tee_measurement)
-            .context("Couldn't verify peer attestation info")
+    /// Get SHA-256 hash of the [`Transcript::value`].
+    pub fn get_sha256(&self) -> Vec<u8> {
+        get_sha256(&self.value)
     }
 }
 
-impl AttestationType for MutuallyUnattested {
-    fn generate_attestation_info(&self, public_key_hash: &[u8]) -> Option<AttestationInfo> {
-        // Generate attestation info with a TEE report.
-        // TEE report contains a hash of the public key.
-        Some(AttestationInfo {
-            report: Some(AttestationReport::new(&public_key_hash)),
-            certificate: self.tee_certificate.clone(),
-        })
-    }
-
-    fn verify_attestation_info(
-        self,
-        peer_attestation_info: &Option<AttestationInfo>,
-    ) -> anyhow::Result<()> {
-        let peer_attestation_info = peer_attestation_info
-            .as_ref()
-            .context("No attestation info provided")?;
-        verify_attestation(&peer_attestation_info, &self.expected_tee_measurement)
-            .context("Couldn't verify peer attestation info")
-    }
+/// Generate attestation info with a TEE report.
+/// TEE report contains a hash of the signer's public key.
+pub fn create_attestation_info(
+    signer: &Signer,
+    tee_certificate: &[u8],
+) -> anyhow::Result<AttestationInfo> {
+    let signing_public_key = signer.public_key();
+    let signing_public_key_hash = get_sha256(signing_public_key.as_ref());
+    let report = AttestationReport::new(&signing_public_key_hash);
+    Ok(AttestationInfo {
+        report: Some(report),
+        certificate: tee_certificate.to_vec(),
+    })
 }
 
 /// Verifies the validity of the attestation info:
@@ -255,14 +562,14 @@ impl AttestationType for MutuallyUnattested {
 ///   presented in the server response.
 /// - Extracts the TEE measurement from the TEE report and compares it to the
 ///   `expected_tee_measurement`.
-fn verify_attestation(
+fn verify_attestation_info(
     peer_attestation_info: &AttestationInfo,
     expected_tee_measurement: &[u8],
 ) -> anyhow::Result<()> {
     // TODO(#1867): Add remote attestation support, use real TEE reports and check that
     // `AttestationInfo::certificate` is signed by one of the root certificates.
 
-    // Verify peer tee measurement.
+    // Verify peer TEE measurement.
     let peer_report = peer_attestation_info
         .report
         .as_ref()
@@ -272,4 +579,13 @@ fn verify_attestation(
     } else {
         Err(anyhow!("Incorrect TEE measurement"))
     }
+}
+
+// TODO(#2273): Use raw bytes for messages since Protobuf is not deterministic.
+pub fn serialize_protobuf<M: prost::Message>(message: &M) -> anyhow::Result<Vec<u8>> {
+    let mut message_bytes = Vec::new();
+    message
+        .encode(&mut message_bytes)
+        .context("Couldn't serialize Protobuf message to bytes")?;
+    Ok(message_bytes)
 }
