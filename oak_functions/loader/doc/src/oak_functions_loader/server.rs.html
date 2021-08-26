@@ -831,6 +831,13 @@
 <span id="828">828</span>
 <span id="829">829</span>
 <span id="830">830</span>
+<span id="831">831</span>
+<span id="832">832</span>
+<span id="833">833</span>
+<span id="834">834</span>
+<span id="835">835</span>
+<span id="836">836</span>
+<span id="837">837</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -853,12 +860,12 @@
     <span class="ident">metrics</span>::{<span class="ident">PrivateMetricsAggregator</span>, <span class="ident">PrivateMetricsProxy</span>},
     <span class="ident">tf</span>::<span class="ident">TensorFlowModel</span>,
 };
+
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ByteOrder</span>, <span class="ident">LittleEndian</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">FutureExt</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">Level</span>;
 <span class="kw">use</span> <span class="ident">oak_functions_abi</span>::<span class="ident">proto</span>::{<span class="ident">OakStatus</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>};
-<span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">convert</span>::<span class="ident">TryFrom</span>,
@@ -877,6 +884,7 @@
 <span class="kw">const</span> <span class="ident">WRITE_RESPONSE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>;
 <span class="kw">const</span> <span class="ident">STORAGE_GET_ITEM</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">2</span>;
 <span class="kw">const</span> <span class="ident">WRITE_LOG_MESSAGE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">3</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
 <span class="kw">const</span> <span class="ident">TF_MODEL_INFER</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
 <span class="kw">const</span> <span class="ident">REPORT_METRIC</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">5</span>;
 
@@ -990,6 +998,7 @@
     <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">response_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="ident">tf_model</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TensorFlowModel</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">instance</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">ModuleRef</span><span class="op">&gt;</span>,
     <span class="ident">memory</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">MemoryRef</span><span class="op">&gt;</span>,
@@ -1200,6 +1209,7 @@
     }
 
     <span class="doccomment">/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tf_model_infer</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">input_ptr</span>: <span class="ident">AbiPointer</span>,
@@ -1207,6 +1217,8 @@
         <span class="ident">inference_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
         <span class="ident">inference_len_ptr</span>: <span class="ident">AbiPointer</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
+
         <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">tf_model</span> {
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTensorFlowModelNotFound</span>),
             <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">tf_model</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -1325,6 +1337,7 @@
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>,
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>,
             )),
+            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
             <span class="ident">TF_MODEL_INFER</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">map_host_errors</span>(<span class="self">self</span>.<span class="ident">tf_model_infer</span>(
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>,
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>,
@@ -1612,6 +1625,7 @@
                 <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
             ),
         ),
+        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
         <span class="string">&quot;tf_model_infer&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
             <span class="ident">TF_MODEL_INFER</span>,
             <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
