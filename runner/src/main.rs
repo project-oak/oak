@@ -84,8 +84,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::RunExamples(ref opt) => run_examples(&opt),
             Command::RunFunctionsExamples(ref opt) => run_functions_examples(&opt),
             Command::BuildFunctionsExample(ref opt) => build_functions_example(&opt),
-            Command::BuildServer(ref opt) => build_server(&opt),
-            Command::BuildFunctionsServer(ref opt) => build_functions_server(opt),
+            Command::BuildServer(ref opt) => build_server(&opt, vec![]),
+            Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
             Command::RunTests => run_tests(),
             Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
             Command::RunBazelTests => run_bazel_tests(),
@@ -391,31 +391,46 @@ fn run_ci() -> Step {
             check_format(&Commits::default()),
             run_cargo_deny(),
             run_cargo_udeps(),
-            build_server(&BuildServer {
-                server_variant: ServerVariant::Base,
-                server_rust_toolchain: None,
-                server_rust_target: None,
-            }),
-            build_server(&BuildServer {
-                server_variant: ServerVariant::NoIntrospectionClient,
-                server_rust_toolchain: None,
-                server_rust_target: None,
-            }),
-            build_server(&BuildServer {
-                server_variant: ServerVariant::Unsafe,
-                server_rust_toolchain: None,
-                server_rust_target: None,
-            }),
-            build_server(&BuildServer {
-                server_variant: ServerVariant::Coverage,
-                server_rust_toolchain: None,
-                server_rust_target: None,
-            }),
-            build_server(&BuildServer {
-                server_variant: ServerVariant::Experimental,
-                server_rust_toolchain: None,
-                server_rust_target: None,
-            }),
+            build_server(
+                &BuildServer {
+                    server_variant: ServerVariant::Base,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+                vec![],
+            ),
+            build_server(
+                &BuildServer {
+                    server_variant: ServerVariant::NoIntrospectionClient,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+                vec![],
+            ),
+            build_server(
+                &BuildServer {
+                    server_variant: ServerVariant::Unsafe,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+                vec![],
+            ),
+            build_server(
+                &BuildServer {
+                    server_variant: ServerVariant::Coverage,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+                vec![],
+            ),
+            build_server(
+                &BuildServer {
+                    server_variant: ServerVariant::Experimental,
+                    server_rust_toolchain: None,
+                    server_rust_target: None,
+                },
+                vec![],
+            ),
             run_tests(),
             run_tests_tsan(),
             run_examples(&RunExamples {

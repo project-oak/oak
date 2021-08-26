@@ -19,12 +19,12 @@ use crate::{
     metrics::{PrivateMetricsAggregator, PrivateMetricsProxy},
     tf::TensorFlowModel,
 };
+
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
 use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode};
-use prost::Message;
 use serde::Deserialize;
 use std::{
     convert::TryFrom,
@@ -43,6 +43,7 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
+#[cfg(feature = "oak-tf")]
 const TF_MODEL_INFER: usize = 4;
 const REPORT_METRIC: usize = 5;
 
@@ -156,6 +157,7 @@ struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
     lookup_data: Arc<LookupData>,
+    #[allow(dead_code)]
     tf_model: Arc<Option<TensorFlowModel>>,
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
@@ -366,6 +368,7 @@ impl WasmState {
     }
 
     /// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
+    #[cfg(feature = "oak-tf")]
     pub fn tf_model_infer(
         &mut self,
         input_ptr: AbiPointer,
@@ -373,6 +376,8 @@ impl WasmState {
         inference_ptr_ptr: AbiPointer,
         inference_len_ptr: AbiPointer,
     ) -> Result<(), OakStatus> {
+        use prost::Message;
+
         match *self.tf_model {
             None => Err(OakStatus::ErrTensorFlowModelNotFound),
             Some(ref tf_model) => {
@@ -491,6 +496,7 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
             )),
+            #[cfg(feature = "oak-tf")]
             TF_MODEL_INFER => map_host_errors(self.tf_model_infer(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
@@ -778,6 +784,7 @@ fn oak_functions_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
+        #[cfg(feature = "oak-tf")]
         "tf_model_infer" => (
             TF_MODEL_INFER,
             wasmi::Signature::new(

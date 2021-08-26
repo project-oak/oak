@@ -17,8 +17,9 @@
 //! SDK functionality that provides idiomatic Rust wrappers around the underlying Oak Functions
 //! platform functionality.
 
-use oak_functions_abi::proto::{Inference, OakStatus};
-use prost::Message;
+#[cfg(feature = "oak-tf")]
+use oak_functions_abi::proto::Inference;
+use oak_functions_abi::proto::OakStatus;
 use std::convert::AsRef;
 
 /// Reads and returns the user request.
@@ -124,7 +125,10 @@ pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
 /// Uses the TensorFlow model to perform inference for the given input.
 ///
 /// See [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
+#[cfg(feature = "oak-tf")]
 pub fn tf_model_infer(input_vector: &[u8]) -> Result<Inference, OakStatus> {
+    use prost::Message;
+
     let mut inference_ptr: *mut u8 = std::ptr::null_mut();
     let mut inference_len: usize = 0;
     let status_code = unsafe {

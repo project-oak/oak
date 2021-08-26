@@ -10,8 +10,9 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "*"
-image = "*"
-oak_functions = { path = "../../../sdk/oak_functions" }
+oak_functions = { path = "../../../sdk/oak_functions", features = [
+  "oak-unsafe"
+] }
 oak_functions_abi = { path = "../../../abi" }
 prost = "*"
 serde = { version = "*", features = ["derive"] }

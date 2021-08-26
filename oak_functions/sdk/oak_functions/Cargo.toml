@@ -5,6 +5,11 @@ authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
+[features]
+default = []
+oak-unsafe = ["oak-tf"]
+oak-tf = []
+
 [dependencies]
 oak_functions_abi = { path = "../../abi" }
 prost = "*"

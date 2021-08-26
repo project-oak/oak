@@ -28,8 +28,9 @@ use oak_functions_loader::{
     lookup::{LookupData, LookupDataAuth},
     metrics::{PrivateMetricsAggregator, PrivateMetricsConfig},
     server::Policy,
-    tf::{read_model_from_path, TensorFlowModel},
+    tf::TensorFlowModel,
 };
+
 use serde_derive::Deserialize;
 use std::{
     fs,
@@ -72,6 +73,7 @@ struct Config {
     /// Security policy guaranteed by the server.
     policy: Option<Policy>,
     /// Configuration for TensorFlow model
+    #[cfg(feature = "oak-tf")]
     #[serde(default)]
     tf_model: Option<TensorFlowModelConfig>,
     /// Differentially private metrics configuration.
@@ -252,13 +254,20 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
 
 /// Load the TensorFlow model from the given path in the config, or return `None` if a path is not
 /// provided.
+#[cfg(feature = "oak-tf")]
 async fn load_tensorflow_model(config: &Config) -> anyhow::Result<Option<TensorFlowModel>> {
     match &config.tf_model {
         Some(tf_model_config) => {
-            let model = read_model_from_path(&tf_model_config.path).await?;
+            let model =
+                oak_functions_loader::tf::read_model_from_path(&tf_model_config.path).await?;
             let tf_model = TensorFlowModel::create(model, tf_model_config.shape.clone())?;
             Ok(Some(tf_model))
         }
         None => Ok(None),
     }
+}
+
+#[cfg(not(feature = "oak-tf"))]
+async fn load_tensorflow_model(_config: &Config) -> anyhow::Result<Option<TensorFlowModel>> {
+    Ok(None)
 }

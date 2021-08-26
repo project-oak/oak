@@ -11,6 +11,7 @@ target = { Cargo = { cargo_manifest = "oak_functions/examples/mobilenet/module/C
 additional_args = [
   "--config-path=./oak_functions/examples/mobilenet/config.toml"
 ]
+required_features = ["oak-unsafe"]
 
 [clients]
 rust = { Cargo = { cargo_manifest = "oak_functions/examples/mobilenet/client/rust/Cargo.toml" } }

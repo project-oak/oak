@@ -92,6 +92,8 @@ struct ApplicationFunctions {
 struct ExampleServer {
     #[serde(default)]
     additional_args: Vec<String>,
+    #[serde(default)]
+    required_features: Vec<String>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -397,7 +399,7 @@ pub fn run_functions_examples(opt: &RunFunctionsExamples) -> Step {
     }
 }
 
-pub fn build_server(opt: &BuildServer) -> Step {
+pub fn build_server(opt: &BuildServer, additional_features: Vec<String>) -> Step {
     Step::Multiple {
         name: "server".to_string(),
         steps: vec![
@@ -422,7 +424,7 @@ pub fn build_server(opt: &BuildServer) -> Step {
                 _ => vec![]
             },
             vec![
-                build_rust_binary("oak_loader", opt,
+                build_rust_binary("oak_loader", opt, additional_features,
                 &if opt.server_variant == ServerVariant::Coverage {
                     hashmap! {
                         // Build the Runtime server in coverage mode, as per https://github.com/mozilla/grcov
@@ -441,7 +443,10 @@ pub fn build_server(opt: &BuildServer) -> Step {
     }
 }
 
-pub fn build_functions_server(opt: &BuildFunctionsServer) -> Step {
+pub fn build_functions_server(
+    opt: &BuildFunctionsServer,
+    additional_features: Vec<String>,
+) -> Step {
     Step::Multiple {
         name: "server".to_string(),
         steps: vec![
@@ -452,7 +457,12 @@ pub fn build_functions_server(opt: &BuildFunctionsServer) -> Step {
                     vec!["-p".to_string(), "oak_functions/loader/bin".to_string()],
                 ),
             }],
-            vec![build_rust_binary("oak_functions/loader", opt, &hashmap! {})],
+            vec![build_rust_binary(
+                "oak_functions/loader",
+                opt,
+                additional_features,
+                &hashmap! {},
+            )],
         ]
         .into_iter()
         .flatten()
@@ -491,7 +501,10 @@ fn run_example(example: &ClassicExample) -> Step {
             if opt.run_server.unwrap_or(true) {
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
-                vec![build_server(&opt.build_server)]
+                vec![build_server(
+                    &opt.build_server,
+                    example.example.server.required_features.clone(),
+                )]
             } else {
                 vec![]
             },
@@ -538,7 +551,10 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
             if opt.run_server.unwrap_or(true) {
                 // Build the server first so that when running it in the next step it will start up
                 // faster.
-                vec![build_functions_server(&opt.build_server)]
+                vec![build_functions_server(
+                    &opt.build_server,
+                    example.example.server.required_features.clone(),
+                )]
             } else {
                 vec![]
             },
@@ -601,7 +617,10 @@ pub fn build_functions_example(opt: &RunFunctionsExamples) -> Step {
             functions_example.construct_application_build_steps(),
             // Build the server first so that when running it in the next step it will start up
             // faster.
-            vec![build_functions_server(&opt.build_server)],
+            vec![build_functions_server(
+                &opt.build_server,
+                example.server.required_features.clone(),
+            )],
             if opt.build_docker {
                 vec![build_docker(&example)]
             } else {
@@ -959,8 +978,18 @@ fn run(
 fn build_rust_binary<T: RustBinaryOptions>(
     manifest_dir: &str,
     opt: &T,
+    additional_features: Vec<String>,
     env: &HashMap<String, String>,
 ) -> Step {
+    let mut features = additional_features;
+    let mut server_variant_features = opt.features().iter().map(|s| s.to_string()).collect();
+    features.append(&mut server_variant_features);
+    let features = if !features.is_empty() {
+        features.join(",")
+    } else {
+        "".to_string()
+    };
+
     Step::Single {
         name: "build rust binary".to_string(),
         command: Cmd::new_with_env(
@@ -978,8 +1007,8 @@ fn build_rust_binary<T: RustBinaryOptions>(
                 format!("--out-dir={}/bin", manifest_dir),
                 // `--out-dir` is unstable and requires `-Zunstable-options`.
                 "-Zunstable-options".to_string(),
-                ...if !opt.features().is_empty() {
-                    vec![format!("--features={}", opt.features())]
+                ...if !features.is_empty() {
+                    vec![format!("--features={}", features)]
                 } else {
                     vec![]
                 },
