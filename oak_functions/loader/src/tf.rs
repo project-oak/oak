@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::extensions::OakApiNativeExtension;
 use anyhow::Context;
 use bytes::Bytes;
 use oak_functions_abi::proto::Inference;
@@ -23,6 +24,9 @@ use tract_tensorflow::prelude::{
     tract_ndarray::{ArrayBase, Dim, IxDynImpl, ViewRepr},
     *,
 };
+use prost::Message;
+
+const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer"
 
 /// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`
 /// is not required, InferenceModel with [`InferenceFact`] and [`InferenceOp`] could be used
@@ -35,6 +39,7 @@ type Model = RunnableModel<TypedFact, Box<dyn TypedOp>, Graph<TypedFact, Box<dyn
 pub struct TensorFlowModel {
     model: Model,
     pub shape: Vec<u8>,
+    index: usize,
 }
 
 #[cfg(feature = "oak-tf")]
@@ -110,6 +115,94 @@ impl TensorFlowModel {
             inference_vec,
         })
     }
+}
+
+impl OakApiNativeExtension for TensorFlowModel {
+    fn invoke_index(
+        &self,
+        &mut wasm_state: WasmState,
+        args: wasmi::RuntimeArgs,
+    ) -> Option<Result<Option<wasmi::RuntimeValue>, wasmi::Trap>>{
+        crate::server::map_host_errors(tf_model_infer(wasm_state, self,
+            args.nth_checked(0)?,
+            args.nth_checked(1)?,
+            args.nth_checked(2)?,
+            args.nth_checked(3)?,
+        ))
+    }
+
+    // Similar to wasmi::ModuleImportResolver, but with additional optionality.
+    fn resolve_func(&self) -> anyhow::Result<(usize, &wasmi::Signature)> {
+        if self.index > 0 {
+            Ok((
+                self.index,
+                wasmi::Signature::new(
+                    &[
+                        ABI_USIZE, // input_ptr
+                        ABI_USIZE, // input_len
+                        ABI_USIZE, // inference_ptr_ptr
+                        ABI_USIZE, // inference_len_ptr
+                    ][..],
+                    Some(ValueType::I32),
+                ),
+            ))
+        } else {
+            anyhow::bail!("Index is not set for TensorFlowModel.");
+        }
+    }
+
+    fn register_index(&mut self, index: usize) {
+        self.index = index;
+    }
+}
+
+/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).    
+fn tf_model_infer(
+    &mut wasm_state: WasmState,
+    tf_model: &TensorFlowModel,
+    input_ptr: AbiPointer,
+    input_len: AbiPointerOffset,
+    inference_ptr_ptr: AbiPointer,
+    inference_len_ptr: AbiPointer,
+) -> Result<(), OakStatus> {
+    let input = wasm_state
+        .get_memory()
+        .get(input_ptr, input_len as usize)
+        .map_err(|err| {
+            wasm_state.logger.log_sensitive(
+                Level::Error,
+                &format!(
+                    "tf_model_infer(): Unable to read input from guest memory: {:?}",
+                    err
+                ),
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
+
+    let shape = tf_model
+        .shape
+        .clone()
+        .iter()
+        .cloned()
+        .map(|u| u.into())
+        .collect::<Vec<usize>>();
+
+    // Get the inference, and convert it into a protobuf-encoded byte array
+    let inference = tf_model.get_inference(&input, &shape).map_err(|err| {
+        wasm_state.logger.log_sensitive(
+            Level::Error,
+            &format!("tf_model_infer(): Unable to run inference: {:?}", err),
+        );
+        OakStatus::ErrBadTensorFlowModelInput
+    })?;
+    let mut encoded_inference = vec![];
+    inference.encode(&mut encoded_inference).unwrap();
+
+    let inference_ptr = wasm_state.alloc(encoded_inference.len() as u32);
+    wasm_state.write_buffer_to_wasm_memory(&encoded_inference, inference_ptr)?;
+    wasm_state.write_u32_to_wasm_memory(inference_ptr, inference_ptr_ptr)?;
+    wasm_state.write_u32_to_wasm_memory(encoded_inference.len() as u32, inference_len_ptr)?;
+    Ok(())
 }
 
 /// Read a tensorFlow model from the given path, into a byte array.

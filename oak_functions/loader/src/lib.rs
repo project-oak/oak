@@ -23,6 +23,7 @@ pub mod proto {
 }
 
 pub mod attestation;
+pub mod extensions;
 pub mod grpc;
 pub mod logger;
 pub mod lookup;

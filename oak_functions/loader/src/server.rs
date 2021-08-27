@@ -153,16 +153,16 @@ impl FixedSizeBodyPadder for Response {
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
 /// module to exchange the request and the response with the Oak functions server. These functions
 /// translate values between Wasm linear memory and Rust types.
-struct WasmState {
+pub struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
     lookup_data: Arc<LookupData>,
-    #[allow(dead_code)]
-    tf_model: Arc<Option<TensorFlowModel>>,
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
     metrics_proxy: Option<PrivateMetricsProxy>,
+    extensions_indexes: RwLock<HashMap<usize, Box<dyn OakApiNativeExtension>>>,
+    extensions_names: RwLock<HashMap<String, Box<dyn OakApiNativeExtension>>>,
 }
 
 impl WasmState {
@@ -367,62 +367,6 @@ impl WasmState {
         }
     }
 
-    /// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
-    #[cfg(feature = "oak-tf")]
-    pub fn tf_model_infer(
-        &mut self,
-        input_ptr: AbiPointer,
-        input_len: AbiPointerOffset,
-        inference_ptr_ptr: AbiPointer,
-        inference_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        use prost::Message;
-
-        match *self.tf_model {
-            None => Err(OakStatus::ErrTensorFlowModelNotFound),
-            Some(ref tf_model) => {
-                let input = self
-                    .get_memory()
-                    .get(input_ptr, input_len as usize)
-                    .map_err(|err| {
-                        self.logger.log_sensitive(
-                            Level::Error,
-                            &format!(
-                                "tf_model_infer(): Unable to read input from guest memory: {:?}",
-                                err
-                            ),
-                        );
-                        OakStatus::ErrInvalidArgs
-                    })?;
-
-                let shape = tf_model
-                    .shape
-                    .clone()
-                    .iter()
-                    .cloned()
-                    .map(|u| u.into())
-                    .collect::<Vec<usize>>();
-
-                // Get the inference, and convert it into a protobuf-encoded byte array
-                let inference = tf_model.get_inference(&input, &shape).map_err(|err| {
-                    self.logger.log_sensitive(
-                        Level::Error,
-                        &format!("tf_model_infer(): Unable to run inference: {:?}", err),
-                    );
-                    OakStatus::ErrBadTensorFlowModelInput
-                })?;
-                let mut encoded_inference = vec![];
-                inference.encode(&mut encoded_inference).unwrap();
-
-                let inference_ptr = self.alloc(encoded_inference.len() as u32);
-                self.write_buffer_to_wasm_memory(&encoded_inference, inference_ptr)?;
-                self.write_u32_to_wasm_memory(inference_ptr, inference_ptr_ptr)?;
-                self.write_u32_to_wasm_memory(encoded_inference.len() as u32, inference_len_ptr)?;
-                Ok(())
-            }
-        }
-    }
-
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
         let result = self.instance.as_ref().unwrap().invoke_export(
             ALLOC_FUNCTION_NAME,
@@ -496,14 +440,18 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
             )),
-            #[cfg(feature = "oak-tf")]
-            TF_MODEL_INFER => map_host_errors(self.tf_model_infer(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-                args.nth_checked(3)?,
-            )),
-            _ => panic!("Unimplemented function at {}", index),
+            // #[cfg(feature = "oak-tf")]
+            // TF_MODEL_INFER => map_host_errors(self.tf_model_infer(
+            //     args.nth_checked(0)?,
+            //     args.nth_checked(1)?,
+            //     args.nth_checked(2)?,
+            //     args.nth_checked(3)?,
+            // )),
+            // TODO: look for the index in a map
+            _ => match self.extensions_indexes.get(index) {
+                Some(ref extension) => extension.invoke_index(self, args),
+                None => panic!("Unimplemented function at {}", index),
+            },
         }
     }
 }
@@ -523,7 +471,6 @@ impl WasmState {
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
         lookup_data: Arc<LookupData>,
-        tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
         metrics_proxy: Option<PrivateMetricsProxy>,
     ) -> anyhow::Result<WasmState> {
@@ -531,11 +478,12 @@ impl WasmState {
             request_bytes,
             response_bytes: vec![],
             lookup_data,
-            tf_model,
             instance: None,
             memory: None,
             logger,
             metrics_proxy,
+            extensions_indexes: vec![],
+            extensions_names: vec![],
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -784,25 +732,28 @@ fn oak_functions_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
-        #[cfg(feature = "oak-tf")]
-        "tf_model_infer" => (
-            TF_MODEL_INFER,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // input_ptr
-                    ABI_USIZE, // input_len
-                    ABI_USIZE, // inference_ptr_ptr
-                    ABI_USIZE, // inference_len_ptr
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        _ => {
-            return Err(wasmi::Error::Instantiation(format!(
-                "Export {} not found",
-                field_name
-            )))
-        }
+        // #[cfg(feature = "oak-tf")]
+        // "tf_model_infer" => (
+        //     TF_MODEL_INFER,
+        //     wasmi::Signature::new(
+        //         &[
+        //             ABI_USIZE, // input_ptr
+        //             ABI_USIZE, // input_len
+        //             ABI_USIZE, // inference_ptr_ptr
+        //             ABI_USIZE, // inference_len_ptr
+        //         ][..],
+        //         Some(ValueType::I32),
+        //     ),
+        // ),
+        _ => match self.extension_names.get(field_name) {
+            Some(extension) => extension.resolve_func(),
+            None => {
+                return Err(wasmi::Error::Instantiation(format!(
+                    "Export {} not found",
+                    field_name
+                )))
+            }
+        },
     };
 
     if signature != &expected_signature {
@@ -819,7 +770,7 @@ fn oak_functions_resolve_func(
 /// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
 /// - `Ok(())` to `Ok(Some(OakStatus::Ok))`
 /// - `Err(x)` to `Ok(Some(x))`
-fn map_host_errors(
+pub fn map_host_errors(
     result: Result<(), OakStatus>,
 ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
     Ok(Some(wasmi::RuntimeValue::I32(result.map_or_else(
