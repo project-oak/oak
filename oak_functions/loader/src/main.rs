@@ -28,8 +28,10 @@ use oak_functions_loader::{
     lookup::{LookupData, LookupDataAuth},
     metrics::{PrivateMetricsAggregator, PrivateMetricsConfig},
     server::Policy,
-    tf::TensorFlowModel,
 };
+
+#[cfg(feature = "oak-tf")]
+use oak_functions_loader::tf::TensorFlowModel;
 
 use serde_derive::Deserialize;
 use std::{
@@ -160,7 +162,8 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 
     let lookup_data = load_lookup_data(&config, logger.clone()).await?;
 
-    let tf_model = load_tensorflow_model(&config).await?;
+    #[cfg(feature = "oak-tf")]
+    let tf_model = load_tensorflow_model(&config, logger.clone()).await?;
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
@@ -192,7 +195,6 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             tee_certificate,
             &wasm_module_bytes,
             lookup_data,
-            tf_model,
             config.policy.unwrap(),
             async { notify_receiver.await.unwrap() },
             logger,
@@ -255,19 +257,17 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
 /// Load the TensorFlow model from the given path in the config, or return `None` if a path is not
 /// provided.
 #[cfg(feature = "oak-tf")]
-async fn load_tensorflow_model(config: &Config) -> anyhow::Result<Option<TensorFlowModel>> {
+async fn load_tensorflow_model(
+    config: &Config,
+    logger: Logger,
+) -> anyhow::Result<Option<TensorFlowModel>> {
     match &config.tf_model {
         Some(tf_model_config) => {
             let model =
                 oak_functions_loader::tf::read_model_from_path(&tf_model_config.path).await?;
-            let tf_model = TensorFlowModel::create(model, tf_model_config.shape.clone())?;
+            let tf_model = TensorFlowModel::create(model, tf_model_config.shape.clone(), logger)?;
             Ok(Some(tf_model))
         }
         None => Ok(None),
     }
-}
-
-#[cfg(not(feature = "oak-tf"))]
-async fn load_tensorflow_model(_config: &Config) -> anyhow::Result<Option<TensorFlowModel>> {
-    Ok(None)
 }

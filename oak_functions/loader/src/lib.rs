@@ -23,10 +23,10 @@ pub mod proto {
 }
 
 pub mod attestation;
-pub mod extensions;
 pub mod grpc;
 pub mod logger;
 pub mod lookup;
 pub mod metrics;
 pub mod server;
+#[cfg(feature = "oak-tf")]
 pub mod tf;

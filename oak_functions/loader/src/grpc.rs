@@ -23,7 +23,6 @@ use crate::{
     metrics::PrivateMetricsAggregator,
     proto::remote_attestation_server::RemoteAttestationServer,
     server::{apply_policy, Policy, WasmHandler},
-    tf::TensorFlowModel,
 };
 use anyhow::Context;
 use log::Level;
@@ -60,19 +59,13 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     tee_certificate: Vec<u8>,
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,
-    tf_model: Option<TensorFlowModel>,
     policy: Policy,
     terminate: F,
     logger: Logger,
     aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
 ) -> anyhow::Result<()> {
-    let wasm_handler = WasmHandler::create(
-        wasm_module_bytes,
-        lookup_data,
-        Arc::new(tf_model),
-        logger.clone(),
-        aggregator,
-    )?;
+    let wasm_handler =
+        WasmHandler::create(wasm_module_bytes, lookup_data, logger.clone(), aggregator)?;
 
     logger.log_public(
         Level::Info,

@@ -93,7 +93,6 @@ async fn test_server() {
             tee_certificate,
             &wasm_module_bytes,
             lookup_data,
-            None,
             policy,
             term,
             logger,
@@ -184,14 +183,8 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 
     let lookup_data = Arc::new(LookupData::for_test(entries));
     let logger = Logger::for_test();
-    let wasm_handler = WasmHandler::create(
-        &wasm_module_bytes,
-        lookup_data,
-        Arc::new(None),
-        logger,
-        None,
-    )
-    .expect("Couldn't create the server");
+    let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, logger, None)
+        .expect("Couldn't create the server");
     let rt = tokio::runtime::Runtime::new().unwrap();
 
     let summary = bencher.bench(|bencher| {

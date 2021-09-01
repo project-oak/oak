@@ -1313,6 +1313,7 @@ dependencies = [
  "hyper",
  "hyper-rustls",
  "log",
+ "maplit",
  "oak_functions_abi",
  "oak_remote_attestation",
  "oak_utils",
