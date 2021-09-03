@@ -137,7 +137,7 @@ impl AttestationClient {
 
         // Remotely attest the server and create:
         // - Client attestation identity containing client's ephemeral public key
-        // - Encryptor used for for decrypting/encrypting messages between client and server
+        // - Encryptor used for decrypting/encrypting messages between client and server
         let (client_identity, attestation_engine) = attestation_engine
             .process_server_identity(&server_identity)
             .context("Couldn't process server identity")?;

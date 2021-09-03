@@ -146,17 +146,17 @@ impl AeadEncryptor {
 /// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
 /// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
 pub struct KeyNegotiator {
-    r#type: KeyNegotiatorType,
+    type_: KeyNegotiatorType,
     private_key: agreement::EphemeralPrivateKey,
 }
 
 impl KeyNegotiator {
-    pub fn create(r#type: KeyNegotiatorType) -> anyhow::Result<Self> {
+    pub fn create(type_: KeyNegotiatorType) -> anyhow::Result<Self> {
         let rng = ring::rand::SystemRandom::new();
         let private_key = agreement::EphemeralPrivateKey::generate(KEY_AGREEMENT_ALGORITHM, &rng)
             .map_err(|error| anyhow!("Couldn't generate private key: {:?}", error))?;
         Ok(Self {
-            r#type,
+            type_,
             private_key,
         })
     }
@@ -180,7 +180,7 @@ impl KeyNegotiator {
     /// Depending on `encryptor_type` creates a different type of encryptor: either server encryptor
     /// or client encryptor.
     pub fn create_encryptor(self, peer_public_key: &[u8]) -> anyhow::Result<AeadEncryptor> {
-        let r#type = self.r#type.clone();
+        let type_ = self.type_.clone();
         let self_public_key = self.public_key()?;
         let (encryption_key, decryption_key) = agreement::agree_ephemeral(
             self.private_key,
@@ -188,7 +188,7 @@ impl KeyNegotiator {
             ring::error::Unspecified,
             |key_material| {
                 let peer_public_key = peer_public_key.as_ref().to_vec();
-                match r#type {
+                match type_ {
                     // On the server side `self_public_key` is the server key.
                     KeyNegotiatorType::Server => {
                         let encryption_key = Self::key_derivation_function(
