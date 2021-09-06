@@ -39,8 +39,8 @@ import oak.functions.server.AttestedInvokeRequest;
 import oak.functions.server.AttestedInvokeResponse;
 import oak.functions.server.RemoteAttestationGrpc;
 import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
-import oak.remote_attestation.AttestationInit;
 import oak.remote_attestation.ClientIdentity;
+import oak.remote_attestation.ClientHello;
 import oak.remote_attestation.EncryptedData;
 import oak.remote_attestation.ServerIdentity;
 
@@ -106,11 +106,11 @@ public class AttestationClient {
     ClientAttestationEngine attestationEngine =
         new ClientAttestationEngine(TEST_TEE_MEASUREMENT.getBytes(UTF_8));
 
-    // Send attestation initialization message.
-    AttestationInit attestationInit = attestationEngine.attestationInit();
-    AttestedInvokeRequest attestationInitRequest =
-        AttestedInvokeRequest.newBuilder().setAttestationInit(attestationInit).build();
-    requestObserver.onNext(attestationInitRequest);
+    // Send client hello message.
+    ClientHello clientHello = attestationEngine.clientHello();
+    AttestedInvokeRequest clientHelloRequest =
+        AttestedInvokeRequest.newBuilder().setClientHello(clientHello).build();
+    requestObserver.onNext(clientHelloRequest);
 
     // Receive server attestation identity containing server's ephemeral public key.
     AttestedInvokeResponse serverIdentityResponse = messageQueue.take();

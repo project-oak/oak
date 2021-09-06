@@ -17,7 +17,7 @@
 // Remote attestation protocol handshake implementation.
 //
 // During the attestation protocol handshake participants send the following messages:
-// - [`Client`] -> [`Server`]: [`AttestationInit`]
+// - [`Client`] -> [`Server`]: [`ClientHello`]
 // - [`Server`] -> [`Client`]: [`ServerIdentity`]
 // - [`Client`] -> [`Server`]: [`ClientIdentity`]
 //
@@ -29,7 +29,7 @@ use crate::{
         get_random, get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier,
         Signer,
     },
-    proto::{AttestationInfo, AttestationInit, AttestationReport, ClientIdentity, ServerIdentity},
+    proto::{AttestationInfo, AttestationReClientHelloport, ClientIdentity, ClientHello, ServerIdentity},
 };
 use anyhow::{anyhow, Context};
 
@@ -74,20 +74,20 @@ impl ClientAttestationEngine<Initializing> {
         }
     }
 
-    /// Initializes the Remote Attestation handshake by creating an `AttestationInit` message.
+    /// Initializes the Remote Attestation handshake by creating an `ClientHello` message.
     ///
     /// Transitions [`ClientAttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
-    pub fn attestation_init(
+    pub fn create_attestation_init(
         mut self,
-    ) -> anyhow::Result<(AttestationInit, ClientAttestationEngine<Attesting>)> {
-        let attestation_init = AttestationInit {
+    ) -> anyhow::Result<(ClientHello, ClientAttestationEngine<Attesting>)> {
+        let client_hello = ClientHello {
             random: self.state.random.to_vec(),
         };
 
         // Update current transcript.
         self.transcript
-            .append(&attestation_init)
-            .context("Couldn't append attestation init to transcript")?;
+            .append(&client_hello)
+            .context("Couldn't append client hello to transcript")?;
 
         let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Client)
             .context("Couldn't create key negotiator")?;
@@ -99,7 +99,7 @@ impl ClientAttestationEngine<Initializing> {
             state: next_state,
             transcript: self.transcript,
         };
-        Ok((attestation_init, attestation_engine))
+        Ok((client_hello, attestation_engine))
     }
 }
 
@@ -112,7 +112,7 @@ impl ServerAttestationEngine<Initializing> {
         }
     }
 
-    /// Responds to `AttestationInit` message by creating a `ServerIdentity` message.
+    /// Responds to `ClientHello` message by creating a `ServerIdentity` message.
     ///
     /// `ServerIdentity` message contains an ephemeral public key for negotiating session keys.
     /// If self attestation is enabled this message also provides necessary information to perform
@@ -121,7 +121,7 @@ impl ServerAttestationEngine<Initializing> {
     /// Transitions [`ServerAttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
     pub fn process_attestation_init(
         mut self,
-        attestation_init: &AttestationInit,
+        client_hello: &ClientHello,
     ) -> anyhow::Result<(ServerIdentity, ServerAttestationEngine<Attesting>)> {
         // Create server identity message.
         let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Server)
@@ -156,8 +156,8 @@ impl ServerAttestationEngine<Initializing> {
             // Update current transcript.
             // Transcript doesn't include transcript signature from the server identity message.
             self.transcript
-                .append(attestation_init)
-                .context("Couldn't append attestation init to transcript")?;
+                .append(client_hello)
+                .context("Couldn't append client hello to transcript")?;
             self.transcript
                 .append(&server_identity)
                 .context("Couldn't append server identity to transcript")?;
@@ -191,7 +191,7 @@ impl ServerAttestationEngine<Initializing> {
 }
 
 impl ClientAttestationEngine<Attesting> {
-    /// Responds to `AttestationInit` message by creating a `ClientIdentity` message and derives
+    /// Responds to `ServerIdentity` message by creating a `ClientIdentity` message and derives
     /// session keys for encrypting/decrypting messages from the server.
     ///
     /// `ClientIdentity` message contains an ephemeral public key for negotiating session keys.
@@ -450,7 +450,7 @@ impl AttestationState for Attesting {}
 impl AttestationState for Attested {}
 
 /// Represents the starting state of the attestation handshake.
-/// I.e. client is preparing to send `AttestationInit`.
+/// I.e. client is preparing to send `ClientHello`.
 pub struct Initializing {
     /// Random vector sent in messages for preventing replay attacks.
     random: Vec<u8>,
@@ -471,7 +471,7 @@ impl Default for Initializing {
 }
 
 /// Represents an ongoing state of the attestation handshake.
-/// I.e. client has sent `AttestationInit` and server has sent `ServerIdentity`.
+/// I.e. client has sent `ClientHello` and server has sent `ServerIdentity`.
 pub struct Attesting {
     /// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
     key_negotiator: KeyNegotiator,

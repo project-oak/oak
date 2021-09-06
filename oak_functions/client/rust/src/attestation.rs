@@ -107,17 +107,17 @@ impl AttestationClient {
                 .context("Couldn't create peer attestation behavior")?,
         );
 
-        // Send attestation initialization message.
-        let (attestation_init, attestation_engine) = attestation_engine
-            .attestation_init()
-            .context("Couldn't create attestation init")?;
+        // Send client hello message.
+        let (client_hello, attestation_engine) = attestation_engine
+            .create_client_hello()
+            .context("Couldn't create client hello")?;
         let request = AttestedInvokeRequest {
-            request_type: Some(RequestType::AttestationInit(attestation_init)),
+            request_type: Some(RequestType::ClientHello(client_hello)),
         };
         channel
             .send(request)
             .await
-            .context("Couldn't send attestation init")?;
+            .context("Couldn't send client hello")?;
 
         // Receive server attestation identity containing server's ephemeral public key.
         let response = channel

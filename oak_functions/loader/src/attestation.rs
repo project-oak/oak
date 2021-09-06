@@ -157,7 +157,7 @@ where
             let (attestation_response, attestation_engine) = process_attestation_init(&mut receiver, &tee_certificate)
                 .await
                 .map_err(|error| {
-                    let message = format!("Couldn't process attestation init: {:?}", error).to_string();
+                    let message = format!("Couldn't process client hello: {:?}", error).to_string();
                     warn!("{}", message);
                     Status::internal(message)
                 })?;
@@ -196,9 +196,9 @@ async fn process_attestation_init(
         .context("Couldn't receive attestation request")?
         .context("Stream stopped preemptively")?;
 
-    // Receive attestation init message.
+    // Receive client hello message.
     let request_type = request.request_type.context("Couldn't read request type")?;
-    let attestation_init = if let RequestType::AttestationInit(request) = request_type {
+    let client_hello = if let RequestType::ClientHello(request) = request_type {
         request
     } else {
         anyhow::bail!("Received incorrect message type");
@@ -209,8 +209,8 @@ async fn process_attestation_init(
             .context("Couldn't create self attestation behavior")?,
     );
     let (server_identity, attestation_engine) = attestation_engine
-        .process_attestation_init(&attestation_init)
-        .context("Couldn't accept attestation init")?;
+        .process_client_hello(&client_hello)
+        .context("Couldn't accept client hello")?;
 
     // Create server attestation identity.
     let attestation_response = AttestedInvokeResponse {

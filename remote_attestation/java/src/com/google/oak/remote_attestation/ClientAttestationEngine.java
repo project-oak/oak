@@ -29,9 +29,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import oak.remote_attestation.AttestationInfo;
-import oak.remote_attestation.AttestationInit;
 import oak.remote_attestation.AttestationReport;
 import oak.remote_attestation.ClientIdentity;
+import oak.remote_attestation.ClientHello;
 import oak.remote_attestation.ServerIdentity;
 
 enum AttestationState {
@@ -90,11 +90,11 @@ public class ClientAttestationEngine {
   }
 
   /**
-   * Initializes the Remote Attestation handshake by creating an `AttestationInit` message.
+   * Initializes the Remote Attestation handshake by creating an `ClientHello` message.
    *
    * Transitions `ClientAttestationEngine` state from `Initializing` to `Attesting` state.
    */
-  public AttestationInit attestationInit() throws IllegalStateException {
+  public ClientHello createClientHello() throws IllegalStateException {
     if (state != AttestationState.Initializing) {
       throw new IllegalStateException("ClientAttestationEngine is not in the Initializing state");
     }
@@ -103,20 +103,20 @@ public class ClientAttestationEngine {
     byte[] random = new byte[REPLAY_PROTECTION_ARRAY_SIZE_BYTES];
     new Random().nextBytes(random);
 
-    // Create attestation init message.
-    AttestationInit attestationInit =
-        AttestationInit.newBuilder().setRandom(ByteString.copyFrom(random)).build();
+    // Create client hello message.
+    ClientHello clientHello =
+        ClientHello.newBuilder().setRandom(ByteString.copyFrom(random)).build();
 
     // Update current transcript.
-    byte[] serializedAttestationInit = attestationInit.toByteArray();
-    transcript = Bytes.concat(transcript, serializedAttestationInit);
+    byte[] serializedClientHello = clientHello.toByteArray();
+    transcript = Bytes.concat(transcript, serializedClientHello);
 
     state = state.transition();
-    return attestationInit;
+    return clientHello;
   }
 
   /**
-   * Responds to `AttestationInit` message by creating a `ClientIdentity` message and derives
+   * Responds to `ServerIdentity` message by creating a `ClientIdentity` message and derives
    * session keys for encrypting/decrypting messages from the server.
    * `ClientIdentity` message contains an ephemeral public key for negotiating session keys.
    *

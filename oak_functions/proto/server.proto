@@ -34,7 +34,7 @@ message Request {
 message AttestedInvokeRequest {
   oneof request_type {
     // Initialization message that starts the Remote Attestation protocol.
-    oak.remote_attestation.AttestationInit attestation_init = 1;
+    oak.remote_attestation.ClientHello client_hello = 1;
     // Client part of session key negotiation.
     oak.remote_attestation.ClientIdentity client_identity = 2;
     // Request with payload encrypted using the session key.
@@ -55,7 +55,7 @@ service RemoteAttestation {
   // Creates a message stream for session key negotiation and encrypted payload exchange.
   //
   // The created message stream looks as follows:
-  // - Client->Server: `AttestedInvokeRequest` with `AttestationInit`.
+  // - Client->Server: `AttestedInvokeRequest` with `ClientHello`.
   // - Server->Client: `AttestedInvokeResponse` with `ServerIdentity`.
   // - Client->Server: `AttestedInvokeRequest` with `ClientIdentity`.
   // - Client->Server: `AttestedInvokeRequest` with `EncryptedData`.
