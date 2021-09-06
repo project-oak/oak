@@ -431,15 +431,15 @@ impl AttestationBehavior {
         self.tee_certificate.is_some() && self.signer.is_some()
     }
 
-    pub fn get_expected_tee_measurement<'a>(&'a self) -> &'a Option<Vec<u8>> {
+    pub fn get_expected_tee_measurement(&self) -> &Option<Vec<u8>> {
         &self.expected_tee_measurement
     }
 
-    pub fn get_tee_certificate<'a>(&'a self) -> &'a Option<Vec<u8>> {
+    pub fn get_tee_certificate(&self) -> &Option<Vec<u8>> {
         &self.tee_certificate
     }
 
-    pub fn get_signer<'a>(&'a self) -> &'a Option<Signer> {
+    pub fn get_signer(&self) -> &Option<Signer> {
         &self.signer
     }
 }
@@ -461,6 +461,12 @@ impl Initializing {
         Self {
             random: get_random(REPLAY_PROTECTION_ARRAY_SIZE_BYTES),
         }
+    }
+}
+
+impl Default for Initializing {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -142,8 +142,8 @@ impl AeadEncryptor {
     /// https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html
     fn generate_nonce() -> [u8; aead::NONCE_LEN] {
         let mut nonce: [u8; aead::NONCE_LEN] = Default::default();
-        let mut random = get_random(aead::NONCE_LEN);
-        nonce.copy_from_slice(&mut random[0..aead::NONCE_LEN]);
+        let random = get_random(aead::NONCE_LEN);
+        nonce.copy_from_slice(&random[0..aead::NONCE_LEN]);
         nonce
     }
 }
