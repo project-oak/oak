@@ -30,8 +30,8 @@ import java.util.Arrays;
 import java.util.Random;
 import oak.remote_attestation.AttestationInfo;
 import oak.remote_attestation.AttestationReport;
-import oak.remote_attestation.ClientIdentity;
 import oak.remote_attestation.ClientHello;
+import oak.remote_attestation.ClientIdentity;
 import oak.remote_attestation.ServerIdentity;
 
 enum AttestationState {

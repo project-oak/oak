@@ -39,8 +39,8 @@ import oak.functions.server.AttestedInvokeRequest;
 import oak.functions.server.AttestedInvokeResponse;
 import oak.functions.server.RemoteAttestationGrpc;
 import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
-import oak.remote_attestation.ClientIdentity;
 import oak.remote_attestation.ClientHello;
+import oak.remote_attestation.ClientIdentity;
 import oak.remote_attestation.EncryptedData;
 import oak.remote_attestation.ServerIdentity;
 

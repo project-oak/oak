@@ -39,7 +39,7 @@ public class SignatureVerifier {
    * Creates a ECDSA-P256 signature verifier.
    *
    * `publicKey` parameter must be an OpenSSL ECDSA-P256 key, which is represented as
-   * "0x04 | X: 32-byte | Y: 32-byte".
+   * `0x04 | X: 32-byte | Y: 32-byte`.
    * Where X and Y are big-endian coordinates of an Elliptic Curve point.
    * https://datatracker.ietf.org/doc/html/rfc6979
    */
@@ -47,7 +47,7 @@ public class SignatureVerifier {
     // Parse OpenSSL public key.
     ECParameterSpec parameters = EllipticCurves.getCurveSpec(CURVE_TYPE);
     ECPublicKey parsedPublicKey = EllipticCurves.getEcPublicKey(
-      parameters, EllipticCurves.PointFormatType.UNCOMPRESSED, publicKey);
+        parameters, EllipticCurves.PointFormatType.UNCOMPRESSED, publicKey);
 
     // Create a signature verifier.
     verifier = new EcdsaVerifyJce(parsedPublicKey, HASH_TYPE, CERTIFICATE_ENCODING);
@@ -56,7 +56,8 @@ public class SignatureVerifier {
   /**
    * Verifies the `signature` value over `input` data.
    *
-   * `signature` parameter must be an IEEE-P1363 signature.
+   * `signature` parameter must be an IEEE-P1363 encoded ECDSA-P256 signature.
+   * https://datatracker.ietf.org/doc/html/rfc6979
    * https://standards.ieee.org/standard/1363-2000.html
    */
   public Boolean verify(byte[] input, byte[] signature) {

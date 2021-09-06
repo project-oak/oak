@@ -29,7 +29,7 @@ use crate::{
         get_random, get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier,
         Signer,
     },
-    proto::{AttestationInfo, AttestationReClientHelloport, ClientIdentity, ClientHello, ServerIdentity},
+    proto::{AttestationInfo, AttestationReport, ClientHello, ClientIdentity, ServerIdentity},
 };
 use anyhow::{anyhow, Context};
 
