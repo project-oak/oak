@@ -72,7 +72,7 @@ message ServerIdentity {
   // Random vector sent in messages for preventing replay attacks.
   bytes random = 3;
   // Signed SHA-256 hash of all previously send and received messaged.
-  // Signed transcript is sent in messaged to prevent replay attacks.
+  // Signed transcript is sent in messages to prevent replay attacks.
   bytes transcript_signature = 4;
   // Public key used to sign transcripts.
   bytes signing_public_key = 5;
@@ -85,7 +85,7 @@ message ClientIdentity {
   // Public key needed to establish a session key.
   bytes ephemeral_public_key = 1;
   // Signed SHA-256 hash of all previously send and received messaged.
-  // Signed transcript is sent in messaged to prevent replay attacks.
+  // Signed transcript is sent in messages to prevent replay attacks.
   bytes transcript_signature = 2;
   // Public key used to sign transcripts.
   bytes signing_public_key = 3;

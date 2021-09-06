@@ -72,7 +72,7 @@ public class ClientAttestationEngine {
   private AttestationState state;
   /**
    * Collection of previously send and received messaged.
-   * Signed transcript is sent in messaged to prevent replay attacks.
+   * Signed transcript is sent in messages to prevent replay attacks.
    */
   private byte[] transcript;
   /** Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation. */

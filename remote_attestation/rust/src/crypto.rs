@@ -14,6 +14,11 @@
 // limitations under the License.
 //
 
+// Crypto primitives used by the Remote Attestation protocol.
+//
+// Should be kept in sync with the Java implementation of the Remote Attestation
+// protocol.
+
 use crate::proto::EncryptedData;
 use anyhow::anyhow;
 use ring::{

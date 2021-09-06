@@ -63,7 +63,7 @@ public class AttestationClient {
    * `url` must contain a protocol used for connection ("https://" or "http://").
    */
   public AttestationClient(String url)
-      throws GeneralSecurityException, IOException, InterruptedException, MalformedURLException {
+      throws GeneralSecurityException, IOException, InterruptedException {
     // Create gRPC channel.
     URL parsedUrl = new URL(url);
     if (parsedUrl.getProtocol().equals("https")) {
@@ -118,7 +118,7 @@ public class AttestationClient {
 
     // Remotely attest the server and create:
     // - Client attestation identity containing client's ephemeral public key
-    // - Encryptor used for for decrypting/encrypting messages between client and server
+    // - Encryptor used for decrypting/encrypting messages between client and server
     ClientIdentity clientIdentity = attestationEngine.processServerIdentity(serverIdentity);
     AttestedInvokeRequest clientIdentityRequest =
         AttestedInvokeRequest.newBuilder().setClientIdentity(clientIdentity).build();
