@@ -814,6 +814,8 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                         "cargo",
                         &[
                             "test",
+                            // Compile and test for all features
+                            "--all-features",
                             &format!("--manifest-path={}", &entry),
                             if opt.benches { "--benches" } else { "" },
                         ],
