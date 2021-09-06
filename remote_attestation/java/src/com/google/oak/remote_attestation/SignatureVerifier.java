@@ -23,10 +23,9 @@ import com.google.crypto.tink.subtle.EllipticCurves.EcdsaEncoding;
 import com.google.crypto.tink.subtle.Enums.HashType;
 import java.security.GeneralSecurityException;
 import java.security.interfaces.ECPublicKey;
+import java.security.spec.ECParameterSpec;
 
 public class SignatureVerifier {
-  /** Size of the Elliptic Curve coordinate value. */
-  private static final int EC_POINT_SIZE = 32;
   /** Elliptic Curve type. */
   private static final CurveType CURVE_TYPE = CurveType.NIST_P256;
   /** Encoding of the verified certificate. */
@@ -45,12 +44,10 @@ public class SignatureVerifier {
    * https://datatracker.ietf.org/doc/html/rfc6979
    */
   public SignatureVerifier(byte[] publicKey) throws GeneralSecurityException {
-    // Extract Elliptic Curve point coordinates from an OpenSSL public key.
-    byte[] x = new byte[EC_POINT_SIZE];
-    byte[] y = new byte[EC_POINT_SIZE];
-    System.arraycopy(publicKey, 1, x, 0, EC_POINT_SIZE);
-    System.arraycopy(publicKey, EC_POINT_SIZE + 1, y, 0, EC_POINT_SIZE);
-    ECPublicKey parsedPublicKey = EllipticCurves.getEcPublicKey(CURVE_TYPE, x, y);
+    // Parse OpenSSL public key.
+    ECParameterSpec parameters = EllipticCurves.getCurveSpec(CURVE_TYPE);
+    ECPublicKey parsedPublicKey = EllipticCurves.getEcPublicKey(
+      parameters, EllipticCurves.PointFormatType.UNCOMPRESSED, publicKey);
 
     // Create a signature verifier.
     verifier = new EcdsaVerifyJce(parsedPublicKey, HASH_TYPE, CERTIFICATE_ENCODING);
