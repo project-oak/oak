@@ -22,7 +22,7 @@ use anyhow::{anyhow, Context};
 use futures::{Stream, StreamExt};
 use log::warn;
 use oak_remote_attestation::{
-    attestation::{AttestationBehavior, AttestationEngine, Attesting, Initializing, Server},
+    attestation::{AttestationBehavior, Attesting, Initializing, ServerAttestationEngine},
     crypto::AeadEncryptor,
 };
 use std::pin::Pin;
@@ -189,7 +189,7 @@ where
 async fn process_attestation_init(
     receiver: &mut Receiver,
     tee_certificate: &[u8],
-) -> anyhow::Result<(AttestedInvokeResponse, AttestationEngine<Server, Attesting>)> {
+) -> anyhow::Result<(AttestedInvokeResponse, ServerAttestationEngine<Attesting>)> {
     let request = receiver
         .receive()
         .await
@@ -204,7 +204,7 @@ async fn process_attestation_init(
         anyhow::bail!("Received incorrect message type");
     };
 
-    let attestation_engine = AttestationEngine::<Server, Initializing>::new(
+    let attestation_engine = ServerAttestationEngine::<Initializing>::new(
         AttestationBehavior::create_self_attestation(&tee_certificate)
             .context("Couldn't create self attestation behavior")?,
     );
@@ -222,7 +222,7 @@ async fn process_attestation_init(
 /// Attest a single gRPC streaming request. Client messages are provided via `receiver`.
 async fn process_client_identity(
     receiver: &mut Receiver,
-    attestation_engine: AttestationEngine<Server, Attesting>,
+    attestation_engine: ServerAttestationEngine<Attesting>,
 ) -> anyhow::Result<AeadEncryptor> {
     let request = receiver
         .receive()

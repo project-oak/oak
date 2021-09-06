@@ -160,10 +160,7 @@ impl KeyNegotiator {
         let rng = ring::rand::SystemRandom::new();
         let private_key = agreement::EphemeralPrivateKey::generate(KEY_AGREEMENT_ALGORITHM, &rng)
             .map_err(|error| anyhow!("Couldn't generate private key: {:?}", error))?;
-        Ok(Self {
-            type_,
-            private_key,
-        })
+        Ok(Self { type_, private_key })
     }
 
     pub fn public_key(&self) -> anyhow::Result<Vec<u8>> {

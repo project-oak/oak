@@ -59,8 +59,8 @@ http_archive(
 # External Java rules.
 http_archive(
     name = "rules_jvm_external",
-    strip_prefix = "rules_jvm_external-4.1",
     sha256 = "f36441aa876c4f6427bfb2d1f2d723b48e9d930b62662bf723ddfb8fc80f0140",
+    strip_prefix = "rules_jvm_external-4.1",
     url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.1.zip",
 )
 

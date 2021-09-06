@@ -21,7 +21,7 @@ use crate::proto::{
 };
 use anyhow::{anyhow, Context};
 use oak_remote_attestation::{
-    attestation::{self, AttestationBehavior, AttestationEngine, Initializing},
+    attestation::{AttestationBehavior, ClientAttestationEngine, Initializing},
     crypto::AeadEncryptor,
 };
 use tokio::sync::mpsc::Sender;
@@ -102,7 +102,7 @@ impl AttestationClient {
         channel: &mut GrpcChannel,
         expected_tee_measurement: &[u8],
     ) -> anyhow::Result<AeadEncryptor> {
-        let attestation_engine = AttestationEngine::<attestation::Client, Initializing>::new(
+        let attestation_engine = ClientAttestationEngine::<Initializing>::new(
             AttestationBehavior::create_peer_attestation(expected_tee_measurement)
                 .context("Couldn't create peer attestation behavior")?,
         );

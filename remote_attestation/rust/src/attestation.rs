@@ -14,6 +14,16 @@
 // limitations under the License.
 //
 
+// Remote attestation protocol handshake implementation.
+//
+// During the attestation protocol handshake participants send the following messages:
+// - [`Client`] -> [`Server`]: [`AttestationInit`]
+// - [`Server`] -> [`Client`]: [`ServerIdentity`]
+// - [`Client`] -> [`Server`]: [`ClientIdentity`]
+//
+// After the protocol handshake both sides create [`AeadEncryptor`] for exchanging encrypted
+// messages.
+
 use crate::{
     crypto::{
         get_random, get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier,
@@ -27,90 +37,11 @@ const ATTESTATION_PROTOCOL_VERSION: u8 = 1;
 /// Size (in bytes) of a random array sent in messages to prevent replay attacks.
 const REPLAY_PROTECTION_ARRAY_SIZE_BYTES: usize = 32;
 
-/// Convenience trait for transitioning between states in the state machine.
-pub trait StateMachine<T, A> {
-    fn transition(self, argument: A) -> anyhow::Result<T>;
-}
-
-impl<P> StateMachine<AttestationEngine<P, Attesting>, KeyNegotiator>
-    for AttestationEngine<P, Initializing>
+/// Client of the Remote attestation protocol handshake.
+pub struct ClientAttestationEngine<S>
 where
-    P: AttestationParticipant,
-{
-    fn transition(
-        self,
-        key_negotiator: KeyNegotiator,
-    ) -> anyhow::Result<AttestationEngine<P, Attesting>> {
-        let next_state =
-            Attesting::create(key_negotiator).context("Couldn't create attesting state")?;
-        Ok(AttestationEngine {
-            participant: self.participant,
-            behavior: self.behavior,
-            state: next_state,
-            transcript: self.transcript,
-        })
-    }
-}
-
-impl<P> StateMachine<AttestationEngine<P, Attested>, &[u8]> for AttestationEngine<P, Attesting>
-where
-    P: AttestationParticipant,
-{
-    fn transition(
-        self,
-        peer_ephemeral_public_key: &[u8],
-    ) -> anyhow::Result<AttestationEngine<P, Attested>> {
-        let next_state = Attested::create(self.state.key_negotiator, peer_ephemeral_public_key)
-            .context("Couldn't create attested state")?;
-        Ok(AttestationEngine {
-            participant: self.participant,
-            behavior: self.behavior,
-            state: next_state,
-            transcript: self.transcript,
-        })
-    }
-}
-
-/// Remote attestation protocol handshake implementation.
-/// During the attestation protocol handshake participants send the following messages:
-/// - [`Client`] -> [`Server`]: [`AttestationInit`]
-/// - [`Server`] -> [`Client`]: [`ServerIdentity`]
-/// - [`Client`] -> [`Server`]: [`ClientIdentity`]
-///
-/// After the protocol handshake both sides create [`AeadEncryptor`] for exchanging encrypted
-/// messages.
-///
-/// Generic argument `P` defines the participant of attestation used.
-/// It can be either [`Client`] or [`Server`].
-///
-/// Generic argument `S` defines current attestation state. It can be one of:
-/// - [`Initializing`]: represents the starting state of the attestation handshake.
-///     - Client is preparing to send `AttestationInit`.
-/// - [`Attesting`]: represents an ongoing state of the attestation handshake.
-///     - Client has sent `AttestationInit`.
-///     - Server has sent `ServerIdentity`.
-/// - [`Attested`]: represents a finished state of the attestation handshake.
-///     - Client has sent `ClientIdentity`.
-///     - Both Client and Server agreed on session keys.
-///
-/// [`AttestationEngine::behavior`] defines the behavior of the remote attestation protocol.
-/// It can be one of:
-/// - Peer Attestation:
-///   - Represents an attestation process, where current machine remotely attests a remote peer and
-///     verifies its attestation info.
-/// - Self Attestation:
-///   - Represents an attestation process, where current machine remotely attests to a remote peer
-///     and sends attestation info to it.
-/// - Bidirectional Attestation:
-///   - Represents an attestation process, where current machine and a remote peer remotely attest
-///     each other.
-pub struct AttestationEngine<P, S>
-where
-    P: AttestationParticipant,
     S: AttestationState,
 {
-    /// Participant of the remote attestation protocol.
-    participant: std::marker::PhantomData<P>,
     /// Behavior of the remote attestation protocol.
     behavior: AttestationBehavior,
     /// Current state of the remote attestation protocol.
@@ -120,10 +51,23 @@ where
     transcript: Transcript,
 }
 
-impl AttestationEngine<Client, Initializing> {
+/// Server of the Remote attestation protocol handshake.
+pub struct ServerAttestationEngine<S>
+where
+    S: AttestationState,
+{
+    /// Behavior of the remote attestation protocol.
+    behavior: AttestationBehavior,
+    /// Current state of the remote attestation protocol.
+    state: S,
+    /// Collection of previously send and received messaged.
+    /// Signed transcript is sent in messages to prevent replay attacks.
+    transcript: Transcript,
+}
+
+impl ClientAttestationEngine<Initializing> {
     pub fn new(behavior: AttestationBehavior) -> Self {
         Self {
-            participant: std::marker::PhantomData,
             behavior,
             state: Initializing::new(),
             transcript: Transcript::new(),
@@ -132,10 +76,10 @@ impl AttestationEngine<Client, Initializing> {
 
     /// Initializes the Remote Attestation handshake by creating an `AttestationInit` message.
     ///
-    /// Transitions [`AttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
+    /// Transitions [`ClientAttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
     pub fn attestation_init(
         mut self,
-    ) -> anyhow::Result<(AttestationInit, AttestationEngine<Client, Attesting>)> {
+    ) -> anyhow::Result<(AttestationInit, ClientAttestationEngine<Attesting>)> {
         let attestation_init = AttestationInit {
             random: self.state.random.to_vec(),
         };
@@ -147,17 +91,21 @@ impl AttestationEngine<Client, Initializing> {
 
         let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Client)
             .context("Couldn't create key negotiator")?;
-        let attestation_engine = self
-            .transition(key_negotiator)
-            .context("Couldn't transition from Initializing to Attesting state")?;
+
+        let next_state =
+            Attesting::create(key_negotiator).context("Couldn't create attesting state")?;
+        let attestation_engine = ClientAttestationEngine {
+            behavior: self.behavior,
+            state: next_state,
+            transcript: self.transcript,
+        };
         Ok((attestation_init, attestation_engine))
     }
 }
 
-impl AttestationEngine<Server, Initializing> {
+impl ServerAttestationEngine<Initializing> {
     pub fn new(behavior: AttestationBehavior) -> Self {
         Self {
-            participant: std::marker::PhantomData,
             behavior,
             state: Initializing::new(),
             transcript: Transcript::new(),
@@ -170,11 +118,11 @@ impl AttestationEngine<Server, Initializing> {
     /// If self attestation is enabled this message also provides necessary information to perform
     /// remote attestation.
     ///
-    /// Transitions [`AttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
+    /// Transitions [`ServerAttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
     pub fn process_attestation_init(
         mut self,
         attestation_init: &AttestationInit,
-    ) -> anyhow::Result<(ServerIdentity, AttestationEngine<Server, Attesting>)> {
+    ) -> anyhow::Result<(ServerIdentity, ServerAttestationEngine<Attesting>)> {
         // Create server identity message.
         let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Server)
             .context("Couldn't create key negotiator")?;
@@ -231,14 +179,18 @@ impl AttestationEngine<Server, Initializing> {
             }
         };
 
-        let attestation_engine = self
-            .transition(key_negotiator)
-            .context("Couldn't transition from Initializing to Attesting state")?;
+        let next_state =
+            Attesting::create(key_negotiator).context("Couldn't create attesting state")?;
+        let attestation_engine = ServerAttestationEngine {
+            behavior: self.behavior,
+            state: next_state,
+            transcript: self.transcript,
+        };
         Ok((server_identity, attestation_engine))
     }
 }
 
-impl AttestationEngine<Client, Attesting> {
+impl ClientAttestationEngine<Attesting> {
     /// Responds to `AttestationInit` message by creating a `ClientIdentity` message and derives
     /// session keys for encrypting/decrypting messages from the server.
     ///
@@ -246,11 +198,11 @@ impl AttestationEngine<Client, Attesting> {
     /// If self attestation is enabled this message also provides necessary information to perform
     /// remote attestation.
     ///
-    /// Transitions [`AttestationEngine`] state from [`Attesting`] to [`Attested`] state.
+    /// Transitions [`ClientAttestationEngine`] state from [`Attesting`] to [`Attested`] state.
     pub fn process_server_identity(
         mut self,
         server_identity: &ServerIdentity,
-    ) -> anyhow::Result<(ClientIdentity, AttestationEngine<Client, Attested>)> {
+    ) -> anyhow::Result<(ClientIdentity, ClientAttestationEngine<Attested>)> {
         if self.behavior.contains_peer_attestation() {
             // Verify server transcript signature.
             // Transcript doesn't include transcript signature from the server identity message.
@@ -331,22 +283,29 @@ impl AttestationEngine<Client, Attesting> {
         };
 
         // Agree on session keys and create an encryptor.
-        let attestation_engine = self
-            .transition(&server_identity.ephemeral_public_key)
-            .context("Couldn't transition from Attesting to Attested state")?;
+        let next_state = Attested::create(
+            self.state.key_negotiator,
+            &server_identity.ephemeral_public_key,
+        )
+        .context("Couldn't create attested state")?;
+        let attestation_engine = ClientAttestationEngine {
+            behavior: self.behavior,
+            state: next_state,
+            transcript: self.transcript,
+        };
         Ok((client_identity, attestation_engine))
     }
 }
 
-impl AttestationEngine<Server, Attesting> {
+impl ServerAttestationEngine<Attesting> {
     /// Finishes the remote attestation protocol handshake and derives session keys for
     /// encrypting/decrypting messages from the client.
     ///
-    /// Transitions [`AttestationEngine`] state from [`Attesting`] to [`Attested`] state.
+    /// Transitions [`ServerAttestationEngine`] state from [`Attesting`] to [`Attested`] state.
     pub fn process_client_identity(
         mut self,
         client_identity: &ClientIdentity,
-    ) -> anyhow::Result<AttestationEngine<Server, Attested>> {
+    ) -> anyhow::Result<ServerAttestationEngine<Attested>> {
         if self.behavior.contains_peer_attestation() {
             // Verify client transcript signature.
             // Transcript doesn't include transcript signature from the client identity message.
@@ -378,30 +337,45 @@ impl AttestationEngine<Server, Attesting> {
         }
 
         // Agree on session keys and create an encryptor.
-        let attestation_engine = self
-            .transition(&client_identity.ephemeral_public_key)
-            .context("Couldn't transition from Attesting to Attested state")?;
+        let next_state = Attested::create(
+            self.state.key_negotiator,
+            &client_identity.ephemeral_public_key,
+        )
+        .context("Couldn't create attested state")?;
+        let attestation_engine = ServerAttestationEngine {
+            behavior: self.behavior,
+            state: next_state,
+            transcript: self.transcript,
+        };
         Ok(attestation_engine)
     }
 }
 
-impl<P> AttestationEngine<P, Attested>
-where
-    P: AttestationParticipant,
-{
+impl ClientAttestationEngine<Attested> {
     /// Returns an encryptor created based on the negotiated ephemeral keys.
     pub fn get_encryptor(self) -> AeadEncryptor {
         self.state.encryptor
     }
 }
 
-pub trait AttestationParticipant {}
-impl AttestationParticipant for Client {}
-impl AttestationParticipant for Server {}
+impl ServerAttestationEngine<Attested> {
+    /// Returns an encryptor created based on the negotiated ephemeral keys.
+    pub fn get_encryptor(self) -> AeadEncryptor {
+        self.state.encryptor
+    }
+}
 
-pub struct Client {}
-pub struct Server {}
-
+/// Defines the behavior of the remote attestation protocol.
+/// It can be one of:
+/// - Peer Attestation:
+///   - Represents an attestation process, where current machine remotely attests a remote peer and
+///     verifies its attestation info.
+/// - Self Attestation:
+///   - Represents an attestation process, where current machine remotely attests to a remote peer
+///     and sends attestation info to it.
+/// - Bidirectional Attestation:
+///   - Represents an attestation process, where current machine and a remote peer remotely attest
+///     each other.
 pub struct AttestationBehavior {
     /// Expected value of the peer's TEE measurement.
     expected_tee_measurement: Option<Vec<u8>>,
@@ -476,6 +450,7 @@ impl AttestationState for Attesting {}
 impl AttestationState for Attested {}
 
 /// Represents the starting state of the attestation handshake.
+/// I.e. client is preparing to send `AttestationInit`.
 pub struct Initializing {
     /// Random vector sent in messages for preventing replay attacks.
     random: Vec<u8>,
@@ -490,6 +465,7 @@ impl Initializing {
 }
 
 /// Represents an ongoing state of the attestation handshake.
+/// I.e. client has sent `AttestationInit` and server has sent `ServerIdentity`.
 pub struct Attesting {
     /// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
     key_negotiator: KeyNegotiator,
@@ -502,6 +478,8 @@ impl Attesting {
 }
 
 /// Represents a finished state of the attestation handshake.
+/// I.e. client has sent `ClientIdentity` and both Client and Server agreed on
+/// session keys.
 pub struct Attested {
     /// Encryptor that was created during the attestation handshake.
     encryptor: AeadEncryptor,
