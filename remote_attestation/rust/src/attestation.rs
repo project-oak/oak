@@ -238,18 +238,6 @@ impl AttestationEngine<Server, Initializing> {
     }
 }
 
-impl AttestationEngine<Server, SelfAttestation, Initializing> {
-    fn create_server_identity<T>() -> anyhow::Result<ServerIdentity> {
-
-    }
-}
-
-impl AttestationEngine<Server, PeerAttestation, Initializing> {
-    fn create_server_identity<T>() -> anyhow::Result<ServerIdentity> {
-
-    }
-}
-
 impl AttestationEngine<Client, Attesting> {
     /// Responds to `AttestationInit` message by creating a `ClientIdentity` message and derives
     /// session keys for encrypting/decrypting messages from the server.
@@ -413,44 +401,6 @@ impl AttestationParticipant for Server {}
 
 pub struct Client {}
 pub struct Server {}
-
-
-
-
-
-
-pub struct PeerAttestation {
-    /// Expected value of the peer's TEE measurement.
-    expected_tee_measurement: Vec<u8>,
-}
-
-pub struct SelfAttestation {
-    /// PEM encoded X.509 certificate that signs TEE firmware key.
-    tee_certificate: Vec<u8>,
-    /// Signer containing a key which public part is signed by the TEE firmware key.
-    /// Used for signing protocol transcripts and preventing replay attacks.
-    signer: Signer,
-}
-
-pub struct BidirectionalAttestation {
-    /// Expected value of the peer's TEE measurement.
-    expected_tee_measurement: Vec<u8>,
-    // /// Convenience struct for creating attestation info and signing data with TEE
-    // /// firmware key.
-    // tee_provider: Option<TeeProvider>,
-    /// PEM encoded X.509 certificate that signs TEE firmware key.
-    tee_certificate: Vec<u8>,
-    /// Signer containing a key which public part is signed by the TEE firmware key.
-    /// Used for signing protocol transcripts and preventing replay attacks.
-    signer: Signer,
-}
-
-
-
-
-
-
-
 
 pub struct AttestationBehavior {
     /// Expected value of the peer's TEE measurement.
