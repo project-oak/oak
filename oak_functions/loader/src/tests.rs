@@ -18,7 +18,7 @@ extern crate test;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, Response, StatusCode};
 use oak_functions_loader::{
-    grpc::create_and_start_grpc_server,
+    grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData, LookupDataAuth},
     server::{apply_policy, format_bytes, Policy, WasmHandler},
@@ -143,17 +143,23 @@ where
     ));
     lookup_data.refresh().await.unwrap();
     let tee_certificate = vec![];
+    let wasm_handler = create_wasm_handler(
+        &wasm_module_bytes,
+        lookup_data,
+        None,
+        vec![],
+        logger.clone(),
+    )
+    .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
             &address,
+            wasm_handler,
             tee_certificate,
-            &wasm_module_bytes,
-            lookup_data,
             policy,
             term,
             logger,
-            None,
         )
         .await
     });

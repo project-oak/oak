@@ -31,7 +31,7 @@ public class Main {
       "\\{\"temperature_degrees_celsius\":.*\\}";
 
   public static void main(String[] args) throws Exception {
-    AttestationClient client = new AttestationClient("https://localhost:8790");
+    AttestationClient client = new AttestationClient("http://localhost:8080");
 
     byte[] requestBody = "{\"lat\":52,\"lon\":0}".getBytes(UTF_8);
     Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();

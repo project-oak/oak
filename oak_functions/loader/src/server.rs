@@ -150,23 +150,27 @@ impl FixedSizeBodyPadder for Response {
 
 /// Trait for implementing extensions, to implement new native functionality.
 pub trait OakApiNativeExtension {
-    // Similar to wasmi::Externals, but with additional optionality.
+    /// Similar to `invoke_index` in [`wasmi::Externals`], but may return a result to be
+    /// written into the memory of the `WasmState`.
     fn invoke_index(
         &self,
         wasm_state: &WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<Option<ExtensionResult>, OakStatus>, wasmi::Trap>;
 
-    // Similar to wasmi::ModuleImportResolver, but with additional optionality.
+    /// Similar to `resolve_func` in [`wasmi::ModuleImportResolver`], but returns a tuple with a
+    /// function index and a function signature to be converted into [`wasmi::FuncRef`].
     fn resolve_func(&self) -> anyhow::Result<(usize, wasmi::Signature)>;
 
+    /// Registration info, including a function index and a function name, for registering this
+    /// extension in the [`WasmState`].
     fn registration_info(&self) -> (usize, String);
 }
 
-type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
+pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
 
-// Result of the invocation of the extension. The WasmState will write the bytes into the specified
-// memory.
+// Result of the invocation of an extension. The [`WasmState`] will write the `bytes` into the
+// memory location specified by `buf_ptr_ptr` and `buf_len_ptr`.
 pub struct ExtensionResult {
     pub bytes: Vec<u8>,
     pub buf_ptr_ptr: AbiPointer,
@@ -209,7 +213,7 @@ impl WasmState {
         }
     }
 
-    pub fn write_buffer_to_wasm_memory(
+    fn write_buffer_to_wasm_memory(
         &self,
         source: &[u8],
         dest: AbiPointer,
@@ -224,11 +228,7 @@ impl WasmState {
         })
     }
 
-    pub fn write_u32_to_wasm_memory(
-        &self,
-        value: u32,
-        address: AbiPointer,
-    ) -> Result<(), OakStatus> {
+    fn write_u32_to_wasm_memory(&self, value: u32, address: AbiPointer) -> Result<(), OakStatus> {
         let value_bytes = &mut [0; 4];
         LittleEndian::write_u32(value_bytes, value);
         self.get_memory().set(address, value_bytes).map_err(|err| {
@@ -476,7 +476,7 @@ impl wasmi::Externals for WasmState {
                         None => panic!("Unimplemented function at {}", index),
                     }
                 };
-                map_host_errors(map_extension_result(self, result))
+                map_host_errors(handle_extension_result(self, result))
             }
         }
     }
@@ -488,28 +488,34 @@ impl wasmi::ModuleImportResolver for WasmState {
         field_name: &str,
         signature: &wasmi::Signature,
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
-        match oak_functions_resolve_func(field_name, signature) {
-            Ok(func_ref) => Ok(func_ref),
-            Err(err) => {
+        // First look for the function (i.e., `field_name`) in the statically registered functions.
+        // If not found, then look for it among the extensions. If not found, return an error.
+        let (index, expected_signature) = match oak_functions_resolve_func(field_name) {
+            Some(sig) => sig,
+            None => {
                 let ext_names = self.extensions_names.read().unwrap();
                 match ext_names.get(field_name) {
-                    Some(extension) => {
-                        let (index, ext_signature) = extension
-                            .resolve_func()
-                            .map_err(|err| wasmi::Error::Instantiation(format!("{:?}", err)))?;
-                        if signature != &ext_signature {
-                            return Err(wasmi::Error::Instantiation(format!(
-                                "Export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
-                                field_name, signature, ext_signature
-                            )));
-                        }
-
-                        Ok(wasmi::FuncInstance::alloc_host(ext_signature, index))
+                    Some(extension) => extension
+                        .resolve_func()
+                        .map_err(|err| wasmi::Error::Instantiation(format!("{:?}", err)))?,
+                    None => {
+                        return Err(wasmi::Error::Instantiation(format!(
+                            "Export {} not found",
+                            field_name
+                        )))
                     }
-                    None => Err(err),
                 }
             }
+        };
+
+        if signature != &expected_signature {
+            return Err(wasmi::Error::Instantiation(format!(
+                "Export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
+                field_name, signature, expected_signature
+            )));
         }
+
+        Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
     }
 }
 
@@ -733,10 +739,7 @@ impl WasmHandler {
 
 /// A resolver function, mapping `oak_functions` host function names to an index and a type
 /// signature.
-fn oak_functions_resolve_func(
-    field_name: &str,
-    signature: &wasmi::Signature,
-) -> Result<wasmi::FuncRef, wasmi::Error> {
+fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signature)> {
     // The types in the signatures correspond to the parameters from
     // oak_functions/abi/src/lib.rs
     let (index, expected_signature) = match field_name {
@@ -793,22 +796,10 @@ fn oak_functions_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
-        _ => {
-            return Err(wasmi::Error::Instantiation(format!(
-                "Export {} not found",
-                field_name
-            )))
-        }
+        _ => return None,
     };
 
-    if signature != &expected_signature {
-        return Err(wasmi::Error::Instantiation(format!(
-            "Export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
-            field_name, signature, expected_signature
-        )));
-    }
-
-    Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
+    Some((index, expected_signature))
 }
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
@@ -824,7 +815,10 @@ fn map_host_errors(
     ))))
 }
 
-fn map_extension_result(
+/// If `result` contains an [`ExtensionResult`] writes it into the memory of `wasm_state`, returning
+/// any errors that may arise. If `result` contains an error, returns that error. Otherwise, returns
+/// `Ok(())`.
+fn handle_extension_result(
     wasm_state: &mut WasmState,
     result: Result<Option<ExtensionResult>, OakStatus>,
 ) -> Result<(), OakStatus> {

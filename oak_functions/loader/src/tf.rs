@@ -141,7 +141,6 @@ impl OakApiNativeExtension for TensorFlowModel {
         ))
     }
 
-    // Similar to wasmi::ModuleImportResolver, but with additional optionality.
     fn resolve_func(&self) -> anyhow::Result<(usize, wasmi::Signature)> {
         Ok((
             TF_MODEL_INFER,

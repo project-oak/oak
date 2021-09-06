@@ -22,7 +22,7 @@ use crate::{
     lookup::LookupData,
     metrics::PrivateMetricsAggregator,
     proto::remote_attestation_server::RemoteAttestationServer,
-    server::{apply_policy, Policy, WasmHandler},
+    server::{apply_policy, BoxedExtension, Policy, WasmHandler},
 };
 use anyhow::Context;
 use log::Level;
@@ -52,21 +52,35 @@ async fn handle_request(
     Ok(bytes)
 }
 
-/// Starts a gRPC server on the given address, serving the `main` function of the given Wasm module.
+/// Creates a [`WasmHandler`] with the given Wasm module, lookup data, metrics aggregator, and
+/// extensions.
+pub fn create_wasm_handler(
+    wasm_module_bytes: &[u8],
+    lookup_data: Arc<LookupData>,
+    aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
+    extensions: Vec<BoxedExtension>,
+    logger: Logger,
+) -> anyhow::Result<WasmHandler> {
+    let mut wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, logger, aggregator)?;
+
+    for extension in extensions {
+        wasm_handler.register_extension(extension);
+    }
+
+    Ok(wasm_handler)
+}
+
+/// Starts a gRPC server on the given address, serving the `main` function from the given
+/// [`WasmHandler`].
 #[allow(clippy::too_many_arguments)]
 pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     address: &SocketAddr,
+    wasm_handler: WasmHandler,
     tee_certificate: Vec<u8>,
-    wasm_module_bytes: &[u8],
-    lookup_data: Arc<LookupData>,
     policy: Policy,
     terminate: F,
     logger: Logger,
-    aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
 ) -> anyhow::Result<()> {
-    let wasm_handler =
-        WasmHandler::create(wasm_module_bytes, lookup_data, logger.clone(), aggregator)?;
-
     logger.log_public(
         Level::Info,
         &format!(
