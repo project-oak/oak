@@ -77,7 +77,7 @@ impl ClientAttestationEngine<Initializing> {
     /// Initializes the Remote Attestation handshake by creating an `ClientHello` message.
     ///
     /// Transitions [`ClientAttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
-    pub fn create_attestation_init(
+    pub fn create_client_hello(
         mut self,
     ) -> anyhow::Result<(ClientHello, ClientAttestationEngine<Attesting>)> {
         let client_hello = ClientHello {
@@ -119,7 +119,7 @@ impl ServerAttestationEngine<Initializing> {
     /// remote attestation.
     ///
     /// Transitions [`ServerAttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
-    pub fn process_attestation_init(
+    pub fn process_client_hello(
         mut self,
         client_hello: &ClientHello,
     ) -> anyhow::Result<(ServerIdentity, ServerAttestationEngine<Attesting>)> {

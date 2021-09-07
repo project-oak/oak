@@ -107,7 +107,7 @@ public class AttestationClient {
         new ClientAttestationEngine(TEST_TEE_MEASUREMENT.getBytes(UTF_8));
 
     // Send client hello message.
-    ClientHello clientHello = attestationEngine.clientHello();
+    ClientHello clientHello = attestationEngine.createClientHello();
     AttestedInvokeRequest clientHelloRequest =
         AttestedInvokeRequest.newBuilder().setClientHello(clientHello).build();
     requestObserver.onNext(clientHelloRequest);

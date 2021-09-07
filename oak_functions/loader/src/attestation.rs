@@ -154,7 +154,7 @@ where
         let response_stream = async_stream::try_stream! {
             let mut receiver = Receiver { request_stream };
 
-            let (attestation_response, attestation_engine) = process_attestation_init(&mut receiver, &tee_certificate)
+            let (attestation_response, attestation_engine) = process_client_hello(&mut receiver, &tee_certificate)
                 .await
                 .map_err(|error| {
                     let message = format!("Couldn't process client hello: {:?}", error).to_string();
@@ -186,7 +186,7 @@ where
 }
 
 /// Attest a single gRPC streaming request. Client messages are provided via `receiver`.
-async fn process_attestation_init(
+async fn process_client_hello(
     receiver: &mut Receiver,
     tee_certificate: &[u8],
 ) -> anyhow::Result<(AttestedInvokeResponse, ServerAttestationEngine<Attesting>)> {
