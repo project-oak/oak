@@ -152,22 +152,29 @@ impl FixedSizeBodyPadder for Response {
 pub trait OakApiNativeExtension {
     /// Similar to `invoke_index` in [`wasmi::Externals`], but may return a result to be
     /// written into the memory of the `WasmState`.
-    fn invoke_index(
+    fn invoke(
         &self,
         wasm_state: &WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<Option<ExtensionResult>, OakStatus>, wasmi::Trap>;
 
-    /// Similar to `resolve_func` in [`wasmi::ModuleImportResolver`], but returns a tuple with a
-    /// function index and a function signature to be converted into [`wasmi::FuncRef`].
-    fn resolve_func(&self) -> anyhow::Result<(usize, wasmi::Signature)>;
-
-    /// Registration info, including a function index and a function name, for registering this
-    /// extension in the [`WasmState`].
-    fn registration_info(&self) -> (usize, String);
+    /// Metadata about this Extension, including a unique internal index, the exported host function
+    /// name, and the function's signature
+    fn get_metadata(&self) -> ExtensionMetadata;
 }
 
 pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
+
+/// Metadata about an [`OakApiNativeExtension`].
+pub struct ExtensionMetadata {
+    /// Name of the exported host function.
+    pub name: String,
+    /// Unique internal index corresponding to the exported host function. It is required when
+    /// invoking the host function.
+    pub index: usize,
+    /// Signature of the exported host function.
+    pub signature: wasmi::Signature,
+}
 
 // Result of the invocation of an extension. The [`WasmState`] will write the `bytes` into the
 // memory location specified by `buf_ptr_ptr` and `buf_len_ptr`.
@@ -189,8 +196,10 @@ pub struct WasmState {
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
     metrics_proxy: Option<PrivateMetricsProxy>,
+    /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
     extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
-    extensions_names: Arc<HashMap<String, Arc<BoxedExtension>>>,
+    /// A mapping of host function names to metadata required for resolving the function.
+    extensions_metadata: Arc<HashMap<String, ExtensionMetadata>>,
 }
 
 impl WasmState {
@@ -471,7 +480,7 @@ impl wasmi::Externals for WasmState {
             _ => {
                 let result = {
                     match self.extensions_indices.get(&index) {
-                        Some(ref extension) => extension.invoke_index(self, args)?,
+                        Some(ref extension) => extension.invoke(self, args)?,
                         None => panic!("Unimplemented function at {}", index),
                     }
                 };
@@ -491,10 +500,8 @@ impl wasmi::ModuleImportResolver for WasmState {
         // If not found, then look for it among the extensions. If not found, return an error.
         let (index, expected_signature) = match oak_functions_resolve_func(field_name) {
             Some(sig) => sig,
-            None => match self.extensions_names.get(field_name) {
-                Some(extension) => extension
-                    .resolve_func()
-                    .map_err(|err| wasmi::Error::Instantiation(format!("{:?}", err)))?,
+            None => match self.extensions_metadata.get(field_name) {
+                Some(metadata) => (metadata.index, metadata.signature.clone()),
                 None => {
                     return Err(wasmi::Error::Instantiation(format!(
                         "Export {} not found",
@@ -523,7 +530,7 @@ impl WasmState {
         logger: Logger,
         metrics_proxy: Option<PrivateMetricsProxy>,
         extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
-        extensions_names: Arc<HashMap<String, Arc<BoxedExtension>>>,
+        extensions_metadata: Arc<HashMap<String, ExtensionMetadata>>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -534,7 +541,7 @@ impl WasmState {
             logger,
             metrics_proxy,
             extensions_indices,
-            extensions_names,
+            extensions_metadata,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -682,7 +689,7 @@ pub struct WasmHandler {
     logger: Logger,
     aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
-    extensions_names: Arc<HashMap<String, Arc<BoxedExtension>>>,
+    extensions_metadata: Arc<HashMap<String, ExtensionMetadata>>,
 }
 
 impl WasmHandler {
@@ -694,13 +701,13 @@ impl WasmHandler {
         aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     ) -> anyhow::Result<Self> {
         let mut extensions_indices = hashmap! {};
-        let mut extensions_names = hashmap! {};
+        let mut extensions_metadata = hashmap! {};
 
         for extension in extensions {
-            let (index, name) = extension.registration_info();
+            let metadata = extension.get_metadata();
             let ext = Arc::new(extension);
-            extensions_indices.insert(index, ext.clone());
-            extensions_names.insert(name, ext);
+            extensions_indices.insert(metadata.index, ext.clone());
+            extensions_metadata.insert(metadata.name.clone(), metadata);
         }
 
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
@@ -711,7 +718,7 @@ impl WasmHandler {
             logger,
             aggregator,
             extensions_indices: Arc::new(extensions_indices),
-            extensions_names: Arc::new(extensions_names),
+            extensions_metadata: Arc::new(extensions_metadata),
         })
     }
 
@@ -724,7 +731,7 @@ impl WasmHandler {
             self.logger.clone(),
             self.aggregator.clone().map(PrivateMetricsProxy::new),
             self.extensions_indices.clone(),
-            self.extensions_names.clone(),
+            self.extensions_metadata.clone(),
         )?;
         wasm_state.invoke();
         wasm_state.publish_metrics();

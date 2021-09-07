@@ -17,7 +17,8 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, ExtensionResult, OakApiNativeExtension, WasmState, ABI_USIZE,
+        AbiPointer, AbiPointerOffset, ExtensionMetadata, ExtensionResult, OakApiNativeExtension,
+        WasmState, ABI_USIZE,
     },
 };
 use anyhow::Context;
@@ -32,8 +33,10 @@ use tract_tensorflow::prelude::{
 };
 use wasmi::ValueType;
 
-const TF_MODEL_INFER: usize = 4;
+/// Host function name for invoking TensorFlow model inference.
 const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
+/// Internal index associated with the `tf_model_infer` host function.
+const TF_MODEL_INFER: usize = 4;
 
 /// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`
 /// is not required, InferenceModel with [`InferenceFact`] and [`InferenceOp`] could be used
@@ -126,7 +129,7 @@ impl TensorFlowModel {
 }
 
 impl OakApiNativeExtension for TensorFlowModel {
-    fn invoke_index(
+    fn invoke(
         &self,
         wasm_state: &WasmState,
         args: wasmi::RuntimeArgs,
@@ -141,25 +144,23 @@ impl OakApiNativeExtension for TensorFlowModel {
         ))
     }
 
-    fn resolve_func(&self) -> anyhow::Result<(usize, wasmi::Signature)> {
-        Ok((
-            TF_MODEL_INFER,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // input_ptr
-                    ABI_USIZE, // input_len
-                    ABI_USIZE, // inference_ptr_ptr
-                    ABI_USIZE, // inference_len_ptr
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ))
-    }
-
     /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
-    /// fine to return constants for registration.
-    fn registration_info(&self) -> (usize, String) {
-        (TF_MODEL_INFER, TF_ABI_FUNCTION_NAME.to_string())
+    /// fine to return a constant name and index in the metadata.
+    fn get_metadata(&self) -> ExtensionMetadata {
+        let signature = wasmi::Signature::new(
+            &[
+                ABI_USIZE, // input_ptr
+                ABI_USIZE, // input_len
+                ABI_USIZE, // inference_ptr_ptr
+                ABI_USIZE, // inference_len_ptr
+            ][..],
+            Some(ValueType::I32),
+        );
+        ExtensionMetadata {
+            name: TF_ABI_FUNCTION_NAME.to_string(),
+            index: TF_MODEL_INFER,
+            signature,
+        }
     }
 }
 
