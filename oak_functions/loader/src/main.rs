@@ -27,7 +27,7 @@ use oak_functions_loader::{
     logger::Logger,
     lookup::{LookupData, LookupDataAuth},
     metrics::{PrivateMetricsAggregator, PrivateMetricsConfig},
-    server::{BoxedExtension, Policy},
+    server::Policy,
 };
 
 #[cfg(feature = "oak-tf")]
@@ -162,12 +162,12 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 
     let lookup_data = load_lookup_data(&config, logger.clone()).await?;
 
-    let extensions = if cfg!(feature = "oak-unsafe") {
-        if let Some(tf_model) = load_tensorflow_model(&config, logger.clone()).await? {
-            vec![tf_model]
-        } else {
-            vec![]
-        }
+    #[cfg(not(feature = "oak-unsafe"))]
+    let extensions = vec![];
+
+    #[cfg(feature = "oak-unsafe")]
+    let extensions = if let Some(tf_model) = load_tensorflow_model(&config, logger.clone()).await? {
+        vec![tf_model]
     } else {
         vec![]
     };
@@ -273,23 +273,15 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
 async fn load_tensorflow_model(
     config: &Config,
     logger: Logger,
-) -> anyhow::Result<Option<BoxedExtension>> {
+) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtension>> {
     match &config.tf_model {
         Some(tf_model_config) => {
             let model =
                 oak_functions_loader::tf::read_model_from_path(&tf_model_config.path).await?;
             let tf_model = TensorFlowModel::create(model, tf_model_config.shape.clone(), logger)?;
-            let tf_model: BoxedExtension = Box::new(tf_model);
+            let tf_model: oak_functions_loader::server::BoxedExtension = Box::new(tf_model);
             Ok(Some(tf_model))
         }
         None => Ok(None),
     }
-}
-
-#[cfg(not(feature = "oak-tf"))]
-async fn load_tensorflow_model(
-    _config: &Config,
-    _logger: Logger,
-) -> anyhow::Result<Option<BoxedExtension>> {
-    Ok(None)
 }
