@@ -16,12 +16,14 @@
 
 include!(concat!(env!("OUT_DIR"), "/handle_tests/tests.rs"));
 
+#[cfg(not(feature = "linear-handles"))]
 use oak::{
     handle::{extract_handles, inject_handles},
     io::{Receiver, Sender},
 };
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn extract_nothing() {
     let mut message = LookMaNoHandles {
         a: "Hello, world!".to_string(),
@@ -34,6 +36,7 @@ fn extract_nothing() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn extract_struct() {
     let mut message = TestMessage {
         other_arbitrary_field: "Test".to_string(),
@@ -55,6 +58,7 @@ fn extract_struct() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn enum_extract_sender() {
     let mut message = TestMessageWithEnum {
         either: Some(test_message_with_enum::Either::EitherSender(sender(42))),
@@ -72,6 +76,7 @@ fn enum_extract_sender() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn enum_extract_receiver() {
     let mut message = TestMessageWithEnum {
         either: Some(test_message_with_enum::Either::EitherReceiver(receiver(42))),
@@ -89,6 +94,7 @@ fn enum_extract_receiver() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn enum_inject_sender() {
     let mut message = TestMessageWithEnum {
         either: Some(test_message_with_enum::Either::EitherSender(sender(0))),
@@ -105,6 +111,7 @@ fn enum_inject_sender() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn map_extract() {
     use dummy_hash::DummyBuildHasher;
     use std::collections::HashMap;
@@ -126,6 +133,7 @@ fn map_extract() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn map_inject() {
     use dummy_hash::DummyBuildHasher;
     use std::collections::HashMap;
@@ -141,6 +149,7 @@ fn map_inject() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn recursive_extract() {
     let mut msg = RecursiveMessage {
         sender: None,
@@ -156,6 +165,7 @@ fn recursive_extract() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn repeated_extract() {
     let mut msg = RepeatedMessage {
         sender: vec![sender(1), sender(2), sender(3)],
@@ -167,6 +177,7 @@ fn repeated_extract() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn inject_too_many_fails() {
     let mut message = TestMessage {
         other_arbitrary_field: "Test".to_string(),
@@ -180,6 +191,7 @@ fn inject_too_many_fails() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn inject_too_few_fails() {
     let mut message = TestMessage {
         other_arbitrary_field: "Test".to_string(),
@@ -193,6 +205,7 @@ fn inject_too_few_fails() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn sane_handle_order() {
     let reference = SaneHandleOrder {
         sender: Some(sender(1)),
@@ -224,6 +237,7 @@ fn sane_handle_order() {
 }
 
 #[test]
+#[cfg(not(feature = "linear-handles"))]
 fn roundtrip() {
     let reference = RoundtripContainer {
         look_ma_no_handles: Some(LookMaNoHandles {
@@ -270,10 +284,12 @@ fn roundtrip() {
     assert_eq!(reference, message);
 }
 
+#[cfg(not(feature = "linear-handles"))]
 fn sender<T: oak::io::Encodable>(id: u64) -> Sender<T> {
     Sender::new(oak::WriteHandle { handle: id })
 }
 
+#[cfg(not(feature = "linear-handles"))]
 fn receiver<T: oak::io::Decodable>(id: u64) -> Receiver<T> {
     Receiver::new(oak::ReadHandle { handle: id })
 }
