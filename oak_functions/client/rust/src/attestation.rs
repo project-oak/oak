@@ -16,7 +16,7 @@
 
 use crate::proto::{
     attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
-    remote_attestation_client::RemoteAttestationClient, AttestedInvokeRequest,
+    remote_attestation_client::RemoteAttestationClient, AttestationMessage, AttestedInvokeRequest,
     AttestedInvokeResponse,
 };
 use anyhow::{anyhow, Context};
@@ -112,7 +112,9 @@ impl AttestationClient {
             .create_client_hello()
             .context("Couldn't create client hello")?;
         let request = AttestedInvokeRequest {
-            request_type: Some(RequestType::ClientHello(client_hello)),
+            request_type: Some(RequestType::AttestationMessage(AttestationMessage {
+                body: client_hello,
+            })),
         };
         channel
             .send(request)
@@ -129,8 +131,8 @@ impl AttestationClient {
             .response_type
             .context("Couldn't read response type")?;
         let server_identity =
-            if let ResponseType::ServerIdentity(attestation_response) = response_type {
-                Ok(attestation_response)
+            if let ResponseType::AttestationMessage(attestation_response) = response_type {
+                Ok(attestation_response.body)
             } else {
                 Err(anyhow!("Received incorrect message type"))
             }?;
@@ -142,7 +144,9 @@ impl AttestationClient {
             .process_server_identity(&server_identity)
             .context("Couldn't process server identity")?;
         let request = AttestedInvokeRequest {
-            request_type: Some(RequestType::ClientIdentity(client_identity)),
+            request_type: Some(RequestType::AttestationMessage(AttestationMessage {
+                body: client_identity,
+            })),
         };
         channel
             .send(request)

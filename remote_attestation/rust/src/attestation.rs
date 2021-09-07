@@ -27,15 +27,16 @@
 use crate::{
     crypto::{
         get_random, get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier,
-        Signer,
+        Signer, KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
     },
-    proto::{AttestationInfo, AttestationReport, ClientHello, ClientIdentity, ServerIdentity},
+    message::{
+        ClientHello, ClientIdentity, Deserializable, Serializable, ServerIdentity,
+        PROTOCOL_VERSION, REPLAY_PROTECTION_ARRAY_LENGTH,
+    },
+    proto::{AttestationInfo, AttestationReport},
 };
 use anyhow::{anyhow, Context};
-
-const ATTESTATION_PROTOCOL_VERSION: u8 = 1;
-/// Size (in bytes) of a random array sent in messages to prevent replay attacks.
-const REPLAY_PROTECTION_ARRAY_SIZE_BYTES: usize = 32;
+use prost::Message;
 
 /// Client of the Remote attestation protocol handshake.
 pub struct ClientAttestationEngine<S>
@@ -46,7 +47,7 @@ where
     behavior: AttestationBehavior,
     /// Current state of the remote attestation protocol.
     state: S,
-    /// Collection of previously send and received messaged.
+    /// Collection of previously sent and received messages.
     /// Signed transcript is sent in messages to prevent replay attacks.
     transcript: Transcript,
 }
@@ -60,7 +61,7 @@ where
     behavior: AttestationBehavior,
     /// Current state of the remote attestation protocol.
     state: S,
-    /// Collection of previously send and received messaged.
+    /// Collection of previously sent and received messages.
     /// Signed transcript is sent in messages to prevent replay attacks.
     transcript: Transcript,
 }
@@ -79,15 +80,16 @@ impl ClientAttestationEngine<Initializing> {
     /// Transitions [`ClientAttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
     pub fn create_client_hello(
         mut self,
-    ) -> anyhow::Result<(ClientHello, ClientAttestationEngine<Attesting>)> {
-        let client_hello = ClientHello {
-            random: self.state.random.to_vec(),
-        };
+    ) -> anyhow::Result<(Vec<u8>, ClientAttestationEngine<Attesting>)> {
+        let client_hello = ClientHello::new(&self.state.random);
+        let serialized_client_hello = client_hello
+            .serialize()
+            .context("Couldn't serialize client hello message")?;
 
         // Update current transcript.
         self.transcript
             .append(&client_hello)
-            .context("Couldn't append client hello to transcript")?;
+            .context("Couldn't append client hello to the transcript")?;
 
         let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Client)
             .context("Couldn't create key negotiator")?;
@@ -99,7 +101,7 @@ impl ClientAttestationEngine<Initializing> {
             state: next_state,
             transcript: self.transcript,
         };
-        Ok((client_hello, attestation_engine))
+        Ok((serialized_client_hello, attestation_engine))
     }
 }
 
@@ -121,8 +123,11 @@ impl ServerAttestationEngine<Initializing> {
     /// Transitions [`ServerAttestationEngine`] state from [`Initializing`] to [`Attesting`] state.
     pub fn process_client_hello(
         mut self,
-        client_hello: &ClientHello,
-    ) -> anyhow::Result<(ServerIdentity, ServerAttestationEngine<Attesting>)> {
+        serialized_client_hello: &[u8],
+    ) -> anyhow::Result<(Vec<u8>, ServerAttestationEngine<Attesting>)> {
+        let client_hello = ClientHello::deserialize(serialized_client_hello)
+            .context("Couldn't deserialize client hello message")?;
+
         // Create server identity message.
         let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Server)
             .context("Couldn't create key negotiator")?;
@@ -144,40 +149,43 @@ impl ServerAttestationEngine<Initializing> {
             let attestation_info = create_attestation_info(signer, tee_certificate)
                 .context("Couldn't get attestation info")?;
 
-            let mut server_identity = ServerIdentity {
-                version: ATTESTATION_PROTOCOL_VERSION as i32,
-                ephemeral_public_key,
-                random: self.state.random.to_vec(),
-                transcript_signature: vec![],
-                signing_public_key: signer.public_key(),
-                attestation_info: Some(attestation_info),
-            };
+            let mut server_identity = ServerIdentity::new(
+                &ephemeral_public_key,
+                &self.state.random,
+                &signer
+                    .public_key()
+                    .context("Couldn't get singing public key")?,
+                &attestation_info,
+            );
 
             // Update current transcript.
             // Transcript doesn't include transcript signature from the server identity message.
             self.transcript
-                .append(client_hello)
-                .context("Couldn't append client hello to transcript")?;
+                .append(&client_hello)
+                .context("Couldn't append client hello to the transcript")?;
             self.transcript
                 .append(&server_identity)
-                .context("Couldn't append server identity to transcript")?;
+                .context("Couldn't append server identity to the transcript")?;
 
             // Add transcript signature to the server identity message.
             let transcript_signature = signer
                 .sign(&self.transcript.get_sha256())
                 .context("Couldn't create transcript signature")?;
-            server_identity.transcript_signature = transcript_signature;
+            server_identity.set_transcript_signature(&transcript_signature);
             server_identity
         } else {
-            ServerIdentity {
-                version: ATTESTATION_PROTOCOL_VERSION as i32,
-                ephemeral_public_key,
-                random: self.state.random.to_vec(),
-                transcript_signature: vec![],
-                signing_public_key: vec![],
-                attestation_info: None,
-            }
+            ServerIdentity::new(
+                &ephemeral_public_key,
+                &self.state.random,
+                // Signing public key.
+                &[Default::default(); SIGNING_ALGORITHM_KEY_LENGTH],
+                // Attestation info.
+                &vec![],
+            )
         };
+        let serialized_server_identity = server_identity
+            .serialize()
+            .context("Couldn't serialize server identity message")?;
 
         let next_state =
             Attesting::create(key_negotiator).context("Couldn't create attesting state")?;
@@ -186,7 +194,7 @@ impl ServerAttestationEngine<Initializing> {
             state: next_state,
             transcript: self.transcript,
         };
-        Ok((server_identity, attestation_engine))
+        Ok((serialized_server_identity, attestation_engine))
     }
 }
 
@@ -201,16 +209,23 @@ impl ClientAttestationEngine<Attesting> {
     /// Transitions [`ClientAttestationEngine`] state from [`Attesting`] to [`Attested`] state.
     pub fn process_server_identity(
         mut self,
-        server_identity: &ServerIdentity,
-    ) -> anyhow::Result<(ClientIdentity, ClientAttestationEngine<Attested>)> {
+        serialized_server_identity: &[u8],
+    ) -> anyhow::Result<(Vec<u8>, ClientAttestationEngine<Attested>)> {
+        let server_identity = ServerIdentity::deserialize(serialized_server_identity)
+            .context("Couldn't deserialize server identity message")?;
+
+        if server_identity.version != PROTOCOL_VERSION {
+            return Err(anyhow!("Incorrect remote attestation protocol version"));
+        }
+
         if self.behavior.contains_peer_attestation() {
             // Verify server transcript signature.
             // Transcript doesn't include transcript signature from the server identity message.
             let mut server_identity_no_signature = server_identity.clone();
-            server_identity_no_signature.transcript_signature = vec![];
+            server_identity_no_signature.clear_transcript_signature();
             self.transcript
                 .append(&server_identity_no_signature)
-                .context("Couldn't append server identity to transcript")?;
+                .context("Couldn't append server identity to the transcript")?;
             let verifier = SignatureVerifier::new(&server_identity.signing_public_key);
             verifier
                 .verify(
@@ -220,10 +235,7 @@ impl ClientAttestationEngine<Attesting> {
                 .context("Couldn't verify server transcript")?;
 
             // Verify server attestation info.
-            let server_attestation_info = &server_identity
-                .attestation_info
-                .as_ref()
-                .context("Couldn't get server attestation info")?;
+            let server_attestation_info = &server_identity.attestation_info;
             let expected_tee_measurement = self
                 .behavior
                 .get_expected_tee_measurement()
@@ -254,12 +266,13 @@ impl ClientAttestationEngine<Attesting> {
             let attestation_info = create_attestation_info(signer, tee_certificate)
                 .context("Couldn't create attestation info")?;
 
-            let mut client_identity = ClientIdentity {
-                ephemeral_public_key,
-                transcript_signature: vec![],
-                signing_public_key: signer.public_key(),
-                attestation_info: Some(attestation_info),
-            };
+            let mut client_identity = ClientIdentity::new(
+                &ephemeral_public_key,
+                &signer
+                    .public_key()
+                    .context("Couldn't get singing public key")?,
+                &attestation_info,
+            );
 
             // Update current transcript.
             // Transcript doesn't include transcript signature from the client identity message.
@@ -271,16 +284,20 @@ impl ClientAttestationEngine<Attesting> {
             let transcript_signature = signer
                 .sign(&self.transcript.get_sha256())
                 .context("Couldn't create transcript signature")?;
-            client_identity.transcript_signature = transcript_signature;
+            client_identity.set_transcript_signature(&transcript_signature);
             client_identity
         } else {
-            ClientIdentity {
-                ephemeral_public_key,
-                transcript_signature: vec![],
-                signing_public_key: vec![],
-                attestation_info: None,
-            }
+            ClientIdentity::new(
+                &ephemeral_public_key,
+                // Signing public key.
+                &[Default::default(); SIGNING_ALGORITHM_KEY_LENGTH],
+                // Attestation info.
+                &vec![],
+            )
         };
+        let serialized_client_identity = client_identity
+            .serialize()
+            .context("Couldn't serialize client identity message")?;
 
         // Agree on session keys and create an encryptor.
         let next_state = Attested::create(
@@ -293,7 +310,7 @@ impl ClientAttestationEngine<Attesting> {
             state: next_state,
             transcript: self.transcript,
         };
-        Ok((client_identity, attestation_engine))
+        Ok((serialized_client_identity, attestation_engine))
     }
 }
 
@@ -304,16 +321,19 @@ impl ServerAttestationEngine<Attesting> {
     /// Transitions [`ServerAttestationEngine`] state from [`Attesting`] to [`Attested`] state.
     pub fn process_client_identity(
         mut self,
-        client_identity: &ClientIdentity,
+        serialized_client_identity: &[u8],
     ) -> anyhow::Result<ServerAttestationEngine<Attested>> {
+        let client_identity = ClientIdentity::deserialize(serialized_client_identity)
+            .context("Couldn't deserialize client identity message")?;
+
         if self.behavior.contains_peer_attestation() {
             // Verify client transcript signature.
             // Transcript doesn't include transcript signature from the client identity message.
             let mut client_identity_no_signature = client_identity.clone();
-            client_identity_no_signature.transcript_signature = vec![];
+            client_identity_no_signature.clear_transcript_signature();
             self.transcript
                 .append(&client_identity_no_signature)
-                .context("Couldn't append client identity to transcript")?;
+                .context("Couldn't append client identity to the transcript")?;
             let verifier = SignatureVerifier::new(&client_identity.signing_public_key);
             verifier
                 .verify(
@@ -323,10 +343,7 @@ impl ServerAttestationEngine<Attesting> {
                 .context("Couldn't verify client transcript")?;
 
             // Verify client attestation info.
-            let client_attestation_info = &client_identity
-                .attestation_info
-                .as_ref()
-                .context("Couldn't get client attestation info")?;
+            let client_attestation_info = &client_identity.attestation_info;
             let expected_tee_measurement = self
                 .behavior
                 .get_expected_tee_measurement()
@@ -453,13 +470,13 @@ impl AttestationState for Attested {}
 /// I.e. client is preparing to send `ClientHello`.
 pub struct Initializing {
     /// Random vector sent in messages for preventing replay attacks.
-    random: Vec<u8>,
+    random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
 }
 
 impl Initializing {
     pub fn new() -> Self {
         Self {
-            random: get_random(REPLAY_PROTECTION_ARRAY_SIZE_BYTES),
+            random: get_random(),
         }
     }
 }
@@ -494,7 +511,7 @@ pub struct Attested {
 impl Attested {
     pub fn create(
         key_negotiator: KeyNegotiator,
-        peer_ephemeral_public_key: &[u8],
+        peer_ephemeral_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     ) -> anyhow::Result<Self> {
         let encryptor = key_negotiator
             .create_encryptor(peer_ephemeral_public_key)
@@ -515,9 +532,9 @@ impl Transcript {
         Self { value: vec![] }
     }
 
-    /// Append `message` to the and of [`Transcript::value`].
-    pub fn append<M: prost::Message>(&mut self, message: &M) -> anyhow::Result<()> {
-        let bytes = serialize_protobuf(message).context("Couldn't serialize message")?;
+    /// Appends a serialized `message` to the end of [`Transcript::value`].
+    pub fn append<M: Serializable>(&mut self, message: &M) -> anyhow::Result<()> {
+        let bytes = message.serialize().context("Couldn't serialize message")?;
         self.value.extend(bytes);
         Ok(())
     }
@@ -528,19 +545,20 @@ impl Transcript {
     }
 }
 
-/// Generate attestation info with a TEE report.
+/// Generates attestation info with a TEE report.
 /// TEE report contains a hash of the signer's public key.
-pub fn create_attestation_info(
-    signer: &Signer,
-    tee_certificate: &[u8],
-) -> anyhow::Result<AttestationInfo> {
-    let signing_public_key = signer.public_key();
+pub fn create_attestation_info(signer: &Signer, tee_certificate: &[u8]) -> anyhow::Result<Vec<u8>> {
+    let signing_public_key = signer
+        .public_key()
+        .context("Couldn't get singing public key")?;
     let signing_public_key_hash = get_sha256(signing_public_key.as_ref());
     let report = AttestationReport::new(&signing_public_key_hash);
-    Ok(AttestationInfo {
+    let attestation_info = AttestationInfo {
         report: Some(report),
         certificate: tee_certificate.to_vec(),
-    })
+    };
+    serialize_protobuf(&attestation_info)
+        .context("Couldn't encode attestation info Protobuf message")
 }
 
 /// Verifies the validity of the attestation info:
@@ -550,25 +568,27 @@ pub fn create_attestation_info(
 /// - Extracts the TEE measurement from the TEE report and compares it to the
 ///   `expected_tee_measurement`.
 fn verify_attestation_info(
-    peer_attestation_info: &AttestationInfo,
+    attestation_info_bytes: &[u8],
     expected_tee_measurement: &[u8],
 ) -> anyhow::Result<()> {
+    let attestation_info = AttestationInfo::decode(attestation_info_bytes)
+        .context("Couldn't decode attestation info Protobuf message")?;
+
     // TODO(#1867): Add remote attestation support, use real TEE reports and check that
     // `AttestationInfo::certificate` is signed by one of the root certificates.
 
-    // Verify peer TEE measurement.
-    let peer_report = peer_attestation_info
+    // Verify TEE measurement.
+    let report = attestation_info
         .report
         .as_ref()
         .context("Couldn't find report in peer attestation info")?;
-    if expected_tee_measurement == peer_report.measurement {
+    if expected_tee_measurement == report.measurement {
         Ok(())
     } else {
         Err(anyhow!("Incorrect TEE measurement"))
     }
 }
 
-// TODO(#2273): Use raw bytes for messages since Protobuf is not deterministic.
 pub fn serialize_protobuf<M: prost::Message>(message: &M) -> anyhow::Result<Vec<u8>> {
     let mut message_bytes = Vec::new();
     message

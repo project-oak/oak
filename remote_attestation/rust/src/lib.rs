@@ -20,4 +20,5 @@ pub mod proto {
 
 pub mod attestation;
 pub mod crypto;
+pub mod message;
 pub mod report;

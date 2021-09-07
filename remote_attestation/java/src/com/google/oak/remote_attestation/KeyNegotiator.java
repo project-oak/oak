@@ -42,7 +42,7 @@ public class KeyNegotiator {
   private static final int KEY_SIZE_BYTES = 32;
   private final byte[] privateKey;
 
-  // Defines the type of encryptor created by `KeyNegotiator.createEncryptor`.
+  /** Defines the type of encryptor created by {@code KeyNegotiator.createEncryptor}. */
   public enum EncryptorType {
     // Defines a server encryptor, which uses server session key for encryption and client
     // session key for decryption.
@@ -61,7 +61,7 @@ public class KeyNegotiator {
   }
 
   /**
-   * Derives a session key from `key_material` using HKDF.
+   * Derives a session key from {@code key_material} using HKDF.
    * https://datatracker.ietf.org/doc/html/rfc5869
    * https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
    *
@@ -77,7 +77,7 @@ public class KeyNegotiator {
   }
 
   /**
-   * Derives a session key and creates an `AeadEncryptor::encryptor` from it.
+   * Derives a session key and creates an {@code AeadEncryptor::encryptor} from it.
    * https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
    */
   public AeadEncryptor createEncryptor(byte[] peerPublicKey, EncryptorType encryptorType)
@@ -90,14 +90,14 @@ public class KeyNegotiator {
     byte[] encryptionKey = null;
     byte[] decryptionKey = null;
     switch (encryptorType) {
-      // On the server side `self_public_key` is the server key.
+      // On the server side {@code self_public_key} is the server key.
       case SERVER:
         encryptionKey =
             keyDerivationFunction(keyMaterial, SERVER_KEY_PURPOSE, selfPublicKey, peerPublicKey);
         decryptionKey =
             keyDerivationFunction(keyMaterial, CLIENT_KEY_PURPOSE, selfPublicKey, peerPublicKey);
         break;
-      // On the client side `peer_public_key` is the server key.
+      // On the client side {@code peer_public_key} is the server key.
       case CLIENT:
         encryptionKey =
             keyDerivationFunction(keyMaterial, CLIENT_KEY_PURPOSE, peerPublicKey, selfPublicKey);

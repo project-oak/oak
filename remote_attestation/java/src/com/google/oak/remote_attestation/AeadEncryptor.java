@@ -44,7 +44,7 @@ public class AeadEncryptor {
   }
 
   /**
-   * Encrypts `data` using `AeadEncryptor::encryptor`.
+   * Encrypts {@code data} using {@code AeadEncryptor::encryptor}.
    * The resulting encrypted data is prefixed with a random 12 bit nonce.
    */
   public EncryptedData encrypt(byte[] data) throws GeneralSecurityException {
@@ -62,7 +62,7 @@ public class AeadEncryptor {
   }
 
   /**
-   * Decrypts and authenticates `data` using `AeadEncryptor::encryptor`.
+   * Decrypts and authenticates {@code data} using {@code AeadEncryptor::encryptor}.
    */
   public byte[] decrypt(EncryptedData data) throws GeneralSecurityException {
     // Create a byte array prefixed with a 12 bit nonce.
