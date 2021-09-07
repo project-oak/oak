@@ -194,9 +194,14 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             LookupDataAuth::default(),
             logger.clone(),
         ));
-        let wasm_handler =
-            WasmHandler::create(&wasm_module_bytes, lookup_data.clone(), logger, None)
-                .expect("Couldn't create the server");
+        let wasm_handler = WasmHandler::create(
+            &wasm_module_bytes,
+            lookup_data.clone(),
+            vec![],
+            logger,
+            None,
+        )
+        .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let (terminate_static_server_tx, terminate_static_server_rx) =

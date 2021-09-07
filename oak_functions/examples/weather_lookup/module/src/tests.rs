@@ -189,7 +189,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 
     let lookup_data = Arc::new(LookupData::for_test(entries));
     let logger = Logger::for_test();
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, logger, None)
+    let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger, None)
         .expect("Couldn't create the server");
     let rt = tokio::runtime::Runtime::new().unwrap();
 

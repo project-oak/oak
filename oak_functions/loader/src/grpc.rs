@@ -61,11 +61,13 @@ pub fn create_wasm_handler(
     extensions: Vec<BoxedExtension>,
     logger: Logger,
 ) -> anyhow::Result<WasmHandler> {
-    let mut wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, logger, aggregator)?;
-
-    for extension in extensions {
-        wasm_handler.register_extension(extension);
-    }
+    let wasm_handler = WasmHandler::create(
+        wasm_module_bytes,
+        lookup_data,
+        extensions,
+        logger,
+        aggregator,
+    )?;
 
     Ok(wasm_handler)
 }

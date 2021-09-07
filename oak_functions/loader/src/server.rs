@@ -30,7 +30,7 @@ use std::{
     collections::HashMap,
     convert::TryFrom,
     str,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, Mutex},
     time::Duration,
 };
 use wasmi::ValueType;
@@ -189,8 +189,8 @@ pub struct WasmState {
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
     metrics_proxy: Option<PrivateMetricsProxy>,
-    extensions_indexes: Arc<RwLock<HashMap<usize, Arc<BoxedExtension>>>>,
-    extensions_names: Arc<RwLock<HashMap<String, Arc<BoxedExtension>>>>,
+    extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
+    extensions_names: Arc<HashMap<String, Arc<BoxedExtension>>>,
 }
 
 impl WasmState {
@@ -470,8 +470,7 @@ impl wasmi::Externals for WasmState {
             )),
             _ => {
                 let result = {
-                    let ext_indexes = self.extensions_indexes.read().unwrap();
-                    match ext_indexes.get(&index) {
+                    match self.extensions_indices.get(&index) {
                         Some(ref extension) => extension.invoke_index(self, args)?,
                         None => panic!("Unimplemented function at {}", index),
                     }
@@ -492,20 +491,17 @@ impl wasmi::ModuleImportResolver for WasmState {
         // If not found, then look for it among the extensions. If not found, return an error.
         let (index, expected_signature) = match oak_functions_resolve_func(field_name) {
             Some(sig) => sig,
-            None => {
-                let ext_names = self.extensions_names.read().unwrap();
-                match ext_names.get(field_name) {
-                    Some(extension) => extension
-                        .resolve_func()
-                        .map_err(|err| wasmi::Error::Instantiation(format!("{:?}", err)))?,
-                    None => {
-                        return Err(wasmi::Error::Instantiation(format!(
-                            "Export {} not found",
-                            field_name
-                        )))
-                    }
+            None => match self.extensions_names.get(field_name) {
+                Some(extension) => extension
+                    .resolve_func()
+                    .map_err(|err| wasmi::Error::Instantiation(format!("{:?}", err)))?,
+                None => {
+                    return Err(wasmi::Error::Instantiation(format!(
+                        "Export {} not found",
+                        field_name
+                    )))
                 }
-            }
+            },
         };
 
         if signature != &expected_signature {
@@ -526,8 +522,8 @@ impl WasmState {
         lookup_data: Arc<LookupData>,
         logger: Logger,
         metrics_proxy: Option<PrivateMetricsProxy>,
-        extensions_indexes: Arc<RwLock<HashMap<usize, Arc<BoxedExtension>>>>,
-        extensions_names: Arc<RwLock<HashMap<String, Arc<BoxedExtension>>>>,
+        extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
+        extensions_names: Arc<HashMap<String, Arc<BoxedExtension>>>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -537,7 +533,7 @@ impl WasmState {
             memory: None,
             logger,
             metrics_proxy,
-            extensions_indexes,
+            extensions_indices,
             extensions_names,
         };
 
@@ -685,36 +681,38 @@ pub struct WasmHandler {
     lookup_data: Arc<LookupData>,
     logger: Logger,
     aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
-    extensions_indexes: Arc<RwLock<HashMap<usize, Arc<BoxedExtension>>>>,
-    extensions_names: Arc<RwLock<HashMap<String, Arc<BoxedExtension>>>>,
+    extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
+    extensions_names: Arc<HashMap<String, Arc<BoxedExtension>>>,
 }
 
 impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
         lookup_data: Arc<LookupData>,
+        extensions: Vec<BoxedExtension>,
         logger: Logger,
         aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     ) -> anyhow::Result<Self> {
+        let mut extensions_indices = hashmap! {};
+        let mut extensions_names = hashmap! {};
+
+        for extension in extensions {
+            let (index, name) = extension.registration_info();
+            let ext = Arc::new(extension);
+            extensions_indices.insert(index, ext.clone());
+            extensions_names.insert(name, ext);
+        }
+
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
+
         Ok(WasmHandler {
             module: Arc::new(module),
             lookup_data,
             logger,
             aggregator,
-            extensions_indexes: Arc::new(RwLock::new(hashmap! {})),
-            extensions_names: Arc::new(RwLock::new(hashmap! {})),
+            extensions_indices: Arc::new(extensions_indices),
+            extensions_names: Arc::new(extensions_names),
         })
-    }
-
-    pub fn register_extension(&mut self, extension: BoxedExtension) {
-        let (index, name) = extension.registration_info();
-        let ext = Arc::new(extension);
-        let mut extensions_indexes = self.extensions_indexes.write().unwrap();
-        extensions_indexes.insert(index, ext.clone());
-
-        let mut extensions_names = self.extensions_names.write().unwrap();
-        extensions_names.insert(name, ext);
     }
 
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
@@ -725,7 +723,7 @@ impl WasmHandler {
             self.lookup_data.clone(),
             self.logger.clone(),
             self.aggregator.clone().map(PrivateMetricsProxy::new),
-            self.extensions_indexes.clone(),
+            self.extensions_indices.clone(),
             self.extensions_names.clone(),
         )?;
         wasm_state.invoke();
