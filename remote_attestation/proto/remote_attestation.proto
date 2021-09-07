@@ -50,19 +50,64 @@ message AttestationInfo {
   bytes certificate = 2;
 }
 
-// TODO(#2105): Implement challenge-response in remote attestation.
-// TODO(#2106): Support various claims in remote attestation.
-message AttestationIdentity {
-  // Public key needed to establish a session key.
-  bytes public_key = 1;
-  // Information used for remote attestation such as a TEE report and a TEE provider's certificate.
-  // TEE report should contain a hash of the `public_key`.
-  AttestationInfo attestation_info = 2;
-}
-
 message EncryptedData {
   // Random nonce (initialization vector) used for encryption/decryption.
   bytes nonce = 1;
   // Data encrypted using the session key.
   bytes data = 2;
+}
+
+// TODO(#2105): Implement challenge-response in remote attestation.
+// TODO(#2106): Support various claims in remote attestation.
+message ClientHello {
+  // Random vector sent in messages for preventing replay attacks.
+  bytes random = 1;
+}
+
+message ServerIdentity {
+  // Remote attestation protocol version.
+  int32 version = 1;
+  // Public key needed to establish a session key.
+  bytes ephemeral_public_key = 2;
+  // Random vector sent in messages for preventing replay attacks.
+  bytes random = 3;
+  // Signature of the SHA-256 hash of all previously send and received messaged.
+  // Transcript signature is sent in messages to prevent replay attacks.
+  //
+  // Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
+  // https://datatracker.ietf.org/doc/html/rfc6979
+  // https://standards.ieee.org/standard/1363-2000.html
+  bytes transcript_signature = 4;
+  // Public key used to sign transcripts.
+  //
+  // Public key must be an OpenSSL ECDSA-P256 key, which is represented as
+  // `0x04 | X: 32-byte | Y: 32-byte`.
+  // Where X and Y are big-endian coordinates of an Elliptic Curve point.
+  // https://datatracker.ietf.org/doc/html/rfc6979
+  bytes signing_public_key = 5;
+  // Information used for remote attestation such as a TEE report and a TEE provider's certificate.
+  // TEE report contains a hash of the `signing_public_key`.
+  AttestationInfo attestation_info = 6;
+}
+
+message ClientIdentity {
+  // Public key needed to establish a session key.
+  bytes ephemeral_public_key = 1;
+  // Signature of the SHA-256 hash of all previously send and received messaged.
+  // Transcript signature is sent in messages to prevent replay attacks.
+  //
+  // Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
+  // https://datatracker.ietf.org/doc/html/rfc6979
+  // https://standards.ieee.org/standard/1363-2000.html
+  bytes transcript_signature = 2;
+  // Public key used to sign transcripts.
+  //
+  // Public key must be an OpenSSL ECDSA-P256 key, which is represented as
+  // `0x04 | X: 32-byte | Y: 32-byte`.
+  // Where X and Y are big-endian coordinates of an Elliptic Curve point.
+  // https://datatracker.ietf.org/doc/html/rfc6979
+  bytes signing_public_key = 3;
+  // Information used for remote attestation such as a TEE report and a TEE provider's certificate.
+  // TEE report contains a hash of the `signing_public_key`.
+  AttestationInfo attestation_info = 4;
 }

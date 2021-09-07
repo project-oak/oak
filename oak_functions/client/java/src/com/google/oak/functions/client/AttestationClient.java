@@ -19,12 +19,13 @@ package com.google.oak.functions.client;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.oak.remote_attestation.AeadEncryptor;
-import com.google.oak.remote_attestation.AttestationEngine;
+import com.google.oak.remote_attestation.ClientAttestationEngine;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
@@ -38,8 +39,10 @@ import oak.functions.server.AttestedInvokeRequest;
 import oak.functions.server.AttestedInvokeResponse;
 import oak.functions.server.RemoteAttestationGrpc;
 import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
-import oak.remote_attestation.AttestationIdentity;
+import oak.remote_attestation.ClientHello;
+import oak.remote_attestation.ClientIdentity;
 import oak.remote_attestation.EncryptedData;
+import oak.remote_attestation.ServerIdentity;
 
 /**
  * Client with remote attestation support for sending requests to an Oak Functions loader
@@ -57,10 +60,10 @@ public class AttestationClient {
   /**
    * Creates an attested gRPC channel.
    *
-   * `url` must contain protocol used for connection ("https://" or "http://").
+   * `url` must contain a protocol used for connection ("https://" or "http://").
    */
   public AttestationClient(String url)
-      throws GeneralSecurityException, InterruptedException, MalformedURLException {
+      throws GeneralSecurityException, IOException, InterruptedException {
     // Create gRPC channel.
     URL parsedUrl = new URL(url);
     if (parsedUrl.getProtocol().equals("https")) {
@@ -100,19 +103,27 @@ public class AttestationClient {
     requestObserver = stub.attestedInvoke(responseObserver);
 
     // Generate client private/public key pair.
-    AttestationEngine attestationEngine =
-        new AttestationEngine(TEST_TEE_MEASUREMENT.getBytes(UTF_8));
-    AttestationIdentity identity = attestationEngine.getIdentity();
+    ClientAttestationEngine attestationEngine =
+        new ClientAttestationEngine(TEST_TEE_MEASUREMENT.getBytes(UTF_8));
 
-    // Send client public key to the server.
-    AttestedInvokeRequest request =
-        AttestedInvokeRequest.newBuilder().setClientIdentity(identity).build();
-    requestObserver.onNext(request);
-    AttestedInvokeResponse response = messageQueue.take();
+    // Send client hello message.
+    ClientHello clientHello = attestationEngine.createClientHello();
+    AttestedInvokeRequest clientHelloRequest =
+        AttestedInvokeRequest.newBuilder().setClientHello(clientHello).build();
+    requestObserver.onNext(clientHelloRequest);
 
-    // Remotely attest peer.
-    AttestationIdentity peerIdentity = response.getServerIdentity();
-    encryptor = attestationEngine.createClientEncryptor(peerIdentity);
+    // Receive server attestation identity containing server's ephemeral public key.
+    AttestedInvokeResponse serverIdentityResponse = messageQueue.take();
+    ServerIdentity serverIdentity = serverIdentityResponse.getServerIdentity();
+
+    // Remotely attest the server and create:
+    // - Client attestation identity containing client's ephemeral public key
+    // - Encryptor used for decrypting/encrypting messages between client and server
+    ClientIdentity clientIdentity = attestationEngine.processServerIdentity(serverIdentity);
+    AttestedInvokeRequest clientIdentityRequest =
+        AttestedInvokeRequest.newBuilder().setClientIdentity(clientIdentity).build();
+    requestObserver.onNext(clientIdentityRequest);
+    encryptor = attestationEngine.getEncryptor();
   }
 
   public Boolean verifyAttestation(byte[] unusedAttestationInfo) {

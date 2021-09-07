@@ -14,6 +14,11 @@
 // limitations under the License.
 //
 
+// Crypto primitives used by the Remote Attestation protocol.
+//
+// Should be kept in sync with the Java implementation of the Remote Attestation
+// protocol.
+
 use crate::proto::EncryptedData;
 use anyhow::anyhow;
 use ring::{
@@ -21,6 +26,7 @@ use ring::{
     agreement,
     hkdf::{Salt, HKDF_SHA256},
     rand::{SecureRandom, SystemRandom},
+    signature::{EcdsaKeyPair, KeyPair},
 };
 use sha2::{digest::Digest, Sha256};
 
@@ -136,8 +142,8 @@ impl AeadEncryptor {
     /// https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html
     fn generate_nonce() -> [u8; aead::NONCE_LEN] {
         let mut nonce: [u8; aead::NONCE_LEN] = Default::default();
-        let rng = SystemRandom::new();
-        rng.fill(&mut nonce).unwrap();
+        let random = get_random(aead::NONCE_LEN);
+        nonce.copy_from_slice(&random[0..aead::NONCE_LEN]);
         nonce
     }
 }
@@ -145,15 +151,16 @@ impl AeadEncryptor {
 /// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
 /// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
 pub struct KeyNegotiator {
+    type_: KeyNegotiatorType,
     private_key: agreement::EphemeralPrivateKey,
 }
 
 impl KeyNegotiator {
-    pub fn create() -> anyhow::Result<Self> {
+    pub fn create(type_: KeyNegotiatorType) -> anyhow::Result<Self> {
         let rng = ring::rand::SystemRandom::new();
         let private_key = agreement::EphemeralPrivateKey::generate(KEY_AGREEMENT_ALGORITHM, &rng)
             .map_err(|error| anyhow!("Couldn't generate private key: {:?}", error))?;
-        Ok(Self { private_key })
+        Ok(Self { type_, private_key })
     }
 
     pub fn public_key(&self) -> anyhow::Result<Vec<u8>> {
@@ -174,11 +181,8 @@ impl KeyNegotiator {
     ///
     /// Depending on `encryptor_type` creates a different type of encryptor: either server encryptor
     /// or client encryptor.
-    pub fn create_encryptor(
-        self,
-        peer_public_key: &[u8],
-        encryptor_type: EncryptorType,
-    ) -> anyhow::Result<AeadEncryptor> {
+    pub fn create_encryptor(self, peer_public_key: &[u8]) -> anyhow::Result<AeadEncryptor> {
+        let type_ = self.type_.clone();
         let self_public_key = self.public_key()?;
         let (encryption_key, decryption_key) = agreement::agree_ephemeral(
             self.private_key,
@@ -186,9 +190,9 @@ impl KeyNegotiator {
             ring::error::Unspecified,
             |key_material| {
                 let peer_public_key = peer_public_key.as_ref().to_vec();
-                match encryptor_type {
+                match type_ {
                     // On the server side `self_public_key` is the server key.
-                    EncryptorType::Server => {
+                    KeyNegotiatorType::Server => {
                         let encryption_key = Self::key_derivation_function(
                             key_material,
                             SERVER_KEY_PURPOSE,
@@ -204,7 +208,7 @@ impl KeyNegotiator {
                         Ok((encryption_key, decryption_key))
                     }
                     // On the client side `peer_public_key` is the server key.
-                    EncryptorType::Client => {
+                    KeyNegotiatorType::Client => {
                         let encryption_key = Self::key_derivation_function(
                             key_material,
                             CLIENT_KEY_PURPOSE,
@@ -258,14 +262,75 @@ impl KeyNegotiator {
     }
 }
 
-/// Defines the type of encryptor created by [`KeyNegotiator::create_encryptor`].
-pub enum EncryptorType {
-    /// Defines a server encryptor, which uses server session key for encryption and client session
-    /// key for decryption.
+/// Defines the type of key negotiator and the set of session keys created by it.
+#[derive(Clone)]
+pub enum KeyNegotiatorType {
+    /// Defines a key negotiator which provides server session key for encryption and client
+    /// session key for decryption.
     Server,
-    /// Defines a client encryptor, which uses client session key for encryption and server session
-    /// key for decryption.
+    /// Defines a key negotiator which provides client session key for encryption and server
+    /// session key for decryption.
     Client,
+}
+
+pub struct Signer {
+    /// Parsed PKCS#8 v2 key pair representation.
+    key_pair: EcdsaKeyPair,
+}
+
+impl Signer {
+    pub fn create() -> anyhow::Result<Self> {
+        let rng = ring::rand::SystemRandom::new();
+        let key_pair_pkcs8 =
+            EcdsaKeyPair::generate_pkcs8(&ring::signature::ECDSA_P256_SHA256_FIXED_SIGNING, &rng)
+                .map_err(|error| anyhow!("Couldn't generate PKCS#8 key pair: {:?}", error))?;
+        let key_pair = EcdsaKeyPair::from_pkcs8(
+            &ring::signature::ECDSA_P256_SHA256_FIXED_SIGNING,
+            key_pair_pkcs8.as_ref(),
+        )
+        .map_err(|error| anyhow!("Couldn't parse generated key pair: {:?}", error))?;
+
+        Ok(Self { key_pair })
+    }
+
+    pub fn public_key(&self) -> Vec<u8> {
+        self.key_pair.public_key().as_ref().to_vec()
+    }
+
+    pub fn sign(&self, input: &[u8]) -> anyhow::Result<Vec<u8>> {
+        let rng = ring::rand::SystemRandom::new();
+        let signature = self
+            .key_pair
+            .sign(&rng, input)
+            .map_err(|error| anyhow!("Couldn't sign input: {:?}", error))?
+            .as_ref()
+            .to_vec();
+        Ok(signature)
+    }
+}
+
+pub struct SignatureVerifier {
+    public_key_bytes: Vec<u8>,
+}
+
+impl SignatureVerifier {
+    pub fn new(public_key_bytes: &[u8]) -> Self {
+        Self {
+            public_key_bytes: public_key_bytes.to_vec(),
+        }
+    }
+
+    /// Verifies the signature validity.
+    pub fn verify(&self, input: &[u8], signature: &[u8]) -> anyhow::Result<()> {
+        let public_key = ring::signature::UnparsedPublicKey::new(
+            &ring::signature::ECDSA_P256_SHA256_FIXED,
+            &self.public_key_bytes,
+        );
+        public_key
+            .verify(input, signature)
+            .map_err(|error| anyhow!("Signature verification failed: {:?}", error))?;
+        Ok(())
+    }
 }
 
 /// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
@@ -273,4 +338,12 @@ pub fn get_sha256(input: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();
     hasher.update(&input);
     hasher.finalize().to_vec()
+}
+
+/// Generates a random vector of `size` bytes.
+pub fn get_random(size: usize) -> Vec<u8> {
+    let mut result: Vec<u8> = vec![0; size];
+    let rng = SystemRandom::new();
+    rng.fill(&mut result[..]).unwrap();
+    result
 }
