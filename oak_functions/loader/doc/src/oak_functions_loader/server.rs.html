@@ -838,6 +838,7 @@
 <span id="835">835</span>
 <span id="836">836</span>
 <span id="837">837</span>
+<span id="838">838</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -858,7 +859,6 @@
     <span class="ident">logger</span>::<span class="ident">Logger</span>,
     <span class="ident">lookup</span>::<span class="ident">LookupData</span>,
     <span class="ident">metrics</span>::{<span class="ident">PrivateMetricsAggregator</span>, <span class="ident">PrivateMetricsProxy</span>},
-    <span class="ident">tf</span>::<span class="ident">TensorFlowModel</span>,
 };
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
@@ -868,6 +868,7 @@
 <span class="kw">use</span> <span class="ident">oak_functions_abi</span>::<span class="ident">proto</span>::{<span class="ident">OakStatus</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">collections</span>::<span class="ident">HashMap</span>,
     <span class="ident">convert</span>::<span class="ident">TryFrom</span>,
     <span class="ident">str</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
@@ -884,17 +885,16 @@
 <span class="kw">const</span> <span class="ident">WRITE_RESPONSE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>;
 <span class="kw">const</span> <span class="ident">STORAGE_GET_ITEM</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">2</span>;
 <span class="kw">const</span> <span class="ident">WRITE_LOG_MESSAGE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">3</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-<span class="kw">const</span> <span class="ident">TF_MODEL_INFER</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
 <span class="kw">const</span> <span class="ident">REPORT_METRIC</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">5</span>;
+<span class="kw">const</span> <span class="ident">EXTENSION_INDEX_OFFSET</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">10</span>;
 
 <span class="comment">// Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version</span>
 <span class="comment">// of Wasm would use different types.</span>
-<span class="kw">type</span> <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">u32</span>;
-<span class="kw">type</span> <span class="ident">AbiPointerOffset</span> <span class="op">=</span> <span class="ident">u32</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AbiPointer</span> <span class="op">=</span> <span class="ident">u32</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AbiPointerOffset</span> <span class="op">=</span> <span class="ident">u32</span>;
 <span class="doccomment">/// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of</span>
 <span class="doccomment">/// Wasm would use a different value.</span>
-<span class="kw">const</span> <span class="ident">ABI_USIZE</span>: <span class="ident">ValueType</span> <span class="op">=</span> <span class="ident">ValueType</span>::<span class="ident">I32</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">ABI_USIZE</span>: <span class="ident">ValueType</span> <span class="op">=</span> <span class="ident">ValueType</span>::<span class="ident">I32</span>;
 
 <span class="doccomment">/// Minimum size of constant response bytes. It is large enough to fit an error response, in case</span>
 <span class="doccomment">/// the policy is violated.</span>
@@ -990,25 +990,52 @@
     }
 }
 
+<span class="doccomment">/// Trait for implementing extensions, to implement new native functionality.</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">OakApiNativeExtension</span> {
+    <span class="doccomment">/// Similar to `invoke_index` in [`wasmi::Externals`], but may return a result to be</span>
+    <span class="doccomment">/// written into the memory of the `WasmState`.</span>
+    <span class="kw">fn</span> <span class="ident">invoke</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">wasm_state</span>: <span class="kw-2">&amp;</span><span class="ident">WasmState</span>,
+        <span class="ident">args</span>: <span class="ident">wasmi</span>::<span class="ident">RuntimeArgs</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ExtensionResult</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>, <span class="ident">wasmi</span>::<span class="ident">Trap</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Metadata about this Extension, including the exported host function name, and the function&#39;s</span>
+    <span class="doccomment">/// signature.</span>
+    <span class="kw">fn</span> <span class="ident">get_metadata</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">String</span>, <span class="ident">wasmi</span>::<span class="ident">Signature</span>);
+}
+
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">BoxedExtension</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">OakApiNativeExtension</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>;
+
+<span class="comment">// Result of the invocation of an extension. The [`WasmState`] will write the `bytes` into the</span>
+<span class="comment">// memory location specified by `buf_ptr_ptr` and `buf_len_ptr`.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExtensionResult</span> {
+    <span class="kw">pub</span> <span class="ident">bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">buf_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
+    <span class="kw">pub</span> <span class="ident">buf_len_ptr</span>: <span class="ident">AbiPointer</span>,
+}
+
 <span class="doccomment">/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a</span>
 <span class="doccomment">/// single user request. The methods here correspond to the ABI host functions that allow the Wasm</span>
 <span class="doccomment">/// module to exchange the request and the response with the Oak functions server. These functions</span>
 <span class="doccomment">/// translate values between Wasm linear memory and Rust types.</span>
-<span class="kw">struct</span> <span class="ident">WasmState</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WasmState</span> {
     <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">response_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="ident">tf_model</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TensorFlowModel</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">instance</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">ModuleRef</span><span class="op">&gt;</span>,
     <span class="ident">memory</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">MemoryRef</span><span class="op">&gt;</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
     <span class="ident">metrics_proxy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PrivateMetricsProxy</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].</span>
+    <span class="ident">extensions_indices</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// A mapping of host function names to metadata required for resolving the function.</span>
+    <span class="ident">extensions_metadata</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, (<span class="ident">usize</span>, <span class="ident">wasmi</span>::<span class="ident">Signature</span>)<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WasmState</span> {
     <span class="doccomment">/// Helper function to get memory.</span>
-    <span class="kw">fn</span> <span class="ident">get_memory</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">MemoryRef</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_memory</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">MemoryRef</span> {
         <span class="self">self</span>.<span class="ident">memory</span>
             .<span class="ident">as_ref</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;WasmState memory not attached!?&quot;</span>)
@@ -1208,62 +1235,6 @@
         }
     }
 
-    <span class="doccomment">/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tf_model_infer</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">input_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">input_len</span>: <span class="ident">AbiPointerOffset</span>,
-        <span class="ident">inference_ptr_ptr</span>: <span class="ident">AbiPointer</span>,
-        <span class="ident">inference_len_ptr</span>: <span class="ident">AbiPointer</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
-
-        <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">tf_model</span> {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTensorFlowModelNotFound</span>),
-            <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">tf_model</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="self">self</span>
-                    .<span class="ident">get_memory</span>()
-                    .<span class="ident">get</span>(<span class="ident">input_ptr</span>, <span class="ident">input_len</span> <span class="kw">as</span> <span class="ident">usize</span>)
-                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                        <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                            <span class="ident">Level</span>::<span class="ident">Error</span>,
-                            <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(
-                                <span class="string">&quot;tf_model_infer(): Unable to read input from guest memory: {:?}&quot;</span>,
-                                <span class="ident">err</span>
-                            ),
-                        );
-                        <span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>
-                    })<span class="question-mark">?</span>;
-
-                <span class="kw">let</span> <span class="ident">shape</span> <span class="op">=</span> <span class="ident">tf_model</span>
-                    .<span class="ident">shape</span>
-                    .<span class="ident">clone</span>()
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">cloned</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="ident">u</span>.<span class="ident">into</span>())
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-
-                <span class="comment">// Get the inference, and convert it into a protobuf-encoded byte array</span>
-                <span class="kw">let</span> <span class="ident">inference</span> <span class="op">=</span> <span class="ident">tf_model</span>.<span class="ident">get_inference</span>(<span class="kw-2">&amp;</span><span class="ident">input</span>, <span class="kw-2">&amp;</span><span class="ident">shape</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                    <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">log_sensitive</span>(
-                        <span class="ident">Level</span>::<span class="ident">Error</span>,
-                        <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;tf_model_infer(): Unable to run inference: {:?}&quot;</span>, <span class="ident">err</span>),
-                    );
-                    <span class="ident">OakStatus</span>::<span class="ident">ErrBadTensorFlowModelInput</span>
-                })<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">encoded_inference</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-                <span class="ident">inference</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">encoded_inference</span>).<span class="ident">unwrap</span>();
-
-                <span class="kw">let</span> <span class="ident">inference_ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">alloc</span>(<span class="ident">encoded_inference</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
-                <span class="self">self</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="ident">encoded_inference</span>, <span class="ident">inference_ptr</span>)<span class="question-mark">?</span>;
-                <span class="self">self</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">inference_ptr</span>, <span class="ident">inference_ptr_ptr</span>)<span class="question-mark">?</span>;
-                <span class="self">self</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">encoded_inference</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>, <span class="ident">inference_len_ptr</span>)<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>(())
-            }
-        }
-    }
-
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">alloc</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">len</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AbiPointer</span> {
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">invoke_export</span>(
             <span class="ident">ALLOC_FUNCTION_NAME</span>,
@@ -1337,14 +1308,15 @@
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>,
                 <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>,
             )),
-            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-            <span class="ident">TF_MODEL_INFER</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">map_host_errors</span>(<span class="self">self</span>.<span class="ident">tf_model_infer</span>(
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">0</span>)<span class="question-mark">?</span>,
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">1</span>)<span class="question-mark">?</span>,
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">2</span>)<span class="question-mark">?</span>,
-                <span class="ident">args</span>.<span class="ident">nth_checked</span>(<span class="number">3</span>)<span class="question-mark">?</span>,
-            )),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Unimplemented function at {}&quot;</span>, <span class="ident">index</span>),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> {
+                    <span class="kw">match</span> <span class="self">self</span>.<span class="ident">extensions_indices</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">index</span>) {
+                        <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">extension</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">extension</span>.<span class="ident">invoke</span>(<span class="self">self</span>, <span class="ident">args</span>)<span class="question-mark">?</span>,
+                        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Unimplemented function at {}&quot;</span>, <span class="ident">index</span>),
+                    }
+                };
+                <span class="ident">map_host_errors</span>(<span class="ident">handle_extension_result</span>(<span class="self">self</span>, <span class="ident">result</span>))
+            }
         }
     }
 }
@@ -1355,7 +1327,29 @@
         <span class="ident">field_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">Signature</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">FuncRef</span>, <span class="ident">wasmi</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">oak_functions_resolve_func</span>(<span class="ident">field_name</span>, <span class="ident">signature</span>)
+        <span class="comment">// First look for the function (i.e., `field_name`) in the statically registered functions.</span>
+        <span class="comment">// If not found, then look for it among the extensions. If not found, return an error.</span>
+        <span class="kw">let</span> (<span class="ident">index</span>, <span class="ident">expected_signature</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">oak_functions_resolve_func</span>(<span class="ident">field_name</span>) {
+            <span class="prelude-val">Some</span>(<span class="ident">sig</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">sig</span>,
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">extensions_metadata</span>.<span class="ident">get</span>(<span class="ident">field_name</span>) {
+                <span class="prelude-val">Some</span>((<span class="ident">ind</span>, <span class="ident">sig</span>)) <span class="op">=</span><span class="op">&gt;</span> (<span class="kw-2">*</span><span class="ident">ind</span>, <span class="ident">sig</span>.<span class="ident">clone</span>()),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">wasmi</span>::<span class="ident">Error</span>::<span class="ident">Instantiation</span>(<span class="macro">format</span><span class="macro">!</span>(
+                        <span class="string">&quot;Export {} not found&quot;</span>,
+                        <span class="ident">field_name</span>
+                    )))
+                }
+            },
+        };
+
+        <span class="kw">if</span> <span class="ident">signature</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">expected_signature</span> {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">wasmi</span>::<span class="ident">Error</span>::<span class="ident">Instantiation</span>(<span class="macro">format</span><span class="macro">!</span>(
+                <span class="string">&quot;Export `{}` doesn&#39;t match expected signature; got: {:?}, expected: {:?}&quot;</span>,
+                <span class="ident">field_name</span>, <span class="ident">signature</span>, <span class="ident">expected_signature</span>
+            )));
+        }
+
+        <span class="prelude-val">Ok</span>(<span class="ident">wasmi</span>::<span class="ident">FuncInstance</span>::<span class="ident">alloc_host</span>(<span class="ident">expected_signature</span>, <span class="ident">index</span>))
     }
 }
 
@@ -1364,19 +1358,21 @@
         <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">Module</span>,
         <span class="ident">request_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
-        <span class="ident">tf_model</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TensorFlowModel</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">logger</span>: <span class="ident">Logger</span>,
         <span class="ident">metrics_proxy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PrivateMetricsProxy</span><span class="op">&gt;</span>,
+        <span class="ident">extensions_indices</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">extensions_metadata</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, (<span class="ident">usize</span>, <span class="ident">wasmi</span>::<span class="ident">Signature</span>)<span class="op">&gt;</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">WasmState</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">abi</span> <span class="op">=</span> <span class="ident">WasmState</span> {
             <span class="ident">request_bytes</span>,
             <span class="ident">response_bytes</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">lookup_data</span>,
-            <span class="ident">tf_model</span>,
             <span class="ident">instance</span>: <span class="prelude-val">None</span>,
             <span class="ident">memory</span>: <span class="prelude-val">None</span>,
             <span class="ident">logger</span>,
             <span class="ident">metrics_proxy</span>,
+            <span class="ident">extensions_indices</span>,
+            <span class="ident">extensions_metadata</span>,
         };
 
         <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">ModuleInstance</span>::<span class="ident">new</span>(
@@ -1521,26 +1517,39 @@
     <span class="comment">// cloneable.</span>
     <span class="ident">module</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">Module</span><span class="op">&gt;</span>,
     <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
-    <span class="ident">tf_model</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TensorFlowModel</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
     <span class="ident">aggregator</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">PrivateMetricsAggregator</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">extensions_indices</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">extensions_metadata</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, (<span class="ident">usize</span>, <span class="ident">wasmi</span>::<span class="ident">Signature</span>)<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WasmHandler</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
         <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
         <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
-        <span class="ident">tf_model</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TensorFlowModel</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span>,
         <span class="ident">logger</span>: <span class="ident">Logger</span>,
         <span class="ident">aggregator</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">PrivateMetricsAggregator</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_indices</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extensions_metadata</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
+
+        <span class="kw">for</span> (<span class="ident">ind</span>, <span class="ident">extension</span>) <span class="kw">in</span> <span class="ident">extensions</span>.<span class="ident">into_iter</span>().<span class="ident">enumerate</span>() {
+            <span class="kw">let</span> (<span class="ident">name</span>, <span class="ident">signature</span>) <span class="op">=</span> <span class="ident">extension</span>.<span class="ident">get_metadata</span>();
+            <span class="kw">let</span> <span class="ident">ext</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">extension</span>);
+            <span class="ident">extensions_indices</span>.<span class="ident">insert</span>(<span class="ident">ind</span> <span class="op">+</span> <span class="ident">EXTENSION_INDEX_OFFSET</span>, <span class="ident">ext</span>.<span class="ident">clone</span>());
+            <span class="ident">extensions_metadata</span>.<span class="ident">insert</span>(<span class="ident">name</span>, (<span class="ident">ind</span> <span class="op">+</span> <span class="ident">EXTENSION_INDEX_OFFSET</span>, <span class="ident">signature</span>));
+        }
+
         <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">wasmi</span>::<span class="ident">Module</span>::<span class="ident">from_buffer</span>(<span class="kw-2">&amp;</span><span class="ident">wasm_module_bytes</span>)<span class="question-mark">?</span>;
+
         <span class="prelude-val">Ok</span>(<span class="ident">WasmHandler</span> {
             <span class="ident">module</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">module</span>),
             <span class="ident">lookup_data</span>,
-            <span class="ident">tf_model</span>,
             <span class="ident">logger</span>,
             <span class="ident">aggregator</span>,
+            <span class="ident">extensions_indices</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">extensions_indices</span>),
+            <span class="ident">extensions_metadata</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">extensions_metadata</span>),
         })
     }
 
@@ -1550,9 +1559,10 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>,
             <span class="ident">request_bytes</span>,
             <span class="self">self</span>.<span class="ident">lookup_data</span>.<span class="ident">clone</span>(),
-            <span class="self">self</span>.<span class="ident">tf_model</span>.<span class="ident">clone</span>(),
             <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>(),
             <span class="self">self</span>.<span class="ident">aggregator</span>.<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">PrivateMetricsProxy</span>::<span class="ident">new</span>),
+            <span class="self">self</span>.<span class="ident">extensions_indices</span>.<span class="ident">clone</span>(),
+            <span class="self">self</span>.<span class="ident">extensions_metadata</span>.<span class="ident">clone</span>(),
         )<span class="question-mark">?</span>;
         <span class="ident">wasm_state</span>.<span class="ident">invoke</span>();
         <span class="ident">wasm_state</span>.<span class="ident">publish_metrics</span>();
@@ -1565,10 +1575,7 @@
 
 <span class="doccomment">/// A resolver function, mapping `oak_functions` host function names to an index and a type</span>
 <span class="doccomment">/// signature.</span>
-<span class="kw">fn</span> <span class="ident">oak_functions_resolve_func</span>(
-    <span class="ident">field_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">wasmi</span>::<span class="ident">Signature</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">wasmi</span>::<span class="ident">FuncRef</span>, <span class="ident">wasmi</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">oak_functions_resolve_func</span>(<span class="ident">field_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">usize</span>, <span class="ident">wasmi</span>::<span class="ident">Signature</span>)<span class="op">&gt;</span> {
     <span class="comment">// The types in the signatures correspond to the parameters from</span>
     <span class="comment">// oak_functions/abi/src/lib.rs</span>
     <span class="kw">let</span> (<span class="ident">index</span>, <span class="ident">expected_signature</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">field_name</span> {
@@ -1625,35 +1632,10 @@
                 <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
             ),
         ),
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;oak-tf&quot;</span>)]</span>
-        <span class="string">&quot;tf_model_infer&quot;</span> <span class="op">=</span><span class="op">&gt;</span> (
-            <span class="ident">TF_MODEL_INFER</span>,
-            <span class="ident">wasmi</span>::<span class="ident">Signature</span>::<span class="ident">new</span>(
-                <span class="kw-2">&amp;</span>[
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// input_ptr</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// input_len</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// inference_ptr_ptr</span>
-                    <span class="ident">ABI_USIZE</span>, <span class="comment">// inference_len_ptr</span>
-                ][..],
-                <span class="prelude-val">Some</span>(<span class="ident">ValueType</span>::<span class="ident">I32</span>),
-            ),
-        ),
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">wasmi</span>::<span class="ident">Error</span>::<span class="ident">Instantiation</span>(<span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;Export {} not found&quot;</span>,
-                <span class="ident">field_name</span>
-            )))
-        }
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">None</span>,
     };
 
-    <span class="kw">if</span> <span class="ident">signature</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">expected_signature</span> {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">wasmi</span>::<span class="ident">Error</span>::<span class="ident">Instantiation</span>(<span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;Export `{}` doesn&#39;t match expected signature; got: {:?}, expected: {:?}&quot;</span>,
-            <span class="ident">field_name</span>, <span class="ident">signature</span>, <span class="ident">expected_signature</span>
-        )));
-    }
-
-    <span class="prelude-val">Ok</span>(<span class="ident">wasmi</span>::<span class="ident">FuncInstance</span>::<span class="ident">alloc_host</span>(<span class="ident">expected_signature</span>, <span class="ident">index</span>))
+    <span class="prelude-val">Some</span>((<span class="ident">index</span>, <span class="ident">expected_signature</span>))
 }
 
 <span class="doccomment">/// A helper function to move between our specific result type `Result&lt;(), OakStatus&gt;` and the</span>
@@ -1667,6 +1649,26 @@
         <span class="op">|</span><span class="ident">x</span>: <span class="ident">OakStatus</span><span class="op">|</span> <span class="ident">x</span> <span class="kw">as</span> <span class="ident">i32</span>,
         <span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">OakStatus</span>::<span class="prelude-val">Ok</span> <span class="kw">as</span> <span class="ident">i32</span>,
     ))))
+}
+
+<span class="doccomment">/// If `result` contains an [`ExtensionResult`] writes it into the memory of `wasm_state`, returning</span>
+<span class="doccomment">/// any errors that may arise. If `result` contains an error, returns that error. Otherwise, returns</span>
+<span class="doccomment">/// `Ok(())`.</span>
+<span class="kw">fn</span> <span class="ident">handle_extension_result</span>(
+    <span class="ident">wasm_state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">WasmState</span>,
+    <span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ExtensionResult</span><span class="op">&gt;</span>, <span class="ident">OakStatus</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakStatus</span><span class="op">&gt;</span> {
+    <span class="kw">match</span> <span class="ident">result</span> {
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">result</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">buf_ptr</span> <span class="op">=</span> <span class="ident">wasm_state</span>.<span class="ident">alloc</span>(<span class="ident">result</span>.<span class="ident">bytes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>);
+            <span class="ident">wasm_state</span>.<span class="ident">write_buffer_to_wasm_memory</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>.<span class="ident">bytes</span>, <span class="ident">buf_ptr</span>)<span class="question-mark">?</span>;
+            <span class="ident">wasm_state</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">buf_ptr</span>, <span class="ident">result</span>.<span class="ident">buf_ptr_ptr</span>)<span class="question-mark">?</span>;
+            <span class="ident">wasm_state</span>.<span class="ident">write_u32_to_wasm_memory</span>(<span class="ident">result</span>.<span class="ident">bytes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>, <span class="ident">result</span>.<span class="ident">buf_len_ptr</span>)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(())
+        }
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
+        <span class="prelude-val">Err</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">status</span>),
+    }
 }
 
 <span class="doccomment">/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric</span>

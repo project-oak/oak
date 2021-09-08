@@ -101,6 +101,15 @@
 <span id="98"> 98</span>
 <span id="99"> 99</span>
 <span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -126,8 +135,7 @@
     <span class="ident">lookup</span>::<span class="ident">LookupData</span>,
     <span class="ident">metrics</span>::<span class="ident">PrivateMetricsAggregator</span>,
     <span class="ident">proto</span>::<span class="ident">remote_attestation_server</span>::<span class="ident">RemoteAttestationServer</span>,
-    <span class="ident">server</span>::{<span class="ident">apply_policy</span>, <span class="ident">Policy</span>, <span class="ident">WasmHandler</span>},
-    <span class="ident">tf</span>::<span class="ident">TensorFlowModel</span>,
+    <span class="ident">server</span>::{<span class="ident">apply_policy</span>, <span class="ident">BoxedExtension</span>, <span class="ident">Policy</span>, <span class="ident">WasmHandler</span>},
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">Context</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">Level</span>;
@@ -157,27 +165,37 @@
     <span class="prelude-val">Ok</span>(<span class="ident">bytes</span>)
 }
 
-<span class="doccomment">/// Starts a gRPC server on the given address, serving the `main` function of the given Wasm module.</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">too_many_arguments</span>)]</span>
-<span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">create_and_start_grpc_server</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span><span class="op">&gt;</span>(
-    <span class="ident">address</span>: <span class="kw-2">&amp;</span><span class="ident">SocketAddr</span>,
-    <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Creates a [`WasmHandler`] with the given Wasm module, lookup data, metrics aggregator, and</span>
+<span class="doccomment">/// extensions.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_wasm_handler</span>(
     <span class="ident">wasm_module_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
     <span class="ident">lookup_data</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LookupData</span><span class="op">&gt;</span>,
-    <span class="ident">tf_model</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TensorFlowModel</span><span class="op">&gt;</span>,
-    <span class="ident">policy</span>: <span class="ident">Policy</span>,
-    <span class="ident">terminate</span>: <span class="ident">F</span>,
-    <span class="ident">logger</span>: <span class="ident">Logger</span>,
     <span class="ident">aggregator</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">PrivateMetricsAggregator</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="ident">extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BoxedExtension</span><span class="op">&gt;</span>,
+    <span class="ident">logger</span>: <span class="ident">Logger</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">WasmHandler</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">wasm_handler</span> <span class="op">=</span> <span class="ident">WasmHandler</span>::<span class="ident">create</span>(
         <span class="ident">wasm_module_bytes</span>,
         <span class="ident">lookup_data</span>,
-        <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">tf_model</span>),
-        <span class="ident">logger</span>.<span class="ident">clone</span>(),
+        <span class="ident">extensions</span>,
+        <span class="ident">logger</span>,
         <span class="ident">aggregator</span>,
     )<span class="question-mark">?</span>;
 
+    <span class="prelude-val">Ok</span>(<span class="ident">wasm_handler</span>)
+}
+
+<span class="doccomment">/// Starts a gRPC server on the given address, serving the `main` function from the given</span>
+<span class="doccomment">/// [`WasmHandler`].</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">too_many_arguments</span>)]</span>
+<span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">create_and_start_grpc_server</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span><span class="op">&gt;</span>(
+    <span class="ident">address</span>: <span class="kw-2">&amp;</span><span class="ident">SocketAddr</span>,
+    <span class="ident">wasm_handler</span>: <span class="ident">WasmHandler</span>,
+    <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">policy</span>: <span class="ident">Policy</span>,
+    <span class="ident">terminate</span>: <span class="ident">F</span>,
+    <span class="ident">logger</span>: <span class="ident">Logger</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">logger</span>.<span class="ident">log_public</span>(
         <span class="ident">Level</span>::<span class="ident">Info</span>,
         <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(
