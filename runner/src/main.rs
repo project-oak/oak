@@ -808,6 +808,15 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
             .map(to_string)
             .filter(|path| all_affected_crates.contains(&path))
             .map(|entry| {
+                // Manually exclude `oak-introspection-client` for `oak_loader` and `oak_runtime` to
+                // avoid compile time errors.
+                let features = if entry.contains("oak_loader") {
+                    "--features=oak-unsafe,awskms,gcpkms,oak-attestation"
+                } else if entry.contains("oak_runtime") {
+                    "--features=oak-unsafe,awskms,gcpkms,linear-handles"
+                } else {
+                    "--all-features"
+                };
                 let test_run_step = |name| Step::Single {
                     name,
                     command: Cmd::new(
@@ -815,7 +824,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
                         &[
                             "test",
                             // Compile and test for all features
-                            "--all-features",
+                            features,
                             &format!("--manifest-path={}", &entry),
                             if opt.benches { "--benches" } else { "" },
                         ],
