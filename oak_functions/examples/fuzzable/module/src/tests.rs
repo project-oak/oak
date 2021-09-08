@@ -18,7 +18,7 @@ use crate::proto::{
 };
 use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
-    grpc::create_and_start_grpc_server,
+    grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{LookupData, LookupDataAuth},
     server::Policy,
@@ -56,18 +56,23 @@ async fn test_server() {
         constant_processing_time: Duration::from_millis(200),
     };
     let tee_certificate = vec![];
+    let wasm_handler = create_wasm_handler(
+        &wasm_module_bytes,
+        lookup_data,
+        None,
+        vec![],
+        logger.clone(),
+    )
+    .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
             &address,
+            wasm_handler,
             tee_certificate,
-            &wasm_module_bytes,
-            lookup_data,
-            None,
             policy,
             term,
             logger,
-            None,
         )
         .await
     });

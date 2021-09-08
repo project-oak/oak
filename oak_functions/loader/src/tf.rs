@@ -14,34 +14,43 @@
 // limitations under the License.
 //
 
+use crate::{
+    logger::Logger,
+    server::{
+        AbiPointer, AbiPointerOffset, ExtensionResult, OakApiNativeExtension, WasmState, ABI_USIZE,
+    },
+};
 use anyhow::Context;
 use bytes::Bytes;
-use oak_functions_abi::proto::Inference;
+use log::Level;
+use oak_functions_abi::proto::{Inference, OakStatus};
+use prost::Message;
 use std::{fs::File, io::Read};
-#[cfg(feature = "oak-tf")]
 use tract_tensorflow::prelude::{
     tract_ndarray::{ArrayBase, Dim, IxDynImpl, ViewRepr},
     *,
 };
+use wasmi::ValueType;
+
+/// Host function name for invoking TensorFlow model inference.
+const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 
 /// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`
 /// is not required, InferenceModel with [`InferenceFact`] and [`InferenceOp`] could be used
 /// instead. These traits are available from the `tract-hir` crate.
 /// More information: https://github.com/sonos/tract/blob/main/doc/graph.md
-#[cfg(feature = "oak-tf")]
 type Model = RunnableModel<TypedFact, Box<dyn TypedOp>, Graph<TypedFact, Box<dyn TypedOp>>>;
 
-#[cfg(feature = "oak-tf")]
 pub struct TensorFlowModel {
     model: Model,
     pub shape: Vec<u8>,
+    logger: Logger,
 }
 
-#[cfg(feature = "oak-tf")]
 impl TensorFlowModel {
     /// Creates an instance of TensorFlowModel, by loading the model from the given byte array and
     /// optimizing it using the given shape.
-    pub fn create(bytes: Bytes, shape: Vec<u8>) -> anyhow::Result<Self> {
+    pub fn create(bytes: Bytes, shape: Vec<u8>, logger: Logger) -> anyhow::Result<Self> {
         use bytes::Buf;
 
         let dim = shape
@@ -62,7 +71,11 @@ impl TensorFlowModel {
             // make the model runnable and fix its inputs and outputs
             .into_runnable()?;
 
-        Ok(TensorFlowModel { model, shape })
+        Ok(TensorFlowModel {
+            model,
+            shape,
+            logger,
+        })
     }
 
     /// Run the model for the given input and return the resulting inference vector. Returns an
@@ -112,6 +125,88 @@ impl TensorFlowModel {
     }
 }
 
+impl OakApiNativeExtension for TensorFlowModel {
+    fn invoke(
+        &self,
+        wasm_state: &WasmState,
+        args: wasmi::RuntimeArgs,
+    ) -> Result<Result<Option<ExtensionResult>, OakStatus>, wasmi::Trap> {
+        Ok(tf_model_infer(
+            wasm_state,
+            self,
+            args.nth_checked(0)?,
+            args.nth_checked(1)?,
+            args.nth_checked(2)?,
+            args.nth_checked(3)?,
+        ))
+    }
+
+    /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
+    /// fine to return a constant name in the metadata.
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
+        let signature = wasmi::Signature::new(
+            &[
+                ABI_USIZE, // input_ptr
+                ABI_USIZE, // input_len
+                ABI_USIZE, // inference_ptr_ptr
+                ABI_USIZE, // inference_len_ptr
+            ][..],
+            Some(ValueType::I32),
+        );
+
+        (TF_ABI_FUNCTION_NAME.to_string(), signature)
+    }
+}
+
+/// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).    
+fn tf_model_infer(
+    wasm_state: &WasmState,
+    tf_model: &TensorFlowModel,
+    input_ptr: AbiPointer,
+    input_len: AbiPointerOffset,
+    inference_ptr_ptr: AbiPointer,
+    inference_len_ptr: AbiPointer,
+) -> Result<Option<ExtensionResult>, OakStatus> {
+    let input = wasm_state
+        .get_memory()
+        .get(input_ptr, input_len as usize)
+        .map_err(|err| {
+            tf_model.logger.log_sensitive(
+                Level::Error,
+                &format!(
+                    "tf_model_infer(): Unable to read input from guest memory: {:?}",
+                    err
+                ),
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
+
+    let shape = tf_model
+        .shape
+        .clone()
+        .iter()
+        .cloned()
+        .map(|u| u.into())
+        .collect::<Vec<usize>>();
+
+    // Get the inference, and convert it into a protobuf-encoded byte array
+    let inference = tf_model.get_inference(&input, &shape).map_err(|err| {
+        tf_model.logger.log_sensitive(
+            Level::Error,
+            &format!("tf_model_infer(): Unable to run inference: {:?}", err),
+        );
+        OakStatus::ErrBadTensorFlowModelInput
+    })?;
+    let mut encoded_inference = vec![];
+    inference.encode(&mut encoded_inference).unwrap();
+
+    Ok(Some(ExtensionResult {
+        bytes: encoded_inference,
+        buf_ptr_ptr: inference_ptr_ptr,
+        buf_len_ptr: inference_len_ptr,
+    }))
+}
+
 /// Read a tensorFlow model from the given path, into a byte array.
 pub async fn read_model_from_path(path: &str) -> anyhow::Result<Bytes> {
     let mut f = File::open(path).context("could not open TensorFlow model file")?;
@@ -120,21 +215,4 @@ pub async fn read_model_from_path(path: &str) -> anyhow::Result<Bytes> {
         .context("could not read TensorFlow model from file")?;
 
     Ok(Bytes::from(buf))
-}
-
-#[cfg(not(feature = "oak-tf"))]
-pub struct TensorFlowModel;
-
-#[cfg(not(feature = "oak-tf"))]
-impl TensorFlowModel {
-    pub fn create(_bytes: Bytes, _shape: Vec<u8>) -> anyhow::Result<Self> {
-        anyhow::bail!("Unreachable: cannot create an instance of TensorFlowModel when `oak-tf` is not enabled")
-    }
-    pub fn get_inference(
-        &self,
-        _tensor_bytes: &[u8],
-        _tensor_shape: &[usize],
-    ) -> anyhow::Result<Inference> {
-        anyhow::bail!("Unreachable: inference is not supported when `oak-tf` is not enabled")
-    }
 }

@@ -17,7 +17,6 @@ use crate::{
     logger::Logger,
     lookup::LookupData,
     metrics::{PrivateMetricsAggregator, PrivateMetricsProxy},
-    tf::TensorFlowModel,
 };
 
 use anyhow::Context;
@@ -27,6 +26,7 @@ use log::Level;
 use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode};
 use serde::Deserialize;
 use std::{
+    collections::HashMap,
     convert::TryFrom,
     str,
     sync::{Arc, Mutex},
@@ -43,17 +43,16 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
-#[cfg(feature = "oak-tf")]
-const TF_MODEL_INFER: usize = 4;
 const REPORT_METRIC: usize = 5;
+const EXTENSION_INDEX_OFFSET: usize = 10;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
-type AbiPointer = u32;
-type AbiPointerOffset = u32;
+pub type AbiPointer = u32;
+pub type AbiPointerOffset = u32;
 /// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
 /// Wasm would use a different value.
-const ABI_USIZE: ValueType = ValueType::I32;
+pub const ABI_USIZE: ValueType = ValueType::I32;
 
 /// Minimum size of constant response bytes. It is large enough to fit an error response, in case
 /// the policy is violated.
@@ -149,25 +148,52 @@ impl FixedSizeBodyPadder for Response {
     }
 }
 
+/// Trait for implementing extensions, to implement new native functionality.
+pub trait OakApiNativeExtension {
+    /// Similar to `invoke_index` in [`wasmi::Externals`], but may return a result to be
+    /// written into the memory of the `WasmState`.
+    fn invoke(
+        &self,
+        wasm_state: &WasmState,
+        args: wasmi::RuntimeArgs,
+    ) -> Result<Result<Option<ExtensionResult>, OakStatus>, wasmi::Trap>;
+
+    /// Metadata about this Extension, including the exported host function name, and the function's
+    /// signature.
+    fn get_metadata(&self) -> (String, wasmi::Signature);
+}
+
+pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
+
+// Result of the invocation of an extension. The [`WasmState`] will write the `bytes` into the
+// memory location specified by `buf_ptr_ptr` and `buf_len_ptr`.
+pub struct ExtensionResult {
+    pub bytes: Vec<u8>,
+    pub buf_ptr_ptr: AbiPointer,
+    pub buf_len_ptr: AbiPointer,
+}
+
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
 /// module to exchange the request and the response with the Oak functions server. These functions
 /// translate values between Wasm linear memory and Rust types.
-struct WasmState {
+pub struct WasmState {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
     lookup_data: Arc<LookupData>,
-    #[allow(dead_code)]
-    tf_model: Arc<Option<TensorFlowModel>>,
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
     metrics_proxy: Option<PrivateMetricsProxy>,
+    /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
+    extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
+    /// A mapping of host function names to metadata required for resolving the function.
+    extensions_metadata: Arc<HashMap<String, (usize, wasmi::Signature)>>,
 }
 
 impl WasmState {
     /// Helper function to get memory.
-    fn get_memory(&self) -> &wasmi::MemoryRef {
+    pub fn get_memory(&self) -> &wasmi::MemoryRef {
         self.memory
             .as_ref()
             .expect("WasmState memory not attached!?")
@@ -367,62 +393,6 @@ impl WasmState {
         }
     }
 
-    /// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).
-    #[cfg(feature = "oak-tf")]
-    pub fn tf_model_infer(
-        &mut self,
-        input_ptr: AbiPointer,
-        input_len: AbiPointerOffset,
-        inference_ptr_ptr: AbiPointer,
-        inference_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        use prost::Message;
-
-        match *self.tf_model {
-            None => Err(OakStatus::ErrTensorFlowModelNotFound),
-            Some(ref tf_model) => {
-                let input = self
-                    .get_memory()
-                    .get(input_ptr, input_len as usize)
-                    .map_err(|err| {
-                        self.logger.log_sensitive(
-                            Level::Error,
-                            &format!(
-                                "tf_model_infer(): Unable to read input from guest memory: {:?}",
-                                err
-                            ),
-                        );
-                        OakStatus::ErrInvalidArgs
-                    })?;
-
-                let shape = tf_model
-                    .shape
-                    .clone()
-                    .iter()
-                    .cloned()
-                    .map(|u| u.into())
-                    .collect::<Vec<usize>>();
-
-                // Get the inference, and convert it into a protobuf-encoded byte array
-                let inference = tf_model.get_inference(&input, &shape).map_err(|err| {
-                    self.logger.log_sensitive(
-                        Level::Error,
-                        &format!("tf_model_infer(): Unable to run inference: {:?}", err),
-                    );
-                    OakStatus::ErrBadTensorFlowModelInput
-                })?;
-                let mut encoded_inference = vec![];
-                inference.encode(&mut encoded_inference).unwrap();
-
-                let inference_ptr = self.alloc(encoded_inference.len() as u32);
-                self.write_buffer_to_wasm_memory(&encoded_inference, inference_ptr)?;
-                self.write_u32_to_wasm_memory(inference_ptr, inference_ptr_ptr)?;
-                self.write_u32_to_wasm_memory(encoded_inference.len() as u32, inference_len_ptr)?;
-                Ok(())
-            }
-        }
-    }
-
     pub fn alloc(&mut self, len: u32) -> AbiPointer {
         let result = self.instance.as_ref().unwrap().invoke_export(
             ALLOC_FUNCTION_NAME,
@@ -496,14 +466,15 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(2)?,
                 args.nth_checked(3)?,
             )),
-            #[cfg(feature = "oak-tf")]
-            TF_MODEL_INFER => map_host_errors(self.tf_model_infer(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-                args.nth_checked(3)?,
-            )),
-            _ => panic!("Unimplemented function at {}", index),
+            _ => {
+                let result = {
+                    match self.extensions_indices.get(&index) {
+                        Some(ref extension) => extension.invoke(self, args)?,
+                        None => panic!("Unimplemented function at {}", index),
+                    }
+                };
+                map_host_errors(handle_extension_result(self, result))
+            }
         }
     }
 }
@@ -514,7 +485,29 @@ impl wasmi::ModuleImportResolver for WasmState {
         field_name: &str,
         signature: &wasmi::Signature,
     ) -> Result<wasmi::FuncRef, wasmi::Error> {
-        oak_functions_resolve_func(field_name, signature)
+        // First look for the function (i.e., `field_name`) in the statically registered functions.
+        // If not found, then look for it among the extensions. If not found, return an error.
+        let (index, expected_signature) = match oak_functions_resolve_func(field_name) {
+            Some(sig) => sig,
+            None => match self.extensions_metadata.get(field_name) {
+                Some((ind, sig)) => (*ind, sig.clone()),
+                None => {
+                    return Err(wasmi::Error::Instantiation(format!(
+                        "Export {} not found",
+                        field_name
+                    )))
+                }
+            },
+        };
+
+        if signature != &expected_signature {
+            return Err(wasmi::Error::Instantiation(format!(
+                "Export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
+                field_name, signature, expected_signature
+            )));
+        }
+
+        Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
     }
 }
 
@@ -523,19 +516,21 @@ impl WasmState {
         module: &wasmi::Module,
         request_bytes: Vec<u8>,
         lookup_data: Arc<LookupData>,
-        tf_model: Arc<Option<TensorFlowModel>>,
         logger: Logger,
         metrics_proxy: Option<PrivateMetricsProxy>,
+        extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
+        extensions_metadata: Arc<HashMap<String, (usize, wasmi::Signature)>>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
             response_bytes: vec![],
             lookup_data,
-            tf_model,
             instance: None,
             memory: None,
             logger,
             metrics_proxy,
+            extensions_indices,
+            extensions_metadata,
         };
 
         let instance = wasmi::ModuleInstance::new(
@@ -680,26 +675,39 @@ pub struct WasmHandler {
     // cloneable.
     module: Arc<wasmi::Module>,
     lookup_data: Arc<LookupData>,
-    tf_model: Arc<Option<TensorFlowModel>>,
     logger: Logger,
     aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
+    extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
+    extensions_metadata: Arc<HashMap<String, (usize, wasmi::Signature)>>,
 }
 
 impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
         lookup_data: Arc<LookupData>,
-        tf_model: Arc<Option<TensorFlowModel>>,
+        extensions: Vec<BoxedExtension>,
         logger: Logger,
         aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     ) -> anyhow::Result<Self> {
+        let mut extensions_indices = HashMap::new();
+        let mut extensions_metadata = HashMap::new();
+
+        for (ind, extension) in extensions.into_iter().enumerate() {
+            let (name, signature) = extension.get_metadata();
+            let ext = Arc::new(extension);
+            extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, ext.clone());
+            extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
+        }
+
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
+
         Ok(WasmHandler {
             module: Arc::new(module),
             lookup_data,
-            tf_model,
             logger,
             aggregator,
+            extensions_indices: Arc::new(extensions_indices),
+            extensions_metadata: Arc::new(extensions_metadata),
         })
     }
 
@@ -709,9 +717,10 @@ impl WasmHandler {
             &self.module,
             request_bytes,
             self.lookup_data.clone(),
-            self.tf_model.clone(),
             self.logger.clone(),
             self.aggregator.clone().map(PrivateMetricsProxy::new),
+            self.extensions_indices.clone(),
+            self.extensions_metadata.clone(),
         )?;
         wasm_state.invoke();
         wasm_state.publish_metrics();
@@ -724,10 +733,7 @@ impl WasmHandler {
 
 /// A resolver function, mapping `oak_functions` host function names to an index and a type
 /// signature.
-fn oak_functions_resolve_func(
-    field_name: &str,
-    signature: &wasmi::Signature,
-) -> Result<wasmi::FuncRef, wasmi::Error> {
+fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signature)> {
     // The types in the signatures correspond to the parameters from
     // oak_functions/abi/src/lib.rs
     let (index, expected_signature) = match field_name {
@@ -784,35 +790,10 @@ fn oak_functions_resolve_func(
                 Some(ValueType::I32),
             ),
         ),
-        #[cfg(feature = "oak-tf")]
-        "tf_model_infer" => (
-            TF_MODEL_INFER,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // input_ptr
-                    ABI_USIZE, // input_len
-                    ABI_USIZE, // inference_ptr_ptr
-                    ABI_USIZE, // inference_len_ptr
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        _ => {
-            return Err(wasmi::Error::Instantiation(format!(
-                "Export {} not found",
-                field_name
-            )))
-        }
+        _ => return None,
     };
 
-    if signature != &expected_signature {
-        return Err(wasmi::Error::Instantiation(format!(
-            "Export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
-            field_name, signature, expected_signature
-        )));
-    }
-
-    Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
+    Some((index, expected_signature))
 }
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
@@ -826,6 +807,26 @@ fn map_host_errors(
         |x: OakStatus| x as i32,
         |_| OakStatus::Ok as i32,
     ))))
+}
+
+/// If `result` contains an [`ExtensionResult`] writes it into the memory of `wasm_state`, returning
+/// any errors that may arise. If `result` contains an error, returns that error. Otherwise, returns
+/// `Ok(())`.
+fn handle_extension_result(
+    wasm_state: &mut WasmState,
+    result: Result<Option<ExtensionResult>, OakStatus>,
+) -> Result<(), OakStatus> {
+    match result {
+        Ok(Some(result)) => {
+            let buf_ptr = wasm_state.alloc(result.bytes.len() as u32);
+            wasm_state.write_buffer_to_wasm_memory(&result.bytes, buf_ptr)?;
+            wasm_state.write_u32_to_wasm_memory(buf_ptr, result.buf_ptr_ptr)?;
+            wasm_state.write_u32_to_wasm_memory(result.bytes.len() as u32, result.buf_len_ptr)?;
+            Ok(())
+        }
+        Ok(None) => Ok(()),
+        Err(status) => Err(status),
+    }
 }
 
 /// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
