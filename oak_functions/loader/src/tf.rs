@@ -17,8 +17,7 @@
 use crate::{
     logger::Logger,
     server::{
-        AbiPointer, AbiPointerOffset, ExtensionMetadata, ExtensionResult, OakApiNativeExtension,
-        WasmState, ABI_USIZE,
+        AbiPointer, AbiPointerOffset, ExtensionResult, OakApiNativeExtension, WasmState, ABI_USIZE,
     },
 };
 use anyhow::Context;
@@ -35,8 +34,6 @@ use wasmi::ValueType;
 
 /// Host function name for invoking TensorFlow model inference.
 const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
-/// Internal index associated with the `tf_model_infer` host function.
-const TF_MODEL_INFER: usize = 4;
 
 /// An optimized TypeModel with [`TypedFact`] and [`TypedOp`]. If optimization performed by `tract`
 /// is not required, InferenceModel with [`InferenceFact`] and [`InferenceOp`] could be used
@@ -145,8 +142,8 @@ impl OakApiNativeExtension for TensorFlowModel {
     }
 
     /// Each Oak Functions application can have at most one instance of TensorFlowModule. So it is
-    /// fine to return a constant name and index in the metadata.
-    fn get_metadata(&self) -> ExtensionMetadata {
+    /// fine to return a constant name in the metadata.
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
         let signature = wasmi::Signature::new(
             &[
                 ABI_USIZE, // input_ptr
@@ -156,11 +153,8 @@ impl OakApiNativeExtension for TensorFlowModel {
             ][..],
             Some(ValueType::I32),
         );
-        ExtensionMetadata {
-            name: TF_ABI_FUNCTION_NAME.to_string(),
-            index: TF_MODEL_INFER,
-            signature,
-        }
+
+        (TF_ABI_FUNCTION_NAME.to_string(), signature)
     }
 }
 

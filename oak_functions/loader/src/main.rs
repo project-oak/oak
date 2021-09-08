@@ -162,15 +162,13 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 
     let lookup_data = load_lookup_data(&config, logger.clone()).await?;
 
-    #[cfg(not(feature = "oak-unsafe"))]
-    let extensions = vec![];
+    #[allow(unused_mut)]
+    let mut extensions = Vec::new();
 
-    #[cfg(feature = "oak-unsafe")]
-    let extensions = if let Some(tf_model) = load_tensorflow_model(&config, logger.clone()).await? {
-        vec![tf_model]
-    } else {
-        vec![]
-    };
+    #[cfg(feature = "oak-tf")]
+    if let Some(tf_model) = load_tensorflow_model(&config, logger.clone()).await? {
+        extensions.push(tf_model);
+    }
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
