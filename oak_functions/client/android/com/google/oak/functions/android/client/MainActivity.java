@@ -66,7 +66,8 @@ public class MainActivity extends Activity {
 
     TextView resultTextView = findViewById(R.id.resultTextView);
     try {
-      AttestationClient client = new AttestationClient(uri);
+      AttestationClient client = new AttestationClient();
+      client.attest(uri);
       Response response = client.send(request);
       StatusCode responseStatus = response.getStatus();
       if (responseStatus != StatusCode.SUCCESS) {
