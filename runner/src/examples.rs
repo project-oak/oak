@@ -431,7 +431,7 @@ pub fn build_server(opt: &BuildServer, additional_features: Vec<String>) -> Step
                         "CARGO_INCREMENTAL".to_string() => "0".to_string(),
                         "RUSTDOCFLAGS".to_string() => "-Cpanic=abort".to_string(),
                         // grcov instructions suggest also including `-Cpanic=abort` in RUSTFLAGS, but this causes our build.rs scripts to fail.
-                        "RUSTFLAGS".to_string() => "-Z timings -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
+                        "RUSTFLAGS".to_string() => "-Ztimings -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic-abort_tests".to_string(),
                     }
                 } else {
                     hashmap! {}
@@ -655,7 +655,7 @@ pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Ste
                         // `--out-dir` is unstable and requires `-Zunstable-options`.
                         "-Zunstable-options".to_string(),
                         "build".to_string(),
-                        "-Z timings --target=wasm32-unknown-unknown".to_string(),
+                        "-Ztimings --target=wasm32-unknown-unknown".to_string(),
                         // Use a fixed `--target-dir`, because it influences the SHA256 hash of the
                         // Wasm module.
                         //
@@ -889,7 +889,7 @@ fn build(target: &Target, opt: &BuildClient) -> Box<dyn Runnable> {
             "cargo",
             spread![
                 "build".to_string(),
-                "-Z timings --release".to_string(),
+                "-Ztimings --release".to_string(),
                 format!(
                     "--target={}",
                     opt.client_rust_target
