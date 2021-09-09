@@ -45,8 +45,7 @@ import oak.remote_attestation.EncryptedData;
 import oak.remote_attestation.ServerIdentity;
 
 /**
- * Client with remote attestation support for sending requests to an Oak
- * Functions loader application.
+ * Client with remote attestation support for sending requests to an Oak Functions application.
  */
 public class AttestationClient {
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
@@ -65,7 +64,7 @@ public class AttestationClient {
   /**
    * Creates a gRPC channel and creates an attested channel over it.
    *
-   * `url` must contain a protocol used for connection ("https://" or "http://").
+   * @param url must contain a protocol used for the connection ("https://" or "http://")
    */
   public void attest(String url)
       throws GeneralSecurityException, IOException, InterruptedException {
@@ -82,12 +81,13 @@ public class AttestationClient {
   }
 
   /**
-   * Creates an attested channel over the gRRC ManagedChannel.
-   *
-   * `url` must contain a protocol used for connection ("https://" or "http://").
+   * Creates an attested channel over the gRPC {@code ManagedChannel}.
    */
   public void attest(ManagedChannel channel)
       throws GeneralSecurityException, IOException, InterruptedException {
+    if (channel == null) {
+      throw new NullPointerException("Channel must not be null.");
+    }
     this.channel = channel;
     RemoteAttestationStub stub = RemoteAttestationGrpc.newStub(channel);
 
@@ -150,10 +150,15 @@ public class AttestationClient {
   @Override
   protected void finalize() throws Throwable {
     requestObserver.onCompleted();
-    channel.shutdown();
+    channel.shutdownNow();
   }
 
-  /** Encrypts and sends `message` via an attested gRPC channel to the server. */
+  /**
+   * Encrypts and sends a Request via an attested gRPC channel to the server and receives and
+   * decrypts the response.
+   *
+   * This method can only be used after the {@code attest} method has been called successfully.
+   * */
   @SuppressWarnings("ProtoParseWithRegistry")
   public Response send(Request request)
       throws GeneralSecurityException, InterruptedException, InvalidProtocolBufferException {
