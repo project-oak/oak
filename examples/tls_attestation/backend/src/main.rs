@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let make_service =
         make_service_fn(|_conn| async { Ok::<_, hyper::Error>(service_fn(service)) });
 
-    let server = Server::bind(&address).serve(make_service);
+    let server = Server::bind(address).serve(make_service);
     info!(
         "TLS Attestation Backend is listening on http://{}",
         &opt.http_listen_address

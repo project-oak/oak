@@ -20,7 +20,7 @@ use colored::*;
 use nix::sys::signal::Signal;
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf,
+    path::{Path, PathBuf},
     time::Instant,
 };
 use structopt::StructOpt;
@@ -788,7 +788,7 @@ impl Cmd {
         })
     }
 
-    pub fn new_in_dir<I, S>(executable: &str, args: I, current_dir: &PathBuf) -> Box<Self>
+    pub fn new_in_dir<I, S>(executable: &str, args: I, current_dir: &Path) -> Box<Self>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
@@ -797,7 +797,7 @@ impl Cmd {
             executable: executable.to_string(),
             args: args.into_iter().map(|s| s.as_ref().to_string()).collect(),
             env: HashMap::new(),
-            current_dir: Some(current_dir.clone()),
+            current_dir: Some(current_dir.to_path_buf()),
         })
     }
 }

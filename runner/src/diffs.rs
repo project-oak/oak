@@ -18,7 +18,7 @@ use maplit::hashset;
 use std::{
     collections::{HashMap, HashSet},
     io::{BufRead, BufReader},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Command,
 };
 
@@ -253,9 +253,9 @@ fn add_affected_crates(
 /// Returns paths to `Cargo.toml` files of local crates (crates belonging to the Oak repo) that the
 /// given crate has a dependency to. Converts the relative dependency paths in `Cargo.toml` into
 /// paths relative to the repo's root.
-fn get_local_dependencies(toml_path: &PathBuf) -> Vec<String> {
+fn get_local_dependencies(toml_path: &Path) -> Vec<String> {
     let cargo_manifest: CargoManifest =
-        toml::from_str(&read_file(&toml_path)).unwrap_or_else(|err| {
+        toml::from_str(&read_file(toml_path)).unwrap_or_else(|err| {
             panic!(
                 "could not parse crate manifest file {:?}: {}",
                 toml_path, err
@@ -269,7 +269,7 @@ fn get_local_dependencies(toml_path: &PathBuf) -> Vec<String> {
         .fold(&mut dependency_toml_paths, |paths, dep_path_str| {
             let dep_path = PathBuf::from(dep_path_str);
             let dep_path = dep_path.as_path();
-            let mut canonical_dep_toml_path = toml_path.clone();
+            let mut canonical_dep_toml_path = toml_path.to_path_buf();
             canonical_dep_toml_path.pop();
             // Change the path to be relative to the repo's root.
             for dir in dep_path.components() {

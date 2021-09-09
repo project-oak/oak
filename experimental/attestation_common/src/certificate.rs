@@ -125,7 +125,7 @@ impl CertificateAuthority {
         builder.set_version(CERTIFICATE_VERSION)?;
         builder.set_serial_number(SERIAL_NUMBER_SIZE)?;
         builder.set_name()?;
-        builder.set_public_key(&request.public_key()?.as_ref())?;
+        builder.set_public_key(request.public_key()?.as_ref())?;
         builder.set_expiration_interval(CERTIFICATE_EXPIRATION_INTERVAL_IN_DAYS)?;
 
         builder.add_basic_constraints_extension(false)?;
@@ -138,7 +138,7 @@ impl CertificateAuthority {
 
         // Bind the certificate to the TEE firmware using an X.509 TEE extension.
         if let AddTeeExtension::Yes(tee_certificate) = add_tee_extension {
-            builder.add_tee_extension(&request.public_key()?.as_ref(), tee_certificate)?;
+            builder.add_tee_extension(request.public_key()?.as_ref(), tee_certificate)?;
         }
 
         let certificate = builder.build(&self.key_pair)?;

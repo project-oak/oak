@@ -112,7 +112,7 @@ fn wasm_starting_module_without_content_fails() {
 fn wasm_starting_minimal_module_succeeds() {
     let binary = read("testdata/minimal.wasm").expect("Couldn't read Wasm file");
     let result = start_node(binary, "oak_main", vec![].as_ref());
-    assert_eq!(true, result.is_ok());
+    assert!(result.is_ok());
 }
 
 #[test]
@@ -176,7 +176,7 @@ fn wasm_verify_module_signature_succeeds() {
     let binary = read("testdata/minimal.wasm").expect("Couldn't read Wasm file");
     let signature = load_signature("testdata/minimal.sign");
     let result = start_node(binary, "oak_main", vec![signature].as_ref());
-    assert_eq!(true, result.is_ok());
+    assert!(result.is_ok());
 }
 
 #[test]

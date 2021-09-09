@@ -74,7 +74,7 @@ fn run_node_body(node_label: &Label, node_privilege: &NodePrivilege, node_body: 
     struct TestNode {
         node_body: Box<NodeBody>,
         result_sender: mpsc::SyncSender<Result<(), OakStatus>>,
-    };
+    }
 
     impl crate::node::Node for TestNode {
         fn node_type(&self) -> &'static str {
@@ -285,11 +285,11 @@ fn create_channel_with_more_confidential_label_from_public_untrusted_node_ok() {
         integrity_tags: vec![],
     };
     run_node_body(
-        &initial_label,
+        initial_label,
         &NodePrivilege::default(),
         Box::new(move |runtime| {
             let result = runtime.channel_create("", &more_confidential_label);
-            assert_eq!(true, result.is_ok());
+            assert!(result.is_ok());
 
             let (write_handle, read_handle) = result.unwrap();
 
@@ -337,7 +337,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_downgrade_o
         },
         Box::new(move |runtime| {
             let result = runtime.channel_create("", &more_confidential_label);
-            assert_eq!(true, result.is_ok());
+            assert!(result.is_ok());
 
             let (write_handle, read_handle) = result.unwrap();
 
@@ -382,7 +382,7 @@ fn create_channel_with_more_confidential_label_from_public_node_with_top_privile
         &NodePrivilege::top_privilege(),
         Box::new(move |runtime| {
             let result = runtime.channel_create("", &more_confidential_label);
-            assert_eq!(true, result.is_ok());
+            assert!(result.is_ok());
 
             let (write_handle, read_handle) = result.unwrap();
 

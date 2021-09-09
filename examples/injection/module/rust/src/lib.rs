@@ -199,7 +199,7 @@ impl BlobStoreFrontend {
         };
 
         match &self.store {
-            BlobStoreAccess::BlobStore(iface) => &iface,
+            BlobStoreAccess::BlobStore(iface) => iface,
             _ => unreachable!(),
         }
     }

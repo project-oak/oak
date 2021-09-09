@@ -50,15 +50,17 @@ impl Handler {
 impl HelloWorld for Handler {
     fn say_hello(&mut self, req: HelloRequest) -> grpc::Result<HelloResponse> {
         info!("Say hello to {}", req.greeting);
-        let mut res = HelloResponse::default();
-        res.reply = format!("HELLO {}!", req.greeting);
+        let res = HelloResponse {
+            reply: format!("HELLO {}!", req.greeting),
+        };
         Ok(res)
     }
 
     fn lots_of_replies(&mut self, req: HelloRequest, writer: grpc::ChannelResponseWriter) {
         info!("Say hello to {}", req.greeting);
-        let mut res1 = HelloResponse::default();
-        res1.reply = format!("HELLO {}!", req.greeting);
+        let res1 = HelloResponse {
+            reply: format!("HELLO {}!", req.greeting),
+        };
         writer
             .write(&res1, grpc::WriteMode::KeepOpen)
             .expect("Failed to write response");
@@ -66,16 +68,18 @@ impl HelloWorld for Handler {
         // Attempt to also generate a translated response.
         if let Some(salutation) = self.translate(&req.greeting, "en", "fr") {
             info!("Say bonjour to {}", salutation);
-            let mut res = HelloResponse::default();
-            res.reply = format!("BONJOUR {}!", salutation);
+            let res = HelloResponse {
+                reply: format!("BONJOUR {}!", salutation),
+            };
             writer
                 .write(&res, grpc::WriteMode::KeepOpen)
                 .expect("Failed to write translated response");
         }
 
         info!("Say hello again to {}", req.greeting);
-        let mut res2 = HelloResponse::default();
-        res2.reply = format!("HELLO AGAIN {}!", req.greeting);
+        let res2 = HelloResponse {
+            reply: format!("HELLO AGAIN {}!", req.greeting),
+        };
         writer
             .write(&res2, grpc::WriteMode::Close)
             .expect("Failed to write final response");
@@ -86,21 +90,22 @@ impl HelloWorld for Handler {
         let mut msg = String::new();
         msg.push_str("Hello ");
         msg.push_str(&recipients(&reqs));
-        let mut res = HelloResponse::default();
-        res.reply = msg;
+        let res = HelloResponse { reply: msg };
         Ok(res)
     }
 
     fn bidi_hello(&mut self, reqs: Vec<HelloRequest>, writer: grpc::ChannelResponseWriter) {
         info!("Say hello");
         let msg = recipients(&reqs);
-        let mut res1 = HelloResponse::default();
-        res1.reply = format!("HELLO {}!", msg);
+        let res1 = HelloResponse {
+            reply: format!("HELLO {}!", msg),
+        };
         writer
             .write(&res1, grpc::WriteMode::KeepOpen)
             .expect("Failed to write response");
-        let mut res2 = HelloResponse::default();
-        res2.reply = format!("BONJOUR {}!", msg);
+        let res2 = HelloResponse {
+            reply: format!("BONJOUR {}!", msg),
+        };
         writer
             .write(&res2, grpc::WriteMode::Close)
             .expect("Failed to write final response");

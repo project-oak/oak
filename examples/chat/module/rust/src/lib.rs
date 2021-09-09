@@ -99,11 +99,8 @@ oak::entrypoint_command_handler_init!(router => Router);
 /// code to the client.
 fn is_valid_label(label: &Label) -> bool {
     (label.confidentiality_tags.len() == 1)
-        && (if let Some(tag) = &label.confidentiality_tags[0].tag {
-            match tag {
-                tag::Tag::PublicKeyIdentityTag(_) => true,
-                _ => false,
-            }
+        && (if let Some(tag::Tag::PublicKeyIdentityTag(_)) = &label.confidentiality_tags[0].tag {
+            true
         } else {
             false
         })

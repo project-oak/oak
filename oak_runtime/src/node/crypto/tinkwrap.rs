@@ -94,7 +94,7 @@ impl TinkWrapper {
     /// to a KMS-backed AEAD.
     fn get_aead(&self, h: u64) -> Result<Box<dyn tink_core::Aead>, rpc::Status> {
         Ok(match self.get_keyset(h)? {
-            Keyset::Local(kh) => tink_aead::new(&kh).map_err(tinkerr)?,
+            Keyset::Local(kh) => tink_aead::new(kh).map_err(tinkerr)?,
             Keyset::Proxy(aead) => aead.box_clone(),
         })
     }
@@ -102,7 +102,7 @@ impl TinkWrapper {
     /// Retrieve the [`tink_core::keyset::Handle`] that corresponds to an opaque `u64` value.
     fn get_handle(&self, h: u64) -> Result<&tink_core::keyset::Handle, rpc::Status> {
         match self.get_keyset(h)? {
-            Keyset::Local(kh) => Ok(&kh),
+            Keyset::Local(kh) => Ok(kh),
             Keyset::Proxy(_) => Err(rpc_status(
                 Code::InvalidArgument,
                 "wrong keyset type".to_string(),
@@ -256,7 +256,7 @@ impl TinkWrapper {
         req: crypto::DeterministicAeadEncryptRequest,
     ) -> Result<crypto::DeterministicAeadEncryptResponse, rpc::Status> {
         let kh = self.get_handle(req.keyset_handle)?;
-        let d = tink_daead::new(&kh).map_err(tinkerr)?;
+        let d = tink_daead::new(kh).map_err(tinkerr)?;
         let ct = d
             .encrypt_deterministically(&req.plaintext, &req.associated_data)
             .map_err(tinkerr)?;
@@ -268,7 +268,7 @@ impl TinkWrapper {
         req: crypto::DeterministicAeadDecryptRequest,
     ) -> Result<crypto::DeterministicAeadDecryptResponse, rpc::Status> {
         let kh = self.get_handle(req.keyset_handle)?;
-        let d = tink_daead::new(&kh).map_err(tinkerr)?;
+        let d = tink_daead::new(kh).map_err(tinkerr)?;
         let pt = d
             .decrypt_deterministically(&req.ciphertext, &req.associated_data)
             .map_err(tinkerr)?;
@@ -280,7 +280,7 @@ impl TinkWrapper {
         req: crypto::ComputeMacRequest,
     ) -> Result<crypto::ComputeMacResponse, rpc::Status> {
         let kh = self.get_handle(req.keyset_handle)?;
-        let d = tink_mac::new(&kh).map_err(tinkerr)?;
+        let d = tink_mac::new(kh).map_err(tinkerr)?;
         let mac = d.compute_mac(&req.data).map_err(tinkerr)?;
         Ok(crypto::ComputeMacResponse { mac_value: mac })
     }
@@ -290,7 +290,7 @@ impl TinkWrapper {
         req: crypto::VerifyMacRequest,
     ) -> Result<crypto::VerifyMacResponse, rpc::Status> {
         let kh = self.get_handle(req.keyset_handle)?;
-        let d = tink_mac::new(&kh).map_err(tinkerr)?;
+        let d = tink_mac::new(kh).map_err(tinkerr)?;
         d.verify_mac(&req.mac_value, &req.data).map_err(tinkerr)?;
         Ok(crypto::VerifyMacResponse {})
     }
@@ -300,7 +300,7 @@ impl TinkWrapper {
         req: crypto::ComputePrfRequest,
     ) -> Result<crypto::ComputePrfResponse, rpc::Status> {
         let kh = self.get_handle(req.keyset_handle)?;
-        let d = tink_prf::Set::new(&kh).map_err(tinkerr)?;
+        let d = tink_prf::Set::new(kh).map_err(tinkerr)?;
         let prf = d
             .compute_primary_prf(&req.data, req.output_length as usize)
             .map_err(tinkerr)?;
@@ -312,7 +312,7 @@ impl TinkWrapper {
         req: crypto::SignatureSignRequest,
     ) -> Result<crypto::SignatureSignResponse, rpc::Status> {
         let kh = self.get_handle(req.private_keyset_handle)?;
-        let d = tink_signature::new_signer(&kh).map_err(tinkerr)?;
+        let d = tink_signature::new_signer(kh).map_err(tinkerr)?;
         let sig = d.sign(&req.data).map_err(tinkerr)?;
         Ok(crypto::SignatureSignResponse { signature: sig })
     }
@@ -322,7 +322,7 @@ impl TinkWrapper {
         req: crypto::SignatureVerifyRequest,
     ) -> Result<crypto::SignatureVerifyResponse, rpc::Status> {
         let kh = self.get_handle(req.public_keyset_handle)?;
-        let d = tink_signature::new_verifier(&kh).map_err(tinkerr)?;
+        let d = tink_signature::new_verifier(kh).map_err(tinkerr)?;
         d.verify(&req.signature, &req.data).map_err(tinkerr)?;
         Ok(crypto::SignatureVerifyResponse {})
     }

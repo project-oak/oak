@@ -101,37 +101,38 @@ impl Translator for Handler {
             "Attempt to translate '{}' from {} to {}",
             req.text, req.from_lang, req.to_lang
         );
-        let mut rsp = TranslateResponse::default();
-        rsp.translated_text = match req.from_lang.as_str() {
-            "en" => match req.text.as_str() {
-                "WORLDS" => match req.to_lang.as_str() {
-                    "fr" => "MONDES".to_string(),
-                    "it" => "MONDI".to_string(),
+        let rsp = TranslateResponse {
+            translated_text: match req.from_lang.as_str() {
+                "en" => match req.text.as_str() {
+                    "WORLDS" => match req.to_lang.as_str() {
+                        "fr" => "MONDES".to_string(),
+                        "it" => "MONDI".to_string(),
+                        _ => {
+                            info!("Output language {} not found", req.to_lang);
+                            return Err(grpc::build_status(
+                                grpc::Code::NotFound,
+                                "Output language not found",
+                            ));
+                        }
+                    },
                     _ => {
-                        info!("Output language {} not found", req.to_lang);
+                        info!(
+                            "Input text '{}' in {} not recognized",
+                            req.text, req.from_lang
+                        );
                         return Err(grpc::build_status(
                             grpc::Code::NotFound,
-                            "Output language not found",
+                            "Input text unrecognized",
                         ));
                     }
                 },
                 _ => {
-                    info!(
-                        "Input text '{}' in {} not recognized",
-                        req.text, req.from_lang
-                    );
+                    info!("Input language '{}' not recognized", req.from_lang);
                     return Err(grpc::build_status(
                         grpc::Code::NotFound,
-                        "Input text unrecognized",
+                        "Input language unrecognized",
                     ));
                 }
-            },
-            _ => {
-                info!("Input language '{}' not recognized", req.from_lang);
-                return Err(grpc::build_status(
-                    grpc::Code::NotFound,
-                    "Input language unrecognized",
-                ));
             }
         };
         info!("Translation '{}'", rsp.translated_text);
@@ -444,7 +445,7 @@ impl oak::CommandHandler for Main {
         let log_sender = oak::logger::create()?;
         oak::logger::init(log_sender.clone(), log::Level::Debug)?;
         let config: Config =
-            toml::from_slice(&command.items.get("config").expect("Couldn't find config"))
+            toml::from_slice(command.items.get("config").expect("Couldn't find config"))
                 .context("Couldn't parse TOML config file")?;
 ```
 <!-- prettier-ignore-end -->

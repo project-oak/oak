@@ -139,7 +139,7 @@ impl ApplicationClassic {
             },
             Step::Single {
                 name: "build application".to_string(),
-                command: build_application(&self),
+                command: build_application(self),
             },
         ]
     }
@@ -185,7 +185,7 @@ impl ApplicationFunctions {
         run_clients: Step,
     ) -> Step {
         let opt = &example.options;
-        let run_server = run_functions_example_server(&example.example.server, &self);
+        let run_server = run_functions_example_server(&example.example.server, self);
 
         if opt.build_client.client_variant == NO_CLIENTS {
             Step::Single {
@@ -219,7 +219,7 @@ trait OakExample {
             .iter()
             .map(move |(name, backend)| Step::Single {
                 name: name.to_string(),
-                command: build(&backend.target, &self.get_build_client()),
+                command: build(&backend.target, self.get_build_client()),
             })
             .collect()
     }
@@ -233,7 +233,7 @@ trait OakExample {
                 Step::WithBackground {
                     name: name.to_string(),
                     // Each `backend` is included as background step.
-                    background: run(&backend, &self.get_build_client(), Vec::new()),
+                    background: run(backend, self.get_build_client(), Vec::new()),
                     foreground: Box::new(backend_steps),
                 }
             })
@@ -287,7 +287,7 @@ impl OakExample for ClassicExample<'_> {
         let app_variant = self.options.application_variant.as_str();
         match self.applications.get(app_variant) {
             None => run_clients,
-            Some(app) => app.construct_example_server_run_step(&self, run_clients),
+            Some(app) => app.construct_example_server_run_step(self, run_clients),
         }
     }
 }
@@ -340,7 +340,7 @@ impl OakExample for FunctionsExample<'_> {
         let app_variant = self.options.application_variant.as_str();
         match self.applications.get(app_variant) {
             None => run_clients,
-            Some(app) => app.construct_example_server_run_step(&self, run_clients),
+            Some(app) => app.construct_example_server_run_step(self, run_clients),
         }
     }
 }
@@ -474,7 +474,7 @@ fn run_example(example: &ClassicExample) -> Step {
     let opt = &example.options;
 
     let run_clients = run_clients(
-        &example.example,
+        example.example,
         &opt.build_client,
         opt.client_additional_args.clone(),
     );
@@ -509,7 +509,7 @@ fn run_example(example: &ClassicExample) -> Step {
                 vec![]
             },
             if opt.build_docker {
-                vec![build_docker(&example.example)]
+                vec![build_docker(example.example)]
             } else {
                 vec![]
             },
@@ -530,7 +530,7 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
 
     // Build steps for running clients
     let run_clients = run_clients(
-        &example.example,
+        example.example,
         &opt.build_client,
         opt.client_additional_args.clone(),
     );
@@ -559,7 +559,7 @@ fn run_functions_example(example: &FunctionsExample) -> Step {
                 vec![]
             },
             if opt.build_docker {
-                vec![build_docker(&example.example)]
+                vec![build_docker(example.example)]
             } else {
                 vec![]
             },
@@ -791,7 +791,7 @@ fn run_clients(
                 client => *name == client,
             })
             .map(|(name, client)| {
-                run_client(name, &client, &build_client, client_additional_args.clone())
+                run_client(name, client, build_client, client_additional_args.clone())
             })
             .collect(),
     }
@@ -808,11 +808,11 @@ fn run_client(
         steps: vec![
             Step::Single {
                 name: "build".to_string(),
-                command: build(&executable.target, &opt),
+                command: build(&executable.target, opt),
             },
             Step::Single {
                 name: "run".to_string(),
-                command: run(executable, &opt, additional_args),
+                command: run(executable, opt, additional_args),
             },
         ],
     }

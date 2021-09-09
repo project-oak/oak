@@ -166,7 +166,7 @@ impl CommandHandler for StaticHttpHandler {
 
         info!("Handling a request to {}.", request.uri());
 
-        let response = match request.uri().path().as_ref() {
+        let response = match request.uri().path() {
             "/" => http::response::Builder::new()
                 .status(http::StatusCode::OK)
                 .header(http::header::CONTENT_TYPE, "text/html; charset=UTF-8")

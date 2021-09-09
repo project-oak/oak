@@ -1345,7 +1345,7 @@ fn validate_entrypoint(module: &wasmi::Module, entrypoint: &str) -> Result<(), O
     let abi_stub = WasmInterfaceStub;
     let wasi_stub = WasiStub;
     let instance = wasmi::ModuleInstance::new(
-        &module,
+        module,
         &wasmi::ImportsBuilder::new()
             .with_resolver("oak", &abi_stub)
             .with_resolver("wasi_snapshot_preview1", &wasi_stub),
@@ -1355,7 +1355,7 @@ fn validate_entrypoint(module: &wasmi::Module, entrypoint: &str) -> Result<(), O
 
     let expected_signature = wasmi::Signature::new(&[ValueType::I64][..], None);
 
-    let export = instance.export_by_name(&entrypoint).ok_or_else(|| {
+    let export = instance.export_by_name(entrypoint).ok_or_else(|| {
         warn!("entrypoint '{}' export not found", entrypoint);
         OakStatus::ErrInvalidArgs
     })?;
@@ -1415,7 +1415,7 @@ pub(crate) fn get_privilege(
     wasm_module_bytes: &[u8],
     signature_table: &SignatureTable,
 ) -> NodePrivilege {
-    let module_hash = get_sha256_hex(&wasm_module_bytes);
+    let module_hash = get_sha256_hex(wasm_module_bytes);
     debug!("Wasm module SHA-256 hash: {:?}", module_hash);
 
     // Create hash tags.

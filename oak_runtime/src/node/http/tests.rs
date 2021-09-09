@@ -413,7 +413,7 @@ fn test_https_client_can_handle_https_requests_to_an_external_service() {
                 privilege: crate::node::http::client::get_privilege(authority),
             },
             "client_tester_node",
-            &confidentiality_label(tls_endpoint_tag(&authority)),
+            &confidentiality_label(tls_endpoint_tag(authority)),
             oak_node_init_receiver.handle.handle,
         )
         .unwrap();
@@ -547,7 +547,7 @@ fn create_communication_channel(
 ) -> (Receiver<HttpInvocationSender>, Receiver<HttpInvocation>) {
     // Create channel: one end to server_node::run; the other to the Oak node.
     let (init_sender, init_receiver) = channel_create::<HttpInvocationSender>(
-        &runtime,
+        runtime,
         "HTTP server init",
         &Label::public_untrusted(),
     )
@@ -558,7 +558,7 @@ fn create_communication_channel(
     //
     // Create a channel for receiving invocations to pass to the HTTP server pseudo-Node.
     let (invocation_sender, invocation_receiver) = channel_create::<HttpInvocation>(
-        &runtime,
+        runtime,
         "HTTP server invocation",
         &Label::public_untrusted(),
     )
@@ -704,7 +704,7 @@ fn create_http_client_communication_channel(
     // Create HttpInvocation channel: The receiver end goes to the Oak node. The other end goes to
     // the HTTP client pseudo-node.
     let (init_sender, init_receiver) = channel_create::<HttpInvocationSender>(
-        &runtime,
+        runtime,
         "Oak node init",
         &Label::public_untrusted(),
     )
@@ -715,7 +715,7 @@ fn create_http_client_communication_channel(
     //
     // Create a channel for sending invocations to the HTTP client pseudo-Node.
     let (invocation_sender, invocation_receiver) = channel_create::<HttpInvocation>(
-        &runtime,
+        runtime,
         "HTTP client invocation",
         &Label::public_untrusted(),
     )

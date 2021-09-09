@@ -159,10 +159,10 @@ async fn process_request(
             }
             ConnectionStatus::NotAttested => {
                 warn!("TLS connection is not attested");
-                return Ok(Response::builder()
+                Ok(Response::builder()
                     .status(hyper::StatusCode::UNAUTHORIZED)
                     .body(Body::from("TLS connection is not attested"))
-                    .unwrap());
+                    .unwrap())
             }
         },
     }

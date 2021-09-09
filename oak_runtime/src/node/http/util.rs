@@ -44,10 +44,10 @@ impl Pipe {
         // that allows removing integrity tags, this will fail if the label has a non-empty
         // integrity component.
         let (request_sender, request_receiver) =
-            channel_create_with_downgrade(&runtime, "HTTP request", request_label)?;
+            channel_create_with_downgrade(runtime, "HTTP request", request_label)?;
 
         let (response_sender, response_receiver) =
-            channel_create_with_downgrade(&runtime, "HTTP response", user_identity_label)?;
+            channel_create_with_downgrade(runtime, "HTTP response", user_identity_label)?;
 
         Ok(Pipe {
             request_sender,
@@ -88,19 +88,19 @@ impl Pipe {
 
     /// Close all local handles except for the one that allows reading responses.
     pub fn close(self, runtime: &RuntimeProxy) {
-        if let Err(err) = self.request_sender.close(&runtime) {
+        if let Err(err) = self.request_sender.close(runtime) {
             error!(
                 "Failed to close request sender channel for invocation: {:?}",
                 err
             );
         }
-        if let Err(err) = self.request_receiver.close(&runtime) {
+        if let Err(err) = self.request_receiver.close(runtime) {
             error!(
                 "Failed to close request receiver channel for invocation: {:?}",
                 err
             );
         }
-        if let Err(err) = self.response_sender.close(&runtime) {
+        if let Err(err) = self.response_sender.close(runtime) {
             error!(
                 "Failed to close response sender channel for invocation: {:?}",
                 err

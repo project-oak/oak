@@ -62,7 +62,7 @@ async fn test_set_intersection() {
 
     let wasm_modules = build_wasm().expect("Couldn't compile Wasm modules");
     let signature =
-        sign(&wasm_modules.get(HANDLER_MODULE_NAME).unwrap()).expect("Couldn't sign Wasm module");
+        sign(wasm_modules.get(HANDLER_MODULE_NAME).unwrap()).expect("Couldn't sign Wasm module");
     let permissions = oak_runtime::permissions::PermissionsConfiguration {
         allow_grpc_server_nodes: true,
         allow_log_nodes: true,

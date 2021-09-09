@@ -117,7 +117,7 @@ mod common {
 fn get_int_metric_value(all_metrics: &str, metric_name: &str) -> Option<i64> {
     let pattern = format!(r"(.*)(\b{} \b)([0-9]+)(.*)", metric_name);
     let re = regex::Regex::new(&pattern).unwrap();
-    re.captures(&all_metrics)
+    re.captures(all_metrics)
         .map(|c| c[3].parse::<i64>().unwrap())
 }
 

@@ -89,7 +89,7 @@ pub fn create() -> Result<Sender<LogMessage>, OakStatus> {
     // confidentiality it means that the Runtime was not built with the `oak-unsafe` feature, so
     // we try to create it as a public Node.
     for label in &[confidentiality_label(top()), Label::public_untrusted()] {
-        match crate::io::node_create("log", &label, &crate::node_config::log()) {
+        match crate::io::node_create("log", label, &crate::node_config::log()) {
             Ok(log_node) => return Ok(log_node),
             Err(crate::OakStatus::ErrPermissionDenied) => continue,
             Err(e) => return Err(e),

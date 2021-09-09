@@ -125,17 +125,13 @@ async fn test_chat() {
     runtime.stop();
 }
 
-struct Chatter<'a> {
+struct Chatter {
     pub client: ChatClient<tonic::transport::Channel>,
-    pub room_key_pair: &'a oak_sign::KeyPair,
     pub user_handle: String,
 }
 
-impl<'a> Chatter<'a> {
-    pub async fn new(
-        room_key_pair: &'a oak_sign::KeyPair,
-        user_handle: &'static str,
-    ) -> Chatter<'a> {
+impl Chatter {
+    pub async fn new(room_key_pair: &oak_sign::KeyPair, user_handle: &'static str) -> Chatter {
         info!(
             "creating new Chatter({}, {})",
             user_handle,
@@ -149,7 +145,6 @@ impl<'a> Chatter<'a> {
         let client = ChatClient::with_interceptor(channel, interceptor);
         Chatter {
             client,
-            room_key_pair,
             user_handle: user_handle.to_string(),
         }
     }

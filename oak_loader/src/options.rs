@@ -207,10 +207,10 @@ pub fn parse_config_map(config_entries: &[ConfigEntry]) -> anyhow::Result<Config
 async fn create_secure_server_config(
     opt: &Opt,
 ) -> anyhow::Result<oak_runtime::SecureServerConfiguration> {
-    let grpc_config = create_grpc_config(&opt)
+    let grpc_config = create_grpc_config(opt)
         .await
         .context("Couldn't create gRPC config")?;
-    let http_config = create_http_config(&opt)
+    let http_config = create_http_config(opt)
         .map_err(|e| log::warn!("{}", e))
         .ok();
 
@@ -223,10 +223,10 @@ async fn create_secure_server_config(
 /// Create the overall [`oak_runtime::GrpcConfiguration`] from the TLS certificate and private key
 /// files or using the Proxy Attestation Service.
 async fn create_grpc_config(opt: &Opt) -> anyhow::Result<oak_runtime::GrpcConfiguration> {
-    let tls_identity = get_tls_identity(&opt).await?;
+    let tls_identity = get_tls_identity(opt).await?;
 
-    let root_tls_certificate = get_root_tls_certificate_or_default(&opt).ok();
-    let oidc_client_info = get_oidc_client_info(&opt)?;
+    let root_tls_certificate = get_root_tls_certificate_or_default(opt).ok();
+    let oidc_client_info = get_oidc_client_info(opt)?;
 
     let grpc_config = oak_runtime::GrpcConfiguration {
         grpc_server_tls_identity: Some(tls_identity),
@@ -279,7 +279,7 @@ fn create_http_config(opt: &Opt) -> anyhow::Result<oak_runtime::HttpConfiguratio
 
     match oak_runtime::tls::TlsConfig::new(http_tls_certificate_path, http_tls_private_key_path) {
         Some(tls_config) => {
-            let root_tls_certificate = get_root_tls_certificate_or_default(&opt).ok();
+            let root_tls_certificate = get_root_tls_certificate_or_default(opt).ok();
             Ok(oak_runtime::HttpConfiguration {
                 tls_config,
                 http_client_root_tls_certificate: root_tls_certificate,
@@ -377,8 +377,8 @@ fn get_default_root_tls_certs() -> Vec<u8> {
 fn create_app_config(opt: &Opt) -> anyhow::Result<ApplicationConfiguration> {
     let app_config_data =
         read(&opt.application).context("could not read application configuration")?;
-    Ok(ApplicationConfiguration::decode(app_config_data.as_ref())
-        .context("could not parse application configuration")?)
+    ApplicationConfiguration::decode(app_config_data.as_ref())
+        .context("could not parse application configuration")
 }
 
 /// Parse permissions configuration into an instance of [`PermissionsConfiguration`], if

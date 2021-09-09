@@ -33,15 +33,12 @@ fn parse_config_entry_ok() {
 
 #[test]
 fn parse_config_entry_multiple_equals_err() {
-    assert_eq!(
-        false,
-        "foo=/dev/null=/foo/bar".parse::<ConfigEntry>().is_ok()
-    );
+    assert!("foo=/dev/null=/foo/bar".parse::<ConfigEntry>().is_err());
 }
 
 #[test]
 fn parse_config_entry_missing_equals_err() {
-    assert_eq!(false, "/dev/null".parse::<ConfigEntry>().is_ok());
+    assert!("/dev/null".parse::<ConfigEntry>().is_err());
 }
 
 #[test]
@@ -66,7 +63,7 @@ fn parse_config_map_multiple_ok() {
 # some cases, their employer may be the copyright holder.  To see the full list
 # of contributors, see the revision history in source control.
 Google LLC
-".iter().cloned().collect(),
+".to_vec(),
             },
         },
         result.expect("could not parse config")
@@ -101,7 +98,7 @@ fn parse_config_map_duplicate_key_err() {
             filename: "/dev/null".to_string(),
         },
     ]);
-    assert_eq!(false, result.is_ok());
+    assert!(result.is_err());
 }
 
 #[test]
@@ -110,7 +107,7 @@ fn parse_config_map_non_existing_file_err() {
         key: "foo".to_string(),
         filename: "/non-existing-file".to_string(),
     }]);
-    assert_eq!(false, result.is_ok());
+    assert!(result.is_err());
 }
 
 #[test]
@@ -120,7 +117,7 @@ fn parse_config_map_directory_err() {
         // Directory.
         filename: "/etc".to_string(),
     }]);
-    assert_eq!(false, result.is_ok());
+    assert!(result.is_err());
 }
 
 #[test]
@@ -130,5 +127,5 @@ fn parse_config_map_no_permission_err() {
         // File only readable by the root user.
         filename: "/etc/sudoers".to_string(),
     }]);
-    assert_eq!(false, result.is_ok());
+    assert!(result.is_err());
 }

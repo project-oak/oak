@@ -42,7 +42,7 @@ impl Assertion {
     ) -> anyhow::Result<Self> {
         let serialized_keying_material = serde_json::to_string(&keying_material)
             .context("Couldn't serialize keying material")?;
-        let tee_report = Report::new(&serialized_keying_material.as_bytes());
+        let tee_report = Report::new(serialized_keying_material.as_bytes());
         let attestation_info = AttestationInfo {
             report: tee_report,
             certificate: tee_certificate.to_vec(),

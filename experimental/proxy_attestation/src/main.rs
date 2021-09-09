@@ -118,8 +118,9 @@ impl ProxyAttestation for Proxy {
             Ok(certificate) => match certificate.to_pem() {
                 Ok(serialized_certificate) => {
                     info!("Sending signed certificate");
-                    let mut res = GetSignedCertificateResponse::default();
-                    res.certificate = serialized_certificate;
+                    let res = GetSignedCertificateResponse {
+                        certificate: serialized_certificate,
+                    };
                     Ok(Response::new(res))
                 }
                 Err(error) => {
@@ -146,8 +147,9 @@ impl ProxyAttestation for Proxy {
         match self.certificate_authority.root_certificate.to_pem() {
             Ok(serialized_certificate) => {
                 info!("Sending root certificate");
-                let mut res = GetRootCertificateResponse::default();
-                res.root_certificate = serialized_certificate;
+                let res = GetRootCertificateResponse {
+                    root_certificate: serialized_certificate,
+                };
                 Ok(Response::new(res))
             }
             Err(error) => {

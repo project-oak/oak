@@ -33,10 +33,11 @@ pub fn translate(
         "attempt to translate '{}' from {} to {}",
         text, from_lang, to_lang
     );
-    let mut req = TranslateRequest::default();
-    req.text = text.to_string();
-    req.from_lang = from_lang.to_string();
-    req.to_lang = to_lang.to_string();
+    let req = TranslateRequest {
+        text: text.to_string(),
+        from_lang: from_lang.to_string(),
+        to_lang: to_lang.to_string(),
+    };
 
     match client.translate(req) {
         Ok(rsp) => {

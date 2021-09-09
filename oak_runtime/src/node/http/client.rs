@@ -167,7 +167,7 @@ impl HttpClientNode {
 
         // Receive a request from the invocation channel.
         let request = invocation
-            .receive_request(&runtime)
+            .receive_request(runtime)
             .map_err(ProcessingError::ReadFailed)?;
         debug!("Incoming HTTP request: {:?}", request);
 

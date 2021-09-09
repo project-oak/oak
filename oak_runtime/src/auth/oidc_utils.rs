@@ -127,7 +127,7 @@ pub struct ClientInfo {
 
 /// Parses the content of the downloaded OpenID Connect client secret file.
 pub fn parse_client_info_json(client_info_json: &str) -> Result<ClientInfo, Box<dyn error::Error>> {
-    let wrapper: ClientInfoWrapper = serde_json::from_str(&client_info_json)?;
+    let wrapper: ClientInfoWrapper = serde_json::from_str(client_info_json)?;
     Ok(wrapper.installed)
 }
 
@@ -166,7 +166,7 @@ async fn decode_identity_token(token: &str) -> Result<Claims, Box<dyn error::Err
     let key = get_key(decode_header(token)?).await?;
     let validation = Validation::new(key.algorithm.parse()?);
     let key = DecodingKey::from_rsa_components(&key.modulus, &key.exponent);
-    let data = decode::<Claims>(&token, &key, &validation)?;
+    let data = decode::<Claims>(token, &key, &validation)?;
     Ok(data.claims)
 }
 

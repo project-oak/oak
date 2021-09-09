@@ -777,7 +777,7 @@ impl Runtime {
         channel_half: &ChannelHalf,
         downgrade: Downgrading,
     ) -> Result<(), OakStatus> {
-        let channel_label = self.get_reader_channel_label(&channel_half)?;
+        let channel_label = self.get_reader_channel_label(channel_half)?;
         self.validate_can_read_from_label(node_id, &channel_label, downgrade)
     }
 
@@ -822,7 +822,7 @@ impl Runtime {
         channel_half: &ChannelHalf,
         downgrade: Downgrading,
     ) -> Result<(), OakStatus> {
-        let channel_label = self.get_writer_channel_label(&channel_half)?;
+        let channel_label = self.get_writer_channel_label(channel_half)?;
         self.validate_can_write_to_label(node_id, &channel_label, downgrade)
     }
 
@@ -848,7 +848,7 @@ impl Runtime {
             effective_label
         );
         trace!("{:?}: target label: {:?}?", node_debug_id, target_label);
-        if effective_label.flows_to(&target_label) {
+        if effective_label.flows_to(target_label) {
             trace!("{:?}: can write to {:?}", node_debug_id, target_label);
             Ok(())
         } else {
@@ -879,7 +879,7 @@ impl Runtime {
 
         // First get a pair of `ChannelHalf` objects.
         let channel_id = self.next_channel_id.fetch_add(1, SeqCst);
-        let channel = Channel::new(channel_id, name, label, Arc::downgrade(&self));
+        let channel = Channel::new(channel_id, name, label, Arc::downgrade(self));
         let write_half = ChannelHalf::new(channel.clone(), ChannelHalfDirection::Write);
         let read_half = ChannelHalf::new(channel, ChannelHalfDirection::Read);
         let node_debug_id = self.get_node_debug_id(node_id);
@@ -1408,7 +1408,7 @@ impl Runtime {
             node_privilege
         );
         let node_stopper = self.clone().node_start_instance(
-            &node_name,
+            node_name,
             instance,
             new_node_proxy,
             initial_handle,

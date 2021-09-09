@@ -59,7 +59,7 @@ impl TrustedDatabase for Handler {
                 })
             }
             None => {
-                let err = grpc::build_status(grpc::Code::NotFound, &ID_NOT_FOUND_ERROR);
+                let err = grpc::build_status(grpc::Code::NotFound, ID_NOT_FOUND_ERROR);
                 error!("{:?}", err);
                 Err(err)
             }
@@ -73,7 +73,7 @@ impl TrustedDatabase for Handler {
     ) -> grpc::Result<ListPointsOfInterestResponse> {
         error!("Received request: {:?}", request);
         let request_location = request.location.ok_or_else(|| {
-            let err = grpc::build_status(grpc::Code::InvalidArgument, &NO_LOCATION_ERROR);
+            let err = grpc::build_status(grpc::Code::InvalidArgument, NO_LOCATION_ERROR);
             warn!("{:?}", err);
             err
         })?;
@@ -101,7 +101,7 @@ impl TrustedDatabase for Handler {
                 })
             }
             None => {
-                let err = grpc::build_status(grpc::Code::Internal, &EMPTY_DATABASE_ERROR);
+                let err = grpc::build_status(grpc::Code::Internal, EMPTY_DATABASE_ERROR);
                 error!("{:?}", err);
                 Err(err)
             }
