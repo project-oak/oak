@@ -138,6 +138,7 @@ impl<Init: Decodable, Command: Decodable> Decodable for InitWrapper<Init, Comman
 }
 
 #[cfg(test)]
+#[cfg(not(feature = "linear-handles"))]
 mod tests {
     use super::*;
     use assert_matches::assert_matches;

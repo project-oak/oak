@@ -19,4 +19,5 @@ pub mod server;
 pub(crate) mod util;
 
 #[cfg(test)]
+#[cfg(not(feature = "linear-handles"))]
 pub mod tests;
