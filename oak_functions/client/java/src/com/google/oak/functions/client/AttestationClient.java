@@ -45,24 +45,28 @@ import oak.remote_attestation.EncryptedData;
 import oak.remote_attestation.ServerIdentity;
 
 /**
- * Client with remote attestation support for sending requests to an Oak Functions loader
- * application.
+ * Client with remote attestation support for sending requests to an Oak Functions application.
  */
 public class AttestationClient {
   private static final Logger logger = Logger.getLogger(AttestationClient.class.getName());
   // TODO(#1867): Add remote attestation support.
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
-  private final ManagedChannel channel;
-  private final StreamObserver<AttestedInvokeRequest> requestObserver;
-  private final BlockingQueue<AttestedInvokeResponse> messageQueue;
-  private final AeadEncryptor encryptor;
+  private ManagedChannel channel;
+  private StreamObserver<AttestedInvokeRequest> requestObserver;
+  private BlockingQueue<AttestedInvokeResponse> messageQueue;
+  private AeadEncryptor encryptor;
 
   /**
-   * Creates an attested gRPC channel.
-   *
-   * `url` must contain a protocol used for connection ("https://" or "http://").
+   * Creates an unattested AttestationClient instance.
    */
-  public AttestationClient(String url)
+  public AttestationClient() {}
+
+  /**
+   * Creates a gRPC channel and creates an attested channel over it.
+   *
+   * @param url must contain a protocol used for the connection ("https://" or "http://")
+   */
+  public void attest(String url)
       throws GeneralSecurityException, IOException, InterruptedException {
     // Create gRPC channel.
     URL parsedUrl = new URL(url);
@@ -73,6 +77,18 @@ public class AttestationClient {
                     .usePlaintext()
                     .build();
     }
+    attest(channel);
+  }
+
+  /**
+   * Creates an attested channel over the gRPC {@code ManagedChannel}.
+   */
+  public void attest(ManagedChannel channel)
+      throws GeneralSecurityException, IOException, InterruptedException {
+    if (channel == null) {
+      throw new NullPointerException("Channel must not be null.");
+    }
+    this.channel = channel;
     RemoteAttestationStub stub = RemoteAttestationGrpc.newStub(channel);
 
     // Create server response handler.
@@ -134,13 +150,22 @@ public class AttestationClient {
   @Override
   protected void finalize() throws Throwable {
     requestObserver.onCompleted();
-    channel.shutdown();
+    channel.shutdownNow();
   }
 
-  /** Encrypts and sends `message` via an attested gRPC channel to the server. */
+  /**
+   * Encrypts and sends a Request via an attested gRPC channel to the server and receives and
+   * decrypts the response.
+   *
+   * This method can only be used after the {@code attest} method has been called successfully.
+   * */
   @SuppressWarnings("ProtoParseWithRegistry")
   public Response send(Request request)
       throws GeneralSecurityException, InterruptedException, InvalidProtocolBufferException {
+    if (channel == null || requestObserver == null || encryptor == null) {
+      throw new IllegalStateException("Attested channel not available.");
+    }
+
     EncryptedData encryptedData = encryptor.encrypt(request.getBody().toByteArray());
     oak.functions.server.Request serverRequest =
         oak.functions.server.Request.newBuilder().setEncryptedPayload(encryptedData).build();
