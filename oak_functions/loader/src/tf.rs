@@ -16,9 +16,7 @@
 
 use crate::{
     logger::Logger,
-    server::{
-        AbiPointer, AbiPointerOffset, ExtensionResult, OakApiNativeExtension, WasmState, ABI_USIZE,
-    },
+    server::{AbiPointer, AbiPointerOffset, OakApiNativeExtension, WasmState, ABI_USIZE},
 };
 use anyhow::Context;
 use bytes::Bytes;
@@ -128,9 +126,9 @@ impl TensorFlowModel {
 impl OakApiNativeExtension for TensorFlowModel {
     fn invoke(
         &self,
-        wasm_state: &WasmState,
+        wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
-    ) -> Result<Result<Option<ExtensionResult>, OakStatus>, wasmi::Trap> {
+    ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
         Ok(tf_model_infer(
             wasm_state,
             self,
@@ -160,13 +158,13 @@ impl OakApiNativeExtension for TensorFlowModel {
 
 /// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).    
 fn tf_model_infer(
-    wasm_state: &WasmState,
+    wasm_state: &mut WasmState,
     tf_model: &TensorFlowModel,
     input_ptr: AbiPointer,
     input_len: AbiPointerOffset,
     inference_ptr_ptr: AbiPointer,
     inference_len_ptr: AbiPointer,
-) -> Result<Option<ExtensionResult>, OakStatus> {
+) -> Result<(), OakStatus> {
     let input = wasm_state
         .get_memory()
         .get(input_ptr, input_len as usize)
@@ -200,11 +198,10 @@ fn tf_model_infer(
     let mut encoded_inference = vec![];
     inference.encode(&mut encoded_inference).unwrap();
 
-    Ok(Some(ExtensionResult {
-        bytes: encoded_inference,
-        buf_ptr_ptr: inference_ptr_ptr,
-        buf_len_ptr: inference_len_ptr,
-    }))
+    let buf_ptr = wasm_state.alloc(encoded_inference.len() as u32);
+    wasm_state.write_buffer_to_wasm_memory(&encoded_inference, buf_ptr)?;
+    wasm_state.write_u32_to_wasm_memory(buf_ptr, inference_ptr_ptr)?;
+    wasm_state.write_u32_to_wasm_memory(encoded_inference.len() as u32, inference_len_ptr)
 }
 
 /// Read a tensorFlow model from the given path, into a byte array.

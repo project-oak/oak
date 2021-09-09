@@ -154,9 +154,9 @@ pub trait OakApiNativeExtension {
     /// written into the memory of the `WasmState`.
     fn invoke(
         &self,
-        wasm_state: &WasmState,
+        wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
-    ) -> Result<Result<Option<ExtensionResult>, OakStatus>, wasmi::Trap>;
+    ) -> Result<Result<(), OakStatus>, wasmi::Trap>;
 
     /// Metadata about this Extension, including the exported host function name, and the function's
     /// signature.
@@ -164,14 +164,6 @@ pub trait OakApiNativeExtension {
 }
 
 pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
-
-// Result of the invocation of an extension. The [`WasmState`] will write the `bytes` into the
-// memory location specified by `buf_ptr_ptr` and `buf_len_ptr`.
-pub struct ExtensionResult {
-    pub bytes: Vec<u8>,
-    pub buf_ptr_ptr: AbiPointer,
-    pub buf_len_ptr: AbiPointer,
-}
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
@@ -211,7 +203,7 @@ impl WasmState {
         }
     }
 
-    fn write_buffer_to_wasm_memory(
+    pub fn write_buffer_to_wasm_memory(
         &self,
         source: &[u8],
         dest: AbiPointer,
@@ -226,7 +218,11 @@ impl WasmState {
         })
     }
 
-    fn write_u32_to_wasm_memory(&self, value: u32, address: AbiPointer) -> Result<(), OakStatus> {
+    pub fn write_u32_to_wasm_memory(
+        &self,
+        value: u32,
+        address: AbiPointer,
+    ) -> Result<(), OakStatus> {
         let value_bytes = &mut [0; 4];
         LittleEndian::write_u32(value_bytes, value);
         self.get_memory().set(address, value_bytes).map_err(|err| {
@@ -467,13 +463,11 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(3)?,
             )),
             _ => {
-                let result = {
-                    match self.extensions_indices.get(&index) {
-                        Some(ref extension) => extension.invoke(self, args)?,
-                        None => panic!("Unimplemented function at {}", index),
-                    }
+                let extension = match self.extensions_indices.get(&index) {
+                    Some(ref extension) => (*extension).clone(),
+                    None => panic!("Unimplemented function at {}", index),
                 };
-                map_host_errors(handle_extension_result(self, result))
+                map_host_errors(extension.invoke(self, args)?)
             }
         }
     }
@@ -807,26 +801,6 @@ fn map_host_errors(
         |x: OakStatus| x as i32,
         |_| OakStatus::Ok as i32,
     ))))
-}
-
-/// If `result` contains an [`ExtensionResult`] writes it into the memory of `wasm_state`, returning
-/// any errors that may arise. If `result` contains an error, returns that error. Otherwise, returns
-/// `Ok(())`.
-fn handle_extension_result(
-    wasm_state: &mut WasmState,
-    result: Result<Option<ExtensionResult>, OakStatus>,
-) -> Result<(), OakStatus> {
-    match result {
-        Ok(Some(result)) => {
-            let buf_ptr = wasm_state.alloc(result.bytes.len() as u32);
-            wasm_state.write_buffer_to_wasm_memory(&result.bytes, buf_ptr)?;
-            wasm_state.write_u32_to_wasm_memory(buf_ptr, result.buf_ptr_ptr)?;
-            wasm_state.write_u32_to_wasm_memory(result.bytes.len() as u32, result.buf_len_ptr)?;
-            Ok(())
-        }
-        Ok(None) => Ok(()),
-        Err(status) => Err(status),
-    }
 }
 
 /// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
