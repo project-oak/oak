@@ -36,10 +36,11 @@ few ways that are described in this section.
 ### Number of Wasm modules
 
 While an Oak application may have more than one Wasm module, each Oak Functions
-application can only have one Wasm module. The Oak Functions loader instantiates
-this single Wasm module for each incoming user request, runs the request through
-it in order to produce a response, and then terminates the Wasm instance; each
-Wasm instance is short lived and stateless.
+application can only have one Wasm module.
+[The Oak Functions loader](https://project-oak.github.io/oak/oak_functions/loader)
+instantiates this single Wasm module for each incoming user request, runs the
+request through it in order to produce a response, and then terminates the Wasm
+instance; each Wasm instance is short lived and stateless.
 
 Structurally, an Oak Functions application is very similar to a single-node Oak
 application. This simplifies the design considerably. Since there is only one
@@ -105,7 +106,8 @@ offers is that queries are not observable (and not logged) by the loader, since
 they happen within the same process, which eventually is going to be contained
 in a single TEE instance. Oak Functions provides a
 [lookup API](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item)
-as part of the SDK that the Wasm modules can use to fetch data from the storage.
+as part of the [SDK](https://project-oak.github.io/oak/oak_functions/sdk) that
+the Wasm modules can use to fetch data from the storage.
 
 ### Remote attestation
 
