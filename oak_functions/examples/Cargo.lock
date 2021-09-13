@@ -1006,6 +1006,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "location_utils"
+version = "0.1.0"
+
+[[package]]
 name = "log"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2786,6 +2790,7 @@ name = "weather_lookup"
 version = "0.1.0"
 dependencies = [
  "http",
+ "location_utils",
  "lookup_data_generator",
  "maplit",
  "oak_functions",

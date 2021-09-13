@@ -12,6 +12,7 @@ large-bench = []
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+location_utils = { path = "../location_utils" }
 oak_functions = { path = "../../../sdk/oak_functions" }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
