@@ -15,8 +15,6 @@
 //
 
 #![feature(async_closure)]
-// Required by https://doc.rust-lang.org/std/cmp/trait.Ord.html#method.clamp
-#![feature(clamp)]
 
 pub mod proto {
     tonic::include_proto!("oak.functions.server");

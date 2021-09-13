@@ -264,7 +264,7 @@ fn get_invocation_channel(
     startup_handle: ReadHandle,
 ) -> Result<WriteHandle, OakError> {
     let startup_receiver = Receiver::<HttpInvocationSender>::new(startup_handle);
-    let invocation_channel = startup_receiver.receive(&runtime)?;
+    let invocation_channel = startup_receiver.receive(runtime)?;
     match invocation_channel.sender {
         Some(invocation_sender) => {
             info!(

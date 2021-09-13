@@ -65,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_unary(
     client: &mut HelloWorldClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Tesing unary request");
+    info!("Testing unary request");
 
     let request = tonic::Request::new(HelloRequest {
         greeting: "World".into(),
@@ -81,15 +81,16 @@ async fn test_unary(
 async fn test_client_streaming(
     client: &mut HelloWorldClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Tesing client streaming");
+    info!("Testing client streaming");
 
-    let mut requests = vec![];
-    requests.push(HelloRequest {
-        greeting: "A".into(),
-    });
-    requests.push(HelloRequest {
-        greeting: "B".into(),
-    });
+    let requests = vec![
+        HelloRequest {
+            greeting: "A".into(),
+        },
+        HelloRequest {
+            greeting: "B".into(),
+        },
+    ];
 
     let request = tonic::Request::new(iter(requests));
 
@@ -103,7 +104,7 @@ async fn test_client_streaming(
 async fn test_server_streaming(
     client: &mut HelloWorldClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Tesing server streaming");
+    info!("Testing server streaming");
 
     let request = tonic::Request::new(HelloRequest {
         greeting: "World".into(),
@@ -121,7 +122,7 @@ async fn test_server_streaming(
 async fn test_bidi_streaming(
     client: &mut HelloWorldClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Tesing bidirectional streaming");
+    info!("Testing bidirectional streaming");
 
     let (sender, mut receiver) = mpsc::channel(4);
 

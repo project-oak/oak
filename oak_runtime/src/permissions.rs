@@ -66,9 +66,9 @@ impl PermissionsConfiguration {
             match &node_configuration.config_type {
                 Some(ConfigType::LogConfig(_config)) => Ok(self.allow_log_nodes),
                 Some(ConfigType::GrpcServerConfig(_config)) => Ok(self.allow_grpc_server_nodes),
-                Some(ConfigType::GrpcClientConfig(config)) => self.allow_grpc_client(&config),
+                Some(ConfigType::GrpcClientConfig(config)) => self.allow_grpc_client(config),
                 Some(ConfigType::HttpServerConfig(_config)) => Ok(self.allow_http_server_nodes),
-                Some(ConfigType::HttpClientConfig(config)) => Ok(self.allow_http_client(&config)),
+                Some(ConfigType::HttpClientConfig(config)) => Ok(self.allow_http_client(config)),
                 _ => Ok(true),
             }
         }

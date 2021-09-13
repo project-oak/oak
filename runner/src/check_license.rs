@@ -15,6 +15,7 @@
 //
 
 use super::*;
+use std::path::Path;
 
 /// A [`Runnable`] command that checks for the existence of source files without the necessary
 /// license header.
@@ -34,7 +35,7 @@ impl Runnable for CheckLicense {
     }
 
     fn run(self: Box<Self>, _opt: &Opt) -> Box<dyn Running> {
-        let result_value = if file_contains(&self.path.into(), "Apache License") {
+        let result_value = if file_contains(Path::new(&self.path), "Apache License") {
             StatusResultValue::Ok
         } else {
             StatusResultValue::Error

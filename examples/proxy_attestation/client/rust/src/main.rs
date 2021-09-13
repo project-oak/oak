@@ -102,7 +102,7 @@ async fn get_root_tls_certificate(
     proxy_uri: &Uri,
     proxy_root_tls_certificate: &[u8],
 ) -> anyhow::Result<Vec<u8>> {
-    let mut client = create_proxy_client(&proxy_uri, &proxy_root_tls_certificate)
+    let mut client = create_proxy_client(proxy_uri, proxy_root_tls_certificate)
         .await
         .context("Couldn't create gRPC client")?;
     let request = Request::new(GetRootCertificateRequest {});
@@ -119,7 +119,7 @@ async fn get_example_message(
     root_tls_certificate: &[u8],
     tee_measurement: &[u8],
 ) -> anyhow::Result<String> {
-    let mut client = create_application_client(&uri, &root_tls_certificate, tee_measurement)
+    let mut client = create_application_client(uri, root_tls_certificate, tee_measurement)
         .await
         .context("Couldn't create gRPC client")?;
     let request = Request::new(GetExampleMessageRequest {});

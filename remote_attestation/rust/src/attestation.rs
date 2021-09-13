@@ -141,7 +141,7 @@ impl ServerAttestationEngine<Initializing> {
                 .as_ref()
                 .context("Couldn't get TEE certificate")?;
 
-            let attestation_info = create_attestation_info(&signer, &tee_certificate)
+            let attestation_info = create_attestation_info(signer, tee_certificate)
                 .context("Couldn't get attestation info")?;
 
             let mut server_identity = ServerIdentity {
@@ -229,7 +229,7 @@ impl ClientAttestationEngine<Attesting> {
                 .get_expected_tee_measurement()
                 .as_ref()
                 .context("Couldn't get expected TEE measurement")?;
-            verify_attestation_info(&server_attestation_info, &expected_tee_measurement)
+            verify_attestation_info(server_attestation_info, expected_tee_measurement)
                 .context("Couldn't verify server attestation info")?;
         }
 
@@ -251,7 +251,7 @@ impl ClientAttestationEngine<Attesting> {
                 .as_ref()
                 .context("Couldn't access TEE certificate")?;
 
-            let attestation_info = create_attestation_info(&signer, &tee_certificate)
+            let attestation_info = create_attestation_info(signer, tee_certificate)
                 .context("Couldn't create attestation info")?;
 
             let mut client_identity = ClientIdentity {
@@ -332,7 +332,7 @@ impl ServerAttestationEngine<Attesting> {
                 .get_expected_tee_measurement()
                 .as_ref()
                 .context("Couldn't get expected TEE measurement")?;
-            verify_attestation_info(&client_attestation_info, &expected_tee_measurement)
+            verify_attestation_info(client_attestation_info, expected_tee_measurement)
                 .context("Couldn't verify client attestation info")?;
         }
 

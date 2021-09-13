@@ -53,7 +53,8 @@ async fn test_valid_policy() {
         assert!(
             (result.elapsed.as_millis() as f64)
                 < 1.05 * constant_processing_time.as_millis() as f64,
-            format!("elapsed time is: {:?}", result.elapsed)
+            "elapsed time is: {:?}",
+            result.elapsed
         );
 
         let response = result.response;

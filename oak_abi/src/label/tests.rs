@@ -104,36 +104,36 @@ fn label_flow() {
     //          public_untrusted
 
     // Data with any label can flow to the same label.
-    assert_eq!(true, public_untrusted.flows_to(&public_untrusted));
-    assert_eq!(true, label_0.flows_to(&label_0));
-    assert_eq!(true, label_1.flows_to(&label_1));
-    assert_eq!(true, label_0_1.flows_to(&label_0_1));
-    assert_eq!(true, label_1_0.flows_to(&label_1_0));
+    assert!(public_untrusted.flows_to(&public_untrusted));
+    assert!(label_0.flows_to(&label_0));
+    assert!(label_1.flows_to(&label_1));
+    assert!(label_0_1.flows_to(&label_0_1));
+    assert!(label_1_0.flows_to(&label_1_0));
 
     // label_0_1 and label_1_0 are effectively the same label, since the order of tags does not
     // matter.
-    assert_eq!(true, label_0_1.flows_to(&label_1_0));
-    assert_eq!(true, label_1_0.flows_to(&label_0_1));
+    assert!(label_0_1.flows_to(&label_1_0));
+    assert!(label_1_0.flows_to(&label_0_1));
 
     // public_untrusted data can flow to more private data;
-    assert_eq!(true, public_untrusted.flows_to(&label_0));
-    assert_eq!(true, public_untrusted.flows_to(&label_1));
-    assert_eq!(true, public_untrusted.flows_to(&label_0_1));
+    assert!(public_untrusted.flows_to(&label_0));
+    assert!(public_untrusted.flows_to(&label_1));
+    assert!(public_untrusted.flows_to(&label_0_1));
 
     // Private data cannot flow to public_untrusted.
-    assert_eq!(false, label_0.flows_to(&public_untrusted));
-    assert_eq!(false, label_1.flows_to(&public_untrusted));
-    assert_eq!(false, label_0_1.flows_to(&public_untrusted));
+    assert!(!label_0.flows_to(&public_untrusted));
+    assert!(!label_1.flows_to(&public_untrusted));
+    assert!(!label_0_1.flows_to(&public_untrusted));
 
     // Private data with non-comparable labels cannot flow to each other.
-    assert_eq!(false, label_0.flows_to(&label_1));
-    assert_eq!(false, label_1.flows_to(&label_0));
+    assert!(!label_0.flows_to(&label_1));
+    assert!(!label_1.flows_to(&label_0));
 
     // Private data can flow to even more private data.
-    assert_eq!(true, label_0.flows_to(&label_0_1));
-    assert_eq!(true, label_1.flows_to(&label_0_1));
+    assert!(label_0.flows_to(&label_0_1));
+    assert!(label_1.flows_to(&label_0_1));
 
     // And vice versa.
-    assert_eq!(false, label_0_1.flows_to(&label_0));
-    assert_eq!(false, label_0_1.flows_to(&label_1));
+    assert!(!label_0_1.flows_to(&label_0));
+    assert!(!label_0_1.flows_to(&label_1));
 }

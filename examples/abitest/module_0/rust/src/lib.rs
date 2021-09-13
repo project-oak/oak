@@ -529,8 +529,10 @@ impl OakAbiTestService for FrontendNode {
                 );
                 continue;
             }
-            let mut result = proto::abi_test_response::TestResult::default();
-            result.name = name.to_string();
+            let mut result = proto::abi_test_response::TestResult {
+                name: name.to_string(),
+                ..Default::default()
+            };
             match counts {
                 Count::Unsure => result.predictable_counts = false,
                 Count::Unchanged => {
@@ -563,10 +565,7 @@ impl OakAbiTestService for FrontendNode {
             results.push(result);
         }
 
-        let mut res = AbiTestResponse::default();
-        res.results = results;
-
-        Ok(res)
+        Ok(AbiTestResponse { results })
     }
 
     // gRPC test methods.
@@ -635,13 +634,13 @@ impl OakAbiTestService for FrontendNode {
             if let Some(proto::grpc_test_request::MethodResult::OkText(ok_text)) =
                 &req.method_result
             {
-                combined_text.push_str(&ok_text);
+                combined_text.push_str(ok_text);
             }
         }
         info!("client_streaming_method -> Ok({})", combined_text);
-        let mut rsp = GrpcTestResponse::default();
-        rsp.text = combined_text;
-        Ok(rsp)
+        Ok(GrpcTestResponse {
+            text: combined_text,
+        })
     }
     fn bidi_streaming_method(
         &mut self,
@@ -660,8 +659,9 @@ impl OakAbiTestService for FrontendNode {
                 }
                 Some(proto::grpc_test_request::MethodResult::OkText(ok_text)) => {
                     info!("bidi_streaming_method -> Ok({})", ok_text);
-                    let mut rsp = GrpcTestResponse::default();
-                    rsp.text = ok_text.to_string();
+                    let rsp = GrpcTestResponse {
+                        text: ok_text.to_string(),
+                    };
                     writer
                         .write(&rsp, grpc::WriteMode::KeepOpen)
                         .expect("Failed to write response");
@@ -1722,18 +1722,12 @@ impl FrontendNode {
         // sure here that this continues to be the case by making sure that
         // [`Label::decode`] and [`NodeConfiguration::decode`] fail to parse these bytes.
         let invalid_proto_bytes = vec![0, 88, 0];
-        assert_eq!(false, Label::decode(invalid_proto_bytes.as_ref()).is_ok());
-        assert_eq!(
-            false,
-            NodeConfiguration::decode(invalid_proto_bytes.as_ref()).is_ok()
-        );
+        assert!(Label::decode(invalid_proto_bytes.as_ref()).is_err());
+        assert!(NodeConfiguration::decode(invalid_proto_bytes.as_ref()).is_err());
 
         // This is not a valid UTF-8 encoding.
         let invalid_string_bytes = vec![240];
-        assert_eq!(
-            false,
-            std::str::from_utf8(invalid_string_bytes.as_ref()).is_ok()
-        );
+        assert!(std::str::from_utf8(invalid_string_bytes.as_ref()).is_err());
 
         {
             let mut config_bytes = Vec::new();

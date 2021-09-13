@@ -82,8 +82,10 @@ async fn test_abi() {
         // Skip tests that require the existence of an external service.
         //  - storage and gRPC client test require details of a gRPC service to connect to
         //  - Roughtime tests connect to the internet.
-        let mut req = AbiTestRequest::default();
-        req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
+        let req = AbiTestRequest {
+            exclude: "(Storage|GrpcClient|Roughtime)".to_string(),
+            ..Default::default()
+        };
 
         info!("Sending request: {:?}", req);
         let result = client.run_tests(req).await;
@@ -112,7 +114,7 @@ async fn test_abi() {
         if disabled > 0 {
             info!("YOU HAVE {} DISABLED TESTS", disabled);
         }
-        assert_eq!(true, success);
+        assert!(success);
     } // ensure futures are all dropped
     drop(client);
     runtime.stop();
@@ -134,9 +136,11 @@ async fn test_leaks() {
         // Skip tests that require the existence of an external service.
         //  - storage and gRPC client test require details of a gRPC service to connect to
         //  - Roughtime tests connect to the internet.
-        let mut req = AbiTestRequest::default();
-        req.exclude = "(Storage|GrpcClient|Roughtime)".to_string();
-        req.predictable_counts = true;
+        let req = AbiTestRequest {
+            exclude: "(Storage|GrpcClient|Roughtime)".to_string(),
+            predictable_counts: true,
+            ..Default::default()
+        };
 
         debug!("Sending request: {:?}", req);
         let result = client.run_tests(req).await;
@@ -148,7 +152,7 @@ async fn test_leaks() {
         let mut want_nodes = before_nodes;
         let mut want_channels = before_channels;
         for result in &results {
-            assert_eq!(result.predictable_counts, true);
+            assert!(result.predictable_counts);
             if result.disabled {
                 continue;
             }
@@ -193,8 +197,10 @@ async fn test_leaks() {
                     before_channels + result.channel_change,
                 );
 
-                let mut req = AbiTestRequest::default();
-                req.include = format!("^{}$", result.name);
+                let req = AbiTestRequest {
+                    include: format!("^{}$", result.name),
+                    ..Default::default()
+                };
                 debug!("Sending request: {:?}", req);
                 let this_result = client.run_tests(req).await;
                 assert_matches!(this_result, Ok(_));

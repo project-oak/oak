@@ -163,7 +163,7 @@ impl RuntimeProxy {
 
         self.node_create(
             "Initial",
-            &node_configuration,
+            node_configuration,
             // When first starting, we assign the least privileged label to the entrypoint Node.
             &Label::public_untrusted(),
             read_handle,

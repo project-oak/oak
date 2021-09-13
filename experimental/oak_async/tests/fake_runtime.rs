@@ -107,7 +107,7 @@ pub extern "C" fn channel_read(
             Some(Ok(data)) => {
                 unsafe {
                     let buf = core::slice::from_raw_parts_mut(buf, data.len());
-                    buf.copy_from_slice(&data);
+                    buf.copy_from_slice(data);
                     *actual_size = data.len() as u32;
                     *actual_handle_count = 0;
                 };

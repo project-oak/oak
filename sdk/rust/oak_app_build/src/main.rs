@@ -175,7 +175,7 @@ async fn load_module(manifest_dir: &Path, module: &Module) -> anyhow::Result<Vec
         }
         Module::External(external) => {
             // Try to load module from cache, if failed, download it from URL.
-            let cache_path = get_module_cache_path(&manifest_dir, &external.sha256);
+            let cache_path = get_module_cache_path(manifest_dir, &external.sha256);
             let data = match fs::read(&cache_path) {
                 Ok(data) => {
                     info!("Loaded module from cache {:?}", cache_path.as_path());
@@ -257,7 +257,7 @@ async fn main() -> anyhow::Result<()> {
     // Load Wasm modules.
     let mut modules = HashMap::new();
     for (name, module) in manifest.modules.iter() {
-        let loaded_module = load_module(&manifest_dir, &module)
+        let loaded_module = load_module(manifest_dir, module)
             .await
             .context("Couldn't load module")?;
         modules.insert(name.to_string(), loaded_module);
@@ -297,7 +297,7 @@ async fn main() -> anyhow::Result<()> {
         module_signatures: signatures,
     };
 
-    let output_file_path = get_output_file_path(&manifest_dir, &manifest.name);
+    let output_file_path = get_output_file_path(manifest_dir, &manifest.name);
 
     std::fs::create_dir_all(output_file_path.parent().unwrap())
         .context("Couldn't create output dir")?;

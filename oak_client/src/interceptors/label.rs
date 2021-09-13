@@ -52,8 +52,8 @@ impl Interceptor for LabelInterceptor {
     }
 }
 
-impl Into<tonic::Interceptor> for LabelInterceptor {
-    fn into(self) -> tonic::Interceptor {
-        tonic::Interceptor::new(move |request: Request<()>| self.process(request))
+impl From<LabelInterceptor> for tonic::Interceptor {
+    fn from(interceptor: LabelInterceptor) -> Self {
+        tonic::Interceptor::new(move |request: Request<()>| interceptor.process(request))
     }
 }

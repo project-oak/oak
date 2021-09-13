@@ -135,8 +135,10 @@ impl ChannelResponseWriter {
     pub fn close(&self, result: Result<()>) -> std::result::Result<(), OakError> {
         // Build a final GrpcResponse message wrapper and serialize it into the
         // channel.
-        let mut grpc_rsp = GrpcResponse::default();
-        grpc_rsp.last = true;
+        let mut grpc_rsp = GrpcResponse {
+            last: true,
+            ..Default::default()
+        };
         if let Err(status) = result {
             grpc_rsp.status = Some(status);
         }

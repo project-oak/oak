@@ -69,8 +69,8 @@ impl Interceptor for AuthInterceptor {
     }
 }
 
-impl Into<tonic::Interceptor> for AuthInterceptor {
-    fn into(self) -> tonic::Interceptor {
-        tonic::Interceptor::new(move |request: Request<()>| self.process(request))
+impl From<AuthInterceptor> for tonic::Interceptor {
+    fn from(interceptor: AuthInterceptor) -> Self {
+        tonic::Interceptor::new(move |request: Request<()>| interceptor.process(request))
     }
 }

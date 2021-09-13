@@ -115,7 +115,7 @@ impl Aggregator for Handler {
             },
             None => {
                 let err = "No data specified";
-                Err(grpc::build_status(grpc::Code::InvalidArgument, &err))
+                Err(grpc::build_status(grpc::Code::InvalidArgument, err))
             }
         }
     }

@@ -133,7 +133,7 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
     ) -> Result<CreatedNode, ConfigurationError> {
         if !self
             .permissions_configuration
-            .allowed_creation(&node_configuration)
+            .allowed_creation(node_configuration)
             // TODO(#1027): Use anyhow or an improved ConfigurationError
             .map_err(|_| ConfigurationError::InvalidNodeConfiguration)?
         {
@@ -195,10 +195,10 @@ impl NodeFactory<NodeConfiguration> for ServerNodeFactory {
                 Ok(CreatedNode {
                     instance: Box::new(wasm::WasmNode::new(
                         node_name,
-                        &wasm_module_bytes,
+                        wasm_module_bytes,
                         config.clone(),
                     )?),
-                    privilege: wasm::get_privilege(&wasm_module_bytes, &self.signature_table),
+                    privilege: wasm::get_privilege(wasm_module_bytes, &self.signature_table),
                 })
             }
             Some(ConfigType::GrpcClientConfig(config)) => {

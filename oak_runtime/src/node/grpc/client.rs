@@ -58,8 +58,8 @@ pub(crate) fn get_privilege(uri: &Uri) -> NodePrivilege {
         // Authority is the host:port portion of the endpoint name.
         if let Some(authority) = uri.authority() {
             NodePrivilege::new(
-                hashset! { oak_abi::label::tls_endpoint_tag(&authority.as_str()) },
-                hashset! { oak_abi::label::tls_endpoint_tag(&authority.as_str()) },
+                hashset! { oak_abi::label::tls_endpoint_tag(authority.as_str()) },
+                hashset! { oak_abi::label::tls_endpoint_tag(authority.as_str()) },
             )
         } else {
             NodePrivilege::default()
@@ -76,7 +76,7 @@ impl GrpcClientNode {
         uri: &Uri,
         root_tls_certificate_bytes: crate::tls::Certificate,
     ) -> Result<Self, ConfigurationError> {
-        check_uri(&uri)?;
+        check_uri(uri)?;
         let root_tls_certificate = root_tls_certificate_bytes.into();
         Ok(Self {
             node_name: node_name.to_string(),
@@ -153,7 +153,7 @@ impl GrpcClientNode {
         };
 
         // Receive a request from the invocation channel.
-        let request = invocation.receive_request(&runtime).map_err(|error| {
+        let request = invocation.receive_request(runtime).map_err(|error| {
             send_error(rpc::Code::Internal, "Failed to read request");
             error!(
                 "Couldn't read gRPC request from the invocation: {:?}",

@@ -205,7 +205,7 @@ async fn process_client_hello(
     };
 
     let attestation_engine = ServerAttestationEngine::<Initializing>::new(
-        AttestationBehavior::create_self_attestation(&tee_certificate)
+        AttestationBehavior::create_self_attestation(tee_certificate)
             .context("Couldn't create self attestation behavior")?,
     );
     let (server_identity, attestation_engine) = attestation_engine

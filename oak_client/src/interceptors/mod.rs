@@ -54,8 +54,8 @@ impl<A: Interceptor, B: Interceptor> Interceptor for CombinedInterceptor<A, B> {
     }
 }
 
-impl<A: Interceptor, B: Interceptor> Into<tonic::Interceptor> for CombinedInterceptor<A, B> {
-    fn into(self) -> tonic::Interceptor {
-        tonic::Interceptor::new(move |request: Request<()>| self.process(request))
+impl<A: Interceptor, B: Interceptor> From<CombinedInterceptor<A, B>> for tonic::Interceptor {
+    fn from(interceptor: CombinedInterceptor<A, B>) -> Self {
+        tonic::Interceptor::new(move |request: Request<()>| interceptor.process(request))
     }
 }

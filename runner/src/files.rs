@@ -14,11 +14,14 @@
 // limitations under the License.
 //
 
-use std::{io::Read, path::PathBuf};
+use std::{
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 use crate::{diffs::all_affected_crates, internal::Commits};
 
-pub fn read_file(path: &PathBuf) -> String {
+pub fn read_file(path: &Path) -> String {
     let mut file = std::fs::File::open(path).expect("could not open file");
     let mut contents = String::new();
     file.read_to_string(&mut contents)
@@ -36,7 +39,7 @@ pub fn source_files() -> impl Iterator<Item = PathBuf> {
         .map(|e| e.into_path())
 }
 
-pub fn file_contains(path: &PathBuf, pattern: &str) -> bool {
+pub fn file_contains(path: &Path, pattern: &str) -> bool {
     if path.is_file() {
         let mut file = std::fs::File::open(path).expect("could not open file");
         let mut contents = String::new();
@@ -52,10 +55,10 @@ pub fn file_contains(path: &PathBuf, pattern: &str) -> bool {
 }
 
 pub fn example_toml_files(commits: &Commits) -> Box<dyn Iterator<Item = PathBuf>> {
-    all_affected_crates(&commits)
+    all_affected_crates(commits)
         .files
         .map(affected_example_toml_filles)
-        .unwrap_or_else(|| Box::new(source_files().filter(is_example_toml_file)))
+        .unwrap_or_else(|| Box::new(source_files().filter(|p| is_example_toml_file(p))))
 }
 
 fn affected_example_toml_filles(affected_crates: Vec<String>) -> Box<dyn Iterator<Item = PathBuf>> {
@@ -71,12 +74,11 @@ fn affected_example_toml_filles(affected_crates: Vec<String>) -> Box<dyn Iterato
             re.captures(&path)
                 .map(|caps| format!("{}/examples/{}", caps[1].to_string(), caps[2].to_string()))
         })
-        .filter(|path| path.is_some())
-        .map(|path| path.unwrap());
+        .flatten();
 
     // Iterate through all `example.toml` files and choose and return the ones that belong to the
     // affected examples
-    let example_toml_files = source_files().filter(is_example_toml_file);
+    let example_toml_files = source_files().filter(|p| is_example_toml_file(p));
     Box::new(example_toml_files.filter(move |path| {
         modified_examples
             .clone()
@@ -85,25 +87,25 @@ fn affected_example_toml_filles(affected_crates: Vec<String>) -> Box<dyn Iterato
 }
 
 pub fn fuzz_config_toml_files() -> impl Iterator<Item = PathBuf> {
-    source_files().filter(is_fuzz_config_toml_file)
+    source_files().filter(|p| is_fuzz_config_toml_file(p))
 }
 
 /// Return an iterator of all known Cargo Manifest files that define crates.
 pub fn crate_manifest_files() -> impl Iterator<Item = PathBuf> {
     source_files()
-        .filter(is_cargo_toml_file)
+        .filter(|p| is_cargo_toml_file(p))
         .filter(|p| is_cargo_package_file(p))
 }
 
 /// Return an iterator of all known Cargo Manifest files that define workspaces.
 pub fn workspace_manifest_files() -> impl Iterator<Item = PathBuf> {
     source_files()
-        .filter(is_cargo_toml_file)
+        .filter(|p| is_cargo_toml_file(p))
         .filter(|p| is_cargo_workspace_file(p))
 }
 
 /// Return whether the provided path refers to a source file in a programming language.
-pub fn is_source_code_file(path: &PathBuf) -> bool {
+pub fn is_source_code_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".cc")
         || filename.ends_with(".h")
@@ -115,7 +117,7 @@ pub fn is_source_code_file(path: &PathBuf) -> bool {
 }
 
 /// Return whether the provided path refers to a source file that can be formatted by clang-tidy.
-pub fn is_clang_format_file(path: &PathBuf) -> bool {
+pub fn is_clang_format_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".cc")
         || filename.ends_with(".h")
@@ -124,53 +126,53 @@ pub fn is_clang_format_file(path: &PathBuf) -> bool {
 }
 
 /// Return whether the provided path refers to a Bazel file (`BUILD`, `WORKSPACE`, or `*.bzl`)
-pub fn is_bazel_file(path: &PathBuf) -> bool {
+pub fn is_bazel_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "BUILD" || filename == "WORKSPACE" || filename.ends_with(".bzl")
 }
 
-pub fn is_build_file(path: &PathBuf) -> bool {
+pub fn is_build_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "BUILD"
 }
 
 /// Return whether the provided path refers to a markdown file (`*.md`)
-pub fn is_markdown_file(path: &PathBuf) -> bool {
+pub fn is_markdown_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".md")
 }
 
-pub fn is_dockerfile(path: &PathBuf) -> bool {
+pub fn is_dockerfile(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with("Dockerfile")
 }
 
-pub fn is_toml_file(path: &PathBuf) -> bool {
+pub fn is_toml_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".toml")
 }
 
-pub fn is_yaml_file(path: &PathBuf) -> bool {
+pub fn is_yaml_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".yaml") || filename.ends_with(".yml")
 }
 
-pub fn is_html_file(path: &PathBuf) -> bool {
+pub fn is_html_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".htm") || filename.ends_with(".html")
 }
 
-pub fn is_javascript_file(path: &PathBuf) -> bool {
+pub fn is_javascript_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".js") || filename.ends_with(".mjs")
 }
 
-pub fn is_typescript_file(path: &PathBuf) -> bool {
+pub fn is_typescript_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".ts") || filename.ends_with(".tsx")
 }
 
-pub fn is_shell_script(path: &PathBuf) -> bool {
+pub fn is_shell_script(path: &Path) -> bool {
     if path.is_file() {
         let mut file = std::fs::File::open(path).expect("could not open file");
         let mut contents = String::new();
@@ -184,20 +186,20 @@ pub fn is_shell_script(path: &PathBuf) -> bool {
 }
 
 /// Return whether the provided path refers to a `fuzz` crate for fuzz testing with `cargo-fuzz`.
-pub fn is_fuzzing_toml_file(path: &PathBuf) -> bool {
+pub fn is_fuzzing_toml_file(path: &Path) -> bool {
     format!("{:?}", path).contains("/fuzz/")
 }
 
 /// Return whether the provided path refers to a `Cargo.toml` file. Note that it does not
 /// differentiate between workspace-level and crate-level files.
-fn is_cargo_toml_file(path: &PathBuf) -> bool {
+fn is_cargo_toml_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "Cargo.toml"
 }
 
 /// Return whether the provided path refers to a workspace-level `Cargo.toml` file, by looking at
 /// the contents of the file.
-fn is_cargo_workspace_file(path: &PathBuf) -> bool {
+fn is_cargo_workspace_file(path: &Path) -> bool {
     // We naively look for the `[workspace]` string to appear in the contents of the file. A better
     // alternative would be to actually parse the file as `toml` and figure out whether it has a
     // `workspace` section, but it seems overkill for now.
@@ -206,19 +208,19 @@ fn is_cargo_workspace_file(path: &PathBuf) -> bool {
 
 /// Return whether the provided path refers to a `Cargo.toml` file that defines a crate, by looking
 /// at the contents of the file.
-fn is_cargo_package_file(path: &PathBuf) -> bool {
+fn is_cargo_package_file(path: &Path) -> bool {
     // We naively look for the `[package]` string to appear in the contents of the file. A better
     // alternative would be to actually parse the file as `toml` and figure out whether it has a
     // `package` section, but it seems overkill for now.
     file_contains(path, "[package]")
 }
 
-fn is_example_toml_file(path: &PathBuf) -> bool {
+fn is_example_toml_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "example.toml"
 }
 
-fn is_fuzz_config_toml_file(path: &PathBuf) -> bool {
+fn is_fuzz_config_toml_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "fuzz.toml"
 }
@@ -231,7 +233,7 @@ fn is_ignored_entry(entry: &walkdir::DirEntry) -> bool {
 
 /// Return whether to ignore the specified path. This is used by the `walker` package to efficiently
 /// avoid descending into blacklisted directories.
-fn is_ignored_path(path: &PathBuf) -> bool {
+fn is_ignored_path(path: &Path) -> bool {
     let components = path.components().collect::<std::collections::HashSet<_>>();
     components.contains(&std::path::Component::Normal(".git".as_ref()))
         || components.contains(&std::path::Component::Normal("bazel-cache".as_ref()))

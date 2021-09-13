@@ -24,12 +24,14 @@
 //! ```
 
 #![feature(async_closure)]
-#![feature(map_into_keys_values)]
 
 use colored::*;
 use maplit::hashmap;
 use once_cell::sync::Lazy;
-use std::{path::PathBuf, sync::Mutex};
+use std::{
+    path::{Path, PathBuf},
+    sync::Mutex,
+};
 use structopt::StructOpt;
 
 #[macro_use]
@@ -81,10 +83,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let run = async move || {
         let steps = match opt.cmd {
-            Command::RunExamples(ref opt) => run_examples(&opt),
-            Command::RunFunctionsExamples(ref opt) => run_functions_examples(&opt),
-            Command::BuildFunctionsExample(ref opt) => build_functions_example(&opt),
-            Command::BuildServer(ref opt) => build_server(&opt, vec![]),
+            Command::RunExamples(ref opt) => run_examples(opt),
+            Command::RunFunctionsExamples(ref opt) => run_functions_examples(opt),
+            Command::BuildFunctionsExample(ref opt) => build_functions_example(opt),
+            Command::BuildServer(ref opt) => build_server(opt, vec![]),
             Command::BuildFunctionsServer(ref opt) => build_functions_server(opt, vec![]),
             Command::RunTests => run_tests(),
             Command::RunCargoTests(ref opt) => run_cargo_tests(opt),
@@ -307,15 +309,15 @@ pub fn run_fuzz_targets(opt: &RunCargoFuzz) -> Step {
     }
 }
 
-pub fn run_fuzz_targets_in_crate(path: &PathBuf, opt: &RunCargoFuzz) -> Step {
+pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
     // `cargo-fuzz` can only run in the crate that contains the `fuzz` crate. So we need to use
     // `Cmd::new_in_dir` to execute the command inside the crate's directory. Pop the two components
     // (i.e., `fuzz/Cargo.toml`) to get to the crate path.
-    let mut crate_path = path.clone();
+    let mut crate_path = path.to_path_buf();
     crate_path.pop();
     crate_path.pop();
 
-    let cargo_manifest: CargoManifest = toml::from_str(&read_file(&path))
+    let cargo_manifest: CargoManifest = toml::from_str(&read_file(path))
         .unwrap_or_else(|err| panic!("could not parse cargo manifest file {:?}: {}", path, err));
 
     Step::Multiple {
@@ -546,7 +548,7 @@ fn run_buildifier(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "buildifier".to_string(),
         steps: source_files()
-            .filter(is_bazel_file)
+            .filter(|p| is_bazel_file(p))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -599,7 +601,7 @@ fn run_markdownlint(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "markdownlint".to_string(),
         steps: source_files()
-            .filter(is_markdown_file)
+            .filter(|p| is_markdown_file(p))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -622,7 +624,7 @@ fn run_embedmd(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "embedmd".to_string(),
         steps: source_files()
-            .filter(is_markdown_file)
+            .filter(|p| is_markdown_file(p))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -647,7 +649,7 @@ fn run_liche() -> Step {
     Step::Multiple {
         name: "liche".to_string(),
         steps: source_files()
-            .filter(is_markdown_file)
+            .filter(|p| is_markdown_file(p))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -669,7 +671,7 @@ fn run_hadolint() -> Step {
     Step::Multiple {
         name: "hadolint".to_string(),
         steps: source_files()
-            .filter(is_dockerfile)
+            .filter(|p| is_dockerfile(p))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -683,7 +685,7 @@ fn run_shellcheck() -> Step {
     Step::Multiple {
         name: "shellcheck".to_string(),
         steps: source_files()
-            .filter(is_shell_script)
+            .filter(|p| is_shell_script(p))
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -712,7 +714,7 @@ fn run_clang_format(mode: FormatMode) -> Step {
         FormatMode::Fix => Step::Multiple {
             name: "clang format".to_string(),
             steps: source_files()
-                .filter(is_clang_format_file)
+                .filter(|p| is_clang_format_file(p))
                 .map(to_string)
                 .map(|entry| Step::Single {
                     name: entry.clone(),
@@ -727,7 +729,7 @@ fn run_check_license(modified_files: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "check license".to_string(),
         steps: source_files()
-            .filter(is_source_code_file)
+            .filter(|p| is_source_code_file(p))
             .map(to_string)
             .filter(|file| modified_files.contains(file))
             .map(|entry| Step::Single {
@@ -742,7 +744,7 @@ fn run_check_build_licenses(modified_files: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "check BUILD licenses".to_string(),
         steps: source_files()
-            .filter(is_build_file)
+            .filter(|p| is_build_file(p))
             .map(to_string)
             .filter(|file| modified_files.contains(file))
             .map(|entry| Step::Single {
@@ -757,7 +759,7 @@ fn run_check_todo(modified_files: &ModifiedContent) -> Step {
     Step::Multiple {
         name: "check todo".to_string(),
         steps: source_files()
-            .filter(is_source_code_file)
+            .filter(|p| is_source_code_file(p))
             .map(to_string)
             .filter(|file| modified_files.contains(file))
             .map(|entry| Step::Single {
@@ -773,7 +775,7 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
         name: "cargo fmt".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
-            .filter(|path| modified_crates.contains(&path))
+            .filter(|path| modified_crates.contains(path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new_with_env(
@@ -806,7 +808,7 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
             // Exclude `fuzz` crates, as there are no tests and binaries should not be executed.
             .filter(|path| !is_fuzzing_toml_file(path))
             .map(to_string)
-            .filter(|path| all_affected_crates.contains(&path))
+            .filter(|path| all_affected_crates.contains(path))
             .map(|entry| {
                 // Manually exclude `oak-introspection-client` for `oak_loader` and `oak_runtime` to
                 // avoid compile time errors.
@@ -858,7 +860,7 @@ fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
         name: "cargo doc".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
-            .filter(|path| all_affected_crates.contains(&path))
+            .filter(|path| all_affected_crates.contains(path))
             .map(|entry| {
                 let mut path = PathBuf::from(entry);
                 path.pop();
@@ -907,7 +909,7 @@ fn run_cargo_clippy(all_affected_crates: &ModifiedContent) -> Step {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
-            .filter(|path| all_affected_crates.contains(&path))
+            .filter(|path| all_affected_crates.contains(path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new(

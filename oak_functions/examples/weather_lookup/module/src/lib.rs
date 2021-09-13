@@ -70,7 +70,7 @@ pub extern "C" fn main() {
             })
             .ok_or("could not find nearest location")?;
         log!("nearest location key: {:?}\n", best_key);
-        log!("nearest location: {:?}\n", Location::from_bytes(&best_key));
+        log!("nearest location: {:?}\n", Location::from_bytes(best_key));
 
         let best_value = oak_functions::storage_get_item(best_key)
             .map_err(|err| format!("could not get item: {:?}", err))?

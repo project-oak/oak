@@ -464,7 +464,7 @@ impl wasmi::Externals for WasmState {
             )),
             _ => {
                 let extension = match self.extensions_indices.get(&index) {
-                    Some(ref extension) => (*extension).clone(),
+                    Some(extension) => extension.clone(),
                     None => panic!("Unimplemented function at {}", index),
                 };
                 map_host_errors(extension.invoke(self, args)?)

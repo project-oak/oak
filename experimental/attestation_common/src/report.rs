@@ -22,7 +22,7 @@ use x509_parser::der_parser::{self, oid::Oid};
 // Using `NETSCAPE_COMMENT` extension since `rust-openssl` doesn't support custom extensions yet.
 // https://github.com/sfackler/rust-openssl/issues/1411
 // https://www.alvestrand.no/objectid/2.16.840.1.113730.1.13.html
-pub const TEE_EXTENSION_OID: Oid<'static> = der_parser::oid!(2.16.840.1.113730.1.13);
+pub const TEE_EXTENSION_OID: Oid<'static> = der_parser::oid!(2.16.840 .1 .113730 .1 .13);
 // TODO(#1867): Add remote attestation support.
 const TEST_TEE_MEASUREMENT: &str = "Test TEE measurement";
 

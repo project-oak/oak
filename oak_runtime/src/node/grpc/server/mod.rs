@@ -108,7 +108,7 @@ impl GrpcServerNode {
         let startup_receiver = Receiver::<GrpcInvocationSender>::new(ReadHandle {
             handle: startup_handle,
         });
-        let invocation_channel = startup_receiver.receive(&runtime)?;
+        let invocation_channel = startup_receiver.receive(runtime)?;
         match invocation_channel.sender {
             Some(invocation_sender) => {
                 info!(
@@ -441,7 +441,7 @@ impl ServerStreamingService<Vec<u8>> for GrpcInvocationHandler {
                 request.get_ref().len(),
                 oak_label
             );
-            let identity_label = get_user_identity_label(&request.metadata())?;
+            let identity_label = get_user_identity_label(request.metadata())?;
 
             // Create an encapsulated gRPC request.
             // TODO(#97): Add client-streaming support.
@@ -510,7 +510,7 @@ impl GrpcInvocationHandler {
         // The channel containing the request is created with the label specified by the caller.
         // This will fail if the label has a non-empty integrity component.
         let (request_sender, request_receiver) =
-            channel_create_with_downgrade::<GrpcRequest>(&self.runtime, "gRPC request", &label)
+            channel_create_with_downgrade::<GrpcRequest>(&self.runtime, "gRPC request", label)
                 .map_err(|err| {
                     warn!("Couldn't create gRPC request channel: {:?}", err);
                 })?;
@@ -520,7 +520,7 @@ impl GrpcInvocationHandler {
         let (response_sender, response_receiver) = channel_create_with_downgrade::<GrpcResponse>(
             &self.runtime,
             "gRPC response",
-            &identity_label,
+            identity_label,
         )
         .map_err(|err| {
             warn!("Couldn't create gRPC response channel: {:?}", err);
