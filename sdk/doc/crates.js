@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["oak","oak_app_build","oak_tests"];

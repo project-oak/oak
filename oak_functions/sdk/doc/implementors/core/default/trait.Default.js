@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["test_utils"] = [{"text":"impl Default for MockStaticServer","synthetic":false,"types":[]}];
+implementors["test_utils"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"test_utils/struct.MockStaticServer.html\" title=\"struct test_utils::MockStaticServer\">MockStaticServer</a>","synthetic":false,"types":["test_utils::MockStaticServer"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

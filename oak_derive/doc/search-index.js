@@ -1,4 +1,4 @@
 var searchIndex = JSON.parse('{\
-"oak_derive":{"doc":"","i":[[24,"HandleVisit","oak_derive","Automatically derives the `HandleVisit` trait for structs…",null,null]],"p":[]}\
+"oak_derive":{"doc":"","t":[24],"n":["HandleVisit"],"q":["oak_derive"],"d":["Automatically derives the <code>HandleVisit</code> trait for structs …"],"i":[0],"f":[null],"p":[]}\
 }');
-addSearchOptions(searchIndex);initSearch(searchIndex);
+if (window.initSearch) {window.initSearch(searchIndex)};

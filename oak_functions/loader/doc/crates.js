@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["oak_functions_loader"];

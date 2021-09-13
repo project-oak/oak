@@ -1,7 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `rust/oak_app_build/src/main.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>main.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
-<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../oak_app_build/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><span class="help-button">?</span>
-                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust&#x2F;oak_app_build&#x2F;src&#x2F;main.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>main.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../oak_app_build/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -311,7 +308,7 @@
 <span id="308">308</span>
 <span id="309">309</span>
 <span id="310">310</span>
-</pre><div class="example-wrap"><pre class="rust ">
+</pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -342,20 +339,20 @@
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">oak_abi</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
-    <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">NodeConfiguration</span>,
+<span class="kw">use</span> <span class="ident">oak_abi::proto::oak::application</span>::{
+    <span class="ident">node_configuration::ConfigType</span>, <span class="ident">ApplicationConfiguration</span>, <span class="ident">NodeConfiguration</span>,
     <span class="ident">WebAssemblyConfiguration</span>,
 };
-<span class="kw">use</span> <span class="ident">oak_sign</span>::<span class="ident">SignatureBundle</span>;
-<span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
-<span class="kw">use</span> <span class="ident">reqwest</span>::<span class="ident">Url</span>;
+<span class="kw">use</span> <span class="ident">oak_sign::SignatureBundle</span>;
+<span class="kw">use</span> <span class="ident">prost::Message</span>;
+<span class="kw">use</span> <span class="ident">reqwest::Url</span>;
 <span class="kw">use</span> <span class="ident">sha2</span>::{<span class="ident">Digest</span>, <span class="ident">Sha256</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections</span>::<span class="ident">HashMap</span>,
+    <span class="ident">collections::HashMap</span>,
     <span class="ident">fs</span>,
     <span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>},
 };
-<span class="kw">use</span> <span class="ident">structopt</span>::<span class="ident">StructOpt</span>;
+<span class="kw">use</span> <span class="ident">structopt::StructOpt</span>;
 
 <span class="doccomment">/// Command line options for the Oak Application builder.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">StructOpt</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
@@ -365,7 +362,7 @@
     <span class="ident">manifest_path</span>: <span class="ident">String</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">struct</span> <span class="ident">Manifest</span> {
     <span class="ident">name</span>: <span class="ident">String</span>,
@@ -376,7 +373,7 @@
     <span class="ident">signature_manifests</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FileLocation</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">enum</span> <span class="ident">Module</span> {
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;path&quot;</span>)]</span>
@@ -385,14 +382,14 @@
     <span class="ident">External</span>(<span class="ident">External</span>),
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">struct</span> <span class="ident">External</span> {
     <span class="ident">url</span>: <span class="ident">String</span>,
     <span class="ident">sha256</span>: <span class="ident">String</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">struct</span> <span class="ident">InitialNodeConfig</span> {
     <span class="ident">wasm_module_name</span>: <span class="ident">String</span>,
@@ -408,13 +405,13 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">struct</span> <span class="ident">SignatureManifest</span> {
     <span class="ident">signatures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FileLocation</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">enum</span> <span class="ident">FileLocation</span> {
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;path&quot;</span>)]</span>
@@ -443,36 +440,36 @@
 <span class="kw">fn</span> <span class="ident">get_output_file_path</span>(<span class="ident">manifest_dir</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">app_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PathBuf</span> {
     <span class="ident">manifest_dir</span>
         .<span class="ident">join</span>(<span class="ident">OUTPUT_DIRECTORY</span>)
-        .<span class="ident">join</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.oak&quot;</span>, <span class="ident">app_name</span>))
+        .<span class="ident">join</span>(<span class="macro">format!</span>(<span class="string">&quot;{}.oak&quot;</span>, <span class="ident">app_name</span>))
 }
 
 <span class="doccomment">/// Computes SHA256 sum from `data` and returns it as a HEX encoded string.</span>
 <span class="kw">fn</span> <span class="ident">get_sha256</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">Sha256</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">Sha256::new</span>();
     <span class="ident">hasher</span>.<span class="ident">update</span>(<span class="ident">data</span>);
-    <span class="ident">hex</span>::<span class="ident">encode</span>(<span class="ident">hasher</span>.<span class="ident">finalize</span>().<span class="ident">as_slice</span>().<span class="ident">to_vec</span>())
+    <span class="ident">hex::encode</span>(<span class="ident">hasher</span>.<span class="ident">finalize</span>().<span class="ident">as_slice</span>().<span class="ident">to_vec</span>())
 }
 
 <span class="doccomment">/// Download file from `url`.</span>
-<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">download_file_from_url</span>(<span class="ident">url</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">download_file_from_url</span>(<span class="ident">url</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">url</span>: <span class="ident">Url</span> <span class="op">=</span> <span class="ident">url</span>
         .<span class="ident">parse</span>()
-        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t parse URL {}&quot;</span>, <span class="ident">url</span>))<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">reqwest</span>::<span class="ident">get</span>(<span class="ident">url</span>.<span class="ident">clone</span>())
-        .<span class="ident">await</span>
-        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t send request to {}&quot;</span>, <span class="ident">url</span>))<span class="question-mark">?</span>;
+        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t parse URL {}&quot;</span>, <span class="ident">url</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">reqwest::get</span>(<span class="ident">url</span>.<span class="ident">clone</span>())
+        .<span class="kw">await</span>
+        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t send request to {}&quot;</span>, <span class="ident">url</span>))<span class="question-mark">?</span>;
 
     <span class="comment">// `reqwest` automatically handles redirects.</span>
     <span class="comment">// https://docs.rs/reqwest/0.10.8/reqwest/redirect/index.html</span>
     <span class="kw">if</span> <span class="ident">response</span>.<span class="ident">status</span>().<span class="ident">is_success</span>() {
         <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">response</span>
             .<span class="ident">bytes</span>()
-            .<span class="ident">await</span>
+            .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t retrieve file from HTTP response&quot;</span>)<span class="question-mark">?</span>
             .<span class="ident">to_vec</span>();
         <span class="prelude-val">Ok</span>(<span class="ident">data</span>)
     } <span class="kw">else</span> {
-        <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(
+        <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
             <span class="string">&quot;Couldn&#39;t download file from {}, status {:?}&quot;</span>,
             <span class="ident">url</span>,
             <span class="ident">response</span>.<span class="ident">status</span>().<span class="ident">canonical_reason</span>()
@@ -482,26 +479,26 @@
 
 <span class="doccomment">/// Load Wasm module from file or URL if specified.</span>
 <span class="doccomment">/// If the file was downloaded from URL, it is cached in [`CACHE_DIRECTORY`].</span>
-<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">load_module</span>(<span class="ident">manifest_dir</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">Module</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">load_module</span>(<span class="ident">manifest_dir</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">Module</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">module</span> {
-        <span class="ident">Module</span>::<span class="ident">Path</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="ident">fs</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>).<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read file {}&quot;</span>, <span class="ident">path</span>))
+        <span class="ident">Module::Path</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>).<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read file {}&quot;</span>, <span class="ident">path</span>))
         }
-        <span class="ident">Module</span>::<span class="ident">External</span>(<span class="ident">external</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">Module::External</span>(<span class="ident">external</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="comment">// Try to load module from cache, if failed, download it from URL.</span>
-            <span class="kw">let</span> <span class="ident">cache_path</span> <span class="op">=</span> <span class="ident">get_module_cache_path</span>(<span class="kw-2">&amp;</span><span class="ident">manifest_dir</span>, <span class="kw-2">&amp;</span><span class="ident">external</span>.<span class="ident">sha256</span>);
-            <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">fs</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="ident">cache_path</span>) {
+            <span class="kw">let</span> <span class="ident">cache_path</span> <span class="op">=</span> <span class="ident">get_module_cache_path</span>(<span class="ident">manifest_dir</span>, <span class="kw-2">&amp;</span><span class="ident">external</span>.<span class="ident">sha256</span>);
+            <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">fs::read</span>(<span class="kw-2">&amp;</span><span class="ident">cache_path</span>) {
                 <span class="prelude-val">Ok</span>(<span class="ident">data</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Loaded module from cache {:?}&quot;</span>, <span class="ident">cache_path</span>.<span class="ident">as_path</span>());
+                    <span class="macro">info!</span>(<span class="string">&quot;Loaded module from cache {:?}&quot;</span>, <span class="ident">cache_path</span>.<span class="ident">as_path</span>());
                     <span class="ident">data</span>
                 }
                 <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">info</span><span class="macro">!</span>(
+                    <span class="macro">info!</span>(
                         <span class="string">&quot;Couldn&#39;t load module from cache {:?}, downloading from URL {}&quot;</span>,
                         <span class="ident">cache_path</span>.<span class="ident">as_path</span>(),
                         <span class="ident">external</span>.<span class="ident">url</span>,
                     );
-                    <span class="ident">download_file_from_url</span>(<span class="kw-2">&amp;</span><span class="ident">external</span>.<span class="ident">url</span>).<span class="ident">await</span><span class="question-mark">?</span>
+                    <span class="ident">download_file_from_url</span>(<span class="kw-2">&amp;</span><span class="ident">external</span>.<span class="ident">url</span>).<span class="kw">await</span><span class="question-mark">?</span>
                 }
             };
 
@@ -509,13 +506,13 @@
             <span class="kw">let</span> <span class="ident">sha256_sum</span> <span class="op">=</span> <span class="ident">get_sha256</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>);
             <span class="kw">if</span> <span class="ident">sha256_sum</span> <span class="op">=</span><span class="op">=</span> <span class="ident">external</span>.<span class="ident">sha256</span> {
                 <span class="comment">// Save the downloaded Wasm module into the cache directory.</span>
-                <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="ident">cache_path</span>.<span class="ident">parent</span>().<span class="ident">unwrap</span>())
+                <span class="ident">std::fs::create_dir_all</span>(<span class="ident">cache_path</span>.<span class="ident">parent</span>().<span class="ident">unwrap</span>())
                     .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create cache directory&quot;</span>)<span class="question-mark">?</span>;
-                <span class="ident">fs</span>::<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">cache_path</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>)
-                    .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t write file {:?}&quot;</span>, <span class="ident">cache_path</span>.<span class="ident">as_path</span>()))<span class="question-mark">?</span>;
+                <span class="ident">fs::write</span>(<span class="kw-2">&amp;</span><span class="ident">cache_path</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>)
+                    .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t write file {:?}&quot;</span>, <span class="ident">cache_path</span>.<span class="ident">as_path</span>()))<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(<span class="ident">data</span>)
             } <span class="kw">else</span> {
-                <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(
+                <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
                     <span class="string">&quot;Incorrect SHA256 sum: expected {}, received {}&quot;</span>,
                     <span class="ident">external</span>.<span class="ident">sha256</span>,
                     <span class="ident">sha256_sum</span>
@@ -526,14 +523,14 @@
 }
 
 <span class="doccomment">/// Loads a file from the file path or URL specified in the file location.</span>
-<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">load_file_from_location</span>(<span class="ident">location</span>: <span class="kw-2">&amp;</span><span class="ident">FileLocation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">load_file_from_location</span>(<span class="ident">location</span>: <span class="kw-2">&amp;</span><span class="ident">FileLocation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">location</span> {
-        <span class="ident">FileLocation</span>::<span class="ident">Path</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="ident">fs</span>::<span class="ident">read</span>(<span class="ident">path</span>).<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t read file {}&quot;</span>, <span class="ident">path</span>))
+        <span class="ident">FileLocation::Path</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">fs::read</span>(<span class="ident">path</span>).<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t read file {}&quot;</span>, <span class="ident">path</span>))
         }
-        <span class="ident">FileLocation</span>::<span class="ident">Url</span>(<span class="ident">url</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">download_file_from_url</span>(<span class="ident">url</span>)
-            .<span class="ident">await</span>
-            .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t download file {}&quot;</span>, <span class="ident">url</span>)),
+        <span class="ident">FileLocation::Url</span>(<span class="ident">url</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">download_file_from_url</span>(<span class="ident">url</span>)
+            .<span class="kw">await</span>
+            .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t download file {}&quot;</span>, <span class="ident">url</span>)),
     }
 }
 
@@ -541,56 +538,56 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_config_to_file</span>(
     <span class="ident">app_config</span>: <span class="kw-2">&amp;</span><span class="ident">ApplicationConfiguration</span>,
     <span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
     <span class="ident">app_config</span>
         .<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">bytes</span>)
         .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t encode application configuration&quot;</span>)<span class="question-mark">?</span>;
-    <span class="ident">fs</span>::<span class="ident">write</span>(<span class="ident">filename</span>, <span class="kw-2">&amp;</span><span class="ident">bytes</span>)
-        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t write file {}&quot;</span>, <span class="ident">filename</span>.<span class="ident">display</span>()))<span class="question-mark">?</span>;
+    <span class="ident">fs::write</span>(<span class="ident">filename</span>, <span class="kw-2">&amp;</span><span class="ident">bytes</span>)
+        .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t write file {}&quot;</span>, <span class="ident">filename</span>.<span class="ident">display</span>()))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="attribute">#[<span class="ident">tokio</span>::<span class="ident">main</span>]</span>
-<span class="ident">async</span> <span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">env_logger</span>::<span class="ident">init</span>();
+<span class="attribute">#[<span class="ident">tokio::main</span>]</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="ident">env_logger::init</span>();
 
-    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt</span>::<span class="ident">from_args</span>();
-    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Parsed opts: {:?}&quot;</span>, <span class="ident">opt</span>);
+    <span class="kw">let</span> <span class="ident">opt</span> <span class="op">=</span> <span class="ident">Opt::from_args</span>();
+    <span class="macro">debug!</span>(<span class="string">&quot;Parsed opts: {:?}&quot;</span>, <span class="ident">opt</span>);
 
-    <span class="kw">let</span> <span class="ident">manifest_path</span> <span class="op">=</span> <span class="ident">Path</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">manifest_path</span>);
+    <span class="kw">let</span> <span class="ident">manifest_path</span> <span class="op">=</span> <span class="ident">Path::new</span>(<span class="kw-2">&amp;</span><span class="ident">opt</span>.<span class="ident">manifest_path</span>);
     <span class="kw">let</span> <span class="ident">manifest_dir</span> <span class="op">=</span> <span class="ident">manifest_path</span>
         .<span class="ident">parent</span>()
         .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t find manifest directory&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">manifest_file</span> <span class="op">=</span> <span class="ident">fs</span>::<span class="ident">read_to_string</span>(<span class="ident">manifest_path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read manifest file&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">manifest_file</span> <span class="op">=</span> <span class="ident">fs::read_to_string</span>(<span class="ident">manifest_path</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read manifest file&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">manifest</span>: <span class="ident">Manifest</span> <span class="op">=</span>
-        <span class="ident">toml</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">manifest_file</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse manifest file as TOML&quot;</span>)<span class="question-mark">?</span>;
-    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Parsed manifest file: {:?}&quot;</span>, <span class="ident">manifest</span>);
+        <span class="ident">toml::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">manifest_file</span>).<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse manifest file as TOML&quot;</span>)<span class="question-mark">?</span>;
+    <span class="macro">debug!</span>(<span class="string">&quot;Parsed manifest file: {:?}&quot;</span>, <span class="ident">manifest</span>);
 
     <span class="comment">// Load Wasm modules.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">modules</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">modules</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
     <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">module</span>) <span class="kw">in</span> <span class="ident">manifest</span>.<span class="ident">modules</span>.<span class="ident">iter</span>() {
-        <span class="kw">let</span> <span class="ident">loaded_module</span> <span class="op">=</span> <span class="ident">load_module</span>(<span class="kw-2">&amp;</span><span class="ident">manifest_dir</span>, <span class="kw-2">&amp;</span><span class="ident">module</span>)
-            .<span class="ident">await</span>
+        <span class="kw">let</span> <span class="ident">loaded_module</span> <span class="op">=</span> <span class="ident">load_module</span>(<span class="ident">manifest_dir</span>, <span class="ident">module</span>)
+            .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t load module&quot;</span>)<span class="question-mark">?</span>;
         <span class="ident">modules</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">to_string</span>(), <span class="ident">loaded_module</span>);
     }
 
     <span class="comment">// Load signatures.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">signatures</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">signatures</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
     <span class="kw">for</span> <span class="ident">signature_manifest_location</span> <span class="kw">in</span> <span class="ident">manifest</span>.<span class="ident">signature_manifests</span>.<span class="ident">iter</span>() {
         <span class="kw">let</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">load_file_from_location</span>(<span class="ident">signature_manifest_location</span>)
-            .<span class="ident">await</span>
+            .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t load file&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">signature_manifest</span>: <span class="ident">SignatureManifest</span> <span class="op">=</span> <span class="ident">toml</span>::<span class="ident">from_slice</span>(<span class="ident">file</span>.<span class="ident">as_slice</span>())
+        <span class="kw">let</span> <span class="ident">signature_manifest</span>: <span class="ident">SignatureManifest</span> <span class="op">=</span> <span class="ident">toml::from_slice</span>(<span class="ident">file</span>.<span class="ident">as_slice</span>())
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse signature manifest file as TOML&quot;</span>)<span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Parsed signature manifest file: {:?}&quot;</span>, <span class="ident">signature_manifest</span>);
+        <span class="macro">debug!</span>(<span class="string">&quot;Parsed signature manifest file: {:?}&quot;</span>, <span class="ident">signature_manifest</span>);
         <span class="kw">for</span> <span class="ident">signature_location</span> <span class="kw">in</span> <span class="ident">signature_manifest</span>.<span class="ident">signatures</span>.<span class="ident">iter</span>() {
             <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">load_file_from_location</span>(<span class="ident">signature_location</span>)
-                .<span class="ident">await</span>
+                .<span class="kw">await</span>
                 .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t load signature&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">bundle</span> <span class="op">=</span> <span class="ident">SignatureBundle</span>::<span class="ident">from_pem</span>(<span class="ident">signature</span>.<span class="ident">as_slice</span>())
+            <span class="kw">let</span> <span class="ident">bundle</span> <span class="op">=</span> <span class="ident">SignatureBundle::from_pem</span>(<span class="ident">signature</span>.<span class="ident">as_slice</span>())
                 .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t parse signature file as PEM&quot;</span>)<span class="question-mark">?</span>;
             <span class="comment">// Verify the signature as an early warning. The signature will also be verified by the</span>
             <span class="comment">// Oak Loader.</span>
@@ -603,7 +600,7 @@
     <span class="kw">let</span> <span class="ident">app_config</span> <span class="op">=</span> <span class="ident">ApplicationConfiguration</span> {
         <span class="ident">wasm_modules</span>: <span class="ident">modules</span>,
         <span class="ident">initial_node_configuration</span>: <span class="prelude-val">Some</span>(<span class="ident">NodeConfiguration</span> {
-            <span class="ident">config_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">WasmConfig</span>(<span class="ident">WebAssemblyConfiguration</span> {
+            <span class="ident">config_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigType::WasmConfig</span>(<span class="ident">WebAssemblyConfiguration</span> {
                 <span class="ident">wasm_module_name</span>: <span class="ident">manifest</span>.<span class="ident">initial_node_configuration</span>.<span class="ident">wasm_module_name</span>,
                 <span class="ident">wasm_entrypoint_name</span>: <span class="ident">manifest</span>.<span class="ident">initial_node_configuration</span>.<span class="ident">wasm_entrypoint_name</span>,
             })),
@@ -611,9 +608,9 @@
         <span class="ident">module_signatures</span>: <span class="ident">signatures</span>,
     };
 
-    <span class="kw">let</span> <span class="ident">output_file_path</span> <span class="op">=</span> <span class="ident">get_output_file_path</span>(<span class="kw-2">&amp;</span><span class="ident">manifest_dir</span>, <span class="kw-2">&amp;</span><span class="ident">manifest</span>.<span class="ident">name</span>);
+    <span class="kw">let</span> <span class="ident">output_file_path</span> <span class="op">=</span> <span class="ident">get_output_file_path</span>(<span class="ident">manifest_dir</span>, <span class="kw-2">&amp;</span><span class="ident">manifest</span>.<span class="ident">name</span>);
 
-    <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="ident">output_file_path</span>.<span class="ident">parent</span>().<span class="ident">unwrap</span>())
+    <span class="ident">std::fs::create_dir_all</span>(<span class="ident">output_file_path</span>.<span class="ident">parent</span>().<span class="ident">unwrap</span>())
         .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create output dir&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Serialize application.</span>
@@ -623,4 +620,6 @@
     <span class="prelude-val">Ok</span>(())
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_app_build";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_app_build" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
+</body></html>

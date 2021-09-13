@@ -1,7 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `rust/oak/src/crypto/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
-<link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../oak/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><span class="help-button">?</span>
-                <a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust&#x2F;oak&#x2F;src&#x2F;crypto&#x2F;mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../oak/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -242,7 +239,7 @@
 <span id="239">239</span>
 <span id="240">240</span>
 <span id="241">241</span>
-</pre><div class="example-wrap"><pre class="rust ">
+</pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2019 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -261,19 +258,19 @@
 
 <span class="doccomment">//! Helper library for accessing the Oak cryptography service.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">grpc</span>, <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">crypto</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">grpc</span>, <span class="ident">proto::oak::crypto</span>};
 <span class="kw">use</span> <span class="ident">oak_abi</span>::{
-    <span class="ident">label</span>::<span class="ident">Label</span>,
-    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::{
-        <span class="ident">node_configuration</span>::<span class="ident">ConfigType</span>, <span class="ident">CryptoConfiguration</span>, <span class="ident">NodeConfiguration</span>,
+    <span class="ident">label::Label</span>,
+    <span class="ident">proto::oak::application</span>::{
+        <span class="ident">node_configuration::ConfigType</span>, <span class="ident">CryptoConfiguration</span>, <span class="ident">NodeConfiguration</span>,
     },
 };
-<span class="kw">use</span> <span class="ident">prost</span>::<span class="ident">Message</span>;
-<span class="kw">use</span> <span class="ident">tink_proto</span>::<span class="ident">KeyTemplate</span>;
+<span class="kw">use</span> <span class="ident">prost::Message</span>;
+<span class="kw">use</span> <span class="ident">tink_proto::KeyTemplate</span>;
 
 <span class="doccomment">/// Local representation of the connection to an external crypto service.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Crypto</span> {
-    <span class="ident">client</span>: <span class="ident">crypto</span>::<span class="ident">OakCryptoClient</span>,
+    <span class="ident">client</span>: <span class="ident">crypto::OakCryptoClient</span>,
 }
 
 <span class="doccomment">/// Opaque handle for a keyset, which is a collection of key material held</span>
@@ -292,21 +289,21 @@
     <span class="doccomment">/// Creates a [`Crypto`] instance using the given configuration and label.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">CryptoConfiguration</span>, <span class="ident">label</span>: <span class="kw-2">&amp;</span><span class="ident">Label</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Crypto</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">NodeConfiguration</span> {
-            <span class="ident">config_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigType</span>::<span class="ident">CryptoConfig</span>(<span class="ident">config</span>.<span class="ident">clone</span>())),
+            <span class="ident">config_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigType::CryptoConfig</span>(<span class="ident">config</span>.<span class="ident">clone</span>())),
         };
-        <span class="kw">crate</span>::<span class="ident">io</span>::<span class="ident">node_create</span>(<span class="string">&quot;crypto&quot;</span>, <span class="ident">label</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>)
+        <span class="ident"><span class="kw">crate</span>::io::node_create</span>(<span class="string">&quot;crypto&quot;</span>, <span class="ident">label</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>)
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">invocation_sender</span><span class="op">|</span> <span class="ident">Crypto</span> {
-                <span class="ident">client</span>: <span class="ident">crypto</span>::<span class="ident">OakCryptoClient</span>(<span class="ident">invocation_sender</span>),
+                <span class="ident">client</span>: <span class="ident">crypto::OakCryptoClient</span>(<span class="ident">invocation_sender</span>),
             })
             .<span class="ident">ok</span>()
     }
 
     <span class="doccomment">/// Generate a new keyset with a single fresh key that matches a specified template.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">template</span>: <span class="ident">KeyTemplate</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">template_data</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">template</span>: <span class="ident">KeyTemplate</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">template_data</span> <span class="op">=</span> <span class="macro">vec!</span>[];
         <span class="ident">template</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">template_data</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">generate</span>(<span class="ident">crypto</span>::<span class="ident">KeysetGenerateRequest</span> {
-            <span class="ident">template_id</span>: <span class="prelude-val">Some</span>(<span class="ident">crypto</span>::<span class="ident">keyset_generate_request</span>::<span class="ident">TemplateId</span>::<span class="ident">TemplateData</span>(
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">generate</span>(<span class="ident">crypto::KeysetGenerateRequest</span> {
+            <span class="ident">template_id</span>: <span class="prelude-val">Some</span>(<span class="ident">crypto::keyset_generate_request::TemplateId::TemplateData</span>(
                 <span class="ident">template_data</span>,
             )),
         })<span class="question-mark">?</span>;
@@ -314,9 +311,9 @@
     }
 
     <span class="doccomment">/// Generate a new keyset with a single fresh key that matches a template specified by name.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_named</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">template_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">generate</span>(<span class="ident">crypto</span>::<span class="ident">KeysetGenerateRequest</span> {
-            <span class="ident">template_id</span>: <span class="prelude-val">Some</span>(<span class="ident">crypto</span>::<span class="ident">keyset_generate_request</span>::<span class="ident">TemplateId</span>::<span class="ident">TemplateName</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_named</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">template_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">generate</span>(<span class="ident">crypto::KeysetGenerateRequest</span> {
+            <span class="ident">template_id</span>: <span class="prelude-val">Some</span>(<span class="ident">crypto::keyset_generate_request::TemplateId::TemplateName</span>(
                 <span class="ident">template_name</span>.<span class="ident">to_string</span>(),
             )),
         })<span class="question-mark">?</span>;
@@ -325,8 +322,8 @@
 
     <span class="doccomment">/// Generate a new keyset that just holds public key information</span>
     <span class="doccomment">/// derived from an existing keyset that has private key information.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">public</span>(<span class="ident">crypto</span>::<span class="ident">KeysetPublicRequest</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">public</span>(<span class="ident">crypto::KeysetPublicRequest</span> {
             <span class="ident">private_keyset_handle</span>: <span class="ident">kh</span>,
         })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>.<span class="ident">keyset_handle</span>)
@@ -338,13 +335,13 @@
         <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>,
         <span class="ident">inner_kh</span>: <span class="ident">KeysetHandle</span>,
         <span class="ident">format</span>: <span class="ident">KeysetFormat</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">bind</span>(<span class="ident">crypto</span>::<span class="ident">KeysetBindRequest</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">bind</span>(<span class="ident">crypto::KeysetBindRequest</span> {
             <span class="ident">keyset_handle</span>: <span class="ident">kh</span>,
             <span class="ident">inner_keyset_handle</span>: <span class="ident">inner_kh</span>,
             <span class="ident">format</span>: <span class="kw">match</span> <span class="ident">format</span> {
-                <span class="ident">KeysetFormat</span>::<span class="ident">Binary</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">crypto</span>::<span class="ident">KeysetFormat</span>::<span class="ident">Binary</span> <span class="kw">as</span> <span class="ident">i32</span>,
-                <span class="ident">KeysetFormat</span>::<span class="ident">Json</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">crypto</span>::<span class="ident">KeysetFormat</span>::<span class="ident">Json</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                <span class="ident">KeysetFormat::Binary</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">crypto::KeysetFormat::Binary</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                <span class="ident">KeysetFormat::Json</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">crypto::KeysetFormat::Json</span> <span class="kw">as</span> <span class="ident">i32</span>,
             },
         })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>.<span class="ident">encrypted_keyset</span>)
@@ -356,13 +353,13 @@
         <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>,
         <span class="ident">encrypted_keyset</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
         <span class="ident">format</span>: <span class="ident">KeysetFormat</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">unbind</span>(<span class="ident">crypto</span>::<span class="ident">KeysetUnbindRequest</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">unbind</span>(<span class="ident">crypto::KeysetUnbindRequest</span> {
             <span class="ident">keyset_handle</span>: <span class="ident">kh</span>,
             <span class="ident">encrypted_keyset</span>: <span class="ident">encrypted_keyset</span>.<span class="ident">to_vec</span>(),
             <span class="ident">format</span>: <span class="kw">match</span> <span class="ident">format</span> {
-                <span class="ident">KeysetFormat</span>::<span class="ident">Binary</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">crypto</span>::<span class="ident">KeysetFormat</span>::<span class="ident">Binary</span> <span class="kw">as</span> <span class="ident">i32</span>,
-                <span class="ident">KeysetFormat</span>::<span class="ident">Json</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">crypto</span>::<span class="ident">KeysetFormat</span>::<span class="ident">Json</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                <span class="ident">KeysetFormat::Binary</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">crypto::KeysetFormat::Binary</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                <span class="ident">KeysetFormat::Json</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">crypto::KeysetFormat::Json</span> <span class="kw">as</span> <span class="ident">i32</span>,
             },
         })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>.<span class="ident">keyset_handle</span>)
@@ -370,16 +367,16 @@
 
     <span class="doccomment">/// Return a keyset that acts as a proxy to key material held in</span>
     <span class="doccomment">/// an external KMS.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">kms_proxy</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kms_id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">kms_proxy</span>(<span class="ident">crypto</span>::<span class="ident">KmsProxyRequest</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">kms_proxy</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kms_id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">KeysetHandle</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">kms_proxy</span>(<span class="ident">crypto::KmsProxyRequest</span> {
             <span class="ident">kms_identifier</span>: <span class="ident">kms_id</span>.<span class="ident">to_string</span>(),
         })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">rsp</span>.<span class="ident">keyset_handle</span>)
     }
 
     <span class="doccomment">/// AEAD encryption.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encrypt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">pt</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">aad</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">encrypt</span>(<span class="ident">crypto</span>::<span class="ident">AeadEncryptRequest</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encrypt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">pt</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">aad</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">encrypt</span>(<span class="ident">crypto::AeadEncryptRequest</span> {
             <span class="ident">keyset_handle</span>: <span class="ident">kh</span>,
             <span class="ident">plaintext</span>: <span class="ident">pt</span>.<span class="ident">to_vec</span>(),
             <span class="ident">associated_data</span>: <span class="ident">aad</span>.<span class="ident">to_vec</span>(),
@@ -388,8 +385,8 @@
     }
 
     <span class="doccomment">/// AEAD decryption.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">decrypt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">ct</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">aad</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">decrypt</span>(<span class="ident">crypto</span>::<span class="ident">AeadDecryptRequest</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">decrypt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">ct</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">aad</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">decrypt</span>(<span class="ident">crypto::AeadDecryptRequest</span> {
             <span class="ident">keyset_handle</span>: <span class="ident">kh</span>,
             <span class="ident">ciphertext</span>: <span class="ident">ct</span>.<span class="ident">to_vec</span>(),
             <span class="ident">associated_data</span>: <span class="ident">aad</span>.<span class="ident">to_vec</span>(),
@@ -403,10 +400,10 @@
         <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>,
         <span class="ident">pt</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
         <span class="ident">aad</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">client</span>
-                .<span class="ident">encrypt_deterministically</span>(<span class="ident">crypto</span>::<span class="ident">DeterministicAeadEncryptRequest</span> {
+                .<span class="ident">encrypt_deterministically</span>(<span class="ident">crypto::DeterministicAeadEncryptRequest</span> {
                     <span class="ident">keyset_handle</span>: <span class="ident">kh</span>,
                     <span class="ident">plaintext</span>: <span class="ident">pt</span>.<span class="ident">to_vec</span>(),
                     <span class="ident">associated_data</span>: <span class="ident">aad</span>.<span class="ident">to_vec</span>(),
@@ -420,10 +417,10 @@
         <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>,
         <span class="ident">ct</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
         <span class="ident">aad</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">client</span>
-                .<span class="ident">decrypt_deterministically</span>(<span class="ident">crypto</span>::<span class="ident">DeterministicAeadDecryptRequest</span> {
+                .<span class="ident">decrypt_deterministically</span>(<span class="ident">crypto::DeterministicAeadDecryptRequest</span> {
                     <span class="ident">keyset_handle</span>: <span class="ident">kh</span>,
                     <span class="ident">ciphertext</span>: <span class="ident">ct</span>.<span class="ident">to_vec</span>(),
                     <span class="ident">associated_data</span>: <span class="ident">aad</span>.<span class="ident">to_vec</span>(),
@@ -432,8 +429,8 @@
     }
 
     <span class="doccomment">/// Compute MAC.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compute_mac</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">compute_mac</span>(<span class="ident">crypto</span>::<span class="ident">ComputeMacRequest</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compute_mac</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">compute_mac</span>(<span class="ident">crypto::ComputeMacRequest</span> {
             <span class="ident">keyset_handle</span>: <span class="ident">kh</span>,
             <span class="ident">data</span>: <span class="ident">data</span>.<span class="ident">to_vec</span>(),
         })<span class="question-mark">?</span>;
@@ -441,8 +438,8 @@
     }
 
     <span class="doccomment">/// Verify MAC.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_mac</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">mac</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">_rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">verify_mac</span>(<span class="ident">crypto</span>::<span class="ident">VerifyMacRequest</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_mac</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">mac</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">_rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">verify_mac</span>(<span class="ident">crypto::VerifyMacRequest</span> {
             <span class="ident">keyset_handle</span>: <span class="ident">kh</span>,
             <span class="ident">data</span>: <span class="ident">data</span>.<span class="ident">to_vec</span>(),
             <span class="ident">mac_value</span>: <span class="ident">mac</span>.<span class="ident">to_vec</span>(),
@@ -456,8 +453,8 @@
         <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>,
         <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
         <span class="ident">output_length</span>: <span class="ident">u64</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">compute_prf</span>(<span class="ident">crypto</span>::<span class="ident">ComputePrfRequest</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">compute_prf</span>(<span class="ident">crypto::ComputePrfRequest</span> {
             <span class="ident">keyset_handle</span>: <span class="ident">kh</span>,
             <span class="ident">data</span>: <span class="ident">data</span>.<span class="ident">to_vec</span>(),
             <span class="ident">output_length</span>,
@@ -466,8 +463,8 @@
     }
 
     <span class="doccomment">/// Generate signature.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">sign</span>(<span class="ident">crypto</span>::<span class="ident">SignatureSignRequest</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">sign</span>(<span class="ident">crypto::SignatureSignRequest</span> {
             <span class="ident">private_keyset_handle</span>: <span class="ident">kh</span>,
             <span class="ident">data</span>: <span class="ident">data</span>.<span class="ident">to_vec</span>(),
         })<span class="question-mark">?</span>;
@@ -475,8 +472,8 @@
     }
 
     <span class="doccomment">/// Verify signature.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">sig</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">_rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">verify</span>(<span class="ident">crypto</span>::<span class="ident">SignatureVerifyRequest</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">kh</span>: <span class="ident">KeysetHandle</span>, <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">sig</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">grpc::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">_rsp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">verify</span>(<span class="ident">crypto::SignatureVerifyRequest</span> {
             <span class="ident">public_keyset_handle</span>: <span class="ident">kh</span>,
             <span class="ident">data</span>: <span class="ident">data</span>.<span class="ident">to_vec</span>(),
             <span class="ident">signature</span>: <span class="ident">sig</span>.<span class="ident">to_vec</span>(),
@@ -485,4 +482,6 @@
     }
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "oak";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="oak" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
+    <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script>
+</body></html>

@@ -1,7 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/node/http/client.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>client.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script src="../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg">
-<link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../../oak_runtime/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><span class="help-button">?</span>
-                <a id="settings-menu" href="../../../../settings.html"><img src="../../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;node&#x2F;http&#x2F;client.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>client.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../../storage.js"></script><script src="../../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../../oak_runtime/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -317,7 +314,7 @@
 <span id="314">314</span>
 <span id="315">315</span>
 <span id="316">316</span>
-</pre><div class="example-wrap"><pre class="rust ">
+</pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -338,22 +335,22 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">io</span>::{<span class="ident">Receiver</span>, <span class="ident">ReceiverExt</span>},
-    <span class="ident">node</span>::{<span class="ident">invocation</span>::<span class="ident">InvocationExt</span>, <span class="ident">ConfigurationError</span>, <span class="ident">Node</span>},
-    <span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">invocation</span>::<span class="ident">HttpInvocation</span> <span class="kw">as</span> <span class="ident">Invocation</span>,
+    <span class="ident">node</span>::{<span class="ident">invocation::InvocationExt</span>, <span class="ident">ConfigurationError</span>, <span class="ident">Node</span>},
+    <span class="ident">proto::oak::invocation::HttpInvocation</span> <span class="kw">as</span> <span class="ident">Invocation</span>,
     <span class="ident">NodePrivilege</span>, <span class="ident">RuntimeProxy</span>,
 };
-<span class="kw">use</span> <span class="ident">http</span>::{<span class="ident">uri</span>::<span class="ident">Scheme</span>, <span class="ident">Uri</span>};
-<span class="kw">use</span> <span class="ident">hyper</span>::<span class="ident">body</span>::<span class="ident">to_bytes</span>;
+<span class="kw">use</span> <span class="ident">http</span>::{<span class="ident">uri::Scheme</span>, <span class="ident">Uri</span>};
+<span class="kw">use</span> <span class="ident">hyper::body::to_bytes</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
-<span class="kw">use</span> <span class="ident">maplit</span>::<span class="ident">hashset</span>;
-<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">application</span>::<span class="ident">HttpClientConfiguration</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>};
-<span class="kw">use</span> <span class="ident">oak_io</span>::{<span class="ident">handle</span>::<span class="ident">ReadHandle</span>, <span class="ident">OakError</span>};
-<span class="kw">use</span> <span class="ident">oak_services</span>::<span class="ident">proto</span>::<span class="ident">oak</span>::<span class="ident">encap</span>::{<span class="ident">HeaderMap</span>, <span class="ident">HttpResponse</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
-<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">sync</span>::<span class="ident">oneshot</span>;
+<span class="kw">use</span> <span class="ident">maplit::hashset</span>;
+<span class="kw">use</span> <span class="ident">oak_abi</span>::{<span class="ident">proto::oak::application::HttpClientConfiguration</span>, <span class="ident">Handle</span>, <span class="ident">OakStatus</span>};
+<span class="kw">use</span> <span class="ident">oak_io</span>::{<span class="ident">handle::ReadHandle</span>, <span class="ident">OakError</span>};
+<span class="kw">use</span> <span class="ident">oak_services::proto::oak::encap</span>::{<span class="ident">HeaderMap</span>, <span class="ident">HttpResponse</span>};
+<span class="kw">use</span> <span class="ident">std::io</span>;
+<span class="kw">use</span> <span class="ident">tokio::sync::oneshot</span>;
 
 <span class="kw">type</span> <span class="ident">HyperClient</span> <span class="op">=</span>
-    <span class="ident">hyper</span>::<span class="ident">client</span>::<span class="ident">Client</span><span class="op">&lt;</span><span class="ident">hyper_rustls</span>::<span class="ident">HttpsConnector</span><span class="op">&lt;</span><span class="ident">hyper</span>::<span class="ident">client</span>::<span class="ident">HttpConnector</span><span class="op">&gt;</span>, <span class="ident">hyper</span>::<span class="ident">Body</span><span class="op">&gt;</span>;
+    <span class="ident">hyper::client::Client</span><span class="op">&lt;</span><span class="ident">hyper_rustls::HttpsConnector</span><span class="op">&lt;</span><span class="ident">hyper::client::HttpConnector</span><span class="op">&gt;</span>, <span class="ident">hyper::Body</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// Struct that represents an HTTP client pseudo-Node.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HttpClientNode</span> {
@@ -379,7 +376,7 @@
         <span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>,
         <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
         <span class="ident">handle</span>: <span class="ident">Handle</span>,
-        <span class="ident">notify_receiver</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+        <span class="ident">notify_receiver</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) {
         <span class="comment">// Create an Async runtime for executing futures.</span>
         <span class="comment">// https://docs.rs/tokio/</span>
@@ -387,25 +384,25 @@
         <span class="kw">let</span> <span class="ident">async_runtime</span> <span class="op">=</span> <span class="ident">create_async_runtime</span>();
 
         <span class="comment">// Listen to incoming HTTP invocations.</span>
-        <span class="macro">info</span><span class="macro">!</span>(
+        <span class="macro">info!</span>(
             <span class="string">&quot;{}: Starting HTTP client pseudo-Node thread&quot;</span>,
             <span class="self">self</span>.<span class="ident">node_name</span>
         );
-        <span class="ident">async_runtime</span>.<span class="ident">block_on</span>(<span class="ident">futures_util</span>::<span class="ident">future</span>::<span class="ident">select</span>(
-            <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="self">self</span>.<span class="ident">handle_loop</span>(<span class="ident">runtime</span>, <span class="ident">handle</span>)),
+        <span class="ident">async_runtime</span>.<span class="ident">block_on</span>(<span class="ident">futures_util::future::select</span>(
+            <span class="ident">Box::pin</span>(<span class="self">self</span>.<span class="ident">handle_loop</span>(<span class="ident">runtime</span>, <span class="ident">handle</span>)),
             <span class="ident">notify_receiver</span>,
         ));
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{}: Exiting HTTP client pseudo-Node thread&quot;</span>, <span class="self">self</span>.<span class="ident">node_name</span>);
+        <span class="macro">info!</span>(<span class="string">&quot;{}: Exiting HTTP client pseudo-Node thread&quot;</span>, <span class="self">self</span>.<span class="ident">node_name</span>);
     }
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_privilege</span>(<span class="ident">authority</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NodePrivilege</span> {
     <span class="kw">if</span> <span class="ident">authority</span>.<span class="ident">is_empty</span>() {
-        <span class="ident">NodePrivilege</span>::<span class="ident">default</span>()
+        <span class="ident">NodePrivilege::default</span>()
     } <span class="kw">else</span> {
-        <span class="ident">NodePrivilege</span>::<span class="ident">new</span>(
-            <span class="macro">hashset</span><span class="macro">!</span> { <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">tls_endpoint_tag</span>(<span class="ident">authority</span>) },
-            <span class="macro">hashset</span><span class="macro">!</span> { <span class="ident">oak_abi</span>::<span class="ident">label</span>::<span class="ident">tls_endpoint_tag</span>(<span class="ident">authority</span>) },
+        <span class="ident">NodePrivilege::new</span>(
+            <span class="macro">hashset!</span> { <span class="ident">oak_abi::label::tls_endpoint_tag</span>(<span class="ident">authority</span>) },
+            <span class="macro">hashset!</span> { <span class="ident">oak_abi::label::tls_endpoint_tag</span>(<span class="ident">authority</span>) },
         )
     }
 }
@@ -416,8 +413,8 @@
     <span class="ident">ReadFailed</span>(<span class="ident">OakError</span>),
     <span class="ident">PermissionDenied</span>,
     <span class="ident">UnsupportedScheme</span>,
-    <span class="ident">BodyConversionError</span>(<span class="ident">http</span>::<span class="ident">Error</span>),
-    <span class="ident">InterruptedWaitForResponse</span>(<span class="ident">hyper</span>::<span class="ident">Error</span>),
+    <span class="ident">BodyConversionError</span>(<span class="ident">http::Error</span>),
+    <span class="ident">InterruptedWaitForResponse</span>(<span class="ident">hyper::Error</span>),
     <span class="ident">ResponseHandlingError</span>,
 }
 
@@ -431,7 +428,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">node_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">config</span>: <span class="ident">HttpClientConfiguration</span>,
-        <span class="ident">root_ca</span>: <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">Certificate</span>,
+        <span class="ident">root_ca</span>: <span class="ident"><span class="kw">crate</span>::tls::Certificate</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">ConfigurationError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">http_client</span> <span class="op">=</span> <span class="ident">create_client</span>(<span class="ident">root_ca</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">HttpClientNode</span> {
@@ -443,42 +440,42 @@
 
     <span class="doccomment">/// Main loop that handles HTTP/HTTPS invocations, sends the requests to an external HTTP or</span>
     <span class="doccomment">/// HTTPS service and writes responses back to the invocation channel.</span>
-    <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle_loop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">handle</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_loop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>, <span class="ident">handle</span>: <span class="ident">Handle</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">OakError</span><span class="op">&gt;</span> {
         <span class="comment">// Create a [`Receiver`] to receive the HTTP/HTTPS request.</span>
-        <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">ReadHandle</span> { <span class="ident">handle</span> });
+        <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">Receiver</span>::<span class="op">&lt;</span><span class="ident">Invocation</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">ReadHandle</span> { <span class="ident">handle</span> });
         <span class="kw">loop</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Waiting for HTTP invocation&quot;</span>);
+            <span class="macro">debug!</span>(<span class="string">&quot;Waiting for HTTP invocation&quot;</span>);
             <span class="comment">// Read an HTTP invocation from the [`Receiver`].</span>
             <span class="kw">let</span> <span class="ident">invocation</span> <span class="op">=</span> <span class="ident">receiver</span>.<span class="ident">receive</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="kw">match</span> <span class="ident">error</span> {
-                    <span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrTerminated</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;HTTP client node is terminating.&quot;</span>)
+                    <span class="ident">OakError::OakStatus</span>(<span class="ident">OakStatus::ErrTerminated</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">debug!</span>(<span class="string">&quot;HTTP client node is terminating.&quot;</span>)
                     }
-                    <span class="ident">OakError</span>::<span class="ident">OakStatus</span>(<span class="ident">OakStatus</span>::<span class="ident">ErrChannelClosed</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;HTTP invocation channel closed&quot;</span>)
+                    <span class="ident">OakError::OakStatus</span>(<span class="ident">OakStatus::ErrChannelClosed</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">info!</span>(<span class="string">&quot;HTTP invocation channel closed&quot;</span>)
                     }
-                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Couldn&#39;t receive the invocation: {:?}&quot;</span>, <span class="ident">error</span>),
+                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error!</span>(<span class="string">&quot;Couldn&#39;t receive the invocation: {:?}&quot;</span>, <span class="ident">error</span>),
                 }
                 <span class="ident">error</span>
             })<span class="question-mark">?</span>;
 
             <span class="comment">// Process the request and send an INTERNAL_SERVER_ERROR (500) response to the caller if</span>
             <span class="comment">// there is an error.</span>
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_invocation</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>, <span class="kw-2">&amp;</span><span class="ident">invocation</span>).<span class="ident">await</span> {
-                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>);
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_invocation</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>, <span class="kw-2">&amp;</span><span class="ident">invocation</span>).<span class="kw">await</span> {
+                <span class="macro">warn!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>);
                 <span class="ident">invocation</span>.<span class="ident">send_error</span>(
-                    <span class="ident">http</span>::<span class="ident">StatusCode</span>::<span class="ident">INTERNAL_SERVER_ERROR</span>,
-                    <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>),
+                    <span class="ident">http::StatusCode::INTERNAL_SERVER_ERROR</span>,
+                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>),
                     <span class="kw-2">&amp;</span><span class="ident">runtime</span>,
                 );
             }
-            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;HTTP client: Invocation processing finished&quot;</span>);
+            <span class="macro">info!</span>(<span class="string">&quot;HTTP client: Invocation processing finished&quot;</span>);
             <span class="ident">invocation</span>.<span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>);
         }
     }
 
     <span class="doccomment">/// Process an HTTP invocation for an external HTTP/HTTPS service.</span>
-    <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">process_invocation</span>(
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_invocation</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">RuntimeProxy</span>,
         <span class="ident">invocation</span>: <span class="kw-2">&amp;</span><span class="ident">Invocation</span>,
@@ -487,19 +484,19 @@
 
         <span class="comment">// Receive a request from the invocation channel.</span>
         <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">invocation</span>
-            .<span class="ident">receive_request</span>(<span class="kw-2">&amp;</span><span class="ident">runtime</span>)
-            .<span class="ident">map_err</span>(<span class="ident">ProcessingError</span>::<span class="ident">ReadFailed</span>)<span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Incoming HTTP request: {:?}&quot;</span>, <span class="ident">request</span>);
+            .<span class="ident">receive_request</span>(<span class="ident">runtime</span>)
+            .<span class="ident">map_err</span>(<span class="ident">ProcessingError::ReadFailed</span>)<span class="question-mark">?</span>;
+        <span class="macro">debug!</span>(<span class="string">&quot;Incoming HTTP request: {:?}&quot;</span>, <span class="ident">request</span>);
 
         <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="ident">request</span>
             .<span class="ident">uri</span>
             .<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">Uri</span><span class="op">&gt;</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_err</span><span class="op">|</span> <span class="ident">ProcessingError</span>::<span class="ident">InvalidUri</span>)<span class="question-mark">?</span>;
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_err</span><span class="op">|</span> <span class="ident">ProcessingError::InvalidUri</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Check that the client is allowed to handle the incoming request.</span>
         <span class="self">self</span>.<span class="ident">validate_uri</span>(<span class="kw-2">&amp;</span><span class="ident">uri</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hyper_request_builder</span> <span class="op">=</span> <span class="ident">hyper</span>::<span class="ident">Request</span>::<span class="ident">builder</span>()
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hyper_request_builder</span> <span class="op">=</span> <span class="ident">hyper::Request::builder</span>()
             .<span class="ident">method</span>(<span class="ident">request</span>.<span class="ident">method</span>.<span class="ident">as_str</span>())
             .<span class="ident">uri</span>(<span class="ident">uri</span>);
 
@@ -509,19 +506,19 @@
             }
         }
         <span class="kw">let</span> <span class="ident">hyper_request</span> <span class="op">=</span> <span class="ident">hyper_request_builder</span>
-            .<span class="ident">body</span>(<span class="ident">hyper</span>::<span class="ident">Body</span>::<span class="ident">from</span>(<span class="ident">request</span>.<span class="ident">body</span>))
-            .<span class="ident">map_err</span>(<span class="ident">ProcessingError</span>::<span class="ident">BodyConversionError</span>)<span class="question-mark">?</span>;
+            .<span class="ident">body</span>(<span class="ident">hyper::Body::from</span>(<span class="ident">request</span>.<span class="ident">body</span>))
+            .<span class="ident">map_err</span>(<span class="ident">ProcessingError::BodyConversionError</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Forward the request to the external HTTP service and wait for the response.</span>
         <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">http_client</span>
             .<span class="ident">request</span>(<span class="ident">hyper_request</span>)
-            .<span class="ident">await</span>
-            .<span class="ident">map_err</span>(<span class="ident">ProcessingError</span>::<span class="ident">InterruptedWaitForResponse</span>)<span class="question-mark">?</span>;
+            .<span class="kw">await</span>
+            .<span class="ident">map_err</span>(<span class="ident">ProcessingError::InterruptedWaitForResponse</span>)<span class="question-mark">?</span>;
 
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;HTTP client: Handling the response...&quot;</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response_handler</span> <span class="op">=</span> <span class="ident">ResponseHandler</span>::<span class="ident">new</span>(<span class="ident">runtime</span>.<span class="ident">clone</span>(), <span class="ident">resp</span>, <span class="ident">invocation</span>);
-        <span class="ident">response_handler</span>.<span class="ident">handle</span>().<span class="ident">await</span>
+        <span class="macro">info!</span>(<span class="string">&quot;HTTP client: Handling the response...&quot;</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response_handler</span> <span class="op">=</span> <span class="ident">ResponseHandler::new</span>(<span class="ident">runtime</span>.<span class="ident">clone</span>(), <span class="ident">resp</span>, <span class="ident">invocation</span>);
+        <span class="ident">response_handler</span>.<span class="ident">handle</span>().<span class="kw">await</span>
     }
 
     <span class="doccomment">/// Check that the client is permitted to handle requests to the given URI.</span>
@@ -531,11 +528,11 @@
         <span class="comment">// - the `authority` in the request&#39;s URI is present, and matches the authority of the node.</span>
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">authority</span>.<span class="ident">is_empty</span>() {
             <span class="ident">uri</span>.<span class="ident">scheme</span>()
-                .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">scheme</span><span class="op">|</span> <span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">scheme</span> <span class="op">=</span><span class="op">=</span> <span class="ident">Scheme</span>::<span class="ident">HTTPS</span>)
-                .<span class="ident">ok_or</span>(<span class="ident">ProcessingError</span>::<span class="ident">UnsupportedScheme</span>)<span class="question-mark">?</span>;
+                .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">scheme</span><span class="op">|</span> <span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">scheme</span> <span class="op">=</span><span class="op">=</span> <span class="ident">Scheme::HTTPS</span>)
+                .<span class="ident">ok_or</span>(<span class="ident">ProcessingError::UnsupportedScheme</span>)<span class="question-mark">?</span>;
             <span class="ident">uri</span>.<span class="ident">authority</span>()
                 .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">auth</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">auth</span>.<span class="ident">to_owned</span>() <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">authority</span>)
-                .<span class="ident">ok_or</span>(<span class="ident">ProcessingError</span>::<span class="ident">PermissionDenied</span>)<span class="question-mark">?</span>;
+                .<span class="ident">ok_or</span>(<span class="ident">ProcessingError::PermissionDenied</span>)<span class="question-mark">?</span>;
         }
         <span class="comment">// Otherwise (for empty authority), return OK, as the node is public and can handle any</span>
         <span class="comment">// arbitrary requests.</span>
@@ -545,14 +542,14 @@
 
 <span class="kw">struct</span> <span class="ident">ResponseHandler</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
-    <span class="ident">response</span>: <span class="ident">http</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="ident">hyper</span>::<span class="ident">Body</span><span class="op">&gt;</span>,
+    <span class="ident">response</span>: <span class="ident">http::Response</span><span class="op">&lt;</span><span class="ident">hyper::Body</span><span class="op">&gt;</span>,
     <span class="ident">invocation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Invocation</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ResponseHandler</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">runtime</span>: <span class="ident">RuntimeProxy</span>,
-        <span class="ident">response</span>: <span class="ident">http</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="ident">hyper</span>::<span class="ident">Body</span><span class="op">&gt;</span>,
+        <span class="ident">response</span>: <span class="ident">http::Response</span><span class="op">&lt;</span><span class="ident">hyper::Body</span><span class="op">&gt;</span>,
         <span class="ident">invocation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Invocation</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">ResponseHandler</span> {
@@ -562,21 +559,21 @@
         }
     }
 
-    <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ProcessingError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ProcessingError</span><span class="op">&gt;</span> {
         <span class="comment">// TODO(#1717): Update HTTP client metrics</span>
 
-        <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">HeaderMap</span>::<span class="ident">from</span>(<span class="self">self</span>.<span class="ident">response</span>.<span class="ident">headers</span>().<span class="ident">to_owned</span>()));
+        <span class="kw">let</span> <span class="ident">headers</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">HeaderMap::from</span>(<span class="self">self</span>.<span class="ident">response</span>.<span class="ident">headers</span>().<span class="ident">to_owned</span>()));
         <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">response</span>.<span class="ident">status</span>().<span class="ident">as_u16</span>() <span class="kw">as</span> <span class="ident">i32</span>;
         <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">response</span>.<span class="ident">body_mut</span>();
         <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">to_bytes</span>(<span class="ident">body</span>)
-            .<span class="ident">await</span>
+            .<span class="kw">await</span>
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">bytes</span><span class="op">|</span> <span class="ident">bytes</span>.<span class="ident">to_vec</span>())
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="macro">error</span><span class="macro">!</span>(
+                <span class="macro">error!</span>(
                     <span class="string">&quot;Error when converting the response body into bytes: {:?}&quot;</span>,
                     <span class="ident">err</span>
                 );
-                <span class="ident">ProcessingError</span>::<span class="ident">ResponseHandlingError</span>
+                <span class="ident">ProcessingError::ResponseHandlingError</span>
             })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">HttpResponse</span> {
@@ -586,25 +583,25 @@
         };
 
         <span class="comment">// Send the response back to the invocation channel.</span>
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sending the HTTP response: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">response</span>);
+        <span class="macro">debug!</span>(<span class="string">&quot;Sending the HTTP response: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">response</span>);
         <span class="self">self</span>.<span class="ident">invocation</span>
             .<span class="ident">send_response</span>(<span class="ident">response</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">runtime</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="macro">error</span><span class="macro">!</span>(
+                <span class="macro">error!</span>(
                     <span class="string">&quot;Couldn&#39;t send the HTTP response to the invocation: {:?}&quot;</span>,
                     <span class="ident">error</span>
                 );
-                <span class="ident">ProcessingError</span>::<span class="ident">ResponseHandlingError</span>
+                <span class="ident">ProcessingError::ResponseHandlingError</span>
             })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="kw">fn</span> <span class="ident">create_async_runtime</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span> {
+<span class="kw">fn</span> <span class="ident">create_async_runtime</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">tokio::runtime::Runtime</span> {
     <span class="comment">// Use simple scheduler that runs all tasks on the current-thread.</span>
     <span class="comment">// https://docs.rs/tokio/1.5.0/tokio/runtime/index.html#current-thread-scheduler</span>
-    <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Builder</span>::<span class="ident">new_current_thread</span>()
+    <span class="ident">tokio::runtime::Builder::new_current_thread</span>()
         <span class="comment">// Enables the I/O driver.</span>
         <span class="comment">// Necessary for using net, process, signal, and I/O types on the Tokio runtime.</span>
         .<span class="ident">enable_io</span>()
@@ -616,23 +613,25 @@
 }
 
 <span class="doccomment">/// Creates a client that allows `Uri`s with either the `HTTP` or the `HTTPS` scheme.</span>
-<span class="kw">fn</span> <span class="ident">create_client</span>(<span class="ident">root_ca</span>: <span class="kw">crate</span>::<span class="ident">tls</span>::<span class="ident">Certificate</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HyperClient</span> {
+<span class="kw">fn</span> <span class="ident">create_client</span>(<span class="ident">root_ca</span>: <span class="ident"><span class="kw">crate</span>::tls::Certificate</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HyperClient</span> {
     <span class="comment">// Build an HTTP connector which supports HTTPS too.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">http</span> <span class="op">=</span> <span class="ident">hyper</span>::<span class="ident">client</span>::<span class="ident">HttpConnector</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">http</span> <span class="op">=</span> <span class="ident">hyper::client::HttpConnector::new</span>();
     <span class="comment">// Allow the client to handle both HTTP and HTTPS requests.</span>
     <span class="ident">http</span>.<span class="ident">enforce_http</span>(<span class="bool-val">false</span>);
 
-    <span class="kw">let</span> <span class="ident">ca_file</span> <span class="op">=</span> <span class="ident">io</span>::<span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">root_ca</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ca_reader</span> <span class="op">=</span> <span class="ident">io</span>::<span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">ca_file</span>);
+    <span class="kw">let</span> <span class="ident">ca_file</span> <span class="op">=</span> <span class="ident">io::Cursor::new</span>(<span class="ident">root_ca</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ca_reader</span> <span class="op">=</span> <span class="ident">io::BufReader::new</span>(<span class="ident">ca_file</span>);
 
     <span class="comment">// Build a TLS client, using the custom CA store for lookups.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tls</span> <span class="op">=</span> <span class="ident">rustls</span>::<span class="ident">ClientConfig</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tls</span> <span class="op">=</span> <span class="ident">rustls::ClientConfig::new</span>();
     <span class="ident">tls</span>.<span class="ident">root_store</span>
         .<span class="ident">add_pem_file</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ca_reader</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;failed to load custom CA store&quot;</span>);
     <span class="comment">// Join the above part into an HTTPS connector.</span>
-    <span class="kw">let</span> <span class="ident">https</span> <span class="op">=</span> <span class="ident">hyper_rustls</span>::<span class="ident">HttpsConnector</span>::<span class="ident">from</span>((<span class="ident">http</span>, <span class="ident">tls</span>));
-    <span class="ident">hyper</span>::<span class="ident">client</span>::<span class="ident">Client</span>::<span class="ident">builder</span>().<span class="ident">build</span>(<span class="ident">https</span>)
+    <span class="kw">let</span> <span class="ident">https</span> <span class="op">=</span> <span class="ident">hyper_rustls::HttpsConnector::from</span>((<span class="ident">http</span>, <span class="ident">tls</span>));
+    <span class="ident">hyper::client::Client::builder</span>().<span class="ident">build</span>(<span class="ident">https</span>)
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../";window.currentCrate = "oak_runtime";</script><script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script><script defer src="../../../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="oak_runtime" data-search-index-js="../../../../search-index.js" data-search-js="../../../../search.js"></div>
+    <script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script>
+</body></html>

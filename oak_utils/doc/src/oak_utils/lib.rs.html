@@ -1,7 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
-<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../oak_utils/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><span class="help-button">?</span>
-                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../oak_utils/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -434,7 +431,7 @@
 <span id="431">431</span>
 <span id="432">432</span>
 <span id="433">433</span>
-</pre><div class="example-wrap"><pre class="rust ">
+</pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
 <span class="comment">//</span>
@@ -460,10 +457,10 @@
 <span class="doccomment">/// instance the `Empty` protobuf is represented as `()` by prost, which is not a valid identifier.</span>
 <span class="kw">fn</span> <span class="ident">type_ident</span>(<span class="ident">type_</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
     <span class="kw">if</span> <span class="ident">type_</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;()&quot;</span> {
-        <span class="macro">quote</span><span class="macro">!</span>(())
+        <span class="macro">quote!</span>(())
     } <span class="kw">else</span> {
-        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">type_</span>);
-        <span class="macro">quote</span><span class="macro">!</span>(#<span class="ident">t</span>)
+        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">type_</span>);
+        <span class="macro">quote!</span>(#<span class="ident">t</span>)
     }
 }
 
@@ -471,83 +468,83 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// When compiling from within the `oak` crate we need to use `crate` to refer to itself.</span>
 <span class="kw">fn</span> <span class="ident">oak_package</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
-    <span class="kw">if</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;CARGO_PKG_NAME&quot;</span>).<span class="ident">unwrap</span>() <span class="op">=</span><span class="op">=</span> <span class="string">&quot;oak&quot;</span> {
-        <span class="macro">quote</span><span class="macro">!</span>(<span class="kw">crate</span>)
+    <span class="kw">if</span> <span class="ident">std::env::var</span>(<span class="string">&quot;CARGO_PKG_NAME&quot;</span>).<span class="ident">unwrap</span>() <span class="op">=</span><span class="op">=</span> <span class="string">&quot;oak&quot;</span> {
+        <span class="macro">quote!</span>(<span class="kw">crate</span>)
     } <span class="kw">else</span> {
-        <span class="macro">quote</span><span class="macro">!</span>(::<span class="ident">oak</span>)
+        <span class="macro">quote!</span>(<span class="ident">::oak</span>)
     }
 }
 
 <span class="kw">struct</span> <span class="ident">OakServiceGenerator</span>;
 
-<span class="kw">impl</span> <span class="ident">prost_build</span>::<span class="ident">ServiceGenerator</span> <span class="kw">for</span> <span class="ident">OakServiceGenerator</span> {
-    <span class="kw">fn</span> <span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">service</span>: <span class="ident">prost_build</span>::<span class="ident">Service</span>, <span class="ident">out</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>) {
+<span class="kw">impl</span> <span class="ident">prost_build::ServiceGenerator</span> <span class="kw">for</span> <span class="ident">OakServiceGenerator</span> {
+    <span class="kw">fn</span> <span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">service</span>: <span class="ident">prost_build::Service</span>, <span class="ident">out</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std::string::String</span>) {
         <span class="kw">let</span> <span class="ident">oak_package</span> <span class="op">=</span> <span class="ident">oak_package</span>();
 
-        <span class="kw">let</span> <span class="ident">service_name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>);
+        <span class="kw">let</span> <span class="ident">service_name</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>);
         <span class="kw">let</span> <span class="ident">service_methods</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">methods</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">method</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">name</span>);
+            <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">name</span>);
             <span class="kw">let</span> <span class="ident">input_type</span> <span class="op">=</span> <span class="ident">type_ident</span>(<span class="kw-2">&amp;</span><span class="ident">method</span>.<span class="ident">input_type</span>);
             <span class="kw">let</span> <span class="ident">output_type</span> <span class="op">=</span> <span class="ident">type_ident</span>(<span class="kw-2">&amp;</span><span class="ident">method</span>.<span class="ident">output_type</span>);
             <span class="comment">// TODO(#97): Better client-side streaming.</span>
             <span class="kw">match</span> (<span class="ident">method</span>.<span class="ident">client_streaming</span>, <span class="ident">method</span>.<span class="ident">server_streaming</span>) {
-                (<span class="bool-val">false</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span>
+                (<span class="bool-val">false</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span> {
+                    <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package::grpc::Result</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span>
                 },
-                (<span class="bool-val">false</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>, <span class="ident">writer</span>: #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ChannelResponseWriter</span>)
+                (<span class="bool-val">false</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span> {
+                    <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>, <span class="ident">writer</span>: #<span class="ident">oak_package::grpc::ChannelResponseWriter</span>)
                 },
-                (<span class="bool-val">true</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">reqs</span>: <span class="ident">Vec</span><span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span>
+                (<span class="bool-val">true</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span> {
+                    <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">reqs</span>: <span class="ident">Vec</span><span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package::grpc::Result</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span>
                 },
-                (<span class="bool-val">true</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">reqs</span>: <span class="ident">Vec</span><span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>, <span class="ident">writer</span>: #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ChannelResponseWriter</span>)
+                (<span class="bool-val">true</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span> {
+                    <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">reqs</span>: <span class="ident">Vec</span><span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>, <span class="ident">writer</span>: #<span class="ident">oak_package::grpc::ChannelResponseWriter</span>)
                 },
             }
         });
 
-        <span class="kw">let</span> <span class="ident">dispatcher_name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}Dispatcher&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>);
+        <span class="kw">let</span> <span class="ident">dispatcher_name</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}Dispatcher&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>);
         <span class="kw">let</span> <span class="ident">dispatcher_invocable_methods</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">methods</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">method</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">name</span>);
-            <span class="kw">let</span> <span class="ident">method_name_string</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">name</span>);
+            <span class="kw">let</span> <span class="ident">method_name_string</span> <span class="op">=</span> <span class="macro">format!</span>(
                 <span class="string">&quot;/{}.{}/{}&quot;</span>,
                 <span class="ident">service</span>.<span class="ident">package</span>, <span class="ident">service</span>.<span class="ident">proto_name</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>
             );
             <span class="comment">// Figure out which `ServerMethod` variant applies.</span>
             <span class="kw">let</span> <span class="ident">invocable_method</span> <span class="op">=</span> <span class="kw">match</span> (<span class="ident">method</span>.<span class="ident">client_streaming</span>, <span class="ident">method</span>.<span class="ident">server_streaming</span>) {
-                (<span class="bool-val">false</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ServerMethod</span>::<span class="ident">UnaryUnary</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
+                (<span class="bool-val">false</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span> {
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package::grpc::ServerMethod::UnaryUnary</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
                 },
-                (<span class="bool-val">false</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
+                (<span class="bool-val">false</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span> {
                     <span class="comment">// The response type is not actually used in the method signature, so we need to manually specify a placeholder.</span>
-                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ServerMethod</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, ()<span class="op">&gt;</span>::<span class="ident">UnaryStream</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package::grpc::ServerMethod</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, ()<span class="op">&gt;</span><span class="ident">::UnaryStream</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
                 },
-                (<span class="bool-val">true</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
-                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ServerMethod</span>::<span class="ident">StreamUnary</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
+                (<span class="bool-val">true</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span> {
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package::grpc::ServerMethod::StreamUnary</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
                 },
-                (<span class="bool-val">true</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote</span><span class="macro">!</span> {
+                (<span class="bool-val">true</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span> {
                     <span class="comment">// The response type is not actually used in the method signature, so we need to manually specify a placeholder.</span>
-                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">ServerMethod</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, ()<span class="op">&gt;</span>::<span class="ident">StreamStream</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>#<span class="ident">oak_package::grpc::ServerMethod</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, ()<span class="op">&gt;</span><span class="ident">::StreamStream</span>(<span class="ident">T</span>::#<span class="ident">method_name</span>))
                 },
             };
-            <span class="macro">quote</span><span class="macro">!</span> {
+            <span class="macro">quote!</span> {
                 #<span class="ident">method_name_string</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="ident">invocable_method</span>
             }
         });
 
-        <span class="kw">let</span> <span class="ident">client_name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}Client&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>);
+        <span class="kw">let</span> <span class="ident">client_name</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}Client&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>);
         <span class="kw">let</span> <span class="ident">client_methods</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">methods</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">method</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">name</span>);
+            <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">name</span>);
             <span class="kw">let</span> <span class="ident">input_type</span> <span class="op">=</span> <span class="ident">type_ident</span>(<span class="kw-2">&amp;</span><span class="ident">method</span>.<span class="ident">input_type</span>);
             <span class="kw">let</span> <span class="ident">output_type</span> <span class="op">=</span> <span class="ident">type_ident</span>(<span class="kw-2">&amp;</span><span class="ident">method</span>.<span class="ident">output_type</span>);
-            <span class="kw">let</span> <span class="ident">method_name_string</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;/{}.{}/{}&quot;</span>, <span class="ident">service</span>.<span class="ident">package</span>, <span class="ident">service</span>.<span class="ident">proto_name</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>);
+            <span class="kw">let</span> <span class="ident">method_name_string</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;/{}.{}/{}&quot;</span>, <span class="ident">service</span>.<span class="ident">package</span>, <span class="ident">service</span>.<span class="ident">proto_name</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>);
             <span class="comment">// TODO(#97): Support client-side streaming.</span>
-            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">match_bool</span>)]</span>
+            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::match_bool</span>)]</span>
             <span class="kw">match</span> <span class="ident">method</span>.<span class="ident">server_streaming</span> {
                 <span class="bool-val">false</span> <span class="op">=</span><span class="op">&gt;</span>
-                    <span class="macro">quote</span><span class="macro">!</span> {
-                        <span class="kw">pub</span> <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span> {
-                            #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method</span>(#<span class="ident">method_name_string</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)
+                    <span class="macro">quote!</span> {
+                        <span class="kw">pub</span> <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package::grpc::Result</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span> {
+                            #<span class="ident">oak_package::grpc::invoke_grpc_method</span>(#<span class="ident">method_name_string</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)
                         }
                     },
                 <span class="bool-val">true</span> <span class="op">=</span><span class="op">&gt;</span>
@@ -555,14 +552,14 @@
                     <span class="comment">//   format!(&quot;oak::io::Receiver&lt;{}&gt;&quot;, self.output_message());</span>
                     <span class="comment">// This is not possible with the current io::Receiver&#39;s direct use of</span>
                     <span class="comment">// the underlying handle.</span>
-                    <span class="macro">quote</span><span class="macro">!</span> {
-                        <span class="kw">pub</span> <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>#<span class="ident">oak_package</span>::<span class="ident">io</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">GrpcResponse</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-                            #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">invoke_grpc_method_stream</span>(#<span class="ident">method_name_string</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)
+                    <span class="macro">quote!</span> {
+                        <span class="kw">pub</span> <span class="kw">fn</span> #<span class="ident">method_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: #<span class="ident">input_type</span>) <span class="op">-</span><span class="op">&gt;</span> #<span class="ident">oak_package::grpc::Result</span><span class="op">&lt;</span>#<span class="ident">oak_package::io::Receiver</span><span class="op">&lt;</span>#<span class="ident">oak_package::grpc::GrpcResponse</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+                            #<span class="ident">oak_package::grpc::invoke_grpc_method_stream</span>(#<span class="ident">method_name_string</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)
                         }
                     },
             }
         });
-        <span class="kw">let</span> <span class="ident">gen</span> <span class="op">=</span> <span class="macro">quote</span><span class="macro">!</span> {
+        <span class="kw">let</span> <span class="ident">gen</span> <span class="op">=</span> <span class="macro">quote!</span> {
             <span class="kw">pub</span> <span class="kw">trait</span> #<span class="ident">service_name</span> {
                 #(#<span class="ident">service_methods</span>;)<span class="op">*</span>
             }
@@ -572,7 +569,7 @@
 
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
             <span class="kw">impl</span> #<span class="ident">dispatcher_name</span> {
-                <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server_method</span><span class="op">&lt;</span><span class="ident">T</span>: #<span class="ident">service_name</span><span class="op">&gt;</span>(<span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">dyn</span> #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">Invocable</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+                <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server_method</span><span class="op">&lt;</span><span class="ident">T</span>: #<span class="ident">service_name</span><span class="op">&gt;</span>(<span class="ident">method_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw">dyn</span> #<span class="ident">oak_package::grpc::Invocable</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
                     <span class="kw">match</span> <span class="ident">method_name</span> {
                         #(#<span class="ident">dispatcher_invocable_methods</span>,)<span class="op">*</span>
                         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>
@@ -581,7 +578,7 @@
             }
 
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-            <span class="kw">pub</span> <span class="kw">struct</span> #<span class="ident">client_name</span>(<span class="kw">pub</span> #<span class="ident">oak_package</span>::<span class="ident">io</span>::<span class="ident">Sender</span><span class="op">&lt;</span>#<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">Invocation</span><span class="op">&gt;</span>);
+            <span class="kw">pub</span> <span class="kw">struct</span> #<span class="ident">client_name</span>(<span class="kw">pub</span> #<span class="ident">oak_package::io::Sender</span><span class="op">&lt;</span>#<span class="ident">oak_package::grpc::Invocation</span><span class="op">&gt;</span>);
 
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
             <span class="kw">impl</span> #<span class="ident">client_name</span> {
@@ -591,61 +588,61 @@
         <span class="ident">out</span>.<span class="ident">push</span>(<span class="string">&#39;\n&#39;</span>);
         <span class="comment">// TODO(#832): Currently the generated output is squashed on a single line; consider passing</span>
         <span class="comment">// it through rustfmt, if it does not increase compile time too much.</span>
-        <span class="ident">out</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">gen</span>));
+        <span class="ident">out</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">gen</span>));
         <span class="ident">out</span>.<span class="ident">push</span>(<span class="string">&#39;\n&#39;</span>);
     }
 }
 
 <span class="kw">struct</span> <span class="ident">AsyncServiceGenerator</span>;
 
-<span class="kw">impl</span> <span class="ident">prost_build</span>::<span class="ident">ServiceGenerator</span> <span class="kw">for</span> <span class="ident">AsyncServiceGenerator</span> {
-    <span class="kw">fn</span> <span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">service</span>: <span class="ident">prost_build</span>::<span class="ident">Service</span>, <span class="ident">out</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">String</span>) {
+<span class="kw">impl</span> <span class="ident">prost_build::ServiceGenerator</span> <span class="kw">for</span> <span class="ident">AsyncServiceGenerator</span> {
+    <span class="kw">fn</span> <span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">service</span>: <span class="ident">prost_build::Service</span>, <span class="ident">out</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">String</span>) {
         <span class="kw">let</span> <span class="ident">oak_package</span> <span class="op">=</span> <span class="ident">oak_package</span>();
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>);
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">service</span>.<span class="ident">name</span>);
         <span class="kw">let</span> <span class="ident">service_enum</span> <span class="op">=</span> <span class="ident">generate_service_enum</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="ident">service</span>);
 
         <span class="kw">let</span> <span class="ident">method_matchers</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">methods</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">method</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>);
-            <span class="kw">let</span> <span class="ident">variant</span> <span class="op">=</span> <span class="macro">quote</span><span class="macro">!</span>(#<span class="ident">name</span>::#<span class="ident">method_name</span>);
+            <span class="kw">let</span> <span class="ident">method_name</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>);
+            <span class="kw">let</span> <span class="ident">variant</span> <span class="op">=</span> <span class="macro">quote!</span>(#<span class="ident">name</span>::#<span class="ident">method_name</span>);
             <span class="kw">let</span> <span class="ident">input_type</span> <span class="op">=</span> <span class="ident">type_ident</span>(<span class="kw-2">&amp;</span><span class="ident">method</span>.<span class="ident">input_type</span>);
             <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">method</span>.<span class="ident">client_streaming</span> {
-                <span class="macro">quote</span><span class="macro">!</span>(<span class="ident">requests</span>.<span class="ident">into_type</span>::<span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>())
+                <span class="macro">quote!</span>(<span class="ident">requests</span>.<span class="ident">into_type</span>::<span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>())
             } <span class="kw">else</span> {
-                <span class="macro">quote</span><span class="macro">!</span>(<span class="ident">requests</span>.<span class="ident">into_type</span>::<span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>().<span class="ident">first</span>().<span class="ident">await</span><span class="question-mark">?</span>)
+                <span class="macro">quote!</span>(<span class="ident">requests</span>.<span class="ident">into_type</span>::<span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>().<span class="ident">first</span>().<span class="kw">await</span><span class="question-mark">?</span>)
             };
             <span class="kw">let</span> <span class="ident">writer</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">method</span>.<span class="ident">server_streaming</span> {
-                <span class="macro">quote</span><span class="macro">!</span>(<span class="ident">MultiWriter</span>)
+                <span class="macro">quote!</span>(<span class="ident">MultiWriter</span>)
             } <span class="kw">else</span> {
-                <span class="macro">quote</span><span class="macro">!</span>(<span class="ident">OneshotWriter</span>)
+                <span class="macro">quote!</span>(<span class="ident">OneshotWriter</span>)
             };
-            <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="macro">quote</span><span class="macro">!</span>(<span class="ident">oak_async</span>::<span class="ident">grpc</span>::#<span class="ident">writer</span>::<span class="ident">new</span>(<span class="ident">response_writer</span>));
-            <span class="kw">let</span> <span class="ident">return_expr</span> <span class="op">=</span> <span class="macro">quote</span><span class="macro">!</span>(#<span class="ident">variant</span>(#<span class="ident">input</span>, #<span class="ident">output</span>));
-            <span class="kw">let</span> <span class="ident">method_name_string</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="ident">oak_async::grpc</span>::#<span class="ident">writer::new</span>(<span class="ident">response_writer</span>));
+            <span class="kw">let</span> <span class="ident">return_expr</span> <span class="op">=</span> <span class="macro">quote!</span>(#<span class="ident">variant</span>(#<span class="ident">input</span>, #<span class="ident">output</span>));
+            <span class="kw">let</span> <span class="ident">method_name_string</span> <span class="op">=</span> <span class="macro">format!</span>(
                 <span class="string">&quot;/{}.{}/{}&quot;</span>,
                 <span class="ident">service</span>.<span class="ident">package</span>, <span class="ident">service</span>.<span class="ident">proto_name</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>
             );
-            <span class="macro">quote</span><span class="macro">!</span> {
+            <span class="macro">quote!</span> {
                 #<span class="ident">method_name_string</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(#<span class="ident">return_expr</span>),
             }
         });
-        <span class="kw">let</span> <span class="ident">service_enum_impl</span> <span class="op">=</span> <span class="macro">quote</span><span class="macro">!</span> {
+        <span class="kw">let</span> <span class="ident">service_enum_impl</span> <span class="op">=</span> <span class="macro">quote!</span> {
             <span class="kw">impl</span> #<span class="ident">name</span> {
                 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-                <span class="kw">pub</span> <span class="ident">async</span> <span class="kw">fn</span> <span class="ident">from_invocation</span>(<span class="ident">invocation</span>: #<span class="ident">oak_package</span>::<span class="ident">grpc</span>::<span class="ident">Invocation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>#<span class="ident">name</span>, #<span class="ident">oak_package</span>::<span class="ident">OakError</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> ::<span class="ident">oak_async</span>::<span class="ident">grpc</span>::<span class="ident">DecomposedInvocation</span> { <span class="ident">method</span>, <span class="ident">requests</span>, <span class="ident">response_writer</span> } <span class="op">=</span>
-                    ::<span class="ident">oak_async</span>::<span class="ident">grpc</span>::<span class="ident">DecomposedInvocation</span>::<span class="ident">from</span>(<span class="ident">invocation</span>).<span class="ident">await</span><span class="question-mark">?</span>;
+                <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">from_invocation</span>(<span class="ident">invocation</span>: #<span class="ident">oak_package::grpc::Invocation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>#<span class="ident">name</span>, #<span class="ident">oak_package::OakError</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="ident">::oak_async::grpc::DecomposedInvocation</span> { <span class="ident">method</span>, <span class="ident">requests</span>, <span class="ident">response_writer</span> } <span class="op">=</span>
+                    <span class="ident">::oak_async::grpc::DecomposedInvocation::from</span>(<span class="ident">invocation</span>).<span class="kw">await</span><span class="question-mark">?</span>;
                     <span class="kw">match</span> <span class="ident">method</span>.<span class="ident">as_str</span>() {
                         #(#<span class="ident">method_matchers</span>)<span class="op">*</span>
                         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                            ::<span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;unknown method name: {}&quot;</span>, <span class="ident">method</span>);
-                            <span class="prelude-val">Err</span>(#<span class="ident">oak_package</span>::<span class="ident">OakStatus</span>::<span class="ident">ErrInvalidArgs</span>.<span class="ident">into</span>())
+                            <span class="macro">::log::error!</span>(<span class="string">&quot;unknown method name: {}&quot;</span>, <span class="ident">method</span>);
+                            <span class="prelude-val">Err</span>(#<span class="ident">oak_package::OakStatus::ErrInvalidArgs</span>.<span class="ident">into</span>())
                         }
                     }
                 }
             }
         };
 
-        <span class="kw">let</span> <span class="ident">gen</span> <span class="op">=</span> <span class="macro">quote</span><span class="macro">!</span> {
+        <span class="kw">let</span> <span class="ident">gen</span> <span class="op">=</span> <span class="macro">quote!</span> {
             <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">asynchronous</span> {
                 <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
                 #<span class="ident">service_enum</span>
@@ -653,7 +650,7 @@
                 #<span class="ident">service_enum_impl</span>
             }
         };
-        <span class="ident">out</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">gen</span>));
+        <span class="ident">out</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">gen</span>));
         <span class="ident">out</span>.<span class="ident">push</span>(<span class="string">&#39;\n&#39;</span>);
 
         <span class="comment">// Eventually the sync code generation will be removed, but until then we also generate that</span>
@@ -662,25 +659,25 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">generate_service_enum</span>(<span class="ident">enum_name</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>, <span class="ident">service</span>: <span class="kw-2">&amp;</span><span class="ident">prost_build</span>::<span class="ident">Service</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+<span class="kw">fn</span> <span class="ident">generate_service_enum</span>(<span class="ident">enum_name</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>, <span class="ident">service</span>: <span class="kw-2">&amp;</span><span class="ident">prost_build::Service</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
     <span class="kw">let</span> <span class="ident">variants</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">methods</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">method</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="ident">variant</span> <span class="op">=</span> <span class="macro">format_ident</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>);
+        <span class="kw">let</span> <span class="ident">variant</span> <span class="op">=</span> <span class="macro">format_ident!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">method</span>.<span class="ident">proto_name</span>);
         <span class="kw">let</span> <span class="ident">input_type</span> <span class="op">=</span> <span class="ident">type_ident</span>(<span class="kw-2">&amp;</span><span class="ident">method</span>.<span class="ident">input_type</span>);
         <span class="kw">let</span> <span class="ident">output_type</span> <span class="op">=</span> <span class="ident">type_ident</span>(<span class="kw-2">&amp;</span><span class="ident">method</span>.<span class="ident">output_type</span>);
         <span class="kw">let</span> <span class="ident">input_type</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">method</span>.<span class="ident">client_streaming</span> {
-            <span class="macro">quote</span><span class="macro">!</span>(::<span class="ident">oak_async</span>::<span class="ident">ChannelReadStream</span><span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>)
+            <span class="macro">quote!</span>(<span class="ident">::oak_async::ChannelReadStream</span><span class="op">&lt;</span>#<span class="ident">input_type</span><span class="op">&gt;</span>)
         } <span class="kw">else</span> {
-            <span class="macro">quote</span><span class="macro">!</span>(#<span class="ident">input_type</span>)
+            <span class="macro">quote!</span>(#<span class="ident">input_type</span>)
         };
         <span class="kw">let</span> <span class="ident">output_type</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">method</span>.<span class="ident">server_streaming</span> {
-            <span class="macro">quote</span><span class="macro">!</span>(::<span class="ident">oak_async</span>::<span class="ident">grpc</span>::<span class="ident">MultiWriter</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span>)
+            <span class="macro">quote!</span>(<span class="ident">::oak_async::grpc::MultiWriter</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span>)
         } <span class="kw">else</span> {
-            <span class="macro">quote</span><span class="macro">!</span>(::<span class="ident">oak_async</span>::<span class="ident">grpc</span>::<span class="ident">OneshotWriter</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span>)
+            <span class="macro">quote!</span>(<span class="ident">::oak_async::grpc::OneshotWriter</span><span class="op">&lt;</span>#<span class="ident">output_type</span><span class="op">&gt;</span>)
         };
-        <span class="macro">quote</span><span class="macro">!</span>(#<span class="ident">variant</span>(#<span class="ident">input_type</span>, #<span class="ident">output_type</span>))
+        <span class="macro">quote!</span>(#<span class="ident">variant</span>(#<span class="ident">input_type</span>, #<span class="ident">output_type</span>))
     });
 
-    <span class="macro">quote</span><span class="macro">!</span> {
+    <span class="macro">quote!</span> {
         <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
         <span class="kw">pub</span> <span class="kw">enum</span> #<span class="ident">enum_name</span> {
             #(#<span class="ident">variants</span>,)<span class="op">*</span>
@@ -715,7 +712,7 @@
     <span class="doccomment">/// This feature is currently experimental.</span>
     <span class="kw">pub</span> <span class="ident">experimental_async</span>: <span class="ident">bool</span>,
 
-    <span class="kw">pub</span> <span class="ident">out_dir_override</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">out_dir_override</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std::path::PathBuf</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// The default option values.</span>
@@ -740,31 +737,31 @@
 <span class="doccomment">/// relative to this path.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_protos</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>(<span class="ident">inputs</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>], <span class="ident">repo_root</span>: <span class="ident">P</span>)
 <span class="kw">where</span>
-    <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span><span class="op">&gt;</span>,
+    <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std::path::Path</span><span class="op">&gt;</span>,
 {
-    <span class="ident">compile_protos_with_options</span>(<span class="ident">inputs</span>, <span class="ident">repo_root</span>, <span class="ident">ProtoOptions</span>::<span class="ident">default</span>());
+    <span class="ident">compile_protos_with_options</span>(<span class="ident">inputs</span>, <span class="ident">repo_root</span>, <span class="ident">ProtoOptions::default</span>());
 }
 
 <span class="doccomment">/// Like `compile_protos`, but allows for configuring options through `ProtoOptions`.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_protos_with_options</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>(<span class="ident">inputs</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>], <span class="ident">repo_root</span>: <span class="ident">P</span>, <span class="ident">options</span>: <span class="ident">ProtoOptions</span>)
 <span class="kw">where</span>
-    <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span><span class="op">&gt;</span>,
+    <span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">std::path::Path</span><span class="op">&gt;</span>,
 {
     <span class="ident">set_protoc_env_if_unset</span>();
 
     <span class="kw">for</span> <span class="ident">input</span> <span class="kw">in</span> <span class="ident">inputs</span> {
         <span class="comment">// Tell cargo to rerun this build script if the proto file has changed.</span>
         <span class="comment">// https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath</span>
-        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, <span class="ident">input</span>.<span class="ident">as_ref</span>().<span class="ident">display</span>());
+        <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, <span class="ident">input</span>.<span class="ident">as_ref</span>().<span class="ident">display</span>());
     }
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prost_config</span> <span class="op">=</span> <span class="ident">prost_build</span>::<span class="ident">Config</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prost_config</span> <span class="op">=</span> <span class="ident">prost_build::Config::new</span>();
     <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">generate_services</span> {
         <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">experimental_async</span> {
             <span class="comment">// AsyncServiceGenerator calls OakServiceGenerator, so the sync code is either way.</span>
-            <span class="ident">prost_config</span>.<span class="ident">service_generator</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">AsyncServiceGenerator</span>));
+            <span class="ident">prost_config</span>.<span class="ident">service_generator</span>(<span class="ident">Box::new</span>(<span class="ident">AsyncServiceGenerator</span>));
         } <span class="kw">else</span> {
-            <span class="ident">prost_config</span>.<span class="ident">service_generator</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">OakServiceGenerator</span>));
+            <span class="ident">prost_config</span>.<span class="ident">service_generator</span>(<span class="ident">Box::new</span>(<span class="ident">OakServiceGenerator</span>));
         }
     }
     <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">derive_handle_visit</span> {
@@ -833,12 +830,12 @@
     <span class="ident">proto_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">file_paths</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>],
     <span class="ident">options</span>: <span class="ident">CodegenOptions</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std::io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">set_protoc_env_if_unset</span>();
 
     <span class="comment">// TODO(#1093): Move all proto generation to a common crate.</span>
-    <span class="kw">let</span> <span class="ident">proto_path</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span>::<span class="ident">new</span>(<span class="ident">proto_path</span>);
-    <span class="kw">let</span> <span class="ident">file_paths</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">file_paths</span>
+    <span class="kw">let</span> <span class="ident">proto_path</span> <span class="op">=</span> <span class="ident">std::path::Path::new</span>(<span class="ident">proto_path</span>);
+    <span class="kw">let</span> <span class="ident">file_paths</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">std::path::PathBuf</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">file_paths</span>
         .<span class="ident">iter</span>()
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">file_path</span><span class="op">|</span> <span class="ident">proto_path</span>.<span class="ident">join</span>(<span class="ident">file_path</span>))
         .<span class="ident">collect</span>();
@@ -846,12 +843,12 @@
     <span class="comment">// Tell cargo to rerun this build script if the proto file has changed.</span>
     <span class="comment">// https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath</span>
     <span class="kw">for</span> <span class="ident">file_path</span> <span class="kw">in</span> <span class="ident">file_paths</span>.<span class="ident">iter</span>() {
-        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, <span class="ident">file_path</span>.<span class="ident">display</span>());
+        <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, <span class="ident">file_path</span>.<span class="ident">display</span>());
     }
 
     <span class="comment">// Generate the normal (non-Oak) server and client code for the gRPC service,</span>
     <span class="comment">// along with the Rust types corresponding to the message definitions.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">tonic_build</span>::<span class="ident">configure</span>()
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">tonic_build::configure</span>()
         .<span class="ident">build_client</span>(<span class="ident">options</span>.<span class="ident">build_client</span>)
         .<span class="ident">build_server</span>(<span class="ident">options</span>.<span class="ident">build_server</span>);
 
@@ -862,11 +859,13 @@
 }
 
 <span class="kw">fn</span> <span class="ident">set_protoc_env_if_unset</span>() {
-    <span class="kw">if</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;PROTOC&quot;</span>).<span class="ident">is_err</span>() {
+    <span class="kw">if</span> <span class="ident">std::env::var</span>(<span class="string">&quot;PROTOC&quot;</span>).<span class="ident">is_err</span>() {
         <span class="comment">// Use the system protoc if no override is set, so prost-build does not try to use the</span>
         <span class="comment">// bundled one that we remove as part of the vendoring process.</span>
-        <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">set_var</span>(<span class="string">&quot;PROTOC&quot;</span>, <span class="string">&quot;protoc&quot;</span>);
+        <span class="ident">std::env::set_var</span>(<span class="string">&quot;PROTOC&quot;</span>, <span class="string">&quot;protoc&quot;</span>);
     }
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "oak_utils";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_utils" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
+</body></html>
