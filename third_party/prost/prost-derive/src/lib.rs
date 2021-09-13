@@ -1,12 +1,12 @@
 #![doc(html_root_url = "https://docs.rs/prost-derive/0.7.0")]
 // The `quote!` macro requires deep recursion.
 #![recursion_limit = "4096"]
+#![feature(iter_intersperse)]
 
 extern crate alloc;
 extern crate proc_macro;
 
 use anyhow::{bail, Error};
-use itertools::Itertools;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
