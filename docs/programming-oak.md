@@ -133,7 +133,7 @@ impl Translator for Handler {
                         "Input language unrecognized",
                     ));
                 }
-            }
+            },
         };
         info!("Translation '{}'", rsp.translated_text);
         Ok(rsp)
