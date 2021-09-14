@@ -40,14 +40,14 @@ public class Message {
    * Size (in bytes) of the prefix that describes the size of a serialized array.
    * Prefix is encoded with Little-Endian.
    */
-  public static final int SERIALIZATION_PREFIX_SIZE_BYTES = 8;
+  public static final int ARRAY_SERIALIZATION_PREFIX_LENGTH = 8;
 
   /** Size (in bytes) of a random array sent in messages to prevent replay attacks. */
   public static final int REPLAY_PROTECTION_ARRAY_LENGTH = 32;
-  public static final int EPHEMERAL_PUBLIC_KEY_SIZE_BYTES = 32;
+  public static final int EPHEMERAL_PUBLIC_KEY_LENGTH = 32;
   // TODO(#2277): Use OpenSSL signature format (which is 72 bytes).
-  public static final int TRANSCRIPT_SIGNATURE_SIZE_BYTES = 64;
-  public static final int SIGNING_PUBLIC_KEY_SIZE_BYTES = 65;
+  public static final int TRANSCRIPT_SIGNATURE_LENGTH = 64;
+  public static final int SIGNING_PUBLIC_KEY_LENGTH = 65;
 
   /** Initial message that starts Remote Attestation handshake. */
   public static class ClientHello {
@@ -177,13 +177,13 @@ public class Message {
 
       outputStream.writeByte(header);
       outputStream.writeByte(version);
-      writeFixedSizeArray(outputStream, ephemeralPublicKey, EPHEMERAL_PUBLIC_KEY_SIZE_BYTES,
+      writeFixedSizeArray(outputStream, ephemeralPublicKey, EPHEMERAL_PUBLIC_KEY_LENGTH,
           "ephemeral public key");
       writeFixedSizeArray(outputStream, random, REPLAY_PROTECTION_ARRAY_LENGTH, "random value");
-      writeFixedSizeArray(outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_SIZE_BYTES,
+      writeFixedSizeArray(outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_LENGTH,
           "transcript signature");
       writeFixedSizeArray(
-          outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_SIZE_BYTES, "signing public key");
+          outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
       writeVariableSizeArray(outputStream, attestationInfo, "attestation info");
       outputStream.flush();
 
@@ -205,13 +205,13 @@ public class Message {
       }
 
       byte[] ephemeralPublicKey =
-          readFixedSizeArray(inputStream, EPHEMERAL_PUBLIC_KEY_SIZE_BYTES, "ephemeral public key");
+          readFixedSizeArray(inputStream, EPHEMERAL_PUBLIC_KEY_LENGTH, "ephemeral public key");
       byte[] random =
           readFixedSizeArray(inputStream, REPLAY_PROTECTION_ARRAY_LENGTH, "random value");
       byte[] transcriptSignature =
-          readFixedSizeArray(inputStream, TRANSCRIPT_SIGNATURE_SIZE_BYTES, "transcript signature");
+          readFixedSizeArray(inputStream, TRANSCRIPT_SIGNATURE_LENGTH, "transcript signature");
       byte[] signingPublicKey =
-          readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_SIZE_BYTES, "signing key");
+          readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_LENGTH, "signing key");
       byte[] attestationInfo = readVariableSizeArray(inputStream, "attestation info");
 
       ServerIdentity serverIdentity =
@@ -291,12 +291,12 @@ public class Message {
       DataOutputStream outputStream = new DataOutputStream(output);
 
       outputStream.writeByte(header);
-      writeFixedSizeArray(outputStream, ephemeralPublicKey, EPHEMERAL_PUBLIC_KEY_SIZE_BYTES,
+      writeFixedSizeArray(outputStream, ephemeralPublicKey, EPHEMERAL_PUBLIC_KEY_LENGTH,
           "ephemeral public key");
-      writeFixedSizeArray(outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_SIZE_BYTES,
+      writeFixedSizeArray(outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_LENGTH,
           "transcript signature");
       writeFixedSizeArray(
-          outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_SIZE_BYTES, "signing public key");
+          outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
       writeVariableSizeArray(outputStream, attestationInfo, "attestation info");
       outputStream.flush();
 
@@ -313,11 +313,11 @@ public class Message {
       }
 
       byte[] ephemeralPublicKey =
-          readFixedSizeArray(inputStream, EPHEMERAL_PUBLIC_KEY_SIZE_BYTES, "ephemeral public key");
+          readFixedSizeArray(inputStream, EPHEMERAL_PUBLIC_KEY_LENGTH, "ephemeral public key");
       byte[] transcriptSignature =
-          readFixedSizeArray(inputStream, TRANSCRIPT_SIGNATURE_SIZE_BYTES, "transcript signature");
+          readFixedSizeArray(inputStream, TRANSCRIPT_SIGNATURE_LENGTH, "transcript signature");
       byte[] signingPublicKey =
-          readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_SIZE_BYTES, "signing key");
+          readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_LENGTH, "signing key");
       byte[] attestationInfo = readVariableSizeArray(inputStream, "attestation info");
 
       ClientIdentity clientIdentity =
@@ -341,7 +341,7 @@ public class Message {
   private static byte[] readVariableSizeArray(DataInputStream inputStream, String name)
       throws IllegalArgumentException, IOException {
     byte[] sizeBytes =
-        readFixedSizeArray(inputStream, SERIALIZATION_PREFIX_SIZE_BYTES, name + " size");
+        readFixedSizeArray(inputStream, ARRAY_SERIALIZATION_PREFIX_LENGTH, name + " size");
     long size = ByteBuffer.wrap(sizeBytes).order(ByteOrder.LITTLE_ENDIAN).getLong();
     return readFixedSizeArray(inputStream, toIntExact(size), name);
   }
@@ -366,12 +366,12 @@ public class Message {
   private static void writeVariableSizeArray(DataOutputStream outputStream, byte[] value,
       String name) throws IllegalArgumentException, IOException {
     long outputSize = (long) value.length;
-    byte[] outputSizeBytes = ByteBuffer.allocate(SERIALIZATION_PREFIX_SIZE_BYTES)
+    byte[] outputSizeBytes = ByteBuffer.allocate(ARRAY_SERIALIZATION_PREFIX_LENGTH)
                                  .order(ByteOrder.LITTLE_ENDIAN)
                                  .putLong(outputSize)
                                  .array();
     writeFixedSizeArray(
-        outputStream, outputSizeBytes, SERIALIZATION_PREFIX_SIZE_BYTES, name + " size");
+        outputStream, outputSizeBytes, ARRAY_SERIALIZATION_PREFIX_LENGTH, name + " size");
     writeFixedSizeArray(outputStream, value, value.length, name);
   }
 }
