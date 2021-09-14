@@ -646,9 +646,9 @@ dependencies = [
 
 [[package]]
 name = "httparse"
-version = "1.4.1"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3a87b616e37e93c22fb19bcd386f02f3af5ea98a25670ad0fce773de23c5e68"
+checksum = "acd94fdbe1d4ff688b67b04eee2e17bd50995534a61539e45adfefb45e5e5503"
 
 [[package]]
 name = "httpdate"
@@ -674,9 +674,9 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "0.14.9"
+version = "0.14.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07d6baa1b441335f3ce5098ac421fb6547c46dda735ca1bc6d0153c838f9dd83"
+checksum = "13f67199e765030fa08fe0bd581af683f0d5bc04ea09c2b1102012c5fb90e7fd"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -1043,8 +1043,8 @@ dependencies = [
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
- "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.8.0",
+ "prost-build 0.8.0",
 ]
 
 [[package]]
@@ -1059,7 +1059,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_remote_attestation",
  "oak_utils",
- "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.8.0",
  "regex",
  "structopt",
  "tokio",
@@ -1085,7 +1085,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_remote_attestation",
  "oak_utils",
- "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.8.0",
  "rand",
  "serde",
  "serde_derive",
@@ -1107,8 +1107,8 @@ dependencies = [
  "anyhow",
  "bincode",
  "log",
- "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.8.0",
+ "prost-build 0.8.0",
  "ring",
  "rustls",
  "serde",
@@ -1907,7 +1907,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_client",
  "port_check",
- "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.8.0",
  "tokio",
 ]
 
