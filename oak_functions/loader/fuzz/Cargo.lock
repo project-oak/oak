@@ -1028,8 +1028,8 @@ dependencies = [
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
- "prost 0.8.0",
- "prost-build 0.8.0",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1050,7 +1050,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_remote_attestation",
  "oak_utils",
- "prost 0.8.0",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand",
  "serde",
  "serde_derive",
@@ -1075,8 +1075,8 @@ dependencies = [
  "maplit",
  "oak_functions_abi",
  "oak_functions_loader",
- "prost 0.8.0",
- "prost-build 0.8.0",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tonic",
 ]
@@ -1088,8 +1088,8 @@ dependencies = [
  "anyhow",
  "bincode",
  "log",
- "prost 0.8.0",
- "prost-build 0.8.0",
+ "prost 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ring",
  "rustls",
  "serde",

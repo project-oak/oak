@@ -214,7 +214,7 @@ impl ClientIdentity {
     }
 
     pub fn set_transcript_signature(&mut self, transcript_signature: &[u8; SIGNATURE_LENGTH]) {
-        self.transcript_signature = transcript_signature.clone();
+        self.transcript_signature = *transcript_signature;
     }
 }
 
