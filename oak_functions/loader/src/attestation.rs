@@ -16,7 +16,8 @@
 
 use crate::proto::{
     attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
-    remote_attestation_server::RemoteAttestation, AttestedInvokeRequest, AttestedInvokeResponse,
+    remote_attestation_server::RemoteAttestation, AttestationMessage, AttestedInvokeRequest,
+    AttestedInvokeResponse,
 };
 use anyhow::{anyhow, Context};
 use futures::{Stream, StreamExt};
@@ -198,8 +199,8 @@ async fn process_client_hello(
 
     // Receive client hello message.
     let request_type = request.request_type.context("Couldn't read request type")?;
-    let client_hello = if let RequestType::ClientHello(request) = request_type {
-        request
+    let client_hello = if let RequestType::AttestationMessage(request) = request_type {
+        request.body
     } else {
         anyhow::bail!("Received incorrect message type");
     };
@@ -214,7 +215,9 @@ async fn process_client_hello(
 
     // Create server attestation identity.
     let attestation_response = AttestedInvokeResponse {
-        response_type: Some(ResponseType::ServerIdentity(server_identity)),
+        response_type: Some(ResponseType::AttestationMessage(AttestationMessage {
+            body: server_identity,
+        })),
     };
     Ok((attestation_response, attestation_engine))
 }
@@ -232,8 +235,8 @@ async fn process_client_identity(
 
     // Receive client attestation identity.
     let request_type = request.request_type.context("Couldn't read request type")?;
-    let client_identity = if let RequestType::ClientIdentity(request) = request_type {
-        request
+    let client_identity = if let RequestType::AttestationMessage(request) = request_type {
+        request.body
     } else {
         anyhow::bail!("Received incorrect message type");
     };

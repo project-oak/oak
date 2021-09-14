@@ -23,6 +23,11 @@ import "remote_attestation/proto/remote_attestation.proto";
 option java_multiple_files = true;
 option java_package = "oak.functions.server";
 
+// Wrapper around Remote Attestation handshake message.
+message AttestationMessage {
+  bytes body = 1;
+}
+
 // Wrapper around the encrypted payload.
 // TODO(#2144): Extend this with additional potentially public fields, for instance for specifying
 // policies.
@@ -33,19 +38,17 @@ message Request {
 
 message AttestedInvokeRequest {
   oneof request_type {
-    // Initialization message that starts the Remote Attestation protocol.
-    oak.remote_attestation.ClientHello client_hello = 1;
-    // Client part of session key negotiation.
-    oak.remote_attestation.ClientIdentity client_identity = 2;
+    // Remote Attestation handshake message.
+    AttestationMessage attestation_message = 1;
     // Request with payload encrypted using the session key.
-    Request request = 3;
+    Request request = 2;
   }
 }
 
 message AttestedInvokeResponse {
   oneof response_type {
-    // Server part of session key negotiation.
-    oak.remote_attestation.ServerIdentity server_identity = 1;
+    // Remote Attestation handshake message.
+    AttestationMessage attestation_message = 1;
     // Payload encrypted using the session key.
     oak.remote_attestation.EncryptedData encrypted_payload = 2;
   }

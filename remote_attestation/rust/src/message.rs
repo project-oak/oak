@@ -1,0 +1,237 @@
+//
+// Copyright 2021 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+use crate::crypto::{
+    KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, SIGNATURE_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
+};
+use anyhow::{anyhow, Context};
+use bincode;
+use serde::{Deserialize, Serialize};
+use serde_big_array::BigArray;
+
+// Message header values.
+const CLIENT_HELLO_HEADER: u8 = 1;
+const SERVER_IDENTITY_HEADER: u8 = 2;
+const CLIENT_IDENTITY_HEADER: u8 = 3;
+
+/// Remote Attestation protocol version.
+pub const PROTOCOL_VERSION: u8 = 1;
+
+/// Length (in bytes) of the random vector sent in messages for preventing replay attacks.
+pub const REPLAY_PROTECTION_ARRAY_LENGTH: usize = 32;
+
+// TODO(#2105): Implement challenge-response in remote attestation.
+// TODO(#2106): Support various claims in remote attestation.
+/// Initial message that starts Remote Attestation handshake.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ClientHello {
+    /// Message header.
+    header: u8,
+    /// Random vector sent in messages for preventing replay attacks.
+    pub random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
+}
+
+/// Server identity message containing remote attestation information and a public key for
+/// Diffie-Hellman key negotiation.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ServerIdentity {
+    /// Message header.
+    header: u8,
+    /// Remote attestation protocol version.
+    pub version: u8,
+    /// Public key needed to establish a session key.
+    pub ephemeral_public_key: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+    /// Random vector sent in messages for preventing replay attacks.
+    pub random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
+    /// Signature of the SHA-256 hash of all previously sent and received messages.
+    /// Transcript signature is sent in messages to prevent replay attacks.
+    ///
+    /// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
+    /// https://datatracker.ietf.org/doc/html/rfc6979
+    /// https://standards.ieee.org/standard/1363-2000.html
+    #[serde(with = "BigArray")]
+    pub transcript_signature: [u8; SIGNATURE_LENGTH],
+    /// Public key used to sign transcripts.
+    ///
+    /// Public key must be an OpenSSL ECDSA-P256 key, which is represented as
+    /// `0x04 | X: 32-byte | Y: 32-byte`.
+    /// Where X and Y are big-endian coordinates of an Elliptic Curve point.
+    /// https://datatracker.ietf.org/doc/html/rfc6979
+    #[serde(with = "BigArray")]
+    pub signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
+    /// Information used for remote attestation such as a TEE report and a TEE provider's
+    /// certificate. TEE report contains a hash of the `signing_public_key`.
+    ///
+    /// Attestation info must be a serialized `oak.remote_attestation.AttestationInfo` Protobuf
+    /// message.
+    pub attestation_info: Vec<u8>,
+}
+
+/// Client identity message containing remote attestation information and a public key for
+/// Diffie-Hellman key negotiation.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ClientIdentity {
+    /// Message header.
+    header: u8,
+    /// Public key needed to establish a session key.
+    pub ephemeral_public_key: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+    /// Signature of the SHA-256 hash of all previously sent and received messages.
+    /// Transcript signature is sent in messages to prevent replay attacks.
+    ///
+    /// Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
+    /// https://datatracker.ietf.org/doc/html/rfc6979
+    /// https://standards.ieee.org/standard/1363-2000.html
+    #[serde(with = "BigArray")]
+    pub transcript_signature: [u8; SIGNATURE_LENGTH],
+    /// Public key used to sign transcripts.
+    ///
+    /// Public key must be an OpenSSL ECDSA-P256 key, which is represented as
+    /// `0x04 | X: 32-byte | Y: 32-byte`.
+    /// Where X and Y are big-endian coordinates of an Elliptic Curve point.
+    /// https://datatracker.ietf.org/doc/html/rfc6979
+    #[serde(with = "BigArray")]
+    pub signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
+    /// Information used for remote attestation such as a TEE report and a TEE provider's
+    /// certificate. TEE report contains a hash of the `signing_public_key`.
+    ///
+    /// Attestation info must be a serialized `oak.remote_attestation.AttestationInfo` Protobuf
+    /// message.
+    pub attestation_info: Vec<u8>,
+}
+
+pub trait Serializable {
+    fn serialize(&self) -> anyhow::Result<Vec<u8>>;
+}
+
+pub trait Deserializable {
+    fn deserialize(bytes: &[u8]) -> anyhow::Result<Self>
+    where
+        Self: Sized;
+}
+
+impl ClientHello {
+    pub fn new(random: &[u8; REPLAY_PROTECTION_ARRAY_LENGTH]) -> Self {
+        Self {
+            header: CLIENT_HELLO_HEADER,
+            random: *random,
+        }
+    }
+}
+
+impl Serializable for ClientHello {
+    fn serialize(&self) -> anyhow::Result<Vec<u8>> {
+        bincode::serialize(&self).context("Couldn't serialize client hello message")
+    }
+}
+
+impl Deserializable for ClientHello {
+    fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
+        let message: Self =
+            bincode::deserialize(bytes).context("Couldn't deserialize client hello message")?;
+        if message.header == CLIENT_HELLO_HEADER {
+            Ok(message)
+        } else {
+            Err(anyhow!("Incorrect client hello message header"))
+        }
+    }
+}
+
+impl ServerIdentity {
+    pub fn new(
+        ephemeral_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+        random: &[u8; REPLAY_PROTECTION_ARRAY_LENGTH],
+        signing_public_key: &[u8; SIGNING_ALGORITHM_KEY_LENGTH],
+        attestation_info: &[u8],
+    ) -> Self {
+        Self {
+            header: SERVER_IDENTITY_HEADER,
+            version: PROTOCOL_VERSION,
+            ephemeral_public_key: *ephemeral_public_key,
+            random: *random,
+            transcript_signature: [Default::default(); SIGNATURE_LENGTH],
+            signing_public_key: *signing_public_key,
+            attestation_info: attestation_info.to_vec(),
+        }
+    }
+
+    pub fn clear_transcript_signature(&mut self) {
+        self.transcript_signature = [Default::default(); SIGNATURE_LENGTH];
+    }
+
+    pub fn set_transcript_signature(&mut self, transcript_signature: &[u8; SIGNATURE_LENGTH]) {
+        self.transcript_signature = *transcript_signature;
+    }
+}
+
+impl Serializable for ServerIdentity {
+    fn serialize(&self) -> anyhow::Result<Vec<u8>> {
+        bincode::serialize(&self).context("Couldn't serialize server identity message")
+    }
+}
+
+impl Deserializable for ServerIdentity {
+    fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
+        let message: Self =
+            bincode::deserialize(bytes).context("Couldn't deserialize server identity message")?;
+        if message.header == SERVER_IDENTITY_HEADER {
+            Ok(message)
+        } else {
+            Err(anyhow!("Incorrect server identity message header"))
+        }
+    }
+}
+
+impl ClientIdentity {
+    pub fn new(
+        ephemeral_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+        signing_public_key: &[u8; SIGNING_ALGORITHM_KEY_LENGTH],
+        attestation_info: &[u8],
+    ) -> Self {
+        Self {
+            header: CLIENT_IDENTITY_HEADER,
+            ephemeral_public_key: *ephemeral_public_key,
+            transcript_signature: [Default::default(); SIGNATURE_LENGTH],
+            signing_public_key: *signing_public_key,
+            attestation_info: attestation_info.to_vec(),
+        }
+    }
+
+    pub fn clear_transcript_signature(&mut self) {
+        self.transcript_signature = [Default::default(); SIGNATURE_LENGTH];
+    }
+
+    pub fn set_transcript_signature(&mut self, transcript_signature: &[u8; SIGNATURE_LENGTH]) {
+        self.transcript_signature = *transcript_signature;
+    }
+}
+
+impl Serializable for ClientIdentity {
+    fn serialize(&self) -> anyhow::Result<Vec<u8>> {
+        bincode::serialize(&self).context("Couldn't serialize client identity message")
+    }
+}
+
+impl Deserializable for ClientIdentity {
+    fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
+        let message: Self =
+            bincode::deserialize(bytes).context("Couldn't deserialize client identity message")?;
+        if message.header == CLIENT_IDENTITY_HEADER {
+            Ok(message)
+        } else {
+            Err(anyhow!("Incorrect client identity message header"))
+        }
+    }
+}

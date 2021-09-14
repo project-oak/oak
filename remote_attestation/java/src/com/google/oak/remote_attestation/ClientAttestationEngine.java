@@ -21,6 +21,8 @@ import com.google.common.hash.Hashing;
 import com.google.common.primitives.Bytes;
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.KeyNegotiator;
+import com.google.oak.remote_attestation.Message;
+import com.google.oak.remote_attestation.Message.ServerIdentity;
 import com.google.oak.remote_attestation.SignatureVerifier;
 import com.google.protobuf.ByteString;
 import java.io.IOException;
@@ -30,9 +32,6 @@ import java.util.Arrays;
 import java.util.Random;
 import oak.remote_attestation.AttestationInfo;
 import oak.remote_attestation.AttestationReport;
-import oak.remote_attestation.ClientHello;
-import oak.remote_attestation.ClientIdentity;
-import oak.remote_attestation.ServerIdentity;
 
 enum AttestationState {
   Initializing {
@@ -62,7 +61,7 @@ public class ClientAttestationEngine {
   /** Remote attestation protocol version. */
   private static final int ATTESTATION_PROTOCOL_VERSION = 1;
   /** Size (in bytes) of a random array sent in messages to prevent replay attacks. */
-  private static final int REPLAY_PROTECTION_ARRAY_SIZE_BYTES = 32;
+  private static final int REPLAY_PROTECTION_ARRAY_LENGTH = 32;
   /** Test value of the server's TEE measurement. */
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
 
@@ -71,7 +70,7 @@ public class ClientAttestationEngine {
   /** Current state of the remote attestation protocol. */
   private AttestationState state;
   /**
-   * Collection of previously send and received messaged.
+   * Collection of previously sent and received messages.
    * Signed transcript is sent in messages to prevent replay attacks.
    */
   private byte[] transcript;
@@ -90,62 +89,59 @@ public class ClientAttestationEngine {
   }
 
   /**
-   * Initializes the Remote Attestation handshake by creating an `ClientHello` message.
+   * Initializes the Remote Attestation handshake by creating an {@code ClientHello} message.
    *
-   * Transitions `ClientAttestationEngine` state from `Initializing` to `Attesting` state.
+   * Transitions {@code ClientAttestationEngine} state from {@code Initializing} to
+   * {@code Attesting} state.
    */
-  public ClientHello createClientHello() throws IllegalStateException {
+  public byte[] createClientHello() throws IllegalStateException, IOException {
     if (state != AttestationState.Initializing) {
       throw new IllegalStateException("ClientAttestationEngine is not in the Initializing state");
     }
 
     // Random vector sent in messages for preventing replay attacks.
-    byte[] random = new byte[REPLAY_PROTECTION_ARRAY_SIZE_BYTES];
+    byte[] random = new byte[REPLAY_PROTECTION_ARRAY_LENGTH];
     new Random().nextBytes(random);
 
     // Create client hello message.
-    ClientHello clientHello =
-        ClientHello.newBuilder().setRandom(ByteString.copyFrom(random)).build();
+    Message.ClientHello clientHello = new Message.ClientHello(random);
 
     // Update current transcript.
-    byte[] serializedClientHello = clientHello.toByteArray();
-    transcript = Bytes.concat(transcript, serializedClientHello);
+    byte[] serializedClientHello = clientHello.serialize();
+    appendTranscript(serializedClientHello);
 
     state = state.transition();
-    return clientHello;
+    return serializedClientHello;
   }
 
   /**
-   * Responds to `ServerIdentity` message by creating a `ClientIdentity` message and derives
-   * session keys for encrypting/decrypting messages from the server.
-   * `ClientIdentity` message contains an ephemeral public key for negotiating session keys.
+   * Responds to {@code ServerIdentity} message by creating a {@code ClientIdentity} message and
+   * derives session keys for encrypting/decrypting messages from the server.
+   * {@code ClientIdentity} message contains an ephemeral public key for negotiating session keys.
    *
-   * Transitions [`AttestationEngine`] state from [`Attesting`] to [`Attested`] state.
+   * Transitions {@code AttestationEngine} state from {@code Attesting} to {@code Attested} state.
    */
-  public ClientIdentity processServerIdentity(ServerIdentity serverIdentity)
+  public byte[] processServerIdentity(byte[] serializedServerIdentity)
       throws IllegalStateException, IOException, GeneralSecurityException {
     if (state != AttestationState.Attesting) {
       throw new IllegalStateException("ClientAttestationEngine is not in the Attesting state");
     }
 
+    Message.ServerIdentity serverIdentity =
+        Message.ServerIdentity.deserialize(serializedServerIdentity);
+
     // Update current transcript.
     // Transcript doesn't include transcript signature from the server identity message.
-    ServerIdentity serverIdentityNoSignature =
-        ServerIdentity.newBuilder()
-            .setVersion(serverIdentity.getVersion())
-            .setEphemeralPublicKey(serverIdentity.getEphemeralPublicKey())
-            .setRandom(serverIdentity.getRandom())
-            .setSigningPublicKey(serverIdentity.getSigningPublicKey())
-            .setAttestationInfo(serverIdentity.getAttestationInfo())
-            .build();
-    byte[] serializedServerIdentityNoSignature = serverIdentityNoSignature.toByteArray();
-    transcript = Bytes.concat(transcript, serializedServerIdentityNoSignature);
+    ServerIdentity serverIdentityNoSignature = new Message.ServerIdentity(
+        serverIdentity.getEphemeralPublicKey(), serverIdentity.getRandom(),
+        serverIdentity.getSigningPublicKey(), serverIdentity.getAttestationInfo());
+    byte[] serializedServerIdentityNoSignature = serverIdentityNoSignature.serialize();
+    appendTranscript(serializedServerIdentityNoSignature);
 
     // Verify server transcript signature.
     byte[] transcriptHash = Hashing.sha256().hashBytes(transcript).asBytes();
-    SignatureVerifier verifier =
-        new SignatureVerifier(serverIdentity.getSigningPublicKey().toByteArray());
-    if (!verifier.verify(transcriptHash, serverIdentity.getTranscriptSignature().toByteArray())) {
+    SignatureVerifier verifier = new SignatureVerifier(serverIdentity.getSigningPublicKey());
+    if (!verifier.verify(transcriptHash, serverIdentity.getTranscriptSignature())) {
       throw new VerifyException("Couldn't verify server transcript signature");
     }
 
@@ -155,17 +151,22 @@ public class ClientAttestationEngine {
     }
 
     // Create client attestation identity.
-    ClientIdentity clientIdentity =
-        ClientIdentity.newBuilder()
-            .setEphemeralPublicKey(ByteString.copyFrom(keyNegotiator.getPublicKey()))
-            .build();
+    Message.ClientIdentity clientIdentity = new Message.ClientIdentity(keyNegotiator.getPublicKey(),
+        // Signing public key.
+        new byte[0],
+        // Attestation info.
+        new byte[0]);
+
+    // Update current transcript.
+    byte[] serializedClientIdentity = clientIdentity.serialize();
+    transcript = Bytes.concat(transcript, serializedClientIdentity);
 
     // Agree on session keys and create an encryptor.
     encryptor = keyNegotiator.createEncryptor(
-        serverIdentity.getEphemeralPublicKey().toByteArray(), KeyNegotiator.EncryptorType.CLIENT);
+        serverIdentity.getEphemeralPublicKey(), KeyNegotiator.EncryptorType.CLIENT);
 
     state = state.transition();
-    return clientIdentity;
+    return serializedClientIdentity;
   }
 
   /** Returns an encryptor created based on the negotiated ephemeral keys. */
@@ -183,11 +184,22 @@ public class ClientAttestationEngine {
    * - Checks that the public key hash from the TEE report is equal to the hash of the public key
    *   presented in the server response.
    * - Extracts the TEE measurement from the TEE report and compares it to the
-   *   `expectedTeeMeasurement`.
+   *   {@code expectedTeeMeasurement}.
    */
-  private Boolean verifyAttestationInfo(AttestationInfo attestationInfo) {
+  private Boolean verifyAttestationInfo(byte[] serializedAttestationInfo) throws IOException {
+    AttestationInfo attestationInfo = AttestationInfo.parseFrom(serializedAttestationInfo);
+
     // TODO(#1867): Add remote attestation support.
     return Arrays.equals(
         expectedTeeMeasurement, attestationInfo.getReport().getMeasurement().toByteArray());
+  }
+
+  /**
+   * Appends {@code serializedMessage} to the protocol transcript.
+   * Transcript is a concatenation of all sent and received messages, which is used for preventing
+   * replay attacks.
+   */
+  private void appendTranscript(byte[] serializedMessage) {
+    transcript = Bytes.concat(transcript, serializedMessage);
   }
 }

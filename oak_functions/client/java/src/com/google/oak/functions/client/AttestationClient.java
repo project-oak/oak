@@ -20,6 +20,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.ClientAttestationEngine;
+import com.google.oak.remote_attestation.Message;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -35,14 +37,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
+import oak.functions.server.AttestationMessage;
 import oak.functions.server.AttestedInvokeRequest;
 import oak.functions.server.AttestedInvokeResponse;
 import oak.functions.server.RemoteAttestationGrpc;
 import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
-import oak.remote_attestation.ClientHello;
-import oak.remote_attestation.ClientIdentity;
 import oak.remote_attestation.EncryptedData;
-import oak.remote_attestation.ServerIdentity;
 
 /**
  * Client with remote attestation support for sending requests to an Oak Functions application.
@@ -123,21 +123,28 @@ public class AttestationClient {
         new ClientAttestationEngine(TEST_TEE_MEASUREMENT.getBytes(UTF_8));
 
     // Send client hello message.
-    ClientHello clientHello = attestationEngine.createClientHello();
+    byte[] clientHello = attestationEngine.createClientHello();
     AttestedInvokeRequest clientHelloRequest =
-        AttestedInvokeRequest.newBuilder().setClientHello(clientHello).build();
+        AttestedInvokeRequest.newBuilder()
+            .setAttestationMessage(
+                AttestationMessage.newBuilder().setBody(ByteString.copyFrom(clientHello)).build())
+            .build();
     requestObserver.onNext(clientHelloRequest);
 
     // Receive server attestation identity containing server's ephemeral public key.
     AttestedInvokeResponse serverIdentityResponse = messageQueue.take();
-    ServerIdentity serverIdentity = serverIdentityResponse.getServerIdentity();
+    byte[] serverIdentity = serverIdentityResponse.getAttestationMessage().getBody().toByteArray();
 
     // Remotely attest the server and create:
     // - Client attestation identity containing client's ephemeral public key
     // - Encryptor used for decrypting/encrypting messages between client and server
-    ClientIdentity clientIdentity = attestationEngine.processServerIdentity(serverIdentity);
+    byte[] clientIdentity = attestationEngine.processServerIdentity(serverIdentity);
     AttestedInvokeRequest clientIdentityRequest =
-        AttestedInvokeRequest.newBuilder().setClientIdentity(clientIdentity).build();
+        AttestedInvokeRequest.newBuilder()
+            .setAttestationMessage(AttestationMessage.newBuilder()
+                                       .setBody(ByteString.copyFrom(clientIdentity))
+                                       .build())
+            .build();
     requestObserver.onNext(clientIdentityRequest);
     encryptor = attestationEngine.getEncryptor();
   }

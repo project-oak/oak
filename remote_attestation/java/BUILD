@@ -28,6 +28,7 @@ java_library(
         "src/com/google/oak/remote_attestation/AeadEncryptor.java",
         "src/com/google/oak/remote_attestation/ClientAttestationEngine.java",
         "src/com/google/oak/remote_attestation/KeyNegotiator.java",
+        "src/com/google/oak/remote_attestation/Message.java",
         "src/com/google/oak/remote_attestation/SignatureVerifier.java",
     ],
     deps = [
@@ -50,6 +51,7 @@ android_library(
         "src/com/google/oak/remote_attestation/AeadEncryptor.java",
         "src/com/google/oak/remote_attestation/ClientAttestationEngine.java",
         "src/com/google/oak/remote_attestation/KeyNegotiator.java",
+        "src/com/google/oak/remote_attestation/Message.java",
         "src/com/google/oak/remote_attestation/SignatureVerifier.java",
     ],
     deps = [

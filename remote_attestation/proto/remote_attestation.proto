@@ -71,7 +71,7 @@ message ServerIdentity {
   bytes ephemeral_public_key = 2;
   // Random vector sent in messages for preventing replay attacks.
   bytes random = 3;
-  // Signature of the SHA-256 hash of all previously send and received messaged.
+  // Signature of the SHA-256 hash of all previously sent and received messages.
   // Transcript signature is sent in messages to prevent replay attacks.
   //
   // Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
@@ -93,7 +93,7 @@ message ServerIdentity {
 message ClientIdentity {
   // Public key needed to establish a session key.
   bytes ephemeral_public_key = 1;
-  // Signature of the SHA-256 hash of all previously send and received messaged.
+  // Signature of the SHA-256 hash of all previously sent and received messages.
   // Transcript signature is sent in messages to prevent replay attacks.
   //
   // Signature must be an IEEE-P1363 encoded ECDSA-P256 signature.
