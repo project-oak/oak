@@ -244,6 +244,9 @@
 <span id="244">244</span>
 <span id="245">245</span>
 <span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -263,7 +266,8 @@
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto</span>::{
     <span class="ident">attested_invoke_request::RequestType</span>, <span class="ident">attested_invoke_response::ResponseType</span>,
-    <span class="ident">remote_attestation_server::RemoteAttestation</span>, <span class="ident">AttestedInvokeRequest</span>, <span class="ident">AttestedInvokeResponse</span>,
+    <span class="ident">remote_attestation_server::RemoteAttestation</span>, <span class="ident">AttestationMessage</span>, <span class="ident">AttestedInvokeRequest</span>,
+    <span class="ident">AttestedInvokeResponse</span>,
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">Stream</span>, <span class="ident">StreamExt</span>};
@@ -445,8 +449,8 @@
 
     <span class="comment">// Receive client hello message.</span>
     <span class="kw">let</span> <span class="ident">request_type</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">request_type</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read request type&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">client_hello</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RequestType::ClientHello</span>(<span class="ident">request</span>) <span class="op">=</span> <span class="ident">request_type</span> {
-        <span class="ident">request</span>
+    <span class="kw">let</span> <span class="ident">client_hello</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RequestType::AttestationMessage</span>(<span class="ident">request</span>) <span class="op">=</span> <span class="ident">request_type</span> {
+        <span class="ident">request</span>.<span class="ident">body</span>
     } <span class="kw">else</span> {
         <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Received incorrect message type&quot;</span>);
     };
@@ -461,7 +465,9 @@
 
     <span class="comment">// Create server attestation identity.</span>
     <span class="kw">let</span> <span class="ident">attestation_response</span> <span class="op">=</span> <span class="ident">AttestedInvokeResponse</span> {
-        <span class="ident">response_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseType::ServerIdentity</span>(<span class="ident">server_identity</span>)),
+        <span class="ident">response_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseType::AttestationMessage</span>(<span class="ident">AttestationMessage</span> {
+            <span class="ident">body</span>: <span class="ident">server_identity</span>,
+        })),
     };
     <span class="prelude-val">Ok</span>((<span class="ident">attestation_response</span>, <span class="ident">attestation_engine</span>))
 }
@@ -479,8 +485,8 @@
 
     <span class="comment">// Receive client attestation identity.</span>
     <span class="kw">let</span> <span class="ident">request_type</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">request_type</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read request type&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">client_identity</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RequestType::ClientIdentity</span>(<span class="ident">request</span>) <span class="op">=</span> <span class="ident">request_type</span> {
-        <span class="ident">request</span>
+    <span class="kw">let</span> <span class="ident">client_identity</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RequestType::AttestationMessage</span>(<span class="ident">request</span>) <span class="op">=</span> <span class="ident">request_type</span> {
+        <span class="ident">request</span>.<span class="ident">body</span>
     } <span class="kw">else</span> {
         <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Received incorrect message type&quot;</span>);
     };

@@ -45,7 +45,16 @@
 <span id="45">45</span>
 <span id="46">46</span>
 <span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
 </pre><pre class="rust">
+<span class="doccomment">/// Wrapper around Remote Attestation handshake message.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AttestationMessage</span> {
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span><span class="op">=</span><span class="string">&quot;vec&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">::prost::alloc::vec::Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+}
 <span class="doccomment">/// Wrapper around the encrypted payload.</span>
 <span class="doccomment">/// TODO(#2144): Extend this with additional potentially public fields, for instance for specifying</span>
 <span class="doccomment">/// policies.</span>
@@ -57,21 +66,18 @@
 }
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AttestedInvokeRequest</span> {
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;attested_invoke_request::RequestType&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;1, 2, 3&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;attested_invoke_request::RequestType&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;1, 2&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">request_type</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">attested_invoke_request::RequestType</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// Nested message and enum types in `AttestedInvokeRequest`.</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">attested_invoke_request</span> {
     <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Oneof</span>)]</span>
     <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RequestType</span> {
-        <span class="doccomment">/// Initialization message that starts the Remote Attestation protocol.</span>
+        <span class="doccomment">/// Remote Attestation handshake message.</span>
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-        <span class="ident">ClientHello</span>(<span class="ident">::oak_remote_attestation::proto::ClientHello</span>),
-        <span class="doccomment">/// Client part of session key negotiation.</span>
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-        <span class="ident">ClientIdentity</span>(<span class="ident">::oak_remote_attestation::proto::ClientIdentity</span>),
+        <span class="ident">AttestationMessage</span>(<span class="ident"><span class="kw">super</span>::AttestationMessage</span>),
         <span class="doccomment">/// Request with payload encrypted using the session key.</span>
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
+        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
         <span class="ident">Request</span>(<span class="ident"><span class="kw">super</span>::Request</span>),
     }
 }
@@ -84,9 +90,9 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">attested_invoke_response</span> {
     <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Oneof</span>)]</span>
     <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ResponseType</span> {
-        <span class="doccomment">/// Server part of session key negotiation.</span>
+        <span class="doccomment">/// Remote Attestation handshake message.</span>
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-        <span class="ident">ServerIdentity</span>(<span class="ident">::oak_remote_attestation::proto::ServerIdentity</span>),
+        <span class="ident">AttestationMessage</span>(<span class="ident"><span class="kw">super</span>::AttestationMessage</span>),
         <span class="doccomment">/// Payload encrypted using the session key.</span>
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
         <span class="ident">EncryptedPayload</span>(<span class="ident">::oak_remote_attestation::proto::EncryptedData</span>),
