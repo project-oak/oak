@@ -180,7 +180,7 @@ impl ServerAttestationEngine<Initializing> {
                 // Signing public key.
                 &[Default::default(); SIGNING_ALGORITHM_KEY_LENGTH],
                 // Attestation info.
-                &vec![],
+                &[],
             )
         };
         let serialized_server_identity = server_identity
@@ -292,7 +292,7 @@ impl ClientAttestationEngine<Attesting> {
                 // Signing public key.
                 &[Default::default(); SIGNING_ALGORITHM_KEY_LENGTH],
                 // Attestation info.
-                &vec![],
+                &[],
             )
         };
         let serialized_client_identity = client_identity

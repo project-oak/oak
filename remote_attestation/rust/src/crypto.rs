@@ -214,7 +214,7 @@ impl KeyNegotiator {
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
             ring::error::Unspecified,
             |key_material| {
-                let peer_public_key = peer_public_key.clone();
+                let peer_public_key = *peer_public_key;
                 match type_ {
                     // On the server side `self_public_key` is the server key.
                     KeyNegotiatorType::Server => {
@@ -338,7 +338,7 @@ pub struct SignatureVerifier {
 impl SignatureVerifier {
     pub fn new(public_key_bytes: &[u8; SIGNING_ALGORITHM_KEY_LENGTH]) -> Self {
         Self {
-            public_key_bytes: public_key_bytes.clone(),
+            public_key_bytes: *public_key_bytes,
         }
     }
 

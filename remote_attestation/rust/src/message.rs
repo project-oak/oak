@@ -126,7 +126,7 @@ impl ClientHello {
     pub fn new(random: &[u8; REPLAY_PROTECTION_ARRAY_LENGTH]) -> Self {
         Self {
             header: CLIENT_HELLO_HEADER,
-            random: random.clone(),
+            random: *random,
         }
     }
 }
@@ -140,7 +140,7 @@ impl Serializable for ClientHello {
 impl Deserializable for ClientHello {
     fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
         let message: Self =
-            bincode::deserialize(&bytes).context("Couldn't deserialize client hello message")?;
+            bincode::deserialize(bytes).context("Couldn't deserialize client hello message")?;
         if message.header == CLIENT_HELLO_HEADER {
             Ok(message)
         } else {
@@ -159,10 +159,10 @@ impl ServerIdentity {
         Self {
             header: SERVER_IDENTITY_HEADER,
             version: PROTOCOL_VERSION,
-            ephemeral_public_key: ephemeral_public_key.clone(),
-            random: random.clone(),
+            ephemeral_public_key: *ephemeral_public_key,
+            random: *random,
             transcript_signature: [Default::default(); SIGNATURE_LENGTH],
-            signing_public_key: signing_public_key.clone(),
+            signing_public_key: *signing_public_key,
             attestation_info: attestation_info.to_vec(),
         }
     }
@@ -172,7 +172,7 @@ impl ServerIdentity {
     }
 
     pub fn set_transcript_signature(&mut self, transcript_signature: &[u8; SIGNATURE_LENGTH]) {
-        self.transcript_signature = transcript_signature.clone();
+        self.transcript_signature = *transcript_signature;
     }
 }
 
@@ -185,7 +185,7 @@ impl Serializable for ServerIdentity {
 impl Deserializable for ServerIdentity {
     fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
         let message: Self =
-            bincode::deserialize(&bytes).context("Couldn't deserialize server identity message")?;
+            bincode::deserialize(bytes).context("Couldn't deserialize server identity message")?;
         if message.header == SERVER_IDENTITY_HEADER {
             Ok(message)
         } else {
@@ -202,9 +202,9 @@ impl ClientIdentity {
     ) -> Self {
         Self {
             header: CLIENT_IDENTITY_HEADER,
-            ephemeral_public_key: ephemeral_public_key.clone(),
+            ephemeral_public_key: *ephemeral_public_key,
             transcript_signature: [Default::default(); SIGNATURE_LENGTH],
-            signing_public_key: signing_public_key.clone(),
+            signing_public_key: *signing_public_key,
             attestation_info: attestation_info.to_vec(),
         }
     }
@@ -227,7 +227,7 @@ impl Serializable for ClientIdentity {
 impl Deserializable for ClientIdentity {
     fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
         let message: Self =
-            bincode::deserialize(&bytes).context("Couldn't deserialize client identity message")?;
+            bincode::deserialize(bytes).context("Couldn't deserialize client identity message")?;
         if message.header == CLIENT_IDENTITY_HEADER {
             Ok(message)
         } else {

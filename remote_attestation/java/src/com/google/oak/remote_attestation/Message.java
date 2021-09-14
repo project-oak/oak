@@ -132,8 +132,8 @@ public class Message {
      */
     private final byte[] attestationInfo;
 
-    public ServerIdentity(byte[] ephemeralPublicKey, byte[] random, byte[] signingPublicKey,
-        byte[] attestationInfo) {
+    public ServerIdentity(
+        byte[] ephemeralPublicKey, byte[] random, byte[] signingPublicKey, byte[] attestationInfo) {
       header = SERVER_IDENTITY_HEADER;
       version = PROTOCOL_VERSION;
       this.ephemeralPublicKey = ephemeralPublicKey;
@@ -214,8 +214,8 @@ public class Message {
           readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_SIZE_BYTES, "signing key");
       byte[] attestationInfo = readVariableSizeArray(inputStream, "attestation info");
 
-      ServerIdentity serverIdentity = new ServerIdentity(
-          ephemeralPublicKey, random, signingPublicKey, attestationInfo);
+      ServerIdentity serverIdentity =
+          new ServerIdentity(ephemeralPublicKey, random, signingPublicKey, attestationInfo);
       serverIdentity.setTranscriptSignature(transcriptSignature);
       return serverIdentity;
     }
@@ -257,8 +257,8 @@ public class Message {
      */
     private final byte[] attestationInfo;
 
-    public ClientIdentity(byte[] ephemeralPublicKey, byte[] signingPublicKey,
-        byte[] attestationInfo) {
+    public ClientIdentity(
+        byte[] ephemeralPublicKey, byte[] signingPublicKey, byte[] attestationInfo) {
       header = CLIENT_IDENTITY_HEADER;
       this.ephemeralPublicKey = ephemeralPublicKey;
       this.transcriptSignature = new byte[0];
@@ -320,8 +320,8 @@ public class Message {
           readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_SIZE_BYTES, "signing key");
       byte[] attestationInfo = readVariableSizeArray(inputStream, "attestation info");
 
-      ClientIdentity clientIdentity = new ClientIdentity(
-          ephemeralPublicKey, signingPublicKey, attestationInfo);
+      ClientIdentity clientIdentity =
+          new ClientIdentity(ephemeralPublicKey, signingPublicKey, attestationInfo);
       clientIdentity.setTranscriptSignature(transcriptSignature);
       return clientIdentity;
     }
