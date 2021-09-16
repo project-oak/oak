@@ -22,8 +22,12 @@ mod tests;
 /// Represents a cell on a sphere.
 #[derive(Debug, PartialEq)]
 pub struct Cell {
-    /// The cell width in degrees.
+    /// The cell width in degrees for a typical cell in this row.
     pub width: f32,
+    /// The number of columns in this row. We store this value so that we can easily determine
+    /// whether a cell is the last cell for a specific row so that we can adjust the width when
+    /// determining the midpoint.
+    pub col_count: i16,
     /// The unique identifier of the cell.
     pub index: IndexKey,
 }
@@ -40,7 +44,12 @@ impl Cell {
     pub fn relative_position(&self, latitude_degrees: f32, longitude_degrees: f32) -> Point {
         // Find the midpoint of the cell.
         let mid_latitude = self.index.row as f32 + 0.5;
-        let mid_longitude = self.index.col as f32 * self.width + self.width / 2.0;
+        let current_width = if self.index.col + 1 == self.col_count {
+            360.0 - self.index.col as f32 * self.width
+        } else {
+            self.width
+        };
+        let mid_longitude = self.index.col as f32 * self.width + current_width / 2.0;
 
         // We do the initial projections on a unit sphere and then scale the coordinates by the
         // average radius of the earth in meters.
@@ -81,7 +90,7 @@ impl Cell {
 /// An identifier for a cell. The surface of the sphere is covered by cells of approximately the
 /// same size.
 ///
-/// Each row lies between two degrees of latitude. The row number is the degree of
+/// Each row lies between two integer degrees of latitude. The row number is the degree of
 /// latitude that forms its souther border.
 ///
 /// The rows at the equator are divided into 360 cells. The number of cells in each row above and
@@ -90,11 +99,11 @@ impl Cell {
 /// this is the southern border and vice versa.
 ///
 /// The cell with a western border at 0° longitude has a
-/// column number of 0. Column numbers increase eastward and decrease westward.
+/// column number of 0. Column numbers increase eastward and cannot be smaller than 0.
 #[derive(Debug, Eq, PartialEq)]
 pub struct IndexKey {
-    row: i16,
-    col: i16,
+    pub row: i16,
+    pub col: i16,
 }
 
 impl IndexKey {
@@ -167,7 +176,7 @@ impl Point {
         [self.x.to_be_bytes(), self.y.to_be_bytes()].concat()
     }
 
-    /// Calcluates the square of the distance between the point and another point.
+    /// Calculates the square of the distance between the point and another point.
     ///
     /// The square of the distance is sufficient for finding the minimum, seeing that `sqrt` grows
     /// monotonically.
@@ -179,10 +188,7 @@ impl Point {
     pub fn validate_close_enough(&self, other: &Point, cutoff: i32) -> Result<(), String> {
         let cutoff_sqaured = (cutoff as i64).pow(2);
         if self.squared_distance(other) > cutoff_sqaured {
-            return Err(format!(
-                "The closest station is more than {}m away.",
-                cutoff
-            ));
+            return Err(format!("closest station is more than {}m away", cutoff));
         }
         Ok(())
     }
@@ -207,16 +213,30 @@ pub fn find_cell(latitude_degrees: f32, longitude_degrees: f32) -> Result<Cell, 
         .cos()
         .max(north_border.to_radians().cos());
     // At the equator there are 360 cells, each with a width of 1°. The number of cells in each row
-    // above or below scales with `ratio` to ensure the actual witdhs are roughly similar. This
-    // means that the width in degrees for each cell is `1 / scale`.
-    let cell_width_degrees = ratio.recip();
-    let cell_row = south_border as i32;
-    let cell_col = (longitude_degrees / cell_width_degrees).floor();
+    // above or below scales with `ratio` to ensure the actual witdhs are roughly similar.
+    let cell_count = (360.0 * ratio).ceil();
+
+    let cell_width_degrees = 360.0 / cell_count;
+
+    let row = south_border as i16;
+    // We only want positive column numbers, so we wrap negative longitudes around.
+    let positive_longitude = if longitude_degrees < 0.0 {
+        longitude_degrees + 360.0
+    } else {
+        longitude_degrees
+    };
+    let cell_col = (positive_longitude / cell_width_degrees).floor() as i16;
+
+    // Make sure the column does not go out of bounds due to rounding during the division.
+    let col = if cell_col >= cell_count as i16 {
+        cell_count as i16 - 1
+    } else {
+        cell_col
+    };
+
     Ok(Cell {
         width: cell_width_degrees,
-        index: IndexKey {
-            row: cell_row as i16,
-            col: cell_col as i16,
-        },
+        col_count: cell_count as i16,
+        index: IndexKey { row, col },
     })
 }

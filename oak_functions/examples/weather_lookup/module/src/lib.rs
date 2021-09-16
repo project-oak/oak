@@ -50,7 +50,10 @@ pub extern "C" fn main() {
         log!("parsed request: {:?}\n", request);
 
         let cell = find_cell(request.latitude_degrees, request.longitude_degrees)?;
+        log!("current location cell: {:?}\n", cell);
         let position = cell.relative_position(request.latitude_degrees, request.longitude_degrees);
+        log!("position relative to cell midpoint: {:?}\n", position);
+
         // Look up the index values for the list of weather stations in the vicinity of the cell.
         let index = oak_functions::storage_get_item(&cell.index.to_bytes())
             .map_err(|err| format!("could not get index item: {:?}", err))?
