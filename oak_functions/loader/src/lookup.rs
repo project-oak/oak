@@ -35,14 +35,19 @@ impl LookupDataAuth {
     }
 }
 
+#[derive(Clone, Debug)]
+pub enum LookupDataSource {
+    Http { url: String, auth: LookupDataAuth },
+    File(std::path::PathBuf),
+}
+
 /// An in-memory lookup store instance that can refresh its internal entries from the provided data
 /// file URL.
 ///
 /// Entries in the data file path must be consecutive binary encoded and length delimited
 /// protobuf messages according to the definition in `/oak_functions/proto/lookup_data.proto`.
 pub struct LookupData {
-    lookup_data_url: String,
-    lookup_data_auth: LookupDataAuth,
+    lookup_data_source: Option<LookupDataSource>,
     entries: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
     logger: Logger,
 }
@@ -53,14 +58,9 @@ impl LookupData {
     ///
     /// The returned instance is empty, and must be populated by calling the [`LookupData::refresh`]
     /// method at least once.
-    pub fn new_empty(
-        lookup_data_url: &str,
-        lookup_data_auth: LookupDataAuth,
-        logger: Logger,
-    ) -> LookupData {
+    pub fn new_empty(lookup_data_source: Option<LookupDataSource>, logger: Logger) -> LookupData {
         LookupData {
-            lookup_data_url: lookup_data_url.to_string(),
-            lookup_data_auth,
+            lookup_data_source,
             entries: RwLock::new(HashMap::new()),
             logger,
         }
@@ -79,59 +79,60 @@ impl LookupData {
     /// method, and existing entries are left untouched. The caller may retry the refresh operation
     /// at a future time.
     pub async fn refresh(&self) -> anyhow::Result<()> {
-        // TODO(#1930): Avoid loading the entire file in memory for parsing.
-        let https = HttpsConnector::with_native_roots();
-        let client = Client::builder().build::<_, Body>(https);
-        let start = Instant::now();
-        let lookup_data_buf = send_request(&client, self.build_download_request().await?).await?;
-        self.logger.log_public(
-            Level::Info,
-            &format!(
-                "downloaded {} bytes of lookup data in {:.0?}",
-                lookup_data_buf.len(),
-                start.elapsed()
-            ),
-        );
+        match &self.lookup_data_source {
+            Some(lookup_data_source) => {
+                let start = Instant::now();
+                let lookup_data_buf = fetch_lookup_data(&self.logger, lookup_data_source).await?;
+                self.logger.log_public(
+                    Level::Info,
+                    &format!(
+                        "fetched {} bytes of lookup data in {:.0?}",
+                        lookup_data_buf.len(),
+                        start.elapsed()
+                    ),
+                );
 
-        let start = Instant::now();
-        let entries = parse_lookup_entries(&mut lookup_data_buf.as_ref())
-            .context("could not parse lookup data")?;
+                let start = Instant::now();
+                let entries = parse_lookup_entries(&mut lookup_data_buf.as_ref())
+                    .context("could not parse lookup data")?;
 
-        self.logger.log_public(
-            Level::Info,
-            &format!(
-                "parsed {} entries of lookup data in {:.0?}",
-                entries.len(),
-                start.elapsed()
-            ),
-        );
+                self.logger.log_public(
+                    Level::Info,
+                    &format!(
+                        "parsed {} entries of lookup data in {:.0?}",
+                        entries.len(),
+                        start.elapsed()
+                    ),
+                );
 
-        // This block is here to emphasize and ensure that the write lock is only held for a very
-        // short time.
-        let start = Instant::now();
-        {
-            *self
-                .entries
-                .write()
-                .expect("could not lock entries for write") = entries;
+                // This block is here to emphasize and ensure that the write lock is only held for a
+                // very short time.
+                let start = Instant::now();
+                {
+                    *self
+                        .entries
+                        .write()
+                        .expect("could not lock entries for write") = entries;
+                }
+                self.logger.log_public(
+                    Level::Debug,
+                    &format!(
+                        "lookup data write lock acquisition time: {:.0?}",
+                        start.elapsed()
+                    ),
+                );
+
+                Ok(())
+            }
+            None => Ok(()),
         }
-        self.logger.log_public(
-            Level::Debug,
-            &format!(
-                "lookup data write lock acquisition time: {:.0?}",
-                start.elapsed()
-            ),
-        );
-
-        Ok(())
     }
 
     /// Creates an instance of LookupData populated with the given entries.
     #[allow(dead_code)]
     pub fn for_test(entries: HashMap<Vec<u8>, Vec<u8>>) -> Self {
         LookupData {
-            lookup_data_url: "".to_string(),
-            lookup_data_auth: LookupDataAuth::default(),
+            lookup_data_source: None,
             entries: RwLock::new(entries),
             logger: Logger::for_test(),
         }
@@ -162,24 +163,33 @@ impl LookupData {
             .expect("Could not lock entries for read")
             .is_empty()
     }
+}
 
-    async fn build_download_request(&self) -> anyhow::Result<Request<Body>> {
-        let url: &str = &self.lookup_data_url;
-        let builder = match self.lookup_data_auth {
-            LookupDataAuth::None => Request::builder().method(http::Method::GET).uri(url),
-            LookupDataAuth::GcpMetadataToken => {
-                let access_token = get_access_token()
-                    .await
-                    .context("could not get access token")?;
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri(url)
-                    .header("Authorization", format!("Bearer {}", access_token))
-            }
-        };
-        builder
-            .body(Body::empty())
-            .context("could not create lookup data request")
+async fn fetch_lookup_data(
+    logger: &Logger,
+    lookup_data_source: &LookupDataSource,
+) -> anyhow::Result<Bytes> {
+    match lookup_data_source {
+        LookupDataSource::Http { url, auth } => {
+            logger.log_public(
+                Level::Info,
+                &format!(
+                    "refreshing lookup data from HTTP: {} with auth {:?}",
+                    url, auth
+                ),
+            );
+            // TODO(#1930): Avoid loading the entire file in memory for parsing.
+            let https = HttpsConnector::with_native_roots();
+            let client = Client::builder().build::<_, Body>(https);
+            send_request(&client, build_download_request(url, auth).await?).await
+        }
+        LookupDataSource::File(file_path) => {
+            logger.log_public(
+                Level::Info,
+                &format!("refreshing lookup data from file path: {:?}", file_path),
+            );
+            Ok(tokio::fs::read(&file_path).await?.into())
+        }
     }
 }
 
@@ -195,6 +205,24 @@ pub fn parse_lookup_entries<B: prost::bytes::Buf>(
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)
+}
+
+async fn build_download_request(url: &str, auth: &LookupDataAuth) -> anyhow::Result<Request<Body>> {
+    let builder = match auth {
+        LookupDataAuth::None => Request::builder().method(http::Method::GET).uri(url),
+        LookupDataAuth::GcpMetadataToken => {
+            let access_token = get_access_token()
+                .await
+                .context("could not get access token")?;
+            Request::builder()
+                .method(http::Method::GET)
+                .uri(url)
+                .header("Authorization", format!("Bearer {}", access_token))
+        }
+    };
+    builder
+        .body(Body::empty())
+        .context("could not create lookup data request")
 }
 
 async fn send_request<C>(client: &Client<C, Body>, request: Request<Body>) -> anyhow::Result<Bytes>

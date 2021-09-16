@@ -20,7 +20,7 @@ use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::{LookupData, LookupDataAuth},
+    lookup::LookupData,
     server::Policy,
 };
 use prost::Message;
@@ -45,11 +45,7 @@ async fn test_server() {
 
     let logger = Logger::for_test();
 
-    let lookup_data = Arc::new(LookupData::new_empty(
-        "",
-        LookupDataAuth::default(),
-        logger.clone(),
-    ));
+    let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
 
     let policy = Policy {
         constant_response_size_bytes: 100,

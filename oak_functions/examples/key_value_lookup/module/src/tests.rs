@@ -18,7 +18,7 @@ use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::{LookupData, LookupDataAuth},
+    lookup::{LookupData, LookupDataAuth, LookupDataSource},
     server::Policy,
 };
 use std::{
@@ -60,8 +60,10 @@ async fn test_server() {
     let logger = Logger::for_test();
 
     let lookup_data = Arc::new(LookupData::new_empty(
-        &format!("http://localhost:{}", static_server_port),
-        LookupDataAuth::default(),
+        Some(LookupDataSource::Http {
+            url: format!("http://localhost:{}", static_server_port),
+            auth: LookupDataAuth::default(),
+        }),
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();

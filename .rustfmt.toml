@@ -4,6 +4,6 @@ format_code_in_doc_comments = true
 max_width = 100
 normalize_doc_attributes = true
 wrap_comments = true
-merge_imports = true
+imports_granularity = "Crate"
 imports_layout = "mixed"
 edition = "2018"

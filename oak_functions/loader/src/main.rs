@@ -23,7 +23,7 @@ use log::Level;
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::{LookupData, LookupDataAuth},
+    lookup::{LookupData, LookupDataAuth, LookupDataSource},
     metrics::{PrivateMetricsAggregator, PrivateMetricsConfig},
     server::Policy,
 };
@@ -49,12 +49,19 @@ mod tests;
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct Config {
-    /// URL of a file to GET over HTTP containing key / value entries in protobuf binary format for
-    /// lookup. If empty or not provided, no data is available for lookup.
+    /// URL of a file containing key / value entries in protobuf binary format for lookup.
+    ///
+    /// If the schema is `http` or `https`, then the file is downloaded via HTTP GET.
+    ///
+    /// If the schema is `file`, then the file is read from the local file system.
+    ///
+    /// If empty or not provided, no data is available for lookup.
     #[serde(default)]
     lookup_data_url: String,
-    /// How often to refresh the lookup data. If not provided, data is only loaded once at startup.
-    #[serde(with = "humantime_serde")]
+    /// How often to refresh the lookup data.
+    ////
+    /// If empty or not provided, data is only loaded once at startup.
+    #[serde(default, with = "humantime_serde")]
     lookup_data_download_period: Option<Duration>,
     /// Whether to use the GCP metadata service to obtain an authentication token for downloading
     /// the lookup data.
@@ -238,12 +245,32 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 }
 
 async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc<LookupData>> {
+    let lookup_data_source = if config.lookup_data_url.is_empty() {
+        None
+    } else {
+        let url =
+            url::Url::parse(&config.lookup_data_url).context("could not parse lookup data URL")?;
+        match url.scheme() {
+            "file" => {
+                let file_path = url
+                    .to_file_path()
+                    .map_err(|()| anyhow::anyhow!("could not convert url to file path"))?;
+                Some(LookupDataSource::File(file_path))
+            }
+            "http" | "https" => Some(LookupDataSource::Http {
+                url: config.lookup_data_url.clone(),
+                auth: config.lookup_data_auth,
+            }),
+            scheme => {
+                anyhow::bail!("unknown scheme in lookup data URL: {}", scheme)
+            }
+        }
+    };
     let lookup_data = Arc::new(LookupData::new_empty(
-        &config.lookup_data_url,
-        config.lookup_data_auth,
+        lookup_data_source.clone(),
         logger.clone(),
     ));
-    if !config.lookup_data_url.is_empty() {
+    if lookup_data_source.is_some() {
         // First load the lookup data upfront in a blocking fashion.
         // TODO(#1930): Retry the initial lookup a few times if it fails.
         lookup_data
