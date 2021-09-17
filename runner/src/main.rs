@@ -392,7 +392,7 @@ fn run_ci() -> Step {
         steps: vec![
             check_format(&Commits::default()),
             run_cargo_deny(),
-            run_cargo_udeps(),
+            //run_cargo_udeps(),
             build_server(
                 &BuildServer {
                     server_variant: ServerVariant::Base,

@@ -62,7 +62,7 @@ impl Cell {
         // y-component onto the plane would just be `sin(delta_latitude)`.
         //
         // We need to adjust the y-component to account for the circular nature of the parallel at
-        // the location's longitude for the cases wehre the `delta_latitude != 0`.
+        // the location's longitude for the cases where the `delta_latitude != 0`.
         //
         // The radius of the circle formed by the parallel is `cos(latitude)`.
         //
@@ -91,7 +91,7 @@ impl Cell {
 /// same size.
 ///
 /// Each row lies between two integer degrees of latitude. The row number is the degree of
-/// latitude that forms its souther border.
+/// latitude that forms its southern border.
 ///
 /// The rows at the equator are divided into 360 cells. The number of cells in each row above and
 /// below is scaled by `cos(latitude_border)` for the border that gives the higer scale value.
@@ -126,7 +126,7 @@ impl IndexKey {
 
 /// Represents an index value for a location-based lookup (e.g a weather station). The `value_key`
 /// is the key for the location's related value (e.g. the current weather at the weather station)
-/// and the `position` is the cartesion projection of its position relative to the midpoint of the
+/// and the `position` is the cartesian projection of its position relative to the midpoint of the
 /// cell. Locations have 8 byte keys and cells have 4 byte keys, so there is no chance of a
 /// collision.
 #[derive(Debug, Eq, PartialEq)]
@@ -196,7 +196,7 @@ impl Point {
 
 /// Finds the cell in which a location falls.
 pub fn find_cell(latitude_degrees: f32, longitude_degrees: f32) -> Result<Cell, String> {
-    // Validate that the request is in the expected bounds
+    // Validate that the locations is witin the expected bounds.
     if !(-90.0..=90.0).contains(&latitude_degrees) {
         return Err("invalid latitude".to_owned());
     }

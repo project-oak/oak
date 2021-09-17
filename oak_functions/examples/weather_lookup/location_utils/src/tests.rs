@@ -78,6 +78,7 @@ fn test_index_value_round_trip() {
 
 #[test]
 fn test_distance_two_points_same_cell() {
+    // Around London.
     let london_lat = 51.5074;
     let london_lon = 0.1278;
     let chelmsford_lat = 51.7356;
@@ -91,7 +92,39 @@ fn test_distance_two_points_same_cell() {
     let hav_distance =
         haversine_distance(london_lat, london_lon, chelmsford_lat, chelmsford_lon) as i32;
 
-    // This should be accurate to within im at this scale.
+    // This should be accurate to within 1m at this scale.
+    assert!((distance - hav_distance).abs() <= 1);
+
+    // Near Equator.
+    let lat1 = 0.8;
+    let lon1 = -130.1;
+    let lat2 = 0.3;
+    let lon2 = -130.4;
+
+    let cell = find_cell(lat1, lon1).unwrap();
+    let position1 = cell.relative_position(lat1, lon1);
+    let position2 = cell.relative_position(lat2, lon2);
+
+    let distance = (position1.squared_distance(&position2) as f32).sqrt() as i32;
+    let hav_distance = haversine_distance(lat1, lon1, lat2, lon2) as i32;
+
+    // This should be accurate to within 1m at this scale.
+    assert!((distance - hav_distance).abs() <= 1);
+
+    // Near Pole
+    let lat1 = -89.2;
+    let lon1 = 10.1;
+    let lat2 = -89.4;
+    let lon2 = 50.1;
+
+    let cell = find_cell(lat1, lon1).unwrap();
+    let position1 = cell.relative_position(lat1, lon1);
+    let position2 = cell.relative_position(lat2, lon2);
+
+    let distance = (position1.squared_distance(&position2) as f32).sqrt() as i32;
+    let hav_distance = haversine_distance(lat1, lon1, lat2, lon2) as i32;
+
+    // This should be accurate to within 1m at this scale.
     assert!((distance - hav_distance).abs() <= 1);
 }
 
@@ -111,7 +144,6 @@ fn test_distance_two_points_different_cell() {
 
     let distance = (london.squared_distance(&oxford) as f32).sqrt() as i32;
 
-    println!("Cell: {:?}, distance: {}m", cell, distance);
     // Allow up to 10m distortion from the projection at this distance.
     assert!((distance - hav_distance).abs() <= 10);
 
@@ -122,7 +154,6 @@ fn test_distance_two_points_different_cell() {
 
     let distance = (london.squared_distance(&oxford) as f32).sqrt() as i32;
 
-    println!("Cell: {:?}, distance: {}m", cell, distance);
     // Allow up to 10m distortion from the projection at this distance.
     assert!((distance - hav_distance).abs() <= 10);
 }
