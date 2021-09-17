@@ -49,7 +49,7 @@ jobs:
       - name: Free disk space
         run: |
           df --human-readable
-          sudo apt-get remove --yes '^ghc-8.*' '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell
+          sudo apt-get remove --yes '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell
           sudo apt-get autoremove --yes
           sudo apt clean
           docker rmi $(docker image ls --all --quiet)

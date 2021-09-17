@@ -318,7 +318,11 @@ where
     for input in inputs {
         // Tell cargo to rerun this build script if the proto file has changed.
         // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-        println!("cargo:rerun-if-changed={}", input.as_ref().display());
+        println!(
+            "cargo:rerun-if-changed={}/{}",
+            repo_root.as_ref().display(),
+            input.as_ref().display()
+        );
     }
 
     let mut prost_config = prost_build::Config::new();

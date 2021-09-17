@@ -177,11 +177,11 @@ public class Message {
 
       outputStream.writeByte(header);
       outputStream.writeByte(version);
-      writeFixedSizeArray(outputStream, ephemeralPublicKey, EPHEMERAL_PUBLIC_KEY_LENGTH,
-          "ephemeral public key");
+      writeFixedSizeArray(
+          outputStream, ephemeralPublicKey, EPHEMERAL_PUBLIC_KEY_LENGTH, "ephemeral public key");
       writeFixedSizeArray(outputStream, random, REPLAY_PROTECTION_ARRAY_LENGTH, "random value");
-      writeFixedSizeArray(outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_LENGTH,
-          "transcript signature");
+      writeFixedSizeArray(
+          outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_LENGTH, "transcript signature");
       writeFixedSizeArray(
           outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
       writeVariableSizeArray(outputStream, attestationInfo, "attestation info");
@@ -291,10 +291,10 @@ public class Message {
       DataOutputStream outputStream = new DataOutputStream(output);
 
       outputStream.writeByte(header);
-      writeFixedSizeArray(outputStream, ephemeralPublicKey, EPHEMERAL_PUBLIC_KEY_LENGTH,
-          "ephemeral public key");
-      writeFixedSizeArray(outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_LENGTH,
-          "transcript signature");
+      writeFixedSizeArray(
+          outputStream, ephemeralPublicKey, EPHEMERAL_PUBLIC_KEY_LENGTH, "ephemeral public key");
+      writeFixedSizeArray(
+          outputStream, transcriptSignature, TRANSCRIPT_SIGNATURE_LENGTH, "transcript signature");
       writeFixedSizeArray(
           outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
       writeVariableSizeArray(outputStream, attestationInfo, "attestation info");

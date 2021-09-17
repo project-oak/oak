@@ -12,6 +12,9 @@
 # Cargo cache.
 /cargo-cache/
 
+# Cargo timing files.
+cargo-timing*.html
+
 # Bazel cache.
 /.cache/
 

@@ -15,5 +15,3 @@ oak_functions = { path = "../../../sdk/oak_functions", features = [
 ] }
 oak_functions_abi = { path = "../../../abi" }
 prost = "*"
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"

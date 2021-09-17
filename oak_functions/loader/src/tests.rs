@@ -20,12 +20,13 @@ use oak_functions_abi::proto::{Request, Response, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
-    lookup::{parse_lookup_entries, LookupData, LookupDataAuth},
+    lookup::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
     server::{apply_policy, format_bytes, Policy, WasmHandler},
 };
 use prost::Message;
 use std::{
     convert::TryInto,
+    io::{Seek, Write},
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
     time::Duration,
@@ -138,8 +139,10 @@ where
     }));
 
     let lookup_data = Arc::new(LookupData::new_empty(
-        &format!("http://localhost:{}", static_server_port),
-        LookupDataAuth::default(),
+        Some(LookupDataSource::Http {
+            url: format!("http://localhost:{}", static_server_port),
+            auth: LookupDataAuth::default(),
+        }),
         logger.clone(),
     ));
     lookup_data.refresh().await.unwrap();
@@ -191,8 +194,10 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         let logger = Logger::for_test();
         let static_server_port = test_utils::free_port();
         let lookup_data = Arc::new(LookupData::new_empty(
-            &format!("http://localhost:{}", static_server_port),
-            LookupDataAuth::default(),
+            Some(LookupDataSource::Http {
+                url: format!("http://localhost:{}", static_server_port),
+                auth: LookupDataAuth::default(),
+            }),
             logger.clone(),
         ));
         let wasm_handler = WasmHandler::create(
@@ -339,7 +344,7 @@ fn parse_lookup_entries_invalid() {
 }
 
 #[tokio::test]
-async fn lookup_data_refresh() {
+async fn lookup_data_refresh_http() {
     let mock_static_server = Arc::new(test_utils::MockStaticServer::default());
 
     let static_server_port = test_utils::free_port();
@@ -351,8 +356,10 @@ async fn lookup_data_refresh() {
     });
 
     let lookup_data = crate::LookupData::new_empty(
-        &format!("http://localhost:{}", static_server_port),
-        LookupDataAuth::default(),
+        Some(LookupDataSource::Http {
+            url: format!("http://localhost:{}", static_server_port),
+            auth: LookupDataAuth::default(),
+        }),
         Logger::for_test(),
     );
     assert!(lookup_data.is_empty());
@@ -390,6 +397,77 @@ async fn lookup_data_refresh() {
     assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
 
     mock_static_server_background.terminate_and_join().await;
+}
+
+#[tokio::test]
+async fn lookup_data_refresh_file() {
+    let temp_file = tempfile::NamedTempFile::new().unwrap();
+
+    let lookup_data = crate::LookupData::new_empty(
+        Some(LookupDataSource::File(temp_file.path().to_path_buf())),
+        Logger::for_test(),
+    );
+    assert!(lookup_data.is_empty());
+
+    // Initially empty file, no entries.
+    lookup_data.refresh().await.unwrap();
+    assert!(lookup_data.is_empty());
+
+    // Single entry.
+    temp_file.as_file().set_len(0).unwrap();
+    temp_file.as_file().rewind().unwrap();
+    temp_file
+        .as_file()
+        .write_all(ENTRY_0_LENGTH_DELIMITED)
+        .unwrap();
+    lookup_data.refresh().await.unwrap();
+    assert_eq!(lookup_data.len(), 1);
+    assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
+    assert_eq!(lookup_data.get(b"Harry"), None);
+
+    // Empty file again.
+    temp_file.as_file().set_len(0).unwrap();
+    temp_file.as_file().rewind().unwrap();
+    lookup_data.refresh().await.unwrap();
+    assert!(lookup_data.is_empty());
+
+    // A different entry.
+    temp_file.as_file().set_len(0).unwrap();
+    temp_file.as_file().rewind().unwrap();
+    temp_file
+        .as_file()
+        .write_all(ENTRY_1_LENGTH_DELIMITED)
+        .unwrap();
+    lookup_data.refresh().await.unwrap();
+    assert_eq!(lookup_data.len(), 1);
+    assert_eq!(lookup_data.get(&[14, 12]), None);
+    assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
+
+    // Two entries.
+    temp_file.as_file().set_len(0).unwrap();
+    temp_file.as_file().rewind().unwrap();
+    temp_file
+        .as_file()
+        .write_all(ENTRY_0_LENGTH_DELIMITED)
+        .unwrap();
+    temp_file
+        .as_file()
+        .write_all(ENTRY_1_LENGTH_DELIMITED)
+        .unwrap();
+    lookup_data.refresh().await.unwrap();
+    assert_eq!(lookup_data.len(), 2);
+    assert_eq!(lookup_data.get(&[14, 12]), Some(vec![19, 88]));
+    assert_eq!(lookup_data.get(b"Harry"), Some(b"Potter".to_vec()));
+}
+
+#[tokio::test]
+async fn lookup_data_refresh_no_lookup_source() {
+    let lookup_data = crate::LookupData::new_empty(None, Logger::for_test());
+    assert!(lookup_data.is_empty());
+
+    // Still empty, no errors.
+    lookup_data.refresh().await.unwrap();
+    assert!(lookup_data.is_empty());
 }
 
 #[tokio::test]

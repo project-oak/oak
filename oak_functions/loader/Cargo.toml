@@ -50,11 +50,13 @@ tokio = { version = "*", features = [
 toml = "*"
 tonic = "*"
 tract-tensorflow = { version = "*", optional = true }
+url = "*"
 wasmi = "*"
 signal-hook = "*"
 
 [dev-dependencies]
 maplit = "*"
+tempfile = "*"
 test_utils = { path = "../sdk/test_utils" }
 
 [build-dependencies]
