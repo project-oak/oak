@@ -15,7 +15,8 @@
 //
 
 use crate::crypto::{
-    KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, SIGNATURE_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
+    KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, NONCE_LENGTH, SIGNATURE_LENGTH,
+    SIGNING_ALGORITHM_KEY_LENGTH,
 };
 use anyhow::{anyhow, Context};
 use bincode;
@@ -26,16 +27,36 @@ use serde_big_array::BigArray;
 const CLIENT_HELLO_HEADER: u8 = 1;
 const SERVER_IDENTITY_HEADER: u8 = 2;
 const CLIENT_IDENTITY_HEADER: u8 = 3;
+const ENCRYPTED_DATA_HEADER: u8 = 4;
 
-/// Remote Attestation protocol version.
+/// Remote attestation protocol version.
 pub const PROTOCOL_VERSION: u8 = 1;
 
 /// Length (in bytes) of the random vector sent in messages for preventing replay attacks.
 pub const REPLAY_PROTECTION_ARRAY_LENGTH: usize = 32;
 
+/// Convenience struct that wraps attestation messages.
+pub enum MessageWrapper {
+    ClientHello(ClientHello),
+    ServerIdentity(ServerIdentity),
+    ClientIdentity(ClientIdentity),
+    EncryptedData(EncryptedData),
+}
+
+impl std::fmt::Display for MessageWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::ClientHello(_) => write!(f, "ClientHello"),
+            Self::ServerIdentity(_) => write!(f, "ServerIdentity"),
+            Self::ClientIdentity(_) => write!(f, "ClientIdentity"),
+            Self::EncryptedData(_) => write!(f, "EncryptedData"),
+        }
+    }
+}
+
 // TODO(#2105): Implement challenge-response in remote attestation.
 // TODO(#2106): Support various claims in remote attestation.
-/// Initial message that starts Remote Attestation handshake.
+/// Initial message that starts remote attestation handshake.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ClientHello {
     /// Message header.
@@ -112,6 +133,18 @@ pub struct ClientIdentity {
     pub attestation_info: Vec<u8>,
 }
 
+/// Message containing data encrypted using a session key.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EncryptedData {
+    /// Message header.
+    header: u8,
+    /// Random nonce (initialization vector) used for encryption/decryption.
+    #[serde(with = "BigArray")]
+    pub nonce: [u8; NONCE_LENGTH],
+    /// Data encrypted using the session key.
+    pub data: Vec<u8>,
+}
+
 pub trait Serializable {
     fn serialize(&self) -> anyhow::Result<Vec<u8>>;
 }
@@ -123,10 +156,10 @@ pub trait Deserializable {
 }
 
 impl ClientHello {
-    pub fn new(random: &[u8; REPLAY_PROTECTION_ARRAY_LENGTH]) -> Self {
+    pub fn new(random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH]) -> Self {
         Self {
             header: CLIENT_HELLO_HEADER,
-            random: *random,
+            random,
         }
     }
 }
@@ -151,19 +184,19 @@ impl Deserializable for ClientHello {
 
 impl ServerIdentity {
     pub fn new(
-        ephemeral_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
-        random: &[u8; REPLAY_PROTECTION_ARRAY_LENGTH],
-        signing_public_key: &[u8; SIGNING_ALGORITHM_KEY_LENGTH],
-        attestation_info: &[u8],
+        ephemeral_public_key: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+        random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
+        signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
+        attestation_info: Vec<u8>,
     ) -> Self {
         Self {
             header: SERVER_IDENTITY_HEADER,
             version: PROTOCOL_VERSION,
-            ephemeral_public_key: *ephemeral_public_key,
-            random: *random,
+            ephemeral_public_key,
+            random,
             transcript_signature: [Default::default(); SIGNATURE_LENGTH],
-            signing_public_key: *signing_public_key,
-            attestation_info: attestation_info.to_vec(),
+            signing_public_key,
+            attestation_info,
         }
     }
 
@@ -186,26 +219,28 @@ impl Deserializable for ServerIdentity {
     fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
         let message: Self =
             bincode::deserialize(bytes).context("Couldn't deserialize server identity message")?;
-        if message.header == SERVER_IDENTITY_HEADER {
-            Ok(message)
-        } else {
-            Err(anyhow!("Incorrect server identity message header"))
+        if message.header != SERVER_IDENTITY_HEADER {
+            return Err(anyhow!("Incorrect server identity message header"));
         }
+        if message.version != PROTOCOL_VERSION {
+            return Err(anyhow!("Incorrect remote attestation protocol version"));
+        }
+        Ok(message)
     }
 }
 
 impl ClientIdentity {
     pub fn new(
-        ephemeral_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
-        signing_public_key: &[u8; SIGNING_ALGORITHM_KEY_LENGTH],
-        attestation_info: &[u8],
+        ephemeral_public_key: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+        signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
+        attestation_info: Vec<u8>,
     ) -> Self {
         Self {
             header: CLIENT_IDENTITY_HEADER,
-            ephemeral_public_key: *ephemeral_public_key,
+            ephemeral_public_key,
             transcript_signature: [Default::default(); SIGNATURE_LENGTH],
-            signing_public_key: *signing_public_key,
-            attestation_info: attestation_info.to_vec(),
+            signing_public_key,
+            attestation_info,
         }
     }
 
@@ -233,5 +268,64 @@ impl Deserializable for ClientIdentity {
         } else {
             Err(anyhow!("Incorrect client identity message header"))
         }
+    }
+}
+
+impl EncryptedData {
+    pub fn new(nonce: &[u8; NONCE_LENGTH], data: &[u8]) -> Self {
+        Self {
+            header: ENCRYPTED_DATA_HEADER,
+            nonce: *nonce,
+            data: data.to_vec(),
+        }
+    }
+}
+
+impl Serializable for EncryptedData {
+    fn serialize(&self) -> anyhow::Result<Vec<u8>> {
+        bincode::serialize(&self).context("Couldn't serialize encrypted data message")
+    }
+}
+
+impl Deserializable for EncryptedData {
+    fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
+        let message: Self =
+            bincode::deserialize(bytes).context("Couldn't deserialize encrypted data message")?;
+        if message.header == ENCRYPTED_DATA_HEADER {
+            Ok(message)
+        } else {
+            Err(anyhow!("Incorrect encrypted data message header"))
+        }
+    }
+}
+
+/// Deserializes an attestation message from a serialized [`input`] and wraps in a
+/// [`MessageWrapper`].
+pub fn deserialize_message(input: &[u8]) -> anyhow::Result<MessageWrapper> {
+    if input.is_empty() {
+        return Err(anyhow!("Empty input"));
+    }
+    match input[0] {
+        CLIENT_HELLO_HEADER => {
+            let message: ClientHello = Deserializable::deserialize(input)
+                .context("Couldn't deserialize client hello message")?;
+            Ok(MessageWrapper::ClientHello(message))
+        }
+        SERVER_IDENTITY_HEADER => {
+            let message: ServerIdentity = Deserializable::deserialize(input)
+                .context("Couldn't deserialize server identity message")?;
+            Ok(MessageWrapper::ServerIdentity(message))
+        }
+        CLIENT_IDENTITY_HEADER => {
+            let message: ClientIdentity = Deserializable::deserialize(input)
+                .context("Couldn't deserialize client identity message")?;
+            Ok(MessageWrapper::ClientIdentity(message))
+        }
+        ENCRYPTED_DATA_HEADER => {
+            let message: EncryptedData = Deserializable::deserialize(input)
+                .context("Couldn't deserialize encrypted data message")?;
+            Ok(MessageWrapper::EncryptedData(message))
+        }
+        header => Err(anyhow!("Unknown message header: {:#02x}", header)),
     }
 }

@@ -19,7 +19,7 @@ package com.google.oak.functions.client;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.oak.remote_attestation.AeadEncryptor;
-import com.google.oak.remote_attestation.ClientAttestationEngine;
+import com.google.oak.remote_attestation.ClientHandshaker;
 import com.google.oak.remote_attestation.Message;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -37,12 +37,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
-import oak.functions.server.AttestationMessage;
 import oak.functions.server.AttestedInvokeRequest;
 import oak.functions.server.AttestedInvokeResponse;
 import oak.functions.server.RemoteAttestationGrpc;
 import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
-import oak.remote_attestation.EncryptedData;
 
 /**
  * Client with remote attestation support for sending requests to an Oak Functions application.
@@ -56,9 +54,7 @@ public class AttestationClient {
   private BlockingQueue<AttestedInvokeResponse> messageQueue;
   private AeadEncryptor encryptor;
 
-  /**
-   * Creates an unattested AttestationClient instance.
-   */
+  /** Creates an unattested AttestationClient instance. */
   public AttestationClient() {}
 
   /**
@@ -80,9 +76,7 @@ public class AttestationClient {
     attest(channel);
   }
 
-  /**
-   * Creates an attested channel over the gRPC {@code ManagedChannel}.
-   */
+  /** Creates an attested channel over the gRPC {@code ManagedChannel}. */
   public void attest(ManagedChannel channel)
       throws GeneralSecurityException, IOException, InterruptedException {
     if (channel == null) {
@@ -119,34 +113,26 @@ public class AttestationClient {
     requestObserver = stub.attestedInvoke(responseObserver);
 
     // Generate client private/public key pair.
-    ClientAttestationEngine attestationEngine =
-        new ClientAttestationEngine(TEST_TEE_MEASUREMENT.getBytes(UTF_8));
+    ClientHandshaker handshaker = new ClientHandshaker(TEST_TEE_MEASUREMENT.getBytes(UTF_8));
 
     // Send client hello message.
-    byte[] clientHello = attestationEngine.createClientHello();
+    byte[] clientHello = handshaker.createClientHello();
     AttestedInvokeRequest clientHelloRequest =
-        AttestedInvokeRequest.newBuilder()
-            .setAttestationMessage(
-                AttestationMessage.newBuilder().setBody(ByteString.copyFrom(clientHello)).build())
-            .build();
+        AttestedInvokeRequest.newBuilder().setBody(ByteString.copyFrom(clientHello)).build();
     requestObserver.onNext(clientHelloRequest);
 
     // Receive server attestation identity containing server's ephemeral public key.
     AttestedInvokeResponse serverIdentityResponse = messageQueue.take();
-    byte[] serverIdentity = serverIdentityResponse.getAttestationMessage().getBody().toByteArray();
+    byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
     // Remotely attest the server and create:
     // - Client attestation identity containing client's ephemeral public key
     // - Encryptor used for decrypting/encrypting messages between client and server
-    byte[] clientIdentity = attestationEngine.processServerIdentity(serverIdentity);
+    byte[] clientIdentity = handshaker.processServerIdentity(serverIdentity);
     AttestedInvokeRequest clientIdentityRequest =
-        AttestedInvokeRequest.newBuilder()
-            .setAttestationMessage(AttestationMessage.newBuilder()
-                                       .setBody(ByteString.copyFrom(clientIdentity))
-                                       .build())
-            .build();
+        AttestedInvokeRequest.newBuilder().setBody(ByteString.copyFrom(clientIdentity)).build();
     requestObserver.onNext(clientIdentityRequest);
-    encryptor = attestationEngine.getEncryptor();
+    encryptor = handshaker.getEncryptor();
   }
 
   public Boolean verifyAttestation(byte[] unusedAttestationInfo) {
@@ -168,21 +154,20 @@ public class AttestationClient {
    * */
   @SuppressWarnings("ProtoParseWithRegistry")
   public Response send(Request request)
-      throws GeneralSecurityException, InterruptedException, InvalidProtocolBufferException {
+      throws GeneralSecurityException, IOException, InterruptedException,
+             InvalidProtocolBufferException {
     if (channel == null || requestObserver == null || encryptor == null) {
       throw new IllegalStateException("Attested channel not available.");
     }
 
-    EncryptedData encryptedData = encryptor.encrypt(request.getBody().toByteArray());
-    oak.functions.server.Request serverRequest =
-        oak.functions.server.Request.newBuilder().setEncryptedPayload(encryptedData).build();
+    byte[] encryptedData = encryptor.encrypt(request.getBody().toByteArray());
     AttestedInvokeRequest attestedRequest =
-        AttestedInvokeRequest.newBuilder().setRequest(serverRequest).build();
+        AttestedInvokeRequest.newBuilder().setBody(ByteString.copyFrom(encryptedData)).build();
 
     requestObserver.onNext(attestedRequest);
     AttestedInvokeResponse attestedResponse = messageQueue.take();
 
-    EncryptedData responsePayload = attestedResponse.getEncryptedPayload();
+    byte[] responsePayload = attestedResponse.getBody().toByteArray();
     byte[] decryptedResponse = encryptor.decrypt(responsePayload);
     return Response.parseFrom(decryptedResponse);
   }

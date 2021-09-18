@@ -15,14 +15,12 @@
 //
 
 use crate::proto::{
-    attested_invoke_request::RequestType, attested_invoke_response::ResponseType,
-    remote_attestation_client::RemoteAttestationClient, AttestationMessage, AttestedInvokeRequest,
+    remote_attestation_client::RemoteAttestationClient, AttestedInvokeRequest,
     AttestedInvokeResponse,
 };
-use anyhow::{anyhow, Context};
-use oak_remote_attestation::{
-    attestation::{AttestationBehavior, ClientAttestationEngine, Initializing},
-    crypto::AeadEncryptor,
+use anyhow::Context;
+use oak_remote_attestation::handshaker::{
+    AttestationBehavior, ClientHandshaker, Encryptor, Handshaker,
 };
 use tokio::sync::mpsc::Sender;
 use tonic::{transport::Channel, Request, Streaming};
@@ -82,7 +80,7 @@ impl GrpcChannel {
 /// gRPC Attestation Service client implementation.
 pub struct AttestationClient {
     channel: GrpcChannel,
-    encryptor: AeadEncryptor,
+    encryptor: Encryptor,
 }
 
 impl AttestationClient {
@@ -101,106 +99,76 @@ impl AttestationClient {
     async fn attest_server(
         channel: &mut GrpcChannel,
         expected_tee_measurement: &[u8],
-    ) -> anyhow::Result<AeadEncryptor> {
-        let attestation_engine = ClientAttestationEngine::<Initializing>::new(
-            AttestationBehavior::create_peer_attestation(expected_tee_measurement)
-                .context("Couldn't create peer attestation behavior")?,
-        );
-
-        // Send client hello message.
-        let (client_hello, attestation_engine) = attestation_engine
+    ) -> anyhow::Result<Encryptor> {
+        let mut handshaker = ClientHandshaker::new(AttestationBehavior::create_peer_attestation(
+            expected_tee_measurement,
+        ));
+        let client_hello = handshaker
             .create_client_hello()
-            .context("Couldn't create client hello")?;
-        let request = AttestedInvokeRequest {
-            request_type: Some(RequestType::AttestationMessage(AttestationMessage {
-                body: client_hello,
-            })),
-        };
+            .context("Couldn't create client hello message")?;
         channel
-            .send(request)
+            .send(AttestedInvokeRequest { body: client_hello })
             .await
-            .context("Couldn't send client hello")?;
+            .context("Couldn't send client hello message")?;
 
-        // Receive server attestation identity containing server's ephemeral public key.
-        let response = channel
-            .receive()
-            .await
-            .context("Couldn't receive server identity")?
-            .context("Stream stopped preemptively")?;
-        let response_type = response
-            .response_type
-            .context("Couldn't read response type")?;
-        let server_identity =
-            if let ResponseType::AttestationMessage(attestation_response) = response_type {
-                Ok(attestation_response.body)
-            } else {
-                Err(anyhow!("Received incorrect message type"))
-            }?;
+        while !handshaker.is_completed() {
+            let incoming_message = channel
+                .receive()
+                .await
+                .context("Couldn't receive handshake message")?
+                .context("Stream stopped preemptively")?;
 
-        // Remotely attest the server and create:
-        // - Client attestation identity containing client's ephemeral public key
-        // - Encryptor used for decrypting/encrypting messages between client and server
-        let (client_identity, attestation_engine) = attestation_engine
-            .process_server_identity(&server_identity)
-            .context("Couldn't process server identity")?;
-        let request = AttestedInvokeRequest {
-            request_type: Some(RequestType::AttestationMessage(AttestationMessage {
-                body: client_identity,
-            })),
-        };
-        channel
-            .send(request)
-            .await
-            .context("Couldn't send client identity")?;
-
-        let encryptor = attestation_engine.get_encryptor();
+            let outgoing_message = handshaker
+                .next_step(&incoming_message.body)
+                .context("Couldn't process handshake message")?;
+            if let Some(outgoing_message) = outgoing_message {
+                channel
+                    .send(AttestedInvokeRequest {
+                        body: outgoing_message,
+                    })
+                    .await
+                    .context("Couldn't send handshake message")?;
+            }
+        }
+        let encryptor = handshaker
+            .get_encryptor()
+            .context("Couldn't get encryptor")?;
         Ok(encryptor)
     }
 
-    /// Sends data encrypted by the [`AttestationClient::encryptor`] to the server and returns
-    /// server responses.
+    /// Sends data encrypted by the [`Encryptor`] to the server and returns server responses.
     /// Returns `Ok(None)` to indicate that the corresponding gRPC stream has ended.
     pub async fn send(
         &mut self,
         request: oak_functions_abi::proto::Request,
     ) -> anyhow::Result<Option<Vec<u8>>> {
-        let encrypted_message = self
+        let encrypted_request = self
             .encryptor
             .encrypt(&request.body)
-            .context("Couldn't encrypt data")?;
-        let data_request = AttestedInvokeRequest {
-            request_type: Some(RequestType::Request(crate::proto::Request {
-                encrypted_payload: Some(encrypted_message),
-            })),
-        };
-
+            .context("Couldn't encrypt request")?;
         self.channel
-            .send(data_request)
+            .send(AttestedInvokeRequest {
+                body: encrypted_request,
+            })
             .await
             .context("Couldn't send encrypted data request")?;
-        let response = self
+
+        let encrypted_response = self
             .channel
             .receive()
             .await
             .context("Couldn't send encrypted data request")?;
-        let data = if let Some(response) = response {
-            let response_type = response
-                .response_type
-                .context("Couldn't read response type")?;
-            let encrypted_payload = if let ResponseType::EncryptedPayload(data) = response_type {
-                Ok(data)
-            } else {
-                Err(anyhow!("Received incorrect message type"))
-            }?;
-            let payload = self
-                .encryptor
-                .decrypt(&encrypted_payload)
-                .context("Couldn't decrypt data")?;
-            Some(payload)
-        } else {
-            None
+        let response = match encrypted_response {
+            Some(encrypted_response) => {
+                let response = self
+                    .encryptor
+                    .decrypt(&encrypted_response.body)
+                    .context("Couldn't decrypt response")?;
+                Some(response)
+            }
+            None => None,
         };
 
-        Ok(data)
+        Ok(response)
     }
 }

@@ -33,7 +33,7 @@ java_library(
         "//oak_functions/proto:server_java_proto",
         "//remote_attestation/java:remote_attestation",
         "//remote_attestation/proto:remote_attestation_java_proto",
-        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//netty",
         "@io_grpc_grpc_java//stub",

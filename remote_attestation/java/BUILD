@@ -26,7 +26,7 @@ java_library(
     name = "remote_attestation",
     srcs = [
         "src/com/google/oak/remote_attestation/AeadEncryptor.java",
-        "src/com/google/oak/remote_attestation/ClientAttestationEngine.java",
+        "src/com/google/oak/remote_attestation/ClientHandshaker.java",
         "src/com/google/oak/remote_attestation/KeyNegotiator.java",
         "src/com/google/oak/remote_attestation/Message.java",
         "src/com/google/oak/remote_attestation/SignatureVerifier.java",
@@ -49,7 +49,7 @@ android_library(
     name = "remote_attestation_android",
     srcs = [
         "src/com/google/oak/remote_attestation/AeadEncryptor.java",
-        "src/com/google/oak/remote_attestation/ClientAttestationEngine.java",
+        "src/com/google/oak/remote_attestation/ClientHandshaker.java",
         "src/com/google/oak/remote_attestation/KeyNegotiator.java",
         "src/com/google/oak/remote_attestation/Message.java",
         "src/com/google/oak/remote_attestation/SignatureVerifier.java",

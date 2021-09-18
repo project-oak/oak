@@ -14,12 +14,12 @@
 // limitations under the License.
 //
 
-// Crypto primitives used by the Remote Attestation protocol.
+// Crypto primitives used by the remote attestation protocol.
 //
-// Should be kept in sync with the Java implementation of the Remote Attestation
+// Should be kept in sync with the Java implementation of the remote attestation
 // protocol.
 
-use crate::proto::EncryptedData;
+use crate::message::EncryptedData;
 use anyhow::{anyhow, Context};
 use ring::{
     aead::{self, BoundKey},
@@ -114,7 +114,7 @@ impl AeadEncryptor {
         // Generate a random nonce.
         let nonce = Self::generate_nonce();
 
-        // Bind `AeadEncryptor::key` to a `NONCE`.
+        // Bind [`AeadEncryptor::key`] to a `nonce`.
         let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.encryption_key)
             .map_err(|error| anyhow!("Couldn't create sealing key: {:?}", error))?;
         let mut sealing_key =
@@ -130,25 +130,18 @@ impl AeadEncryptor {
             .seal_in_place_append_tag(aead::Aad::empty(), &mut encrypted_data)
             .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
 
-        Ok(EncryptedData {
-            nonce: nonce.to_vec(),
-            data: encrypted_data,
-        })
+        Ok(EncryptedData::new(&nonce, &encrypted_data))
     }
 
     /// Decrypts and authenticates `data` using [`AeadEncryptor::key`].
     /// `data` must contain an encrypted message prefixed with a random nonce of [`NONCE_LENGTH`]
     /// length.
     pub fn decrypt(&mut self, data: &EncryptedData) -> anyhow::Result<Vec<u8>> {
-        // Extract nonce from `data`.
-        let mut nonce: [u8; NONCE_LENGTH] = Default::default();
-        nonce.copy_from_slice(&data.nonce[0..NONCE_LENGTH]);
-
         // Bind `AeadEncryptor::key` to the extracted `nonce`.
         let unbound_opening_key =
             aead::UnboundKey::new(AEAD_ALGORITHM, &self.decryption_key).unwrap();
         let mut opening_key =
-            ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new(nonce));
+            ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new(data.nonce));
 
         let mut decrypted_data = data.data.to_vec();
         let decrypted_data = opening_key

@@ -18,50 +18,28 @@ syntax = "proto3";
 
 package oak.functions.server;
 
-import "remote_attestation/proto/remote_attestation.proto";
-
 option java_multiple_files = true;
 option java_package = "oak.functions.server";
 
-// Wrapper around Remote Attestation handshake message.
-message AttestationMessage {
+message AttestedInvokeRequest {
   bytes body = 1;
 }
 
-// Wrapper around the encrypted payload.
-// TODO(#2144): Extend this with additional potentially public fields, for instance for specifying
-// policies.
-message Request {
-  // Payload encrypted using the session key.
-  oak.remote_attestation.EncryptedData encrypted_payload = 1;
-}
-
-message AttestedInvokeRequest {
-  oneof request_type {
-    // Remote Attestation handshake message.
-    AttestationMessage attestation_message = 1;
-    // Request with payload encrypted using the session key.
-    Request request = 2;
-  }
-}
-
 message AttestedInvokeResponse {
-  oneof response_type {
-    // Remote Attestation handshake message.
-    AttestationMessage attestation_message = 1;
-    // Payload encrypted using the session key.
-    oak.remote_attestation.EncryptedData encrypted_payload = 2;
-  }
+  bytes body = 1;
 }
 
 service RemoteAttestation {
   // Creates a message stream for session key negotiation and encrypted payload exchange.
   //
   // The created message stream looks as follows:
-  // - Client->Server: `AttestedInvokeRequest` with `ClientHello`.
-  // - Server->Client: `AttestedInvokeResponse` with `ServerIdentity`.
-  // - Client->Server: `AttestedInvokeRequest` with `ClientIdentity`.
-  // - Client->Server: `AttestedInvokeRequest` with `EncryptedData`.
-  // - Server->Client: `AttestedInvokeResponse` with `EncryptedData`.
+  // - Client->Server: `AttestedInvokeRequest` with a serialized `ClientHello` message.
+  // - Server->Client: `AttestedInvokeResponse` with a serialized `ServerIdentity` message.
+  // - Client->Server: `AttestedInvokeRequest` with a serialized `ClientIdentity` message.
+  // - Client->Server: `AttestedInvokeRequest` with a serialized `EncryptedData` message.
+  // - Server->Client: `AttestedInvokeResponse` with a serialized `EncryptedData` message.
+  //
+  // Messages are represented as serialized messages defined in the `remote_attestation::message.rs`
+  // and `com.google.oak.remote_attestation.Message`.
   rpc AttestedInvoke(stream AttestedInvokeRequest) returns (stream AttestedInvokeResponse);
 }
