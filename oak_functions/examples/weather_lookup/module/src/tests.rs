@@ -166,7 +166,7 @@ async fn test_server() {
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
-            r#"closest station is more than 40000m away"#,
+            r#"closest data point is more than 40000m away"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
         );
     }

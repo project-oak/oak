@@ -49,32 +49,34 @@ pub extern "C" fn main() {
             .map_err(|err| format!("could not deserialize request as JSON: {:?}", err))?;
         log!("parsed request: {:?}\n", request);
 
+        // Find the cell that contains the current location.
         let cell = find_cell(request.latitude_degrees, request.longitude_degrees)?;
         log!("current location cell: {:?}\n", cell);
+        // Map the current location as a cartesion position relative to the midpoint of the cell.
         let position = cell.relative_position(request.latitude_degrees, request.longitude_degrees);
         log!("position relative to cell midpoint: {:?}\n", position);
 
-        // Look up the index values for the list of weather stations in the vicinity of the cell.
+        // Look up the index values for the list of weather data point in the vicinity of the cell.
         let index = oak_functions::storage_get_item(&cell.index.to_bytes())
             .map_err(|err| format!("could not get index item: {:?}", err))?
             .ok_or("could not find index item for cell")?;
 
-        // Find the closest key by linearly scanning the nearby weather stations to find the closest
-        // one.
+        // Find the closest key by linearly scanning the nearby weather data points to find the
+        // closest one.
         let best_key = index
             .chunks(16)
             .min_by_key(|key| {
-                let station = IndexValue::from_bytes(key);
-                station.position.squared_distance(&position)
+                let index_item = IndexValue::from_bytes(key);
+                index_item.position.squared_distance(&position)
             })
             .ok_or("could not find nearest location")?;
-        log!("nearest station key: {:?}\n", best_key);
-        let best_station = IndexValue::from_bytes(&best_key);
-        log!("nearest station: {:?}\n", best_station);
+        log!("nearest data key: {:?}\n", best_key);
+        let best_location = IndexValue::from_bytes(&best_key);
+        log!("nearest data point: {:?}\n", best_location);
         // Make sure it is no further than 40km.
-        position.validate_close_enough(&best_station.position, 40_000)?;
+        position.validate_close_enough(&best_location.position, 40_000)?;
 
-        let best_value = oak_functions::storage_get_item(&best_station.value_key)
+        let best_value = oak_functions::storage_get_item(&best_location.value_key)
             .map_err(|err| format!("could not get item: {:?}", err))?
             .ok_or("could not find item with key")?;
         log!("nearest location value: {:?}\n", best_value);

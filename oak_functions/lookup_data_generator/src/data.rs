@@ -109,7 +109,7 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
     let mut keys = vec![];
     let mut cell_map = MultiMap::new();
     for i in 0..entries {
-        // Fix the first point to ensure the default example can find at least one station within
+        // Fix the first point to ensure the default example can find at least one data point within
         // 40km.
         let latitude_degrees = if i == 0 {
             52.1_f32
@@ -174,7 +174,7 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
     Ok(buf)
 }
 
-/// Finds all nearby cells where a point in the cell could be within 40km of the weather station.
+/// Finds all nearby cells where a point in the cell could be within 40km of the weather data point.
 ///
 /// If the point is above or below the midpoint of the cell we only need to check the row above or
 /// below respectively. Similarly, if a point is to the the right or left of the midpoint we only
@@ -183,8 +183,9 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
 /// points within about 200km of the North and South poles.
 ///
 /// Additionally, the longest distance between the midpoint of a cell and its furthest corner is
-/// just under 80km. If the cutoff for finding weather stations is 40km, a point in a cell can only
-/// fall within this range if the midpoint of the cell is less than 120km from the weather station.
+/// just under 80km. If the cutoff for finding weather data points is 40km, a point in a cell can
+/// only fall within this range if the midpoint of the cell is less than 120km from the weather
+/// data point.
 fn find_nearby_cells(latitude_degrees: f32, longitude_degrees: f32) -> Vec<Cell> {
     let cutoff = 120_000;
     let mut cells = vec![];

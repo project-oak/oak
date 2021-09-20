@@ -34,13 +34,13 @@ pub struct Cell {
 
 impl Cell {
     /// Calculates an approximate local cartesian coordinate relative of the location in meters. The
-    /// middle of the cell is used as the origin and the y-axis points due north. All points on the
+    /// middle of the cell is used as the origin and the y-axis points due North. All points on the
     /// surface of the sphere are projected onto a tangent plane at the midpoint using lines
     /// perpendicular to the plane.
     ///
-    /// This approximation is close enough for applications such as finding the closest weather
-    /// station within a 40km radius of the location as the surface of the earth is very close
-    /// to flat at this scale.
+    /// This approximation is close enough for applications such as finding the closest data
+    /// location within a 40km radius of the client as the surface of the earth is very close to
+    /// flat at this scale.
     pub fn relative_position(&self, latitude_degrees: f32, longitude_degrees: f32) -> Point {
         // Find the midpoint of the cell.
         let mid_latitude = self.index.row as f32 + 0.5;
@@ -94,12 +94,11 @@ impl Cell {
 /// latitude that forms its southern border.
 ///
 /// The rows at the equator are divided into 360 cells. The number of cells in each row above and
-/// below is scaled by `cos(latitude_border)` for the border that gives the higer scale value.
-/// This means the cell width is scaled by `1 / cos(latitude_border)`. For the northern hemisphere
-/// this is the southern border and vice versa.
+/// below is scaled by `cos(latitude_border)` for the border that gives the higer scale value. For
+/// the northern hemisphere this is the southern border and vice versa.
 ///
-/// The cell with a western border at 0° longitude has a
-/// column number of 0. Column numbers increase eastward and cannot be smaller than 0.
+/// The cell with a western border at 0° longitude has a column number of 0. Column numbers increase
+/// eastward and cannot be smaller than 0.
 #[derive(Debug, Eq, PartialEq)]
 pub struct IndexKey {
     pub row: i16,
@@ -119,19 +118,21 @@ impl IndexKey {
         }
     }
 
+    /// Converts the `IndexKey` for the cell to bytes. This is used for looking up index entries for
+    /// a cell. Locations have 8 byte keys and cells have 4 byte keys, so there is no chance of a
+    /// collision.
     pub fn to_bytes(&self) -> Vec<u8> {
         [self.row.to_be_bytes(), self.col.to_be_bytes()].concat()
     }
 }
 
-/// Represents an index value for a location-based lookup (e.g a weather station). The `value_key`
-/// is the key for the location's related value (e.g. the current weather at the weather station)
-/// and the `position` is the cartesian projection of its position relative to the midpoint of the
-/// cell. Locations have 8 byte keys and cells have 4 byte keys, so there is no chance of a
-/// collision.
+/// Represents an index value for a location-based lookup (e.g weather data).
 #[derive(Debug, Eq, PartialEq)]
 pub struct IndexValue {
+    /// The key for the location's related value (e.g. the current weather at the weather data
+    /// location).
     pub value_key: [u8; 8],
+    /// The cartesian projection of its position relative to the midpoint of the cell.
     pub position: Point,
 }
 
@@ -184,11 +185,11 @@ impl Point {
         ((self.x - other.x) as i64).pow(2) + ((self.y - other.y) as i64).pow(2)
     }
 
-    /// Validates that the closest station is no more than 40km away.
+    /// Validates that a point is within a cutoff radius.
     pub fn validate_close_enough(&self, other: &Point, cutoff: i32) -> Result<(), String> {
         let cutoff_sqaured = (cutoff as i64).pow(2);
         if self.squared_distance(other) > cutoff_sqaured {
-            return Err(format!("closest station is more than {}m away", cutoff));
+            return Err(format!("closest data point is more than {}m away", cutoff));
         }
         Ok(())
     }
