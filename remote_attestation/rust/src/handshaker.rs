@@ -119,7 +119,7 @@ impl Handshaker for ClientHandshaker {
                             .serialize()
                             .context("Couldn't serialize client identity message")?;
                         Ok(Some(serialized_client_identity))
-                    }
+                    },
                     ClientHandshakerState::MessageProcessing => Err(anyhow!(
                         "Cannot process new messages while in the MessageProcessing state",
                     )),

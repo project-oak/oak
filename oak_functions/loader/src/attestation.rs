@@ -14,12 +14,15 @@
 // limitations under the License.
 //
 
-use crate::proto::{
-    remote_attestation_server::RemoteAttestation, AttestedInvokeRequest, AttestedInvokeResponse,
+use crate::{
+    logger::Logger,
+    proto::{
+        remote_attestation_server::RemoteAttestation, AttestedInvokeRequest, AttestedInvokeResponse,
+    },
 };
 use anyhow::Context;
 use futures::{Stream, StreamExt};
-use log::warn;
+use log::Level;
 use oak_remote_attestation::handshaker::{
     AttestationBehavior, Encryptor, Handshaker, ServerHandshaker,
 };
@@ -105,6 +108,9 @@ pub struct AttestationServer<F> {
     tee_certificate: Vec<u8>,
     /// Processes data from client requests and creates responses.
     request_handler: F,
+    /// Logger that is required for logging attestation protocol errors.
+    /// Errors are only logged on server side and are not sent to clients.
+    logger: Logger,
 }
 
 impl<F, S> AttestationServer<F>
@@ -112,10 +118,11 @@ where
     F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
-    pub fn create(tee_certificate: Vec<u8>, request_handler: F) -> anyhow::Result<Self> {
+    pub fn create(tee_certificate: Vec<u8>, request_handler: F, logger: Logger) -> anyhow::Result<Self> {
         Ok(Self {
             tee_certificate,
             request_handler,
+            logger,
         })
     }
 }
@@ -135,6 +142,7 @@ where
     ) -> Result<Response<Self::AttestedInvokeStream>, Status> {
         let tee_certificate = self.tee_certificate.clone();
         let request_handler = self.request_handler.clone();
+        let logger = self.logger.clone();
 
         let request_stream = request_stream.into_inner();
         let response_stream = async_stream::try_stream! {
@@ -143,22 +151,39 @@ where
             /// Attest a single gRPC streaming request.
             let mut handshaker = ServerHandshaker::new(
                 AttestationBehavior::create_self_attestation(&tee_certificate)
-                    .map_err(|error| error_to_status("Couldn't create self attestation behavior", error))?,
+                    .map_err(|error| {
+                        log_error(
+                            &logger,
+                            &format!("Couldn't create self attestation behavior: {:?}", error)
+                        );
+                        Status::internal("")
+                    })?,
             );
             while !handshaker.is_completed() {
                 let incoming_message = receiver
                     .receive()
                     .await
-                    .map_err(|error| error_to_status("Couldn't receive handshake message", error))?
+                    .map_err(|error| {
+                        log_error(
+                            &logger,
+                            &format!("Couldn't receive handshake message: {:?}", error)
+                        );
+                        Status::aborted("")
+                    })?
                     .ok_or_else(|| {
-                        let message = format!("Stream stopped preemptively");
-                        warn!("{}", message);
-                        Status::internal(message)
+                        log_error(&logger, "Stream stopped preemptively");
+                        Status::internal("")
                     })?;
 
                 let outgoing_message = handshaker
                     .next_step(&incoming_message.body)
-                    .map_err(|error| error_to_status("Couldn't process handshake message", error))?;
+                    .map_err(|error| {
+                        log_error(
+                            &logger,
+                            &format!("Couldn't process handshake message: {:?}", error)
+                        );
+                        Status::aborted("")
+                    })?;
                 if let Some(outgoing_message) = outgoing_message {
                     yield AttestedInvokeResponse {
                         body: outgoing_message,
@@ -167,10 +192,20 @@ where
             }
             let encryptor = handshaker
                 .get_encryptor()
-                .map_err(|error| error_to_status("Couldn't get encryptor", error))?;
+                .map_err(|error| {
+                    log_error(&logger, &format!("Couldn't get encryptor: {:?}", error));
+                    Status::internal("")
+                })?;
 
             let mut handler = RequestHandler::<F, S>::new(encryptor, request_handler);
-            while let Some(response) = handler.handle_request(&mut receiver).await.map_err(|error| error_to_status("Couldn't handle request", error))? {
+            while let Some(response) = handler
+                .handle_request(&mut receiver)
+                .await
+                .map_err(|error| {
+                    log_error(&logger, &format!("Couldn't handle request: {:?}", error));
+                    Status::aborted("")
+                })?
+            {
                 yield response;
             }
         };
@@ -179,8 +214,10 @@ where
     }
 }
 
-fn error_to_status<T: std::fmt::Debug>(comment: &str, error: T) -> Status {
-    let message = format!("{}: {:?}", comment, error);
-    warn!("{}", message);
-    Status::internal(message)
+/// Helper function for logging remote attestation errors.
+fn log_error(logger: &Logger, error: &str) {
+    logger.log_public(
+        Level::Warn,
+        &format!("{:?}: Remote attestation error: {}", std::thread::current().id(), error)
+    );
 }

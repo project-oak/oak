@@ -35,6 +35,7 @@ pub const PROTOCOL_VERSION: u8 = 1;
 /// Length (in bytes) of the random vector sent in messages for preventing replay attacks.
 pub const REPLAY_PROTECTION_ARRAY_LENGTH: usize = 32;
 
+// TODO(#2295): Add Frame struct to remote attestation messages.
 /// Convenience struct that wraps attestation messages.
 pub enum MessageWrapper {
     ClientHello(ClientHello),
@@ -56,6 +57,7 @@ impl std::fmt::Display for MessageWrapper {
 
 // TODO(#2105): Implement challenge-response in remote attestation.
 // TODO(#2106): Support various claims in remote attestation.
+// TODO(#2294): Remove `bincode` and use manual message serialization.
 /// Initial message that starts remote attestation handshake.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ClientHello {
