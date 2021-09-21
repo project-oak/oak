@@ -33,31 +33,31 @@ import java.util.Random;
 import oak.remote_attestation.AttestationInfo;
 import oak.remote_attestation.AttestationReport;
 
-enum AttestationState {
+enum HandshakerState {
   Initializing {
     @Override
-    public AttestationState transition() {
-      return Attesting;
+    public HandshakerState transition() {
+      return ExpectingServerIdentity;
     }
   },
-  Attesting {
+  ExpectingServerIdentity {
     @Override
-    public AttestationState transition() {
-      return Attested;
+    public HandshakerState transition() {
+      return Completed;
     }
   },
-  Attested {
+  Completed {
     @Override
-    public AttestationState transition() {
+    public HandshakerState transition() {
       return this;
     }
   };
 
-  public abstract AttestationState transition();
+  public abstract HandshakerState transition();
 }
 
 /** Remote attestation protocol handshake implementation. */
-public class ClientAttestationEngine {
+public class ClientHandshaker {
   /** Remote attestation protocol version. */
   private static final int ATTESTATION_PROTOCOL_VERSION = 1;
   /** Size (in bytes) of a random array sent in messages to prevent replay attacks. */
@@ -68,7 +68,7 @@ public class ClientAttestationEngine {
   /** Expected value of the server's TEE measurement. */
   private final byte[] expectedTeeMeasurement;
   /** Current state of the remote attestation protocol. */
-  private AttestationState state;
+  private HandshakerState state;
   /**
    * Collection of previously sent and received messages.
    * Signed transcript is sent in messages to prevent replay attacks.
@@ -79,9 +79,9 @@ public class ClientAttestationEngine {
   /** Encryptor that was created during the attestation handshake. */
   private AeadEncryptor encryptor;
 
-  public ClientAttestationEngine(byte[] expectedTeeMeasurement) {
+  public ClientHandshaker(byte[] expectedTeeMeasurement) {
     this.expectedTeeMeasurement = expectedTeeMeasurement;
-    state = AttestationState.Initializing;
+    state = HandshakerState.Initializing;
     transcript = new byte[0];
     // Generate client private/public key pair.
     keyNegotiator = new KeyNegotiator();
@@ -89,14 +89,14 @@ public class ClientAttestationEngine {
   }
 
   /**
-   * Initializes the Remote Attestation handshake by creating an {@code ClientHello} message.
+   * Initializes the remote attestation handshake by creating an {@code ClientHello} message.
    *
-   * Transitions {@code ClientAttestationEngine} state from {@code Initializing} to
+   * Transitions {@code ClientHandshaker} state from {@code Initializing} to
    * {@code Attesting} state.
    */
   public byte[] createClientHello() throws IllegalStateException, IOException {
-    if (state != AttestationState.Initializing) {
-      throw new IllegalStateException("ClientAttestationEngine is not in the Initializing state");
+    if (state != HandshakerState.Initializing) {
+      throw new IllegalStateException("ClientHandshaker is not in the Initializing state");
     }
 
     // Random vector sent in messages for preventing replay attacks.
@@ -119,12 +119,13 @@ public class ClientAttestationEngine {
    * derives session keys for encrypting/decrypting messages from the server.
    * {@code ClientIdentity} message contains an ephemeral public key for negotiating session keys.
    *
-   * Transitions {@code AttestationEngine} state from {@code Attesting} to {@code Attested} state.
+   * Transitions {@code ClientHandshaker} state from {@code Attesting} to {@code Attested} state.
    */
   public byte[] processServerIdentity(byte[] serializedServerIdentity)
       throws IllegalStateException, IOException, GeneralSecurityException {
-    if (state != AttestationState.Attesting) {
-      throw new IllegalStateException("ClientAttestationEngine is not in the Attesting state");
+    if (state != HandshakerState.ExpectingServerIdentity) {
+      throw new IllegalStateException(
+          "ClientHandshaker is not in the ExpectingServerIdentity state");
     }
 
     Message.ServerIdentity serverIdentity =
@@ -171,8 +172,8 @@ public class ClientAttestationEngine {
 
   /** Returns an encryptor created based on the negotiated ephemeral keys. */
   public AeadEncryptor getEncryptor() {
-    if (state != AttestationState.Attested) {
-      throw new IllegalStateException("ClientAttestationEngine is not in the Attested state");
+    if (state != HandshakerState.Completed) {
+      throw new IllegalStateException("ClientHandshaker is not in the Completed state");
     }
 
     return encryptor;

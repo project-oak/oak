@@ -28,13 +28,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-/** Wrapper class for Remote Attestation Protocol messages. */
+/** Wrapper class for remote attestation protocol messages. */
 public class Message {
   static final int CLIENT_HELLO_HEADER = 1;
   static final int SERVER_IDENTITY_HEADER = 2;
   static final int CLIENT_IDENTITY_HEADER = 3;
+  static final int ENCRYPTED_DATA_HEADER = 4;
 
-  /** Remote Attestation protocol version. */
+  /** Remote attestation protocol version. */
   public static final int PROTOCOL_VERSION = 1;
   /**
    * Size (in bytes) of the prefix that describes the size of a serialized array.
@@ -42,6 +43,7 @@ public class Message {
    */
   public static final int ARRAY_SERIALIZATION_PREFIX_LENGTH = 8;
 
+  public static final int NONCE_LENGTH = 12;
   /** Size (in bytes) of a random array sent in messages to prevent replay attacks. */
   public static final int REPLAY_PROTECTION_ARRAY_LENGTH = 32;
   public static final int EPHEMERAL_PUBLIC_KEY_LENGTH = 32;
@@ -49,7 +51,7 @@ public class Message {
   public static final int TRANSCRIPT_SIGNATURE_LENGTH = 64;
   public static final int SIGNING_PUBLIC_KEY_LENGTH = 65;
 
-  /** Initial message that starts Remote Attestation handshake. */
+  /** Initial message that starts remote attestation handshake. */
   public static class ClientHello {
     /** Message header. */
     private final byte header;
@@ -324,6 +326,58 @@ public class Message {
           new ClientIdentity(ephemeralPublicKey, signingPublicKey, attestationInfo);
       clientIdentity.setTranscriptSignature(transcriptSignature);
       return clientIdentity;
+    }
+  }
+
+  /** Message containing data encrypted using a session key. */
+  public static class EncryptedData {
+    /** Message header. */
+    private final byte header;
+    /** Random nonce (initialization vector) used for encryption/decryption. */
+    private final byte[] nonce;
+    /** Data encrypted using the session key. */
+    private final byte[] data;
+
+    public EncryptedData(byte[] nonce, byte[] data) {
+      header = ENCRYPTED_DATA_HEADER;
+      this.nonce = nonce;
+      this.data = data;
+    }
+
+    public byte[] getNonce() {
+      return nonce;
+    }
+
+    public byte[] getData() {
+      return data;
+    }
+
+    public byte[] serialize() throws IOException {
+      ByteArrayOutputStream output = new ByteArrayOutputStream();
+      DataOutputStream outputStream = new DataOutputStream(output);
+
+      outputStream.writeByte(header);
+      writeFixedSizeArray(outputStream, nonce, NONCE_LENGTH, "nonce");
+      writeVariableSizeArray(outputStream, data, "data");
+      outputStream.flush();
+
+      return output.toByteArray();
+    }
+
+    public static EncryptedData deserialize(byte[] input)
+        throws IllegalArgumentException, IOException {
+      DataInputStream inputStream = new DataInputStream(new ByteArrayInputStream(input));
+
+      byte header = inputStream.readByte();
+      if (header != ENCRYPTED_DATA_HEADER) {
+        throw new IllegalArgumentException("Incorrect encrypted data message header");
+      }
+
+      byte[] nonce = readFixedSizeArray(inputStream, NONCE_LENGTH, "nonce");
+      byte[] data = readVariableSizeArray(inputStream, "data");
+
+      EncryptedData encryptedData = new EncryptedData(nonce, data);
+      return encryptedData;
     }
   }
 

@@ -98,7 +98,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     // `wasm_handler`.
     tonic::transport::Server::builder()
         .add_service(RemoteAttestationServer::new(
-            AttestationServer::create(tee_certificate, request_handler)
+            AttestationServer::create(tee_certificate, request_handler, logger)
                 .context("Couldn't create remote attestation server")?,
         ))
         .serve_with_shutdown(*address, terminate)
