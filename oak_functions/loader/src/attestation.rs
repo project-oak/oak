@@ -23,9 +23,7 @@ use crate::{
 use anyhow::Context;
 use futures::{Stream, StreamExt};
 use log::Level;
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, Encryptor, Handshaker, ServerHandshaker,
-};
+use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
 use std::pin::Pin;
 use tonic::{Request, Response, Status, Streaming};
 
@@ -118,7 +116,11 @@ where
     F: Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync,
 {
-    pub fn create(tee_certificate: Vec<u8>, request_handler: F, logger: Logger) -> anyhow::Result<Self> {
+    pub fn create(
+        tee_certificate: Vec<u8>,
+        request_handler: F,
+        logger: Logger,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             tee_certificate,
             request_handler,
@@ -218,6 +220,10 @@ where
 fn log_error(logger: &Logger, error: &str) {
     logger.log_public(
         Level::Warn,
-        &format!("{:?}: Remote attestation error: {}", std::thread::current().id(), error)
+        &format!(
+            "{:?}: Remote attestation error: {}",
+            std::thread::current().id(),
+            error
+        ),
     );
 }

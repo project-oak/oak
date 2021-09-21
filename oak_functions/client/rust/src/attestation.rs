@@ -19,9 +19,7 @@ use crate::proto::{
     AttestedInvokeResponse,
 };
 use anyhow::Context;
-use oak_remote_attestation::handshaker::{
-    AttestationBehavior, ClientHandshaker, Encryptor, Handshaker,
-};
+use oak_remote_attestation::handshaker::{AttestationBehavior, ClientHandshaker, Encryptor};
 use tokio::sync::mpsc::Sender;
 use tonic::{transport::Channel, Request, Streaming};
 

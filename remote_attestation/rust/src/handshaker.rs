@@ -108,7 +108,9 @@ impl ClientHandshaker {
         }
     }
 
-    fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+    /// Processes incoming `message` and returns a serialized remote attestation message.
+    /// If [`None`] is returned, then no messages should be sent out to the server.
+    pub fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
             deserialize_message(message).context("Couldn't deserialize message")?;
         match deserialized_message {
@@ -122,7 +124,7 @@ impl ClientHandshaker {
                             .serialize()
                             .context("Couldn't serialize client identity message")?;
                         Ok(Some(serialized_client_identity))
-                    },
+                    }
                     ClientHandshakerState::MessageProcessing => Err(anyhow!(
                         "Cannot process new messages while in the MessageProcessing state",
                     )),
@@ -139,11 +141,11 @@ impl ClientHandshaker {
         }
     }
 
-    fn is_completed(&self) -> bool {
+    pub fn is_completed(&self) -> bool {
         matches!(self.state, ClientHandshakerState::Completed(_))
     }
 
-    fn get_encryptor(self) -> anyhow::Result<Encryptor> {
+    pub fn get_encryptor(self) -> anyhow::Result<Encryptor> {
         match self.state {
             ClientHandshakerState::Completed(encryptor) => Ok(Encryptor { encryptor }),
             _ => Err(anyhow!("Handshake is not complete")),
@@ -297,7 +299,9 @@ impl ServerHandshaker {
         }
     }
 
-    fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+    /// Processes incoming `message` and returns a serialized remote attestation message.
+    /// If [`None`] is returned, then no messages should be sent out to the client.
+    pub fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
             deserialize_message(message).context("Couldn't deserialize message")?;
         match deserialized_message {
@@ -342,11 +346,11 @@ impl ServerHandshaker {
         }
     }
 
-    fn is_completed(&self) -> bool {
+    pub fn is_completed(&self) -> bool {
         matches!(self.state, ServerHandshakerState::Completed(_))
     }
 
-    fn get_encryptor(self) -> anyhow::Result<Encryptor> {
+    pub fn get_encryptor(self) -> anyhow::Result<Encryptor> {
         match self.state {
             ServerHandshakerState::Completed(encryptor) => Ok(Encryptor { encryptor }),
             _ => Err(anyhow!("Handshake is not complete")),
