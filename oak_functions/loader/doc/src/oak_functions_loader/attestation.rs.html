@@ -227,26 +227,6 @@
 <span id="227">227</span>
 <span id="228">228</span>
 <span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
-<span id="240">240</span>
-<span id="241">241</span>
-<span id="242">242</span>
-<span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-<span id="248">248</span>
-<span id="249">249</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -264,18 +244,16 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proto</span>::{
-    <span class="ident">attested_invoke_request::RequestType</span>, <span class="ident">attested_invoke_response::ResponseType</span>,
-    <span class="ident">remote_attestation_server::RemoteAttestation</span>, <span class="ident">AttestationMessage</span>, <span class="ident">AttestedInvokeRequest</span>,
-    <span class="ident">AttestedInvokeResponse</span>,
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">logger::Logger</span>,
+    <span class="ident">proto</span>::{
+        <span class="ident">remote_attestation_server::RemoteAttestation</span>, <span class="ident">AttestedInvokeRequest</span>, <span class="ident">AttestedInvokeResponse</span>,
+    },
 };
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">Context</span>};
+<span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">Stream</span>, <span class="ident">StreamExt</span>};
-<span class="kw">use</span> <span class="ident">log::warn</span>;
-<span class="kw">use</span> <span class="ident">oak_remote_attestation</span>::{
-    <span class="ident">attestation</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">Attesting</span>, <span class="ident">Initializing</span>, <span class="ident">ServerAttestationEngine</span>},
-    <span class="ident">crypto::AeadEncryptor</span>,
-};
+<span class="kw">use</span> <span class="ident">log::Level</span>;
+<span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">Encryptor</span>, <span class="ident">ServerHandshaker</span>};
 <span class="kw">use</span> <span class="ident">std::pin::Pin</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Status</span>, <span class="ident">Streaming</span>};
 
@@ -303,7 +281,7 @@
     <span class="ident">S</span>: <span class="ident">std::future::Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
 {
     <span class="doccomment">/// Utility object for decrypting and encrypting messages using a Diffie-Hellman session key.</span>
-    <span class="ident">encryptor</span>: <span class="ident">AeadEncryptor</span>,
+    <span class="ident">encryptor</span>: <span class="ident">Encryptor</span>,
     <span class="doccomment">/// Handler function that processes data from client requests and creates responses.</span>
     <span class="ident">handler</span>: <span class="ident">F</span>,
 }
@@ -313,7 +291,7 @@
     <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">FnOnce</span>(<span class="ident">oak_functions_abi::proto::Request</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">S</span>,
     <span class="ident">S</span>: <span class="ident">std::future::Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">encryptor</span>: <span class="ident">AeadEncryptor</span>, <span class="ident">handler</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">encryptor</span>: <span class="ident">Encryptor</span>, <span class="ident">handler</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> { <span class="ident">encryptor</span>, <span class="ident">handler</span> }
     }
 
@@ -324,40 +302,28 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">receiver</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Receiver</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AttestedInvokeResponse</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">request</span>) <span class="op">=</span> <span class="ident">receiver</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">encrypted_request</span>) <span class="op">=</span> <span class="ident">receiver</span>
             .<span class="ident">receive</span>()
             .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t receive request&quot;</span>)<span class="question-mark">?</span>
         {
-            <span class="kw">let</span> <span class="ident">request_type</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">request_type</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read request type&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">secure_request</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RequestType::Request</span>(<span class="ident">request</span>) <span class="op">=</span> <span class="ident">request_type</span> {
-                <span class="prelude-val">Ok</span>(<span class="ident">request</span>)
-            } <span class="kw">else</span> {
-                <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Received incorrect message type&quot;</span>))
-            }<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">request_payload</span> <span class="op">=</span> <span class="self">self</span>
+            <span class="kw">let</span> <span class="ident">decrypted_request</span> <span class="op">=</span> <span class="self">self</span>
                 .<span class="ident">encryptor</span>
-                .<span class="ident">decrypt</span>(
-                    <span class="kw-2">&amp;</span><span class="ident">secure_request</span>
-                        .<span class="ident">encrypted_payload</span>
-                        .<span class="ident">context</span>(<span class="string">&quot;Empty encrypted payload&quot;</span>)<span class="question-mark">?</span>,
-                )
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t decrypt data&quot;</span>)<span class="question-mark">?</span>;
+                .<span class="ident">decrypt</span>(<span class="kw-2">&amp;</span><span class="ident">encrypted_request</span>.<span class="ident">body</span>)
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t decrypt request&quot;</span>)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">oak_functions_abi::proto::Request</span> {
-                <span class="ident">body</span>: <span class="ident">request_payload</span>,
-            };
-
-            <span class="kw">let</span> <span class="ident">response_payload</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">handler</span>.<span class="ident">clone</span>())(<span class="ident">request</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">encrypted_response_payload</span> <span class="op">=</span> <span class="self">self</span>
+            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">handler</span>.<span class="ident">clone</span>())(<span class="ident">oak_functions_abi::proto::Request</span> {
+                <span class="ident">body</span>: <span class="ident">decrypted_request</span>,
+            })
+            .<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">encrypted_response</span> <span class="op">=</span> <span class="self">self</span>
                 .<span class="ident">encryptor</span>
-                .<span class="ident">encrypt</span>(<span class="kw-2">&amp;</span><span class="ident">response_payload</span>)
-                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t encrypt data&quot;</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">AttestedInvokeResponse</span> {
-                <span class="ident">response_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseType::EncryptedPayload</span>(<span class="ident">encrypted_response_payload</span>)),
-            };
+                .<span class="ident">encrypt</span>(<span class="kw-2">&amp;</span><span class="ident">response</span>)
+                .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t decrypt response&quot;</span>)<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">response</span>))
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">AttestedInvokeResponse</span> {
+                <span class="ident">body</span>: <span class="ident">encrypted_response</span>,
+            }))
         } <span class="kw">else</span> {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
         }
@@ -370,6 +336,9 @@
     <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Processes data from client requests and creates responses.</span>
     <span class="ident">request_handler</span>: <span class="ident">F</span>,
+    <span class="doccomment">/// Logger that is required for logging attestation protocol errors.</span>
+    <span class="doccomment">/// Errors are only logged on server side and are not sent to clients.</span>
+    <span class="ident">logger</span>: <span class="ident">Logger</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">AttestationServer</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>
@@ -377,10 +346,15 @@
     <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">FnOnce</span>(<span class="ident">oak_functions_abi::proto::Request</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">S</span>,
     <span class="ident">S</span>: <span class="ident">std::future::Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">request_handler</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
+        <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+        <span class="ident">request_handler</span>: <span class="ident">F</span>,
+        <span class="ident">logger</span>: <span class="ident">Logger</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">tee_certificate</span>,
             <span class="ident">request_handler</span>,
+            <span class="ident">logger</span>,
         })
     }
 }
@@ -400,34 +374,70 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::AttestedInvokeStream</span><span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">tee_certificate</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tee_certificate</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">request_handler</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_handler</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>();
 
         <span class="kw">let</span> <span class="ident">request_stream</span> <span class="op">=</span> <span class="ident">request_stream</span>.<span class="ident">into_inner</span>();
         <span class="kw">let</span> <span class="ident">response_stream</span> <span class="op">=</span> <span class="macro">async_stream::try_stream!</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">Receiver</span> { <span class="ident">request_stream</span> };
 
-            <span class="kw">let</span> (<span class="ident">attestation_response</span>, <span class="ident">attestation_engine</span>) <span class="op">=</span> <span class="ident">process_client_hello</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">receiver</span>, <span class="kw-2">&amp;</span><span class="ident">tee_certificate</span>)
-                .<span class="kw">await</span>
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t process client hello: {:?}&quot;</span>, <span class="ident">error</span>).<span class="ident">to_string</span>();
-                    <span class="macro">warn!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">message</span>);
-                    <span class="ident">Status::internal</span>(<span class="ident">message</span>)
-                })<span class="question-mark">?</span>;
-            <span class="kw">yield</span> <span class="ident">attestation_response</span>;
+            <span class="doccomment">/// Attest a single gRPC streaming request.</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handshaker</span> <span class="op">=</span> <span class="ident">ServerHandshaker::new</span>(
+                <span class="ident">AttestationBehavior::create_self_attestation</span>(<span class="kw-2">&amp;</span><span class="ident">tee_certificate</span>)
+                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                        <span class="ident">log_error</span>(
+                            <span class="kw-2">&amp;</span><span class="ident">logger</span>,
+                            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t create self attestation behavior: {:?}&quot;</span>, <span class="ident">error</span>)
+                        );
+                        <span class="ident">Status::internal</span>(<span class="string">&quot;&quot;</span>)
+                    })<span class="question-mark">?</span>,
+            );
+            <span class="kw">while</span> <span class="op">!</span><span class="ident">handshaker</span>.<span class="ident">is_completed</span>() {
+                <span class="kw">let</span> <span class="ident">incoming_message</span> <span class="op">=</span> <span class="ident">receiver</span>
+                    .<span class="ident">receive</span>()
+                    .<span class="kw">await</span>
+                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                        <span class="ident">log_error</span>(
+                            <span class="kw-2">&amp;</span><span class="ident">logger</span>,
+                            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t receive handshake message: {:?}&quot;</span>, <span class="ident">error</span>)
+                        );
+                        <span class="ident">Status::aborted</span>(<span class="string">&quot;&quot;</span>)
+                    })<span class="question-mark">?</span>
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+                        <span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="ident">logger</span>, <span class="string">&quot;Stream stopped preemptively&quot;</span>);
+                        <span class="ident">Status::internal</span>(<span class="string">&quot;&quot;</span>)
+                    })<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">encryptor</span> <span class="op">=</span> <span class="ident">process_client_identity</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">receiver</span>, <span class="ident">attestation_engine</span>)
-                .<span class="kw">await</span>
+                <span class="kw">let</span> <span class="ident">outgoing_message</span> <span class="op">=</span> <span class="ident">handshaker</span>
+                    .<span class="ident">next_step</span>(<span class="kw-2">&amp;</span><span class="ident">incoming_message</span>.<span class="ident">body</span>)
+                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                        <span class="ident">log_error</span>(
+                            <span class="kw-2">&amp;</span><span class="ident">logger</span>,
+                            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t process handshake message: {:?}&quot;</span>, <span class="ident">error</span>)
+                        );
+                        <span class="ident">Status::aborted</span>(<span class="string">&quot;&quot;</span>)
+                    })<span class="question-mark">?</span>;
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">outgoing_message</span>) <span class="op">=</span> <span class="ident">outgoing_message</span> {
+                    <span class="kw">yield</span> <span class="ident">AttestedInvokeResponse</span> {
+                        <span class="ident">body</span>: <span class="ident">outgoing_message</span>,
+                    };
+                }
+            }
+            <span class="kw">let</span> <span class="ident">encryptor</span> <span class="op">=</span> <span class="ident">handshaker</span>
+                .<span class="ident">get_encryptor</span>()
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t process client identity: {:?}&quot;</span>, <span class="ident">error</span>).<span class="ident">to_string</span>();
-                    <span class="macro">warn!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">message</span>);
-                    <span class="ident">Status::internal</span>(<span class="ident">message</span>)
+                    <span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="ident">logger</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t get encryptor: {:?}&quot;</span>, <span class="ident">error</span>));
+                    <span class="ident">Status::internal</span>(<span class="string">&quot;&quot;</span>)
                 })<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handler</span> <span class="op">=</span> <span class="ident">RequestHandler</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">encryptor</span>, <span class="ident">request_handler</span>);
-            <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">response</span>) <span class="op">=</span> <span class="ident">handler</span>.<span class="ident">handle_request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">receiver</span>).<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t handle request: {:?}&quot;</span>, <span class="ident">error</span>);
-                <span class="macro">warn!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">message</span>);
-                <span class="ident">Status::internal</span>(<span class="ident">message</span>)
-            })<span class="question-mark">?</span> {
+            <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">response</span>) <span class="op">=</span> <span class="ident">handler</span>
+                .<span class="ident">handle_request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">receiver</span>)
+                .<span class="kw">await</span>
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                    <span class="ident">log_error</span>(<span class="kw-2">&amp;</span><span class="ident">logger</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t handle request: {:?}&quot;</span>, <span class="ident">error</span>));
+                    <span class="ident">Status::aborted</span>(<span class="string">&quot;&quot;</span>)
+                })<span class="question-mark">?</span>
+            {
                 <span class="kw">yield</span> <span class="ident">response</span>;
             }
         };
@@ -436,66 +446,16 @@
     }
 }
 
-<span class="doccomment">/// Attest a single gRPC streaming request. Client messages are provided via `receiver`.</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_client_hello</span>(
-    <span class="ident">receiver</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Receiver</span>,
-    <span class="ident">tee_certificate</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span>(<span class="ident">AttestedInvokeResponse</span>, <span class="ident">ServerAttestationEngine</span><span class="op">&lt;</span><span class="ident">Attesting</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">receiver</span>
-        .<span class="ident">receive</span>()
-        .<span class="kw">await</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t receive attestation request&quot;</span>)<span class="question-mark">?</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Stream stopped preemptively&quot;</span>)<span class="question-mark">?</span>;
-
-    <span class="comment">// Receive client hello message.</span>
-    <span class="kw">let</span> <span class="ident">request_type</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">request_type</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read request type&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">client_hello</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RequestType::AttestationMessage</span>(<span class="ident">request</span>) <span class="op">=</span> <span class="ident">request_type</span> {
-        <span class="ident">request</span>.<span class="ident">body</span>
-    } <span class="kw">else</span> {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Received incorrect message type&quot;</span>);
-    };
-
-    <span class="kw">let</span> <span class="ident">attestation_engine</span> <span class="op">=</span> <span class="ident">ServerAttestationEngine</span>::<span class="op">&lt;</span><span class="ident">Initializing</span><span class="op">&gt;</span><span class="ident">::new</span>(
-        <span class="ident">AttestationBehavior::create_self_attestation</span>(<span class="ident">tee_certificate</span>)
-            .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create self attestation behavior&quot;</span>)<span class="question-mark">?</span>,
+<span class="doccomment">/// Helper function for logging remote attestation errors.</span>
+<span class="kw">fn</span> <span class="ident">log_error</span>(<span class="ident">logger</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>, <span class="ident">error</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+    <span class="ident">logger</span>.<span class="ident">log_public</span>(
+        <span class="ident">Level::Warn</span>,
+        <span class="kw-2">&amp;</span><span class="macro">format!</span>(
+            <span class="string">&quot;{:?}: Remote attestation error: {}&quot;</span>,
+            <span class="ident">std::thread::current</span>().<span class="ident">id</span>(),
+            <span class="ident">error</span>
+        ),
     );
-    <span class="kw">let</span> (<span class="ident">server_identity</span>, <span class="ident">attestation_engine</span>) <span class="op">=</span> <span class="ident">attestation_engine</span>
-        .<span class="ident">process_client_hello</span>(<span class="kw-2">&amp;</span><span class="ident">client_hello</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t accept client hello&quot;</span>)<span class="question-mark">?</span>;
-
-    <span class="comment">// Create server attestation identity.</span>
-    <span class="kw">let</span> <span class="ident">attestation_response</span> <span class="op">=</span> <span class="ident">AttestedInvokeResponse</span> {
-        <span class="ident">response_type</span>: <span class="prelude-val">Some</span>(<span class="ident">ResponseType::AttestationMessage</span>(<span class="ident">AttestationMessage</span> {
-            <span class="ident">body</span>: <span class="ident">server_identity</span>,
-        })),
-    };
-    <span class="prelude-val">Ok</span>((<span class="ident">attestation_response</span>, <span class="ident">attestation_engine</span>))
-}
-
-<span class="doccomment">/// Attest a single gRPC streaming request. Client messages are provided via `receiver`.</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_client_identity</span>(
-    <span class="ident">receiver</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Receiver</span>,
-    <span class="ident">attestation_engine</span>: <span class="ident">ServerAttestationEngine</span><span class="op">&lt;</span><span class="ident">Attesting</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="ident">AeadEncryptor</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">receiver</span>
-        .<span class="ident">receive</span>()
-        .<span class="kw">await</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t receive attestation request&quot;</span>)<span class="question-mark">?</span>
-        .<span class="ident">context</span>(<span class="string">&quot;Stream stopped preemptively&quot;</span>)<span class="question-mark">?</span>;
-
-    <span class="comment">// Receive client attestation identity.</span>
-    <span class="kw">let</span> <span class="ident">request_type</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">request_type</span>.<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t read request type&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">client_identity</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RequestType::AttestationMessage</span>(<span class="ident">request</span>) <span class="op">=</span> <span class="ident">request_type</span> {
-        <span class="ident">request</span>.<span class="ident">body</span>
-    } <span class="kw">else</span> {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Received incorrect message type&quot;</span>);
-    };
-
-    <span class="kw">let</span> <span class="ident">attestation_engine</span> <span class="op">=</span> <span class="ident">attestation_engine</span>
-        .<span class="ident">process_client_identity</span>(<span class="kw-2">&amp;</span><span class="ident">client_identity</span>)
-        .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t attest the client&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">encryptor</span> <span class="op">=</span> <span class="ident">attestation_engine</span>.<span class="ident">get_encryptor</span>();
-    <span class="prelude-val">Ok</span>(<span class="ident">encryptor</span>)
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_loader" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>

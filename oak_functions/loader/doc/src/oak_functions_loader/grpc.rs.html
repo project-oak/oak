@@ -208,7 +208,7 @@
     <span class="comment">// `wasm_handler`.</span>
     <span class="ident">tonic::transport::Server::builder</span>()
         .<span class="ident">add_service</span>(<span class="ident">RemoteAttestationServer::new</span>(
-            <span class="ident">AttestationServer::create</span>(<span class="ident">tee_certificate</span>, <span class="ident">request_handler</span>)
+            <span class="ident">AttestationServer::create</span>(<span class="ident">tee_certificate</span>, <span class="ident">request_handler</span>, <span class="ident">logger</span>)
                 .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create remote attestation server&quot;</span>)<span class="question-mark">?</span>,
         ))
         .<span class="ident">serve_with_shutdown</span>(<span class="kw-2">*</span><span class="ident">address</span>, <span class="ident">terminate</span>)
