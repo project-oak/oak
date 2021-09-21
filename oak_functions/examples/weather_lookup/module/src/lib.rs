@@ -71,7 +71,7 @@ pub extern "C" fn main() {
             })
             .ok_or("could not find nearest location")?;
         log!("nearest data key: {:?}\n", best_key);
-        let best_location = IndexValue::from_bytes(&best_key);
+        let best_location = IndexValue::from_bytes(best_key);
         log!("nearest data point: {:?}\n", best_location);
         // Make sure it is no further than 40km.
         position.validate_close_enough(&best_location.position, 40_000)?;
