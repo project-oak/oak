@@ -87,12 +87,6 @@ impl std::fmt::Display for ServerHandshakerState {
     }
 }
 
-pub trait Handshaker {
-    fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
-    fn is_completed(&self) -> bool;
-    fn get_encryptor(self) -> anyhow::Result<Encryptor>;
-}
-
 /// Client of the remote attestation protocol handshake.
 pub struct ClientHandshaker {
     /// Behavior of the remote attestation protocol.
@@ -104,7 +98,16 @@ pub struct ClientHandshaker {
     transcript: Transcript,
 }
 
-impl Handshaker for ClientHandshaker {
+impl ClientHandshaker {
+    /// Creates [`ClientHandshaker`] with [`HandshakerState::Initializing`] state.
+    pub fn new(behavior: AttestationBehavior) -> Self {
+        Self {
+            behavior,
+            state: ClientHandshakerState::Initializing,
+            transcript: Transcript::new(),
+        }
+    }
+
     fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
             deserialize_message(message).context("Couldn't deserialize message")?;
@@ -144,17 +147,6 @@ impl Handshaker for ClientHandshaker {
         match self.state {
             ClientHandshakerState::Completed(encryptor) => Ok(Encryptor { encryptor }),
             _ => Err(anyhow!("Handshake is not complete")),
-        }
-    }
-}
-
-impl ClientHandshaker {
-    /// Creates [`ClientHandshaker`] with [`HandshakerState::Initializing`] state.
-    pub fn new(behavior: AttestationBehavior) -> Self {
-        Self {
-            behavior,
-            state: ClientHandshakerState::Initializing,
-            transcript: Transcript::new(),
         }
     }
 
@@ -294,7 +286,17 @@ pub struct ServerHandshaker {
     transcript: Transcript,
 }
 
-impl Handshaker for ServerHandshaker {
+impl ServerHandshaker {
+    /// Creates [`ServerHandshaker`] with [`HandshakerState::ExpectingClientIdentity`]
+    /// state.
+    pub fn new(behavior: AttestationBehavior) -> Self {
+        Self {
+            behavior,
+            state: ServerHandshakerState::ExpectingClientHello,
+            transcript: Transcript::new(),
+        }
+    }
+
     fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
             deserialize_message(message).context("Couldn't deserialize message")?;
@@ -348,18 +350,6 @@ impl Handshaker for ServerHandshaker {
         match self.state {
             ServerHandshakerState::Completed(encryptor) => Ok(Encryptor { encryptor }),
             _ => Err(anyhow!("Handshake is not complete")),
-        }
-    }
-}
-
-impl ServerHandshaker {
-    /// Creates [`ServerHandshaker`] with [`HandshakerState::ExpectingClientIdentity`]
-    /// state.
-    pub fn new(behavior: AttestationBehavior) -> Self {
-        Self {
-            behavior,
-            state: ServerHandshakerState::ExpectingClientHello,
-            transcript: Transcript::new(),
         }
     }
 
