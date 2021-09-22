@@ -22,6 +22,7 @@ mod tests;
 const EARTH_RADIUS: f32 = 6_371_000.0;
 
 /// Represents a cell on a sphere.
+/// TODO(#2296): Implement a version based on S2 Geometry for benchmark comparison.
 #[derive(Debug, PartialEq)]
 pub struct Cell {
     /// The cell width in degrees for a typical cell in this row.
