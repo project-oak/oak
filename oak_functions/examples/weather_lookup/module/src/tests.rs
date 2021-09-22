@@ -15,7 +15,7 @@
 
 extern crate test;
 
-use crate::Location;
+use location_utils::{find_cell, IndexValue};
 use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
 use oak_functions_abi::proto::{Request, StatusCode};
@@ -55,21 +55,49 @@ async fn test_server() {
             .await
     });
 
-    let key_0 = Location {
-        latitude_millidegrees: 52_000,
-        longitude_millidegrees: 0,
-    }
-    .to_bytes();
-    let key_1 = Location {
-        latitude_millidegrees: 14_000,
-        longitude_millidegrees: -12_000,
-    }
-    .to_bytes();
+    let latitude_degrees_0 = 52.0;
+    let longitude_degrees_0 = 0.0;
+    let latitude_degrees_1 = 14.0;
+    let longitude_degrees_1 = -12.0;
+
+    let location_0 = Location {
+        latitude_millidegrees: (latitude_degrees_0 * 1000.0) as i32,
+        longitude_millidegrees: (longitude_degrees_0 * 1000.0) as i32,
+    };
+    let location_1 = Location {
+        latitude_millidegrees: (latitude_degrees_1 * 1000.0) as i32,
+        longitude_millidegrees: (longitude_degrees_1 * 1000.0) as i32,
+    };
+
+    let key_0 = location_0.to_bytes();
+    let key_1 = location_1.to_bytes();
+
+    // Find the cells for the locations and generate the associated lookup index entries.
+    let cell_0 = find_cell(latitude_degrees_0, longitude_degrees_0).unwrap();
+    let cell_1 = find_cell(latitude_degrees_1, longitude_degrees_1).unwrap();
+
+    let mut value_key_0 = [0; 8];
+    value_key_0.copy_from_slice(&key_0[0..8]);
+    let mut value_key_1 = [0; 8];
+    value_key_1.copy_from_slice(&key_1[0..8]);
+
+    let position_0 = cell_0.relative_position(latitude_degrees_0, longitude_degrees_0);
+    let position_1 = cell_1.relative_position(latitude_degrees_1, longitude_degrees_1);
+
+    let index_value_0 = IndexValue {
+        value_key: value_key_0,
+        position: position_0,
+    };
+    let index_value_1 = IndexValue {
+        value_key: value_key_1,
+        position: position_1,
+    };
 
     mock_static_server.set_response_body(test_utils::serialize_entries(hashmap! {
-        b"index".to_vec() => [key_0.clone(), key_1.clone()].concat(),
         key_0 => br#"{"temperature_degrees_celsius":10}"#.to_vec(),
         key_1 => br#"{"temperature_degrees_celsius":42}"#.to_vec(),
+        cell_0.index.to_bytes() => index_value_0.to_bytes(),
+        cell_1.index.to_bytes() => index_value_1.to_bytes(),
     }));
 
     let logger = Logger::for_test();
@@ -122,7 +150,7 @@ async fn test_server() {
     }
     {
         // Close to key_0.
-        let response = make_request(server_port, br#"{"lat":52.1,"lon":-0.1}"#)
+        let response = make_request(server_port, br#"{"lat":52.1,"lon":0.1}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -132,13 +160,35 @@ async fn test_server() {
         );
     }
     {
+        // A bit further from key_0.
+        let response = make_request(server_port, br#"{"lat":52.9,"lon":1.4}"#)
+            .await
+            .response;
+        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(
+            r#"closest data point is more than 40000m away"#,
+            std::str::from_utf8(response.body().unwrap()).unwrap()
+        );
+    }
+    {
         // Close to key_1.
-        let response = make_request(server_port, br#"{"lat":14.1,"lon":-12.1}"#)
+        let response = make_request(server_port, br#"{"lat":14.1,"lon":-11.9}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
         assert_eq!(
             r#"{"temperature_degrees_celsius":42}"#,
+            std::str::from_utf8(response.body().unwrap()).unwrap()
+        );
+    }
+    {
+        // Far from both keys.
+        let response = make_request(server_port, br#"{"lat":-10.0,"lon":10.0}"#)
+            .await
+            .response;
+        assert_eq!(StatusCode::Success as i32, response.status);
+        assert_eq!(
+            r#"could not find index item for cell"#,
             std::str::from_utf8(response.body().unwrap()).unwrap()
         );
     }
@@ -158,16 +208,20 @@ async fn test_server() {
     mock_static_server_background.terminate_and_join().await;
 }
 
-// Test for the example contained in the README.
-#[test]
-fn test_location_from_slice() {
-    let value = Location {
-        latitude_millidegrees: 14_120,
-        longitude_millidegrees: -19_880,
-    };
-    let bytes = vec![0x00, 0x00, 0x37, 0x28, 0xFF, 0xFF, 0xB2, 0x58];
-    assert_eq!(bytes, value.to_bytes(),);
-    assert_eq!(value, Location::from_bytes(&bytes));
+#[derive(Debug)]
+struct Location {
+    latitude_millidegrees: i32,
+    longitude_millidegrees: i32,
+}
+
+impl Location {
+    fn to_bytes(&self) -> Vec<u8> {
+        [
+            self.latitude_millidegrees.to_be_bytes(),
+            self.longitude_millidegrees.to_be_bytes(),
+        ]
+        .concat()
+    }
 }
 
 #[bench]
@@ -176,9 +230,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     // data. By default it uses a smaller number of entries. To run the bench with realistic data
     // size, use `cargo bench --features large-bench`.
     #[cfg(not(feature = "large-bench"))]
-    let (entry_count, elapsed_limit_millis) = (10_000, 25);
+    let (entry_count, elapsed_limit_millis) = (10_000, 5);
     #[cfg(feature = "large-bench")]
-    let (entry_count, elapsed_limit_millis) = (200_000, 500);
+    let (entry_count, elapsed_limit_millis) = (200_000, 5);
 
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.push("Cargo.toml");

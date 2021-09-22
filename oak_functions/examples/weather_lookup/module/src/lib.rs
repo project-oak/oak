@@ -20,11 +20,14 @@
 // Required for enabling benchmark tests.
 #![feature(test)]
 
+use location_utils::{find_cell, IndexValue};
 use oak_functions::log;
 use serde::Deserialize;
 
 #[cfg(test)]
 mod tests;
+
+const CUTOFF_40KM: i32 = 40_000;
 
 #[derive(Deserialize, Debug)]
 struct Request {
@@ -48,31 +51,34 @@ pub extern "C" fn main() {
             .map_err(|err| format!("could not deserialize request as JSON: {:?}", err))?;
         log!("parsed request: {:?}\n", request);
 
-        // Fetch the index entry, containing all the concatenated keys.
-        let index = oak_functions::storage_get_item("index".as_bytes())
-            .map_err(|err| format!("could not get item: {:?}", err))?
-            .ok_or("could not find index item")?;
+        // Find the cell that contains the current location.
+        let cell = find_cell(request.latitude_degrees, request.longitude_degrees)?;
+        log!("current location cell: {:?}\n", cell);
+        // Map the current location as a cartesion position relative to the midpoint of the cell.
+        let position = cell.relative_position(request.latitude_degrees, request.longitude_degrees);
+        log!("position relative to cell midpoint: {:?}\n", position);
 
-        // Build a `Location` object from the client request.
-        let request_location = Location {
-            latitude_millidegrees: (request.latitude_degrees * 1000.0) as i32,
-            longitude_millidegrees: (request.longitude_degrees * 1000.0) as i32,
-        };
-        log!("request location: {:?}\n", request_location);
+        // Look up the index values for the list of weather data point in the vicinity of the cell.
+        let index = oak_functions::storage_get_item(&cell.index.to_bytes())
+            .map_err(|err| format!("could not get index item: {:?}", err))?
+            .ok_or("could not find index item for cell")?;
 
-        // Find the closest key by linearly scanning the keys from the index and computing their
-        // distance to the client request location.
+        // Find the closest key by linearly scanning the nearby weather data points to find the
+        // closest one.
         let best_key = index
-            .chunks(8)
+            .chunks(16)
             .min_by_key(|key| {
-                let location = Location::from_bytes(key);
-                location.distance(&request_location)
+                let index_item = IndexValue::from_bytes(key);
+                index_item.position.squared_distance(&position)
             })
             .ok_or("could not find nearest location")?;
-        log!("nearest location key: {:?}\n", best_key);
-        log!("nearest location: {:?}\n", Location::from_bytes(best_key));
+        log!("nearest data key: {:?}\n", best_key);
+        let best_location = IndexValue::from_bytes(best_key);
+        log!("nearest data point: {:?}\n", best_location);
+        // Make sure it is no further than 40km.
+        position.validate_close_enough(&best_location.position, CUTOFF_40KM)?;
 
-        let best_value = oak_functions::storage_get_item(best_key)
+        let best_value = oak_functions::storage_get_item(&best_location.value_key)
             .map_err(|err| format!("could not get item: {:?}", err))?
             .ok_or("could not find item with key")?;
         log!("nearest location value: {:?}\n", best_value);
@@ -84,46 +90,4 @@ pub extern "C" fn main() {
 
     // Write the response.
     oak_functions::write_response(&response).expect("Couldn't write the response body.");
-}
-
-/// We use a fixed point representation (`i32`, instead of `f32`) for the location coordinates in
-/// order to be more efficient at parsing it from bytes, and also to compute distance via arithmetic
-/// operations.
-#[derive(Debug, Eq, PartialEq)]
-struct Location {
-    latitude_millidegrees: i32,
-    longitude_millidegrees: i32,
-}
-
-impl Location {
-    fn from_bytes(c: &[u8]) -> Location {
-        let mut latitude_millidegrees_bytes = [0; 4];
-        latitude_millidegrees_bytes.copy_from_slice(&c[0..4]);
-        let mut longitude_millidegrees_bytes = [0; 4];
-        longitude_millidegrees_bytes.copy_from_slice(&c[4..8]);
-
-        Location {
-            latitude_millidegrees: i32::from_be_bytes(latitude_millidegrees_bytes),
-            longitude_millidegrees: i32::from_be_bytes(longitude_millidegrees_bytes),
-        }
-    }
-
-    #[cfg(test)]
-    fn to_bytes(&self) -> Vec<u8> {
-        [
-            self.latitude_millidegrees.to_be_bytes(),
-            self.longitude_millidegrees.to_be_bytes(),
-        ]
-        .concat()
-    }
-
-    fn distance(&self, other: &Location) -> i32 {
-        // TODO(#2201): Improve distance calculation logic.
-
-        // Convert to `i64` in order to avoid overflow when squaring.
-        (((self.latitude_millidegrees as i64 - other.latitude_millidegrees as i64).pow(2)
-            + (self.longitude_millidegrees as i64 - other.longitude_millidegrees as i64).pow(2))
-            as f32)
-            .sqrt() as i32
-    }
 }
