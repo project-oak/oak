@@ -206,7 +206,11 @@ pub fn find_cell(latitude_degrees: f32, longitude_degrees: f32) -> Result<Cell, 
     }
 
     // Determine which cell the location falls into.
-    let south_border = latitude_degrees.floor();
+    let south_border = if latitude_degrees == 90.0 {
+        89.0
+    } else {
+        latitude_degrees.floor()
+    };
     let north_border = south_border + 1.0;
     // We use the longest border to scale the cell count for the row.
     let ratio = south_border
