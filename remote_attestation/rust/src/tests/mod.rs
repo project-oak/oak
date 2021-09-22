@@ -14,13 +14,4 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    tonic::include_proto!("oak.remote_attestation");
-}
-
 pub mod crypto;
-pub mod handshaker;
-pub mod message;
-pub mod report;
-#[cfg(test)]
-mod tests;

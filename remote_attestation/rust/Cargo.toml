@@ -19,3 +19,6 @@ tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
 prost-build = "*"
+
+[dev-dependencies]
+assert_matches = "*"

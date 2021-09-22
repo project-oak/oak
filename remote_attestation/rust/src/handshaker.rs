@@ -26,7 +26,7 @@
 use crate::{
     crypto::{
         get_random, get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier,
-        Signer, SIGNING_ALGORITHM_KEY_LENGTH,
+        Signer, SHA256_HASH_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
     },
     message::{
         deserialize_message, ClientHello, ClientIdentity, MessageWrapper, Serializable,
@@ -611,7 +611,7 @@ impl Transcript {
     }
 
     /// Get SHA-256 hash of the [`Transcript::value`].
-    pub fn get_sha256(&self) -> Vec<u8> {
+    pub fn get_sha256(&self) -> [u8; SHA256_HASH_LENGTH] {
         get_sha256(&self.value)
     }
 }

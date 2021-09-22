@@ -136,7 +136,7 @@ pub struct ClientIdentity {
 }
 
 /// Message containing data encrypted using a session key.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EncryptedData {
     /// Message header.
     header: u8,
@@ -274,11 +274,11 @@ impl Deserializable for ClientIdentity {
 }
 
 impl EncryptedData {
-    pub fn new(nonce: &[u8; NONCE_LENGTH], data: &[u8]) -> Self {
+    pub fn new(nonce: [u8; NONCE_LENGTH], data: Vec<u8>) -> Self {
         Self {
             header: ENCRYPTED_DATA_HEADER,
-            nonce: *nonce,
-            data: data.to_vec(),
+            nonce,
+            data,
         }
     }
 }

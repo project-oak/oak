@@ -29,11 +29,13 @@ use ring::{
     signature::{EcdsaKeyPair, EcdsaSigningAlgorithm, EcdsaVerificationAlgorithm, KeyPair},
 };
 use sha2::{digest::Digest, Sha256};
+use std::convert::TryInto;
 
 /// Length of the encryption nonce.
 /// `ring::aead` uses 96-bit (12-byte) nonces.
 /// https://briansmith.org/rustdoc/ring/aead/constant.NONCE_LEN.html
 pub const NONCE_LENGTH: usize = aead::NONCE_LEN;
+pub const SHA256_HASH_LENGTH: usize = 32;
 /// Algorithm used for encrypting/decrypting messages.
 /// https://datatracker.ietf.org/doc/html/rfc5288
 static AEAD_ALGORITHM: &aead::Algorithm = &aead::AES_256_GCM;
@@ -130,7 +132,7 @@ impl AeadEncryptor {
             .seal_in_place_append_tag(aead::Aad::empty(), &mut encrypted_data)
             .map_err(|error| anyhow!("Couldn't encrypt data: {:?}", error))?;
 
-        Ok(EncryptedData::new(&nonce, &encrypted_data))
+        Ok(EncryptedData::new(nonce, encrypted_data))
     }
 
     /// Decrypts and authenticates `data` using [`AeadEncryptor::key`].
@@ -183,7 +185,11 @@ impl KeyNegotiator {
             .map_err(|error| anyhow!("Couldn't get public key: {:?}", error))?
             .as_ref()
             .to_vec();
-        to_array(&public_key).context("Couldn't convert public key to array")
+        public_key.as_slice().try_into().context(format!(
+            "Incorrect public key length, expected {}, found {}",
+            KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
+            public_key.len()
+        ))
     }
 
     /// Derives session keys from self and peer public keys and creates an [`AeadEncryptor`].
@@ -200,13 +206,34 @@ impl KeyNegotiator {
         self,
         peer_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     ) -> anyhow::Result<AeadEncryptor> {
+        let (encryption_key, decryption_key) = self
+            .derive_session_keys(peer_public_key)
+            .context("Couldn't derive session keys")?;
+        let encryptor = AeadEncryptor::new(encryption_key, decryption_key);
+        Ok(encryptor)
+    }
+
+    /// Implementation of the session keys derivation.
+    /// Returns a tuple with an encryption key and a decryption key.
+    pub(crate) fn derive_session_keys(
+        self,
+        peer_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+    ) -> anyhow::Result<(
+        [u8; AEAD_ALGORITHM_KEY_LENGTH],
+        [u8; AEAD_ALGORITHM_KEY_LENGTH],
+    )> {
         let type_ = self.type_.clone();
-        let self_public_key = self.public_key()?;
+        let self_public_key = self.public_key().context("Couldn't get self public key")?;
         let (encryption_key, decryption_key) = agreement::agree_ephemeral(
             self.private_key,
             &agreement::UnparsedPublicKey::new(KEY_AGREEMENT_ALGORITHM, peer_public_key),
-            ring::error::Unspecified,
+            anyhow!("Couldn't derive session keys"),
             |key_material| {
+                let key_material = key_material.try_into().context(format!(
+                    "Incorrect key material length, expected {}, found {}",
+                    KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
+                    key_material.len()
+                ))?;
                 let peer_public_key = *peer_public_key;
                 match type_ {
                     // On the server side `self_public_key` is the server key.
@@ -244,12 +271,10 @@ impl KeyNegotiator {
                 }
             },
         )
-        .map_err(|error| anyhow!("Couldn't agree on a session key: {:?}", error))?;
-        Ok(AeadEncryptor::new(
-            encryption_key
-                .map_err(|error| anyhow!("Couldn't derive encryption key: {:?}", error))?,
-            decryption_key
-                .map_err(|error| anyhow!("Couldn't derive decryption key: {:?}", error))?,
+        .context("Couldn't agree on session keys")?;
+        Ok((
+            encryption_key.context("Couldn't derive encryption key")?,
+            decryption_key.context("Couldn't derive decryption key")?,
         ))
     }
 
@@ -259,12 +284,12 @@ impl KeyNegotiator {
     ///
     /// In order to derive keys, uses the information string that consists of a purpose string, a
     /// server public key and a client public key (in that specific order).
-    fn key_derivation_function(
-        key_material: &[u8],
+    pub(crate) fn key_derivation_function(
+        key_material: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
         key_purpose: &str,
         server_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
         client_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
-    ) -> Result<[u8; AEAD_ALGORITHM_KEY_LENGTH], ring::error::Unspecified> {
+    ) -> anyhow::Result<[u8; AEAD_ALGORITHM_KEY_LENGTH]> {
         // Session key is derived from a purpose string and two public keys.
         let info = vec![key_purpose.as_bytes(), server_public_key, client_public_key];
 
@@ -274,8 +299,17 @@ impl KeyNegotiator {
 
         // Derive session key.
         let mut session_key: [u8; AEAD_ALGORITHM_KEY_LENGTH] = Default::default();
-        let output_key_material = kdf.expand(&info, AEAD_ALGORITHM)?;
-        output_key_material.fill(&mut session_key)?;
+        let output_key_material = kdf
+            .expand(&info, AEAD_ALGORITHM)
+            .map_err(|error| anyhow!("Couldn't run HKDF-Expand operation : {:?}", error))?;
+        output_key_material
+            .fill(&mut session_key)
+            .map_err(|error| {
+                anyhow!(
+                    "Couldn't get the output of the HKDF-Expand operation: {:?}",
+                    error
+                )
+            })?;
         Ok(session_key)
     }
 }
@@ -309,7 +343,11 @@ impl Signer {
 
     pub fn public_key(&self) -> anyhow::Result<[u8; SIGNING_ALGORITHM_KEY_LENGTH]> {
         let public_key = self.key_pair.public_key().as_ref().to_vec();
-        to_array(&public_key).context("Couldn't convert public key to array")
+        public_key.as_slice().try_into().context(format!(
+            "Incorrect public key length, expected {}, found {}",
+            SIGNING_ALGORITHM_KEY_LENGTH,
+            public_key.len()
+        ))
     }
 
     pub fn sign(&self, input: &[u8]) -> anyhow::Result<[u8; SIGNATURE_LENGTH]> {
@@ -320,7 +358,11 @@ impl Signer {
             .map_err(|error| anyhow!("Couldn't sign input: {:?}", error))?
             .as_ref()
             .to_vec();
-        to_array(&signature).context("Couldn't convert signature to array")
+        signature.as_slice().try_into().context(format!(
+            "Incorrect signature length, expected {}, found {}",
+            SIGNATURE_LENGTH,
+            signature.len()
+        ))
     }
 }
 
@@ -347,34 +389,21 @@ impl SignatureVerifier {
 }
 
 /// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
-pub fn get_sha256(input: &[u8]) -> Vec<u8> {
+pub fn get_sha256(input: &[u8]) -> [u8; SHA256_HASH_LENGTH] {
     let mut hasher = Sha256::new();
     hasher.update(&input);
-    hasher.finalize().to_vec()
+    hasher
+        .finalize()
+        .as_slice()
+        .try_into()
+        .expect("Incorrect SHA-256 hash length")
 }
 
 /// Generates a random vector of `size` bytes.
 pub fn get_random<const L: usize>() -> [u8; L] {
     let mut result: [u8; L] = [Default::default(); L];
     let rng = SystemRandom::new();
-    rng.fill(&mut result[..]).unwrap();
+    rng.fill(&mut result[..])
+        .expect("Couldn't create random value");
     result
-}
-
-/// Converts slices to arrays.
-pub fn to_array<T, const L: usize>(input: &[T]) -> anyhow::Result<[T; L]>
-where
-    T: std::marker::Copy + std::default::Default,
-{
-    if input.len() == L {
-        let mut result: [T; L] = [Default::default(); L];
-        result.copy_from_slice(&input[0..L]);
-        Ok(result)
-    } else {
-        Err(anyhow!(
-            "Incorrect input length, expected {}, found {}",
-            L,
-            input.len()
-        ))
-    }
 }
