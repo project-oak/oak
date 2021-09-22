@@ -27,6 +27,8 @@ use serde::Deserialize;
 #[cfg(test)]
 mod tests;
 
+const CUTOFF_40KM: i32 = 40_000;
+
 #[derive(Deserialize, Debug)]
 struct Request {
     #[serde(rename = "lat")]
@@ -74,7 +76,7 @@ pub extern "C" fn main() {
         let best_location = IndexValue::from_bytes(best_key);
         log!("nearest data point: {:?}\n", best_location);
         // Make sure it is no further than 40km.
-        position.validate_close_enough(&best_location.position, 40_000)?;
+        position.validate_close_enough(&best_location.position, CUTOFF_40KM)?;
 
         let best_value = oak_functions::storage_get_item(&best_location.value_key)
             .map_err(|err| format!("could not get item: {:?}", err))?

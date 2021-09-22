@@ -8,7 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 bytes = "*"
-location_utils = { path = "../examples/weather_lookup/location_utils" }
+location_utils = { path = "../location_utils" }
 multimap = "*"
 oak_functions_abi = { path = "../abi" }
 prost = "*"

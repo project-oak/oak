@@ -23,6 +23,8 @@ use prost::Message;
 use rand::Rng;
 use serde::Serialize;
 
+const CUTOFF_120KM: i32 = 120_000;
+
 fn create_bytes<R: Rng>(rng: &mut R, size_bytes: usize) -> Vec<u8> {
     let mut buf = vec![0u8; size_bytes];
     rng.fill(buf.as_mut_slice());
@@ -103,8 +105,8 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
     let pi = std::f32::consts::PI;
     // We sample longitude in radians from [-pi, pi).
     let lon_dist = rand::distributions::Uniform::new(-pi, pi);
-    // To avoid increased density towards the poles, we sample lattitude in the range [-1, 1] and
-    // convert to lattitude using `acos`. See https://mathworld.wolfram.com/SpherePointPicking.html
+    // To avoid increased density towards the poles, we sample latitude in the range [-1, 1] and
+    // convert to latitude using `acos`. See https://mathworld.wolfram.com/SpherePointPicking.html
     let lat_dist = rand::distributions::Uniform::new(-1.0_f32, 1.0);
     let mut keys = vec![];
     let mut cell_map = MultiMap::new();
@@ -153,7 +155,7 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
             .encode_length_delimited(&mut buf)
             .context("could not encode entry")?;
     }
-    // Add the index entry containin all keys.
+    // Add the index entry containing all keys.
     let index = Entry {
         key: "index".as_bytes().to_vec(),
         value: keys.concat(),
@@ -177,17 +179,16 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
 /// Finds all nearby cells where a point in the cell could be within 40km of the weather data point.
 ///
 /// If the point is above or below the midpoint of the cell we only need to check the row above or
-/// below respectively. Similarly, if a point is to the the right or left of the midpoint we only
-/// need to check the cell in the same row to the right or left respectively. Note that this
-/// assumption does not strictly hold at latitudes above 88° or below -88° but this only affects
-/// points within about 200km of the North and South poles.
+/// below respectively. Similarly, if a point is to the right or left of the midpoint we only need
+/// to check the cell in the same row to the right or left respectively. Note that this assumption
+/// does not strictly hold at latitudes above 88° or below -88° but this only affects points within
+/// about 200km of the North and South poles.
 ///
 /// Additionally, the longest distance between the midpoint of a cell and its furthest corner is
 /// just under 80km. If the cutoff for finding weather data points is 40km, a point in a cell can
 /// only fall within this range if the midpoint of the cell is less than 120km from the weather
 /// data point.
 fn find_nearby_cells(latitude_degrees: f32, longitude_degrees: f32) -> Vec<Cell> {
-    let cutoff = 120_000;
     let mut cells = vec![];
     let mid_point = Point { x: 0, y: 0 };
     // Add cells of interest by trying half a degree above and below the point. One of the points
@@ -206,7 +207,7 @@ fn find_nearby_cells(latitude_degrees: f32, longitude_degrees: f32) -> Vec<Cell>
         .into_iter()
         .filter(|cell| {
             cell.relative_position(latitude_degrees, longitude_degrees)
-                .validate_close_enough(&mid_point, cutoff)
+                .validate_close_enough(&mid_point, CUTOFF_120KM)
                 .is_ok()
         })
         .collect()

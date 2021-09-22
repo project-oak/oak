@@ -19,6 +19,8 @@
 #[cfg(test)]
 mod tests;
 
+const EARTH_RADIUS: f32 = 6_371_000.0;
+
 /// Represents a cell on a sphere.
 #[derive(Debug, PartialEq)]
 pub struct Cell {
@@ -33,7 +35,7 @@ pub struct Cell {
 }
 
 impl Cell {
-    /// Calculates an approximate local cartesian coordinate relative of the location in meters. The
+    /// Calculates an approximate local cartesian coordinate relative to the location in meters. The
     /// middle of the cell is used as the origin and the y-axis points due North. All points on the
     /// surface of the sphere are projected onto a tangent plane at the midpoint using lines
     /// perpendicular to the plane.
@@ -53,7 +55,6 @@ impl Cell {
 
         // We do the initial projections on a unit sphere and then scale the coordinates by the
         // average radius of the earth in meters.
-        let earth_radius = 6_371_000.0;
 
         let delta_latitude_radians = (latitude_degrees - mid_latitude).to_radians();
         let delta_longitude_radians = (longitude_degrees - mid_longitude).to_radians();
@@ -75,13 +76,12 @@ impl Cell {
         let offset = (1.0 - delta_longitude_radians.cos())
             * latitude_degrees.to_radians().cos()
             * mid_latitude.to_radians().sin();
-        let y = ((y_base + offset) * earth_radius) as i32;
+        let y = ((y_base + offset) * EARTH_RADIUS) as i32;
 
         // The projection of the x-component onto the plane is given by `sin(delta_longitude)`
         // scaled by cos(latitude) to account for the sphere's curvature.
         let scale = latitude_degrees.to_radians().cos();
-        let x =
-            ((longitude_degrees - mid_longitude).to_radians().sin() * scale * earth_radius) as i32;
+        let x = (delta_longitude_radians.sin() * scale * EARTH_RADIUS) as i32;
 
         Point { x, y }
     }

@@ -33,11 +33,11 @@ earth's surface is divided into rows. Each row lies between two integer degrees
 of latitude (e.g one row between 0° and 1°, and another between 1° and 2°). Each
 row is divided into cells. We start with 360 cells per row at the equator. As we
 move away from the equator each row becomes shorter, so the number of cells per
-row is scaled by `cos(lattitude_border)` to ensure that the width of the cells
-in different rows are roughly similar. The lengths of the northern and southern
-borders of a cell would be different. For simplicity, We use the longer border
+row is scaled by `cos(latitude_border)` to ensure that the width of the cells in
+different rows are roughly similar. The lengths of the northern and southern
+borders of a cell would be different. For simplicity, we use the longer border
 of the two to calculate the number of cells. This means tha most cells are
-slightly wider than 100km at the widest point. All cells in a row has exactly
+slightly wider than 100km at the widest point. All cells in a row have exactly
 the same width, except for the last cell. The width of the last cell is slightly
 adjusted to make sure that the widths of all the cells in a row sum up to
 exactly 360° in spite of the rounding in floating point calculations.
@@ -53,7 +53,7 @@ numbers for the cell. This means that index entries have 4 byte keys while
 weather data entries have 8 byte keys, so key collisions are not possible.
 
 The value of each index entry consists of a concatenated list of potential
-weather data locations in the vicinity of the cell. All eather data locations
+weather data locations in the vicinity of the cell. All weather data locations
 that could be within the cutoff (currently 40km) of any point within the cell
 are included in the list. Each item in the list is exactly 16 bytes long. The
 first 8 bytes is the key for looking up the weather data. The next 8 bytes
@@ -67,17 +67,16 @@ concatenated.
 
 ## Lookup Logic
 
-The Wasm logic of the lookup module first determines in which cell the the
-current location falls and calculates the relative cartesian projection of the
-client's location compared to the midpoint of the cell. It then looks up the
-index entry using the key based on the cell identifier (row and column). If it
-finds an index entry it iterates through all the potential weather data
-locations in the list to find the closest weather data location using the
-relative cartesian projections. The projections are accurate enough to find the
-closest weather data, as the spherical surface is very close to being flat at
-these scales. If the closest item lies within 40km of the client's location it
-uses the key to lookup the weather data associated with that item and returns it
-to the client.
+The Wasm logic of the lookup module first determines in which cell the current
+location falls and calculates the relative cartesian projection of the client's
+location compared to the midpoint of the cell. It then looks up the index entry
+using the key based on the cell identifier (row and column). If it finds an
+index entry it iterates through all the potential weather data locations in the
+list to find the closest weather data location using the relative cartesian
+projections. The projections are accurate enough to find the closest weather
+data, as the spherical surface is very close to being flat at these scales. If
+the closest item lies within 40km of the client's location it uses the key to
+lookup the weather data associated with that item and returns it to the client.
 
 ## Running manually
 

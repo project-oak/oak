@@ -53,8 +53,8 @@ fn test_final_cell_width() {
         // Ensure that the last cell was really found.
         assert_eq!(last_cell.index.col, last_cell.col_count - 1);
         let actual_last_cell_width = 360.0 - (first_cell.width * last_cell.index.col as f32);
-        // Make sure that different between the width of the last cell and widths of the others is
-        // within 1%.
+        // Make sure that the difference between the width of the last cell and widths of the others
+        // is within 1%.
         assert!((first_cell.width - actual_last_cell_width).abs() / first_cell.width < 0.01);
     }
 }
@@ -85,6 +85,9 @@ fn test_distance_two_points_same_cell() {
     let chelmsford_lon = 0.4685;
 
     let cell = find_cell(london_lat, london_lon).unwrap();
+    // Make sure Chelmsford falls in the same cell.
+    assert_eq!(find_cell(chelmsford_lat, chelmsford_lon).unwrap(), cell);
+
     let london = cell.relative_position(london_lat, london_lon);
     let chelmsford = cell.relative_position(chelmsford_lat, chelmsford_lon);
 
@@ -163,14 +166,13 @@ fn test_distance_two_points_different_cell() {
 ///
 /// See https://en.wikipedia.org/wiki/Haversine_formula
 fn haversine_distance(lat1: f32, lon1: f32, lat2: f32, lon2: f32) -> f32 {
-    let earth_radius = 6_371_000.0; // Average radius in meters.
     let lat1_radians = lat1.to_radians();
     let lat2_radians = lat2.to_radians();
     let h = haversine(lat2_radians - lat1_radians)
         + lat1_radians.cos()
             * lat2_radians.cos()
             * haversine(lon2.to_radians() - lon1.to_radians());
-    2.0 * earth_radius * h.sqrt().atan()
+    2.0 * EARTH_RADIUS * h.sqrt().atan()
 }
 
 fn haversine(theta: f32) -> f32 {
