@@ -19,7 +19,10 @@
 #[cfg(test)]
 mod tests;
 
+// Radius of the earth in meters.
 const EARTH_RADIUS: f32 = 6_371_000.0;
+// The height of a row in degrees latitude.
+const CELL_HEIGHT: f32 = 1.0;
 
 /// Represents a cell on a sphere.
 /// TODO(#2296): Implement a version based on S2 Geometry for benchmark comparison.
@@ -46,7 +49,7 @@ impl Cell {
     /// flat at this scale.
     pub fn relative_position(&self, latitude_degrees: f32, longitude_degrees: f32) -> Point {
         // Find the midpoint of the cell.
-        let mid_latitude = self.index.row as f32 + 0.5;
+        let mid_latitude = self.index.row as f32 + CELL_HEIGHT * 0.5;
         let current_width = if self.index.col + 1 == self.col_count {
             360.0 - self.index.col as f32 * self.width
         } else {
@@ -209,11 +212,11 @@ pub fn find_cell(latitude_degrees: f32, longitude_degrees: f32) -> Result<Cell, 
 
     // Determine which cell the location falls into.
     let south_border = if latitude_degrees == 90.0 {
-        89.0
+        90.0 - CELL_HEIGHT
     } else {
         latitude_degrees.floor()
     };
-    let north_border = south_border + 1.0;
+    let north_border = south_border + CELL_HEIGHT;
     // We use the longest border to scale the cell count for the row.
     let ratio = south_border
         .to_radians()
