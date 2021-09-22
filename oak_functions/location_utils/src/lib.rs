@@ -196,6 +196,7 @@ impl Point {
 }
 
 /// Finds the cell in which a location falls.
+#[allow(clippy::float_cmp)]
 pub fn find_cell(latitude_degrees: f32, longitude_degrees: f32) -> Result<Cell, String> {
     // Validate that the locations is witin the expected bounds.
     if !(-90.0..=90.0).contains(&latitude_degrees) {

@@ -36,7 +36,7 @@ move away from the equator each row becomes shorter, so the number of cells per
 row is scaled by `cos(latitude_border)` to ensure that the width of the cells in
 different rows are roughly similar. The lengths of the northern and southern
 borders of a cell would be different. For simplicity, we use the longer border
-of the two to calculate the number of cells. This means tha most cells are
+of the two to calculate the number of cells. This means that most cells are
 slightly wider than 100km at the widest point. All cells in a row have exactly
 the same width, except for the last cell. The width of the last cell is slightly
 adjusted to make sure that the widths of all the cells in a row sum up to
