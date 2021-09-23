@@ -16,93 +16,98 @@
 
 use crate::{
     crypto::{
-        get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier, Signer,
+        AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier, Signer, SessionKeys,
         AEAD_ALGORITHM_KEY_LENGTH, CLIENT_KEY_PURPOSE, KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
         NONCE_LENGTH, SERVER_KEY_PURPOSE, SHA256_HASH_LENGTH, SIGNATURE_LENGTH,
-        SIGNING_ALGORITHM_KEY_LENGTH,
+        SIGNING_ALGORITHM_KEY_LENGTH, get_sha256,
     },
     message::EncryptedData,
 };
-use assert_matches::assert_matches;
 
 // Keys are only used for test purposes.
-// Were created by printing out values in the `crate::crypto`.
-const TEST_KEY_MATERIAL: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH] = [
+// Were created by printing out values in the `crate::crypto` using `println!`.
+const KEY_MATERIAL: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH] = [
     60, 42, 197, 238, 121, 136, 107, 43, 1, 207, 63, 140, 212, 12, 2, 188, 56, 164, 115, 88, 78,
     61, 160, 69, 12, 131, 187, 250, 173, 18, 146, 23,
 ];
-const TEST_SERVER_KEY_AGREEMENT_PUBLIC_KEY: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH] = [
+const SERVER_KEY_AGREEMENT_PUBLIC_KEY: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH] = [
     159, 12, 61, 172, 239, 0, 129, 205, 167, 250, 118, 50, 23, 39, 135, 72, 68, 139, 125, 122, 145,
     224, 155, 20, 42, 98, 211, 28, 67, 125, 47, 68,
 ];
-const TEST_CLIENT_KEY_AGREEMENT_PUBLIC_KEY: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH] = [
+const CLIENT_KEY_AGREEMENT_PUBLIC_KEY: [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH] = [
     75, 130, 163, 244, 38, 189, 249, 222, 43, 127, 116, 150, 233, 190, 243, 236, 19, 237, 74, 108,
     9, 122, 105, 223, 34, 125, 125, 242, 239, 66, 78, 95,
 ];
-const TEST_SERVER_ENCRYPTION_KEY: [u8; AEAD_ALGORITHM_KEY_LENGTH] = [
+const SERVER_ENCRYPTION_KEY: [u8; AEAD_ALGORITHM_KEY_LENGTH] = [
     148, 3, 161, 94, 41, 6, 250, 223, 92, 22, 86, 91, 150, 171, 248, 51, 221, 90, 230, 90, 151, 55,
     59, 108, 21, 54, 33, 61, 219, 140, 229, 59,
 ];
-const TEST_CLIENT_ENCRYPTION_KEY: [u8; AEAD_ALGORITHM_KEY_LENGTH] = [
+const CLIENT_ENCRYPTION_KEY: [u8; AEAD_ALGORITHM_KEY_LENGTH] = [
     48, 90, 139, 218, 156, 196, 174, 129, 15, 178, 216, 181, 106, 232, 160, 188, 136, 103, 87, 120,
     231, 20, 78, 129, 237, 225, 173, 25, 179, 152, 139, 82,
 ];
-const TEST_SIGNING_PUBLIC_KEY: [u8; SIGNING_ALGORITHM_KEY_LENGTH] = [
+const SIGNING_PUBLIC_KEY: [u8; SIGNING_ALGORITHM_KEY_LENGTH] = [
     4, 51, 234, 203, 59, 199, 24, 233, 70, 68, 246, 116, 56, 113, 159, 19, 252, 238, 243, 127, 133,
     116, 177, 172, 54, 42, 233, 123, 233, 25, 181, 153, 133, 63, 45, 191, 156, 46, 102, 156, 93,
     183, 74, 48, 189, 37, 49, 50, 66, 90, 61, 100, 2, 81, 180, 225, 13, 253, 220, 7, 54, 127, 13,
     131, 85,
 ];
 
-const TEST_DATA: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-// [`TEST_DATA`] encrypted with [`TEST_CLIENT_ENCRYPTION_KEY`],
-const ENCRYPTED_TEST_DATA: [u8; 26] = [
+const DATA: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+// [`DATA`] encrypted with [`CLIENT_ENCRYPTION_KEY`],
+const ENCRYPTED_DATA: [u8; 26] = [
     255, 242, 249, 3, 114, 107, 147, 122, 38, 153, 12, 33, 62, 56, 172, 90, 234, 207, 50, 219, 22,
     212, 169, 40, 113, 28,
 ];
-const ENCRYPTED_TEST_DATA_NONCE: [u8; NONCE_LENGTH] =
+const ENCRYPTED_DATA_NONCE: [u8; NONCE_LENGTH] =
     [106, 176, 114, 112, 226, 142, 211, 123, 95, 187, 120, 206];
 const INVALID_NONCE: [u8; NONCE_LENGTH] = [0; NONCE_LENGTH];
-const TEST_DATA_SIGNATURE: [u8; SIGNATURE_LENGTH] = [
+const DATA_SIGNATURE: [u8; SIGNATURE_LENGTH] = [
     14, 133, 10, 201, 218, 60, 123, 206, 59, 25, 101, 172, 89, 65, 201, 197, 92, 249, 247, 99, 133,
     8, 217, 94, 125, 160, 31, 141, 61, 197, 119, 2, 41, 79, 195, 23, 105, 0, 50, 253, 111, 103, 19,
     188, 169, 243, 11, 157, 49, 155, 154, 249, 14, 29, 183, 167, 0, 82, 74, 74, 221, 214, 250, 222,
 ];
-const TEST_DATA_SHA256_HASH: [u8; SHA256_HASH_LENGTH] = [
+const DATA_SHA256_HASH: [u8; SHA256_HASH_LENGTH] = [
     31, 130, 90, 162, 240, 2, 14, 247, 207, 145, 223, 163, 13, 164, 102, 141, 121, 28, 93, 72, 36,
     252, 142, 65, 53, 75, 137, 236, 5, 121, 90, 179,
 ];
 
 #[test]
 fn test_decrypt() {
-    let mut encryptor = AeadEncryptor::new(TEST_SERVER_ENCRYPTION_KEY, TEST_CLIENT_ENCRYPTION_KEY);
+    let mut encryptor = AeadEncryptor::new(SessionKeys {
+        encryption_key: SERVER_ENCRYPTION_KEY,
+        decryption_key: CLIENT_ENCRYPTION_KEY,
+    });
     let result = encryptor.decrypt(&EncryptedData::new(
-        ENCRYPTED_TEST_DATA_NONCE,
-        ENCRYPTED_TEST_DATA.to_vec(),
+        ENCRYPTED_DATA_NONCE,
+        ENCRYPTED_DATA.to_vec(),
     ));
-    assert_matches!(result, Ok(_));
-    assert_eq!(result.unwrap(), TEST_DATA);
+    assert_eq!(result.unwrap(), DATA);
 
     let result = encryptor.decrypt(&EncryptedData::new(
         INVALID_NONCE,
-        ENCRYPTED_TEST_DATA.to_vec(),
+        ENCRYPTED_DATA.to_vec(),
     ));
-    assert_matches!(result, Err(_));
+    assert!(result.is_err());
 }
 
 #[test]
 fn test_encrypt() {
-    let mut server_encryptor =
-        AeadEncryptor::new(TEST_SERVER_ENCRYPTION_KEY, TEST_CLIENT_ENCRYPTION_KEY);
-    let mut client_encryptor =
-        AeadEncryptor::new(TEST_CLIENT_ENCRYPTION_KEY, TEST_SERVER_ENCRYPTION_KEY);
+    let mut server_encryptor = AeadEncryptor::new(SessionKeys {
+        encryption_key: SERVER_ENCRYPTION_KEY,
+        decryption_key: CLIENT_ENCRYPTION_KEY,
+    });
+    let mut client_encryptor = AeadEncryptor::new(SessionKeys {
+        encryption_key: CLIENT_ENCRYPTION_KEY,
+        decryption_key: SERVER_ENCRYPTION_KEY
+    });
 
-    let result = server_encryptor.encrypt(&TEST_DATA);
-    assert_matches!(result, Ok(_));
+    let result = server_encryptor.encrypt(&DATA);
+    assert!(result.is_ok());
     let encrypted_data = result.unwrap();
 
     let decrypted_data = client_encryptor.decrypt(&encrypted_data).unwrap();
-    assert_eq!(decrypted_data, TEST_DATA);
+    assert_eq!(decrypted_data, DATA);
 }
 
 #[test]
@@ -113,30 +118,30 @@ fn test_create_key_negotiator() {
         .expect("Couldn't create client key negotiator");
 
     let server_ephemeral_public_key = server_key_negotiator.public_key();
-    assert_matches!(server_ephemeral_public_key, Ok(_));
+    assert!(server_ephemeral_public_key.is_ok());
     let client_ephemeral_public_key = client_key_negotiator.public_key();
-    assert_matches!(client_ephemeral_public_key, Ok(_));
+    assert!(client_ephemeral_public_key.is_ok());
 }
 
 #[test]
 fn test_key_derivation_function() {
     let server_encryption_key = KeyNegotiator::key_derivation_function(
-        &TEST_KEY_MATERIAL,
+        &KEY_MATERIAL,
         SERVER_KEY_PURPOSE,
-        &TEST_SERVER_KEY_AGREEMENT_PUBLIC_KEY,
-        &TEST_CLIENT_KEY_AGREEMENT_PUBLIC_KEY,
+        &SERVER_KEY_AGREEMENT_PUBLIC_KEY,
+        &CLIENT_KEY_AGREEMENT_PUBLIC_KEY,
     );
-    assert_matches!(server_encryption_key, Ok(_));
-    assert_eq!(server_encryption_key.unwrap(), TEST_SERVER_ENCRYPTION_KEY);
+    assert!(server_encryption_key.is_ok());
+    assert_eq!(server_encryption_key.unwrap(), SERVER_ENCRYPTION_KEY);
 
     let client_encryption_key = KeyNegotiator::key_derivation_function(
-        &TEST_KEY_MATERIAL,
+        &KEY_MATERIAL,
         CLIENT_KEY_PURPOSE,
-        &TEST_SERVER_KEY_AGREEMENT_PUBLIC_KEY,
-        &TEST_CLIENT_KEY_AGREEMENT_PUBLIC_KEY,
+        &SERVER_KEY_AGREEMENT_PUBLIC_KEY,
+        &CLIENT_KEY_AGREEMENT_PUBLIC_KEY,
     );
-    assert_matches!(client_encryption_key, Ok(_));
-    assert_eq!(client_encryption_key.unwrap(), TEST_CLIENT_ENCRYPTION_KEY);
+    assert!(client_encryption_key.is_ok());
+    assert_eq!(client_encryption_key.unwrap(), CLIENT_ENCRYPTION_KEY);
 }
 
 #[test]
@@ -148,15 +153,15 @@ fn test_derive_session_keys() {
     let client_ephemeral_public_key = client_key_negotiator.public_key().unwrap();
 
     let result = server_key_negotiator.derive_session_keys(&client_ephemeral_public_key);
-    assert_matches!(result, Ok(_));
-    let (server_encryption_key, server_decryption_key) = result.unwrap();
+    assert!(result.is_ok());
+    let server_session_keys = result.unwrap();
 
     let result = client_key_negotiator.derive_session_keys(&server_ephemeral_public_key);
-    assert_matches!(result, Ok(_));
-    let (client_encryption_key, client_decryption_key) = result.unwrap();
+    assert!(result.is_ok());
+    let client_session_keys = result.unwrap();
 
-    assert_eq!(server_encryption_key, client_decryption_key);
-    assert_eq!(server_decryption_key, client_encryption_key);
+    assert_eq!(server_session_keys.encryption_key, client_session_keys.decryption_key);
+    assert_eq!(server_session_keys.decryption_key, client_session_keys.encryption_key);
 }
 
 #[test]
@@ -174,44 +179,44 @@ fn test_create_encryptor() {
         .create_encryptor(&server_ephemeral_public_key)
         .expect("Couldn't create client encryptor");
 
-    let encrypted_server_data = server_encryptor.encrypt(&TEST_DATA).unwrap();
+    let encrypted_server_data = server_encryptor.encrypt(&DATA).unwrap();
     let decrypted_server_data = client_encryptor.decrypt(&encrypted_server_data).unwrap();
-    assert_eq!(decrypted_server_data, TEST_DATA);
+    assert_eq!(decrypted_server_data, DATA);
 
-    let encrypted_client_data = client_encryptor.encrypt(&TEST_DATA).unwrap();
+    let encrypted_client_data = client_encryptor.encrypt(&DATA).unwrap();
     let decrypted_client_data = server_encryptor.decrypt(&encrypted_client_data).unwrap();
-    assert_eq!(decrypted_client_data, TEST_DATA);
+    assert_eq!(decrypted_client_data, DATA);
 }
 
 #[test]
 fn test_create_signer() {
     let signer = Signer::create().expect("Couldn't create signer");
     let result = signer.public_key();
-    assert_matches!(result, Ok(_));
+    assert!(result.is_ok());
 }
 
 #[test]
 fn test_verify() {
-    let verifier = SignatureVerifier::new(&TEST_SIGNING_PUBLIC_KEY);
-    let result = verifier.verify(&TEST_DATA, &TEST_DATA_SIGNATURE);
-    assert_matches!(result, Ok(_));
+    let verifier = SignatureVerifier::new(&SIGNING_PUBLIC_KEY);
+    let result = verifier.verify(&DATA, &DATA_SIGNATURE);
+    assert!(result.is_ok());
 }
 
 #[test]
 fn test_sign() {
     let signer = Signer::create().unwrap();
     let public_key = signer.public_key().unwrap();
-    let result = signer.sign(&TEST_DATA);
-    assert_matches!(result, Ok(_));
+    let result = signer.sign(&DATA);
+    assert!(result.is_ok());
     let signature = result.unwrap();
 
     let verifier = SignatureVerifier::new(&public_key);
-    let result = verifier.verify(&TEST_DATA, &signature);
-    assert_matches!(result, Ok(_));
+    let result = verifier.verify(&DATA, &signature);
+    assert!(result.is_ok());
 }
 
 #[test]
 fn test_get_sha256() {
-    let test_hash = get_sha256(&TEST_DATA);
-    assert_eq!(test_hash, TEST_DATA_SHA256_HASH);
+    let test_hash = get_sha256(&DATA);
+    assert_eq!(test_hash, DATA_SHA256_HASH);
 }
