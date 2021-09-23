@@ -87,9 +87,15 @@ fn test_decrypt() {
     ));
     assert_eq!(result.unwrap(), DATA);
 
-    let result = encryptor.decrypt(&EncryptedData::new(INVALID_ENCRYPTED_DATA_NONCE, ENCRYPTED_DATA.to_vec()));
+    let result = encryptor.decrypt(&EncryptedData::new(
+        INVALID_ENCRYPTED_DATA_NONCE,
+        ENCRYPTED_DATA.to_vec(),
+    ));
     assert!(result.is_err());
-    let result = encryptor.decrypt(&EncryptedData::new(ENCRYPTED_DATA_NONCE, INVALID_ENCRYPTED_DATA.to_vec()));
+    let result = encryptor.decrypt(&EncryptedData::new(
+        ENCRYPTED_DATA_NONCE,
+        INVALID_ENCRYPTED_DATA.to_vec(),
+    ));
     assert!(result.is_err());
 }
 
@@ -104,8 +110,12 @@ fn test_encrypt(data: Vec<u8>) -> bool {
         decryption_key: SERVER_ENCRYPTION_KEY,
     });
 
-    let encrypted_data = server_encryptor.encrypt(&data).expect("Couldn't encrypt data");
-    let decrypted_data = client_encryptor.decrypt(&encrypted_data).expect("Couldn't decrypt data");
+    let encrypted_data = server_encryptor
+        .encrypt(&data)
+        .expect("Couldn't encrypt data");
+    let decrypted_data = client_encryptor
+        .decrypt(&encrypted_data)
+        .expect("Couldn't decrypt data");
     data == decrypted_data
 }
 
@@ -212,7 +222,9 @@ fn test_verify() {
 #[quickcheck]
 fn test_sign(data: Vec<u8>) -> bool {
     let signer = Signer::create().expect("Couldn't create signer");
-    let public_key = signer.public_key().expect("Couldn't get signing public key");
+    let public_key = signer
+        .public_key()
+        .expect("Couldn't get signing public key");
     let signature = signer.sign(&data).expect("Couldn't sign data");
 
     let verifier = SignatureVerifier::new(&public_key);
