@@ -20,21 +20,22 @@
 // Required for enabling benchmark tests.
 #![feature(test)]
 
-use location_utils::{find_cell, IndexValue};
+use location_utils::{
+    cell_id_to_bytes, default_cutoff_radius, find_cell, location_from_bytes, location_from_degrees,
+    location_to_bytes,
+};
 use oak_functions::log;
 use serde::Deserialize;
 
 #[cfg(test)]
 mod tests;
 
-const CUTOFF_40KM: i32 = 40_000;
-
 #[derive(Deserialize, Debug)]
 struct Request {
     #[serde(rename = "lat")]
-    latitude_degrees: f32,
+    latitude_degrees: f64,
     #[serde(rename = "lon")]
-    longitude_degrees: f32,
+    longitude_degrees: f64,
 }
 
 #[cfg_attr(not(test), no_mangle)]
@@ -51,39 +52,50 @@ pub extern "C" fn main() {
             .map_err(|err| format!("could not deserialize request as JSON: {:?}", err))?;
         log!("parsed request: {:?}\n", request);
 
-        // Find the cell that contains the current location.
-        let cell = find_cell(request.latitude_degrees, request.longitude_degrees)?;
-        log!("current location cell: {:?}\n", cell);
-        // Map the current location as a cartesion position relative to the midpoint of the cell.
-        let position = cell.relative_position(request.latitude_degrees, request.longitude_degrees);
-        log!("position relative to cell midpoint: {:?}\n", position);
+        // Find the S2 cell (using the default level) that contains the current location.
+        let level = location_utils::S2_DEFAULT_LEVEL;
+        let location = location_from_degrees(request.latitude_degrees, request.longitude_degrees);
+        let cell =
+            find_cell(&location, level).map_err(|err| format!("could not find cell: {:?}", err))?;
+        // let cell = CellID::from_token("4875");
+        log!("current location cell token: {}\n", cell.to_token());
 
-        // Look up the index values for the list of weather data point in the vicinity of the cell.
-        let index = oak_functions::storage_get_item(&cell.index.to_bytes())
+        // Look up the index values for the list of weather data points in the vicinity of the cell.
+        let index = oak_functions::storage_get_item(&cell_id_to_bytes(&cell))
             .map_err(|err| format!("could not get index item: {:?}", err))?
             .ok_or("could not find index item for cell")?;
 
         // Find the closest key by linearly scanning the nearby weather data points to find the
         // closest one.
-        let best_key = index
-            .chunks(16)
-            .min_by_key(|key| {
-                let index_item = IndexValue::from_bytes(key);
-                index_item.position.squared_distance(&position)
-            })
-            .ok_or("could not find nearest location")?;
-        log!("nearest data key: {:?}\n", best_key);
-        let best_location = IndexValue::from_bytes(best_key);
-        log!("nearest data point: {:?}\n", best_location);
-        // Make sure it is no further than 40km.
-        position.validate_close_enough(&best_location.position, CUTOFF_40KM)?;
+        let mut best_distance = default_cutoff_radius();
+        let mut found = false;
+        let mut best_location = location_from_degrees(0., 0.);
 
-        let best_value = oak_functions::storage_get_item(&best_location.value_key)
-            .map_err(|err| format!("could not get item: {:?}", err))?
-            .ok_or("could not find item with key")?;
-        log!("nearest location value: {:?}\n", best_value);
+        for chunk in index.chunks(8) {
+            let test = location_from_bytes(chunk)
+                .map_err(|err| format!("could not convert chunk to location: {:?}", err))?;
+            let distance = location.distance(&test);
+            if distance < best_distance {
+                best_distance = distance;
+                best_location = test;
+                found = true;
+            }
+        }
 
-        best_value
+        let result = if found {
+            log!("nearest data point: {:?}\n", best_location);
+
+            let best_value = oak_functions::storage_get_item(&location_to_bytes(&best_location))
+                .map_err(|err| format!("could not get item: {:?}", err))?
+                .ok_or("could not find item with key")?;
+            log!("nearest location value: {:?}\n", best_value);
+
+            best_value
+        } else {
+            b"could not find location within cutoff".to_vec()
+        };
+
+        result
     };
 
     let response = result.unwrap_or_else(|err| err.as_bytes().to_vec());
