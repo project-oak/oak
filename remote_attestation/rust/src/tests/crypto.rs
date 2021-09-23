@@ -16,10 +16,10 @@
 
 use crate::{
     crypto::{
-        AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier, Signer, SessionKeys,
-        AEAD_ALGORITHM_KEY_LENGTH, CLIENT_KEY_PURPOSE, KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
-        NONCE_LENGTH, SERVER_KEY_PURPOSE, SHA256_HASH_LENGTH, SIGNATURE_LENGTH,
-        SIGNING_ALGORITHM_KEY_LENGTH, get_sha256,
+        get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SessionKeys,
+        SignatureVerifier, Signer, AEAD_ALGORITHM_KEY_LENGTH, CLIENT_KEY_PURPOSE,
+        KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, NONCE_LENGTH, SERVER_KEY_PURPOSE, SHA256_HASH_LENGTH,
+        SIGNATURE_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
     },
     message::EncryptedData,
 };
@@ -84,10 +84,7 @@ fn test_decrypt() {
     ));
     assert_eq!(result.unwrap(), DATA);
 
-    let result = encryptor.decrypt(&EncryptedData::new(
-        INVALID_NONCE,
-        ENCRYPTED_DATA.to_vec(),
-    ));
+    let result = encryptor.decrypt(&EncryptedData::new(INVALID_NONCE, ENCRYPTED_DATA.to_vec()));
     assert!(result.is_err());
 }
 
@@ -99,7 +96,7 @@ fn test_encrypt() {
     });
     let mut client_encryptor = AeadEncryptor::new(SessionKeys {
         encryption_key: CLIENT_ENCRYPTION_KEY,
-        decryption_key: SERVER_ENCRYPTION_KEY
+        decryption_key: SERVER_ENCRYPTION_KEY,
     });
 
     let result = server_encryptor.encrypt(&DATA);
@@ -160,8 +157,14 @@ fn test_derive_session_keys() {
     assert!(result.is_ok());
     let client_session_keys = result.unwrap();
 
-    assert_eq!(server_session_keys.encryption_key, client_session_keys.decryption_key);
-    assert_eq!(server_session_keys.decryption_key, client_session_keys.encryption_key);
+    assert_eq!(
+        server_session_keys.encryption_key,
+        client_session_keys.decryption_key
+    );
+    assert_eq!(
+        server_session_keys.decryption_key,
+        client_session_keys.encryption_key
+    );
 }
 
 #[test]
