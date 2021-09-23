@@ -23,6 +23,7 @@ use crate::{
     },
     message::EncryptedData,
 };
+use quickcheck_macros::quickcheck;
 
 // Keys are only used for test purposes.
 // Were created by printing out values in the `crate::crypto` using `println!`.
@@ -59,14 +60,16 @@ const ENCRYPTED_DATA: [u8; 26] = [
     255, 242, 249, 3, 114, 107, 147, 122, 38, 153, 12, 33, 62, 56, 172, 90, 234, 207, 50, 219, 22,
     212, 169, 40, 113, 28,
 ];
+const INVALID_ENCRYPTED_DATA: [u8; 26] = [0; 26];
 const ENCRYPTED_DATA_NONCE: [u8; NONCE_LENGTH] =
     [106, 176, 114, 112, 226, 142, 211, 123, 95, 187, 120, 206];
-const INVALID_NONCE: [u8; NONCE_LENGTH] = [0; NONCE_LENGTH];
+const INVALID_ENCRYPTED_DATA_NONCE: [u8; NONCE_LENGTH] = [0; NONCE_LENGTH];
 const DATA_SIGNATURE: [u8; SIGNATURE_LENGTH] = [
     14, 133, 10, 201, 218, 60, 123, 206, 59, 25, 101, 172, 89, 65, 201, 197, 92, 249, 247, 99, 133,
     8, 217, 94, 125, 160, 31, 141, 61, 197, 119, 2, 41, 79, 195, 23, 105, 0, 50, 253, 111, 103, 19,
     188, 169, 243, 11, 157, 49, 155, 154, 249, 14, 29, 183, 167, 0, 82, 74, 74, 221, 214, 250, 222,
 ];
+const INVALID_DATA_SIGNATURE: [u8; SIGNATURE_LENGTH] = [0; SIGNATURE_LENGTH];
 const DATA_SHA256_HASH: [u8; SHA256_HASH_LENGTH] = [
     31, 130, 90, 162, 240, 2, 14, 247, 207, 145, 223, 163, 13, 164, 102, 141, 121, 28, 93, 72, 36,
     252, 142, 65, 53, 75, 137, 236, 5, 121, 90, 179,
@@ -84,12 +87,14 @@ fn test_decrypt() {
     ));
     assert_eq!(result.unwrap(), DATA);
 
-    let result = encryptor.decrypt(&EncryptedData::new(INVALID_NONCE, ENCRYPTED_DATA.to_vec()));
+    let result = encryptor.decrypt(&EncryptedData::new(INVALID_ENCRYPTED_DATA_NONCE, ENCRYPTED_DATA.to_vec()));
+    assert!(result.is_err());
+    let result = encryptor.decrypt(&EncryptedData::new(ENCRYPTED_DATA_NONCE, INVALID_ENCRYPTED_DATA.to_vec()));
     assert!(result.is_err());
 }
 
-#[test]
-fn test_encrypt() {
+#[quickcheck]
+fn test_encrypt(data: Vec<u8>) -> bool {
     let mut server_encryptor = AeadEncryptor::new(SessionKeys {
         encryption_key: SERVER_ENCRYPTION_KEY,
         decryption_key: CLIENT_ENCRYPTION_KEY,
@@ -99,12 +104,9 @@ fn test_encrypt() {
         decryption_key: SERVER_ENCRYPTION_KEY,
     });
 
-    let result = server_encryptor.encrypt(&DATA);
-    assert!(result.is_ok());
-    let encrypted_data = result.unwrap();
-
-    let decrypted_data = client_encryptor.decrypt(&encrypted_data).unwrap();
-    assert_eq!(decrypted_data, DATA);
+    let encrypted_data = server_encryptor.encrypt(&data).expect("Couldn't encrypt data");
+    let decrypted_data = client_encryptor.decrypt(&encrypted_data).expect("Couldn't decrypt data");
+    data == decrypted_data
 }
 
 #[test]
@@ -203,19 +205,19 @@ fn test_verify() {
     let verifier = SignatureVerifier::new(&SIGNING_PUBLIC_KEY);
     let result = verifier.verify(&DATA, &DATA_SIGNATURE);
     assert!(result.is_ok());
+    let result = verifier.verify(&DATA, &INVALID_DATA_SIGNATURE);
+    assert!(result.is_err());
 }
 
-#[test]
-fn test_sign() {
-    let signer = Signer::create().unwrap();
-    let public_key = signer.public_key().unwrap();
-    let result = signer.sign(&DATA);
-    assert!(result.is_ok());
-    let signature = result.unwrap();
+#[quickcheck]
+fn test_sign(data: Vec<u8>) -> bool {
+    let signer = Signer::create().expect("Couldn't create signer");
+    let public_key = signer.public_key().expect("Couldn't get signing public key");
+    let signature = signer.sign(&data).expect("Couldn't sign data");
 
     let verifier = SignatureVerifier::new(&public_key);
-    let result = verifier.verify(&DATA, &signature);
-    assert!(result.is_ok());
+    let result = verifier.verify(&data, &signature);
+    result.is_ok()
 }
 
 #[test]

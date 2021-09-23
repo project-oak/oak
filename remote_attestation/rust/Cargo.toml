@@ -19,3 +19,7 @@ tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
 prost-build = "*"
+
+[dev-dependencies]
+quickcheck = "*"
+quickcheck_macros = "*"
