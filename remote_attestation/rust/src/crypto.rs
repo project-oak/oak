@@ -101,10 +101,13 @@ pub struct AeadEncryptor {
 }
 
 impl AeadEncryptor {
-    pub fn new(session_keys: SessionKeys) -> Self {
+    pub fn new(
+        encryption_key: [u8; AEAD_ALGORITHM_KEY_LENGTH],
+        decryption_key: [u8; AEAD_ALGORITHM_KEY_LENGTH],
+    ) -> Self {
         Self {
-            encryption_key: session_keys.encryption_key,
-            decryption_key: session_keys.decryption_key,
+            encryption_key,
+            decryption_key,
         }
     }
 
@@ -160,12 +163,6 @@ impl AeadEncryptor {
     }
 }
 
-/// Convenience struct for representing generated session keys.
-pub struct SessionKeys {
-    pub encryption_key: [u8; AEAD_ALGORITHM_KEY_LENGTH],
-    pub decryption_key: [u8; AEAD_ALGORITHM_KEY_LENGTH],
-}
-
 /// Implementation of the X25519 Elliptic Curve Diffie-Hellman (ECDH) key negotiation.
 /// https://datatracker.ietf.org/doc/html/rfc7748#section-6.1
 pub struct KeyNegotiator {
@@ -209,10 +206,10 @@ impl KeyNegotiator {
         self,
         peer_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
     ) -> anyhow::Result<AeadEncryptor> {
-        let session_keys = self
+        let (encryption_key, decryption_key) = self
             .derive_session_keys(peer_public_key)
             .context("Couldn't derive session keys")?;
-        let encryptor = AeadEncryptor::new(session_keys);
+        let encryptor = AeadEncryptor::new(encryption_key, decryption_key);
         Ok(encryptor)
     }
 
@@ -221,7 +218,10 @@ impl KeyNegotiator {
     pub(crate) fn derive_session_keys(
         self,
         peer_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
-    ) -> anyhow::Result<SessionKeys> {
+    ) -> anyhow::Result<(
+        [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+        [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
+    )> {
         let type_ = self.type_.clone();
         let self_public_key = self.public_key().context("Couldn't get self public key")?;
         let (encryption_key, decryption_key) = agreement::agree_ephemeral(
@@ -272,10 +272,10 @@ impl KeyNegotiator {
             },
         )
         .context("Couldn't agree on session keys")?;
-        Ok(SessionKeys {
-            encryption_key: encryption_key.context("Couldn't derive encryption key")?,
-            decryption_key: decryption_key.context("Couldn't derive decryption key")?,
-        })
+        Ok((
+            encryption_key.context("Couldn't derive encryption key")?,
+            decryption_key.context("Couldn't derive decryption key")?,
+        ))
     }
 
     /// Derives a session key from `key_material` using HKDF.
