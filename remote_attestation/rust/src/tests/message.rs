@@ -22,8 +22,7 @@ use crate::{
     message::{
         deserialize_message, ClientHello, ClientIdentity, Deserializable, EncryptedData,
         MessageWrapper, Serializable, ServerIdentity, CLIENT_HELLO_HEADER, CLIENT_IDENTITY_HEADER,
-        ENCRYPTED_DATA_HEADER, MAXIMUM_MESSAGE_SIZE, REPLAY_PROTECTION_ARRAY_LENGTH,
-        SERVER_IDENTITY_HEADER,
+        MAXIMUM_MESSAGE_SIZE, REPLAY_PROTECTION_ARRAY_LENGTH, SERVER_IDENTITY_HEADER,
     },
 };
 use anyhow::{anyhow, Context};
@@ -31,7 +30,7 @@ use assert_matches::assert_matches;
 use quickcheck::{quickcheck, TestResult};
 
 pub const INVALID_MESSAGE_HEADER: u8 = 5;
-pub const INVALID_PROTOCOL_VERSION: u8 = 2;
+const INVALID_PROTOCOL_VERSION: u8 = 2;
 
 /// Creates a zero initialized array.
 fn default_array<T, const L: usize>() -> [T; L]
@@ -241,11 +240,10 @@ fn test_deserialize_message() {
     let deserialized_big_client_identity = deserialize_message(&big_client_identity);
     assert_matches!(deserialized_big_client_identity, Err(_));
 
-    let big_encrypted_data = [CLIENT_HELLO_HEADER; MAXIMUM_MESSAGE_SIZE + 1];
-    let mut big_encrypted_data = vec![CLIENT_HELLO_HEADER];
-    big_encrypted_data.append(&mut vec![ENCRYPTED_DATA_NONCE]);
-    big_encrypted_data.append(&mut vec![ENCRYPTED_DATA]);
-    big_encrypted_data.append(&mut vec![0; MAXIMUM_MESSAGE_SIZE + 1]);
+    let big_encrypted_data =
+        EncryptedData::new([0; NONCE_LENGTH], vec![0; MAXIMUM_MESSAGE_SIZE + 1])
+            .serialize()
+            .unwrap();
     let deserialized_big_encrypted_data = deserialize_message(&big_encrypted_data);
     assert_matches!(deserialized_big_encrypted_data, Ok(_));
 }
