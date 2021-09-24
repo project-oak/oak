@@ -19,7 +19,7 @@ use oak_sign::{
     decode_public_key_der, encode_public_key_der, get_sha256_hex, KeyPair, SignatureBundle,
 };
 
-const TEST_DATA: &str = "Test data";
+const DATA: &str = "Test data";
 const TEST_SHA256: &str = "e27c8214be8b7cf5bccc7c08247e3cb0c1514a48ee1f63197fe4ef3ef51d7e6f";
 const INCORRECT_SIGNATURE: &str =
     "JmtVw8SPMnU/f4fLSBvd+w96C2NAMFn7+rqGVHzWOItsdZ+T+TqBwnEcCNJrJ1wrQWXPwFk+8sRiRFFCOCJVAA==";
@@ -41,7 +41,7 @@ fn key_pair_serialization_deserialization_test() {
 #[test]
 fn signature_test() {
     let key_pair = KeyPair::generate().expect("Couldn't create key pair");
-    let create_result = SignatureBundle::create(TEST_DATA.as_bytes(), &key_pair);
+    let create_result = SignatureBundle::create(DATA.as_bytes(), &key_pair);
     assert_matches!(create_result, Ok(_));
     let signature = create_result.unwrap();
 
@@ -76,6 +76,6 @@ fn public_key_der_encode_decode() {
 
 #[test]
 fn sha256_test() {
-    let hash = get_sha256_hex(TEST_DATA.as_bytes());
+    let hash = get_sha256_hex(DATA.as_bytes());
     assert_eq!(hash, TEST_SHA256);
 }

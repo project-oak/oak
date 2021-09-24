@@ -26,7 +26,7 @@
 use crate::{
     crypto::{
         get_random, get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier,
-        Signer, SIGNING_ALGORITHM_KEY_LENGTH,
+        Signer, SHA256_HASH_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
     },
     message::{
         deserialize_message, ClientHello, ClientIdentity, MessageWrapper, Serializable,
@@ -162,7 +162,8 @@ impl ClientHandshaker {
             .context("Couldn't create key negotiator")?;
 
         // Create client hello message.
-        let client_hello = ClientHello::new(get_random());
+        let client_hello =
+            ClientHello::new(get_random().context("Couldn't generate random array")?);
 
         // Update current transcript.
         self.transcript
@@ -392,7 +393,7 @@ impl ServerHandshaker {
 
             let mut server_identity = ServerIdentity::new(
                 ephemeral_public_key,
-                get_random(),
+                get_random().context("Couldn't generate random array")?,
                 signer
                     .public_key()
                     .context("Couldn't get singing public key")?,
@@ -417,7 +418,7 @@ impl ServerHandshaker {
         } else {
             ServerIdentity::new(
                 ephemeral_public_key,
-                get_random(),
+                get_random().context("Couldn't generate random array")?,
                 // Signing public key.
                 [Default::default(); SIGNING_ALGORITHM_KEY_LENGTH],
                 // Attestation info.
@@ -611,7 +612,7 @@ impl Transcript {
     }
 
     /// Get SHA-256 hash of the [`Transcript::value`].
-    pub fn get_sha256(&self) -> Vec<u8> {
+    pub fn get_sha256(&self) -> [u8; SHA256_HASH_LENGTH] {
         get_sha256(&self.value)
     }
 }
