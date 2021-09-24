@@ -132,7 +132,7 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
             .unwrap()
             .iter()
         {
-            cell_map.insert(cell_id_to_bytes(&cell), key.to_vec());
+            cell_map.insert(cell_id_to_bytes(cell), key.to_vec());
         }
         let value = serde_json::to_string(&create_weather_value(rng)).unwrap();
         let entry = Entry {
@@ -146,7 +146,7 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
     // Add the cell-based index entries.
     for (key, values) in cell_map.iter_all() {
         let cell_entry = Entry {
-            key: key.to_vec(),
+            key: key.clone(),
             value: values.concat(),
         };
         cell_entry

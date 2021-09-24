@@ -87,7 +87,7 @@ pub fn find_cell(location: &LatLng, level: u8) -> Result<CellID> {
 
 /// Converts a `LatLng` location to a byte representation.
 ///
-/// The latitude and longitude for the location are converted micro-degrees (`E6`) values. These
+/// The latitude and longitude for the location are converted microdegrees (`E6`) values. These
 /// values are then converted to big endian byte representations of the underlying 32 bit signed
 /// integer and concatenated.
 pub fn location_to_bytes(location: &LatLng) -> [u8; 8] {
@@ -104,7 +104,7 @@ pub fn location_to_bytes(location: &LatLng) -> [u8; 8] {
 
 /// Converts a byte representation of a location into a `LatLng`.
 ///
-/// The first four bytes represent a big endian signed integer of the latitude in micro-degrees
+/// The first four bytes represent a big endian signed integer of the latitude in microdegrees
 /// (`E6`). The next for bytes are a similar representation of the longitude.
 pub fn location_from_bytes(bytes: &[u8]) -> Result<LatLng> {
     if bytes.len() != 8 {

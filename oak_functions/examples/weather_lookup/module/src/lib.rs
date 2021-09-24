@@ -57,7 +57,6 @@ pub extern "C" fn main() {
         let location = location_from_degrees(request.latitude_degrees, request.longitude_degrees);
         let cell =
             find_cell(&location, level).map_err(|err| format!("could not find cell: {:?}", err))?;
-        // let cell = CellID::from_token("4875");
         log!("current location cell token: {}\n", cell.to_token());
 
         // Look up the index values for the list of weather data points in the vicinity of the cell.

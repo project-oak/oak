@@ -44,9 +44,15 @@ fn test_location_from_bytes() {
 
 #[test]
 fn test_location_to_bytes() {
+    // London.
     let bytes = location_to_bytes(&location_from_degrees(51.5074_f64, -0.1278_f64));
 
     assert_eq!(bytes, [3, 17, 240, 200, 255, 254, 12, 200]);
+
+    // Example from readme.
+    let bytes = location_to_bytes(&location_from_degrees(14.12_f64, -19.88_f64));
+
+    assert_eq!(bytes, [0x00, 0xD7, 0x74, 0x40, 0xFE, 0xD0, 0xA7, 0xC0]);
 }
 
 #[test]
