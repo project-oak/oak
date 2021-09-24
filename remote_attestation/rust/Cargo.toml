@@ -21,5 +21,6 @@ tonic = { version = "*", features = ["tls"] }
 prost-build = "*"
 
 [dev-dependencies]
+assert_matches = "*"
 quickcheck = "*"
 quickcheck_macros = "*"

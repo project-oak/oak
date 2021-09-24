@@ -51,7 +51,7 @@ impl Default for ClientHandshakerState {
     }
 }
 
-impl std::fmt::Display for ClientHandshakerState {
+impl std::fmt::Debug for ClientHandshakerState {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::Initializing => write!(f, "Initializing"),
@@ -76,7 +76,7 @@ impl Default for ServerHandshakerState {
     }
 }
 
-impl std::fmt::Display for ServerHandshakerState {
+impl std::fmt::Debug for ServerHandshakerState {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::ExpectingClientHello => write!(f, "ExpectingClientHello"),
@@ -129,13 +129,13 @@ impl ClientHandshaker {
                         "Cannot process new messages while in the MessageProcessing state",
                     )),
                     _ => Err(anyhow!(
-                        "Incorrect handshake message received, in state {}, found ServerIdentity",
+                        "Incorrect handshake message received, in state {:?}, found ServerIdentity",
                         self.state
                     )),
                 }
             }
             unsupported_message => Err(anyhow!(
-                "Receiving {} is not supported by the client handshaker",
+                "Receiving {:?} is not supported by the client handshaker",
                 unsupported_message
             )),
         }
@@ -320,7 +320,7 @@ impl ServerHandshaker {
                     "Cannot process new messages while in the MessageProcessing state",
                 )),
                 _ => Err(anyhow!(
-                    "Incorrect handshake message received, in state {}, found ClientHello",
+                    "Incorrect handshake message received, in state {:?}, found ClientHello",
                     self.state
                 )),
             },
@@ -335,13 +335,13 @@ impl ServerHandshaker {
                         "Cannot process new messages while in the MessageProcessing state",
                     )),
                     _ => Err(anyhow!(
-                        "Incorrect handshake message received, in state {}, found ClientIdentity",
+                        "Incorrect handshake message received, in state {:?}, found ClientIdentity",
                         self.state
                     )),
                 }
             }
             unsupported_message => Err(anyhow!(
-                "Receiving {} is not supported by the server handshaker",
+                "Receiving {:?} is not supported by the server handshaker",
                 unsupported_message
             )),
         }
@@ -495,7 +495,7 @@ impl Encryptor {
                 .decrypt(&data)
                 .context("Couldn't decrypt message"),
             incorrect_message => Err(anyhow!(
-                "Incorrect protocol message received, in state EncryptedData, found {}",
+                "Incorrect protocol message received, in state EncryptedData, found {:?}",
                 incorrect_message
             )),
         }

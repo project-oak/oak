@@ -23,11 +23,14 @@ use bincode;
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
+/// Maximum handshake message size is set to be equal to 1KiB.
+pub const MAXIMUM_MESSAGE_SIZE: usize = 1_024;
+
 // Message header values.
-const CLIENT_HELLO_HEADER: u8 = 1;
-const SERVER_IDENTITY_HEADER: u8 = 2;
-const CLIENT_IDENTITY_HEADER: u8 = 3;
-const ENCRYPTED_DATA_HEADER: u8 = 4;
+pub(crate) const CLIENT_HELLO_HEADER: u8 = 1;
+pub(crate) const SERVER_IDENTITY_HEADER: u8 = 2;
+pub(crate) const CLIENT_IDENTITY_HEADER: u8 = 3;
+pub(crate) const ENCRYPTED_DATA_HEADER: u8 = 4;
 
 /// Remote attestation protocol version.
 pub const PROTOCOL_VERSION: u8 = 1;
@@ -37,6 +40,7 @@ pub const REPLAY_PROTECTION_ARRAY_LENGTH: usize = 32;
 
 // TODO(#2295): Add Frame struct to remote attestation messages.
 /// Convenience struct that wraps attestation messages.
+#[derive(PartialEq)]
 pub enum MessageWrapper {
     ClientHello(ClientHello),
     ServerIdentity(ServerIdentity),
@@ -44,7 +48,7 @@ pub enum MessageWrapper {
     EncryptedData(EncryptedData),
 }
 
-impl std::fmt::Display for MessageWrapper {
+impl std::fmt::Debug for MessageWrapper {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::ClientHello(_) => write!(f, "ClientHello"),
@@ -59,7 +63,7 @@ impl std::fmt::Display for MessageWrapper {
 // TODO(#2106): Support various claims in remote attestation.
 // TODO(#2294): Remove `bincode` and use manual message serialization.
 /// Initial message that starts remote attestation handshake.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct ClientHello {
     /// Message header.
     header: u8,
@@ -69,7 +73,7 @@ pub struct ClientHello {
 
 /// Server identity message containing remote attestation information and a public key for
 /// Diffie-Hellman key negotiation.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct ServerIdentity {
     /// Message header.
     header: u8,
@@ -105,7 +109,7 @@ pub struct ServerIdentity {
 
 /// Client identity message containing remote attestation information and a public key for
 /// Diffie-Hellman key negotiation.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct ClientIdentity {
     /// Message header.
     header: u8,
@@ -136,7 +140,7 @@ pub struct ClientIdentity {
 }
 
 /// Message containing data encrypted using a session key.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct EncryptedData {
     /// Message header.
     header: u8,
@@ -173,13 +177,21 @@ impl Serializable for ClientHello {
 }
 
 impl Deserializable for ClientHello {
-    fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
-        let message: Self =
-            bincode::deserialize(bytes).context("Couldn't deserialize client hello message")?;
-        if message.header == CLIENT_HELLO_HEADER {
-            Ok(message)
+    fn deserialize(input: &[u8]) -> anyhow::Result<Self> {
+        if input.len() <= MAXIMUM_MESSAGE_SIZE {
+            let message: Self =
+                bincode::deserialize(input).context("Couldn't deserialize client hello message")?;
+            if message.header == CLIENT_HELLO_HEADER {
+                Ok(message)
+            } else {
+                Err(anyhow!("Incorrect client hello message header"))
+            }
         } else {
-            Err(anyhow!("Incorrect client hello message header"))
+            Err(anyhow!(
+                "Maximum handshake message size of {} exceeded, found {}",
+                MAXIMUM_MESSAGE_SIZE,
+                input.len(),
+            ))
         }
     }
 }
@@ -218,16 +230,24 @@ impl Serializable for ServerIdentity {
 }
 
 impl Deserializable for ServerIdentity {
-    fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
-        let message: Self =
-            bincode::deserialize(bytes).context("Couldn't deserialize server identity message")?;
-        if message.header != SERVER_IDENTITY_HEADER {
-            return Err(anyhow!("Incorrect server identity message header"));
+    fn deserialize(input: &[u8]) -> anyhow::Result<Self> {
+        if input.len() <= MAXIMUM_MESSAGE_SIZE {
+            let message: Self = bincode::deserialize(input)
+                .context("Couldn't deserialize server identity message")?;
+            if message.header != SERVER_IDENTITY_HEADER {
+                return Err(anyhow!("Incorrect server identity message header"));
+            }
+            if message.version != PROTOCOL_VERSION {
+                return Err(anyhow!("Incorrect remote attestation protocol version"));
+            }
+            Ok(message)
+        } else {
+            Err(anyhow!(
+                "Maximum handshake message size of {} exceeded, found {}",
+                MAXIMUM_MESSAGE_SIZE,
+                input.len(),
+            ))
         }
-        if message.version != PROTOCOL_VERSION {
-            return Err(anyhow!("Incorrect remote attestation protocol version"));
-        }
-        Ok(message)
     }
 }
 
@@ -262,13 +282,21 @@ impl Serializable for ClientIdentity {
 }
 
 impl Deserializable for ClientIdentity {
-    fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
-        let message: Self =
-            bincode::deserialize(bytes).context("Couldn't deserialize client identity message")?;
-        if message.header == CLIENT_IDENTITY_HEADER {
-            Ok(message)
+    fn deserialize(input: &[u8]) -> anyhow::Result<Self> {
+        if input.len() <= MAXIMUM_MESSAGE_SIZE {
+            let message: Self = bincode::deserialize(input)
+                .context("Couldn't deserialize client identity message")?;
+            if message.header == CLIENT_IDENTITY_HEADER {
+                Ok(message)
+            } else {
+                Err(anyhow!("Incorrect client identity message header"))
+            }
         } else {
-            Err(anyhow!("Incorrect client identity message header"))
+            Err(anyhow!(
+                "Maximum handshake message size of {} exceeded, found {}",
+                MAXIMUM_MESSAGE_SIZE,
+                input.len(),
+            ))
         }
     }
 }
