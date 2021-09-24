@@ -85,6 +85,14 @@ impl aead::NonceSequence for OneNonceSequence {
     }
 }
 
+/// Convenience struct for passing an encryption key as an argument.
+#[derive(PartialEq)]
+pub(crate) struct EncryptionKey(pub(crate) [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH]);
+
+/// Convenience struct for passing a decryption key as an argument.
+#[derive(PartialEq)]
+pub(crate) struct DecryptionKey(pub(crate) [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH]);
+
 /// Implementation of Authenticated Encryption with Associated Data (AEAD).
 /// https://datatracker.ietf.org/doc/html/rfc5116
 ///
@@ -95,16 +103,13 @@ impl aead::NonceSequence for OneNonceSequence {
 /// and feeds it back as an incoming packet.
 pub struct AeadEncryptor {
     /// Key used for encrypting data.
-    encryption_key: [u8; AEAD_ALGORITHM_KEY_LENGTH],
+    encryption_key: EncryptionKey,
     /// Key used for decrypting peer encrypted data.
-    decryption_key: [u8; AEAD_ALGORITHM_KEY_LENGTH],
+    decryption_key: DecryptionKey,
 }
 
 impl AeadEncryptor {
-    pub fn new(
-        encryption_key: [u8; AEAD_ALGORITHM_KEY_LENGTH],
-        decryption_key: [u8; AEAD_ALGORITHM_KEY_LENGTH],
-    ) -> Self {
+    pub(crate) fn new(encryption_key: EncryptionKey, decryption_key: DecryptionKey) -> Self {
         Self {
             encryption_key,
             decryption_key,
@@ -114,10 +119,10 @@ impl AeadEncryptor {
     /// Encrypts `data` using [`AeadEncryptor::key`].
     pub fn encrypt(&mut self, data: &[u8]) -> anyhow::Result<EncryptedData> {
         // Generate a random nonce.
-        let nonce = Self::generate_nonce();
+        let nonce = Self::generate_nonce().context("Couldn't generate nonce")?;
 
         // Bind [`AeadEncryptor::key`] to a `nonce`.
-        let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.encryption_key)
+        let unbound_sealing_key = aead::UnboundKey::new(AEAD_ALGORITHM, &self.encryption_key.0)
             .map_err(|error| anyhow!("Couldn't create sealing key: {:?}", error))?;
         let mut sealing_key =
             ring::aead::SealingKey::new(unbound_sealing_key, OneNonceSequence::new(nonce));
@@ -141,7 +146,7 @@ impl AeadEncryptor {
     pub fn decrypt(&mut self, data: &EncryptedData) -> anyhow::Result<Vec<u8>> {
         // Bind `AeadEncryptor::key` to the extracted `nonce`.
         let unbound_opening_key =
-            aead::UnboundKey::new(AEAD_ALGORITHM, &self.decryption_key).unwrap();
+            aead::UnboundKey::new(AEAD_ALGORITHM, &self.decryption_key.0).unwrap();
         let mut opening_key =
             ring::aead::OpeningKey::new(unbound_opening_key, OneNonceSequence::new(data.nonce));
 
@@ -158,7 +163,7 @@ impl AeadEncryptor {
     }
 
     /// Generate a random nonce.
-    fn generate_nonce() -> [u8; NONCE_LENGTH] {
+    fn generate_nonce() -> anyhow::Result<[u8; NONCE_LENGTH]> {
         get_random()
     }
 }
@@ -218,10 +223,7 @@ impl KeyNegotiator {
     pub(crate) fn derive_session_keys(
         self,
         peer_public_key: &[u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
-    ) -> anyhow::Result<(
-        [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
-        [u8; KEY_AGREEMENT_ALGORITHM_KEY_LENGTH],
-    )> {
+    ) -> anyhow::Result<(EncryptionKey, DecryptionKey)> {
         let type_ = self.type_.clone();
         let self_public_key = self.public_key().context("Couldn't get self public key")?;
         let (encryption_key, decryption_key) = agreement::agree_ephemeral(
@@ -273,8 +275,8 @@ impl KeyNegotiator {
         )
         .context("Couldn't agree on session keys")?;
         Ok((
-            encryption_key.context("Couldn't derive encryption key")?,
-            decryption_key.context("Couldn't derive decryption key")?,
+            EncryptionKey(encryption_key.context("Couldn't derive encryption key")?),
+            DecryptionKey(decryption_key.context("Couldn't derive decryption key")?),
         ))
     }
 
@@ -400,10 +402,10 @@ pub fn get_sha256(input: &[u8]) -> [u8; SHA256_HASH_LENGTH] {
 }
 
 /// Generates a random vector of `size` bytes.
-pub fn get_random<const L: usize>() -> [u8; L] {
+pub fn get_random<const L: usize>() -> anyhow::Result<[u8; L]> {
     let mut result: [u8; L] = [Default::default(); L];
     let rng = SystemRandom::new();
     rng.fill(&mut result[..])
-        .expect("Couldn't create random value");
-    result
+        .map_err(|error| anyhow!("Couldn't create random value: {:?}", error))?;
+    Ok(result)
 }

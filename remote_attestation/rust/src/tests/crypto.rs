@@ -16,10 +16,10 @@
 
 use crate::{
     crypto::{
-        get_sha256, AeadEncryptor, KeyNegotiator, KeyNegotiatorType, SignatureVerifier, Signer,
-        AEAD_ALGORITHM_KEY_LENGTH, CLIENT_KEY_PURPOSE, KEY_AGREEMENT_ALGORITHM_KEY_LENGTH,
-        NONCE_LENGTH, SERVER_KEY_PURPOSE, SHA256_HASH_LENGTH, SIGNATURE_LENGTH,
-        SIGNING_ALGORITHM_KEY_LENGTH,
+        get_sha256, AeadEncryptor, DecryptionKey, EncryptionKey, KeyNegotiator, KeyNegotiatorType,
+        SignatureVerifier, Signer, AEAD_ALGORITHM_KEY_LENGTH, CLIENT_KEY_PURPOSE,
+        KEY_AGREEMENT_ALGORITHM_KEY_LENGTH, NONCE_LENGTH, SERVER_KEY_PURPOSE, SHA256_HASH_LENGTH,
+        SIGNATURE_LENGTH, SIGNING_ALGORITHM_KEY_LENGTH,
     },
     message::EncryptedData,
 };
@@ -77,7 +77,10 @@ const DATA_SHA256_HASH: [u8; SHA256_HASH_LENGTH] = [
 
 #[test]
 fn test_decrypt() {
-    let mut encryptor = AeadEncryptor::new(SERVER_ENCRYPTION_KEY, CLIENT_ENCRYPTION_KEY);
+    let mut encryptor = AeadEncryptor::new(
+        EncryptionKey(SERVER_ENCRYPTION_KEY),
+        DecryptionKey(CLIENT_ENCRYPTION_KEY),
+    );
     let result = encryptor.decrypt(&EncryptedData::new(
         ENCRYPTED_DATA_NONCE,
         ENCRYPTED_DATA.to_vec(),
@@ -98,8 +101,14 @@ fn test_decrypt() {
 
 #[quickcheck]
 fn test_encrypt(data: Vec<u8>) -> bool {
-    let mut server_encryptor = AeadEncryptor::new(SERVER_ENCRYPTION_KEY, CLIENT_ENCRYPTION_KEY);
-    let mut client_encryptor = AeadEncryptor::new(CLIENT_ENCRYPTION_KEY, SERVER_ENCRYPTION_KEY);
+    let mut server_encryptor = AeadEncryptor::new(
+        EncryptionKey(SERVER_ENCRYPTION_KEY),
+        DecryptionKey(CLIENT_ENCRYPTION_KEY),
+    );
+    let mut client_encryptor = AeadEncryptor::new(
+        EncryptionKey(CLIENT_ENCRYPTION_KEY),
+        DecryptionKey(SERVER_ENCRYPTION_KEY),
+    );
 
     let encrypted_data = server_encryptor
         .encrypt(&data)
@@ -160,8 +169,8 @@ fn test_derive_session_keys() {
     assert!(result.is_ok());
     let (client_encryption_key, client_decryption_key) = result.unwrap();
 
-    assert_eq!(server_encryption_key, client_decryption_key);
-    assert_eq!(server_decryption_key, client_encryption_key);
+    assert_eq!(server_encryption_key.0, client_decryption_key.0);
+    assert_eq!(server_decryption_key.0, client_encryption_key.0);
 }
 
 #[test]

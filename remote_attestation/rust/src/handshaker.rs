@@ -162,7 +162,8 @@ impl ClientHandshaker {
             .context("Couldn't create key negotiator")?;
 
         // Create client hello message.
-        let client_hello = ClientHello::new(get_random());
+        let client_hello =
+            ClientHello::new(get_random().context("Couldn't generate random array")?);
 
         // Update current transcript.
         self.transcript
@@ -392,7 +393,7 @@ impl ServerHandshaker {
 
             let mut server_identity = ServerIdentity::new(
                 ephemeral_public_key,
-                get_random(),
+                get_random().context("Couldn't generate random array")?,
                 signer
                     .public_key()
                     .context("Couldn't get singing public key")?,
@@ -417,7 +418,7 @@ impl ServerHandshaker {
         } else {
             ServerIdentity::new(
                 ephemeral_public_key,
-                get_random(),
+                get_random().context("Couldn't generate random array")?,
                 // Signing public key.
                 [Default::default(); SIGNING_ALGORITHM_KEY_LENGTH],
                 // Attestation info.
