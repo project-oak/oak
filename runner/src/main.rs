@@ -981,6 +981,14 @@ fn run_bazel_build() -> Step {
 fn run_bazel_test() -> Step {
     Step::Single {
         name: "bazel test".to_string(),
-        command: Cmd::new("bazel", &["test", "--", "//oak/...:all"]),
+        command: Cmd::new(
+            "bazel",
+            &[
+                "test",
+                "--",
+                "//oak/...:all",
+                "//remote_attestation/java/tests/...:all",
+            ],
+        ),
     }
 }

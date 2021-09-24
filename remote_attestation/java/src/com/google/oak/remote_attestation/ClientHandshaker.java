@@ -33,29 +33,6 @@ import java.util.Random;
 import oak.remote_attestation.AttestationInfo;
 import oak.remote_attestation.AttestationReport;
 
-enum HandshakerState {
-  Initializing {
-    @Override
-    public HandshakerState transition() {
-      return ExpectingServerIdentity;
-    }
-  },
-  ExpectingServerIdentity {
-    @Override
-    public HandshakerState transition() {
-      return Completed;
-    }
-  },
-  Completed {
-    @Override
-    public HandshakerState transition() {
-      return this;
-    }
-  };
-
-  public abstract HandshakerState transition();
-}
-
 /** Remote attestation protocol handshake implementation. */
 public class ClientHandshaker {
   /** Remote attestation protocol version. */
@@ -65,10 +42,17 @@ public class ClientHandshaker {
   /** Test value of the server's TEE measurement. */
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
 
+  public static enum State {
+    Initializing,
+    ExpectingServerIdentity,
+    Completed,
+    Aborted,
+  }
+
   /** Expected value of the server's TEE measurement. */
   private final byte[] expectedTeeMeasurement;
   /** Current state of the remote attestation protocol. */
-  private HandshakerState state;
+  private State state;
   /**
    * Collection of previously sent and received messages.
    * Signed transcript is sent in messages to prevent replay attacks.
@@ -81,7 +65,7 @@ public class ClientHandshaker {
 
   public ClientHandshaker(byte[] expectedTeeMeasurement) {
     this.expectedTeeMeasurement = expectedTeeMeasurement;
-    state = HandshakerState.Initializing;
+    state = State.Initializing;
     transcript = new byte[0];
     // Generate client private/public key pair.
     keyNegotiator = new KeyNegotiator();
@@ -91,27 +75,32 @@ public class ClientHandshaker {
   /**
    * Initializes the remote attestation handshake by creating an {@code ClientHello} message.
    *
-   * Transitions {@code ClientHandshaker} state from {@code Initializing} to
-   * {@code Attesting} state.
+   * Transitions {@code ClientHandshaker} state from {@code State.Initializing} to
+   * {@code State.ExpectingServerIdentity} state.
    */
   public byte[] createClientHello() throws IllegalStateException, IOException {
-    if (state != HandshakerState.Initializing) {
-      throw new IllegalStateException("ClientHandshaker is not in the Initializing state");
+    try {
+      if (state != State.Initializing) {
+        throw new IllegalStateException("ClientHandshaker is not in the Initializing state");
+      }
+
+      // Random vector sent in messages for preventing replay attacks.
+      byte[] random = new byte[REPLAY_PROTECTION_ARRAY_LENGTH];
+      new Random().nextBytes(random);
+
+      // Create client hello message.
+      Message.ClientHello clientHello = new Message.ClientHello(random);
+
+      // Update current transcript.
+      byte[] serializedClientHello = clientHello.serialize();
+      appendTranscript(serializedClientHello);
+
+      state = State.ExpectingServerIdentity;
+      return serializedClientHello;
+    } catch (Exception e) {
+      state = state.Aborted;
+      throw e;
     }
-
-    // Random vector sent in messages for preventing replay attacks.
-    byte[] random = new byte[REPLAY_PROTECTION_ARRAY_LENGTH];
-    new Random().nextBytes(random);
-
-    // Create client hello message.
-    Message.ClientHello clientHello = new Message.ClientHello(random);
-
-    // Update current transcript.
-    byte[] serializedClientHello = clientHello.serialize();
-    appendTranscript(serializedClientHello);
-
-    state = state.transition();
-    return serializedClientHello;
   }
 
   /**
@@ -119,60 +108,71 @@ public class ClientHandshaker {
    * derives session keys for encrypting/decrypting messages from the server.
    * {@code ClientIdentity} message contains an ephemeral public key for negotiating session keys.
    *
-   * Transitions {@code ClientHandshaker} state from {@code Attesting} to {@code Attested} state.
+   * Transitions {@code ClientHandshaker} state from {@code State.ExpectingServerIdentity} to
+   * {@code State.Attested} state.
    */
   public byte[] processServerIdentity(byte[] serializedServerIdentity)
       throws IllegalStateException, IOException, GeneralSecurityException {
-    if (state != HandshakerState.ExpectingServerIdentity) {
-      throw new IllegalStateException(
-          "ClientHandshaker is not in the ExpectingServerIdentity state");
+    try {
+      if (state != State.ExpectingServerIdentity) {
+        throw new IllegalStateException(
+            "ClientHandshaker is not in the ExpectingServerIdentity state");
+      }
+
+      Message.ServerIdentity serverIdentity =
+          Message.ServerIdentity.deserialize(serializedServerIdentity);
+
+      // Update current transcript.
+      // Transcript doesn't include transcript signature from the server identity message.
+      ServerIdentity serverIdentityNoSignature = new Message.ServerIdentity(
+          serverIdentity.getEphemeralPublicKey(), serverIdentity.getRandom(),
+          serverIdentity.getSigningPublicKey(), serverIdentity.getAttestationInfo());
+      byte[] serializedServerIdentityNoSignature = serverIdentityNoSignature.serialize();
+      appendTranscript(serializedServerIdentityNoSignature);
+
+      // Verify server transcript signature.
+      byte[] transcriptHash = Hashing.sha256().hashBytes(transcript).asBytes();
+      SignatureVerifier verifier = new SignatureVerifier(serverIdentity.getSigningPublicKey());
+      if (!verifier.verify(transcriptHash, serverIdentity.getTranscriptSignature())) {
+        throw new VerifyException("Couldn't verify server transcript signature");
+      }
+
+      // Verify server attestation info.
+      if (!verifyAttestationInfo(serverIdentity.getAttestationInfo())) {
+        throw new VerifyException("Couldn't verify attestation info");
+      }
+
+      // Create client attestation identity.
+      Message.ClientIdentity clientIdentity = new Message.ClientIdentity(keyNegotiator.getPublicKey(),
+          // Signing public key.
+          new byte[0],
+          // Attestation info.
+          new byte[0]);
+
+      // Update current transcript.
+      byte[] serializedClientIdentity = clientIdentity.serialize();
+      transcript = Bytes.concat(transcript, serializedClientIdentity);
+
+      // Agree on session keys and create an encryptor.
+      encryptor = keyNegotiator.createEncryptor(
+          serverIdentity.getEphemeralPublicKey(), KeyNegotiator.EncryptorType.CLIENT);
+
+      state = State.Completed;
+      return serializedClientIdentity;
+    } catch (Exception e) {
+      state = state.Aborted;
+      throw e;
     }
+  }
 
-    Message.ServerIdentity serverIdentity =
-        Message.ServerIdentity.deserialize(serializedServerIdentity);
-
-    // Update current transcript.
-    // Transcript doesn't include transcript signature from the server identity message.
-    ServerIdentity serverIdentityNoSignature = new Message.ServerIdentity(
-        serverIdentity.getEphemeralPublicKey(), serverIdentity.getRandom(),
-        serverIdentity.getSigningPublicKey(), serverIdentity.getAttestationInfo());
-    byte[] serializedServerIdentityNoSignature = serverIdentityNoSignature.serialize();
-    appendTranscript(serializedServerIdentityNoSignature);
-
-    // Verify server transcript signature.
-    byte[] transcriptHash = Hashing.sha256().hashBytes(transcript).asBytes();
-    SignatureVerifier verifier = new SignatureVerifier(serverIdentity.getSigningPublicKey());
-    if (!verifier.verify(transcriptHash, serverIdentity.getTranscriptSignature())) {
-      throw new VerifyException("Couldn't verify server transcript signature");
-    }
-
-    // Verify server attestation info.
-    if (!verifyAttestationInfo(serverIdentity.getAttestationInfo())) {
-      throw new VerifyException("Couldn't verify attestation info");
-    }
-
-    // Create client attestation identity.
-    Message.ClientIdentity clientIdentity = new Message.ClientIdentity(keyNegotiator.getPublicKey(),
-        // Signing public key.
-        new byte[0],
-        // Attestation info.
-        new byte[0]);
-
-    // Update current transcript.
-    byte[] serializedClientIdentity = clientIdentity.serialize();
-    transcript = Bytes.concat(transcript, serializedClientIdentity);
-
-    // Agree on session keys and create an encryptor.
-    encryptor = keyNegotiator.createEncryptor(
-        serverIdentity.getEphemeralPublicKey(), KeyNegotiator.EncryptorType.CLIENT);
-
-    state = state.transition();
-    return serializedClientIdentity;
+  /** Returns current state of the {@code ClientHandshaker}. */
+  public State getState() {
+    return state;
   }
 
   /** Returns an encryptor created based on the negotiated ephemeral keys. */
   public AeadEncryptor getEncryptor() {
-    if (state != HandshakerState.Completed) {
+    if (state != State.Completed) {
       throw new IllegalStateException("ClientHandshaker is not in the Completed state");
     }
 
