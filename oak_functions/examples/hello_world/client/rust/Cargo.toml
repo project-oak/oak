@@ -1,0 +1,19 @@
+[package]
+name = "hello_world_client"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+oak_functions_abi = { path = "../../../../abi" }
+oak_functions_client = { path = "../../../../client/rust" }
+structopt = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }

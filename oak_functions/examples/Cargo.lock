@@ -717,6 +717,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "hello_world"
+version = "0.1.0"
+dependencies = [
+ "oak_functions",
+]
+
+[[package]]
+name = "hello_world_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "oak_functions_abi",
+ "oak_functions_client",
+ "structopt",
+ "tokio",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,6 +1,8 @@
 [workspace]
 members = [
   "fuzzable/module",
+  "hello_world/client/rust",
+  "hello_world/module",
   "key_value_lookup/module",
   "mobilenet/client/rust",
   "mobilenet/module",
