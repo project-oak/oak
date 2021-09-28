@@ -38,7 +38,7 @@ points with a 40km radius. If larger cells are used there would likely be fewer
 index entries but with less tight coverage. Smaller cells would usually give
 tighter coverage but a larger number of index entries.
 
-Each cell has is identified by a unique unsigned 64 bit integer. See
+Each cell is identified by a unique unsigned 64 bit integer. See
 https://s2geometry.io/devguide/s2cell_hierarchy#s2cellid-numbering-again for
 more detail on how this is structured. These identifiers are converted to tokens
 by generating a big endian hex string representation of the number and trimming
@@ -100,7 +100,7 @@ To build and run this example manually follow these steps:
    ```shell
    cargo run --manifest-path=./oak_functions/client/rust/Cargo.toml -- \
        --uri=http://localhost:8080,
-       --request={\"lat\":52,\"lon\":0}
+       --request={\"lat\":52,\"lng\":0}
    ```
 
 Alternatively, the `runner` could be used to run this example:

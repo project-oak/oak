@@ -109,7 +109,7 @@ async fn test_server() {
 
     {
         // Exact key_0.
-        let response = make_request(server_port, br#"{"lat":52.0,"lon":-0.01}"#)
+        let response = make_request(server_port, br#"{"lat":52.0,"lng":-0.01}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -120,7 +120,7 @@ async fn test_server() {
     }
     {
         // Close to key_0.
-        let response = make_request(server_port, br#"{"lat":51.9,"lon":-0.1}"#)
+        let response = make_request(server_port, br#"{"lat":51.9,"lng":-0.1}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -131,7 +131,7 @@ async fn test_server() {
     }
     {
         // A bit further from key_0.
-        let response = make_request(server_port, br#"{"lat":51.4,"lon":-0.6}"#)
+        let response = make_request(server_port, br#"{"lat":51.4,"lng":-0.6}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -142,7 +142,7 @@ async fn test_server() {
     }
     {
         // Close to key_1.
-        let response = make_request(server_port, br#"{"lat":14.1,"lon":-11.9}"#)
+        let response = make_request(server_port, br#"{"lat":14.1,"lng":-11.9}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -153,7 +153,7 @@ async fn test_server() {
     }
     {
         // Far from both keys.
-        let response = make_request(server_port, br#"{"lat":-10.0,"lon":10.0}"#)
+        let response = make_request(server_port, br#"{"lat":-10.0,"lng":10.0}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -206,7 +206,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
             let request = Request {
-                body: br#"{"lat":-60.1,"lon":120.1}"#.to_vec(),
+                body: br#"{"lat":-60.1,"lng":120.1}"#.to_vec(),
             };
             let resp = rt
                 .block_on(wasm_handler.clone().handle_invoke(request))

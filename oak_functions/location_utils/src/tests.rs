@@ -108,7 +108,8 @@ fn test_find_covering_cells() {
     // We should only need 2 level 5 cell.
     // See https://s2.sidewalklabs.com/regioncoverer/?center=51.504569%2C-0.128076&zoom=8&cells=47dc,4874
     // for a visualisation.
-    let cover = find_covering_cells(&location, &default_cutoff_radius(), 5).unwrap();
+    let cover =
+        find_covering_cells(&location, &Angle::from(DEFAULT_CUTOFF_RADIUS_RADIANS), 5).unwrap();
 
     assert_eq!(cover.len(), 2);
     assert_eq!(cover[0].to_token(), "47dc");
@@ -117,7 +118,8 @@ fn test_find_covering_cells() {
     // We should need 4 level 6 cells.
     // See https://s2.sidewalklabs.com/regioncoverer/?center=51.504569%2C-0.128076&zoom=8&cells=47d9,47df,4875,4877
     // for a visualisation.
-    let cover = find_covering_cells(&location, &default_cutoff_radius(), 6).unwrap();
+    let cover =
+        find_covering_cells(&location, &Angle::from(DEFAULT_CUTOFF_RADIUS_RADIANS), 6).unwrap();
 
     assert_eq!(cover.len(), 4);
     assert_eq!(cover[0].to_token(), "47d9");

@@ -17,8 +17,8 @@
 use anyhow::Context;
 use bytes::BytesMut;
 use location_utils::{
-    cell_id_to_bytes, default_cutoff_radius, find_covering_cells, location_from_degrees,
-    location_to_bytes, S2_DEFAULT_LEVEL,
+    cell_id_to_bytes, find_covering_cells, location_from_degrees, location_to_bytes, Angle,
+    DEFAULT_CUTOFF_RADIUS_RADIANS, S2_DEFAULT_LEVEL,
 };
 use multimap::MultiMap;
 use oak_functions_abi::proto::Entry;
@@ -66,8 +66,8 @@ struct WeatherValue {
     temperature_degrees_celsius: i32,
 }
 
-fn create_weather_entry<R: Rng>(rng: &mut R, lat: i32, lon: i32) -> Entry {
-    let key = format!("{},{}", lat, lon);
+fn create_weather_entry<R: Rng>(rng: &mut R, lat: i32, lng: i32) -> Entry {
+    let key = format!("{},{}", lat, lng);
     let value = serde_json::to_string(&create_weather_value(rng)).unwrap();
     Entry {
         key: key.as_bytes().to_vec(),
@@ -87,8 +87,8 @@ fn create_weather_value<R: Rng>(rng: &mut R) -> WeatherValue {
 pub fn generate_and_serialize_weather_entries<R: Rng>(rng: &mut R) -> anyhow::Result<BytesMut> {
     let mut buf = BytesMut::new();
     for lat in -90..=90 {
-        for lon in -180..=180 {
-            let entry = create_weather_entry(rng, lat, lon);
+        for lng in -180..=180 {
+            let entry = create_weather_entry(rng, lat, lng);
             entry
                 .encode_length_delimited(&mut buf)
                 .context("could not encode entry")?;
@@ -105,7 +105,7 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
     let mut buf = BytesMut::new();
     let pi = std::f64::consts::PI;
     // We sample longitude in radians from [-pi, pi).
-    let lon_dist = rand::distributions::Uniform::new(-pi, pi);
+    let lng_dist = rand::distributions::Uniform::new(-pi, pi);
     // To avoid increased density towards the poles, we sample latitude in the range [-1, 1] and
     // convert to latitude using `acos`. See https://mathworld.wolfram.com/SpherePointPicking.html
     let lat_dist = rand::distributions::Uniform::new(-1.0_f64, 1.0);
@@ -121,16 +121,20 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
         let longitude_degrees = if i == 0 {
             0.1_f64
         } else {
-            rng.sample(lon_dist).to_degrees()
+            rng.sample(lng_dist).to_degrees()
         };
 
         let location = location_from_degrees(latitude_degrees, longitude_degrees);
 
         let key = location_to_bytes(&location);
         // Add cell-based lookup index entries.
-        for cell in find_covering_cells(&location, &default_cutoff_radius(), S2_DEFAULT_LEVEL)
-            .unwrap()
-            .iter()
+        for cell in find_covering_cells(
+            &location,
+            &Angle::from(DEFAULT_CUTOFF_RADIUS_RADIANS),
+            S2_DEFAULT_LEVEL,
+        )
+        .unwrap()
+        .iter()
         {
             cell_map.insert(cell_id_to_bytes(cell), key.to_vec());
         }

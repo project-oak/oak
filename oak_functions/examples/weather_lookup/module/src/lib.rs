@@ -21,8 +21,8 @@
 #![feature(test)]
 
 use location_utils::{
-    cell_id_to_bytes, default_cutoff_radius, find_cell, location_from_bytes, location_from_degrees,
-    location_to_bytes,
+    cell_id_to_bytes, find_cell, location_from_bytes, location_from_degrees, location_to_bytes,
+    Angle, LatLng, DEFAULT_CUTOFF_RADIUS_RADIANS,
 };
 use oak_functions::log;
 use serde::Deserialize;
@@ -34,7 +34,7 @@ mod tests;
 struct Request {
     #[serde(rename = "lat")]
     latitude_degrees: f64,
-    #[serde(rename = "lon")]
+    #[serde(rename = "lng")]
     longitude_degrees: f64,
 }
 
@@ -66,9 +66,8 @@ pub extern "C" fn main() {
 
         // Find the closest key by linearly scanning the nearby weather data points to find the
         // closest one.
-        let mut best_distance = default_cutoff_radius();
-        let mut found = false;
-        let mut best_location = location_from_degrees(0., 0.);
+        let mut best_distance = Angle::from(DEFAULT_CUTOFF_RADIUS_RADIANS);
+        let mut best_location: Option<LatLng> = None;
 
         for chunk in index.chunks(8) {
             let test = location_from_bytes(chunk)
@@ -76,22 +75,21 @@ pub extern "C" fn main() {
             let distance = location.distance(&test);
             if distance < best_distance {
                 best_distance = distance;
-                best_location = test;
-                found = true;
+                best_location = Some(test);
             }
         }
 
-        let result = if found {
-            log!("nearest data point: {:?}\n", best_location);
+        let result = match best_location {
+            Some(key_location) => {
+                log!("nearest data point: {:?}\n", key_location);
+                let best_value = oak_functions::storage_get_item(&location_to_bytes(&key_location))
+                    .map_err(|err| format!("could not get item: {:?}", err))?
+                    .ok_or("could not find item with key")?;
+                log!("nearest location value: {:?}\n", best_value);
 
-            let best_value = oak_functions::storage_get_item(&location_to_bytes(&best_location))
-                .map_err(|err| format!("could not get item: {:?}", err))?
-                .ok_or("could not find item with key")?;
-            log!("nearest location value: {:?}\n", best_value);
-
-            best_value
-        } else {
-            b"could not find location within cutoff".to_vec()
+                best_value
+            }
+            None => b"could not find location within cutoff".to_vec(),
         };
 
         result

@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
 
     // Set default request payload.
     EditText requestInput = findViewById(R.id.requestInput);
-    requestInput.setText("{\"lat\":52,\"lon\":0}");
+    requestInput.setText("{\"lat\":52,\"lng\":0}");
   }
 
   /** Handles click events from the `invokeButton`. */

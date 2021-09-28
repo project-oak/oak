@@ -54,5 +54,5 @@ readonly CLOUD_RUN_SERVICE_URL="$(gcloud beta run services describe "${CLOUD_RUN
 # Attempt to communicate with the newly deployed application.
 ./oak_functions/client/rust/target/x86_64-unknown-linux-gnu/release/oak_functions_client \
   --uri="${CLOUD_RUN_SERVICE_URL}" \
-  --request='{"lat":52,"lon":0}'
+  --request='{"lat":52,"lng":0}'
 )

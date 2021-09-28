@@ -33,15 +33,20 @@ mod tests;
 pub const S2_DEFAULT_LEVEL: u8 = 7;
 
 // Radius of the earth in meters.
-const EARTH_RADIUS: f64 = 6_371_000.;
+const EARTH_RADIUS_METERS: f64 = 6_371_000.;
 
 // The default cutoff radius in meters for the lookup area around a point.
 const DEFAULT_CUTOFF_RADIUS_METERS: f64 = 40_000.;
 
-/// Gets the default cutoff radius represented as an `Angle` in radians.
-pub fn default_cutoff_radius() -> Angle {
-    Angle::from(Rad(DEFAULT_CUTOFF_RADIUS_METERS / EARTH_RADIUS))
-}
+// The size in bytes of the integer representation of a latitude or longitude value.
+const LAT_LNG_INTEGER_SIZE: usize = std::mem::size_of::<i32>();
+
+// The size in bytes of the serialized representation of a location.
+const LOCATION_SIZE: usize = LAT_LNG_INTEGER_SIZE * 2;
+
+/// The default cutoff radius in radians.
+pub const DEFAULT_CUTOFF_RADIUS_RADIANS: Rad =
+    Rad(DEFAULT_CUTOFF_RADIUS_METERS / EARTH_RADIUS_METERS);
 
 /// Converts latitude and longitude values in degrees to a `LatLng` location.
 pub fn location_from_degrees(lat_deg: f64, lng_deg: f64) -> LatLng {
@@ -94,8 +99,8 @@ pub fn location_to_bytes(location: &LatLng) -> [u8; 8] {
     let lat: E6 = location.lat.into();
     let lng: E6 = location.lng.into();
 
-    let mut bytes = [0u8; 8];
-    let (first, second) = bytes.split_at_mut(4);
+    let mut bytes = [0u8; LOCATION_SIZE];
+    let (first, second) = bytes.split_at_mut(LAT_LNG_INTEGER_SIZE);
     first.copy_from_slice(&lat.0.to_be_bytes());
     second.copy_from_slice(&lng.0.to_be_bytes());
 
@@ -107,14 +112,14 @@ pub fn location_to_bytes(location: &LatLng) -> [u8; 8] {
 /// The first four bytes represent a big endian signed integer of the latitude in microdegrees
 /// (`E6`). The next for bytes are a similar representation of the longitude.
 pub fn location_from_bytes(bytes: &[u8]) -> Result<LatLng> {
-    if bytes.len() != 8 {
+    if bytes.len() != LOCATION_SIZE {
         anyhow::bail!("incorrect data size");
     }
 
-    let mut lat_bytes = [0; 4];
-    lat_bytes.copy_from_slice(&bytes[0..4]);
-    let mut lng_bytes = [0; 4];
-    lng_bytes.copy_from_slice(&bytes[4..8]);
+    let mut lat_bytes = [0; LAT_LNG_INTEGER_SIZE];
+    lat_bytes.copy_from_slice(&bytes[0..LAT_LNG_INTEGER_SIZE]);
+    let mut lng_bytes = [0; LAT_LNG_INTEGER_SIZE];
+    lng_bytes.copy_from_slice(&bytes[LAT_LNG_INTEGER_SIZE..LOCATION_SIZE]);
 
     Ok(LatLng::new(
         E6(i32::from_be_bytes(lat_bytes)).into(),
