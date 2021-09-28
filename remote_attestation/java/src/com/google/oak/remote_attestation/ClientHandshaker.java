@@ -78,7 +78,7 @@ public class ClientHandshaker {
    * Transitions {@code ClientHandshaker} state from {@code State.Initializing} to
    * {@code State.ExpectingServerIdentity} state.
    */
-  public byte[] createClientHello() throws IllegalStateException, IOException {
+  public byte[] createClientHello() throws RuntimeException, IOException {
     try {
       if (state != State.Initializing) {
         throw new IllegalStateException("ClientHandshaker is not in the Initializing state");
@@ -112,7 +112,7 @@ public class ClientHandshaker {
    * {@code State.Attested} state.
    */
   public byte[] processServerIdentity(byte[] serializedServerIdentity)
-      throws IllegalStateException, IOException, GeneralSecurityException {
+      throws RuntimeException, IOException, GeneralSecurityException {
     try {
       if (state != State.ExpectingServerIdentity) {
         throw new IllegalStateException(
@@ -171,7 +171,7 @@ public class ClientHandshaker {
   }
 
   /** Returns an encryptor created based on the negotiated ephemeral keys. */
-  public AeadEncryptor getEncryptor() {
+  public AeadEncryptor getEncryptor() throws RuntimeException {
     if (state != State.Completed) {
       throw new IllegalStateException("ClientHandshaker is not in the Completed state");
     }

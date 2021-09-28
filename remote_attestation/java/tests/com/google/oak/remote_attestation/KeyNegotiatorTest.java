@@ -18,6 +18,7 @@ package com.google.oak.remote_attestation;
 
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.KeyNegotiator;
+import com.google.oak.remote_attestation.Message;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import org.junit.Assert;
@@ -38,7 +39,8 @@ public class KeyNegotiatorTest {
 
   @Test
   public void testCreateKeyNegotiator() throws GeneralSecurityException {
-    clientKeyNegotiator.getPublicKey();
+    byte[] publicKey = clientKeyNegotiator.getPublicKey();
+    Assert.assertEquals(publicKey.length, Message.EPHEMERAL_PUBLIC_KEY_LENGTH);
   }
 
   @Test
