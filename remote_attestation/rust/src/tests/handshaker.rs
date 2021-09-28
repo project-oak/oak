@@ -25,12 +25,12 @@ const DATA: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
     let bidirectional_attestation =
-        AttestationBehavior::create_bidirectional_attestation(&vec![], TEE_MEASUREMENT.as_bytes())
+        AttestationBehavior::create_bidirectional_attestation(&[], TEE_MEASUREMENT.as_bytes())
             .unwrap();
     let client_handshaker = ClientHandshaker::new(bidirectional_attestation);
 
     let bidirectional_attestation =
-        AttestationBehavior::create_bidirectional_attestation(&vec![], TEE_MEASUREMENT.as_bytes())
+        AttestationBehavior::create_bidirectional_attestation(&[], TEE_MEASUREMENT.as_bytes())
             .unwrap();
     let server_handshaker = ServerHandshaker::new(bidirectional_attestation);
 
@@ -39,11 +39,11 @@ fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
 
 #[test]
 fn test_create_attestation_behavior() {
-    let self_attestation = AttestationBehavior::create_self_attestation(&vec![]);
+    let self_attestation = AttestationBehavior::create_self_attestation(&[]);
     assert_matches!(self_attestation, Ok(_));
 
     let bidirectional_attestation =
-        AttestationBehavior::create_bidirectional_attestation(&vec![], &vec![]);
+        AttestationBehavior::create_bidirectional_attestation(&[], &[]);
     assert_matches!(bidirectional_attestation, Ok(_));
 }
 
