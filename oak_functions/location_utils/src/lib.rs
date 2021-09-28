@@ -29,7 +29,8 @@ pub use s2::{cellid::CellID, latlng::LatLng, s1::Angle};
 mod tests;
 
 /// The default level to use for S2 Geometry cells. Higher numbers means smaller cells. At level 7
-/// the cells have roughly similar size to a circle with a radius of 40km.
+/// the cells have roughly similar size to a circle with a radius of 40km and there are apporimately
+/// 98K of them.
 pub const S2_DEFAULT_LEVEL: u8 = 7;
 
 // Radius of the earth in meters.
@@ -87,6 +88,8 @@ pub fn find_cell(location: &LatLng, level: u8) -> Result<CellID> {
         return Ok(CellID::from(location));
     }
 
+    // Converting a `LatLng` to `CellID` produces a level 30 cell. We need to find the cells
+    // ancestor at the required lower level.
     Ok(CellID::from(location).parent(level))
 }
 
@@ -110,7 +113,7 @@ pub fn location_to_bytes(location: &LatLng) -> [u8; 8] {
 /// Converts a byte representation of a location into a `LatLng`.
 ///
 /// The first four bytes represent a big endian signed integer of the latitude in microdegrees
-/// (`E6`). The next for bytes are a similar representation of the longitude.
+/// (`E6`). The next four bytes are a similar representation of the longitude.
 pub fn location_from_bytes(bytes: &[u8]) -> Result<LatLng> {
     if bytes.len() != LOCATION_SIZE {
         anyhow::bail!("incorrect data size");

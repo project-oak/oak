@@ -30,7 +30,7 @@ S2 Geometry (https://s2geometry.io/) cells are used to create the index lookup
 entries. The surface of the earth is treated as a sphere and divided into a
 number of cells (see https://s2geometry.io/devguide/s2cell_hierarchy). The
 number of cells and their sizes are determined by the level. The level can range
-from 0 to 30. At level 0 there are only 6 cell covering the entire earth. At
+from 0 to 30. At level 0 there are only 6 cells covering the entire earth. At
 level 30 there are 7e18 cells (see
 https://s2geometry.io/resources/s2cell_statistics). This example uses level 7
 cells, as these have roughly similar sizes to the circular area around data
@@ -40,18 +40,19 @@ tighter coverage but a larger number of index entries.
 
 Each cell is identified by a unique unsigned 64 bit integer. See
 https://s2geometry.io/devguide/s2cell_hierarchy#s2cellid-numbering-again for
-more detail on how this is structured. These identifiers are converted to tokens
-by generating a big endian hex string representation of the number and trimming
-all trailing 0s. These tokens are used as the keys for the index entries. At
-level 7 the cells have 5 byte tokens. The keys for the data items are 8 bytes so
-key collisions between data entries and index entries are not possible.
+more details on how this is structured. These identifiers are converted to
+tokens by generating a big endian hex string representation of the number and
+trimming all trailing 0s. These tokens are used as the keys for the index
+entries. At level 7 the cells have 5 byte tokens. The keys for the data items
+are 8 bytes so key collisions between data entries and index entries are not
+possible.
 
 The value of each index entry consists of a concatenated list of the keys of the
 weather data locations in the vicinity of the cell. All weather data locations
 that could be within the cutoff (currently 40km) of any point within the cell
 are included in the list. This is equivalent to finding all cells that partly
 fall within the 40km radius. These are found by generating a cell covering
-(using only level 7 cells) of a sperical cap centered at the data point with a
+(using only level 7 cells) of a spherical cap centred at the data point with a
 radius of 40km. See https://s2geometry.io/devguide/examples/coverings for more
 information on coverings. Cell coverings for areas can be visualised using
 https://s2.sidewalklabs.com/regioncoverer/.

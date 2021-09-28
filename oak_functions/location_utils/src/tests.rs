@@ -15,9 +15,12 @@
 
 use super::*;
 
+const LONDON_LAT: f64 = 51.5074;
+const LONDON_LNG: f64 = -0.1278;
+
 #[test]
 fn test_location_from_degrees() {
-    let location = location_from_degrees(51.5074_f64, -0.1278_f64);
+    let location = location_from_degrees(LONDON_LAT, LONDON_LNG);
 
     assert_eq!(Into::<E6>::into(&location.lat), E6(51_507_400));
     assert_eq!(Into::<E6>::into(&location.lng), E6(-127_800));
@@ -45,7 +48,7 @@ fn test_location_from_bytes() {
 #[test]
 fn test_location_to_bytes() {
     // London.
-    let bytes = location_to_bytes(&location_from_degrees(51.5074_f64, -0.1278_f64));
+    let bytes = location_to_bytes(&location_from_degrees(LONDON_LAT, LONDON_LNG));
 
     assert_eq!(bytes, [3, 17, 240, 200, 255, 254, 12, 200]);
 
@@ -60,7 +63,7 @@ fn test_cell_id_to_bytes() {
     // Find the level 7 s2 cell covering central London.
     // See https://s2.sidewalklabs.com/regioncoverer/?center=51.504569%2C-0.128076&zoom=9&cells=48764
     // for a visualisation.
-    let location = location_from_degrees(51.5074_f64, -0.1278_f64);
+    let location = location_from_degrees(LONDON_LAT, LONDON_LNG);
     let cell = find_cell(&location, 7).unwrap();
 
     let bytes = cell_id_to_bytes(&cell);
@@ -70,7 +73,7 @@ fn test_cell_id_to_bytes() {
 
 #[test]
 fn test_find_cell() {
-    let location = location_from_degrees(51.5074_f64, -0.1278_f64);
+    let location = location_from_degrees(LONDON_LAT, LONDON_LNG);
     // Level 2.
     let level = 2;
     let cell = find_cell(&location, level).unwrap();
@@ -99,13 +102,19 @@ fn test_find_cell() {
 
     assert_eq!(cell.level(), level as u64);
     assert_eq!(cell, expected);
+
+    // Level 31.
+    let level = 31;
+    let cell = find_cell(&location, level);
+
+    assert!(cell.is_err());
 }
 
 #[test]
 fn test_find_covering_cells() {
-    let location = location_from_degrees(51.5074_f64, -0.1278_f64);
+    let location = location_from_degrees(LONDON_LAT, LONDON_LNG);
 
-    // We should only need 2 level 5 cell.
+    // We should only need 2 level-5 cells.
     // See https://s2.sidewalklabs.com/regioncoverer/?center=51.504569%2C-0.128076&zoom=8&cells=47dc,4874
     // for a visualisation.
     let cover =
@@ -115,7 +124,7 @@ fn test_find_covering_cells() {
     assert_eq!(cover[0].to_token(), "47dc");
     assert_eq!(cover[1].to_token(), "4874");
 
-    // We should need 4 level 6 cells.
+    // We should need 4 level-6 cells.
     // See https://s2.sidewalklabs.com/regioncoverer/?center=51.504569%2C-0.128076&zoom=8&cells=47d9,47df,4875,4877
     // for a visualisation.
     let cover =
