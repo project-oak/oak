@@ -42,8 +42,7 @@ fn test_create_attestation_behavior() {
     let self_attestation = AttestationBehavior::create_self_attestation(&[]);
     assert_matches!(self_attestation, Ok(_));
 
-    let bidirectional_attestation =
-        AttestationBehavior::create_bidirectional_attestation(&[], &[]);
+    let bidirectional_attestation = AttestationBehavior::create_bidirectional_attestation(&[], &[]);
     assert_matches!(bidirectional_attestation, Ok(_));
 }
 
