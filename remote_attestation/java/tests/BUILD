@@ -22,6 +22,17 @@ package(
 )
 
 java_test(
+    name = "message_test",
+    srcs = [
+        "com/google/oak/remote_attestation/MessageTest.java",
+    ],
+    test_class = "com.google.oak.remote_attestation.MessageTest",
+    deps = [
+        "//remote_attestation/java:remote_attestation",
+    ],
+)
+
+java_test(
     name = "key_negotiator_test",
     srcs = [
         "com/google/oak/remote_attestation/KeyNegotiatorTest.java",
