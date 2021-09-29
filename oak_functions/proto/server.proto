@@ -16,20 +16,20 @@
 
 syntax = "proto3";
 
-package oak.functions.server;
+package oak.session.v1;
 
 option java_multiple_files = true;
-option java_package = "oak.functions.server";
+option java_package = "oak.session.v1";
 
-message AttestedInvokeRequest {
+message CreateSessionRequest {
   bytes body = 1;
 }
 
-message AttestedInvokeResponse {
+message CreateSessionResponse {
   bytes body = 1;
 }
 
-service RemoteAttestation {
+service Session {
   // Creates a message stream for session key negotiation and encrypted payload exchange.
   //
   // The created message stream looks as follows:
@@ -41,5 +41,5 @@ service RemoteAttestation {
   //
   // Messages are represented as serialized messages defined in the `remote_attestation::message.rs`
   // and `com.google.oak.remote_attestation.Message`.
-  rpc AttestedInvoke(stream AttestedInvokeRequest) returns (stream AttestedInvokeResponse);
+  rpc CreateSession(stream CreateSessionRequest) returns (stream CreateSessionResponse);
 }
