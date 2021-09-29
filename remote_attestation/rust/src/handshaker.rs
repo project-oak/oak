@@ -41,6 +41,7 @@ enum ClientHandshakerState {
     Initializing,
     ExpectingServerIdentity(KeyNegotiator),
     Completed(AeadEncryptor),
+    Aborted,
     /// Additional state that represents ongoing message processing.
     MessageProcessing,
 }
@@ -57,6 +58,7 @@ impl std::fmt::Debug for ClientHandshakerState {
             Self::Initializing => write!(f, "Initializing"),
             Self::ExpectingServerIdentity(_) => write!(f, "ExpectingServerIdentity"),
             Self::Completed(_) => write!(f, "Completed"),
+            Self::Aborted => write!(f, "Aborted"),
             Self::MessageProcessing => write!(f, "MessageProcessing"),
         }
     }
@@ -66,6 +68,7 @@ enum ServerHandshakerState {
     ExpectingClientHello,
     ExpectingClientIdentity(KeyNegotiator),
     Completed(AeadEncryptor),
+    Aborted,
     /// Additional state that represents ongoing message processing.
     MessageProcessing,
 }
@@ -82,6 +85,7 @@ impl std::fmt::Debug for ServerHandshakerState {
             Self::ExpectingClientHello => write!(f, "ExpectingClientHello"),
             Self::ExpectingClientIdentity(_) => write!(f, "ExpectingClientIdentity"),
             Self::Completed(_) => write!(f, "Completed"),
+            Self::Aborted => write!(f, "Aborted"),
             Self::MessageProcessing => write!(f, "MessageProcessing"),
         }
     }
@@ -111,6 +115,13 @@ impl ClientHandshaker {
     /// Processes incoming `message` and returns a serialized remote attestation message.
     /// If [`None`] is returned, then no messages should be sent out to the server.
     pub fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        self.next_step_util(message).map_err(|error| {
+            self.state = ClientHandshakerState::Aborted;
+            error
+        })
+    }
+
+    fn next_step_util(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
             deserialize_message(message).context("Couldn't deserialize message")?;
         match deserialized_message {
@@ -124,6 +135,9 @@ impl ClientHandshaker {
                             .serialize()
                             .context("Couldn't serialize client identity message")?;
                         Ok(Some(serialized_client_identity))
+                    }
+                    ClientHandshakerState::Aborted => {
+                        Err(anyhow!("Remote attestation handshake is aborted",))
                     }
                     ClientHandshakerState::MessageProcessing => Err(anyhow!(
                         "Cannot process new messages while in the MessageProcessing state",
@@ -145,6 +159,10 @@ impl ClientHandshaker {
         matches!(self.state, ClientHandshakerState::Completed(_))
     }
 
+    pub fn is_aborted(&self) -> bool {
+        matches!(self.state, ClientHandshakerState::Aborted)
+    }
+
     pub fn get_encryptor(self) -> anyhow::Result<Encryptor> {
         match self.state {
             ClientHandshakerState::Completed(encryptor) => Ok(Encryptor { encryptor }),
@@ -158,24 +176,39 @@ impl ClientHandshaker {
     /// Transitions [`ClientHandshaker`] state from [`HandshakerState::Initializing`] to
     /// [`HandshakerState::ExpectingServerIdentity`] state.
     pub fn create_client_hello(&mut self) -> anyhow::Result<Vec<u8>> {
-        let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Client)
-            .context("Couldn't create key negotiator")?;
+        self.create_client_hello_util().map_err(|error| {
+            self.state = ClientHandshakerState::Aborted;
+            error
+        })
+    }
 
-        // Create client hello message.
-        let client_hello =
-            ClientHello::new(get_random().context("Couldn't generate random array")?);
+    fn create_client_hello_util(&mut self) -> anyhow::Result<Vec<u8>> {
+        match self.state {
+            ClientHandshakerState::Initializing => {
+                let key_negotiator = KeyNegotiator::create(KeyNegotiatorType::Client)
+                    .context("Couldn't create key negotiator")?;
 
-        // Update current transcript.
-        self.transcript
-            .append(&client_hello)
-            .context("Couldn't append client hello to the transcript")?;
+                // Create client hello message.
+                let client_hello =
+                    ClientHello::new(get_random().context("Couldn't generate random array")?);
 
-        let serialized_client_hello = client_hello
-            .serialize()
-            .context("Couldn't serialize client hello message")?;
+                // Update current transcript.
+                self.transcript
+                    .append(&client_hello)
+                    .context("Couldn't append client hello to the transcript")?;
 
-        self.state = ClientHandshakerState::ExpectingServerIdentity(key_negotiator);
-        Ok(serialized_client_hello)
+                let serialized_client_hello = client_hello
+                    .serialize()
+                    .context("Couldn't serialize client hello message")?;
+
+                self.state = ClientHandshakerState::ExpectingServerIdentity(key_negotiator);
+                Ok(serialized_client_hello)
+            }
+            _ => Err(anyhow!(
+                "Client hello message can't be created in {:?} state, needed Initializing",
+                self.state
+            )),
+        }
     }
 
     /// Responds to [`ServerIdentity`] message by creating a [`ClientIdentity`] message and derives
@@ -303,6 +336,13 @@ impl ServerHandshaker {
     /// Processes incoming `message` and returns a serialized remote attestation message.
     /// If [`None`] is returned, then no messages should be sent out to the client.
     pub fn next_step(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        self.next_step_util(message).map_err(|error| {
+            self.state = ServerHandshakerState::Aborted;
+            error
+        })
+    }
+
+    fn next_step_util(&mut self, message: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let deserialized_message =
             deserialize_message(message).context("Couldn't deserialize message")?;
         match deserialized_message {
@@ -315,6 +355,9 @@ impl ServerHandshaker {
                         .serialize()
                         .context("Couldn't serialize server identity message")?;
                     Ok(Some(serialized_server_identity))
+                }
+                ServerHandshakerState::Aborted => {
+                    Err(anyhow!("Remote attestation handshake is aborted",))
                 }
                 ServerHandshakerState::MessageProcessing => Err(anyhow!(
                     "Cannot process new messages while in the MessageProcessing state",
@@ -349,6 +392,10 @@ impl ServerHandshaker {
 
     pub fn is_completed(&self) -> bool {
         matches!(self.state, ServerHandshakerState::Completed(_))
+    }
+
+    pub fn is_aborted(&self) -> bool {
+        matches!(self.state, ServerHandshakerState::Aborted)
     }
 
     pub fn get_encryptor(self) -> anyhow::Result<Encryptor> {
@@ -535,6 +582,20 @@ pub struct AttestationBehavior {
     /// Signer containing a key which public part is signed by the TEE firmware key.
     /// Used for signing protocol transcripts and preventing replay attacks.
     signer: Option<Signer>,
+}
+
+impl std::fmt::Debug for AttestationBehavior {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match (
+            self.contains_peer_attestation(),
+            self.contains_self_attestation(),
+        ) {
+            (true, false) => write!(f, "PeerAttestation"),
+            (false, true) => write!(f, "SelfAttestation"),
+            (true, true) => write!(f, "BidirectionalAttestation"),
+            (false, false) => write!(f, "InvalidAttestation"),
+        }
+    }
 }
 
 impl AttestationBehavior {

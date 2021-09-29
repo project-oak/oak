@@ -15,4 +15,5 @@
 //
 
 mod crypto;
+mod handshaker;
 mod message;
