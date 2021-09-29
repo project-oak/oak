@@ -21,7 +21,7 @@ use crate::{
     logger::Logger,
     lookup::LookupData,
     metrics::PrivateMetricsAggregator,
-    proto::remote_attestation_server::RemoteAttestationServer,
+    proto::streaming_session_server::StreamingSessionServer,
     server::{apply_policy, BoxedExtension, Policy, WasmHandler},
 };
 use anyhow::Context;
@@ -97,7 +97,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     // A `Service` is needed for every connection. Here we create a service using the
     // `wasm_handler`.
     tonic::transport::Server::builder()
-        .add_service(RemoteAttestationServer::new(
+        .add_service(StreamingSessionServer::new(
             AttestationServer::create(tee_certificate, request_handler, logger)
                 .context("Couldn't create remote attestation server")?,
         ))

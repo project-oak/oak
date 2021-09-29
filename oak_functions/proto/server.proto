@@ -16,10 +16,10 @@
 
 syntax = "proto3";
 
-package oak.session.v1;
+package oak.session.stream.v1;
 
 option java_multiple_files = true;
-option java_package = "oak.session.v1";
+option java_package = "oak.session.stream.v1";
 
 message StreamingRequest {
   bytes body = 1;
@@ -33,11 +33,11 @@ service StreamingSession {
   // Creates a message stream for session key negotiation and encrypted payload exchange.
   //
   // The created message stream looks as follows:
-  // - Client->Server: `AttestedInvokeRequest` with a serialized `ClientHello` message.
-  // - Server->Client: `AttestedInvokeResponse` with a serialized `ServerIdentity` message.
-  // - Client->Server: `AttestedInvokeRequest` with a serialized `ClientIdentity` message.
-  // - Client->Server: `AttestedInvokeRequest` with a serialized `EncryptedData` message.
-  // - Server->Client: `AttestedInvokeResponse` with a serialized `EncryptedData` message.
+  // - Client->Server: `StreamingRequest` with a serialized `ClientHello` message.
+  // - Server->Client: `StreamingResponse` with a serialized `ServerIdentity` message.
+  // - Client->Server: `StreamingRequest` with a serialized `ClientIdentity` message.
+  // - Client->Server: `StreamingRequest` with a serialized `EncryptedData` message.
+  // - Server->Client: `StreamingResponse` with a serialized `EncryptedData` message.
   //
   // Messages are represented as serialized messages defined in the `remote_attestation::message.rs`
   // and `com.google.oak.remote_attestation.Message`.

@@ -14,7 +14,7 @@
 // limitations under the License.
 
 pub mod proto {
-    tonic::include_proto!("oak.functions.server");
+    tonic::include_proto!("oak.session.stream.v1");
 }
 
 pub mod attestation;

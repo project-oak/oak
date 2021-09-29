@@ -17,7 +17,7 @@
 use crate::{
     logger::Logger,
     proto::{
-        remote_attestation_server::RemoteAttestation, AttestedInvokeRequest, AttestedInvokeResponse,
+        streaming_session_server::StreamingSession, StreamingRequest, StreamingResponse,
     },
 };
 use anyhow::Context;
@@ -29,13 +29,13 @@ use tonic::{Request, Response, Status, Streaming};
 
 /// Utility structure that receives messages from gRPC streams.
 struct Receiver {
-    request_stream: Streaming<AttestedInvokeRequest>,
+    request_stream: Streaming<StreamingRequest>,
 }
 
 impl Receiver {
     /// Receives requests from [`Receiver::request_stream`].
     /// Returns `Ok(None)` to indicate that the corresponding gRPC stream has ended.
-    async fn receive(&mut self) -> anyhow::Result<Option<AttestedInvokeRequest>> {
+    async fn receive(&mut self) -> anyhow::Result<Option<StreamingRequest>> {
         let request = if let Some(request) = self.request_stream.next().await {
             Some(request.context("Couldn't receive request")?)
         } else {
@@ -71,7 +71,7 @@ where
     pub async fn handle_request(
         &mut self,
         receiver: &mut Receiver,
-    ) -> anyhow::Result<Option<AttestedInvokeResponse>> {
+    ) -> anyhow::Result<Option<StreamingResponse>> {
         if let Some(encrypted_request) = receiver
             .receive()
             .await
@@ -91,7 +91,7 @@ where
                 .encrypt(&response)
                 .context("Couldn't decrypt response")?;
 
-            Ok(Some(AttestedInvokeResponse {
+            Ok(Some(StreamingResponse {
                 body: encrypted_response,
             }))
         } else {
@@ -130,18 +130,18 @@ where
 }
 
 #[tonic::async_trait]
-impl<F, S> RemoteAttestation for AttestationServer<F>
+impl<F, S> StreamingSession for AttestationServer<F>
 where
     F: 'static + Send + Sync + Clone + FnOnce(oak_functions_abi::proto::Request) -> S,
     S: std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + Sync + 'static,
 {
-    type AttestedInvokeStream =
-        Pin<Box<dyn Stream<Item = Result<AttestedInvokeResponse, Status>> + Send + Sync + 'static>>;
+    type StreamStream =
+        Pin<Box<dyn Stream<Item = Result<StreamingResponse, Status>> + Send + Sync + 'static>>;
 
-    async fn attested_invoke(
+    async fn stream(
         &self,
-        request_stream: Request<tonic::Streaming<AttestedInvokeRequest>>,
-    ) -> Result<Response<Self::AttestedInvokeStream>, Status> {
+        request_stream: Request<tonic::Streaming<StreamingRequest>>,
+    ) -> Result<Response<Self::StreamStream>, Status> {
         let tee_certificate = self.tee_certificate.clone();
         let request_handler = self.request_handler.clone();
         let logger = self.logger.clone();
@@ -187,7 +187,7 @@ where
                         Status::aborted("")
                     })?;
                 if let Some(outgoing_message) = outgoing_message {
-                    yield AttestedInvokeResponse {
+                    yield StreamingResponse {
                         body: outgoing_message,
                     };
                 }
