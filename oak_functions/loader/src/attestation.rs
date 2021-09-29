@@ -16,9 +16,7 @@
 
 use crate::{
     logger::Logger,
-    proto::{
-        streaming_session_server::StreamingSession, StreamingRequest, StreamingResponse,
-    },
+    proto::{streaming_session_server::StreamingSession, StreamingRequest, StreamingResponse},
 };
 use anyhow::Context;
 use futures::{Stream, StreamExt};
