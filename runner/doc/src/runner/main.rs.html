@@ -984,6 +984,14 @@
 <span id="984">984</span>
 <span id="985">985</span>
 <span id="986">986</span>
+<span id="987">987</span>
+<span id="988">988</span>
+<span id="989">989</span>
+<span id="990">990</span>
+<span id="991">991</span>
+<span id="992">992</span>
+<span id="993">993</span>
+<span id="994">994</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1968,7 +1976,15 @@
 <span class="kw">fn</span> <span class="ident">run_bazel_test</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Step</span> {
     <span class="ident">Step::Single</span> {
         <span class="ident">name</span>: <span class="string">&quot;bazel test&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">command</span>: <span class="ident">Cmd::new</span>(<span class="string">&quot;bazel&quot;</span>, <span class="kw-2">&amp;</span>[<span class="string">&quot;test&quot;</span>, <span class="string">&quot;--&quot;</span>, <span class="string">&quot;//oak/...:all&quot;</span>]),
+        <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
+            <span class="string">&quot;bazel&quot;</span>,
+            <span class="kw-2">&amp;</span>[
+                <span class="string">&quot;test&quot;</span>,
+                <span class="string">&quot;--&quot;</span>,
+                <span class="string">&quot;//oak/...:all&quot;</span>,
+                <span class="string">&quot;//remote_attestation/java/tests/...:all&quot;</span>,
+            ],
+        ),
     }
 }
 </pre></div>
