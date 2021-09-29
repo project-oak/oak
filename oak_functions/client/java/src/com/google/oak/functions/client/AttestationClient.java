@@ -37,10 +37,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
-import oak.functions.server.AttestedInvokeRequest;
-import oak.functions.server.AttestedInvokeResponse;
-import oak.functions.server.RemoteAttestationGrpc;
-import oak.functions.server.RemoteAttestationGrpc.RemoteAttestationStub;
+import oak.session.stream.v1.StreamingRequest;
+import oak.session.stream.v1.StreamingResponse;
+import oak.session.stream.v1.StreamingSessionGrpc;
+import oak.session.stream.v1.StreamingSessionGrpc.StreamingSessionStub;
 
 /**
  * Client with remote attestation support for sending requests to an Oak Functions application.
@@ -50,8 +50,8 @@ public class AttestationClient {
   // TODO(#1867): Add remote attestation support.
   private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
   private ManagedChannel channel;
-  private StreamObserver<AttestedInvokeRequest> requestObserver;
-  private BlockingQueue<AttestedInvokeResponse> messageQueue;
+  private StreamObserver<StreamingRequest> requestObserver;
+  private BlockingQueue<StreamingResponse> messageQueue;
   private AeadEncryptor encryptor;
 
   /** Creates an unattested AttestationClient instance. */
@@ -83,54 +83,53 @@ public class AttestationClient {
       throw new NullPointerException("Channel must not be null.");
     }
     this.channel = channel;
-    RemoteAttestationStub stub = RemoteAttestationGrpc.newStub(channel);
+    StreamingSessionStub stub = StreamingSessionGrpc.newStub(channel);
 
     // Create server response handler.
     messageQueue = new ArrayBlockingQueue<>(1);
-    StreamObserver<AttestedInvokeResponse> responseObserver =
-        new StreamObserver<AttestedInvokeResponse>() {
-          @Override
-          public void onNext(AttestedInvokeResponse response) {
-            try {
-              messageQueue.put(response);
-            } catch (Exception e) {
-              if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-              }
-              logger.log(Level.WARNING, "Couldn't send server response to the message queue: " + e);
-            }
+    StreamObserver<StreamingResponse> responseObserver = new StreamObserver<StreamingResponse>() {
+      @Override
+      public void onNext(StreamingResponse response) {
+        try {
+          messageQueue.put(response);
+        } catch (Exception e) {
+          if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
           }
+          logger.log(Level.WARNING, "Couldn't send server response to the message queue: " + e);
+        }
+      }
 
-          @Override
-          public void onError(Throwable t) {
-            Status status = Status.fromThrowable(t);
-            logger.log(Level.WARNING, "Couldn't receive response: " + status);
-          }
+      @Override
+      public void onError(Throwable t) {
+        Status status = Status.fromThrowable(t);
+        logger.log(Level.WARNING, "Couldn't receive response: " + status);
+      }
 
-          @Override
-          public void onCompleted() {}
-        };
-    requestObserver = stub.attestedInvoke(responseObserver);
+      @Override
+      public void onCompleted() {}
+    };
+    requestObserver = stub.stream(responseObserver);
 
     // Generate client private/public key pair.
     ClientHandshaker handshaker = new ClientHandshaker(TEST_TEE_MEASUREMENT.getBytes(UTF_8));
 
     // Send client hello message.
     byte[] clientHello = handshaker.createClientHello();
-    AttestedInvokeRequest clientHelloRequest =
-        AttestedInvokeRequest.newBuilder().setBody(ByteString.copyFrom(clientHello)).build();
+    StreamingRequest clientHelloRequest =
+        StreamingRequest.newBuilder().setBody(ByteString.copyFrom(clientHello)).build();
     requestObserver.onNext(clientHelloRequest);
 
     // Receive server attestation identity containing server's ephemeral public key.
-    AttestedInvokeResponse serverIdentityResponse = messageQueue.take();
+    StreamingResponse serverIdentityResponse = messageQueue.take();
     byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
     // Remotely attest the server and create:
     // - Client attestation identity containing client's ephemeral public key
     // - Encryptor used for decrypting/encrypting messages between client and server
     byte[] clientIdentity = handshaker.processServerIdentity(serverIdentity);
-    AttestedInvokeRequest clientIdentityRequest =
-        AttestedInvokeRequest.newBuilder().setBody(ByteString.copyFrom(clientIdentity)).build();
+    StreamingRequest clientIdentityRequest =
+        StreamingRequest.newBuilder().setBody(ByteString.copyFrom(clientIdentity)).build();
     requestObserver.onNext(clientIdentityRequest);
     encryptor = handshaker.getEncryptor();
   }
@@ -157,17 +156,17 @@ public class AttestationClient {
       throws GeneralSecurityException, IOException, InterruptedException,
              InvalidProtocolBufferException {
     if (channel == null || requestObserver == null || encryptor == null) {
-      throw new IllegalStateException("Attested channel not available.");
+      throw new IllegalStateException("Session is not available");
     }
 
     byte[] encryptedData = encryptor.encrypt(request.getBody().toByteArray());
-    AttestedInvokeRequest attestedRequest =
-        AttestedInvokeRequest.newBuilder().setBody(ByteString.copyFrom(encryptedData)).build();
+    StreamingRequest streamingRequest =
+        StreamingRequest.newBuilder().setBody(ByteString.copyFrom(encryptedData)).build();
 
-    requestObserver.onNext(attestedRequest);
-    AttestedInvokeResponse attestedResponse = messageQueue.take();
+    requestObserver.onNext(streamingRequest);
+    StreamingResponse streamingResponse = messageQueue.take();
 
-    byte[] responsePayload = attestedResponse.getBody().toByteArray();
+    byte[] responsePayload = streamingResponse.getBody().toByteArray();
     byte[] decryptedResponse = encryptor.decrypt(responsePayload);
     return Response.parseFrom(decryptedResponse);
   }

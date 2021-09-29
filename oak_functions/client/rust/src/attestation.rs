@@ -15,8 +15,7 @@
 //
 
 use crate::proto::{
-    remote_attestation_client::RemoteAttestationClient, AttestedInvokeRequest,
-    AttestedInvokeResponse,
+    streaming_session_client::StreamingSessionClient, StreamingRequest, StreamingResponse,
 };
 use anyhow::Context;
 use oak_remote_attestation::handshaker::{AttestationBehavior, ClientHandshaker, Encryptor};
@@ -27,8 +26,8 @@ const MESSAGE_BUFFER_SIZE: usize = 1;
 
 /// Convenience structure for sending requests and receiving responses from the server.
 struct GrpcChannel {
-    sender: Sender<AttestedInvokeRequest>,
-    response_stream: Streaming<AttestedInvokeResponse>,
+    sender: Sender<StreamingRequest>,
+    response_stream: Streaming<StreamingResponse>,
 }
 
 impl GrpcChannel {
@@ -38,7 +37,7 @@ impl GrpcChannel {
             .connect()
             .await
             .context("Couldn't connect via gRPC channel")?;
-        let mut client = RemoteAttestationClient::new(channel);
+        let mut client = StreamingSessionClient::new(channel);
 
         let (sender, mut receiver) = tokio::sync::mpsc::channel(MESSAGE_BUFFER_SIZE);
 
@@ -49,7 +48,7 @@ impl GrpcChannel {
         };
 
         let response = client
-            .attested_invoke(Request::new(request_stream))
+            .stream(Request::new(request_stream))
             .await
             .context("Couldn't send request")?;
         let response_stream = response.into_inner();
@@ -60,14 +59,14 @@ impl GrpcChannel {
         })
     }
 
-    async fn send(&mut self, request: AttestedInvokeRequest) -> anyhow::Result<()> {
+    async fn send(&mut self, request: StreamingRequest) -> anyhow::Result<()> {
         self.sender
             .send(request)
             .await
             .context("Couldn't send request")
     }
 
-    async fn receive(&mut self) -> anyhow::Result<Option<AttestedInvokeResponse>> {
+    async fn receive(&mut self) -> anyhow::Result<Option<StreamingResponse>> {
         self.response_stream
             .message()
             .await
@@ -105,7 +104,7 @@ impl AttestationClient {
             .create_client_hello()
             .context("Couldn't create client hello message")?;
         channel
-            .send(AttestedInvokeRequest { body: client_hello })
+            .send(StreamingRequest { body: client_hello })
             .await
             .context("Couldn't send client hello message")?;
 
@@ -121,7 +120,7 @@ impl AttestationClient {
                 .context("Couldn't process handshake message")?;
             if let Some(outgoing_message) = outgoing_message {
                 channel
-                    .send(AttestedInvokeRequest {
+                    .send(StreamingRequest {
                         body: outgoing_message,
                     })
                     .await
@@ -145,7 +144,7 @@ impl AttestationClient {
             .encrypt(&request.body)
             .context("Couldn't encrypt request")?;
         self.channel
-            .send(AttestedInvokeRequest {
+            .send(StreamingRequest {
                 body: encrypted_request,
             })
             .await
