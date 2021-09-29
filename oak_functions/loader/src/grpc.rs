@@ -22,7 +22,7 @@ use crate::{
     lookup::LookupData,
     metrics::PrivateMetricsAggregator,
     proto::streaming_session_server::StreamingSessionServer,
-    server::{apply_policy, BoxedExtension, Policy, WasmHandler},
+    server::{apply_policy, BoxedExtensionFactory, Policy, WasmHandler},
 };
 use anyhow::Context;
 use log::Level;
@@ -58,7 +58,7 @@ pub fn create_wasm_handler(
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,
     aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
-    extensions: Vec<BoxedExtension>,
+    extensions: Vec<BoxedExtensionFactory>,
     logger: Logger,
 ) -> anyhow::Result<WasmHandler> {
     let wasm_handler = WasmHandler::create(

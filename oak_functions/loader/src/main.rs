@@ -29,7 +29,7 @@ use oak_functions_loader::{
 };
 
 #[cfg(feature = "oak-tf")]
-use oak_functions_loader::tf::TensorFlowModel;
+use oak_functions_loader::tf::TensorFlowFactory;
 
 use serde_derive::Deserialize;
 use std::{
@@ -261,9 +261,7 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
                 url: config.lookup_data_url.clone(),
                 auth: config.lookup_data_auth,
             }),
-            scheme => {
-                anyhow::bail!("unknown scheme in lookup data URL: {}", scheme)
-            }
+            scheme => anyhow::bail!("unknown scheme in lookup data URL: {}", scheme),
         }
     };
     let lookup_data = Arc::new(LookupData::new_empty(
@@ -296,14 +294,16 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
 async fn load_tensorflow_model(
     config: &Config,
     logger: Logger,
-) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtension>> {
+) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtensionFactory>> {
     match &config.tf_model {
         Some(tf_model_config) => {
             let model =
                 oak_functions_loader::tf::read_model_from_path(&tf_model_config.path).await?;
-            let tf_model = TensorFlowModel::create(model, tf_model_config.shape.clone(), logger)?;
-            let tf_model: oak_functions_loader::server::BoxedExtension = Box::new(tf_model);
-            Ok(Some(tf_model))
+            let tf_model_factory =
+                TensorFlowFactory::new(model, tf_model_config.shape.clone(), logger)?;
+            let tf_model_factory: oak_functions_loader::server::BoxedExtensionFactory =
+                Box::new(tf_model_factory);
+            Ok(Some(tf_model_factory))
         }
         None => Ok(None),
     }

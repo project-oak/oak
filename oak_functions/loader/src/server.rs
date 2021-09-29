@@ -162,8 +162,12 @@ pub trait OakApiNativeExtension {
     /// signature.
     fn get_metadata(&self) -> (String, wasmi::Signature);
 }
+pub trait ExtensionFactory {
+    fn create(&self) -> anyhow::Result<BoxedExtension>;
+}
 
 pub type BoxedExtension = Box<dyn OakApiNativeExtension + Send + Sync>;
+pub type BoxedExtensionFactory = Box<dyn ExtensionFactory + Send + Sync>;
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
 /// single user request. The methods here correspond to the ABI host functions that allow the Wasm
@@ -178,9 +182,9 @@ pub struct WasmState {
     logger: Logger,
     metrics_proxy: Option<PrivateMetricsProxy>,
     /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
-    extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
+    extensions_indices: HashMap<usize, Arc<BoxedExtension>>,
     /// A mapping of host function names to metadata required for resolving the function.
-    extensions_metadata: Arc<HashMap<String, (usize, wasmi::Signature)>>,
+    extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
 }
 
 impl WasmState {
@@ -512,8 +516,8 @@ impl WasmState {
         lookup_data: Arc<LookupData>,
         logger: Logger,
         metrics_proxy: Option<PrivateMetricsProxy>,
-        extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
-        extensions_metadata: Arc<HashMap<String, (usize, wasmi::Signature)>>,
+        extensions_indices: HashMap<usize, Arc<BoxedExtension>>,
+        extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
             request_bytes,
@@ -671,28 +675,17 @@ pub struct WasmHandler {
     lookup_data: Arc<LookupData>,
     logger: Logger,
     aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
-    extensions_indices: Arc<HashMap<usize, Arc<BoxedExtension>>>,
-    extensions_metadata: Arc<HashMap<String, (usize, wasmi::Signature)>>,
+    extension_factories: Arc<Vec<BoxedExtensionFactory>>,
 }
 
 impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
         lookup_data: Arc<LookupData>,
-        extensions: Vec<BoxedExtension>,
+        extension_factories: Vec<BoxedExtensionFactory>,
         logger: Logger,
         aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     ) -> anyhow::Result<Self> {
-        let mut extensions_indices = HashMap::new();
-        let mut extensions_metadata = HashMap::new();
-
-        for (ind, extension) in extensions.into_iter().enumerate() {
-            let (name, signature) = extension.get_metadata();
-            let ext = Arc::new(extension);
-            extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, ext.clone());
-            extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
-        }
-
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
 
         Ok(WasmHandler {
@@ -700,12 +693,22 @@ impl WasmHandler {
             lookup_data,
             logger,
             aggregator,
-            extensions_indices: Arc::new(extensions_indices),
-            extensions_metadata: Arc::new(extensions_metadata),
+            extension_factories: Arc::new(extension_factories),
         })
     }
 
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
+        let mut extensions_indices = HashMap::new();
+        let mut extensions_metadata = HashMap::new();
+
+        for (ind, factory) in self.extension_factories.iter().enumerate() {
+            let extension = factory.create()?;
+            let (name, signature) = extension.get_metadata();
+            let ext = Arc::new(extension);
+            extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, ext.clone());
+            extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
+        }
+
         let request_bytes = request.body;
         let mut wasm_state = WasmState::new(
             &self.module,
@@ -713,8 +716,8 @@ impl WasmHandler {
             self.lookup_data.clone(),
             self.logger.clone(),
             self.aggregator.clone().map(PrivateMetricsProxy::new),
-            self.extensions_indices.clone(),
-            self.extensions_metadata.clone(),
+            extensions_indices,
+            extensions_metadata,
         )?;
         wasm_state.invoke();
         wasm_state.publish_metrics();
