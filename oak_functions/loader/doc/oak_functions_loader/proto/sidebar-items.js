@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["remote_attestation_server","Generated server implementations."]],"struct":[["AttestedInvokeRequest",""],["AttestedInvokeResponse",""]]});
+initSidebarItems({"mod":[["streaming_session_server","Generated server implementations."]],"struct":[["StreamingRequest",""],["StreamingResponse",""]]});

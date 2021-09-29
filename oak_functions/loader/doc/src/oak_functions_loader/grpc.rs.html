@@ -131,7 +131,7 @@
     <span class="ident">logger::Logger</span>,
     <span class="ident">lookup::LookupData</span>,
     <span class="ident">metrics::PrivateMetricsAggregator</span>,
-    <span class="ident">proto::remote_attestation_server::RemoteAttestationServer</span>,
+    <span class="ident">proto::streaming_session_server::StreamingSessionServer</span>,
     <span class="ident">server</span>::{<span class="ident">apply_policy</span>, <span class="ident">BoxedExtension</span>, <span class="ident">Policy</span>, <span class="ident">WasmHandler</span>},
 };
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
@@ -207,7 +207,7 @@
     <span class="comment">// A `Service` is needed for every connection. Here we create a service using the</span>
     <span class="comment">// `wasm_handler`.</span>
     <span class="ident">tonic::transport::Server::builder</span>()
-        .<span class="ident">add_service</span>(<span class="ident">RemoteAttestationServer::new</span>(
+        .<span class="ident">add_service</span>(<span class="ident">StreamingSessionServer::new</span>(
             <span class="ident">AttestationServer::create</span>(<span class="ident">tee_certificate</span>, <span class="ident">request_handler</span>, <span class="ident">logger</span>)
                 .<span class="ident">context</span>(<span class="string">&quot;Couldn&#39;t create remote attestation server&quot;</span>)<span class="question-mark">?</span>,
         ))
