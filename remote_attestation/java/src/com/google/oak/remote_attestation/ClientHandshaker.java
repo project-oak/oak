@@ -22,7 +22,6 @@ import com.google.common.primitives.Bytes;
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.KeyNegotiator;
 import com.google.oak.remote_attestation.Message;
-import com.google.oak.remote_attestation.Message.ServerIdentity;
 import com.google.oak.remote_attestation.SignatureVerifier;
 import com.google.protobuf.ByteString;
 import java.io.IOException;
@@ -78,7 +77,7 @@ public class ClientHandshaker {
    * Transitions {@code ClientHandshaker} state from {@code State.Initializing} to
    * {@code State.ExpectingServerIdentity} state.
    */
-  public byte[] createClientHello() throws RuntimeException, IOException {
+  public byte[] createClientHello() throws IOException {
     try {
       if (state != State.Initializing) {
         throw new IllegalStateException("ClientHandshaker is not in the Initializing state");
