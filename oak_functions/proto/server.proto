@@ -21,15 +21,15 @@ package oak.session.v1;
 option java_multiple_files = true;
 option java_package = "oak.session.v1";
 
-message CreateSessionRequest {
+message StreamingRequest {
   bytes body = 1;
 }
 
-message CreateSessionResponse {
+message StreamingResponse {
   bytes body = 1;
 }
 
-service Session {
+service StreamingSession {
   // Creates a message stream for session key negotiation and encrypted payload exchange.
   //
   // The created message stream looks as follows:
@@ -41,5 +41,5 @@ service Session {
   //
   // Messages are represented as serialized messages defined in the `remote_attestation::message.rs`
   // and `com.google.oak.remote_attestation.Message`.
-  rpc CreateSession(stream CreateSessionRequest) returns (stream CreateSessionResponse);
+  rpc Stream(stream StreamingRequest) returns (stream StreamingResponse);
 }
