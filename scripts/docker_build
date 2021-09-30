@@ -23,7 +23,7 @@ Options:
   esac
 done
 
-readonly SCRIPTS_DIR="$(dirname "$0")"
+readonly SCRIPTS_DIR="$(dirname "${0}")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
