@@ -28,7 +28,7 @@ use oak_functions_loader::{
 };
 
 #[cfg(feature = "oak-tf")]
-use oak_functions_loader::tf::TensorFlowFactory;
+use oak_functions_loader::tf::{TensorFlowFactory, TensorFlowModelConfig};
 
 #[cfg(feature = "oak-metrics")]
 use oak_functions_loader::metrics::PrivateMetricsConfig;
@@ -89,17 +89,6 @@ struct Config {
     #[cfg(feature = "oak-metrics")]
     #[serde(default)]
     metrics: Option<PrivateMetricsConfig>,
-}
-
-#[derive(Deserialize, Debug, Default)]
-#[serde(deny_unknown_fields)]
-struct TensorFlowModelConfig {
-    /// Path to a TensorFlow model file.
-    #[serde(default)]
-    path: String,
-    /// Shape of the input Tensors expected by the model.
-    #[serde(default)]
-    shape: Vec<u8>,
 }
 
 /// Command line options for the Oak loader.
@@ -175,7 +164,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let mut extensions = Vec::new();
 
     #[cfg(feature = "oak-tf")]
-    if let Some(tf_model_factory) = load_tensorflow_model(&config, logger.clone()).await? {
+    if let Some(tf_model_factory) = create_tensorflow_factory(&config, logger.clone()).await? {
         extensions.push(tf_model_factory);
     }
 
@@ -287,7 +276,7 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
 /// Load the TensorFlow model from the given path in the config, or return `None` if a path is not
 /// provided.
 #[cfg(feature = "oak-tf")]
-async fn load_tensorflow_model(
+async fn create_tensorflow_factory(
     config: &Config,
     logger: Logger,
 ) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtensionFactory>> {
@@ -305,13 +294,13 @@ async fn load_tensorflow_model(
     }
 }
 
-/// Create a metrics proxy factory if the configuration for it is provided.
+/// Create and return a metrics proxy factory if metrics configuration is provided, or return `None`
+/// otherwise.
 #[cfg(feature = "oak-metrics")]
 async fn create_metrics_proxy_factory(
     config: &Config,
     logger: Logger,
 ) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtensionFactory>> {
-    use std::sync::Mutex;
     match &config.metrics {
         Some(metrics_config) => {
             metrics_config.validate()?;

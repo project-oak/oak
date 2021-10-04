@@ -26,6 +26,7 @@ use bytes::Bytes;
 use log::Level;
 use oak_functions_abi::proto::{Inference, OakStatus};
 use prost::Message;
+use serde_derive::Deserialize;
 use std::{fs::File, io::Read};
 use tract_tensorflow::prelude::{
     tract_ndarray::{ArrayBase, Dim, IxDynImpl, ViewRepr},
@@ -41,6 +42,17 @@ const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 /// instead. These traits are available from the `tract-hir` crate.
 /// More information: https://github.com/sonos/tract/blob/main/doc/graph.md
 type Model = RunnableModel<TypedFact, Box<dyn TypedOp>, Graph<TypedFact, Box<dyn TypedOp>>>;
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+pub struct TensorFlowModelConfig {
+    /// Path to a TensorFlow model file.
+    #[serde(default)]
+    pub path: String,
+    /// Shape of the input Tensors expected by the model.
+    #[serde(default)]
+    pub shape: Vec<u8>,
+}
 
 pub struct TensorFlowModel {
     model: Arc<Model>,
@@ -127,6 +139,10 @@ impl OakApiNativeExtension for TensorFlowModel {
 
         (TF_ABI_FUNCTION_NAME.to_string(), signature)
     }
+
+    fn terminate(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 /// Corresponds to the host ABI function [`tf_model_infer`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#tf_model_infer).    
@@ -194,7 +210,7 @@ pub struct TensorFlowFactory {
 }
 
 impl TensorFlowFactory {
-    /// Creates an instance of TensorFlowModel, by loading the model from the given byte array and
+    /// Creates an instance of TensorFlowFactory, by loading the model from the given byte array and
     /// optimizing it using the given shape.
     pub fn new(bytes: Bytes, shape: Vec<u8>, logger: Logger) -> anyhow::Result<Self> {
         use bytes::Buf;

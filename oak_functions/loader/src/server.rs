@@ -32,8 +32,6 @@ use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
 const ALLOC_FUNCTION_NAME: &str = "alloc";
-/// Host function name for reporting private metrics.
-pub const METRICS_ABI_FUNCTION_NAME: &str = "report_metric";
 
 /// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
 /// exposed to the Wasm client. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
@@ -159,6 +157,9 @@ pub trait OakApiNativeExtension {
     /// Metadata about this Extension, including the exported host function name, and the function's
     /// signature.
     fn get_metadata(&self) -> (String, wasmi::Signature);
+
+    /// Performs any cleanup or terminating behavior necessary before destroying the WasmState.
+    fn terminate(&mut self) -> anyhow::Result<()>;
 }
 pub trait ExtensionFactory {
     fn create(&self) -> anyhow::Result<BoxedExtension>;
@@ -178,7 +179,6 @@ pub struct WasmState {
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
-    // metrics_proxy: Option<PrivateMetricsProxy>,
     /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
     extensions_indices: HashMap<usize, Arc<Mutex<BoxedExtension>>>,
     /// A mapping of host function names to metadata required for resolving the function.
@@ -403,7 +403,7 @@ impl wasmi::Externals for WasmState {
                     Some(extension) => extension.clone(),
                     None => panic!("Unimplemented function at {}", index),
                 };
-                let mut ext = extension.lock().unwrap();
+                let mut ext = extension.lock().expect("Internal: could not lock mutex");
                 map_host_errors(ext.invoke(self, args)?)
             }
         }
@@ -448,7 +448,6 @@ impl WasmState {
         request_bytes: Vec<u8>,
         lookup_data: Arc<LookupData>,
         logger: Logger,
-        // metrics_proxy: Option<PrivateMetricsProxy>,
         extensions_indices: HashMap<usize, Arc<Mutex<BoxedExtension>>>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     ) -> anyhow::Result<WasmState> {
@@ -629,12 +628,14 @@ impl WasmHandler {
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
+        let mut extensions = Vec::new();
 
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
             let (name, signature) = extension.get_metadata();
-            let ext = Arc::new(Mutex::new(extension));
-            extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, ext);
+            let extension = Arc::new(Mutex::new(extension));
+            extensions.push(extension.clone());
+            extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
 
@@ -648,7 +649,12 @@ impl WasmHandler {
             extensions_metadata,
         )?;
         wasm_state.invoke();
-        // wasm_state.publish_metrics();
+        for extension in extensions {
+            extension
+                .lock()
+                .map_err(|err| anyhow::anyhow!("could not lock mutex: {}", err))?
+                .terminate()?;
+        }
         Ok(Response::create(
             StatusCode::Success,
             wasm_state.get_response_bytes(),

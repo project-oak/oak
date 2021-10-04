@@ -33,6 +33,9 @@ use std::{
 };
 use wasmi::ValueType;
 
+/// Host function name for reporting private metrics.
+const METRICS_ABI_FUNCTION_NAME: &str = "report_metric";
+
 /// Configuration for differentially-private metrics reporting.
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -275,9 +278,8 @@ impl PrivateMetricsProxy {
         self.data.insert(label.to_owned(), value);
     }
 
-    /// Consumes the proxy and publishes the local request-specific data to the aggregator. If
-    /// publishing the metrics to the aggregator causes the batch threshold to be reached the
-    /// aggregated metrics are returned.
+    /// Publishes the local request-specific data to the aggregator. If publishing the metrics to
+    /// the aggregator causes the batch threshold to be reached the aggregated metrics are returned.
     ///
     /// See [PrivateMetricsAggregator::report_metrics] for more details.
     pub fn publish(&self) -> Option<(usize, Vec<(String, i64)>)> {
@@ -310,12 +312,6 @@ impl PrivateMetricsProxy {
     }
 }
 
-impl Drop for PrivateMetricsProxy {
-    fn drop(&mut self) {
-        self.publish_metrics();
-    }
-}
-
 impl OakApiNativeExtension for PrivateMetricsProxy {
     fn invoke(
         &mut self,
@@ -343,10 +339,12 @@ impl OakApiNativeExtension for PrivateMetricsProxy {
             Some(ValueType::I32),
         );
 
-        (
-            crate::server::METRICS_ABI_FUNCTION_NAME.to_string(),
-            signature,
-        )
+        (METRICS_ABI_FUNCTION_NAME.to_string(), signature)
+    }
+
+    fn terminate(&mut self) -> anyhow::Result<()> {
+        self.publish_metrics();
+        Ok(())
     }
 }
 
