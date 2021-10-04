@@ -7,8 +7,9 @@ license = "Apache-2.0"
 
 [features]
 default = []
-oak-unsafe = ["oak-tf"]
+oak-unsafe = ["oak-tf", "oak-metrics"]
 oak-tf = []
+oak-metrics = []
 
 [dependencies]
 oak_functions_abi = { path = "../../abi" }

@@ -148,14 +148,8 @@ where
     ));
     lookup_data.refresh().await.unwrap();
     let tee_certificate = vec![];
-    let wasm_handler = create_wasm_handler(
-        &wasm_module_bytes,
-        lookup_data,
-        None,
-        vec![],
-        logger.clone(),
-    )
-    .expect("could not create wasm_handler");
+    let wasm_handler = create_wasm_handler(&wasm_module_bytes, lookup_data, vec![], logger.clone())
+        .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(
@@ -201,14 +195,9 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             }),
             logger.clone(),
         ));
-        let wasm_handler = WasmHandler::create(
-            &wasm_module_bytes,
-            lookup_data.clone(),
-            vec![],
-            logger,
-            None,
-        )
-        .expect("Couldn't create the server");
+        let wasm_handler =
+            WasmHandler::create(&wasm_module_bytes, lookup_data.clone(), vec![], logger)
+                .expect("Couldn't create the server");
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let (terminate_static_server_tx, terminate_static_server_rx) =

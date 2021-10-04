@@ -98,7 +98,7 @@ impl TensorFlowModel {
 
 impl OakApiNativeExtension for TensorFlowModel {
     fn invoke(
-        &self,
+        &mut self,
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {

@@ -24,12 +24,14 @@ use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{LookupData, LookupDataAuth, LookupDataSource},
-    metrics::{PrivateMetricsAggregator, PrivateMetricsConfig},
     server::Policy,
 };
 
 #[cfg(feature = "oak-tf")]
 use oak_functions_loader::tf::TensorFlowFactory;
+
+#[cfg(feature = "oak-metrics")]
+use oak_functions_loader::metrics::PrivateMetricsConfig;
 
 use serde_derive::Deserialize;
 use std::{
@@ -37,7 +39,7 @@ use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc,
     },
     time::Duration,
 };
@@ -84,6 +86,8 @@ struct Config {
     #[serde(default)]
     tf_model: Option<TensorFlowModelConfig>,
     /// Differentially private metrics configuration.
+    #[cfg(feature = "oak-metrics")]
+    #[serde(default)]
     metrics: Option<PrivateMetricsConfig>,
 }
 
@@ -171,8 +175,15 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let mut extensions = Vec::new();
 
     #[cfg(feature = "oak-tf")]
-    if let Some(tf_model) = load_tensorflow_model(&config, logger.clone()).await? {
-        extensions.push(tf_model);
+    if let Some(tf_model_factory) = load_tensorflow_model(&config, logger.clone()).await? {
+        extensions.push(tf_model_factory);
+    }
+
+    #[cfg(feature = "oak-metrics")]
+    if let Some(metrics_proxy_factory) =
+        create_metrics_proxy_factory(&config, logger.clone()).await?
+    {
+        extensions.push(metrics_proxy_factory);
     }
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
@@ -188,23 +199,8 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let tee_certificate = vec![];
 
-    let aggregator = match &config.metrics {
-        Some(metrics_config) => {
-            metrics_config.validate()?;
-            Some(Arc::new(Mutex::new(PrivateMetricsAggregator::new(
-                metrics_config,
-            )?)))
-        }
-        None => None,
-    };
-
-    let wasm_handler = create_wasm_handler(
-        &wasm_module_bytes,
-        lookup_data,
-        aggregator,
-        extensions,
-        logger.clone(),
-    )?;
+    let wasm_handler =
+        create_wasm_handler(&wasm_module_bytes, lookup_data, extensions, logger.clone())?;
 
     // Start server.
     let server_handle = tokio::spawn(async move {
@@ -304,6 +300,28 @@ async fn load_tensorflow_model(
             let tf_model_factory: oak_functions_loader::server::BoxedExtensionFactory =
                 Box::new(tf_model_factory);
             Ok(Some(tf_model_factory))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Create a metrics proxy factory if the configuration for it is provided.
+#[cfg(feature = "oak-metrics")]
+async fn create_metrics_proxy_factory(
+    config: &Config,
+    logger: Logger,
+) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtensionFactory>> {
+    use std::sync::Mutex;
+    match &config.metrics {
+        Some(metrics_config) => {
+            metrics_config.validate()?;
+            let metrics_factory = oak_functions_loader::metrics::PrivateMetricsProxyFactory::new(
+                metrics_config,
+                logger,
+            )?;
+            let metrics_factory: oak_functions_loader::server::BoxedExtensionFactory =
+                Box::new(metrics_factory);
+            Ok(Some(metrics_factory))
         }
         None => Ok(None),
     }

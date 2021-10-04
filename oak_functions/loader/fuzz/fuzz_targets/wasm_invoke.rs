@@ -101,10 +101,9 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
         Arc::new(LookupData::for_test(entries)),
+        // TODO(#2252): Use `Arbitrary` to generate metrics configuration, and add as extensions.
         vec![],
         Logger::for_test(),
-        // TODO(#2252): Use `Arbitrary` to generate metrics configuration.
-        None,
     )
     .expect("Could instantiate WasmHandler");
 

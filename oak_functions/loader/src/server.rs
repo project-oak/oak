@@ -13,11 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-    logger::Logger,
-    lookup::LookupData,
-    metrics::{PrivateMetricsAggregator, PrivateMetricsProxy},
-};
+use crate::{logger::Logger, lookup::LookupData};
 
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
@@ -36,6 +32,8 @@ use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
 const ALLOC_FUNCTION_NAME: &str = "alloc";
+/// Host function name for reporting private metrics.
+pub const METRICS_ABI_FUNCTION_NAME: &str = "report_metric";
 
 /// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
 /// exposed to the Wasm client. See https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html
@@ -153,7 +151,7 @@ pub trait OakApiNativeExtension {
     /// Similar to `invoke_index` in [`wasmi::Externals`], but may return a result to be
     /// written into the memory of the `WasmState`.
     fn invoke(
-        &self,
+        &mut self,
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap>;
@@ -180,9 +178,9 @@ pub struct WasmState {
     instance: Option<wasmi::ModuleRef>,
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
-    metrics_proxy: Option<PrivateMetricsProxy>,
+    // metrics_proxy: Option<PrivateMetricsProxy>,
     /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
-    extensions_indices: HashMap<usize, Arc<BoxedExtension>>,
+    extensions_indices: HashMap<usize, Arc<Mutex<BoxedExtension>>>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
 }
@@ -308,44 +306,6 @@ impl WasmState {
         Ok(())
     }
 
-    /// Corresponds to the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
-    pub fn report_metric(
-        &mut self,
-        buf_ptr: AbiPointer,
-        buf_len: AbiPointerOffset,
-        value: i64,
-    ) -> Result<(), OakStatus> {
-        let raw_label = self
-            .get_memory()
-            .get(buf_ptr, buf_len as usize)
-            .map_err(|err| {
-                self.logger.log_sensitive(
-                    Level::Error,
-                    &format!(
-                        "report_metric(): Unable to read label from guest memory: {:?}",
-                        err
-                    ),
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-        let label = str::from_utf8(raw_label.as_slice()).map_err(|err| {
-            self.logger.log_sensitive(
-                Level::Warn,
-                &format!(
-                    "report_metric(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
-                    err, raw_label
-                ),
-            );
-            OakStatus::ErrInvalidArgs
-        })?;
-        self.logger
-            .log_sensitive(Level::Debug, &format!("report_metric(): {}", label));
-        if let Some(proxy) = self.metrics_proxy.as_mut() {
-            proxy.report_metric(label, value);
-        }
-        Ok(())
-    }
-
     /// Corresponds to the host ABI function [`storage_get_item`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item).
     pub fn storage_get_item(
         &mut self,
@@ -409,29 +369,6 @@ impl WasmState {
             _ => panic!("invalid value type returned from `alloc`"),
         }
     }
-
-    pub fn publish_metrics(&mut self) {
-        if let Some(proxy) = self.metrics_proxy.take() {
-            if let Some((batch_size, metrics)) = proxy.publish() {
-                let buckets: Vec<String> = metrics
-                    .iter()
-                    .map(|(label, count)| format!("{}={}", label, count))
-                    .collect();
-                let message = format!(
-                    "metrics export: batch size: {}; counts: {}",
-                    batch_size,
-                    buckets.join(";"),
-                );
-
-                // The differentially private metrics can be treated as non-sensitive
-                // information and therefore logged as public. This assumes
-                // that the client has validated that the configured privacy
-                // budget provides sufficient privacy protection before
-                // sending any data to the server.
-                self.logger.log_public(Level::Info, &message);
-            }
-        }
-    }
 }
 
 impl wasmi::Externals for WasmState {
@@ -455,11 +392,6 @@ impl wasmi::Externals for WasmState {
             WRITE_LOG_MESSAGE => {
                 map_host_errors(self.write_log_message(args.nth_checked(0)?, args.nth_checked(1)?))
             }
-            REPORT_METRIC => map_host_errors(self.report_metric(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-            )),
             STORAGE_GET_ITEM => map_host_errors(self.storage_get_item(
                 args.nth_checked(0)?,
                 args.nth_checked(1)?,
@@ -471,7 +403,8 @@ impl wasmi::Externals for WasmState {
                     Some(extension) => extension.clone(),
                     None => panic!("Unimplemented function at {}", index),
                 };
-                map_host_errors(extension.invoke(self, args)?)
+                let mut ext = extension.lock().unwrap();
+                map_host_errors(ext.invoke(self, args)?)
             }
         }
     }
@@ -515,8 +448,8 @@ impl WasmState {
         request_bytes: Vec<u8>,
         lookup_data: Arc<LookupData>,
         logger: Logger,
-        metrics_proxy: Option<PrivateMetricsProxy>,
-        extensions_indices: HashMap<usize, Arc<BoxedExtension>>,
+        // metrics_proxy: Option<PrivateMetricsProxy>,
+        extensions_indices: HashMap<usize, Arc<Mutex<BoxedExtension>>>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
@@ -526,7 +459,6 @@ impl WasmState {
             instance: None,
             memory: None,
             logger,
-            metrics_proxy,
             extensions_indices,
             extensions_metadata,
         };
@@ -673,9 +605,8 @@ pub struct WasmHandler {
     // cloneable.
     module: Arc<wasmi::Module>,
     lookup_data: Arc<LookupData>,
-    logger: Logger,
-    aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     extension_factories: Arc<Vec<BoxedExtensionFactory>>,
+    logger: Logger,
 }
 
 impl WasmHandler {
@@ -684,16 +615,14 @@ impl WasmHandler {
         lookup_data: Arc<LookupData>,
         extension_factories: Vec<BoxedExtensionFactory>,
         logger: Logger,
-        aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
     ) -> anyhow::Result<Self> {
         let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
 
         Ok(WasmHandler {
             module: Arc::new(module),
             lookup_data,
-            logger,
-            aggregator,
             extension_factories: Arc::new(extension_factories),
+            logger,
         })
     }
 
@@ -704,8 +633,8 @@ impl WasmHandler {
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
             let (name, signature) = extension.get_metadata();
-            let ext = Arc::new(extension);
-            extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, ext.clone());
+            let ext = Arc::new(Mutex::new(extension));
+            extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, ext);
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
 
@@ -715,12 +644,11 @@ impl WasmHandler {
             request_bytes,
             self.lookup_data.clone(),
             self.logger.clone(),
-            self.aggregator.clone().map(PrivateMetricsProxy::new),
             extensions_indices,
             extensions_metadata,
         )?;
         wasm_state.invoke();
-        wasm_state.publish_metrics();
+        // wasm_state.publish_metrics();
         Ok(Response::create(
             StatusCode::Success,
             wasm_state.get_response_bytes(),

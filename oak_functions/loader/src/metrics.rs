@@ -14,13 +14,24 @@
 // limitations under the License.
 //
 
+use crate::{
+    logger::Logger,
+    server::{
+        AbiPointer, AbiPointerOffset, BoxedExtension, ExtensionFactory, OakApiNativeExtension,
+        WasmState, ABI_USIZE,
+    },
+};
+use oak_functions_abi::proto::OakStatus;
+
 use anyhow::Context;
+use log::Level;
 use rand::{distributions::Open01, rngs::StdRng, thread_rng, Rng, SeedableRng};
 use serde::Deserialize;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
+use wasmi::ValueType;
 
 /// Configuration for differentially-private metrics reporting.
 #[derive(Deserialize, Debug)]
@@ -218,18 +229,43 @@ fn inverse_laplace(beta: f64, p: f64) -> f64 {
     -beta * u.signum() * (1.0 - 2.0 * u.abs()).ln()
 }
 
+pub struct PrivateMetricsProxyFactory {
+    aggregator: Arc<Mutex<PrivateMetricsAggregator>>,
+    logger: Logger,
+}
+
+impl PrivateMetricsProxyFactory {
+    pub fn new(config: &PrivateMetricsConfig, logger: Logger) -> anyhow::Result<Self> {
+        let aggregator = PrivateMetricsAggregator::new(config)?;
+
+        Ok(Self {
+            aggregator: Arc::new(Mutex::new(aggregator)),
+            logger,
+        })
+    }
+}
+
+impl ExtensionFactory for PrivateMetricsProxyFactory {
+    fn create(&self) -> anyhow::Result<BoxedExtension> {
+        let metrics_proxy = PrivateMetricsProxy::new(self.aggregator.clone(), self.logger.clone());
+        Ok(Box::new(metrics_proxy))
+    }
+}
+
 /// Proxy for use by request handler instances to push per-request metrics to the
 /// `PrivateMetricsAggregator`.
 pub struct PrivateMetricsProxy {
     aggregator: Arc<Mutex<PrivateMetricsAggregator>>,
     data: HashMap<String, i64>,
+    logger: Logger,
 }
 
 impl PrivateMetricsProxy {
-    pub fn new(aggregator: Arc<Mutex<PrivateMetricsAggregator>>) -> Self {
+    pub fn new(aggregator: Arc<Mutex<PrivateMetricsAggregator>>, logger: Logger) -> Self {
         Self {
             aggregator,
             data: HashMap::new(),
+            logger,
         }
     }
 
@@ -244,13 +280,112 @@ impl PrivateMetricsProxy {
     /// aggregated metrics are returned.
     ///
     /// See [PrivateMetricsAggregator::report_metrics] for more details.
-    pub fn publish(self) -> Option<(usize, Vec<(String, i64)>)> {
+    pub fn publish(&self) -> Option<(usize, Vec<(String, i64)>)> {
         if let Ok(mut aggregator) = self.aggregator.lock() {
-            aggregator.report_metrics(self.data)
+            aggregator.report_metrics(self.data.clone())
         } else {
             None
         }
     }
+
+    fn publish_metrics(&mut self) {
+        if let Some((batch_size, metrics)) = self.publish() {
+            let buckets: Vec<String> = metrics
+                .iter()
+                .map(|(label, count)| format!("{}={}", label, count))
+                .collect();
+            let message = format!(
+                "metrics export: batch size: {}; counts: {}",
+                batch_size,
+                buckets.join(";"),
+            );
+
+            // The differentially private metrics can be treated as non-sensitive
+            // information and therefore logged as public. This assumes
+            // that the client has validated that the configured privacy
+            // budget provides sufficient privacy protection before
+            // sending any data to the server.
+            self.logger.log_public(Level::Info, &message);
+        }
+    }
+}
+
+impl Drop for PrivateMetricsProxy {
+    fn drop(&mut self) {
+        self.publish_metrics();
+    }
+}
+
+impl OakApiNativeExtension for PrivateMetricsProxy {
+    fn invoke(
+        &mut self,
+        wasm_state: &mut WasmState,
+        args: wasmi::RuntimeArgs,
+    ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
+        Ok(report_metric(
+            wasm_state,
+            self,
+            args.nth_checked(0)?,
+            args.nth_checked(1)?,
+            args.nth_checked(2)?,
+        ))
+    }
+
+    /// Each Oak Functions application can have at most one instance of PrivateMetricsProxy. So it
+    /// is fine to return a constant name in the metadata.
+    fn get_metadata(&self) -> (String, wasmi::Signature) {
+        let signature = wasmi::Signature::new(
+            &[
+                ABI_USIZE, // buf_ptr
+                ABI_USIZE, // buf_len
+                ValueType::I64,
+            ][..],
+            Some(ValueType::I32),
+        );
+
+        (
+            crate::server::METRICS_ABI_FUNCTION_NAME.to_string(),
+            signature,
+        )
+    }
+}
+
+/// Corresponds to the host ABI function [`report_metric`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#report_metric).
+pub fn report_metric(
+    wasm_state: &mut WasmState,
+    metrics_proxy: &mut PrivateMetricsProxy,
+    buf_ptr: AbiPointer,
+    buf_len: AbiPointerOffset,
+    value: i64,
+) -> Result<(), OakStatus> {
+    let raw_label = wasm_state
+        .get_memory()
+        .get(buf_ptr, buf_len as usize)
+        .map_err(|err| {
+            metrics_proxy.logger.log_sensitive(
+                Level::Error,
+                &format!(
+                    "report_metric(): Unable to read label from guest memory: {:?}",
+                    err
+                ),
+            );
+            OakStatus::ErrInvalidArgs
+        })?;
+    let label = std::str::from_utf8(raw_label.as_slice()).map_err(|err| {
+        metrics_proxy.logger.log_sensitive(
+            Level::Warn,
+            &format!(
+                "report_metric(): Not a valid UTF-8 encoded string: {:?}\nContent: {:?}",
+                err, raw_label
+            ),
+        );
+        OakStatus::ErrInvalidArgs
+    })?;
+    metrics_proxy
+        .logger
+        .log_sensitive(Level::Debug, &format!("report_metric(): {}", label));
+    metrics_proxy.report_metric(label, value);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -291,19 +426,19 @@ mod tests {
             .map(|_| add_laplace_noise(&mut rng, config.buckets.len() as f64 / epsilon, 0, 1.0))
             .collect();
 
-        let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
+        let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone(), Logger::for_test());
         proxy1.report_metric("a", 1); // Expect +1 for "a".
         assert_eq!(proxy1.publish(), None);
-        let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
+        let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone(), Logger::for_test());
         proxy2.report_metric("a", 2); // Expect +1 for "a".
         proxy2.report_metric("b", 3); // Expect +1 for "b".
         assert_eq!(proxy2.publish(), None);
-        let mut proxy3 = PrivateMetricsProxy::new(aggregator.clone());
+        let mut proxy3 = PrivateMetricsProxy::new(aggregator.clone(), Logger::for_test());
         proxy3.report_metric("c", 1); // Overwritten.
         proxy3.report_metric("b", 1); // Expect +1 for "b".
         proxy3.report_metric("c", 3); // Expect +1 for "c".
         assert_eq!(proxy3.publish(), None);
-        let mut proxy4 = PrivateMetricsProxy::new(aggregator);
+        let mut proxy4 = PrivateMetricsProxy::new(aggregator, Logger::for_test());
         proxy4.report_metric("a", 1); // Expect +1 for "a".
         proxy4.report_metric("e", 1); // Ignored.
         let (count, buckets) = proxy4.publish().unwrap();
@@ -350,17 +485,17 @@ mod tests {
             .map(|_| add_laplace_noise(&mut rng, config.buckets.len() as f64 / epsilon, 0, 10.0))
             .collect();
 
-        let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone());
+        let mut proxy1 = PrivateMetricsProxy::new(aggregator.clone(), Logger::for_test());
         proxy1.report_metric("a", -100); // Expect +0 for "a", +10 for "b".
                                          // Note: even though no metric value is reported for "b" in this request, the minimum
                                          // configured value means that 10 will be added to bucket "b".
         assert_eq!(proxy1.publish(), None);
-        let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone());
+        let mut proxy2 = PrivateMetricsProxy::new(aggregator.clone(), Logger::for_test());
         proxy2.report_metric("a", 5); // Overwritten.
         proxy2.report_metric("a", 3); // Expect +3 for "a".
         proxy2.report_metric("b", 12); // Expect +12 for "b".
         assert_eq!(proxy2.publish(), None);
-        let mut proxy3 = PrivateMetricsProxy::new(aggregator);
+        let mut proxy3 = PrivateMetricsProxy::new(aggregator, Logger::for_test());
         proxy3.report_metric("a", 100); // Expect +10 for "a".
         proxy3.report_metric("b", 5); // Expect +10 for "b".
         let (count, buckets) = proxy3.publish().unwrap();
