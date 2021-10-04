@@ -627,6 +627,7 @@ dependencies = [
 name = "fuzzable"
 version = "0.1.0"
 dependencies = [
+ "maplit",
  "oak_functions",
  "oak_functions_abi",
  "oak_functions_loader",
@@ -1371,6 +1372,7 @@ dependencies = [
  "tokio",
  "toml",
  "tonic",
+ "tract-tensorflow",
  "url",
  "wasmi",
 ]

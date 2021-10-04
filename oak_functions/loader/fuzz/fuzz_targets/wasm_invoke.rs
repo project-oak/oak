@@ -24,7 +24,12 @@ use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
 use maplit::hashmap;
 use oak_functions_abi::proto::Request;
-use oak_functions_loader::{logger::Logger, lookup::LookupData, server::WasmHandler};
+use oak_functions_loader::{
+    logger::Logger,
+    lookup::LookupData,
+    metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
+    server::{BoxedExtensionFactory, WasmHandler},
+};
 use prost::Message;
 use std::{convert::Into, sync::Arc};
 
@@ -98,17 +103,29 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
         FIXED_KEY.to_vec() => br"value".to_vec(),
     };
 
+    // TODO(#2252): Use `Arbitrary` to generate metrics configuration.
+    let metrics_config = PrivateMetricsConfig {
+        epsilon: 1.0,
+        batch_size: 20,
+        buckets: hashmap! {"count".to_string() => BucketConfig::Count },
+    };
+
+    let metrics_factory = PrivateMetricsProxyFactory::new(&metrics_config, Logger::for_test())
+        .expect("could not create PrivateMetricsProxyFactory");
+    let metrics_factory: BoxedExtensionFactory = Box::new(metrics_factory);
+
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
         Arc::new(LookupData::for_test(entries)),
-        // TODO(#2252): Use `Arbitrary` to generate metrics configuration, and add as extensions.
-        vec![],
+        vec![metrics_factory],
         Logger::for_test(),
     )
     .expect("Could instantiate WasmHandler");
 
     let result = RUNTIME.block_on(wasm_handler.handle_invoke(request));
-    assert!(result.is_ok());
+    if result.is_err() {
+        panic!("Error: {:?}", result);
+    }
     // Cannot check the exact response value, since the wasm function may panic at any point.
 });
 

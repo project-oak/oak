@@ -39,7 +39,6 @@ const READ_REQUEST: usize = 0;
 const WRITE_RESPONSE: usize = 1;
 const STORAGE_GET_ITEM: usize = 2;
 const WRITE_LOG_MESSAGE: usize = 3;
-const REPORT_METRIC: usize = 5;
 const EXTENSION_INDEX_OFFSET: usize = 10;
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
@@ -694,17 +693,6 @@ fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signatu
                 &[
                     ABI_USIZE, // buf_ptr
                     ABI_USIZE, // buf_len
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        "report_metric" => (
-            REPORT_METRIC,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // buf_ptr
-                    ABI_USIZE, // buf_len
-                    ValueType::I64,
                 ][..],
                 Some(ValueType::I32),
             ),
