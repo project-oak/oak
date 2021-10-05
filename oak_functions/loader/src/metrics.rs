@@ -259,7 +259,7 @@ impl ExtensionFactory for PrivateMetricsProxyFactory {
 /// `PrivateMetricsAggregator`.
 pub struct PrivateMetricsProxy {
     aggregator: Arc<Mutex<PrivateMetricsAggregator>>,
-    data: HashMap<String, i64>,
+    data: Option<HashMap<String, i64>>,
     logger: Logger,
 }
 
@@ -267,7 +267,7 @@ impl PrivateMetricsProxy {
     pub fn new(aggregator: Arc<Mutex<PrivateMetricsAggregator>>, logger: Logger) -> Self {
         Self {
             aggregator,
-            data: HashMap::new(),
+            data: Some(HashMap::new()),
             logger,
         }
     }
@@ -275,16 +275,23 @@ impl PrivateMetricsProxy {
     /// Sets the value for the labeled metric. If a value was previously set for the label it will
     /// be overwritten.
     pub fn report_metric(&mut self, label: &str, value: i64) {
-        self.data.insert(label.to_owned(), value);
+        self.data
+            .as_mut()
+            .expect("data is already consumed")
+            .insert(label.to_owned(), value);
     }
 
     /// Publishes the local request-specific data to the aggregator. If publishing the metrics to
     /// the aggregator causes the batch threshold to be reached the aggregated metrics are returned.
     ///
     /// See [PrivateMetricsAggregator::report_metrics] for more details.
-    pub fn publish(&self) -> Option<(usize, Vec<(String, i64)>)> {
+    pub fn publish(&mut self) -> Option<(usize, Vec<(String, i64)>)> {
         if let Ok(mut aggregator) = self.aggregator.lock() {
-            aggregator.report_metrics(self.data.clone())
+            if let Some(data) = self.data.take() {
+                aggregator.report_metrics(data)
+            } else {
+                None
+            }
         } else {
             None
         }

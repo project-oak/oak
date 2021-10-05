@@ -21,13 +21,7 @@ use futures::future::FutureExt;
 use log::Level;
 use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode};
 use serde::Deserialize;
-use std::{
-    collections::HashMap,
-    convert::TryFrom,
-    str,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{collections::HashMap, convert::TryFrom, str, sync::Arc, time::Duration};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -179,7 +173,7 @@ pub struct WasmState {
     memory: Option<wasmi::MemoryRef>,
     logger: Logger,
     /// A mapping of internal host functions to the corresponding [`OakApiNativeExtension`].
-    extensions_indices: HashMap<usize, Arc<Mutex<BoxedExtension>>>,
+    extensions_indices: Option<HashMap<usize, BoxedExtension>>,
     /// A mapping of host function names to metadata required for resolving the function.
     extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
 }
@@ -398,12 +392,17 @@ impl wasmi::Externals for WasmState {
                 args.nth_checked(3)?,
             )),
             _ => {
-                let extension = match self.extensions_indices.get(&index) {
-                    Some(extension) => extension.clone(),
+                let mut extensions_indices = self
+                    .extensions_indices
+                    .take()
+                    .expect("no extensions_indices is set");
+                let extension = match extensions_indices.get_mut(&index) {
+                    Some(extension) => Box::new(extension),
                     None => panic!("Unimplemented function at {}", index),
                 };
-                let mut ext = extension.lock().expect("Internal: could not lock mutex");
-                map_host_errors(ext.invoke(self, args)?)
+                let result = map_host_errors(extension.invoke(self, args)?);
+                self.extensions_indices = Some(extensions_indices);
+                result
             }
         }
     }
@@ -447,7 +446,7 @@ impl WasmState {
         request_bytes: Vec<u8>,
         lookup_data: Arc<LookupData>,
         logger: Logger,
-        extensions_indices: HashMap<usize, Arc<Mutex<BoxedExtension>>>,
+        extensions_indices: HashMap<usize, BoxedExtension>,
         extensions_metadata: HashMap<String, (usize, wasmi::Signature)>,
     ) -> anyhow::Result<WasmState> {
         let mut abi = WasmState {
@@ -457,7 +456,7 @@ impl WasmState {
             instance: None,
             memory: None,
             logger,
-            extensions_indices,
+            extensions_indices: Some(extensions_indices),
             extensions_metadata,
         };
 
@@ -627,13 +626,10 @@ impl WasmHandler {
     pub async fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
         let mut extensions_indices = HashMap::new();
         let mut extensions_metadata = HashMap::new();
-        let mut extensions = Vec::new();
 
         for (ind, factory) in self.extension_factories.iter().enumerate() {
             let extension = factory.create()?;
             let (name, signature) = extension.get_metadata();
-            let extension = Arc::new(Mutex::new(extension));
-            extensions.push(extension.clone());
             extensions_indices.insert(ind + EXTENSION_INDEX_OFFSET, extension);
             extensions_metadata.insert(name, (ind + EXTENSION_INDEX_OFFSET, signature));
         }
@@ -648,11 +644,13 @@ impl WasmHandler {
             extensions_metadata,
         )?;
         wasm_state.invoke();
-        for extension in extensions {
-            extension
-                .lock()
-                .map_err(|err| anyhow::anyhow!("could not lock mutex: {}", err))?
-                .terminate()?;
+        for mut extension in wasm_state
+            .extensions_indices
+            .take()
+            .expect("no extensions_indices is set in wasm_state")
+            .into_values()
+        {
+            extension.terminate()?;
         }
         Ok(Response::create(
             StatusCode::Success,
