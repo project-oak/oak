@@ -381,7 +381,7 @@ version = "3.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b166c9e378360dd5a6666a9604bb4f54ae0cac39023ffbac425e917a2a04fef"
 dependencies = [
- "num-bigint 0.4.0",
+ "num-bigint",
  "num-traits",
  "proc-macro2",
  "quote",
@@ -812,6 +812,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18794a8ad5b29321f790b55d93dfba91e125cb1a9edbd4f8e3150acc771c1a5e"
 
 [[package]]
+name = "libm"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7d73b3f436185384286bd8098d17ec07c9a7d2388a6599f824d8502b529702a"
+
+[[package]]
 name = "liquid"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -996,17 +1002,6 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-bigint"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e0d047c1062aa51e256408c560894e5251f08925980e53cf1aa5bd00eec6512"
@@ -1042,7 +1037,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c000134b5dbf44adc5cb772486d335293351644b801551abe8f75c84cfa4aef"
 dependencies = [
  "autocfg",
- "num-bigint 0.2.6",
  "num-integer",
  "num-traits",
 ]
@@ -2467,7 +2461,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2ee05bba3d1d994652079893941a2ef9324d2b58a63c31b40678fb7eddd7a5a"
 dependencies = [
  "downcast-rs",
- "libc",
+ "libm",
  "memory_units",
  "num-rational",
  "num-traits",

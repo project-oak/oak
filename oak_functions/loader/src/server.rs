@@ -464,7 +464,7 @@ impl WasmState {
             module,
             &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
         )
-        .context("failed to instantiate Wasm module")?
+        .map_err(|err| anyhow::anyhow!("failed to instantiate Wasm module: {:?}", err))?
         .assert_no_start();
 
         check_export_function_signature(
@@ -613,7 +613,8 @@ impl WasmHandler {
         extension_factories: Vec<BoxedExtensionFactory>,
         logger: Logger,
     ) -> anyhow::Result<Self> {
-        let module = wasmi::Module::from_buffer(&wasm_module_bytes)?;
+        let module = wasmi::Module::from_buffer(&wasm_module_bytes)
+            .map_err(|err| anyhow::anyhow!("could not load module from buffer: {:?}", err))?;
 
         Ok(WasmHandler {
             module: Arc::new(module),

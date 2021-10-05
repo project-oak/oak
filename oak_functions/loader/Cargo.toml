@@ -52,7 +52,7 @@ toml = "*"
 tonic = "*"
 tract-tensorflow = { version = "*", optional = true }
 url = "*"
-wasmi = "*"
+wasmi = { version = "*", default-features = false, features = ["core"] }
 signal-hook = "*"
 
 [dev-dependencies]
