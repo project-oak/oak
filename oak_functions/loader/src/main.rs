@@ -169,10 +169,8 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     }
 
     #[cfg(feature = "oak-metrics")]
-    if let Some(metrics_proxy_factory) =
-        create_metrics_proxy_factory(&config, logger.clone()).await?
-    {
-        extensions.push(metrics_proxy_factory);
+    if let Some(metrics_factory) = create_metrics_proxy_factory(&config, logger.clone()).await? {
+        extensions.push(metrics_factory);
     }
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)

@@ -102,17 +102,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     let entries = hashmap! {
         FIXED_KEY.to_vec() => br"value".to_vec(),
     };
-
-    // TODO(#2252): Use `Arbitrary` to generate metrics configuration.
-    let metrics_config = PrivateMetricsConfig {
-        epsilon: 1.0,
-        batch_size: 20,
-        buckets: hashmap! {"count".to_string() => BucketConfig::Count },
-    };
-
-    let metrics_factory = PrivateMetricsProxyFactory::new(&metrics_config, Logger::for_test())
-        .expect("could not create PrivateMetricsProxyFactory");
-    let metrics_factory: BoxedExtensionFactory = Box::new(metrics_factory);
+    let metrics_factory = create_metrics_factory();
 
     let wasm_handler = WasmHandler::create(
         &WASM_MODULE_BYTES,
@@ -162,4 +152,17 @@ impl From<&ArbitraryInstruction> for crate::proto::Instruction {
             instruction_variant,
         }
     }
+}
+
+fn create_metrics_factory() -> BoxedExtensionFactory {
+    // TODO(#2252): Use `Arbitrary` to generate metrics configuration.
+    let metrics_config = PrivateMetricsConfig {
+        epsilon: 1.0,
+        batch_size: 20,
+        buckets: hashmap! {"count".to_string() => BucketConfig::Count },
+    };
+
+    let metrics_factory = PrivateMetricsProxyFactory::new(&metrics_config, Logger::for_test())
+        .expect("could not create PrivateMetricsProxyFactory");
+    Box::new(metrics_factory)
 }

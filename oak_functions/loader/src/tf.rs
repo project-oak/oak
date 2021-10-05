@@ -54,7 +54,7 @@ pub struct TensorFlowModelConfig {
     pub shape: Vec<u8>,
 }
 
-pub struct TensorFlowModel {
+struct TensorFlowModel {
     model: Arc<Model>,
     pub shape: Vec<u8>,
     logger: Logger,
@@ -64,7 +64,7 @@ impl TensorFlowModel {
     /// Run the model for the given input and return the resulting inference vector. Returns an
     /// error if the input vector does not have the desired shape, or the model fails to produce an
     /// inference.
-    pub fn get_inference(
+    fn get_inference(
         &self,
         tensor_bytes: &[u8],
         tensor_shape: &[usize],
