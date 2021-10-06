@@ -24,12 +24,14 @@ use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{LookupData, LookupDataAuth, LookupDataSource},
-    metrics::{PrivateMetricsAggregator, PrivateMetricsConfig},
     server::Policy,
 };
 
 #[cfg(feature = "oak-tf")]
-use oak_functions_loader::tf::TensorFlowModel;
+use oak_functions_loader::tf::{TensorFlowFactory, TensorFlowModelConfig};
+
+#[cfg(feature = "oak-metrics")]
+use oak_functions_loader::metrics::PrivateMetricsConfig;
 
 use serde_derive::Deserialize;
 use std::{
@@ -37,7 +39,7 @@ use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc,
     },
     time::Duration,
 };
@@ -84,18 +86,9 @@ struct Config {
     #[serde(default)]
     tf_model: Option<TensorFlowModelConfig>,
     /// Differentially private metrics configuration.
+    #[cfg(feature = "oak-metrics")]
+    #[serde(default)]
     metrics: Option<PrivateMetricsConfig>,
-}
-
-#[derive(Deserialize, Debug, Default)]
-#[serde(deny_unknown_fields)]
-struct TensorFlowModelConfig {
-    /// Path to a TensorFlow model file.
-    #[serde(default)]
-    path: String,
-    /// Shape of the input Tensors expected by the model.
-    #[serde(default)]
-    shape: Vec<u8>,
 }
 
 /// Command line options for the Oak loader.
@@ -171,8 +164,13 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let mut extensions = Vec::new();
 
     #[cfg(feature = "oak-tf")]
-    if let Some(tf_model) = load_tensorflow_model(&config, logger.clone()).await? {
-        extensions.push(tf_model);
+    if let Some(tf_model_factory) = create_tensorflow_factory(&config, logger.clone()).await? {
+        extensions.push(tf_model_factory);
+    }
+
+    #[cfg(feature = "oak-metrics")]
+    if let Some(metrics_factory) = create_metrics_proxy_factory(&config, logger.clone()).await? {
+        extensions.push(metrics_factory);
     }
 
     let wasm_module_bytes = fs::read(&opt.wasm_path)
@@ -188,23 +186,8 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let address = SocketAddr::from((Ipv6Addr::UNSPECIFIED, opt.http_listen_port));
     let tee_certificate = vec![];
 
-    let aggregator = match &config.metrics {
-        Some(metrics_config) => {
-            metrics_config.validate()?;
-            Some(Arc::new(Mutex::new(PrivateMetricsAggregator::new(
-                metrics_config,
-            )?)))
-        }
-        None => None,
-    };
-
-    let wasm_handler = create_wasm_handler(
-        &wasm_module_bytes,
-        lookup_data,
-        aggregator,
-        extensions,
-        logger.clone(),
-    )?;
+    let wasm_handler =
+        create_wasm_handler(&wasm_module_bytes, lookup_data, extensions, logger.clone())?;
 
     // Start server.
     let server_handle = tokio::spawn(async move {
@@ -261,9 +244,7 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
                 url: config.lookup_data_url.clone(),
                 auth: config.lookup_data_auth,
             }),
-            scheme => {
-                anyhow::bail!("unknown scheme in lookup data URL: {}", scheme)
-            }
+            scheme => anyhow::bail!("unknown scheme in lookup data URL: {}", scheme),
         }
     };
     let lookup_data = Arc::new(LookupData::new_empty(
@@ -293,17 +274,41 @@ async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc
 /// Load the TensorFlow model from the given path in the config, or return `None` if a path is not
 /// provided.
 #[cfg(feature = "oak-tf")]
-async fn load_tensorflow_model(
+async fn create_tensorflow_factory(
     config: &Config,
     logger: Logger,
-) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtension>> {
+) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtensionFactory>> {
     match &config.tf_model {
         Some(tf_model_config) => {
             let model =
                 oak_functions_loader::tf::read_model_from_path(&tf_model_config.path).await?;
-            let tf_model = TensorFlowModel::create(model, tf_model_config.shape.clone(), logger)?;
-            let tf_model: oak_functions_loader::server::BoxedExtension = Box::new(tf_model);
-            Ok(Some(tf_model))
+            let tf_model_factory =
+                TensorFlowFactory::new(model, tf_model_config.shape.clone(), logger)?;
+            let tf_model_factory: oak_functions_loader::server::BoxedExtensionFactory =
+                Box::new(tf_model_factory);
+            Ok(Some(tf_model_factory))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Create and return a metrics proxy factory if metrics configuration is provided, or return `None`
+/// otherwise.
+#[cfg(feature = "oak-metrics")]
+async fn create_metrics_proxy_factory(
+    config: &Config,
+    logger: Logger,
+) -> anyhow::Result<Option<oak_functions_loader::server::BoxedExtensionFactory>> {
+    match &config.metrics {
+        Some(metrics_config) => {
+            metrics_config.validate()?;
+            let metrics_factory = oak_functions_loader::metrics::PrivateMetricsProxyFactory::new(
+                metrics_config,
+                logger,
+            )?;
+            let metrics_factory: oak_functions_loader::server::BoxedExtensionFactory =
+                Box::new(metrics_factory);
+            Ok(Some(metrics_factory))
         }
         None => Ok(None),
     }

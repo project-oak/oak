@@ -16,13 +16,17 @@
 
 use crate::{
     logger::Logger,
-    server::{AbiPointer, AbiPointerOffset, OakApiNativeExtension, WasmState, ABI_USIZE},
+    server::{
+        AbiPointer, AbiPointerOffset, BoxedExtension, ExtensionFactory, OakApiNativeExtension,
+        WasmState, ABI_USIZE,
+    },
 };
 use anyhow::Context;
 use bytes::Bytes;
 use log::Level;
 use oak_functions_abi::proto::{Inference, OakStatus};
 use prost::Message;
+use serde_derive::Deserialize;
 use std::{fs::File, io::Read};
 use tract_tensorflow::prelude::{
     tract_ndarray::{ArrayBase, Dim, IxDynImpl, ViewRepr},
@@ -39,47 +43,28 @@ const TF_ABI_FUNCTION_NAME: &str = "tf_model_infer";
 /// More information: https://github.com/sonos/tract/blob/main/doc/graph.md
 type Model = RunnableModel<TypedFact, Box<dyn TypedOp>, Graph<TypedFact, Box<dyn TypedOp>>>;
 
-pub struct TensorFlowModel {
-    model: Model,
+#[derive(Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+pub struct TensorFlowModelConfig {
+    /// Path to a TensorFlow model file.
+    #[serde(default)]
+    pub path: String,
+    /// Shape of the input Tensors expected by the model.
+    #[serde(default)]
+    pub shape: Vec<u8>,
+}
+
+struct TensorFlowModel {
+    model: Arc<Model>,
     pub shape: Vec<u8>,
     logger: Logger,
 }
 
 impl TensorFlowModel {
-    /// Creates an instance of TensorFlowModel, by loading the model from the given byte array and
-    /// optimizing it using the given shape.
-    pub fn create(bytes: Bytes, shape: Vec<u8>, logger: Logger) -> anyhow::Result<Self> {
-        use bytes::Buf;
-
-        let dim = shape
-            .iter()
-            .cloned()
-            .map(|u| u.into())
-            .collect::<Vec<i32>>();
-        let mut reader = bytes.reader();
-
-        // Creates the model based on the example in https://github.com/sonos/tract/tree/main/examples/tensorflow-mobilenet-v2
-        let model = tract_tensorflow::tensorflow()
-            // load the model
-            .model_for_read(&mut reader)?
-            // specify input type and shape to be able to optimize the model
-            .with_input_fact(0, InferenceFact::dt_shape(f32::datum_type(), dim))?
-            // optimize the model
-            .into_optimized()?
-            // make the model runnable and fix its inputs and outputs
-            .into_runnable()?;
-
-        Ok(TensorFlowModel {
-            model,
-            shape,
-            logger,
-        })
-    }
-
     /// Run the model for the given input and return the resulting inference vector. Returns an
     /// error if the input vector does not have the desired shape, or the model fails to produce an
     /// inference.
-    pub fn get_inference(
+    fn get_inference(
         &self,
         tensor_bytes: &[u8],
         tensor_shape: &[usize],
@@ -125,7 +110,7 @@ impl TensorFlowModel {
 
 impl OakApiNativeExtension for TensorFlowModel {
     fn invoke(
-        &self,
+        &mut self,
         wasm_state: &mut WasmState,
         args: wasmi::RuntimeArgs,
     ) -> Result<Result<(), OakStatus>, wasmi::Trap> {
@@ -153,6 +138,10 @@ impl OakApiNativeExtension for TensorFlowModel {
         );
 
         (TF_ABI_FUNCTION_NAME.to_string(), signature)
+    }
+
+    fn terminate(&mut self) -> anyhow::Result<()> {
+        Ok(())
     }
 }
 
@@ -212,4 +201,54 @@ pub async fn read_model_from_path(path: &str) -> anyhow::Result<Bytes> {
         .context("could not read TensorFlow model from file")?;
 
     Ok(Bytes::from(buf))
+}
+
+pub struct TensorFlowFactory {
+    model: Arc<Model>,
+    pub shape: Vec<u8>,
+    logger: Logger,
+}
+
+impl TensorFlowFactory {
+    /// Creates an instance of TensorFlowFactory, by loading the model from the given byte array and
+    /// optimizing it using the given shape.
+    pub fn new(bytes: Bytes, shape: Vec<u8>, logger: Logger) -> anyhow::Result<Self> {
+        use bytes::Buf;
+
+        let dim = shape
+            .iter()
+            .cloned()
+            .map(|u| u.into())
+            .collect::<Vec<i32>>();
+        let mut reader = bytes.reader();
+
+        // Creates the model based on the example in https://github.com/sonos/tract/tree/main/examples/tensorflow-mobilenet-v2
+        let model = tract_tensorflow::tensorflow()
+            // load the model
+            .model_for_read(&mut reader)?
+            // specify input type and shape to be able to optimize the model
+            .with_input_fact(0, InferenceFact::dt_shape(f32::datum_type(), dim))?
+            // optimize the model
+            .into_optimized()?
+            // make the model runnable and fix its inputs and outputs
+            .into_runnable()?;
+
+        Ok(TensorFlowFactory {
+            model: Arc::new(model),
+            shape,
+            logger,
+        })
+    }
+}
+
+impl ExtensionFactory for TensorFlowFactory {
+    fn create(&self) -> anyhow::Result<BoxedExtension> {
+        let model = TensorFlowModel {
+            model: self.model.clone(),
+            shape: self.shape.clone(),
+            logger: self.logger.clone(),
+        };
+
+        Ok(Box::new(model))
+    }
 }

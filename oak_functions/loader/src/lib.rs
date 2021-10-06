@@ -24,6 +24,7 @@ pub mod attestation;
 pub mod grpc;
 pub mod logger;
 pub mod lookup;
+#[cfg(feature = "oak-metrics")]
 pub mod metrics;
 pub mod server;
 #[cfg(feature = "oak-tf")]

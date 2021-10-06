@@ -73,14 +73,8 @@ async fn test_server() {
         constant_processing_time: Duration::from_millis(200),
     };
     let tee_certificate = vec![];
-    let wasm_handler = create_wasm_handler(
-        &wasm_module_bytes,
-        lookup_data,
-        None,
-        vec![],
-        logger.clone(),
-    )
-    .expect("could not create wasm_handler");
+    let wasm_handler = create_wasm_handler(&wasm_module_bytes, lookup_data, vec![], logger.clone())
+        .expect("could not create wasm_handler");
 
     let server_background = test_utils::background(|term| async move {
         create_and_start_grpc_server(

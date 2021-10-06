@@ -16,12 +16,14 @@
 use crate::proto::{
     instruction::InstructionVariant, Instruction, Instructions, Panic, WriteResponse,
 };
+use maplit::hashmap;
 use oak_functions_abi::proto::StatusCode;
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::LookupData,
-    server::Policy,
+    metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
+    server::{BoxedExtensionFactory, Policy},
 };
 use prost::Message;
 use std::{
@@ -51,12 +53,12 @@ async fn test_server() {
         constant_response_size_bytes: 100,
         constant_processing_time: Duration::from_millis(200),
     };
+    let metrics_factory = create_metrics_factory();
     let tee_certificate = vec![];
     let wasm_handler = create_wasm_handler(
         &wasm_module_bytes,
         lookup_data,
-        None,
-        vec![],
+        vec![metrics_factory],
         logger.clone(),
     )
     .expect("could not create wasm_handler");
@@ -132,4 +134,16 @@ async fn test_server() {
 
     let res = server_background.terminate_and_join().await;
     assert!(res.is_ok());
+}
+
+fn create_metrics_factory() -> BoxedExtensionFactory {
+    let metrics_config = PrivateMetricsConfig {
+        epsilon: 1.0,
+        batch_size: 20,
+        buckets: hashmap! {"count".to_string() => BucketConfig::Count },
+    };
+
+    let metrics_factory = PrivateMetricsProxyFactory::new(&metrics_config, Logger::for_test())
+        .expect("could not create PrivateMetricsProxyFactory");
+    Box::new(metrics_factory)
 }

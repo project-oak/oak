@@ -20,20 +20,14 @@ use crate::{
     attestation::AttestationServer,
     logger::Logger,
     lookup::LookupData,
-    metrics::PrivateMetricsAggregator,
     proto::streaming_session_server::StreamingSessionServer,
-    server::{apply_policy, BoxedExtension, Policy, WasmHandler},
+    server::{apply_policy, BoxedExtensionFactory, Policy, WasmHandler},
 };
 use anyhow::Context;
 use log::Level;
 use oak_functions_abi::proto::Request;
 use prost::Message;
-use std::{
-    convert::TryInto,
-    future::Future,
-    net::SocketAddr,
-    sync::{Arc, Mutex},
-};
+use std::{convert::TryInto, future::Future, net::SocketAddr, sync::Arc};
 
 async fn handle_request(
     wasm_handler: WasmHandler,
@@ -57,17 +51,10 @@ async fn handle_request(
 pub fn create_wasm_handler(
     wasm_module_bytes: &[u8],
     lookup_data: Arc<LookupData>,
-    aggregator: Option<Arc<Mutex<PrivateMetricsAggregator>>>,
-    extensions: Vec<BoxedExtension>,
+    extensions: Vec<BoxedExtensionFactory>,
     logger: Logger,
 ) -> anyhow::Result<WasmHandler> {
-    let wasm_handler = WasmHandler::create(
-        wasm_module_bytes,
-        lookup_data,
-        extensions,
-        logger,
-        aggregator,
-    )?;
+    let wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, extensions, logger)?;
 
     Ok(wasm_handler)
 }

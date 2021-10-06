@@ -46,8 +46,8 @@ public class MessageTest {
     byte[] signingPublicKey = getRandomArray(Message.SIGNING_PUBLIC_KEY_LENGTH);
     byte[] attestationInfo = getRandomArray(TEST_LENGTH);
 
-    Message.ServerIdentity serverIdentity = new Message.ServerIdentity(
-        ephemeralPublicKey, random, signingPublicKey, attestationInfo);
+    Message.ServerIdentity serverIdentity =
+        new Message.ServerIdentity(ephemeralPublicKey, random, signingPublicKey, attestationInfo);
     serverIdentity.setTranscriptSignature(transcriptSignature);
     byte[] serializedServerIdentity = serverIdentity.serialize();
     Message.ServerIdentity deserializedServerIdentity =
@@ -56,8 +56,8 @@ public class MessageTest {
     Assert.assertArrayEquals(
         serverIdentity.getEphemeralPublicKey(), deserializedServerIdentity.getEphemeralPublicKey());
     Assert.assertArrayEquals(serverIdentity.getRandom(), deserializedServerIdentity.getRandom());
-    Assert.assertArrayEquals(
-        serverIdentity.getTranscriptSignature(), deserializedServerIdentity.getTranscriptSignature());
+    Assert.assertArrayEquals(serverIdentity.getTranscriptSignature(),
+        deserializedServerIdentity.getTranscriptSignature());
     Assert.assertArrayEquals(
         serverIdentity.getSigningPublicKey(), deserializedServerIdentity.getSigningPublicKey());
     Assert.assertArrayEquals(
@@ -71,8 +71,8 @@ public class MessageTest {
     byte[] signingPublicKey = getRandomArray(Message.SIGNING_PUBLIC_KEY_LENGTH);
     byte[] attestationInfo = getRandomArray(TEST_LENGTH);
 
-    Message.ClientIdentity clientIdentity = new Message.ClientIdentity(
-        ephemeralPublicKey, signingPublicKey, attestationInfo);
+    Message.ClientIdentity clientIdentity =
+        new Message.ClientIdentity(ephemeralPublicKey, signingPublicKey, attestationInfo);
     clientIdentity.setTranscriptSignature(transcriptSignature);
     byte[] serializedClientIdentity = clientIdentity.serialize();
     Message.ClientIdentity deserializedClientIdentity =
@@ -80,8 +80,8 @@ public class MessageTest {
 
     Assert.assertArrayEquals(
         clientIdentity.getEphemeralPublicKey(), deserializedClientIdentity.getEphemeralPublicKey());
-    Assert.assertArrayEquals(
-        clientIdentity.getTranscriptSignature(), deserializedClientIdentity.getTranscriptSignature());
+    Assert.assertArrayEquals(clientIdentity.getTranscriptSignature(),
+        deserializedClientIdentity.getTranscriptSignature());
     Assert.assertArrayEquals(
         clientIdentity.getSigningPublicKey(), deserializedClientIdentity.getSigningPublicKey());
     Assert.assertArrayEquals(
