@@ -243,7 +243,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         // We expect the `mean` time for loading the test Wasm module and running its main function
         // to be less than a fixed threshold.
         assert!(
-            elapsed < Duration::from_millis(3),
+            elapsed < Duration::from_millis(5),
             "elapsed time: {:.0?}",
             elapsed
         );

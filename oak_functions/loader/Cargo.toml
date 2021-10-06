@@ -52,7 +52,8 @@ toml = "*"
 tonic = "*"
 tract-tensorflow = { version = "*", optional = true }
 url = "*"
-wasmi = "*"
+# Use wasmi in `no_std` mode.
+wasmi = { version = "*", default-features = false, features = ["core"] }
 signal-hook = "*"
 
 [dev-dependencies]
