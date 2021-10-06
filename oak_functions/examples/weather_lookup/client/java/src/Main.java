@@ -34,7 +34,7 @@ public class Main {
     AttestationClient client = new AttestationClient();
     client.attest("http://localhost:8080");
 
-    byte[] requestBody = "{\"lat\":52,\"lon\":0}".getBytes(UTF_8);
+    byte[] requestBody = "{\"lat\":52,\"lng\":0}".getBytes(UTF_8);
     Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();
     Response response = client.send(request);
     ByteString responseBody = response.getBody().substring(0, (int) response.getLength());

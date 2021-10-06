@@ -1,4 +1,4 @@
-lookup_data_url = "https://storage.googleapis.com/oak_lookup_data/lookup_data_weather_sparse"
+lookup_data_url = "https://storage.googleapis.com/oak_lookup_data/lookup_data_weather_sparse_s2"
 lookup_data_download_period = "10m"
 worker_threads = 4
 

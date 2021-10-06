@@ -14,239 +14,127 @@
 // limitations under the License.
 //
 
-//! Utilities for finding and comparing longitude- and latitude-based locations.
+//! Utilities for finding and comparing longitude- and latitude-based locations using S2 Geometry.
+//! See https://s2geometry.io/ for more information.
+
+pub use anyhow::Result;
+use s2::{
+    cap::Cap,
+    region::RegionCoverer,
+    s1::{Deg, Rad, E6},
+};
+pub use s2::{cellid::CellID, latlng::LatLng, s1::Angle};
 
 #[cfg(test)]
 mod tests;
 
+/// The default level to use for S2 Geometry cells. Higher numbers means smaller cells. At level 7
+/// the cells have roughly similar size to a circle with a radius of 40km and there are apporimately
+/// 98K of them.
+pub const S2_DEFAULT_LEVEL: u8 = 7;
+
 // Radius of the earth in meters.
-const EARTH_RADIUS: f32 = 6_371_000.0;
-// The height of a row in degrees latitude.
-const CELL_HEIGHT: f32 = 1.0;
+const EARTH_RADIUS_METERS: f64 = 6_371_000.;
 
-/// Represents a cell on a sphere.
-/// TODO(#2296): Implement a version based on S2 Geometry for benchmark comparison.
-#[derive(Debug, PartialEq)]
-pub struct Cell {
-    /// The cell width in degrees for a typical cell in this row.
-    pub width: f32,
-    /// The number of columns in this row. We store this value so that we can easily determine
-    /// whether a cell is the last cell for a specific row so that we can adjust the width when
-    /// determining the midpoint.
-    pub col_count: i16,
-    /// The unique identifier of the cell.
-    pub index: IndexKey,
+// The default cutoff radius in meters for the lookup area around a point.
+const DEFAULT_CUTOFF_RADIUS_METERS: f64 = 40_000.;
+
+// The size in bytes of the integer representation of a latitude or longitude value.
+const LAT_LNG_INTEGER_SIZE: usize = std::mem::size_of::<i32>();
+
+// The size in bytes of the serialized representation of a location.
+const LOCATION_SIZE: usize = LAT_LNG_INTEGER_SIZE * 2;
+
+/// The default cutoff radius in radians.
+pub const DEFAULT_CUTOFF_RADIUS_RADIANS: Rad =
+    Rad(DEFAULT_CUTOFF_RADIUS_METERS / EARTH_RADIUS_METERS);
+
+/// Converts latitude and longitude values in degrees to a `LatLng` location.
+pub fn location_from_degrees(lat_deg: f64, lng_deg: f64) -> LatLng {
+    LatLng::new(Deg(lat_deg).into(), Deg(lng_deg).into())
 }
 
-impl Cell {
-    /// Calculates an approximate local cartesian coordinate relative to the location in meters. The
-    /// middle of the cell is used as the origin and the y-axis points due North. All points on the
-    /// surface of the sphere are projected onto a tangent plane at the midpoint using lines
-    /// perpendicular to the plane.
-    ///
-    /// This approximation is close enough for applications such as finding the closest data
-    /// location within a 40km radius of the client as the surface of the earth is very close to
-    /// flat at this scale.
-    pub fn relative_position(&self, latitude_degrees: f32, longitude_degrees: f32) -> Point {
-        // Find the midpoint of the cell.
-        let mid_latitude = self.index.row as f32 + CELL_HEIGHT * 0.5;
-        let current_width = if self.index.col + 1 == self.col_count {
-            360.0 - self.index.col as f32 * self.width
-        } else {
-            self.width
-        };
-        let mid_longitude = self.index.col as f32 * self.width + current_width / 2.0;
-
-        // We do the initial projections on a unit sphere and then scale the coordinates by the
-        // average radius of the earth in meters.
-
-        let delta_latitude_radians = (latitude_degrees - mid_latitude).to_radians();
-        let delta_longitude_radians = (longitude_degrees - mid_longitude).to_radians();
-
-        // If the location and the midpoint had the same longitude the projections of the
-        // y-component onto the plane would just be `sin(delta_latitude)`.
-        //
-        // We need to adjust the y-component to account for the circular nature of the parallel at
-        // the location's longitude for the cases where the `delta_latitude != 0`.
-        //
-        // The radius of the circle formed by the parallel is `cos(latitude)`.
-        //
-        // The maximal potential effect of the difference in longitude is:
-        // `radius * (1 - cos(delta_longitude))`
-        //
-        // The angle between this circle and a line perpendicular to the plan is `mid_latitude`, so
-        // to project the result onto the plane we must scale it by `sin(mid_latitude)`
-        let y_base = delta_latitude_radians.sin();
-        let offset = (1.0 - delta_longitude_radians.cos())
-            * latitude_degrees.to_radians().cos()
-            * mid_latitude.to_radians().sin();
-        let y = ((y_base + offset) * EARTH_RADIUS) as i32;
-
-        // The projection of the x-component onto the plane is given by `sin(delta_longitude)`
-        // scaled by cos(latitude) to account for the sphere's curvature.
-        let scale = latitude_degrees.to_radians().cos();
-        let x = (delta_longitude_radians.sin() * scale * EARTH_RADIUS) as i32;
-
-        Point { x, y }
-    }
-}
-
-/// An identifier for a cell. The surface of the sphere is covered by cells of approximately the
-/// same size.
+/// Finds the set of S2 cells at the required `level` that covers the area around the `location`.
+/// The area is a spherical cap with the `location` as the midpoint with the specified `radius`.
 ///
-/// Each row lies between two integer degrees of latitude. The row number is the degree of
-/// latitude that forms its southern border.
+/// The level determines the size of the cells. We use a single fixed level for the covering (min
+/// level = max level). If the level is higher (and therefore the cells smaller) the coverage is
+/// usually tighter with less area that falls inside the cells but outside of the target zone. If
+/// the level is lower it would usually require fewer cells to cover the zone, but there is usually
+/// larger areas that fall outside of the zone.
 ///
-/// The rows at the equator are divided into 360 cells. The number of cells in each row above and
-/// below is scaled by `cos(latitude_border)` for the border that gives the higer scale value. For
-/// the northern hemisphere this is the southern border and vice versa.
+/// See https://s2geometry.io/devguide/examples/coverings for more information on coverings.
+pub fn find_covering_cells(location: &LatLng, radius: &Angle, level: u8) -> Result<Vec<CellID>> {
+    if level > s2::cellid::MAX_LEVEL as u8 {
+        anyhow::bail!("level too high");
+    }
+    let coverer = RegionCoverer {
+        min_level: level,
+        max_level: level,
+        level_mod: 0,
+        max_cells: 0,
+    };
+    let region = Cap::from_center_angle(&location.into(), radius);
+    Ok(coverer.covering(&region).0)
+}
+
+/// Finds the cell at the given `level` that covers the `location`.
+pub fn find_cell(location: &LatLng, level: u8) -> Result<CellID> {
+    let level = level as u64;
+    if level > s2::cellid::MAX_LEVEL {
+        anyhow::bail!("level too high");
+    }
+    if level == s2::cellid::MAX_LEVEL {
+        return Ok(CellID::from(location));
+    }
+
+    // Converting a `LatLng` to `CellID` produces a level 30 cell. We need to find the cells
+    // ancestor at the required lower level.
+    Ok(CellID::from(location).parent(level))
+}
+
+/// Converts a `LatLng` location to a byte representation.
 ///
-/// The cell with a western border at 0° longitude has a column number of 0. Column numbers increase
-/// eastward and cannot be smaller than 0.
-#[derive(Debug, Eq, PartialEq)]
-pub struct IndexKey {
-    pub row: i16,
-    pub col: i16,
+/// The latitude and longitude for the location are converted microdegrees (`E6`) values. These
+/// values are then converted to big endian byte representations of the underlying 32 bit signed
+/// integer and concatenated.
+pub fn location_to_bytes(location: &LatLng) -> [u8; 8] {
+    let lat: E6 = location.lat.into();
+    let lng: E6 = location.lng.into();
+
+    let mut bytes = [0u8; LOCATION_SIZE];
+    let (first, second) = bytes.split_at_mut(LAT_LNG_INTEGER_SIZE);
+    first.copy_from_slice(&lat.0.to_be_bytes());
+    second.copy_from_slice(&lng.0.to_be_bytes());
+
+    bytes
 }
 
-impl IndexKey {
-    pub fn from_bytes(c: &[u8]) -> IndexKey {
-        let mut row_bytes = [0; 2];
-        row_bytes.copy_from_slice(&c[0..2]);
-        let mut col_bytes = [0; 2];
-        col_bytes.copy_from_slice(&c[2..4]);
-
-        IndexKey {
-            row: i16::from_be_bytes(row_bytes),
-            col: i16::from_be_bytes(col_bytes),
-        }
+/// Converts a byte representation of a location into a `LatLng`.
+///
+/// The first four bytes represent a big endian signed integer of the latitude in microdegrees
+/// (`E6`). The next four bytes are a similar representation of the longitude.
+pub fn location_from_bytes(bytes: &[u8]) -> Result<LatLng> {
+    if bytes.len() != LOCATION_SIZE {
+        anyhow::bail!("incorrect data size");
     }
 
-    /// Converts the `IndexKey` for the cell to bytes. This is used for looking up index entries for
-    /// a cell. Locations have 8 byte keys and cells have 4 byte keys, so there is no chance of a
-    /// collision.
-    pub fn to_bytes(&self) -> Vec<u8> {
-        [self.row.to_be_bytes(), self.col.to_be_bytes()].concat()
-    }
+    let mut lat_bytes = [0; LAT_LNG_INTEGER_SIZE];
+    lat_bytes.copy_from_slice(&bytes[0..LAT_LNG_INTEGER_SIZE]);
+    let mut lng_bytes = [0; LAT_LNG_INTEGER_SIZE];
+    lng_bytes.copy_from_slice(&bytes[LAT_LNG_INTEGER_SIZE..LOCATION_SIZE]);
+
+    Ok(LatLng::new(
+        E6(i32::from_be_bytes(lat_bytes)).into(),
+        E6(i32::from_be_bytes(lng_bytes)).into(),
+    ))
 }
 
-/// Represents an index value for a location-based lookup (e.g weather data).
-#[derive(Debug, Eq, PartialEq)]
-pub struct IndexValue {
-    /// The key for the location's related value (e.g. the current weather at the weather data
-    /// location).
-    pub value_key: [u8; 8],
-    /// The cartesian projection of its position relative to the midpoint of the cell.
-    pub position: Point,
-}
-
-impl IndexValue {
-    pub fn from_bytes(c: &[u8]) -> IndexValue {
-        let mut value_key = [0; 8];
-        value_key.copy_from_slice(&c[0..8]);
-        IndexValue {
-            value_key,
-            position: Point::from_bytes(&c[8..16]),
-        }
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        [self.value_key[..].to_vec(), self.position.to_bytes()].concat()
-    }
-}
-
-/// A relative location in cartesian coordinates.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Point {
-    /// The relative x-coordinate in meters.
-    pub x: i32,
-    /// The relative y-coordinate in meters.
-    pub y: i32,
-}
-
-impl Point {
-    pub fn from_bytes(c: &[u8]) -> Point {
-        let mut x_bytes = [0; 4];
-        x_bytes.copy_from_slice(&c[0..4]);
-        let mut y_bytes = [0; 4];
-        y_bytes.copy_from_slice(&c[4..8]);
-
-        Point {
-            x: i32::from_be_bytes(x_bytes),
-            y: i32::from_be_bytes(y_bytes),
-        }
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        [self.x.to_be_bytes(), self.y.to_be_bytes()].concat()
-    }
-
-    /// Calculates the square of the distance between the point and another point.
-    ///
-    /// The square of the distance is sufficient for finding the minimum, seeing that `sqrt` grows
-    /// monotonically.
-    pub fn squared_distance(&self, other: &Point) -> i64 {
-        ((self.x - other.x) as i64).pow(2) + ((self.y - other.y) as i64).pow(2)
-    }
-
-    /// Validates that a point is within a cutoff radius.
-    pub fn validate_close_enough(&self, other: &Point, cutoff: i32) -> Result<(), String> {
-        let cutoff_sqaured = (cutoff as i64).pow(2);
-        if self.squared_distance(other) > cutoff_sqaured {
-            return Err(format!("closest data point is more than {}m away", cutoff));
-        }
-        Ok(())
-    }
-}
-
-/// Finds the cell in which a location falls.
-#[allow(clippy::float_cmp)]
-pub fn find_cell(latitude_degrees: f32, longitude_degrees: f32) -> Result<Cell, String> {
-    // Validate that the locations is witin the expected bounds.
-    if !(-90.0..=90.0).contains(&latitude_degrees) {
-        return Err("invalid latitude".to_owned());
-    }
-    if !(-180.0..=180.0).contains(&longitude_degrees) {
-        return Err("invalid longitude".to_owned());
-    }
-
-    // Determine which cell the location falls into.
-    let south_border = if latitude_degrees == 90.0 {
-        90.0 - CELL_HEIGHT
-    } else {
-        latitude_degrees.floor()
-    };
-    let north_border = south_border + CELL_HEIGHT;
-    // We use the longest border to scale the cell count for the row.
-    let ratio = south_border
-        .to_radians()
-        .cos()
-        .max(north_border.to_radians().cos());
-    // At the equator there are 360 cells, each with a width of 1°. The number of cells in each row
-    // above or below scales with `ratio` to ensure the actual witdhs are roughly similar.
-    let cell_count = (360.0 * ratio).ceil();
-
-    let cell_width_degrees = 360.0 / cell_count;
-
-    let row = south_border as i16;
-    // We only want positive column numbers, so we wrap negative longitudes around.
-    let positive_longitude = if longitude_degrees < 0.0 {
-        longitude_degrees + 360.0
-    } else {
-        longitude_degrees
-    };
-    let cell_col = (positive_longitude / cell_width_degrees).floor() as i16;
-
-    // Make sure the column does not go out of bounds due to rounding during the division.
-    let col = if cell_col >= cell_count as i16 {
-        cell_count as i16 - 1
-    } else {
-        cell_col
-    };
-
-    Ok(Cell {
-        width: cell_width_degrees,
-        col_count: cell_count as i16,
-        index: IndexKey { row, col },
-    })
+/// Converts a `CellID` to a byte representation.
+///
+/// A `CellID` is a wrapper around a `u64`. The `to_token` function generates a hex-encoded string
+/// representation of this internal value and truncates trailing 0s. This is then converted to a
+/// vector of bytes.
+pub fn cell_id_to_bytes(cell: &CellID) -> Vec<u8> {
+    cell.to_token().as_bytes().to_vec()
 }

@@ -12,71 +12,60 @@ is available, plus a special set of index entries that can be used for finding
 weather locations in the vicinity of the client's location. This example uses
 40km as the cutoff for finding nearby weather data points, meaning that it would
 only consider candidate weather data entries if they fall within a 40km radius
-of the client's location. The choice of cutoff is based on a combination of the
-likely range on which weather data can be relevant and the cell sizes used for
-creating the index entries.
+of the client's location. The value of this cutoff is an arbitrary choice, but
+seems like a reasonable distance for which weather data might be relevant.
 
 For each weather location, the corresponding entry has an 8-byte key obtained by
-concatenating the latitude and longitude, respectively, in millidegrees, each
-serialized as a 4-byte big endian signed integer and then concatenated together.
+concatenating the latitude and longitude, each serialized as a 4-byte big endian
+signed integer representing the respective value in microdegrees.
 
 For instance, the key for the location corresponding to coordinates
 `(14.12°, -19.88°)` is the byte sequence
-`[0x00, 0x00, 0x37, 0x28, 0xFF, 0xFF, 0xF8, 0x3C]`:
+`[0x00, 0xD7, 0x74, 0x40, 0xFE, 0xD0, 0xA7, 0xC0]`:
 
-`[0x00, 0x00, 0x37, 0x28] -> 0x00003728 -> 14120m° -> 14.120°`
-`[0xFF, 0xFF, 0xB2, 0x58] -> 0xFFFFB258 -> -19880m° -> -19.880°`
+`[0x00, 0xD7, 0x74, 0x40] -> 0x00D77440 -> 14120000u° -> 14.120°`
+`[0xFE, 0xD0, 0xA7, 0xC0] -> 0xFED0A7C0 -> -19880000u° -> -19.880°`
 
-To create the index lookup entries the surface of the earth is treated as a
-sphere and divided into a number of cells with roughly similar sizes. The
-earth's surface is divided into rows. Each row lies between two integer degrees
-of latitude (e.g one row between 0° and 1°, and another between 1° and 2°). Each
-row is divided into cells. We start with 360 cells per row at the equator. As we
-move away from the equator each row becomes shorter, so the number of cells per
-row is scaled by `cos(latitude_border)` to ensure that the width of the cells in
-different rows are roughly similar. The lengths of the northern and southern
-borders of a cell would be different. For simplicity, we use the longer border
-of the two to calculate the number of cells. This means that most cells are
-slightly wider than 100km at the widest point. All cells in a row have exactly
-the same width, except for the last cell. The width of the last cell is slightly
-adjusted to make sure that the widths of all the cells in a row sum up to
-exactly 360° in spite of the rounding in floating point calculations.
+S2 Geometry (https://s2geometry.io/) cells are used to create the index lookup
+entries. The surface of the earth is treated as a sphere and divided into a
+number of cells (see https://s2geometry.io/devguide/s2cell_hierarchy). The
+number of cells and their sizes are determined by the level. The level can range
+from 0 to 30. At level 0 there are only 6 cells covering the entire earth. At
+level 30 there are 7e18 cells (see
+https://s2geometry.io/resources/s2cell_statistics). This example uses level 7
+cells, as these have roughly similar sizes to the circular area around data
+points with a 40km radius. If larger cells are used there would likely be fewer
+index entries but with less tight coverage. Smaller cells would usually give
+tighter coverage but a larger number of index entries.
 
-The cells are identified by row- and column numbers. The row number of a cell is
-the integer degree at its southern border (e.g. the row with the equator as its
-southern border has row number 0). Rows in the southern hemishere have negative
-row numbers. Cells within a row are numbered starting from 0 (the cell with 0°
-longitude as its western border) and counting eastwards. Cells cannot have
-negative column numbers. The key for an index entry is constructed by
-concatenating the 2 byte signed big endian representation of the row and column
-numbers for the cell. This means that index entries have 4 byte keys while
-weather data entries have 8 byte keys, so key collisions are not possible.
+Each cell is identified by a unique unsigned 64 bit integer. See
+https://s2geometry.io/devguide/s2cell_hierarchy#s2cellid-numbering-again for
+more details on how this is structured. These identifiers are converted to
+tokens by generating a big endian hex string representation of the number and
+trimming all trailing 0s. These tokens are used as the keys for the index
+entries. At level 7 the cells have 5 byte tokens. The keys for the data items
+are 8 bytes so key collisions between data entries and index entries are not
+possible.
 
-The value of each index entry consists of a concatenated list of potential
+The value of each index entry consists of a concatenated list of the keys of the
 weather data locations in the vicinity of the cell. All weather data locations
 that could be within the cutoff (currently 40km) of any point within the cell
-are included in the list. Each item in the list is exactly 16 bytes long. The
-first 8 bytes is the key for looking up the weather data. The next 8 bytes
-represent the approximate relative position of the weather data location
-compared to the midpoint of the cell. The relative position is a projection of
-the location onto a plane that forms a tangent to the sphere at the midpoint of
-the cell. The origin of the plane is the midpoint of the cell where the plane
-intersects the sphere and the y-axis points due North. The x and y coordinates
-are both in meters and serialised as 4 byte big endian signed integers and
-concatenated.
+are included in the list. This is equivalent to finding all cells that partly
+fall within the 40km radius. These are found by generating a cell covering
+(using only level 7 cells) of a spherical cap centred at the data point with a
+radius of 40km. See https://s2geometry.io/devguide/examples/coverings for more
+information on coverings. Cell coverings for areas can be visualised using
+https://s2.sidewalklabs.com/regioncoverer/.
 
 ## Lookup Logic
 
 The Wasm logic of the lookup module first determines in which cell the current
-location falls and calculates the relative cartesian projection of the client's
-location compared to the midpoint of the cell. It then looks up the index entry
-using the key based on the cell identifier (row and column). If it finds an
-index entry it iterates through all the potential weather data locations in the
-list to find the closest weather data location using the relative cartesian
-projections. The projections are accurate enough to find the closest weather
-data, as the spherical surface is very close to being flat at these scales. If
-the closest item lies within 40km of the client's location it uses the key to
-lookup the weather data associated with that item and returns it to the client.
+location falls. It then looks up the index entry using the cell's ID token. If
+it finds an index entry it iterates through all the potential weather data
+locations. The keys of the weather locations encode their latitudes and
+longitudes, so can be used to find the closest weather data location. If the
+closest item lies within 40km of the client's location it uses the key to look
+up the weather data associated with that item and returns it to the client.
 
 ## Running manually
 
@@ -112,7 +101,7 @@ To build and run this example manually follow these steps:
    ```shell
    cargo run --manifest-path=./oak_functions/client/rust/Cargo.toml -- \
        --uri=http://localhost:8080,
-       --request={\"lat\":52,\"lon\":0}
+       --request={\"lat\":52,\"lng\":0}
    ```
 
 Alternatively, the `runner` could be used to run this example:
