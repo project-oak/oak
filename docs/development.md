@@ -80,7 +80,7 @@ and build its index. Alternatively, try `./scripts/runner run-tests`.
 
 On Linux you might have to
 [post-installation steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/)
-and run `$ systemctl start docker`. If you get a `Permission denied` try to
+and run `systemctl start docker`. If you get a `Permission denied` try to
 rebuild the Docker images with `./scripts/docker_build`.
 
 ## Meta-Advice
