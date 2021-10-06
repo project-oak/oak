@@ -38,6 +38,9 @@ following:
  ❯ examples } ⊢ [OK] [143s]
 ```
 
+Note: `./scripts/docker_pull` and `./scripts/docker_run` will need `sudo` if not
+[configured otherwise](https://docs.docker.com/engine/install/linux-postinstall/).
+
 The remainder of this document explores what's going on under the covers here,
 allowing individual stages to be built and run independently, and allowing
 builds that don't have to rely on a Docker environment.
@@ -73,7 +76,12 @@ in which case allow that by clicking on "Download now" in the notification.
 To test that things work correctly, open a Rust file, start typing `std::`
 somewhere, and autocomplete results should start showing up. Note that it may
 take a while for the `rust-analyzer` extension to go through all the local code
-and build its index.
+and build its index. Alternatively, try `./scripts/runner run-tests`.
+
+On Linux you might have to
+[post-installation steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/)
+and run `systemctl start docker`. If you get a `Permission denied` try to
+rebuild the Docker images with `./scripts/docker_build`.
 
 ## Meta-Advice
 
