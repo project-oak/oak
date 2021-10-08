@@ -482,7 +482,11 @@ async fn create_client(
     uri: &Uri,
     root_tls_certificate: &[u8],
     public_key: &[u8],
-) -> anyhow::Result<PrivateSetIntersectionClient<Channel>> {
+) -> anyhow::Result<
+    PrivateSetIntersectionClient<
+        InterceptedService<Channel, CombinedInterceptor<AuthInterceptor, LabelInterceptor>>,
+    >,
+> {
     info!("Connecting to Oak Application: {:?}", uri);
     let channel = create_tls_channel(uri, root_tls_certificate)
         .await

@@ -14,20 +14,16 @@
 // limitations under the License.
 //
 
-use super::Interceptor;
 use log::error;
 use oak_abi::proto::oak::identity::SignedChallenge;
 use oak_sign::KeyPair;
 use prost::Message;
-use tonic::{metadata::MetadataValue, Code, Request, Status};
+use tonic::{metadata::MetadataValue, service::interceptor::Interceptor, Code, Request, Status};
 
 /// Intercepts gRPC requests and authenticates the client with the provided [`KeyPair`].
+#[derive(Clone)]
 pub struct AuthInterceptor {
     /// Key pair to use for authentication.
-    ///
-    /// Ideally this would just be a reference instead of an actual value, but
-    /// [`tonic::Interceptor::new`] requires a `'static` lifetime, so it would need to be cloned
-    /// anyway in order to be used.
     key_pair: KeyPair,
 }
 
@@ -38,7 +34,7 @@ impl AuthInterceptor {
 }
 
 impl Interceptor for AuthInterceptor {
-    fn process(&self, request: Request<()>) -> Result<Request<()>, Status> {
+    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
         let mut request = request;
 
         let signature =
@@ -66,11 +62,5 @@ impl Interceptor for AuthInterceptor {
             MetadataValue::from_bytes(&signed_challenge_bytes),
         );
         Ok(request)
-    }
-}
-
-impl From<AuthInterceptor> for tonic::Interceptor {
-    fn from(interceptor: AuthInterceptor) -> Self {
-        tonic::Interceptor::new(move |request: Request<()>| interceptor.process(request))
     }
 }

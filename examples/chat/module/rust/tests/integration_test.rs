@@ -17,8 +17,12 @@
 use assert_matches::assert_matches;
 use chat_grpc::proto::{chat_client::ChatClient, Message, SendMessageRequest, SubscribeRequest};
 use log::info;
+use oak_client::interceptors::{
+    auth::AuthInterceptor, label::LabelInterceptor, CombinedInterceptor,
+};
 use serial_test::serial;
 use std::time::Duration;
+use tonic::{service::interceptor::InterceptedService, transport::Channel};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[serial]
@@ -126,7 +130,9 @@ async fn test_chat() {
 }
 
 struct Chatter {
-    pub client: ChatClient<tonic::transport::Channel>,
+    pub client: ChatClient<
+        InterceptedService<Channel, CombinedInterceptor<LabelInterceptor, AuthInterceptor>>,
+    >,
     pub user_handle: String,
 }
 

@@ -23,11 +23,13 @@ use oak_abi::{
     label::{confidentiality_label, web_assembly_module_tag},
     proto::oak::application::ConfigMap,
 };
+use oak_client::interceptors::label::LabelInterceptor;
 use oak_sign::get_sha256;
 use std::{
     collections::HashMap,
     convert::{From, TryFrom},
 };
+use tonic::{service::interceptor::InterceptedService, transport::Channel};
 
 const WASM_MODULE_MANIFEST: &str = "../../module/rust/Cargo.toml";
 const MODULE_NAME: &str = "app";
@@ -35,7 +37,7 @@ const ENTRYPOINT_NAME: &str = "oak_main";
 const BACKEND_SERVER_URI: &str = "localhost:8888";
 
 async fn submit_sample(
-    client: &mut AggregatorClient<tonic::transport::Channel>,
+    client: &mut AggregatorClient<InterceptedService<Channel, LabelInterceptor>>,
     bucket: &str,
     indices: Vec<u32>,
     values: Vec<f32>,

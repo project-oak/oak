@@ -14,13 +14,13 @@
 // limitations under the License.
 //
 
-use super::Interceptor;
 use anyhow::Context;
 use oak_abi::label::Label;
 use prost::Message;
-use tonic::{metadata::MetadataValue, Request, Status};
+use tonic::{metadata::MetadataValue, service::interceptor::Interceptor, Request, Status};
 
 /// Intercepts gRPC requests and adds the same `label` as a gRPC metadata.
+#[derive(Clone)]
 pub struct LabelInterceptor {
     /// Label that is being added to all gRPC requests.
     ///
@@ -42,18 +42,12 @@ impl LabelInterceptor {
 }
 
 impl Interceptor for LabelInterceptor {
-    fn process(&self, request: Request<()>) -> Result<Request<()>, Status> {
+    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
         let mut request = request;
         request.metadata_mut().insert_bin(
             oak_abi::OAK_LABEL_GRPC_METADATA_KEY,
             MetadataValue::from_bytes(self.label.as_ref()),
         );
         Ok(request)
-    }
-}
-
-impl From<LabelInterceptor> for tonic::Interceptor {
-    fn from(interceptor: LabelInterceptor) -> Self {
-        tonic::Interceptor::new(move |request: Request<()>| interceptor.process(request))
     }
 }

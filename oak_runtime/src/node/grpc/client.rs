@@ -416,6 +416,5 @@ fn tonic_code_to_grpc(code: tonic::Code) -> rpc::Code {
         tonic::Code::Unavailable => rpc::Code::Unavailable,
         tonic::Code::DataLoss => rpc::Code::DataLoss,
         tonic::Code::Unauthenticated => rpc::Code::Unauthenticated,
-        _ => rpc::Code::Unknown,
     }
 }
