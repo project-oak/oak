@@ -41,7 +41,7 @@ Integer types that refer to:
 - sizes of regions in linear memory
 
 are written as the `usize` type, which is an alias for the `u32` type in the
-current WebAsssembly implementation(s). However, in any future
+current WebAssembly implementation(s). However, in any future
 [64-bit](https://github.com/WebAssembly/design/blob/master/FutureFeatures.md#linear-memory-bigger-than-4-gib)
 version of WebAssembly this `usize` type would instead be an alias for the `u64`
 type.
