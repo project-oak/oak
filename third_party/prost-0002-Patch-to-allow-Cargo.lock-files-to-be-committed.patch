@@ -1,18 +1,18 @@
-From f46f3f81d610d80d90141e74f1c386f40da0afbc Mon Sep 17 00:00:00 2001
+From a22d6c33caaa2cd9ba2c6a3c3401ebb02370b71d Mon Sep 17 00:00:00 2001
 From: Conrad Grobler <grobler@google.com>
-Date: Thu, 22 Apr 2021 11:27:17 +0100
+Date: Fri, 8 Oct 2021 12:49:53 +0000
 Subject: [PATCH] Patch prost to allow Cargo.lock files to be committed
 
 ---
- .gitignore | 1 -
+ third_party/prost/.gitignore | 1 -
  1 file changed, 1 deletion(-)
 
-diff --git a/.gitignore b/.gitignore
-index a9d37c5..eb5a316 100644
---- a/.gitignore
-+++ b/.gitignore
+diff --git a/third_party/prost/.gitignore b/third_party/prost/.gitignore
+index a9d37c56..eb5a316c 100644
+--- a/third_party/prost/.gitignore
++++ b/third_party/prost/.gitignore
 @@ -1,2 +1 @@
  target
 -Cargo.lock
---
-2.31.1
+-- 
+2.33.0.685.g46640cef36-goog
