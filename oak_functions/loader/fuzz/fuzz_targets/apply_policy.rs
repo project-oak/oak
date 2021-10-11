@@ -20,14 +20,13 @@ use libfuzzer_sys::{
     arbitrary::{Arbitrary, Result, Unstructured},
     fuzz_target,
 };
-use oak_functions_abi::proto::{Response, StatusCode};
-use oak_functions_loader::server::{apply_policy, Policy};
-use std::convert::TryInto;
+use oak_functions_abi::proto::{Response, StatusCode, ValidatedPolicy};
+use oak_functions_loader::server::apply_policy;
 
 #[derive(Debug)]
 struct ResponseAndValidPolicy {
     response: Response,
-    policy: Policy,
+    policy: ValidatedPolicy,
 }
 
 impl Arbitrary<'_> for ResponseAndValidPolicy {
@@ -43,9 +42,9 @@ impl Arbitrary<'_> for ResponseAndValidPolicy {
         };
 
         // Instantiate a random valid policy.
-        let policy = Policy {
+        let policy = ValidatedPolicy {
             constant_response_size_bytes: raw.int_in_range(50..=5000)?,
-            constant_processing_time: std::time::Duration::from_millis(10),
+            constant_processing_time_ms: 10,
         };
 
         Ok(ResponseAndValidPolicy { response, policy })
@@ -60,10 +59,10 @@ lazy_static::lazy_static! {
 
 fuzz_target!(|data: ResponseAndValidPolicy| {
     let constant_response_size_bytes = data.policy.constant_response_size_bytes;
-    let policy = data.policy.try_into().unwrap();
+    let policy = data.policy.clone();
     let function = async move || Ok(data.response);
     let response = RUNTIME.block_on(apply_policy(policy, function)).unwrap();
 
     // Check the response size
-    assert_eq!(response.body.len(), constant_response_size_bytes)
+    assert_eq!(response.body.len(), constant_response_size_bytes as usize)
 });

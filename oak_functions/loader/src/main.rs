@@ -184,7 +184,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
         .with_context(|| format!("Couldn't read Wasm file {}", &opt.wasm_path))?;
 
     // Make sure that a policy is specified and is valid.
-    config
+    let policy = config
         .policy
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("a valid policy must be provided"))
@@ -202,7 +202,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             &address,
             wasm_handler,
             tee_certificate,
-            config.policy.unwrap(),
+            policy.clone(),
             async { notify_receiver.await.unwrap() },
             logger,
         )

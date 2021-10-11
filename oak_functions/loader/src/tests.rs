@@ -17,16 +17,15 @@
 extern crate test;
 
 use maplit::hashmap;
-use oak_functions_abi::proto::{Request, Response, StatusCode};
+use oak_functions_abi::proto::{Request, Response, StatusCode, ValidatedPolicy};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
-    server::{apply_policy, format_bytes, Policy, WasmHandler},
+    server::{apply_policy, format_bytes, WasmHandler},
 };
 use prost::Message;
 use std::{
-    convert::TryInto,
     io::{Seek, Write},
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
@@ -42,9 +41,9 @@ async fn test_valid_policy() {
     // Policy values are large enough to allow successful serving of the request, and responding
     // with the actual response from the Wasm module.
     let constant_processing_time = Duration::from_millis(200);
-    let policy = Policy {
+    let policy = ValidatedPolicy {
         constant_response_size_bytes: 100,
-        constant_processing_time,
+        constant_processing_time_ms: constant_processing_time.as_millis() as u32,
     };
 
     let scenario = |server_port: u16| async move {
@@ -74,9 +73,9 @@ async fn test_valid_policy() {
 async fn test_long_response_time() {
     // The `constant_processing_time` is too low.
     let constant_processing_time = Duration::from_millis(10);
-    let policy = Policy {
+    let policy = ValidatedPolicy {
         constant_response_size_bytes: 100,
-        constant_processing_time,
+        constant_processing_time_ms: constant_processing_time.as_millis() as u32,
     };
 
     // So we expect the request to fail, with `response not available error`.
@@ -106,7 +105,7 @@ async fn test_long_response_time() {
 /// A normal test scenario makes any number of requests and checks the responses. It has to be an
 /// async function, with a single `u16` input argument as the `server_port`, and returning the unit
 /// type (`()`).
-async fn run_scenario_with_policy<F, S>(test_scenario: F, policy: Policy)
+async fn run_scenario_with_policy<F, S>(test_scenario: F, policy: ValidatedPolicy)
 where
     F: FnOnce(u16) -> S,
     S: std::future::Future<Output = ()>,
@@ -463,34 +462,40 @@ async fn lookup_data_refresh_no_lookup_source() {
 #[tokio::test]
 async fn test_apply_policy() {
     // A valid constant response body size
-    let size = 50;
+    let size: usize = 50;
 
     // A valid policy
-    let policy = Policy {
-        constant_response_size_bytes: size,
-        constant_processing_time: Duration::from_millis(10),
+    let policy = ValidatedPolicy {
+        constant_response_size_bytes: size as u32,
+        constant_processing_time_ms: 10,
     };
 
     {
         // Wasm response with small enough body is serialized with padding, and no other change
         let small_success_response = Response::create(StatusCode::Success, vec![b'x'; size]);
         let function = async move || Ok(small_success_response);
-        let res = apply_policy(policy.try_into().unwrap(), function).await;
+        let res = apply_policy(policy.clone(), function).await;
         assert!(res.is_ok());
         let response = res.unwrap();
         assert_eq!(response.status, StatusCode::Success as i32);
-        assert_eq!(response.body.len(), policy.constant_response_size_bytes);
+        assert_eq!(
+            response.body.len(),
+            policy.constant_response_size_bytes as usize
+        );
     }
 
     {
         // Success Wasm response with a large body is discarded, and replaced with an error response
         let large_success_response = Response::create(StatusCode::Success, vec![b'x'; size + 1]);
         let function = async move || Ok(large_success_response);
-        let res = apply_policy(policy.try_into().unwrap(), function).await;
+        let res = apply_policy(policy.clone(), function).await;
         assert!(res.is_ok());
         let response = res.unwrap();
         assert_eq!(response.status, StatusCode::PolicySizeViolation as i32);
-        assert_eq!(response.body.len(), policy.constant_response_size_bytes);
+        assert_eq!(
+            response.body.len(),
+            policy.constant_response_size_bytes as usize
+        );
     }
 }
 

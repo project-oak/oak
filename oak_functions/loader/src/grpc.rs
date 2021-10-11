@@ -21,21 +21,22 @@ use crate::{
     logger::Logger,
     lookup::LookupData,
     proto::streaming_session_server::StreamingSessionServer,
-    server::{apply_policy, BoxedExtensionFactory, Policy, WasmHandler},
+    server::{apply_policy, BoxedExtensionFactory, WasmHandler},
 };
 use anyhow::Context;
 use log::Level;
 use oak_functions_abi::proto::Request;
+use oak_functions_abi::proto::ValidatedPolicy;
 use prost::Message;
-use std::{convert::TryInto, future::Future, net::SocketAddr, sync::Arc};
+use std::{future::Future, net::SocketAddr, sync::Arc};
 
 async fn handle_request(
     wasm_handler: WasmHandler,
-    policy: Policy,
+    policy: ValidatedPolicy,
     request: Request,
 ) -> anyhow::Result<Vec<u8>> {
     let function = async move || wasm_handler.clone().handle_invoke(request).await;
-    let policy = policy.try_into().context("invalid policy")?;
+    let policy = policy.clone();
     let response = apply_policy(policy, function)
         .await
         .context("internal error")?;
@@ -66,7 +67,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     wasm_handler: WasmHandler,
     tee_certificate: Vec<u8>,
-    policy: Policy,
+    policy: ValidatedPolicy,
     terminate: F,
     logger: Logger,
 ) -> anyhow::Result<()> {
@@ -79,7 +80,8 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
         ),
     );
 
-    let request_handler = async move |request| handle_request(wasm_handler, policy, request).await;
+    let request_handler =
+        async move |request| handle_request(wasm_handler, policy.clone(), request).await;
 
     // A `Service` is needed for every connection. Here we create a service using the
     // `wasm_handler`.

@@ -19,9 +19,9 @@ use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
-use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode};
+use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode, ValidatedPolicy};
 use serde::Deserialize;
-use std::{collections::HashMap, convert::TryFrom, str, sync::Arc, time::Duration};
+use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
 use wasmi::ValueType;
 
 const MAIN_FUNCTION_NAME: &str = "main";
@@ -45,62 +45,34 @@ pub const ABI_USIZE: ValueType = ValueType::I32;
 
 /// Minimum size of constant response bytes. It is large enough to fit an error response, in case
 /// the policy is violated.
-const MIN_RESPONSE_SIZE: usize = 50;
+const MIN_RESPONSE_SIZE: u32 = 50;
 
-/// A policy describing limits on the size of the response and response processing time to avoid
-/// side-channel leaks.
+/// Similar to [`ValidatedPolicy`], but it is used for reading the policy provided in the config,
+/// and is therefore not guaranteed to be valid.
 #[derive(Deserialize, Debug, Clone, Copy)]
 #[serde(deny_unknown_fields)]
 pub struct Policy {
-    /// A fixed size for responses returned by the trusted runtime.
-    ///
-    /// This size only applies to the body of the Oak Functions response. If the response body
-    /// computed by the Wasm module is smaller than this amount, it is padded with additional
-    /// data before serialization and inclusion in the HTTP response to the client. If the body is
-    /// larger than this amount, the trusted runtime discards the response and instead uses a
-    /// response with a body of exactly this size, containing an error message indicating the
-    /// policy violation. The body included in the HTTP response sent to the client is the binary
-    /// protobuf encoding of the Oak Functions response, and will have a size larger than
-    /// `constant_response_size_bytes`. However, this size is still guaranteed to be a constant.
-    pub constant_response_size_bytes: usize,
-    /// A fixed response time.
-    ///
-    /// Similar to the previous one, but controls the amount of time the function is allowed to run
-    /// for. If the function finishes before this time, the response is not sent back until the
-    /// time is elapsed. If the function does not finish within this deadline, the trusted runtime
-    /// sends a response to the client containing an error message indicating the failure. The size
-    /// of this response is equal to the size specified by the previous parameter.
+    /// See [`Policy::constant_response_size_bytes`]
+    pub constant_response_size_bytes: u32,
+    /// A fixed response time. See [`ValidatedPolicy::constant_processing_time_ms`].
     #[serde(with = "humantime_serde")]
     pub constant_processing_time: Duration,
 }
 
 impl Policy {
-    pub fn validate(&self) -> anyhow::Result<()> {
+    pub fn validate(&self) -> anyhow::Result<ValidatedPolicy> {
         anyhow::ensure!(
             self.constant_response_size_bytes >= MIN_RESPONSE_SIZE,
             "Response size is too small",
         );
-        Ok(())
-    }
-}
 
-/// Similar to [`Policy`], but it is guaranteed to be valid. An instance of this can only be created
-/// from a valid [`Policy`] by calling `try_into` on it.
-pub struct ValidatedPolicy {
-    /// See [`Policy::constant_response_size_bytes`]
-    constant_response_size_bytes: usize,
-    /// See [`Policy::constant_processing_time`]
-    constant_processing_time: Duration,
-}
-
-impl TryFrom<Policy> for ValidatedPolicy {
-    type Error = anyhow::Error;
-
-    fn try_from(policy: Policy) -> anyhow::Result<Self> {
-        policy.validate()?;
         Ok(ValidatedPolicy {
-            constant_response_size_bytes: policy.constant_response_size_bytes,
-            constant_processing_time: policy.constant_processing_time,
+            constant_response_size_bytes: self.constant_response_size_bytes,
+            constant_processing_time_ms: self
+                .constant_processing_time
+                .as_millis()
+                .try_into()
+                .context("could not convert milliseconds to u32")?,
         })
     }
 }
@@ -556,7 +528,10 @@ where
     // of time.
     let task = tokio::spawn(async move { function().await });
     // Sleep until the policy times out
-    tokio::time::sleep(policy.constant_processing_time).await;
+    tokio::time::sleep(Duration::from_millis(
+        policy.constant_processing_time_ms.into(),
+    ))
+    .await;
 
     let function_response = task.now_or_never();
 
@@ -584,7 +559,7 @@ where
     };
 
     // Return an error response if the body of the response is larger than allowed by the policy.
-    let response = if response.body.len() > policy.constant_response_size_bytes {
+    let response = if response.body.len() > policy.constant_response_size_bytes as usize {
         Response::create(
             StatusCode::PolicySizeViolation,
             "Reason: the response is too large.".as_bytes().to_vec(),
@@ -592,7 +567,12 @@ where
     } else {
         response
     };
-    response.pad(policy.constant_response_size_bytes)
+    response.pad(
+        policy
+            .constant_response_size_bytes
+            .try_into()
+            .context("could not convert u64 to usize")?,
+    )
 }
 
 // An ephemeral request handler with a Wasm module for handling the requests.

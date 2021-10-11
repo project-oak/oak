@@ -14,17 +14,15 @@
 // limitations under the License.
 
 use maplit::hashmap;
-use oak_functions_abi::proto::StatusCode;
+use oak_functions_abi::proto::{StatusCode, ValidatedPolicy};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{LookupData, LookupDataAuth, LookupDataSource},
-    server::Policy,
 };
 use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
-    time::Duration,
 };
 use test_utils::make_request;
 
@@ -68,9 +66,9 @@ async fn test_server() {
     ));
     lookup_data.refresh().await.unwrap();
 
-    let policy = Policy {
+    let policy = ValidatedPolicy {
         constant_response_size_bytes: 100,
-        constant_processing_time: Duration::from_millis(200),
+        constant_processing_time_ms: 200,
     };
     let tee_certificate = vec![];
     let wasm_handler = create_wasm_handler(&wasm_module_bytes, lookup_data, vec![], logger.clone())
