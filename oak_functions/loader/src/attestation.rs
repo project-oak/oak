@@ -21,7 +21,9 @@ use crate::{
 use anyhow::Context;
 use futures::{Stream, StreamExt};
 use log::Level;
+use oak_functions_abi::proto::ConfigurationInfo;
 use oak_remote_attestation::handshaker::{AttestationBehavior, Encryptor, ServerHandshaker};
+use prost::Message;
 use std::pin::Pin;
 use tonic::{Request, Response, Status, Streaming};
 
@@ -104,6 +106,8 @@ pub struct AttestationServer<F> {
     tee_certificate: Vec<u8>,
     /// Processes data from client requests and creates responses.
     request_handler: F,
+    /// Configuration information to provide to the client for the attestation step.
+    config_info: ConfigurationInfo,
     /// Logger that is required for logging attestation protocol errors.
     /// Errors are only logged on server side and are not sent to clients.
     logger: Logger,
@@ -117,11 +121,13 @@ where
     pub fn create(
         tee_certificate: Vec<u8>,
         request_handler: F,
+        config_info: ConfigurationInfo,
         logger: Logger,
     ) -> anyhow::Result<Self> {
         Ok(Self {
             tee_certificate,
             request_handler,
+            config_info,
             logger,
         })
     }
@@ -145,6 +151,16 @@ where
         let logger = self.logger.clone();
 
         let request_stream = request_stream.into_inner();
+        let mut additional_info = vec![];
+        self.config_info
+            .encode(&mut additional_info)
+            .map_err(|error| {
+                log_error(
+                    &logger,
+                    &format!("Couldn't decode configuration info: {:?}", error),
+                );
+                Status::aborted("")
+            })?;
         let response_stream = async_stream::try_stream! {
             let mut receiver = Receiver { request_stream };
 
@@ -158,6 +174,7 @@ where
                         );
                         Status::internal("")
                     })?,
+                    additional_info,
             );
             while !handshaker.is_completed() {
                 let incoming_message = receiver

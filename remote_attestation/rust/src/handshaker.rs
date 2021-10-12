@@ -322,18 +322,18 @@ pub struct ServerHandshaker {
     transcript: Transcript,
     /// Additional info about the server, including configuration information and proof of
     /// inclusion in a verifiable log.
-    additional_info: Option<Vec<u8>>,
+    additional_info: Vec<u8>,
 }
 
 impl ServerHandshaker {
     /// Creates [`ServerHandshaker`] with [`HandshakerState::ExpectingClientIdentity`]
     /// state.
-    pub fn new(behavior: AttestationBehavior) -> Self {
+    pub fn new(behavior: AttestationBehavior, additional_info: Vec<u8>) -> Self {
         Self {
             behavior,
             state: ServerHandshakerState::ExpectingClientHello,
             transcript: Transcript::new(),
-            additional_info: None, // TODO: add additional info
+            additional_info,
         }
     }
 
@@ -439,11 +439,7 @@ impl ServerHandshaker {
                 .as_ref()
                 .context("Couldn't get TEE certificate")?;
 
-            let additional_info = match self.additional_info {
-                Some(ref additional_info) => additional_info.clone(),
-                None => vec![],
-            };
-
+            let additional_info = self.additional_info.clone();
             let attestation_info =
                 create_attestation_info(signer, additional_info.as_ref(), tee_certificate)
                     .context("Couldn't get attestation info")?;

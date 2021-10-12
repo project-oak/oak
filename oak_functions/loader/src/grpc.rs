@@ -25,8 +25,7 @@ use crate::{
 };
 use anyhow::Context;
 use log::Level;
-use oak_functions_abi::proto::Request;
-use oak_functions_abi::proto::ValidatedPolicy;
+use oak_functions_abi::proto::{ConfigurationInfo, Request, ValidatedPolicy};
 use prost::Message;
 use std::{future::Future, net::SocketAddr, sync::Arc};
 
@@ -68,6 +67,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     wasm_handler: WasmHandler,
     tee_certificate: Vec<u8>,
     policy: ValidatedPolicy,
+    config_info: ConfigurationInfo,
     terminate: F,
     logger: Logger,
 ) -> anyhow::Result<()> {
@@ -87,7 +87,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     // `wasm_handler`.
     tonic::transport::Server::builder()
         .add_service(StreamingSessionServer::new(
-            AttestationServer::create(tee_certificate, request_handler, logger)
+            AttestationServer::create(tee_certificate, request_handler, config_info, logger)
                 .context("Couldn't create remote attestation server")?,
         ))
         .serve_with_shutdown(*address, terminate)

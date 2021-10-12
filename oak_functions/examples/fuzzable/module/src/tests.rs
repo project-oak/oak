@@ -30,7 +30,7 @@ use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
 };
-use test_utils::make_request;
+use test_utils::{get_config_info, make_request};
 
 #[tokio::test]
 async fn test_server() {
@@ -67,7 +67,8 @@ async fn test_server() {
             &address,
             wasm_handler,
             tee_certificate,
-            policy,
+            policy.clone(),
+            get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
         )

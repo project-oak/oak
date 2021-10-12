@@ -42,6 +42,19 @@ message Inference {
   repeated float inference_vec = 2;
 }
 
+// Configuration information that should be provided to the client.
+message ConfigurationInfo {
+  // Hash of the loaded Wasm module.
+  bytes wasm_hash = 1;
+  // The validated server-side policy.
+  ValidatedPolicy policy = 2;
+  // Whether machine learning inference using a TensorFlow model is enabled.
+  bool ml_inference = 3;
+  // Server-side configuration for differentially private metrics. This field is optional. If not
+  // provided, differentially private metrics are not enabled on the server.
+  PrivateMetricsConfig metrics = 4;
+}
+
 /// Server-side policy describing limits on the size of the response and response processing time to
 /// avoid side-channel leaks.
 message ValidatedPolicy {
@@ -64,4 +77,12 @@ message ValidatedPolicy {
   // sends a response to the client containing an error message indicating the failure. The size
   // of this response is equal to the size specified by the previous parameter.
   uint32 constant_processing_time_ms = 2;
+}
+
+// Configuration for differentially private metrics.
+message PrivateMetricsConfig {
+  // The privacy budget.
+  double epsilon = 1;
+  // The number of requests that will be aggregated into each batch.
+  uint32 batch_size = 2;
 }

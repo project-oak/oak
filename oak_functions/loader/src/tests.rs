@@ -32,7 +32,7 @@ use std::{
     time::Duration,
 };
 use test::Bencher;
-use test_utils::make_request;
+use test_utils::{get_config_info, make_request};
 
 const MANIFEST_PATH: &str = "examples/key_value_lookup/module/Cargo.toml";
 
@@ -155,7 +155,8 @@ where
             &address,
             wasm_handler,
             tee_certificate,
-            policy,
+            policy.clone(),
+            get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
         )

@@ -20,12 +20,14 @@
 
 use anyhow::Context;
 use log::Level;
+use oak_functions_abi::proto::{ConfigurationInfo, ValidatedPolicy};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{LookupData, LookupDataAuth, LookupDataSource},
     server::Policy,
 };
+use oak_remote_attestation::crypto::get_sha256;
 
 #[cfg(feature = "oak-tf")]
 use oak_functions_loader::tf::{TensorFlowFactory, TensorFlowModelConfig};
@@ -196,6 +198,8 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
     let wasm_handler =
         create_wasm_handler(&wasm_module_bytes, lookup_data, extensions, logger.clone())?;
 
+    let config_info = get_config_info(&wasm_module_bytes, policy.clone(), &config)?;
+
     // Start server.
     let server_handle = tokio::spawn(async move {
         create_and_start_grpc_server(
@@ -203,6 +207,7 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
             wasm_handler,
             tee_certificate,
             policy.clone(),
+            config_info,
             async { notify_receiver.await.unwrap() },
             logger,
         )
@@ -319,4 +324,40 @@ async fn create_metrics_proxy_factory(
         }
         None => Ok(None),
     }
+}
+
+#[allow(unused_variables)]
+fn get_config_info(
+    wasm_module_bytes: &[u8],
+    policy: ValidatedPolicy,
+    config: &Config,
+) -> anyhow::Result<ConfigurationInfo> {
+    #[cfg(feature = "oak-metrics")]
+    let metrics = match &config.metrics {
+        Some(ref metrics_config) => {
+            use std::convert::TryInto;
+            Some(oak_functions_abi::proto::PrivateMetricsConfig {
+                epsilon: metrics_config.epsilon,
+                batch_size: metrics_config
+                    .batch_size
+                    .try_into()
+                    .context("could not convert usize to u32")?,
+            })
+        }
+        None => None,
+    };
+    #[cfg(not(feature = "oak-metrics"))]
+    let metrics = None;
+
+    #[cfg(feature = "oak-tf")]
+    let ml_inference = config.tf_model.is_some();
+    #[cfg(not(feature = "oak-tf"))]
+    let ml_inference = false;
+
+    Ok(ConfigurationInfo {
+        wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
+        policy: Some(policy),
+        ml_inference,
+        metrics,
+    })
 }
