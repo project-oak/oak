@@ -48,17 +48,6 @@
 <span id="48">48</span>
 <span id="49">49</span>
 <span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -76,7 +65,7 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">Request</span>, <span class="ident">Status</span>};
+<span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">service::interceptor::Interceptor</span>, <span class="ident">Request</span>, <span class="ident">Status</span>};
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
@@ -84,13 +73,8 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">auth</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">label</span>;
 
-<span class="doccomment">/// Trait for interceptors, to facilitate combining until</span>
-<span class="doccomment">/// https://github.com/hyperium/tonic/issues/499 offers a better solution.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Interceptor</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span>;
-}
-
 <span class="doccomment">/// This struct is created by the [`combine`] method. See its documentation for more.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CombinedInterceptor</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">Interceptor</span>, <span class="ident">B</span>: <span class="ident">Interceptor</span><span class="op">&gt;</span> {
     <span class="ident">interceptor_a</span>: <span class="ident">A</span>,
     <span class="ident">interceptor_b</span>: <span class="ident">B</span>,
@@ -110,15 +94,9 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">Interceptor</span>, <span class="ident">B</span>: <span class="ident">Interceptor</span><span class="op">&gt;</span> <span class="ident">Interceptor</span> <span class="kw">for</span> <span class="ident">CombinedInterceptor</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">interceptor_a</span>.<span class="ident">process</span>(<span class="ident">request</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">interceptor_b</span>.<span class="ident">process</span>(<span class="ident">request</span>)
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">Interceptor</span>, <span class="ident">B</span>: <span class="ident">Interceptor</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">CombinedInterceptor</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">B</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">tonic::Interceptor</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">interceptor</span>: <span class="ident">CombinedInterceptor</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">B</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">tonic::Interceptor::new</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">|</span> <span class="ident">interceptor</span>.<span class="ident">process</span>(<span class="ident">request</span>))
+    <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">interceptor_a</span>.<span class="ident">call</span>(<span class="ident">request</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">interceptor_b</span>.<span class="ident">call</span>(<span class="ident">request</span>)
     }
 }
 </pre></div>

@@ -51,12 +51,6 @@
 <span id="51">51</span>
 <span id="52">52</span>
 <span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -74,13 +68,13 @@
 <span class="comment">// limitations under the License.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Interceptor</span>;
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">oak_abi::label::Label</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
-<span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">metadata::MetadataValue</span>, <span class="ident">Request</span>, <span class="ident">Status</span>};
+<span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">metadata::MetadataValue</span>, <span class="ident">service::interceptor::Interceptor</span>, <span class="ident">Request</span>, <span class="ident">Status</span>};
 
 <span class="doccomment">/// Intercepts gRPC requests and adds the same `label` as a gRPC metadata.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LabelInterceptor</span> {
     <span class="doccomment">/// Label that is being added to all gRPC requests.</span>
     <span class="doccomment">///</span>
@@ -102,19 +96,13 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Interceptor</span> <span class="kw">for</span> <span class="ident">LabelInterceptor</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">request</span>;
         <span class="ident">request</span>.<span class="ident">metadata_mut</span>().<span class="ident">insert_bin</span>(
             <span class="ident">oak_abi::OAK_LABEL_GRPC_METADATA_KEY</span>,
             <span class="ident">MetadataValue::from_bytes</span>(<span class="self">self</span>.<span class="ident">label</span>.<span class="ident">as_ref</span>()),
         );
         <span class="prelude-val">Ok</span>(<span class="ident">request</span>)
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">LabelInterceptor</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">tonic::Interceptor</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">interceptor</span>: <span class="ident">LabelInterceptor</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">tonic::Interceptor::new</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">|</span> <span class="ident">interceptor</span>.<span class="ident">process</span>(<span class="ident">request</span>))
     }
 }
 </pre></div>

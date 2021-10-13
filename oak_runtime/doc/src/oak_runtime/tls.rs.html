@@ -142,7 +142,7 @@
 
         <span class="comment">// `rustls` doesn&#39;t specify certificate parsing errors:</span>
         <span class="comment">// https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html</span>
-        <span class="ident">rustls::internal::pemfile::certs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span>()<span class="op">|</span> {
+        <span class="ident">certs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span>()<span class="op">|</span> {
             <span class="ident">anyhow::Error::msg</span>(<span class="string">&quot;The certificate is not a valid PEM formatted certificate&quot;</span>)
         })<span class="question-mark">?</span>;
 
