@@ -36,7 +36,7 @@ use proxy_attestation_client::proto::{
     example_application_client::ExampleApplicationClient, GetExampleMessageRequest,
 };
 use structopt::StructOpt;
-use tonic::{transport::Channel, Request};
+use tonic::{service::interceptor::InterceptedService, transport::Channel, Request};
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Proxy Attestation Client")]
@@ -83,7 +83,7 @@ async fn create_application_client(
     uri: &Uri,
     root_tls_certificate: &[u8],
     tee_measurement: &[u8],
-) -> anyhow::Result<ExampleApplicationClient<Channel>> {
+) -> anyhow::Result<ExampleApplicationClient<InterceptedService<Channel, LabelInterceptor>>> {
     info!("Connecting to Oak application: {:?}", uri);
     let channel = create_attested_grpc_channel(uri, root_tls_certificate, tee_measurement)
         .await

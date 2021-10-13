@@ -20,9 +20,11 @@ use assert_matches::assert_matches;
 use log::{debug, error, info};
 use maplit::hashmap;
 use oak_abi::proto::oak::application::ConfigMap;
+use oak_client::interceptors::label::LabelInterceptor;
 use serial_test::serial;
 use std::{collections::HashMap, sync::Arc};
 use tokio::time::{sleep, Duration};
+use tonic::{service::interceptor::InterceptedService, transport::Channel};
 
 // Constants for Node config names that should match those in the textproto
 // config held in ../../../config.
@@ -45,7 +47,7 @@ fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
 
 async fn setup() -> (
     Arc<oak_runtime::Runtime>,
-    OakAbiTestServiceClient<tonic::transport::Channel>,
+    OakAbiTestServiceClient<InterceptedService<Channel, LabelInterceptor>>,
 ) {
     let _ = env_logger::builder().is_test(true).try_init();
     let permissions = oak_runtime::permissions::PermissionsConfiguration {

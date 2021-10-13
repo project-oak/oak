@@ -38,7 +38,7 @@ impl Certificate {
 
         // `rustls` doesn't specify certificate parsing errors:
         // https://docs.rs/rustls/0.17.0/rustls/internal/pemfile/fn.certs.html
-        rustls::internal::pemfile::certs(&mut cursor).map_err(|()| {
+        certs(&mut cursor).map_err(|()| {
             anyhow::Error::msg("The certificate is not a valid PEM formatted certificate")
         })?;
 

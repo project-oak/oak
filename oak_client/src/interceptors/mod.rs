@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use tonic::{Request, Status};
+use tonic::{service::interceptor::Interceptor, Request, Status};
 
 #[cfg(test)]
 mod tests;
@@ -22,13 +22,8 @@ mod tests;
 pub mod auth;
 pub mod label;
 
-/// Trait for interceptors, to facilitate combining until
-/// https://github.com/hyperium/tonic/issues/499 offers a better solution.
-pub trait Interceptor: Send + Sync + 'static {
-    fn process(&self, request: Request<()>) -> Result<Request<()>, Status>;
-}
-
 /// This struct is created by the [`combine`] method. See its documentation for more.
+#[derive(Clone)]
 pub struct CombinedInterceptor<A: Interceptor, B: Interceptor> {
     interceptor_a: A,
     interceptor_b: B,
@@ -48,14 +43,8 @@ pub fn combine<A: Interceptor, B: Interceptor>(
 }
 
 impl<A: Interceptor, B: Interceptor> Interceptor for CombinedInterceptor<A, B> {
-    fn process(&self, request: Request<()>) -> Result<Request<()>, Status> {
-        let request = self.interceptor_a.process(request)?;
-        self.interceptor_b.process(request)
-    }
-}
-
-impl<A: Interceptor, B: Interceptor> From<CombinedInterceptor<A, B>> for tonic::Interceptor {
-    fn from(interceptor: CombinedInterceptor<A, B>) -> Self {
-        tonic::Interceptor::new(move |request: Request<()>| interceptor.process(request))
+    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
+        let request = self.interceptor_a.call(request)?;
+        self.interceptor_b.call(request)
     }
 }

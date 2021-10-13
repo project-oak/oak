@@ -23,7 +23,7 @@ use maplit::hashset;
 use oak_abi::label::{confidentiality_label, web_assembly_module_signature_tag};
 use oak_client::{
     create_tls_channel,
-    interceptors::{auth::AuthInterceptor, label::LabelInterceptor},
+    interceptors::{auth::AuthInterceptor, label::LabelInterceptor, CombinedInterceptor},
 };
 use private_set_intersection_client::proto::{
     private_set_intersection_client::PrivateSetIntersectionClient, GetIntersectionRequest,
@@ -31,7 +31,7 @@ use private_set_intersection_client::proto::{
 };
 use std::collections::HashSet;
 use structopt::StructOpt;
-use tonic::{transport::Channel, Request};
+use tonic::{service::interceptor::InterceptedService, transport::Channel, Request};
 
 #[derive(StructOpt, Clone)]
 #[structopt(about = "Private Set Intersection Client")]
@@ -58,7 +58,11 @@ async fn create_client(
     uri: &Uri,
     root_tls_certificate: &[u8],
     public_key: &[u8],
-) -> anyhow::Result<PrivateSetIntersectionClient<Channel>> {
+) -> anyhow::Result<
+    PrivateSetIntersectionClient<
+        InterceptedService<Channel, CombinedInterceptor<AuthInterceptor, LabelInterceptor>>,
+    >,
+> {
     info!("Connecting to Oak Application: {:?}", uri);
     let channel = create_tls_channel(uri, root_tls_certificate)
         .await

@@ -18,7 +18,9 @@ use anyhow::Context;
 use assert_matches::assert_matches;
 use maplit::hashmap;
 use oak_abi::proto::oak::application::ConfigMap;
+use oak_client::interceptors::label::LabelInterceptor;
 use std::collections::HashMap;
+use tonic::{service::interceptor::InterceptedService, transport::Channel};
 use trusted_database_client::proto::{
     trusted_database_client::TrustedDatabaseClient, ListPointsOfInterestRequest,
     ListPointsOfInterestResponse, Location, PointOfInterest,
@@ -98,7 +100,7 @@ fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
 }
 
 async fn list_points_of_interest(
-    client: &mut TrustedDatabaseClient<tonic::transport::Channel>,
+    client: &mut TrustedDatabaseClient<InterceptedService<Channel, LabelInterceptor>>,
     latitude: f32,
     longitude: f32,
 ) -> Result<tonic::Response<ListPointsOfInterestResponse>, tonic::Status> {

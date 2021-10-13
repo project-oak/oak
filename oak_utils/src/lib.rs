@@ -349,18 +349,12 @@ where
         // We require identity-related types to be serializable and deserializable to and from JSON.
         .type_attribute(
             ".oak.identity",
-            "#[derive(serde::Deserialize, serde::Serialize)]",
-        )
-        .type_attribute(".oak.identity", "#[serde(rename_all = \"camelCase\")]");
+            "#[derive(serde::Deserialize, serde::Serialize)]\n#[serde(rename_all = \"camelCase\")]",
+        );
     prost_config
         // We require label-related types to be comparable and hashable so that they can be used in
         // hash-based collections.
-        .type_attribute(".oak.label", "#[derive(Eq, Hash)]")
-        .type_attribute(
-            ".oak.label",
-            "#[derive(serde::Deserialize, serde::Serialize)]",
-        )
-        .type_attribute(".oak.label", "#[serde(rename_all = \"camelCase\")]")
+        .type_attribute(".oak.label", "#[derive(Eq, Hash, serde::Deserialize, serde::Serialize)]\n#[serde(rename_all = \"camelCase\")]")
         .compile_protos(inputs, &[repo_root])
         .expect("could not run prost-build");
 }

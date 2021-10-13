@@ -14,15 +14,15 @@
 // limitations under the License.
 //
 
-use super::Interceptor;
-use tonic::{Request, Status};
+use tonic::{service::interceptor::Interceptor, Request, Status};
 
+#[derive(Clone)]
 struct TestInterceptor {
     metadata_to_append: (&'static str, &'static str),
 }
 
 impl Interceptor for TestInterceptor {
-    fn process(&self, request: Request<()>) -> Result<Request<()>, Status> {
+    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
         let mut request = request;
         request.metadata_mut().append(
             self.metadata_to_append.0,
@@ -34,7 +34,7 @@ impl Interceptor for TestInterceptor {
 
 #[test]
 fn test_combine_different_keys() {
-    let combined = super::combine(
+    let mut combined = super::combine(
         TestInterceptor {
             metadata_to_append: ("key_0", "value_0"),
         },
@@ -43,7 +43,7 @@ fn test_combine_different_keys() {
         },
     );
     let initial = tonic::Request::new(());
-    let processed = combined.process(initial).unwrap();
+    let processed = combined.call(initial).unwrap();
     let metadata = processed.metadata();
     assert_eq!(2, metadata.len());
     assert_eq!(
@@ -58,7 +58,7 @@ fn test_combine_different_keys() {
 
 #[test]
 fn test_combine_same_key() {
-    let combined = super::combine(
+    let mut combined = super::combine(
         TestInterceptor {
             metadata_to_append: ("key", "value_0"),
         },
@@ -67,7 +67,7 @@ fn test_combine_same_key() {
         },
     );
     let initial = tonic::Request::new(());
-    let processed = combined.process(initial).unwrap();
+    let processed = combined.call(initial).unwrap();
     let metadata = processed.metadata();
     assert_eq!(2, metadata.len());
     assert_eq!(

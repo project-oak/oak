@@ -256,7 +256,7 @@ pub async fn channel_and_interceptor(label: &Label) -> (Channel, LabelIntercepto
 
 /// Build a public-untrusted channel and interceptor suitable for building a
 /// client that connects to a Runtime under test.
-pub async fn public_channel_and_interceptor() -> (Channel, impl Into<tonic::Interceptor>) {
+pub async fn public_channel_and_interceptor() -> (Channel, LabelInterceptor) {
     channel_and_interceptor(&Label::public_untrusted()).await
 }
 

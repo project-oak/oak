@@ -7,5 +7,4 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-bytes = "*"
 s2 = "*"

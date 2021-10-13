@@ -19,7 +19,9 @@ use anyhow::Context;
 use async_trait::async_trait;
 use maplit::hashmap;
 use oak_abi::proto::oak::application::ConfigMap;
+use oak_client::interceptors::label::LabelInterceptor;
 use std::collections::HashMap;
+use tonic::{service::interceptor::InterceptedService, transport::Channel};
 use trusted_database_client::proto::{
     trusted_database_client::TrustedDatabaseClient, GetPointOfInterestRequest,
 };
@@ -39,7 +41,7 @@ fn build_wasm() -> anyhow::Result<HashMap<String, Vec<u8>>> {
 
 pub struct OakApplication {
     runtime: std::sync::Arc<oak_runtime::Runtime>,
-    client: TrustedDatabaseClient<tonic::transport::channel::Channel>,
+    client: TrustedDatabaseClient<InterceptedService<Channel, LabelInterceptor>>,
 }
 
 impl OakApplication {

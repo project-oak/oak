@@ -1,21 +1,21 @@
-From 8349db8443d46ad1692e3cfb26bfd0dccb210c1c Mon Sep 17 00:00:00 2001
+From b4ac82b4318359c1baba1bcc42060e2b97844153 Mon Sep 17 00:00:00 2001
 From: Conrad Grobler <grobler@google.com>
-Date: Thu, 22 Apr 2021 11:26:39 +0100
+Date: Fri, 8 Oct 2021 12:48:48 +0000
 Subject: [PATCH] Patch prost to generate typesafe Sender and Receiver.
 
 ---
- prost-build/src/code_generator.rs | 13 +++++++++++++
- prost-types/src/protobuf.rs       |  3 +++
+ third_party/prost/prost-build/src/code_generator.rs | 13 +++++++++++++
+ third_party/prost/prost-types/src/protobuf.rs       |  3 +++
  2 files changed, 16 insertions(+)
 
-diff --git a/prost-build/src/code_generator.rs b/prost-build/src/code_generator.rs
-index ba960b0..c2a6f2e 100644
---- a/prost-build/src/code_generator.rs
-+++ b/prost-build/src/code_generator.rs
-@@ -749,7 +749,20 @@ impl<'a> CodeGenerator<'a> {
+diff --git a/third_party/prost/prost-build/src/code_generator.rs b/third_party/prost/prost-build/src/code_generator.rs
+index 156f006d..2eab2e2e 100644
+--- a/third_party/prost/prost-build/src/code_generator.rs
++++ b/third_party/prost/prost-build/src/code_generator.rs
+@@ -737,7 +737,20 @@ impl<'a> CodeGenerator<'a> {
          self.buf.push_str("}\n");
      }
-
+ 
 +    fn resolve_message_type(&self, field: &FieldDescriptorProto) -> Option<String> {
 +        let message_type = self.resolve_ident(&field.options.as_ref()?.message_type.as_ref()?);
 +        let direction = match field.type_name() {
@@ -33,10 +33,10 @@ index ba960b0..c2a6f2e 100644
          match field.r#type() {
              Type::Float => String::from("f32"),
              Type::Double => String::from("f64"),
-diff --git a/prost-types/src/protobuf.rs b/prost-types/src/protobuf.rs
-index 7530b78..2078f02 100644
---- a/prost-types/src/protobuf.rs
-+++ b/prost-types/src/protobuf.rs
+diff --git a/third_party/prost/prost-types/src/protobuf.rs b/third_party/prost/prost-types/src/protobuf.rs
+index 7530b782..2078f025 100644
+--- a/third_party/prost/prost-types/src/protobuf.rs
++++ b/third_party/prost/prost-types/src/protobuf.rs
 @@ -590,6 +590,9 @@ pub struct FieldOptions {
      /// The parser stores options it doesn't recognize here. See above.
      #[prost(message, repeated, tag="999")]
@@ -47,6 +47,5 @@ index 7530b78..2078f02 100644
  }
  /// Nested message and enum types in `FieldOptions`.
  pub mod field_options {
---
-2.31.1
-
+-- 
+2.33.0.685.g46640cef36-goog

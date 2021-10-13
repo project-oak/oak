@@ -259,6 +259,7 @@ impl DecodeContext {
 
     #[cfg(feature = "no-recursion-limit")]
     #[inline]
+    #[allow(clippy::unnecessary_wraps)] // needed in other features
     pub(crate) fn limit_reached(&self) -> Result<(), DecodeError> {
         Ok(())
     }
@@ -314,7 +315,7 @@ pub fn encode_key<B>(tag: u32, wire_type: WireType, buf: &mut B)
 where
     B: BufMut,
 {
-    debug_assert!(tag >= MIN_TAG && tag <= MAX_TAG);
+    debug_assert!((MIN_TAG..=MAX_TAG).contains(&tag));
     let key = (tag << 3) | wire_type as u32;
     encode_varint(u64::from(key), buf);
 }
@@ -990,12 +991,7 @@ pub mod bytes {
         // > last value it sees.
         //
         // [1]: https://developers.google.com/protocol-buffers/docs/encoding#optional
-
-        // NOTE: The use of BufExt::take() currently prevents zero-copy decoding
-        // for bytes fields backed by Bytes when docoding from Bytes. This could
-        // be addressed in the future by specialization.
-        // See also: https://github.com/tokio-rs/bytes/issues/374
-        value.replace_with(buf.take(len));
+        value.replace_with(buf.copy_to_bytes(len));
         Ok(())
     }
 

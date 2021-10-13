@@ -32,6 +32,7 @@ use oak_abi::label::Label;
 use oak_client::interceptors::label::LabelInterceptor;
 use tokio::sync::oneshot;
 use tonic::{
+    service::interceptor::InterceptedService,
     transport::{Channel, Server},
     Request, Response, Status,
 };
@@ -73,7 +74,7 @@ impl TrustedDatabase for TrustedDatabaseService {
 
 pub struct NativeApplication {
     notification_sender: oneshot::Sender<()>,
-    client: TrustedDatabaseClient<tonic::transport::channel::Channel>,
+    client: TrustedDatabaseClient<InterceptedService<Channel, LabelInterceptor>>,
 }
 
 impl NativeApplication {
@@ -117,7 +118,9 @@ impl NativeApplication {
             .expect("Couldn't start server");
     }
 
-    async fn create_client(port: u16) -> TrustedDatabaseClient<tonic::transport::channel::Channel> {
+    async fn create_client(
+        port: u16,
+    ) -> TrustedDatabaseClient<InterceptedService<Channel, LabelInterceptor>> {
         let address = format!("https://localhost:{}", port)
             .parse()
             .expect("Couldn't parse address");
