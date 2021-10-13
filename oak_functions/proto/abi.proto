@@ -18,6 +18,9 @@ syntax = "proto3";
 
 package oak.functions.abi;
 
+option java_multiple_files = true;
+option java_package = "oak.functions.abi";
+
 // Status values exchanged as i32 values across the Node Wasm interface.
 enum OakStatus {
   UNSPECIFIED = 0;

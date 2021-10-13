@@ -36,7 +36,7 @@ pub struct Opt {
 async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
 
-    let mut client = Client::new(&opt.uri)
+    let mut client = Client::new(&opt.uri, |_config| Ok(()))
         .await
         .context("Could not create Oak Functions client")?;
 

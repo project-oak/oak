@@ -18,6 +18,7 @@ package com.google.oak.functions.client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.common.hash.Hashing;
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.ClientHandshaker;
 import com.google.oak.remote_attestation.Message;
@@ -30,13 +31,18 @@ import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import oak.functions.abi.ConfigurationInfo;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
+import oak.remote_attestation.AttestationInfo;
+import oak.remote_attestation.AttestationReport;
 import oak.session.stream.v1.StreamingRequest;
 import oak.session.stream.v1.StreamingResponse;
 import oak.session.stream.v1.StreamingSessionGrpc;
@@ -54,6 +60,19 @@ public class AttestationClient {
   private BlockingQueue<StreamingResponse> messageQueue;
   private AeadEncryptor encryptor;
 
+  /**
+   * Interface for providing the logic for verifying ConfigurationInfo part of ServerIdentity.
+   */
+  public static interface ConfigurationVerifier {
+    boolean verify(ConfigurationInfo config) throws VerificationException;
+  }
+
+  public static class VerificationException extends Exception {
+    public VerificationException(String msg) {
+      super(msg);
+    }
+  }
+
   /** Creates an unattested AttestationClient instance. */
   public AttestationClient() {}
 
@@ -62,8 +81,9 @@ public class AttestationClient {
    *
    * @param url must contain a protocol used for the connection ("https://" or "http://")
    */
-  public void attest(String url)
-      throws GeneralSecurityException, IOException, InterruptedException {
+  public void attest(String url, ConfigurationVerifier verifier)
+      throws GeneralSecurityException, IOException, InterruptedException,
+             InvalidProtocolBufferException, VerificationException {
     // Create gRPC channel.
     URL parsedUrl = new URL(url);
     if (parsedUrl.getProtocol().equals("https")) {
@@ -73,12 +93,13 @@ public class AttestationClient {
                     .usePlaintext()
                     .build();
     }
-    attest(channel);
+    attest(channel, verifier);
   }
 
   /** Creates an attested channel over the gRPC {@code ManagedChannel}. */
-  public void attest(ManagedChannel channel)
-      throws GeneralSecurityException, IOException, InterruptedException {
+  public void attest(ManagedChannel channel, ConfigurationVerifier verifier)
+      throws GeneralSecurityException, IOException, InterruptedException,
+             InvalidProtocolBufferException, VerificationException {
     if (channel == null) {
       throw new NullPointerException("Channel must not be null.");
     }
@@ -124,6 +145,9 @@ public class AttestationClient {
     StreamingResponse serverIdentityResponse = messageQueue.take();
     byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
+    // Verify ServerIdentity, including its configuration and proof of its inclusion in Rekor.
+    verifyServerIdentity(serverIdentity, verifier);
+
     // Remotely attest the server and create:
     // - Client attestation identity containing client's ephemeral public key
     // - Encryptor used for decrypting/encrypting messages between client and server
@@ -132,6 +156,49 @@ public class AttestationClient {
         StreamingRequest.newBuilder().setBody(ByteString.copyFrom(clientIdentity)).build();
     requestObserver.onNext(clientIdentityRequest);
     encryptor = handshaker.getEncryptor();
+  }
+
+  /**
+   * Verifies server identity including its configuration.
+   *
+   *
+   * @param serializedServerIdentity The server's identity.
+   * @param verifier Function that verifies the configuration info part of the server identity.
+   * @throws VerificationException          If any of the verification steps fail
+   *                                        for server's identity.
+   * @throws InvalidProtocolBufferException
+   */
+  public void verifyServerIdentity(byte[] serializedServerIdentity, ConfigurationVerifier verifier)
+      throws IOException, InvalidProtocolBufferException, VerificationException {
+    Message.ServerIdentity serverIdentity =
+        Message.ServerIdentity.deserialize(serializedServerIdentity);
+    byte[] configBytes = serverIdentity.getAdditionalInfo();
+    ConfigurationInfo configInfo = ConfigurationInfo.parseFrom(configBytes);
+    // TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.
+    if (!verifier.verify(configInfo)) {
+      throw new VerificationException("Invalid configuration");
+    }
+    // TODO(#2316): Verify proof of inclusion in Rekor
+
+    AttestationInfo attestationInfo =
+        AttestationInfo.parseFrom(serverIdentity.getAttestationInfo());
+    byte[] attestationReport = attestationInfo.getReport().getData().toByteArray();
+
+    byte[] publicKeyHash =
+        Hashing.sha256().hashBytes(serverIdentity.getSigningPublicKey()).asBytes();
+    byte[] configHash = Hashing.sha256().hashBytes(configBytes).asBytes();
+    byte[] buffer = ByteBuffer.allocate(publicKeyHash.length + configHash.length)
+                        .put(publicKeyHash)
+                        .put(configHash)
+                        .array();
+    byte[] hashBytes = Hashing.sha256().hashBytes(buffer).asBytes();
+    if (!Arrays.equals(hashBytes, attestationReport)) {
+      throw new VerificationException("Invalid hash of the configuration data");
+    }
+
+    if (!verifyAttestation(serverIdentity.getAttestationInfo())) {
+      throw new VerificationException("Attestation failed");
+    }
   }
 
   public Boolean verifyAttestation(byte[] unusedAttestationInfo) {

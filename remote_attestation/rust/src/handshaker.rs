@@ -100,15 +100,21 @@ pub struct ClientHandshaker {
     /// Collection of previously sent and received messages.
     /// Signed transcript is sent in messages to prevent replay attacks.
     transcript: Transcript,
+    /// Function for verifying the identity of the server.
+    server_verifier: Box<dyn Fn(ServerIdentity) -> anyhow::Result<()>>,
 }
 
 impl ClientHandshaker {
     /// Creates [`ClientHandshaker`] with [`HandshakerState::Initializing`] state.
-    pub fn new(behavior: AttestationBehavior) -> Self {
+    pub fn new(
+        behavior: AttestationBehavior,
+        server_verifier: Box<dyn Fn(ServerIdentity) -> anyhow::Result<()>>,
+    ) -> Self {
         Self {
             behavior,
             state: ClientHandshakerState::Initializing,
             transcript: Transcript::new(),
+            server_verifier,
         }
     }
 
@@ -300,6 +306,8 @@ impl ClientHandshaker {
                 vec![],
             )
         };
+
+        (self.server_verifier)(server_identity.clone())?;
 
         // Agree on session keys and create an encryptor.
         let encryptor = key_negotiator

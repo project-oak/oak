@@ -26,7 +26,7 @@ const TOTAL_REQUESTS: usize = 50;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut client = oak_functions_client::Client::new(URL)
+    let mut client = oak_functions_client::Client::new(URL, |_config| Ok(()))
         .await
         .context("Could not create client")?;
 

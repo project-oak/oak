@@ -17,7 +17,7 @@
 //! Sends an image to the mobilenet application and checks that the response is correct.
 
 use anyhow::Context;
-use oak_functions_abi::proto::Request;
+use oak_functions_abi::proto::{ConfigurationInfo, Request};
 use oak_functions_client::Client;
 use tract_tensorflow::prelude::*;
 
@@ -31,7 +31,22 @@ const CHANNELS: usize = 3;
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let mut client = Client::new("http://localhost:8080")
+    let config_verifier = |config: ConfigurationInfo| {
+        if !config.ml_inference {
+            anyhow::bail!("ML inference is not enabled")
+        }
+        if config
+            .policy
+            .context("no policy specified")?
+            .constant_processing_time_ms
+            > 500
+        {
+            anyhow::bail!("constant_processing_time_ms too high")
+        }
+        Ok(())
+    };
+
+    let mut client = Client::new("http://localhost:8080", config_verifier)
         .await
         .context("Could not create Oak Functions client")?;
 
