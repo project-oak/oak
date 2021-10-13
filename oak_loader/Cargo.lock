@@ -1457,7 +1457,7 @@ dependencies = [
  "pem",
  "ring",
  "sha2",
- "simple_asn1 0.5.3",
+ "simple_asn1 0.5.4",
  "structopt",
 ]
 
@@ -2328,9 +2328,9 @@ dependencies = [
 
 [[package]]
 name = "simple_asn1"
-version = "0.5.3"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc31e6cf34ad4321d3a2b8f934949b429e314519f753a77962f16c664dca8e13"
+checksum = "8eb4ea60fb301dc81dfc113df680571045d375ab7345d171c5dc7d7e13107a80"
 dependencies = [
  "chrono",
  "num-bigint 0.4.0",
