@@ -219,7 +219,7 @@ impl SignatureBundle {
     /// Parses public key, signature and SHA-256 hash encoded using PEM format.
     /// https://tools.ietf.org/html/rfc1421
     pub fn from_pem(file: &[u8]) -> anyhow::Result<SignatureBundle> {
-        let file_content: HashMap<String, Vec<u8>> = pem::parse_many(file)
+        let file_content: HashMap<String, Vec<u8>> = pem::parse_many(file)?
             .iter()
             .map(|entry| (entry.tag.to_string(), entry.contents.to_vec()))
             .collect();
