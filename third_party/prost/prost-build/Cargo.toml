@@ -27,4 +27,4 @@ tempfile = "3"
 which = { version = "4", default-features = false }
 
 [dev-dependencies]
-env_logger = { version = "0.8", default-features = false }
+env_logger = { version = "0.9", default-features = false }
