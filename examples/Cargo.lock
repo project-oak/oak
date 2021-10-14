@@ -454,7 +454,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "base64 0.13.0",
+ "base64 0.12.3",
  "chat_grpc",
  "env_logger",
  "log",
@@ -1148,7 +1148,7 @@ name = "https_attestation_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.13.0",
+ "base64 0.12.3",
  "env_logger",
  "http",
  "hyper",
@@ -1170,7 +1170,7 @@ name = "https_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.13.0",
+ "base64 0.12.3",
  "env_logger",
  "http",
  "hyper",
@@ -1325,7 +1325,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "afabcc15e437a6484fc4f12d0fd63068fe457bf93f1c148d3d9649c60b103f32"
 dependencies = [
  "base64 0.12.3",
- "pem",
+ "pem 0.8.3",
  "ring",
  "serde",
  "serde_json",
@@ -1638,7 +1638,7 @@ name = "oak_runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.13.0",
+ "base64 0.12.3",
  "byteorder",
  "bytes",
  "chrono",
@@ -1710,7 +1710,7 @@ dependencies = [
  "log",
  "oak_abi",
  "once_cell",
- "pem",
+ "pem 1.0.0",
  "ring",
  "sha2",
  "simple_asn1 0.5.3",
@@ -1861,6 +1861,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pem"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f2373df5233932a893d3bc2c78a0bf3f6d12590a1edd546b4fbefcac32c5c0f"
+dependencies = [
+ "base64 0.13.0",
+ "once_cell",
+ "regex",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1978,7 +1989,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "base64 0.13.0",
+ "base64 0.12.3",
  "env_logger",
  "hex",
  "log",
@@ -2002,7 +2013,7 @@ name = "private_set_intersection_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.13.0",
+ "base64 0.12.3",
  "env_logger",
  "http",
  "log",
@@ -2011,7 +2022,7 @@ dependencies = [
  "oak_client",
  "oak_sign",
  "oak_utils",
- "pem",
+ "pem 1.0.0",
  "prost",
  "structopt",
  "tokio",
@@ -2150,7 +2161,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "base64 0.13.0",
+ "base64 0.12.3",
  "env_logger",
  "http",
  "log",
@@ -2159,7 +2170,7 @@ dependencies = [
  "oak_proxy_attestation",
  "oak_sign",
  "oak_utils",
- "pem",
+ "pem 1.0.0",
  "prost",
  "structopt",
  "tokio",
@@ -2383,7 +2394,7 @@ dependencies = [
 name = "roughenough"
 version = "1.1.8"
 dependencies = [
- "base64 0.13.0",
+ "base64 0.12.3",
  "byteorder",
  "hex",
  "ring",
@@ -2908,7 +2919,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "base64 0.13.0",
+ "base64 0.12.3",
  "env_logger",
  "http",
  "hyper",
