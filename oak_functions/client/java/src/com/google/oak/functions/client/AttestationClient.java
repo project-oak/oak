@@ -36,6 +36,7 @@ import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.functions.abi.ConfigurationInfo;
@@ -60,13 +61,6 @@ public class AttestationClient {
   private BlockingQueue<StreamingResponse> messageQueue;
   private AeadEncryptor encryptor;
 
-  /**
-   * Interface for providing the logic for verifying ConfigurationInfo part of ServerIdentity.
-   */
-  public static interface ConfigurationVerifier {
-    boolean verify(ConfigurationInfo config) throws VerificationException;
-  }
-
   public static class VerificationException extends Exception {
     public VerificationException(String msg) {
       super(msg);
@@ -81,7 +75,7 @@ public class AttestationClient {
    *
    * @param url must contain a protocol used for the connection ("https://" or "http://")
    */
-  public void attest(String url, ConfigurationVerifier verifier)
+  public void attest(String url, Predicate<ConfigurationInfo> verifier)
       throws GeneralSecurityException, IOException, InterruptedException,
              InvalidProtocolBufferException, VerificationException {
     // Create gRPC channel.
@@ -97,7 +91,7 @@ public class AttestationClient {
   }
 
   /** Creates an attested channel over the gRPC {@code ManagedChannel}. */
-  public void attest(ManagedChannel channel, ConfigurationVerifier verifier)
+  public void attest(ManagedChannel channel, Predicate<ConfigurationInfo> verifier)
       throws GeneralSecurityException, IOException, InterruptedException,
              InvalidProtocolBufferException, VerificationException {
     if (channel == null) {
@@ -160,21 +154,30 @@ public class AttestationClient {
 
   /**
    * Verifies server identity including its configuration.
+   * - Deserializes `serializedServerIdentity`, and retrieves server ConfigurationInfo from it.
+   * Fails by throwing an exception if a ConfigurationInfo cannot be created from the binary-encoded
+   * protobuf field (`configBytes`) containing the configuration info.
+   * - Uses the custom input `verifier` to verify the ConfigurationInfo. If the check fails, returns
+   * a VerificationException.
+   * - Verifies the attestation info, by reconstructing the SHA256 hash of
+   * `(SHA256(signingPublicKey) | SHA256(configBytes))` and comparing it to the `attestationReport`.
+   * If these two hashes are not equal, returns a VerificationException.
    *
    * @param serializedServerIdentity The server's identity.
-   * @param verifier Function that verifies the configuration info part of the server identity.
+   * @param verifier Predicate that verifies the configuration info part of the server identity.
    * @throws VerificationException          If any of the verification steps fail
    *                                        for server's identity.
    * @throws InvalidProtocolBufferException
    */
-  public void verifyServerIdentity(byte[] serializedServerIdentity, ConfigurationVerifier verifier)
+  public void verifyServerIdentity(
+      byte[] serializedServerIdentity, Predicate<ConfigurationInfo> verifier)
       throws IOException, InvalidProtocolBufferException, VerificationException {
     Message.ServerIdentity serverIdentity =
         Message.ServerIdentity.deserialize(serializedServerIdentity);
     byte[] configBytes = serverIdentity.getAdditionalInfo();
     ConfigurationInfo configInfo = ConfigurationInfo.parseFrom(configBytes);
     // TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.
-    if (!verifier.verify(configInfo)) {
+    if (!verifier.test(configInfo)) {
       throw new VerificationException("Invalid configuration");
     }
     // TODO(#2316): Verify proof of inclusion in Rekor

@@ -44,6 +44,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::from_args();
 
+    // TODO(#2348): Replace with a more flexible specification of the verification logic.
     // For the common client used in examples, we expect ML-inference and private metrics to be
     // disabled.
     let config_verifier = |config: ConfigurationInfo| {

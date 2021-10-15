@@ -19,9 +19,9 @@ pub mod proto {
 
 pub mod attestation;
 
-use crate::attestation::AttestationClient;
+use crate::attestation::{AttestationClient, ConfigurationVerifier};
 use anyhow::Context;
-use oak_functions_abi::proto::{ConfigurationInfo, Request, Response};
+use oak_functions_abi::proto::{Request, Response};
 use prost::Message;
 
 // TODO(#1867): Add remote attestation support.
@@ -32,10 +32,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn new(
-        uri: &str,
-        verifier: fn(ConfigurationInfo) -> anyhow::Result<()>,
-    ) -> anyhow::Result<Self> {
+    pub async fn new(uri: &str, verifier: ConfigurationVerifier) -> anyhow::Result<Self> {
         let inner = AttestationClient::create(uri, TEE_MEASUREMENT, verifier)
             .await
             .context("Could not create Oak Functions client")?;

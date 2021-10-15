@@ -37,6 +37,8 @@ use crate::{
 use anyhow::{anyhow, Context};
 use prost::Message;
 
+pub type ServerIdentityVerifier = Box<dyn Fn(ServerIdentity) -> anyhow::Result<()>>;
+
 enum ClientHandshakerState {
     Initializing,
     ExpectingServerIdentity(KeyNegotiator),
@@ -101,15 +103,12 @@ pub struct ClientHandshaker {
     /// Signed transcript is sent in messages to prevent replay attacks.
     transcript: Transcript,
     /// Function for verifying the identity of the server.
-    server_verifier: Box<dyn Fn(ServerIdentity) -> anyhow::Result<()>>,
+    server_verifier: ServerIdentityVerifier,
 }
 
 impl ClientHandshaker {
     /// Creates [`ClientHandshaker`] with [`HandshakerState::Initializing`] state.
-    pub fn new(
-        behavior: AttestationBehavior,
-        server_verifier: Box<dyn Fn(ServerIdentity) -> anyhow::Result<()>>,
-    ) -> Self {
+    pub fn new(behavior: AttestationBehavior, server_verifier: ServerIdentityVerifier) -> Self {
         Self {
             behavior,
             state: ClientHandshakerState::Initializing,
