@@ -210,8 +210,9 @@ fn verify_attestation(
     let extensions = parsed_certificate.extensions();
     debug!("Provided X.509 extension: {:?}", extensions);
     let tee_extension = extensions
-        .get(&TEE_EXTENSION_OID)
-        .context("Couldn't find X.509 TEE extension")?;
+        .iter()
+        .find(|&ext| ext.oid == TEE_EXTENSION_OID)
+        .ok_or_else(|| anyhow!("Couldn't find X.509 TEE extension"))?;
     let tee_extension_value = parse_der(tee_extension.value)
         .context("Couldn't parse X.509 TEE extension")?
         .1

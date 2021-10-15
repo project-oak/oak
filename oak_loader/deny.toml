@@ -10,10 +10,6 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = [
-  # TODO(#2303): Remove once tink-rust is updated.
-  "RUSTSEC-2021-0115",
-]
 
 # Deny multiple versions unless explicitly skipped.
 [bans]
