@@ -19,7 +19,7 @@ use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use futures::future::FutureExt;
 use log::Level;
-use oak_functions_abi::proto::{OakStatus, Request, Response, StatusCode, ValidatedPolicy};
+use oak_functions_abi::proto::{OakStatus, Request, Response, ServerPolicy, StatusCode};
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, str, sync::Arc, time::Duration};
 use wasmi::ValueType;
@@ -47,26 +47,26 @@ pub const ABI_USIZE: ValueType = ValueType::I32;
 /// the policy is violated.
 const MIN_RESPONSE_SIZE: u32 = 50;
 
-/// Similar to [`ValidatedPolicy`], but it is used for reading the policy provided in the config,
+/// Similar to [`ServerPolicy`], but it is used for reading the policy provided in the config,
 /// and is therefore not guaranteed to be valid.
 #[derive(Deserialize, Debug, Clone, Copy)]
 #[serde(deny_unknown_fields)]
 pub struct Policy {
     /// See [`Policy::constant_response_size_bytes`]
     pub constant_response_size_bytes: u32,
-    /// A fixed response time. See [`ValidatedPolicy::constant_processing_time_ms`].
+    /// A fixed response time. See [`ServerPolicy::constant_processing_time_ms`].
     #[serde(with = "humantime_serde")]
     pub constant_processing_time: Duration,
 }
 
 impl Policy {
-    pub fn validate(&self) -> anyhow::Result<ValidatedPolicy> {
+    pub fn validate(&self) -> anyhow::Result<ServerPolicy> {
         anyhow::ensure!(
             self.constant_response_size_bytes >= MIN_RESPONSE_SIZE,
             "Response size is too small",
         );
 
-        Ok(ValidatedPolicy {
+        Ok(ServerPolicy {
             constant_response_size_bytes: self.constant_response_size_bytes,
             constant_processing_time_ms: self
                 .constant_processing_time
@@ -519,7 +519,7 @@ fn check_export_function_signature(
 /// response may be padded by a number of trailing 0s before encoding the response as a binary
 /// protobuf message. In this case, the `length` in the response will contain the effective length
 /// of the `body`. This response is guaranteed to comply with the policy's size restriction.
-pub async fn apply_policy<F, S>(policy: ValidatedPolicy, function: F) -> anyhow::Result<Response>
+pub async fn apply_policy<F, S>(policy: ServerPolicy, function: F) -> anyhow::Result<Response>
 where
     F: std::marker::Send + 'static + FnOnce() -> S,
     S: std::future::Future<Output = anyhow::Result<Response>> + std::marker::Send,

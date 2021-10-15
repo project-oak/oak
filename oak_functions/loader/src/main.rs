@@ -20,7 +20,7 @@
 
 use anyhow::Context;
 use log::Level;
-use oak_functions_abi::proto::{ConfigurationInfo, ValidatedPolicy};
+use oak_functions_abi::proto::{ConfigurationInfo, ServerPolicy};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
@@ -329,7 +329,7 @@ async fn create_metrics_proxy_factory(
 #[allow(unused_variables)]
 fn get_config_info(
     wasm_module_bytes: &[u8],
-    policy: ValidatedPolicy,
+    policy: ServerPolicy,
     config: &Config,
 ) -> anyhow::Result<ConfigurationInfo> {
     #[cfg(feature = "oak-metrics")]

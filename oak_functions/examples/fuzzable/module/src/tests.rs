@@ -17,7 +17,7 @@ use crate::proto::{
     instruction::InstructionVariant, Instruction, Instructions, Panic, WriteResponse,
 };
 use maplit::hashmap;
-use oak_functions_abi::proto::{StatusCode, ValidatedPolicy};
+use oak_functions_abi::proto::{ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
@@ -48,7 +48,7 @@ async fn test_server() {
 
     let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
 
-    let policy = ValidatedPolicy {
+    let policy = ServerPolicy {
         constant_response_size_bytes: 100,
         constant_processing_time_ms: 200,
     };

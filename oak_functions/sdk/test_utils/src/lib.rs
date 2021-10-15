@@ -23,7 +23,7 @@ use hyper::{
 };
 use log::info;
 use oak_functions_abi::proto::{
-    ConfigurationInfo, PrivateMetricsConfig, Request, Response, ValidatedPolicy,
+    ConfigurationInfo, PrivateMetricsConfig, Request, Response, ServerPolicy,
 };
 use oak_remote_attestation::crypto::get_sha256;
 use prost::Message;
@@ -235,7 +235,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
 
 pub fn get_config_info(
     wasm_module_bytes: &[u8],
-    policy: ValidatedPolicy,
+    policy: ServerPolicy,
     ml_inference: bool,
     metrics: Option<PrivateMetricsConfig>,
 ) -> ConfigurationInfo {

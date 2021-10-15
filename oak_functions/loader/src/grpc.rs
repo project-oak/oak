@@ -25,13 +25,13 @@ use crate::{
 };
 use anyhow::Context;
 use log::Level;
-use oak_functions_abi::proto::{ConfigurationInfo, Request, ValidatedPolicy};
+use oak_functions_abi::proto::{ConfigurationInfo, Request, ServerPolicy};
 use prost::Message;
 use std::{future::Future, net::SocketAddr, sync::Arc};
 
 async fn handle_request(
     wasm_handler: WasmHandler,
-    policy: ValidatedPolicy,
+    policy: ServerPolicy,
     request: Request,
 ) -> anyhow::Result<Vec<u8>> {
     let function = async move || wasm_handler.clone().handle_invoke(request).await;
@@ -66,7 +66,7 @@ pub async fn create_and_start_grpc_server<F: Future<Output = ()>>(
     address: &SocketAddr,
     wasm_handler: WasmHandler,
     tee_certificate: Vec<u8>,
-    policy: ValidatedPolicy,
+    policy: ServerPolicy,
     config_info: ConfigurationInfo,
     terminate: F,
     logger: Logger,

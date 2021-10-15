@@ -17,7 +17,7 @@
 extern crate test;
 
 use maplit::hashmap;
-use oak_functions_abi::proto::{Request, Response, StatusCode, ValidatedPolicy};
+use oak_functions_abi::proto::{Request, Response, ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
@@ -41,7 +41,7 @@ async fn test_valid_policy() {
     // Policy values are large enough to allow successful serving of the request, and responding
     // with the actual response from the Wasm module.
     let constant_processing_time = Duration::from_millis(200);
-    let policy = ValidatedPolicy {
+    let policy = ServerPolicy {
         constant_response_size_bytes: 100,
         constant_processing_time_ms: constant_processing_time.as_millis() as u32,
     };
@@ -73,7 +73,7 @@ async fn test_valid_policy() {
 async fn test_long_response_time() {
     // The `constant_processing_time` is too low.
     let constant_processing_time = Duration::from_millis(10);
-    let policy = ValidatedPolicy {
+    let policy = ServerPolicy {
         constant_response_size_bytes: 100,
         constant_processing_time_ms: constant_processing_time.as_millis() as u32,
     };
@@ -105,7 +105,7 @@ async fn test_long_response_time() {
 /// A normal test scenario makes any number of requests and checks the responses. It has to be an
 /// async function, with a single `u16` input argument as the `server_port`, and returning the unit
 /// type (`()`).
-async fn run_scenario_with_policy<F, S>(test_scenario: F, policy: ValidatedPolicy)
+async fn run_scenario_with_policy<F, S>(test_scenario: F, policy: ServerPolicy)
 where
     F: FnOnce(u16) -> S,
     S: std::future::Future<Output = ()>,
@@ -466,7 +466,7 @@ async fn test_apply_policy() {
     let size: usize = 50;
 
     // A valid policy
-    let policy = ValidatedPolicy {
+    let policy = ServerPolicy {
         constant_response_size_bytes: size as u32,
         constant_processing_time_ms: 10,
     };

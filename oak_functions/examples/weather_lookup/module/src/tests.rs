@@ -21,7 +21,7 @@ use location_utils::{
 };
 use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
-use oak_functions_abi::proto::{Request, StatusCode, ValidatedPolicy};
+use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
@@ -87,7 +87,7 @@ async fn test_server() {
     ));
     lookup_data.refresh().await.unwrap();
 
-    let policy = ValidatedPolicy {
+    let policy = ServerPolicy {
         constant_response_size_bytes: 100,
         constant_processing_time_ms: 200,
     };

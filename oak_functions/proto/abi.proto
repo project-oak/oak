@@ -50,7 +50,7 @@ message ConfigurationInfo {
   // Hash of the loaded Wasm module.
   bytes wasm_hash = 1;
   // The validated server-side policy.
-  ValidatedPolicy policy = 2;
+  ServerPolicy policy = 2;
   // Whether machine learning inference using a TensorFlow model is enabled.
   bool ml_inference = 3;
   // Server-side configuration for differentially private metrics. This field is optional. If not
@@ -60,7 +60,7 @@ message ConfigurationInfo {
 
 /// Server-side policy describing limits on the size of the response and response processing time to
 /// avoid side-channel leaks.
-message ValidatedPolicy {
+message ServerPolicy {
   // A fixed size for responses returned by the trusted runtime.
   //
   // This size only applies to the body of the Oak Functions response. If the response body

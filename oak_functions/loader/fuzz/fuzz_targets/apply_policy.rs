@@ -20,13 +20,13 @@ use libfuzzer_sys::{
     arbitrary::{Arbitrary, Result, Unstructured},
     fuzz_target,
 };
-use oak_functions_abi::proto::{Response, StatusCode, ValidatedPolicy};
+use oak_functions_abi::proto::{Response, ServerPolicy, StatusCode};
 use oak_functions_loader::server::apply_policy;
 
 #[derive(Debug)]
 struct ResponseAndValidPolicy {
     response: Response,
-    policy: ValidatedPolicy,
+    policy: ServerPolicy,
 }
 
 impl Arbitrary<'_> for ResponseAndValidPolicy {
@@ -42,7 +42,7 @@ impl Arbitrary<'_> for ResponseAndValidPolicy {
         };
 
         // Instantiate a random valid policy.
-        let policy = ValidatedPolicy {
+        let policy = ServerPolicy {
             constant_response_size_bytes: raw.int_in_range(50..=5000)?,
             constant_processing_time_ms: 10,
         };

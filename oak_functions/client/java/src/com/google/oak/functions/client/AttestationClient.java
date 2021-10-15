@@ -161,7 +161,6 @@ public class AttestationClient {
   /**
    * Verifies server identity including its configuration.
    *
-   *
    * @param serializedServerIdentity The server's identity.
    * @param verifier Function that verifies the configuration info part of the server identity.
    * @throws VerificationException          If any of the verification steps fail
