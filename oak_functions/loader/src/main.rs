@@ -53,15 +53,11 @@ mod tests;
 struct Config {
     /// URL of a file containing key / value entries in protobuf binary format for lookup.
     ///
-    /// If the schema is `http` or `https`, then the file is downloaded via HTTP GET.
-    ///
-    /// If the schema is `file`, then the file is read from the local file system.
-    ///
     /// If empty or not provided, no data is available for lookup.
     #[serde(default)]
-    lookup_data_url: String,
+    lookup_data: Option<Data>,
     /// How often to refresh the lookup data.
-    ////
+    ///
     /// If empty or not provided, data is only loaded once at startup.
     #[serde(default, with = "humantime_serde")]
     lookup_data_download_period: Option<Duration>,
@@ -89,6 +85,17 @@ struct Config {
     #[cfg(feature = "oak-metrics")]
     #[serde(default)]
     metrics: Option<PrivateMetricsConfig>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+enum Data {
+    /// Download data file via HTTP GET.
+    /// Supported URL schemes: `http`, `https`.
+    Url(String),
+    /// Read data file from the local file system.
+    /// File path is relative to the current `$PWD` (*not* relative to the config file).
+    File(String),
 }
 
 /// Command line options for the Oak loader.
@@ -228,24 +235,24 @@ async fn async_main(opt: Opt, config: Config, logger: Logger) -> anyhow::Result<
 }
 
 async fn load_lookup_data(config: &Config, logger: Logger) -> anyhow::Result<Arc<LookupData>> {
-    let lookup_data_source = if config.lookup_data_url.is_empty() {
-        None
-    } else {
-        let url =
-            url::Url::parse(&config.lookup_data_url).context("could not parse lookup data URL")?;
-        match url.scheme() {
-            "file" => {
-                let file_path = url
-                    .to_file_path()
-                    .map_err(|()| anyhow::anyhow!("could not convert url to file path"))?;
-                Some(LookupDataSource::File(file_path))
+    let lookup_data_source = match &config.lookup_data {
+        Some(lookup_data) => match &lookup_data {
+            Data::Url(url_string) => {
+                let url = url::Url::parse(url_string).context("Couldn't parse lookup data URL")?;
+                match url.scheme() {
+                    "http" | "https" => Some(LookupDataSource::Http {
+                        url: url_string.clone(),
+                        auth: config.lookup_data_auth,
+                    }),
+                    scheme => anyhow::bail!(
+                        "Unknown URL scheme in lookup data: expected 'http' or 'https', found {}",
+                        scheme
+                    ),
+                }
             }
-            "http" | "https" => Some(LookupDataSource::Http {
-                url: config.lookup_data_url.clone(),
-                auth: config.lookup_data_auth,
-            }),
-            scheme => anyhow::bail!("unknown scheme in lookup data URL: {}", scheme),
-        }
+            Data::File(path) => Some(LookupDataSource::File(path.clone().into())),
+        },
+        None => None,
     };
     let lookup_data = Arc::new(LookupData::new_empty(
         lookup_data_source.clone(),
