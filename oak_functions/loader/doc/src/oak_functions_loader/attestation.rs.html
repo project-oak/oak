@@ -225,6 +225,23 @@
 <span id="225">225</span>
 <span id="226">226</span>
 <span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -249,7 +266,9 @@
 <span class="kw">use</span> <span class="ident">anyhow::Context</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">Stream</span>, <span class="ident">StreamExt</span>};
 <span class="kw">use</span> <span class="ident">log::Level</span>;
+<span class="kw">use</span> <span class="ident">oak_functions_abi::proto::ConfigurationInfo</span>;
 <span class="kw">use</span> <span class="ident">oak_remote_attestation::handshaker</span>::{<span class="ident">AttestationBehavior</span>, <span class="ident">Encryptor</span>, <span class="ident">ServerHandshaker</span>};
+<span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std::pin::Pin</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::{<span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Status</span>, <span class="ident">Streaming</span>};
 
@@ -332,6 +351,8 @@
     <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Processes data from client requests and creates responses.</span>
     <span class="ident">request_handler</span>: <span class="ident">F</span>,
+    <span class="doccomment">/// Configuration information to provide to the client for the attestation step.</span>
+    <span class="ident">config_info</span>: <span class="ident">ConfigurationInfo</span>,
     <span class="doccomment">/// Logger that is required for logging attestation protocol errors.</span>
     <span class="doccomment">/// Errors are only logged on server side and are not sent to clients.</span>
     <span class="ident">logger</span>: <span class="ident">Logger</span>,
@@ -345,11 +366,13 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
         <span class="ident">tee_certificate</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">request_handler</span>: <span class="ident">F</span>,
+        <span class="ident">config_info</span>: <span class="ident">ConfigurationInfo</span>,
         <span class="ident">logger</span>: <span class="ident">Logger</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">tee_certificate</span>,
             <span class="ident">request_handler</span>,
+            <span class="ident">config_info</span>,
             <span class="ident">logger</span>,
         })
     }
@@ -373,6 +396,16 @@
         <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">logger</span>.<span class="ident">clone</span>();
 
         <span class="kw">let</span> <span class="ident">request_stream</span> <span class="op">=</span> <span class="ident">request_stream</span>.<span class="ident">into_inner</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">additional_info</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+        <span class="self">self</span>.<span class="ident">config_info</span>
+            .<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">additional_info</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                <span class="ident">log_error</span>(
+                    <span class="kw-2">&amp;</span><span class="ident">logger</span>,
+                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t decode configuration info: {:?}&quot;</span>, <span class="ident">error</span>),
+                );
+                <span class="ident">Status::aborted</span>(<span class="string">&quot;&quot;</span>)
+            })<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">response_stream</span> <span class="op">=</span> <span class="macro">async_stream::try_stream!</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">Receiver</span> { <span class="ident">request_stream</span> };
 
@@ -386,6 +419,7 @@
                         );
                         <span class="ident">Status::internal</span>(<span class="string">&quot;&quot;</span>)
                     })<span class="question-mark">?</span>,
+                    <span class="ident">additional_info</span>,
             );
             <span class="kw">while</span> <span class="op">!</span><span class="ident">handshaker</span>.<span class="ident">is_completed</span>() {
                 <span class="kw">let</span> <span class="ident">incoming_message</span> <span class="op">=</span> <span class="ident">receiver</span>
