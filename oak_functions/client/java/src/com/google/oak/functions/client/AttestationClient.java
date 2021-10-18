@@ -18,7 +18,6 @@ package com.google.oak.functions.client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.common.hash.Hashing;
 import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.ClientHandshaker;
 import com.google.oak.remote_attestation.Message;
@@ -33,7 +32,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
-import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Predicate;
@@ -42,8 +40,6 @@ import java.util.logging.Logger;
 import oak.functions.abi.ConfigurationInfo;
 import oak.functions.invocation.Request;
 import oak.functions.invocation.Response;
-import oak.remote_attestation.AttestationInfo;
-import oak.remote_attestation.AttestationReport;
 import oak.session.stream.v1.StreamingRequest;
 import oak.session.stream.v1.StreamingResponse;
 import oak.session.stream.v1.StreamingSessionGrpc;
@@ -76,8 +72,7 @@ public class AttestationClient {
    * @param url must contain a protocol used for the connection ("https://" or "http://")
    */
   public void attest(String url, Predicate<ConfigurationInfo> verifier)
-      throws GeneralSecurityException, IOException, InterruptedException,
-             InvalidProtocolBufferException, VerificationException {
+      throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     // Create gRPC channel.
     URL parsedUrl = new URL(url);
     if (parsedUrl.getProtocol().equals("https")) {
@@ -92,8 +87,7 @@ public class AttestationClient {
 
   /** Creates an attested channel over the gRPC {@code ManagedChannel}. */
   public void attest(ManagedChannel channel, Predicate<ConfigurationInfo> verifier)
-      throws GeneralSecurityException, IOException, InterruptedException,
-             InvalidProtocolBufferException, VerificationException {
+      throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     if (channel == null) {
       throw new NullPointerException("Channel must not be null.");
     }
@@ -140,7 +134,9 @@ public class AttestationClient {
     byte[] serverIdentity = serverIdentityResponse.getBody().toByteArray();
 
     // Verify ServerIdentity, including its configuration and proof of its inclusion in Rekor.
-    verifyServerIdentity(serverIdentity, verifier);
+    if (!verifyServerIdentity(serverIdentity, verifier)) {
+      throw new VerificationException("Verification of ServerIdentity failed.");
+    }
 
     // Remotely attest the server and create:
     // - Client attestation identity containing client's ephemeral public key
@@ -154,57 +150,42 @@ public class AttestationClient {
 
   /**
    * Verifies server identity including its configuration.
-   * - Deserializes `serializedServerIdentity`, and retrieves server ConfigurationInfo from it.
-   * Fails by throwing an exception if a ConfigurationInfo cannot be created from the binary-encoded
-   * protobuf field (`configBytes`) containing the configuration info.
-   * - Uses the custom input `verifier` to verify the ConfigurationInfo. If the check fails, returns
-   * a VerificationException.
-   * - Verifies the attestation info, by reconstructing the SHA256 hash of
-   * `(SHA256(signingPublicKey) | SHA256(configBytes))` and comparing it to the `attestationReport`.
-   * If these two hashes are not equal, returns a VerificationException.
+   *
+   * This function performs the following steps:
+   *
+   * - Deserializes `serializedServerIdentity` into an instance of {@code
+   * Message.ServerIdentity}. Throws IOException if the deserialization fails.
+   * - Checks that the resulting ServerIdentity contains an instance of {@code ConfigurationInfo},
+   * and checks that the {@code configurationVerifier} predicate is valid for it. Returns false if
+   * the check fails.
+   * - Checks that the ServerIdentity contains the expected attestation info as described in {@code
+   * ServerIdentityVerifier::verifyAttestationInfo}.
    *
    * @param serializedServerIdentity The server's identity.
-   * @param verifier Predicate that verifies the configuration info part of the server identity.
-   * @throws VerificationException          If any of the verification steps fail
-   *                                        for server's identity.
-   * @throws InvalidProtocolBufferException
+   * @param configurationVerifier Predicate that verifies the configuration info part of the server
+   *     identity.
+   * @throws IOException If {@code serializedServerIdentity} cannot be deserialized into an instance
+   *     of {@code Message.ServerIdentity}.
    */
-  public void verifyServerIdentity(
-      byte[] serializedServerIdentity, Predicate<ConfigurationInfo> verifier)
-      throws IOException, InvalidProtocolBufferException, VerificationException {
+  public boolean verifyServerIdentity(byte[] serializedServerIdentity,
+      Predicate<ConfigurationInfo> configurationVerifier) throws IOException {
     Message.ServerIdentity serverIdentity =
         Message.ServerIdentity.deserialize(serializedServerIdentity);
-    byte[] configBytes = serverIdentity.getAdditionalInfo();
-    ConfigurationInfo configInfo = ConfigurationInfo.parseFrom(configBytes);
-    // TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.
-    if (!verifier.test(configInfo)) {
-      throw new VerificationException("Invalid configuration");
+
+    ServerIdentityVerifier verifier =
+        new ServerIdentityVerifier(serverIdentity, configurationVerifier);
+
+    // 1. Verify ConfigurationInfo
+    if (!verifier.verifyConfigurationInfo()) {
+      logger.log(Level.WARNING, "Unexpected configuration");
+      return false;
+    };
+
+    // 2. Verify the the attestation info.
+    if (!verifier.verifyAttestation()) {
+      logger.log(Level.WARNING, "Invalid attestation report");
+      return false;
     }
-    // TODO(#2316): Verify proof of inclusion in Rekor
-
-    AttestationInfo attestationInfo =
-        AttestationInfo.parseFrom(serverIdentity.getAttestationInfo());
-    byte[] attestationReport = attestationInfo.getReport().getData().toByteArray();
-
-    byte[] publicKeyHash =
-        Hashing.sha256().hashBytes(serverIdentity.getSigningPublicKey()).asBytes();
-    byte[] configHash = Hashing.sha256().hashBytes(configBytes).asBytes();
-    byte[] buffer = ByteBuffer.allocate(publicKeyHash.length + configHash.length)
-                        .put(publicKeyHash)
-                        .put(configHash)
-                        .array();
-    byte[] hashBytes = Hashing.sha256().hashBytes(buffer).asBytes();
-    if (!Arrays.equals(hashBytes, attestationReport)) {
-      throw new VerificationException("Invalid hash of the configuration data");
-    }
-
-    if (!verifyAttestation(serverIdentity.getAttestationInfo())) {
-      throw new VerificationException("Attestation failed");
-    }
-  }
-
-  public Boolean verifyAttestation(byte[] unusedAttestationInfo) {
-    // TODO(#1867): Add remote attestation support.
     return true;
   }
 
