@@ -70,3 +70,19 @@ java_lite_proto_library(
     name = "invocation_java_proto_lite",
     deps = [":invocation_proto"],
 )
+
+proto_library(
+    name = "abi_proto",
+    srcs = ["abi.proto"],
+    deps = ["@com_google_protobuf//:empty_proto"],
+)
+
+java_proto_library(
+    name = "abi_java_proto",
+    deps = [":abi_proto"],
+)
+
+java_lite_proto_library(
+    name = "abi_java_proto_lite",
+    deps = [":abi_proto"],
+)

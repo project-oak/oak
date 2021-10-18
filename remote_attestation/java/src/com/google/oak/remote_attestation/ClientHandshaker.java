@@ -123,9 +123,10 @@ public class ClientHandshaker {
 
       // Update current transcript.
       // Transcript doesn't include transcript signature from the server identity message.
-      Message.ServerIdentity serverIdentityNoSignature = new Message.ServerIdentity(
-          serverIdentity.getEphemeralPublicKey(), serverIdentity.getRandom(),
-          serverIdentity.getSigningPublicKey(), serverIdentity.getAttestationInfo());
+      Message.ServerIdentity serverIdentityNoSignature =
+          new Message.ServerIdentity(serverIdentity.getEphemeralPublicKey(),
+              serverIdentity.getRandom(), serverIdentity.getSigningPublicKey(),
+              serverIdentity.getAttestationInfo(), serverIdentity.getAdditionalInfo());
       byte[] serializedServerIdentityNoSignature = serverIdentityNoSignature.serialize();
       appendTranscript(serializedServerIdentityNoSignature);
 

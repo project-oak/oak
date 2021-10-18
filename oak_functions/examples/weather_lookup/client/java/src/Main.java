@@ -32,7 +32,7 @@ public class Main {
 
   public static void main(String[] args) throws Exception {
     AttestationClient client = new AttestationClient();
-    client.attest("http://localhost:8080");
+    client.attest("http://localhost:8080", (config) -> !config.getMlInference());
 
     byte[] requestBody = "{\"lat\":52,\"lng\":0}".getBytes(UTF_8);
     Request request = Request.newBuilder().setBody(ByteString.copyFrom(requestBody)).build();

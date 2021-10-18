@@ -18,9 +18,16 @@ use crate::proto::{
     streaming_session_client::StreamingSessionClient, StreamingRequest, StreamingResponse,
 };
 use anyhow::Context;
-use oak_remote_attestation::handshaker::{AttestationBehavior, ClientHandshaker, Encryptor};
+use oak_functions_abi::proto::ConfigurationInfo;
+use oak_remote_attestation::{
+    handshaker::{AttestationBehavior, ClientHandshaker, Encryptor, ServerIdentityVerifier},
+    message::ServerIdentity,
+};
+use prost::Message;
 use tokio::sync::mpsc::Sender;
 use tonic::{transport::Channel, Request, Streaming};
+
+pub type ConfigurationVerifier = fn(ConfigurationInfo) -> anyhow::Result<()>;
 
 const MESSAGE_BUFFER_SIZE: usize = 1;
 
@@ -81,11 +88,15 @@ pub struct AttestationClient {
 }
 
 impl AttestationClient {
-    pub async fn create(uri: &str, expected_tee_measurement: &[u8]) -> anyhow::Result<Self> {
+    pub async fn create(
+        uri: &str,
+        expected_tee_measurement: &[u8],
+        verifier: ConfigurationVerifier,
+    ) -> anyhow::Result<Self> {
         let mut channel = GrpcChannel::create(uri)
             .await
             .context("Couldn't create gRPC client")?;
-        let encryptor = Self::attest_server(&mut channel, expected_tee_measurement)
+        let encryptor = Self::attest_server(&mut channel, expected_tee_measurement, verifier)
             .await
             .context("Couldn't attest server")?;
 
@@ -96,10 +107,12 @@ impl AttestationClient {
     async fn attest_server(
         channel: &mut GrpcChannel,
         expected_tee_measurement: &[u8],
+        config_verifier: ConfigurationVerifier,
     ) -> anyhow::Result<Encryptor> {
-        let mut handshaker = ClientHandshaker::new(AttestationBehavior::create_peer_attestation(
-            expected_tee_measurement,
-        ));
+        let mut handshaker = ClientHandshaker::new(
+            AttestationBehavior::create_peer_attestation(expected_tee_measurement),
+            into_server_identity_verifier(config_verifier),
+        );
         let client_hello = handshaker
             .create_client_hello()
             .context("Couldn't create client hello message")?;
@@ -168,4 +181,22 @@ impl AttestationClient {
 
         Ok(response)
     }
+}
+
+/// Creates a [`ServerIdentityVerifier`] from the given `ConfigurationVerifier`.
+///
+/// The `ServerIdentityVerifier` parses the byte array in `server_identity.additional_info` into a
+/// `ConfigurationInfo` object. If the conversion is successful, `config_verifier` is invoked to
+/// verify the `ConfigurationInfo` object. Otherwise, an error is returned. An error is as well
+/// returned if the call to `config_verifier` returns an error.
+fn into_server_identity_verifier(config_verifier: ConfigurationVerifier) -> ServerIdentityVerifier {
+    let server_verifier = move |server_identity: ServerIdentity| -> anyhow::Result<()> {
+        let config = ConfigurationInfo::decode(server_identity.additional_info.as_ref())?;
+        // TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.
+        config_verifier(config)?;
+        // TODO(#2316): Verify proof of inclusion in Rekor.
+        Ok(())
+    };
+
+    Box::new(server_verifier)
 }

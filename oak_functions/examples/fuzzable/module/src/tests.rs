@@ -17,21 +17,20 @@ use crate::proto::{
     instruction::InstructionVariant, Instruction, Instructions, Panic, WriteResponse,
 };
 use maplit::hashmap;
-use oak_functions_abi::proto::StatusCode;
+use oak_functions_abi::proto::{ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::LookupData,
     metrics::{BucketConfig, PrivateMetricsConfig, PrivateMetricsProxyFactory},
-    server::{BoxedExtensionFactory, Policy},
+    server::BoxedExtensionFactory,
 };
 use prost::Message;
 use std::{
     net::{Ipv6Addr, SocketAddr},
     sync::Arc,
-    time::Duration,
 };
-use test_utils::make_request;
+use test_utils::{get_config_info, make_request};
 
 #[tokio::test]
 async fn test_server() {
@@ -49,9 +48,9 @@ async fn test_server() {
 
     let lookup_data = Arc::new(LookupData::new_empty(None, logger.clone()));
 
-    let policy = Policy {
+    let policy = ServerPolicy {
         constant_response_size_bytes: 100,
-        constant_processing_time: Duration::from_millis(200),
+        constant_processing_time_ms: 200,
     };
     let metrics_factory = create_metrics_factory();
     let tee_certificate = vec![];
@@ -68,7 +67,8 @@ async fn test_server() {
             &address,
             wasm_handler,
             tee_certificate,
-            policy,
+            policy.clone(),
+            get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
         )

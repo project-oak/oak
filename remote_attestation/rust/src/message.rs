@@ -40,6 +40,7 @@ pub const REPLAY_PROTECTION_ARRAY_LENGTH: usize = 32;
 
 // TODO(#2295): Add Frame struct to remote attestation messages.
 /// Convenience struct that wraps attestation messages.
+#[allow(clippy::large_enum_variant)]
 #[derive(PartialEq)]
 pub enum MessageWrapper {
     ClientHello(ClientHello),
@@ -100,11 +101,16 @@ pub struct ServerIdentity {
     #[serde(with = "BigArray")]
     pub signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
     /// Information used for remote attestation such as a TEE report and a TEE provider's
-    /// certificate. TEE report contains a hash of the `signing_public_key`.
+    /// certificate. TEE report contains a hash of the `signing_public_key` and `additional_info`.
     ///
     /// Attestation info must be a serialized `oak.remote_attestation.AttestationInfo` Protobuf
     /// message.
     pub attestation_info: Vec<u8>,
+    /// Additional info to be checked when verifying the identity. This may include server
+    /// configuration details, and inclusion proofs on a verifiable log (e.g., LogEntry on Rekor).
+    /// The server and the client must be able to agree on a canonical representation of the
+    /// content to be able to deterministically compute the hash of this field.
+    pub additional_info: Vec<u8>,
 }
 
 /// Client identity message containing remote attestation information and a public key for
@@ -202,6 +208,7 @@ impl ServerIdentity {
         random: [u8; REPLAY_PROTECTION_ARRAY_LENGTH],
         signing_public_key: [u8; SIGNING_ALGORITHM_KEY_LENGTH],
         attestation_info: Vec<u8>,
+        additional_info: Vec<u8>,
     ) -> Self {
         Self {
             header: SERVER_IDENTITY_HEADER,
@@ -211,6 +218,7 @@ impl ServerIdentity {
             transcript_signature: [Default::default(); SIGNATURE_LENGTH],
             signing_public_key,
             attestation_info,
+            additional_info,
         }
     }
 

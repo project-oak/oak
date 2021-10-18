@@ -37,6 +37,8 @@ use crate::{
 use anyhow::{anyhow, Context};
 use prost::Message;
 
+pub type ServerIdentityVerifier = Box<dyn Fn(ServerIdentity) -> anyhow::Result<()>>;
+
 enum ClientHandshakerState {
     Initializing,
     ExpectingServerIdentity(KeyNegotiator),
@@ -100,15 +102,18 @@ pub struct ClientHandshaker {
     /// Collection of previously sent and received messages.
     /// Signed transcript is sent in messages to prevent replay attacks.
     transcript: Transcript,
+    /// Function for verifying the identity of the server.
+    server_verifier: ServerIdentityVerifier,
 }
 
 impl ClientHandshaker {
     /// Creates [`ClientHandshaker`] with [`HandshakerState::Initializing`] state.
-    pub fn new(behavior: AttestationBehavior) -> Self {
+    pub fn new(behavior: AttestationBehavior, server_verifier: ServerIdentityVerifier) -> Self {
         Self {
             behavior,
             state: ClientHandshakerState::Initializing,
             transcript: Transcript::new(),
+            server_verifier,
         }
     }
 
@@ -268,7 +273,7 @@ impl ClientHandshaker {
                 .as_ref()
                 .context("Couldn't access TEE certificate")?;
 
-            let attestation_info = create_attestation_info(signer, tee_certificate)
+            let attestation_info = create_attestation_info(signer, &[], tee_certificate)
                 .context("Couldn't create attestation info")?;
 
             let mut client_identity = ClientIdentity::new(
@@ -301,6 +306,8 @@ impl ClientHandshaker {
             )
         };
 
+        (self.server_verifier)(server_identity.clone())?;
+
         // Agree on session keys and create an encryptor.
         let encryptor = key_negotiator
             .create_encryptor(&server_identity.ephemeral_public_key)
@@ -320,16 +327,20 @@ pub struct ServerHandshaker {
     /// Collection of previously sent and received messages.
     /// Signed transcript is sent in messages to prevent replay attacks.
     transcript: Transcript,
+    /// Additional info about the server, including configuration information and proof of
+    /// inclusion in a verifiable log.
+    additional_info: Vec<u8>,
 }
 
 impl ServerHandshaker {
     /// Creates [`ServerHandshaker`] with [`HandshakerState::ExpectingClientIdentity`]
     /// state.
-    pub fn new(behavior: AttestationBehavior) -> Self {
+    pub fn new(behavior: AttestationBehavior, additional_info: Vec<u8>) -> Self {
         Self {
             behavior,
             state: ServerHandshakerState::ExpectingClientHello,
             transcript: Transcript::new(),
+            additional_info,
         }
     }
 
@@ -435,8 +446,10 @@ impl ServerHandshaker {
                 .as_ref()
                 .context("Couldn't get TEE certificate")?;
 
-            let attestation_info = create_attestation_info(signer, tee_certificate)
-                .context("Couldn't get attestation info")?;
+            let additional_info = self.additional_info.clone();
+            let attestation_info =
+                create_attestation_info(signer, additional_info.as_ref(), tee_certificate)
+                    .context("Couldn't get attestation info")?;
 
             let mut server_identity = ServerIdentity::new(
                 ephemeral_public_key,
@@ -445,6 +458,7 @@ impl ServerHandshaker {
                     .public_key()
                     .context("Couldn't get singing public key")?,
                 attestation_info,
+                additional_info,
             );
 
             // Update current transcript.
@@ -469,6 +483,8 @@ impl ServerHandshaker {
                 // Signing public key.
                 [Default::default(); SIGNING_ALGORITHM_KEY_LENGTH],
                 // Attestation info.
+                vec![],
+                // Additional info.
                 vec![],
             )
         };
@@ -679,13 +695,22 @@ impl Transcript {
 }
 
 /// Generates attestation info with a TEE report.
-/// TEE report contains a hash of the signer's public key.
-pub fn create_attestation_info(signer: &Signer, tee_certificate: &[u8]) -> anyhow::Result<Vec<u8>> {
+/// TEE report contains a hash of the signer's public key, and additional info if provided as a
+/// non-empty string by the caller.
+pub fn create_attestation_info(
+    signer: &Signer,
+    additional_info: &[u8],
+    tee_certificate: &[u8],
+) -> anyhow::Result<Vec<u8>> {
     let signing_public_key = signer
         .public_key()
         .context("Couldn't get singing public key")?;
-    let signing_public_key_hash = get_sha256(signing_public_key.as_ref());
-    let report = AttestationReport::new(&signing_public_key_hash);
+    let mut data = get_sha256(signing_public_key.as_ref()).to_vec();
+    if !additional_info.is_empty() {
+        data.extend(get_sha256(additional_info));
+        data = get_sha256(&data).to_vec();
+    }
+    let report = AttestationReport::new(&data);
     let attestation_info = AttestationInfo {
         report: Some(report),
         certificate: tee_certificate.to_vec(),

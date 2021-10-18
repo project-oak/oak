@@ -45,9 +45,10 @@ public class MessageTest {
     byte[] transcriptSignature = getRandomArray(Message.TRANSCRIPT_SIGNATURE_LENGTH);
     byte[] signingPublicKey = getRandomArray(Message.SIGNING_PUBLIC_KEY_LENGTH);
     byte[] attestationInfo = getRandomArray(TEST_LENGTH);
+    byte[] additionalInfo = getRandomArray(TEST_LENGTH);
 
-    Message.ServerIdentity serverIdentity =
-        new Message.ServerIdentity(ephemeralPublicKey, random, signingPublicKey, attestationInfo);
+    Message.ServerIdentity serverIdentity = new Message.ServerIdentity(
+        ephemeralPublicKey, random, signingPublicKey, attestationInfo, additionalInfo);
     serverIdentity.setTranscriptSignature(transcriptSignature);
     byte[] serializedServerIdentity = serverIdentity.serialize();
     Message.ServerIdentity deserializedServerIdentity =

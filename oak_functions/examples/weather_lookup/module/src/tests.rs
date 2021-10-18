@@ -21,12 +21,12 @@ use location_utils::{
 };
 use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
-use oak_functions_abi::proto::{Request, StatusCode};
+use oak_functions_abi::proto::{Request, ServerPolicy, StatusCode};
 use oak_functions_loader::{
     grpc::{create_and_start_grpc_server, create_wasm_handler},
     logger::Logger,
     lookup::{parse_lookup_entries, LookupData, LookupDataAuth, LookupDataSource},
-    server::{Policy, WasmHandler},
+    server::WasmHandler,
 };
 use std::{
     net::{Ipv6Addr, SocketAddr},
@@ -34,7 +34,7 @@ use std::{
     time::Duration,
 };
 use test::Bencher;
-use test_utils::make_request;
+use test_utils::{get_config_info, make_request};
 
 #[tokio::test]
 async fn test_server() {
@@ -87,9 +87,9 @@ async fn test_server() {
     ));
     lookup_data.refresh().await.unwrap();
 
-    let policy = Policy {
+    let policy = ServerPolicy {
         constant_response_size_bytes: 100,
-        constant_processing_time: Duration::from_millis(200),
+        constant_processing_time_ms: 200,
     };
     let tee_certificate = vec![];
     let wasm_handler = create_wasm_handler(&wasm_module_bytes, lookup_data, vec![], logger.clone())
@@ -100,7 +100,8 @@ async fn test_server() {
             &address,
             wasm_handler,
             tee_certificate,
-            policy,
+            policy.clone(),
+            get_config_info(&wasm_module_bytes, policy, false, None),
             term,
             logger,
         )

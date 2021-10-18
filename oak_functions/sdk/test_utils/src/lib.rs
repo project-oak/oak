@@ -22,7 +22,10 @@ use hyper::{
     Body,
 };
 use log::info;
-use oak_functions_abi::proto::{Request, Response};
+use oak_functions_abi::proto::{
+    ConfigurationInfo, PrivateMetricsConfig, Request, Response, ServerPolicy,
+};
+use oak_remote_attestation::crypto::get_sha256;
 use prost::Message;
 use std::{
     collections::HashMap,
@@ -211,7 +214,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let uri = format!("http://localhost:{}/", port);
 
     // Create client
-    let mut client = oak_functions_client::Client::new(&uri)
+    let mut client = oak_functions_client::Client::new(&uri, |_config| Ok(()))
         .await
         .expect("Could not create client");
 
@@ -228,4 +231,18 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> TestResult {
     let elapsed = start.elapsed();
 
     TestResult { elapsed, response }
+}
+
+pub fn get_config_info(
+    wasm_module_bytes: &[u8],
+    policy: ServerPolicy,
+    ml_inference: bool,
+    metrics: Option<PrivateMetricsConfig>,
+) -> ConfigurationInfo {
+    ConfigurationInfo {
+        wasm_hash: get_sha256(wasm_module_bytes).to_vec(),
+        policy: Some(policy),
+        ml_inference,
+        metrics,
+    }
 }

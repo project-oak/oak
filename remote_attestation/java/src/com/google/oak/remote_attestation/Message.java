@@ -133,9 +133,15 @@ public class Message {
      * message.
      */
     private final byte[] attestationInfo;
+    /* Additional info to be checked when verifying the identity. This may include server
+     * configuration details, and inclusion proofs on a verifiable log (e.g., LogEntry on Rekor).
+     * The server and the client must be able to agree on a canonical representation of the
+     * content to be able to deterministically compute the hash of this field.
+     */
+    private final byte[] additionalInfo;
 
-    public ServerIdentity(
-        byte[] ephemeralPublicKey, byte[] random, byte[] signingPublicKey, byte[] attestationInfo) {
+    public ServerIdentity(byte[] ephemeralPublicKey, byte[] random, byte[] signingPublicKey,
+        byte[] attestationInfo, byte[] additionalInfo) {
       header = SERVER_IDENTITY_HEADER;
       version = PROTOCOL_VERSION;
       this.ephemeralPublicKey = ephemeralPublicKey;
@@ -143,6 +149,7 @@ public class Message {
       this.transcriptSignature = new byte[0];
       this.signingPublicKey = signingPublicKey;
       this.attestationInfo = attestationInfo;
+      this.additionalInfo = additionalInfo;
     }
 
     public byte getVersion() {
@@ -173,6 +180,10 @@ public class Message {
       return attestationInfo;
     }
 
+    public byte[] getAdditionalInfo() {
+      return additionalInfo;
+    }
+
     public byte[] serialize() throws IOException {
       ByteArrayOutputStream output = new ByteArrayOutputStream();
       DataOutputStream outputStream = new DataOutputStream(output);
@@ -187,6 +198,7 @@ public class Message {
       writeFixedSizeArray(
           outputStream, signingPublicKey, SIGNING_PUBLIC_KEY_LENGTH, "signing public key");
       writeVariableSizeArray(outputStream, attestationInfo, "attestation info");
+      writeVariableSizeArray(outputStream, additionalInfo, "additional info");
       outputStream.flush();
 
       return output.toByteArray();
@@ -215,9 +227,10 @@ public class Message {
       byte[] signingPublicKey =
           readFixedSizeArray(inputStream, SIGNING_PUBLIC_KEY_LENGTH, "signing key");
       byte[] attestationInfo = readVariableSizeArray(inputStream, "attestation info");
+      byte[] additionalInfo = readVariableSizeArray(inputStream, "additional info");
 
-      ServerIdentity serverIdentity =
-          new ServerIdentity(ephemeralPublicKey, random, signingPublicKey, attestationInfo);
+      ServerIdentity serverIdentity = new ServerIdentity(
+          ephemeralPublicKey, random, signingPublicKey, attestationInfo, additionalInfo);
       serverIdentity.setTranscriptSignature(transcriptSignature);
       return serverIdentity;
     }

@@ -2306,6 +2306,7 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "oak_functions_client",
+ "oak_remote_attestation",
  "port_check",
  "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
