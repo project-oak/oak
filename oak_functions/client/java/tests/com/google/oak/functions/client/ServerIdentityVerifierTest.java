@@ -18,10 +18,10 @@ package com.google.oak.functions.client;
 
 import com.google.oak.remote_attestation.Message.ServerIdentity;
 import oak.functions.abi.ConfigurationInfo;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class ServerIdentityVerifierTest {
-
   @Test
   public void testVerifyConfigurationInfo() {
     ConfigurationInfo configInfo = ConfigurationInfo.newBuilder().setMlInference(true).build();
@@ -29,14 +29,12 @@ public class ServerIdentityVerifierTest {
     ServerIdentity serverIdentity =
         new ServerIdentity(new byte[] {}, new byte[] {}, new byte[] {}, new byte[] {}, configBytes);
 
-    ServerIdentityVerifier verifierExpectingMlInference =
-        new ServerIdentityVerifier(
-            serverIdentity, (configInfoToVerify) -> configInfoToVerify.getMlInference());
-    // Assert.assertTrue(verifierExpectingMlInference.verifyConfigurationInfo());
+    ServerIdentityVerifier verifierExpectingMlInference = new ServerIdentityVerifier(
+        serverIdentity, (configInfoToVerify) -> configInfoToVerify.getMlInference());
+    Assert.assertTrue(verifierExpectingMlInference.verifyConfigurationInfo());
 
-    // ServerIdentityVerifier verifierExpectingNoMlInference =
-    //     new ServerIdentityVerifier(
-    //         serverIdentity, (configInfoToVerify) -> !configInfoToVerify.getMlInference());
-    // Assert.assertFalse(verifierExpectingNoMlInference.verifyConfigurationInfo());
+    ServerIdentityVerifier verifierExpectingNoMlInference = new ServerIdentityVerifier(
+        serverIdentity, (configInfoToVerify) -> !configInfoToVerify.getMlInference());
+    Assert.assertFalse(verifierExpectingNoMlInference.verifyConfigurationInfo());
   }
 }
