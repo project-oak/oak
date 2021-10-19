@@ -10,6 +10,10 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
+ignore = [
+  # TODO(#2353): Remove once chrono is updated.
+  "RUSTSEC-2020-0159",
+]
 
 # Deny multiple versions unless explicitly skipped.
 [bans]
