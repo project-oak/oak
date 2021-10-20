@@ -26,7 +26,7 @@ java_library(
     name = "client",
     srcs = [
         "src/com/google/oak/functions/client/AttestationClient.java",
-        "src/com/google/oak/functions/client/ServerIdentityVerifier.java",
+        "src/com/google/oak/functions/client/ServerConfigurationVerifier.java",
     ],
     deps = [
         "//oak_functions/proto:abi_java_proto",
@@ -48,7 +48,7 @@ android_library(
     name = "client_android",
     srcs = [
         "src/com/google/oak/functions/client/AttestationClient.java",
-        "src/com/google/oak/functions/client/ServerIdentityVerifier.java",
+        "src/com/google/oak/functions/client/ServerConfigurationVerifier.java",
     ],
     deps = [
         "//oak_functions/proto:abi_java_proto_lite",

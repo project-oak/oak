@@ -24,9 +24,9 @@ package(
 java_test(
     name = "server_identity_verifier_test",
     srcs = [
-        "com/google/oak/functions/client/ServerIdentityVerifierTest.java",
+        "com/google/oak/functions/client/ServerConfigurationVerifierTest.java",
     ],
-    test_class = "com.google.oak.functions.client.ServerIdentityVerifierTest",
+    test_class = "com.google.oak.functions.client.ServerConfigurationVerifierTest",
     deps = [
         "//oak_functions/client/java:client",
         "//oak_functions/proto:abi_java_proto",

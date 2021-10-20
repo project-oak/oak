@@ -174,8 +174,8 @@ public class AttestationClient {
     Message.ServerIdentity serverIdentity =
         Message.ServerIdentity.deserialize(serializedServerIdentity);
 
-    ServerIdentityVerifier verifier =
-        new ServerIdentityVerifier(serverIdentity, configurationVerifier);
+    ServerConfigurationVerifier verifier =
+        new ServerConfigurationVerifier(serverIdentity, configurationVerifier);
 
     if (!verifier.verify()) {
       logger.log(Level.WARNING, "Verification of the ServerIdentity failed.");

@@ -19,39 +19,26 @@ package com.google.oak.functions.client;
 import com.google.common.hash.Hashing;
 import com.google.oak.remote_attestation.Message.ServerIdentity;
 import com.google.protobuf.InvalidProtocolBufferException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.functions.abi.ConfigurationInfo;
-import oak.remote_attestation.AttestationInfo;
-import oak.remote_attestation.AttestationReport;
 
 /**
- * A verifier that verifies an instance of {@code ServerIdentity}. The verification involves
- * verifying the attestation report, and the server {@code ConfigurationInfo} based on a given
- * predicate.
+ * A verifier that verifies the {@code ConfigurationInfo} in an instance of {@code ServerIdentity}
+ * based on a given predicate.
  */
-public class ServerIdentityVerifier {
-  private static final Logger logger = Logger.getLogger(ServerIdentityVerifier.class.getName());
+public class ServerConfigurationVerifier {
+  private static final Logger logger =
+      Logger.getLogger(ServerConfigurationVerifier.class.getName());
   private final ServerIdentity serverIdentity;
   private final Predicate<ConfigurationInfo> configurationVerifier;
 
-  public ServerIdentityVerifier(
+  public ServerConfigurationVerifier(
       ServerIdentity serverIdentity, Predicate<ConfigurationInfo> configurationVerifier) {
     this.serverIdentity = serverIdentity;
     this.configurationVerifier = configurationVerifier;
-  }
-
-  /**
-   * Verifies the encapsulated ServerIdentity, by calling {@code
-   * ServerIdentityVerifier::verifyConfigurationInfo} and {@code
-   * ServerIdentityVerifier::verifyAttestationInfo}.
-   * @return
-   */
-  public boolean verify() {
-    return verifyConfigurationInfo() && verifyAttestationInfo();
   }
 
   /**
@@ -65,7 +52,7 @@ public class ServerIdentityVerifier {
    *
    * @return the result of calling test {@code configurationVerifier} as described above.
    */
-  boolean verifyConfigurationInfo() {
+  public boolean verify() {
     byte[] configBytes = serverIdentity.getAdditionalInfo();
 
     try {
@@ -78,43 +65,6 @@ public class ServerIdentityVerifier {
       // TODO(#2316): Verify proof of inclusion in Rekor
     } catch (InvalidProtocolBufferException e) {
       logger.log(Level.WARNING, "Could not create ConfigurationInfo from byte array:", e);
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Verifies the attestation info, by reconstructing `attestationReport` from the hashes of the
-   * signing public key and the configuration info. Returns false if this hash is different from the
-   * `attestationReport` retrieved from the deserialized {@code ServerIdentity}.
-   * @return
-   */
-  boolean verifyAttestationInfo() {
-    byte[] configBytes = serverIdentity.getAdditionalInfo();
-
-    try {
-      AttestationInfo attestationInfo =
-          AttestationInfo.parseFrom(serverIdentity.getAttestationInfo());
-      byte[] attestationReport = attestationInfo.getReport().getData().toByteArray();
-
-      byte[] publicKeyHash =
-          Hashing.sha256().hashBytes(serverIdentity.getSigningPublicKey()).asBytes();
-      byte[] configHash = Hashing.sha256().hashBytes(configBytes).asBytes();
-      byte[] buffer = ByteBuffer.allocate(publicKeyHash.length + configHash.length)
-                          .put(publicKeyHash)
-                          .put(configHash)
-                          .array();
-      byte[] hashBytes = Hashing.sha256().hashBytes(buffer).asBytes();
-
-      // Verify attestationReport
-      if (!Arrays.equals(hashBytes, attestationReport)) {
-        logger.log(Level.WARNING, "Invalid hash of the configuration data");
-        return false;
-      }
-
-      // TODO(#1867): Add remote attestation support.
-    } catch (InvalidProtocolBufferException e) {
-      logger.log(Level.WARNING, "Could not parse bytes into ConfigurationInfo:", e);
       return false;
     }
     return true;

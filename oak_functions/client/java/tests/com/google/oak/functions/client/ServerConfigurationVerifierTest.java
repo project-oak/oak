@@ -21,7 +21,7 @@ import oak.functions.abi.ConfigurationInfo;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ServerIdentityVerifierTest {
+public class ServerConfigurationVerifierTest {
   @Test
   public void testVerifyConfigurationInfo() {
     ConfigurationInfo configInfo = ConfigurationInfo.newBuilder().setMlInference(true).build();
@@ -29,12 +29,12 @@ public class ServerIdentityVerifierTest {
     ServerIdentity serverIdentity =
         new ServerIdentity(new byte[] {}, new byte[] {}, new byte[] {}, new byte[] {}, configBytes);
 
-    ServerIdentityVerifier verifierExpectingMlInference = new ServerIdentityVerifier(
+    ServerConfigurationVerifier verifierExpectingMlInference = new ServerConfigurationVerifier(
         serverIdentity, (configInfoToVerify) -> configInfoToVerify.getMlInference());
-    Assert.assertTrue(verifierExpectingMlInference.verifyConfigurationInfo());
+    Assert.assertTrue(verifierExpectingMlInference.verify());
 
-    ServerIdentityVerifier verifierExpectingNoMlInference = new ServerIdentityVerifier(
+    ServerConfigurationVerifier verifierExpectingNoMlInference = new ServerConfigurationVerifier(
         serverIdentity, (configInfoToVerify) -> !configInfoToVerify.getMlInference());
-    Assert.assertFalse(verifierExpectingNoMlInference.verifyConfigurationInfo());
+    Assert.assertFalse(verifierExpectingNoMlInference.verify());
   }
 }
