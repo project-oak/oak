@@ -66,6 +66,7 @@ public class AttestationClient {
   /** Creates an unattested AttestationClient instance. */
   public AttestationClient() {}
 
+  // TODO(#2356): Change the return type to `AttestationResult` instead of throwing exceptions.
   /**
    * Creates a gRPC channel and creates an attested channel over it.
    *
@@ -148,6 +149,7 @@ public class AttestationClient {
     encryptor = handshaker.getEncryptor();
   }
 
+  // TODO(#2356): Change the return type to `VerificationResult` instead of throwing an exception.
   /**
    * Verifies server identity including its configuration.
    *
@@ -167,7 +169,7 @@ public class AttestationClient {
    * @throws IOException If {@code serializedServerIdentity} cannot be deserialized into an instance
    *     of {@code Message.ServerIdentity}.
    */
-  public boolean verifyServerIdentity(byte[] serializedServerIdentity,
+  boolean verifyServerIdentity(byte[] serializedServerIdentity,
       Predicate<ConfigurationInfo> configurationVerifier) throws IOException {
     Message.ServerIdentity serverIdentity =
         Message.ServerIdentity.deserialize(serializedServerIdentity);
@@ -175,17 +177,11 @@ public class AttestationClient {
     ServerIdentityVerifier verifier =
         new ServerIdentityVerifier(serverIdentity, configurationVerifier);
 
-    // 1. Verify ConfigurationInfo
-    if (!verifier.verifyConfigurationInfo()) {
-      logger.log(Level.WARNING, "Unexpected configuration");
+    if (!verifier.verify()) {
+      logger.log(Level.WARNING, "Verification of the ServerIdentity failed.");
       return false;
     };
 
-    // 2. Verify the the attestation info.
-    if (!verifier.verifyAttestation()) {
-      logger.log(Level.WARNING, "Invalid attestation report");
-      return false;
-    }
     return true;
   }
 

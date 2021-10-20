@@ -45,6 +45,16 @@ public class ServerIdentityVerifier {
   }
 
   /**
+   * Verifies the encapsulated ServerIdentity, by calling {@code
+   * ServerIdentityVerifier::verifyConfigurationInfo} and {@code
+   * ServerIdentityVerifier::verifyAttestationInfo}.
+   * @return
+   */
+  public boolean verify() {
+    return verifyConfigurationInfo() && verifyAttestationInfo();
+  }
+
+  /**
    * Verifies the {@code ConfigurationInfo} in the {@code serverIdentity}.
    *
    * The `additionalInfo` field of {@code serverIdentity} is expected to contain an instance of
@@ -55,7 +65,7 @@ public class ServerIdentityVerifier {
    *
    * @return the result of calling test {@code configurationVerifier} as described above.
    */
-  public boolean verifyConfigurationInfo() {
+  boolean verifyConfigurationInfo() {
     byte[] configBytes = serverIdentity.getAdditionalInfo();
 
     try {
@@ -79,7 +89,7 @@ public class ServerIdentityVerifier {
    * `attestationReport` retrieved from the deserialized {@code ServerIdentity}.
    * @return
    */
-  public Boolean verifyAttestation() {
+  boolean verifyAttestationInfo() {
     byte[] configBytes = serverIdentity.getAdditionalInfo();
 
     try {
