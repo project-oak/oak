@@ -15,7 +15,11 @@
 //
 
 use crate::{
-    handshaker::{AttestationBehavior, ClientHandshaker, ServerHandshaker},
+    crypto::Signer,
+    handshaker::{
+        create_attestation_info, verify_attestation_info, AttestationBehavior, ClientHandshaker,
+        ServerHandshaker,
+    },
     tests::message::INVALID_MESSAGE_HEADER,
 };
 use assert_matches::assert_matches;
@@ -29,14 +33,20 @@ fn create_handshakers() -> (ClientHandshaker, ServerHandshaker) {
             .unwrap();
     let client_handshaker = ClientHandshaker::new(
         bidirectional_attestation,
-        Box::new(|_server_identity| Ok(())),
+        Box::new(|server_identity| {
+            if !server_identity.additional_info.is_empty() {
+                Ok(())
+            } else {
+                anyhow::bail!("No additional info provided.")
+            }
+        }),
     );
 
     let bidirectional_attestation =
         AttestationBehavior::create_bidirectional_attestation(&[], TEE_MEASUREMENT.as_bytes())
             .unwrap();
 
-    let additional_info = vec![];
+    let additional_info = br"Additional Info".to_vec();
     let server_handshaker = ServerHandshaker::new(bidirectional_attestation, additional_info);
 
     (client_handshaker, server_handshaker)
@@ -198,4 +208,16 @@ fn test_replay_client_identity() {
         .unwrap();
     let result = second_server_handshaker.next_step(&first_client_identity);
     assert_matches!(result, Err(_));
+}
+
+#[test]
+fn test_attestation_info_roundtrip() {
+    let signer = Signer::create().expect("could not create signer");
+    let additional_info = br"Additional info";
+    let tee_certificate = br"TEE certificate";
+    let attestation_info = create_attestation_info(&signer, additional_info, tee_certificate)
+        .expect("could not create attestation info.");
+
+    let result = verify_attestation_info(attestation_info.as_ref(), TEE_MEASUREMENT.as_bytes());
+    assert!(result.is_ok());
 }

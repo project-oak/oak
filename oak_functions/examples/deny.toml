@@ -13,6 +13,9 @@ notice = "deny"
 ignore = [
   # TODO(#2258): Remove once tract-tensorflow is updated
   "RUSTSEC-2021-0065",
+  # TODO(#2353): Remove once chrono is updated.
+  "RUSTSEC-2020-0159",
+  "RUSTSEC-2020-0071",
 ]
 
 # Deny multiple versions unless explicitly skipped.

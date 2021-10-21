@@ -25,15 +25,19 @@ import com.google.oak.remote_attestation.Message;
 import com.google.oak.remote_attestation.SignatureVerifier;
 import com.google.protobuf.ByteString;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import oak.remote_attestation.AttestationInfo;
 import oak.remote_attestation.AttestationReport;
 
 /** Remote attestation protocol handshake implementation. */
 public class ClientHandshaker {
+  private static final Logger logger = Logger.getLogger(ClientHandshaker.class.getName());
   /** Remote attestation protocol version. */
   private static final int ATTESTATION_PROTOCOL_VERSION = 1;
   /** Size (in bytes) of a random array sent in messages to prevent replay attacks. */
@@ -138,7 +142,7 @@ public class ClientHandshaker {
       }
 
       // Verify server attestation info.
-      if (!verifyAttestationInfo(serverIdentity.getAttestationInfo())) {
+      if (!verifyAttestationInfo(serverIdentity)) {
         throw new VerifyException("Couldn't verify attestation info");
       }
 
@@ -180,6 +184,7 @@ public class ClientHandshaker {
     return encryptor;
   }
 
+  // TODO(#2356): Change the return type to `VerificationResult`.
   /**
    * Verifies the validity of the attestation info:
    * - Checks that the TEE report is signed by TEE Provider’s root key.
@@ -188,8 +193,28 @@ public class ClientHandshaker {
    * - Extracts the TEE measurement from the TEE report and compares it to the
    *   {@code expectedTeeMeasurement}.
    */
-  private Boolean verifyAttestationInfo(byte[] serializedAttestationInfo) throws IOException {
-    AttestationInfo attestationInfo = AttestationInfo.parseFrom(serializedAttestationInfo);
+  private Boolean verifyAttestationInfo(Message.ServerIdentity serverIdentity) throws IOException {
+    byte[] additionalInfo = serverIdentity.getAdditionalInfo();
+
+    // Check the hash of the public key and additional info
+    AttestationInfo attestationInfo =
+        AttestationInfo.parseFrom(serverIdentity.getAttestationInfo());
+    byte[] attestationReportData = attestationInfo.getReport().getData().toByteArray();
+
+    byte[] publicKeyHash =
+        Hashing.sha256().hashBytes(serverIdentity.getSigningPublicKey()).asBytes();
+    byte[] configHash = Hashing.sha256().hashBytes(additionalInfo).asBytes();
+    byte[] buffer = ByteBuffer.allocate(publicKeyHash.length + configHash.length)
+                        .put(publicKeyHash)
+                        .put(configHash)
+                        .array();
+    byte[] hashBytes = Hashing.sha256().hashBytes(buffer).asBytes();
+
+    // Verify attestationReport
+    if (!Arrays.equals(hashBytes, attestationReportData)) {
+      logger.log(Level.WARNING, "Invalid hash of the configuration data");
+      return false;
+    }
 
     // TODO(#1867): Add remote attestation support.
     return Arrays.equals(

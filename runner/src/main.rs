@@ -988,6 +988,7 @@ fn run_bazel_test() -> Step {
                 "--",
                 "//oak/...:all",
                 "//remote_attestation/java/tests/...:all",
+                "//oak_functions/client/java/tests/...:all",
             ],
         ),
     }

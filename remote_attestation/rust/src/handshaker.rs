@@ -725,7 +725,7 @@ pub fn create_attestation_info(
 ///   presented in the server response.
 /// - Extracts the TEE measurement from the TEE report and compares it to the
 ///   `expected_tee_measurement`.
-fn verify_attestation_info(
+pub fn verify_attestation_info(
     attestation_info_bytes: &[u8],
     expected_tee_measurement: &[u8],
 ) -> anyhow::Result<()> {
@@ -735,11 +735,18 @@ fn verify_attestation_info(
     // TODO(#1867): Add remote attestation support, use real TEE reports and check that
     // `AttestationInfo::certificate` is signed by one of the root certificates.
 
-    // Verify TEE measurement.
     let report = attestation_info
         .report
         .as_ref()
         .context("Couldn't find report in peer attestation info")?;
+
+    // Check that the report contains non-empty data. This should be a hash of the public key
+    // and the additional info field.
+    if report.data.is_empty() {
+        anyhow::bail!("Hash of the public key and additional info is not provided.")
+    }
+
+    // Verify TEE measurement.
     if expected_tee_measurement == report.measurement {
         Ok(())
     } else {
