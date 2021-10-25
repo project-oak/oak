@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    "abi",
+    "client/rust/Cargo.toml",
+    "examples/fuzzable/module",
+    "examples/key_value_lookup/module",
+    "examples/mobilenet/client/rust",
+    "examples/mobilenet/module",
+    "examples/metrics/client/rust",
+    "examples/metrics/module",
+    "examples/weather_lookup/module",
+    "location_utils",
+    "lookup_data_generator",
+    "load_test",
+    "loader",
+    "sdk/oak_functions",
+    "sdk/test_utils"
+]
