@@ -1453,6 +1453,7 @@ dependencies = [
  "hyper",
  "hyper-rustls",
  "log",
+ "lookup_data_generator",
  "maplit",
  "oak_functions_abi",
  "oak_remote_attestation",
