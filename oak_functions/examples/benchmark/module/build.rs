@@ -14,16 +14,16 @@
 // limitations under the License.
 //
 
-//! Oak Functions repeated lookup benchmark example.
+extern crate prost_build;
 
-#[cfg_attr(not(test), no_mangle)]
-pub extern "C" fn main() {
-    let request = oak_functions::read_request().expect("Couldn't read request body.");
-    let mut response = Vec::new();
-    for _ in 0..101 {
-        response = oak_functions::storage_get_item(&request)
-            .expect("Couldn't look up entry")
-            .unwrap_or_default();
+fn main() {
+    let file_paths = ["oak_functions/proto/benchmark.proto"];
+    prost_build::compile_protos(&file_paths, &["../../../../"]).expect("Proto compilation failed");
+
+    // Tell cargo to rerun this build script if the proto file has changed.
+    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
+    for proto_path in file_paths.iter() {
+        let file_path = std::path::Path::new(proto_path);
+        println!("cargo:rerun-if-changed=../../../../{}", file_path.display());
     }
-    oak_functions::write_response(&response).expect("Couldn't write response body.");
 }

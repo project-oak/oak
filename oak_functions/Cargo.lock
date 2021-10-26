@@ -119,6 +119,13 @@ name = "bencher"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dfdb4953a096c551ce9ace855a604d702e6e62d77fac690575ae347571717f5"
+name = "benchmark"
+version = "0.1.0"
+dependencies = [
+ "oak_functions",
+ "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "bigdecimal"
@@ -1087,13 +1094,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "lookup_benchmark"
-version = "0.1.0"
-dependencies = [
- "oak_functions",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 [package]
-name = "lookup_benchmark"
+name = "benchmark"
 version = "0.1.0"
 authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2018"
@@ -10,3 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 oak_functions = { path = "../../../sdk/oak_functions" }
+prost = "*"
+
+[build-dependencies]
+prost-build = "*"

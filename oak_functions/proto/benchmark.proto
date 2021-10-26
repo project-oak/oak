@@ -14,23 +14,19 @@
 // limitations under the License.
 //
 
-use oak_utils::{generate_grpc_code, CodegenOptions, ExternPath};
+syntax = "proto3";
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    generate_grpc_code(
-        "../../",
-        &[
-            "oak_functions/proto/server.proto",
-            "oak_functions/proto/benchmark.proto",
-        ],
-        CodegenOptions {
-            build_client: false,
-            build_server: true,
-            extern_paths: vec![ExternPath::new(
-                ".oak.remote_attestation",
-                "::oak_remote_attestation::proto",
-            )],
-        },
-    )?;
-    Ok(())
+package oak.functions.benchmark;
+
+// A request to execute a benchmark action a specified number of times.
+message BenchmarkRequest {
+  uint32 iterations = 1;
+  oneof action {
+    LookupTest lookup = 2;
+  }
+}
+
+// The key and expected value when doing a benchmark lookup.
+message LookupTest {
+  bytes key = 1;
 }
