@@ -9,11 +9,11 @@ members = [
   "examples/metrics/client/rust",
   "examples/metrics/module",
   "examples/weather_lookup/module",
-  "location_utils",
-  "lookup_data_generator",
   "load_test",
   "loader",
+  "loader/fuzz",
+  "location_utils",
+  "lookup_data_generator",
   "sdk/oak_functions",
   "sdk/test_utils",
-  "loader/fuzz"
 ]
