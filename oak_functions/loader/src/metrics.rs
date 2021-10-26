@@ -403,7 +403,7 @@ fn report_metric(
     } else {
         extension.logger.log_sensitive(
             Level::Error,
-            &format!("report_metric(): Missing metrics proxy",),
+            &"report_metric(): Missing metrics proxy",
         );
         Err(OakStatus::ErrInternal)
     }
