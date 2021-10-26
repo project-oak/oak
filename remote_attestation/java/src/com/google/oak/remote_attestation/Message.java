@@ -16,8 +16,6 @@
 
 package com.google.oak.remote_attestation;
 
-import static java.lang.Math.toIntExact;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -409,8 +407,8 @@ public class Message {
       throws IllegalArgumentException, IOException {
     byte[] sizeBytes =
         readFixedSizeArray(inputStream, ARRAY_SERIALIZATION_PREFIX_LENGTH, name + " size");
-    long size = ByteBuffer.wrap(sizeBytes).order(ByteOrder.LITTLE_ENDIAN).getLong();
-    return readFixedSizeArray(inputStream, toIntExact(size), name);
+    int size = ByteBuffer.wrap(sizeBytes).order(ByteOrder.LITTLE_ENDIAN).getInt();
+    return readFixedSizeArray(inputStream, size, name);
   }
 
   private static void writeFixedSizeArray(DataOutputStream outputStream, byte[] value, int size,
