@@ -4,7 +4,7 @@ name = "weather_lookup"
 
 [applications.rust]
 type = "Functions"
-wasm_path = "oak_functions/examples/bin/weather_lookup.wasm"
+wasm_path = "oak_functions/bin/weather_lookup.wasm"
 target = { Cargo = { cargo_manifest = "oak_functions/examples/weather_lookup/module/Cargo.toml" } }
 
 [server]
