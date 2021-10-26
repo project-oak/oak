@@ -407,8 +407,8 @@ public class Message {
       throws IllegalArgumentException, IOException {
     byte[] sizeBytes =
         readFixedSizeArray(inputStream, ARRAY_SERIALIZATION_PREFIX_LENGTH, name + " size");
-    long size = ByteBuffer.wrap(sizeBytes).order(ByteOrder.LITTLE_ENDIAN).getLong();
-    return readFixedSizeArray(inputStream, (int) size, name);
+    int size = ByteBuffer.wrap(sizeBytes).order(ByteOrder.LITTLE_ENDIAN).getInt();
+    return readFixedSizeArray(inputStream, size, name);
   }
 
   private static void writeFixedSizeArray(DataOutputStream outputStream, byte[] value, int size,
