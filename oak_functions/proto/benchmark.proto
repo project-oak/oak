@@ -26,7 +26,7 @@ message BenchmarkRequest {
   }
 }
 
-// The key and expected value when doing a benchmark lookup.
+// Container for the key to use when doing a benchmark lookup.
 message LookupTest {
   bytes key = 1;
 }
