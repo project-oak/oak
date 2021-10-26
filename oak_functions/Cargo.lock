@@ -1090,6 +1090,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "lookup_benchmark"
+version = "0.1.0"
+dependencies = [
+ "oak_functions",
+]
+
+[[package]]
 name = "lookup_data_generator"
 version = "0.1.0"
 dependencies = [
