@@ -14,5 +14,6 @@ members = [
   "load_test",
   "loader",
   "sdk/oak_functions",
-  "sdk/test_utils"
+  "sdk/test_utils",
+  "loader/fuzz"
 ]

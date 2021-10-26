@@ -51,6 +51,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08abcc3b4e9339e33a3d0a5ed15d84a687350c05689d825e0f6655eef9e76a94"
 
 [[package]]
+name = "arbitrary"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "577b08a4acd7b99869f863c50011b01eb73424ccc798ecd996f2e24817adfca7"
+dependencies = [
+ "derive_arbitrary",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -412,6 +421,17 @@ name = "derive-new"
 version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3418329ca0ad70234b9735dc4ceed10af4df60eff9c8e7b06cb5e520d92c3535"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "derive_arbitrary"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b24629208e87a2d8b396ff43b15c4afb0a69cea3fbbaa9ed9b92b7c02f0aed73"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -972,6 +992,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "869d572136620d55835903746bcb5cdc54cb2851fd0aeec53220b4bb65ef3013"
 
 [[package]]
+name = "libfuzzer-sys"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36a9a84a6e8b55dfefb04235e55edb2b9a2a18488fcae777a6bdaa6f06f1deb3"
+dependencies = [
+ "arbitrary",
+ "cc",
+ "once_cell",
+]
+
+[[package]]
 name = "libm"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1441,6 +1472,23 @@ dependencies = [
  "tract-tensorflow",
  "url",
  "wasmi",
+]
+
+[[package]]
+name = "oak_functions_loader-fuzz"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "arbitrary",
+ "lazy_static",
+ "libfuzzer-sys",
+ "maplit",
+ "oak_functions_abi",
+ "oak_functions_loader",
+ "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio",
+ "tonic",
 ]
 
 [[package]]
@@ -2953,7 +3001,7 @@ dependencies = [
  "oak_functions",
  "oak_functions_abi",
  "oak_functions_loader",
- "prost 0.9.0",
+ "prost 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.8.4",
  "serde",
  "serde_json",
