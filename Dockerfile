@@ -259,7 +259,7 @@ RUN chmod +x ${install_dir}/cargo-udeps
 
 # Install rust-analyzer
 # https://github.com/rust-analyzer/rust-analyzer
-ARG rust_analyzer_version=2020-10-26
+ARG rust_analyzer_version=2021-10-18
 ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-linux
 RUN curl --location ${rust_analyzer_location} > ${install_dir}/rust-analyzer
 RUN chmod +x ${install_dir}/rust-analyzer
