@@ -19,7 +19,6 @@ package com.google.oak.remote_attestation;
 import com.google.common.primitives.Bytes;
 import com.google.crypto.tink.subtle.AesGcmJce;
 import com.google.oak.remote_attestation.Message;
-import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;

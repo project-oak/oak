@@ -18,11 +18,13 @@ package com.google.oak.remote_attestation;
 
 import com.google.oak.remote_attestation.Message;
 import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.Random;
 import org.junit.Assert;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.junit.Test;
 
+@RunWith(JUnit4.class)
 public class MessageTest {
   private static final int TEST_LENGTH = 100;
 

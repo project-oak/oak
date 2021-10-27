@@ -23,8 +23,11 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.junit.Test;
 
+@RunWith(JUnit4.class)
 public class KeyNegotiatorTest {
   private static final byte[] DATA = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
@@ -40,7 +43,7 @@ public class KeyNegotiatorTest {
   @Test
   public void testCreateKeyNegotiator() throws GeneralSecurityException {
     byte[] publicKey = clientKeyNegotiator.getPublicKey();
-    Assert.assertEquals(publicKey.length, Message.EPHEMERAL_PUBLIC_KEY_LENGTH);
+    Assert.assertEquals(Message.EPHEMERAL_PUBLIC_KEY_LENGTH, publicKey.length);
   }
 
   @Test

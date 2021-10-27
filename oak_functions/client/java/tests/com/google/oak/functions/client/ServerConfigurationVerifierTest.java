@@ -19,8 +19,11 @@ package com.google.oak.functions.client;
 import com.google.oak.remote_attestation.Message.ServerIdentity;
 import oak.functions.abi.ConfigurationInfo;
 import org.junit.Assert;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.junit.Test;
 
+@RunWith(JUnit4.class)
 public class ServerConfigurationVerifierTest {
   @Test
   public void testVerifyConfigurationInfo() {

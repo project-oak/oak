@@ -23,33 +23,27 @@ import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.KeyNegotiator;
 import com.google.oak.remote_attestation.Message;
 import com.google.oak.remote_attestation.SignatureVerifier;
-import com.google.protobuf.ByteString;
+import com.google.protobuf.ExtensionRegistryLite;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.remote_attestation.AttestationInfo;
-import oak.remote_attestation.AttestationReport;
 
 /** Remote attestation protocol handshake implementation. */
 public class ClientHandshaker {
   private static final Logger logger = Logger.getLogger(ClientHandshaker.class.getName());
-  /** Remote attestation protocol version. */
-  private static final int ATTESTATION_PROTOCOL_VERSION = 1;
   /** Size (in bytes) of a random array sent in messages to prevent replay attacks. */
   private static final int REPLAY_PROTECTION_ARRAY_LENGTH = 32;
-  /** Test value of the server's TEE measurement. */
-  private static final String TEST_TEE_MEASUREMENT = "Test TEE measurement";
 
   public static enum State {
-    Initializing,
-    ExpectingServerIdentity,
-    Completed,
-    Aborted,
+    INITIALIZING,
+    EXPECTING_SERVER_IDENTITY,
+    COMPLETED,
+    ABORTED,
   }
 
   /** Expected value of the server's TEE measurement. */
@@ -68,7 +62,7 @@ public class ClientHandshaker {
 
   public ClientHandshaker(byte[] expectedTeeMeasurement) {
     this.expectedTeeMeasurement = expectedTeeMeasurement;
-    state = State.Initializing;
+    state = State.INITIALIZING;
     transcript = new byte[0];
     // Generate client private/public key pair.
     keyNegotiator = new KeyNegotiator();
@@ -78,13 +72,13 @@ public class ClientHandshaker {
   /**
    * Initializes the remote attestation handshake by creating an {@code ClientHello} message.
    *
-   * Transitions {@code ClientHandshaker} state from {@code State.Initializing} to
-   * {@code State.ExpectingServerIdentity} state.
+   * Transitions {@code ClientHandshaker} state from {@code State.INITIALIZING} to
+   * {@code State.EXPECTING_SERVER_IDENTITY} state.
    */
   public byte[] createClientHello() throws IOException {
     try {
-      if (state != State.Initializing) {
-        throw new IllegalStateException("ClientHandshaker is not in the Initializing state");
+      if (state != State.INITIALIZING) {
+        throw new IllegalStateException("ClientHandshaker is not in the INITIALIZING state");
       }
 
       // Random vector sent in messages for preventing replay attacks.
@@ -98,10 +92,10 @@ public class ClientHandshaker {
       byte[] serializedClientHello = clientHello.serialize();
       appendTranscript(serializedClientHello);
 
-      state = State.ExpectingServerIdentity;
+      state = State.EXPECTING_SERVER_IDENTITY;
       return serializedClientHello;
     } catch (Exception e) {
-      state = state.Aborted;
+      state = State.ABORTED;
       throw e;
     }
   }
@@ -111,15 +105,15 @@ public class ClientHandshaker {
    * derives session keys for encrypting/decrypting messages from the server.
    * {@code ClientIdentity} message contains an ephemeral public key for negotiating session keys.
    *
-   * Transitions {@code ClientHandshaker} state from {@code State.ExpectingServerIdentity} to
+   * Transitions {@code ClientHandshaker} state from {@code State.EXPECTING_SERVER_IDENTITY} to
    * {@code State.Attested} state.
    */
   public byte[] processServerIdentity(byte[] serializedServerIdentity)
       throws RuntimeException, IOException, GeneralSecurityException {
     try {
-      if (state != State.ExpectingServerIdentity) {
+      if (state != State.EXPECTING_SERVER_IDENTITY) {
         throw new IllegalStateException(
-            "ClientHandshaker is not in the ExpectingServerIdentity state");
+            "ClientHandshaker is not in the EXPECTING_SERVER_IDENTITY state");
       }
 
       Message.ServerIdentity serverIdentity =
@@ -162,10 +156,10 @@ public class ClientHandshaker {
       encryptor = keyNegotiator.createEncryptor(
           serverIdentity.getEphemeralPublicKey(), KeyNegotiator.EncryptorType.CLIENT);
 
-      state = State.Completed;
+      state = State.COMPLETED;
       return serializedClientIdentity;
     } catch (Exception e) {
-      state = state.Aborted;
+      state = State.ABORTED;
       throw e;
     }
   }
@@ -177,8 +171,8 @@ public class ClientHandshaker {
 
   /** Returns an encryptor created based on the negotiated ephemeral keys. */
   public AeadEncryptor getEncryptor() throws RuntimeException {
-    if (state != State.Completed) {
-      throw new IllegalStateException("ClientHandshaker is not in the Completed state");
+    if (state != State.COMPLETED) {
+      throw new IllegalStateException("ClientHandshaker is not in the COMPLETED state");
     }
 
     return encryptor;
@@ -197,8 +191,8 @@ public class ClientHandshaker {
     byte[] additionalInfo = serverIdentity.getAdditionalInfo();
 
     // Check the hash of the public key and additional info
-    AttestationInfo attestationInfo =
-        AttestationInfo.parseFrom(serverIdentity.getAttestationInfo());
+    AttestationInfo attestationInfo = AttestationInfo.parseFrom(
+        serverIdentity.getAttestationInfo(), ExtensionRegistryLite.getEmptyRegistry());
     byte[] attestationReportData = attestationInfo.getReport().getData().toByteArray();
 
     byte[] publicKeyHash =
