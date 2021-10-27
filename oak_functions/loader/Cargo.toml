@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "oak_functions_loader"
 version = "0.1.0"

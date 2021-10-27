@@ -23,10 +23,6 @@ tonic = "*"
 [build-dependencies]
 prost-build = "*"
 
-# Prevent this from interfering with workspaces
-[workspace]
-members = ["."]
-
 [[bin]]
 name = "apply_policy"
 path = "fuzz_targets/apply_policy.rs"
