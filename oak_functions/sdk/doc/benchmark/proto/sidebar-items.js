@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["benchmark_request","Nested message and enum types in `BenchmarkRequest`."]],"struct":[["BenchmarkRequest","A request to execute a benchmark action a specified number of times."],["LookupTest","Container for the key to use when doing a benchmark lookup."]]});

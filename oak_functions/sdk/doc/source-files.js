@@ -1,4 +1,5 @@
 var N = null;var sourcesIndex = {};
+sourcesIndex["benchmark"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["fuzzable"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["key_value_lookup"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["location_utils"] = {"name":"","files":["lib.rs"]};
