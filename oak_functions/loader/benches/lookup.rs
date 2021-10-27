@@ -102,14 +102,14 @@ fn medium_random_data_multi_lookup(bencher: &mut Bencher) {
 
 #[bench]
 fn large_random_data_single_lookup(bencher: &mut Bencher) {
-    let test_data = generate_random_test_data_for_bench(1_024, 10_240, 1_000_000);
+    let test_data = generate_random_test_data_for_bench(1_024, 10_240, 1_000);
 
     run_lookup_bench(bencher, test_data, 1, Duration::from_millis(5));
 }
 
 #[bench]
 fn large_random_data_multi_lookup(bencher: &mut Bencher) {
-    let test_data = generate_random_test_data_for_bench(1_024, 10_240, 1_000_000);
+    let test_data = generate_random_test_data_for_bench(1_024, 10_240, 1_000);
 
     run_lookup_bench(bencher, test_data, 101, Duration::from_millis(25));
 }
@@ -129,27 +129,29 @@ fn run_lookup_bench(bencher: &mut Bencher, test_data: TestData, iterations: u32,
         .expect("Couldn't create the server");
     let rt = tokio::runtime::Runtime::new().unwrap();
 
-    let summary = bencher
-        .bench(|bencher| {
-            bencher.iter(|| {
-                let request = Request {
-                    body: benchmark_request.encode_to_vec(),
-                };
-                let resp = rt
-                    .block_on(wasm_handler.clone().handle_invoke(request))
-                    .unwrap();
-                assert_eq!(resp.status, StatusCode::Success as i32);
-                assert_eq!(resp.body, expected_value);
-            });
-        })
-        .unwrap();
+    let summary = bencher.bench(|bencher| {
+        bencher.iter(|| {
+            let request = Request {
+                body: benchmark_request.encode_to_vec(),
+            };
+            let resp = rt
+                .block_on(wasm_handler.clone().handle_invoke(request))
+                .unwrap();
+            assert_eq!(resp.status, StatusCode::Success as i32);
+            assert_eq!(resp.body, expected_value);
+        });
+    });
 
-    // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
-    // https://doc.rust-lang.org/test/stats/struct.Summary.html.
-    let elapsed = Duration::from_nanos(summary.mean as u64);
-    // We expect the `mean` time for loading the test Wasm module and running its main function
-    // to be less than a fixed threshold.
-    assert!(elapsed <= cutoff, "elapsed time: {:.0?}", elapsed);
+    // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
+    // in that case. So, here we first check that `summary` is not empty.
+    if let Some(summary) = summary {
+        // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
+        // https://doc.rust-lang.org/test/stats/struct.Summary.html.
+        let elapsed = Duration::from_nanos(summary.mean as u64);
+        // We expect the `mean` time for loading the test Wasm module and running its main function
+        // to be less than a fixed threshold.
+        assert!(elapsed <= cutoff, "elapsed time: {:.0?}", elapsed);
+    }
 }
 
 /// The test data used for benchmarking.
