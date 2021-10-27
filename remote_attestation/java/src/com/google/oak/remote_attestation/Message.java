@@ -18,9 +18,7 @@ package com.google.oak.remote_attestation;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -48,6 +46,8 @@ public class Message {
   // TODO(#2277): Use OpenSSL signature format (which is 72 bytes).
   public static final int TRANSCRIPT_SIGNATURE_LENGTH = 64;
   public static final int SIGNING_PUBLIC_KEY_LENGTH = 65;
+
+  private Message() {}
 
   /** Initial message that starts remote attestation handshake. */
   public static class ClientHello {

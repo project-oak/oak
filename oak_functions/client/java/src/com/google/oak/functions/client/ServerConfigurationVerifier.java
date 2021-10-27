@@ -16,10 +16,9 @@
 
 package com.google.oak.functions.client;
 
-import com.google.common.hash.Hashing;
 import com.google.oak.remote_attestation.Message.ServerIdentity;
+import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
-import java.util.Arrays;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,7 +55,8 @@ public class ServerConfigurationVerifier {
     byte[] configBytes = serverIdentity.getAdditionalInfo();
 
     try {
-      ConfigurationInfo configInfo = ConfigurationInfo.parseFrom(configBytes);
+      ConfigurationInfo configInfo =
+          ConfigurationInfo.parseFrom(configBytes, ExtensionRegistryLite.getEmptyRegistry());
       // TODO(#2347): Check that ConfigurationInfo does not have additional/unknown fields.
       if (!configurationVerifier.test(configInfo)) {
         logger.log(Level.WARNING, "Verification of ConfigurationInfo failed.");

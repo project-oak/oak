@@ -20,9 +20,13 @@ import com.google.oak.remote_attestation.ClientHandshaker;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import org.junit.Assert;
+import static org.junit.Assert.assertThrows;
 import org.junit.Before;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.junit.Test;
 
+@RunWith(JUnit4.class)
 public class ClientHandshakerTest {
   private static final byte INVALID_MESSAGE_HEADER = 5;
 
@@ -35,30 +39,34 @@ public class ClientHandshakerTest {
 
   @Test
   public void testCreateClientHello() throws GeneralSecurityException, IOException {
-    Assert.assertEquals(handshaker.getState(), ClientHandshaker.State.Initializing);
+    Assert.assertEquals(ClientHandshaker.State.INITIALIZING, handshaker.getState());
     handshaker.createClientHello();
-    Assert.assertEquals(handshaker.getState(), ClientHandshaker.State.ExpectingServerIdentity);
+    Assert.assertEquals(ClientHandshaker.State.EXPECTING_SERVER_IDENTITY, handshaker.getState());
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testProcessServerIdentity() throws GeneralSecurityException, IOException {
-    try {
-      handshaker.processServerIdentity(new byte[0]);
-    } catch (Exception e) {
-      Assert.assertEquals(handshaker.getState(), ClientHandshaker.State.Aborted);
-      throw e;
-    }
+    assertThrows(IllegalStateException.class, () -> {
+      try {
+        handshaker.processServerIdentity(new byte[0]);
+      } catch (Exception e) {
+        Assert.assertEquals(ClientHandshaker.State.ABORTED, handshaker.getState());
+        throw e;
+      }
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidMessage() throws GeneralSecurityException, IOException {
-    try {
-      handshaker.createClientHello();
-      byte[] invalidMessage = {INVALID_MESSAGE_HEADER};
-      handshaker.processServerIdentity(invalidMessage);
-    } catch (Exception e) {
-      Assert.assertEquals(handshaker.getState(), ClientHandshaker.State.Aborted);
-      throw e;
-    }
+    assertThrows(IllegalArgumentException.class, () -> {
+      try {
+        handshaker.createClientHello();
+        byte[] invalidMessage = {INVALID_MESSAGE_HEADER};
+        handshaker.processServerIdentity(invalidMessage);
+      } catch (Exception e) {
+        Assert.assertEquals(ClientHandshaker.State.ABORTED, handshaker.getState());
+        throw e;
+      }
+    });
   }
 }
