@@ -37,9 +37,9 @@ returns the address of the newly allocated buffer. Then, to fulfill the
 invocation the Oak Functions runtime copies the data in the allocated buffer,
 i.e., the memory of the Oak Functions WebAssembly module.
 
-The allocated memory is owned by the caller of the original Oak Functions
-WebAssembly ABI invocation. The Oak Functions runtime never directly frees
-memor allocated from the WebAssembly module through `alloc`.
+The allocated memory is owned by the Oak Functions WebAssembly module originally
+invoking the WebAssembly ABI. The Oak Functions runtime never directly frees
+memory allocated from the WebAssembly module through `alloc`.
 
 A canonical implementation of `alloc` is [provided in the Oak Functions Rust
 SDK](/oak_functions/sdk/oak_functions/src/lib.rs).
