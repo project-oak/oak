@@ -5,17 +5,34 @@ computing platform that allows developing stateless applications in a privacy
 preserving way. Oak Functions leverages TEEs and remote attestation, Wasm
 sandboxing, and allows exposing metrics in a Differentially Private way.
 
+At its core, the Oak Functions loader is a trusted runtime compiled to a server
+binary that, for each incoming client gRPC request, executes an untrusted
+workload that operates on the request payload, and produces a response which is
+sent back to the same client. The trusted runtime ensures that the untrusted
+workload may not violate the confidentiality of the client request data,
+preventing observers from learning anything about the request. From the client
+point of view, the server provides cryptographic evidence (backed by an
+hardware-based Trusted Execution Environment) of its own identity as part of a
+remote attestation protocol, which convinces the client that it is in fact a
+legitimate version of such a runtime.
+
 The main building blocks used in Oak Functions are:
 
 - A Trusted Execution Environment (TEE)
-  - This protects the data from the host, other enclaves and processes, and even
-    some HW attacks.
-  - TEEs can be VM-based (e.g., AMD SEV) or HW-backed (e.g., Intel SGX). Either
-    variant can be used for hosting an Oak Functions application.
-- Sandboxing the workload, currently using WebAssembly
+  - protects the confidentiality and integrity of data and code from the host,
+    other TEE instances and processes, and some hardware attacks
+  - in general, TEEs may be VM-based (e.g.
+    [AMD SEV](https://developer.amd.com/sev/)) or enclave-based (e.g.
+    [Intel SGX](https://www.intel.com/content/www/us/en/developer/tools/software-guard-extensions/overview.html)).
+    Oak Functions mainly leverages VM-based TEEs.
+- Sandboxing the workload, currently using
+  [WebAssembly](https://webassembly.org/)
   - The TEE protects from the host, and anything malicious on it, but to prevent
-    malicious behavior in the code itself we need to sandbox the code and limit
-    its privileges.
+    malicious behavior in the workload code we need to sandbox it and limit what
+    actions it is allowed to perform; for instance, the sandbox prevents the
+    code from logging, storing data to disk or outside the TEE boundary,
+    creating network connections, and interacting with the untrusted host in any
+    way other than what it explicitly allows in a controlled way
 - Remote Attestation
   - So that the client can ensure that it is interacting with a legitimate and
     trustworthy instance of Oak Functions trusted runtime.
@@ -35,10 +52,11 @@ from the conventional computing model.
 is responsible for starting the Oak Functions trusted runtime, and loading an
 application, with a single Wasm module as the workload. An application may
 specify additional resources in a server configuration file. These resources are
-as well loaded by the Oak Functions loader at the startup time. The trusted
-runtime instantiates the given Wasm module for each incoming user request, runs
-the request through it in order to produce a response, and then terminates the
-Wasm instance; each Wasm instance is short lived and stateless.
+as well loaded by the Oak Functions loader at startup time. The trusted runtime
+instantiates the given Wasm module for each incoming user request, runs the
+request through it in order to produce a response, and then terminates the Wasm
+instance; each Wasm instance is short lived and does not persist state outside
+of the request lifetime.
 
 As part of our shift to a distributed runtime, in the future, we may allow
 native Oak Functions instances that do not run any untrusted Wasm code. An
@@ -48,12 +66,12 @@ metrics, deployed on its own TEE instances.
 ### ABI Functions and the Rust SDK
 
 WebAssembly is very restricted. In order to be able to implement meaningful
-applications in a secure way, the trusted runtime provides a number of ABI
-functions. The ABI functions allow reading the incoming request, writing the
-response, writing log messages, and fetching items from an in-memory storage. In
-addition, there are experimental features for publishing metrics, and
-machine-learning inference using a TensorFlow model. The full description of the
-ABI functions can be found
+applications in a secure way, the trusted runtime provides a limited number of
+ABI functions to the Wasm module. The ABI functions allow reading the incoming
+request, writing the response, writing log messages, and fetching items from an
+in-memory storage. In addition, there are experimental features for publishing
+metrics, and machine-learning inference using a TensorFlow model. The full
+description of the ABI functions can be found
 [here](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md).
 
 A Rust SDK is currently available, and support for other languages may be added
@@ -61,13 +79,13 @@ in the future.
 
 ### Read-Only Storage
 
-The trusted runtime does not allow the Wasm logic to interact with any external
-resources. However, each Oak Functions application can have a read-only storage
-that is populated with data from an external data source at the startup time.
-The external resource has to be specified in the server configuration file. It
-is also possible to specify a refresh interval. This allows the Oak Functions
-loader to periodically refresh the data in the storage, by re-downloading the
-entirety of the data from a URL provided in the server configuration file.
+The trusted runtime does not allow the Wasm workload to interact with any
+external resources. However, each Oak Functions application may have read-only
+access to an in-memory storage that is populated with data from an external data
+source at startup time. The external resource is specified in the server
+configuration file as a URL. It is also possible to specify a refresh interval.
+This allows the Oak Functions loader to periodically refresh the data in the
+storage, by re-downloading the entirety of the data from the provided URL.
 
 The storage is implemented as an in-memory key-value store (in practice a
 hashmap), of which there is one instance per Oak Functions trusted runtime
