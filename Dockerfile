@@ -259,9 +259,9 @@ RUN chmod +x ${install_dir}/cargo-udeps
 
 # Install rust-analyzer
 # https://github.com/rust-analyzer/rust-analyzer
-ARG rust_analyzer_version=2021-10-18
-ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-linux
-RUN curl --location ${rust_analyzer_location} > ${install_dir}/rust-analyzer
+ARG rust_analyzer_version=2021-08-16
+ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-x86_64-unknown-linux-gnu.gz
+RUN curl --location ${rust_analyzer_location} | gzip --decompress $@ > ${install_dir}/rust-analyzer
 RUN chmod +x ${install_dir}/rust-analyzer
 
 # Unset $CARGO_HOME so that the new user will use the default value for it, which will point it to
