@@ -47,7 +47,6 @@ memory allocated from the WebAssembly module through `alloc`.
 A canonical implementation of `alloc` is
 [provided in the Oak Functions Rust SDK](/oak_functions/sdk/oak_functions/src/lib.rs).
 
-
 ## Imported Functions
 
 Each Oak Functions WebAssembly module can rely on the the Oak Functions runtime
@@ -209,4 +208,3 @@ In particular, if no TensorFlow model is present, the status is
 
 `tf_model_infer` is experimental, and is only available when the `oak-tf`
 feature is enabled.
-
