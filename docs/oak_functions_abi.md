@@ -20,15 +20,18 @@ Each Oak Functions WebAssembly module exposes the following functions as
 [WebAssembly exports](https://webassembly.github.io/spec/core/syntax/modules.html#exports)
 to the Oak Functions runtime:
 
-### `main() :`
-
-The Oak Functions runtime invokes `main` to start the Oak Functions WebAssembly
-module.
+### `main`
 
 - no params
 - no results
 
-### `alloc(len: i32) : i32`
+The Oak Functions runtime invokes `main` to start the Oak Functions WebAssembly
+module.
+
+### `alloc`
+
+- `param[0]: len: i32`: number of bytes to allocate.
+- `result[0]: i32`: address of the newly allocated buffer.
 
 The Oak Functions runtime invokes `alloc` when it needs to allocate `len` number
 of bytes of memory from the Oak Functions WebAssembly module to fulfill an Oak
@@ -44,8 +47,6 @@ memory allocated from the WebAssembly module through `alloc`.
 A canonical implementation of `alloc` is
 [provided in the Oak Functions Rust SDK](/oak_functions/sdk/oak_functions/src/lib.rs).
 
-- `param[0]: len: i32`: number of bytes to allocate.
-- `result[0]: i32`: address of the newly allocated buffer.
 
 ## Imported Functions
 
@@ -53,7 +54,15 @@ Each Oak Functions WebAssembly module can rely on the the Oak Functions runtime
 providing the following functions as
 [WebAssembly imports](https://webassembly.github.io/spec/core/syntax/modules.html#imports):
 
-### `read_request(dest_ptr_ptr: i32, dest_len_ptr: i32) : i32`
+### `read_request`
+
+- `param[0]: dest_ptr_ptr: i32`: address where the Oak Functions runtime will
+  write the address of the request buffer.
+- `param[1]: dest_len_ptr: i32`: address where the Oak Functions runtime will
+  write the number of bytes of the request buffer (as a little-endian u32).
+- `result[0]: i32`:
+  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
+  of the invocation
 
 The Oak Functions WebAssembly module invokes `read_request` to read a request
 from the client. The Oak Functions WebAssembly module provides an address where
@@ -68,15 +77,13 @@ runtime returns an
 Multiple calls result in the same values in the request buffer and return the
 same status.
 
-- `param[0]: dest_ptr_ptr: i32`: address where the Oak Functions runtime will
-  write the address of the request buffer.
-- `param[1]: dest_len_ptr: i32`: address where the Oak Functions runtime will
-  write the number of bytes of the request buffer (as a little-endian u32).
+### `write_response`
+
+- `param[0]: buf_ptr: i32`: address of the response buffer.
+- `param[1]: buf_len: i32`: number of bytes of the response buffer.
 - `result[0]: i32`:
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
   of the invocation
-
-### `write_response(buf_ptr: i32, buf_len: i32) : i32`
 
 The Oak Functions WebAssembly module invokes `write_response` to write a
 response in the response buffer at address `buf_prt` with the corresponding
@@ -90,13 +97,13 @@ sent to the client. If the Oak Functions WebAssembly module never invokes
 `write_response`, the Oak Functions runtime sends an empty response to the
 client.
 
-- `param[0]: buf_ptr: i32`: address of the response buffer.
-- `param[1]: buf_len: i32`: number of bytes of the response buffer.
+### `write_log_message`
+
+- `param[0]: buf_ptr: i32`: address of the log message buffer.
+- `param[1]: buf_len: i32`: number of bytes of the log message buffer.
 - `result[0]: i32`:
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
   of the invocation
-
-### `write_log_message(buf_ptr: i32, buf_len: i32) : i32`
 
 The Oak Functions WebAssembly module invokes `write_log_message` to write a log
 message to the log message buffer. The Oak Functions runtime reads the log
@@ -110,18 +117,19 @@ buffer as a UTF-8 encoded string. If successful, the string is logged as a debug
 message. If the bytes are not a valid UTF-8 string a warning message containing
 the UTF-8 decoding error and the raw bytes is logged.
 
-Multiple invocations produce different log messages.
+Each invocation produces a log message.
 
 Log messages are considered sensitive, so logging is only possible if the
 `oak_unsafe` feature is enabled.
 
-- `param[0]: buf_ptr: i32`: address of the log message buffer.
-- `param[1]: buf_len: i32`: number of bytes of the log message buffer.
+### `report_metric`
+
+- `param[0]: buf_ptr: i32`: address of the label buffer.
+- `param[1]: buf_len: i32`: number of bytes of the label buffer.
+- `param[2]: value: i64`: the metrics value to report.
 - `result[0]: i32`:
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
   of the invocation
-
-### `report_metric(buf_ptr: i32, buf_len: i32, value: i64) : i32`
 
 The Oak Functions WebAssembly module invokes `report_metric` to report the
 metric value `value` for a sum-based metric bucket identified by a label. The
@@ -147,14 +155,18 @@ only the last reported value will be used for that request.
 If values are not reported for some buckets during a request it will be treated
 as if values of 0 were reported for those buckets.
 
-- `param[0]: buf_ptr: i32`: address of the label buffer.
-- `param[1]: buf_len: i32`: number of bytes of the label buffer.
-- `param[2]: value: i64`: the metrics value to report.
+### `storage_get_item`
+
+- `param[0]: key_ptr: i32`: address of the key buffer.
+- `param[1]: key_len: i32`: number of bytes of the key buffer.
+- `param[2]: value_ptr_ptr: i32`: address where the Oak Functions runtime will
+  write the address of the buffer containing the item.
+- `param[3]: value_len_ptr: i32`: address where the Oak Functions runtime will
+  write the number of bytes of the newly allocated value buffer (as a
+  little-endian u32).
 - `result[0]: i32`:
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
   of the invocation
-
-### `storage_get_item(key_ptr: i32, key_len: i32, value_ptr_ptr: i32, value_len_ptr: i32) : i32`
 
 The Oak Functions WebAssembly module invokes `storage_get_item` to retrieve a
 single item for the given key from the lookup data in-memory store of the Oak
@@ -169,18 +181,18 @@ corresponding size to `value_len_ptr`. The Oak Functions runtime returns an
 In particular, if no item with the given key is found, the status is
 `ERR_STORAGE_ITEM_NOT_FOUND`.
 
-- `param[0]: key_ptr: i32`: address of the key buffer.
-- `param[1]: key_len: i32`: number of bytes of the key buffer.
-- `param[2]: value_ptr_ptr: i32`: address where the Oak Functions runtime will
-  write the address of the buffer containing the item.
-- `param[3]: value_len_ptr: i32`: address where the Oak Functions runtime will
-  write the number of bytes of the newly allocated value buffer (as a
+### `tf_model_infer(input_ptr: i32, input_len: i32, inference_ptr_ptr, inference_len_ptr: i32) : i32`
+
+- `param[0]: input_ptr: i32`: address of the input buffer.
+- `param[1]: input_len: i32`: number of bytes of the input buffer.
+- `param[2]: inference_ptr_ptr: i32`: address where the Oak Functions runtime
+  will write the address of the newly allocated inference buffer.
+- `param[3]: inference_len_ptr: i32`: address where the Oak Functions runtime
+  will write the number of bytes of the newly allocated inference buffer (as a
   little-endian u32).
 - `result[0]: i32`:
   [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
   of the invocation
-
-### `tf_model_infer(input_ptr: i32, input_len: i32, inference_ptr_ptr, inference_len_ptr: i32) : i32`
 
 The Oak Functions WebAssembly module invokes `tf_model_infer` to run the
 specified TensorFlow model for the given input. The Oak Functions runtime reads
@@ -198,13 +210,3 @@ In particular, if no TensorFlow model is present, the status is
 `tf_model_infer` is experimental, and is only available when the `oak-tf`
 feature is enabled.
 
-- `param[0]: input_ptr: i32`: address of the input buffer.
-- `param[1]: input_len: i32`: number of bytes of the input buffer.
-- `param[2]: inference_ptr_ptr: i32`: address where the Oak Functions runtime
-  will write the address of the newly allocated inference buffer.
-- `param[3]: inference_len_ptr: i32`: address where the Oak Functions runtime
-  will write the number of bytes of the newly allocated inference buffer (as a
-  little-endian u32).
-- `result[0]: i32`:
-  [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto)
-  of the invocation
