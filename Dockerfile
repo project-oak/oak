@@ -162,8 +162,8 @@ RUN mkdir --parents ${hadolint_dir} \
 
 # Install buildifier.
 # https://github.com/bazelbuild/buildtools/tree/master/buildifier
-ARG bazel_tools_version=3.5.0
-ARG buildifier_sha256=f9a9c082b8190b9260fce2986aeba02a25d41c00178855a1425e1ce6f1169843
+ARG bazel_tools_version=4.2.2
+ARG buildifier_sha256=3f0e450cd852dbfd89aa2761d85f9fbeb6f0faccfc5d4fbe48952cfe0712922a
 ARG buildifier_dir=/usr/local/buildifier/bin
 ARG buildifier_bin=${buildifier_dir}/buildifier
 ENV PATH "${buildifier_dir}:${PATH}"
