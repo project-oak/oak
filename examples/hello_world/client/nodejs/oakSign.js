@@ -50,18 +50,7 @@ async function generateKeyPair() {
   // - https://github.com/project-oak/oak/issues/1912#issuecomment-802689201
   // - https://tools.ietf.org/html/rfc5280#section-4.1 (SubjectPublicKeyInfo)
   const publicKeyDerPrefix = new Uint8Array([
-    0x30,
-    0x2a,
-    0x30,
-    0x05,
-    0x06,
-    0x03,
-    0x2b,
-    0x65,
-    0x70,
-    0x03,
-    0x21,
-    0x00,
+    0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
   ]);
   const publicKeyDer = concatenateArrays(publicKeyDerPrefix, publicKeyRaw);
 

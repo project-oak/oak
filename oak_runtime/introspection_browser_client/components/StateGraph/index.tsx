@@ -77,10 +77,11 @@ function getGraphFromState(
         channelId
       )} [URL="/dynamic/channel/${channelId}" label="${name}"]`
   );
-  const oakMessages = [
-    ...applicationState.channels.entries(),
-  ].map(([channelId, channel]) =>
-    channel.messages.map((message, index) => getMessageDotId(channelId, index))
+  const oakMessages = [...applicationState.channels.entries()].map(
+    ([channelId, channel]) =>
+      channel.messages.map((message, index) =>
+        getMessageDotId(channelId, index)
+      )
   );
   const connections = [
     'edge [arrowsize=1.2 penwidth=5 color="#595959"]',

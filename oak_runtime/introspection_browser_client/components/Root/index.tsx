@@ -251,9 +251,10 @@ function useEvents() {
   React.useEffect(() => {
     async function loadEvents() {
       const serializedEvents: Uint8Array = await loadSerializedEvents();
-      const events = introspectionEventsProto.Events.deserializeBinary(
-        serializedEvents
-      ).getEventsList();
+      const events =
+        introspectionEventsProto.Events.deserializeBinary(
+          serializedEvents
+        ).getEventsList();
 
       if (events.length > 0) {
         // Key the session storage to the first event, preventing state from
