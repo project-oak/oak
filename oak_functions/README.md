@@ -5,28 +5,34 @@ computing platform that allows developing stateless applications in a privacy
 preserving way. Oak Functions leverages TEEs and remote attestation, Wasm
 sandboxing, and allows exposing metrics in a Differentially Private way.
 
-At its core, the Oak Functions loader is a trusted runtime compiled to a server
-binary that, for each incoming client gRPC request, executes an untrusted
-workload that operates on the request payload, and produces a response which is
-sent back to the same client. The trusted runtime ensures that the untrusted
-workload may not violate the confidentiality of the client request data,
-preventing observers from learning anything about the request. From the client
-point of view, the server provides cryptographic evidence (backed by an
-hardware-based Trusted Execution Environment) of its own identity as part of a
-remote attestation protocol, which convinces the client that it is in fact a
-legitimate version of such a runtime.
+At its core, Oak Functions consists of a **trusted runtime** compiled into a
+server binary
+([`oak_functions_loader`](https://github.com/project-oak/oak/tree/main/oak_functions/loader))
+that, for each incoming client gRPC request, executes an untrusted workload that
+operates on the request payload, and produces a response which is sent back to
+the same client.
+
+The Oak Functions trusted runtime ensures that the untrusted workload may not
+violate the confidentiality of the client request data, preventing observers
+from learning anything about the request.
+
+From the client point of view, the server provides cryptographic evidence
+(backed by an hardware-based Trusted Execution Environment) of its own identity
+as part of a remote attestation protocol, which convinces the client that it is
+in fact a legitimate version of such a runtime.
 
 The main building blocks used in Oak Functions are:
 
 - A Trusted Execution Environment (TEE)
-  - protects the confidentiality and integrity of data and code from the host,
+  - protects the confidentiality and integrity of data and code of the workload
+    (in this case, the Oak Functions trusted runtime) from its untrusted host,
     other TEE instances and processes, and some hardware attacks
   - in general, TEEs may be VM-based (e.g.
     [AMD SEV](https://developer.amd.com/sev/)) or enclave-based (e.g.
     [Intel SGX](https://www.intel.com/content/www/us/en/developer/tools/software-guard-extensions/overview.html)).
     Oak Functions mainly leverages VM-based TEEs.
 - Sandboxing the workload, currently using
-  [WebAssembly](https://webassembly.org/)
+  [WebAssembly](https://webassembly.org/) (Wasm)
   - The TEE protects from the host, and anything malicious on it, but to prevent
     malicious behavior in the workload code we need to sandbox it and limit what
     actions it is allowed to perform; for instance, the sandbox prevents the
@@ -50,13 +56,11 @@ from the conventional computing model.
 
 [The Oak Functions loader](https://project-oak.github.io/oak/oak_functions/loader)
 is responsible for starting the Oak Functions trusted runtime, and loading an
-application, with a single Wasm module as the workload. An application may
-specify additional resources in a server configuration file. These resources are
-as well loaded by the Oak Functions loader at startup time. The trusted runtime
+application, with a single Wasm module as the workload. The trusted runtime
 instantiates the given Wasm module for each incoming user request, runs the
 request through it in order to produce a response, and then terminates the Wasm
-instance; each Wasm instance is short lived and does not persist state outside
-of the request lifetime.
+instance; each Wasm instance is short lived and cannot persist state outside of
+the request lifetime.
 
 As part of our shift to a distributed runtime, in the future, we may allow
 native Oak Functions instances that do not run any untrusted Wasm code. An
@@ -79,22 +83,25 @@ in the future.
 
 ### Read-Only Storage
 
-The trusted runtime does not allow the Wasm workload to interact with any
-external resources. However, each Oak Functions application may have read-only
-access to an in-memory storage that is populated with data from an external data
-source at startup time. The external resource is specified in the server
-configuration file as a URL. It is also possible to specify a refresh interval.
-This allows the Oak Functions loader to periodically refresh the data in the
-storage, by re-downloading the entirety of the data from the provided URL.
+The Oak Functions trusted runtime does not allow the Wasm module to directly
+interact with any external resources. However, each Wasm module may have
+read-only access to an in-memory storage that is populated with data from an
+external data source at startup time. The external data source is specified in
+the server configuration file as a URL or a local file path. It is also possible
+to specify a refresh interval. This allows the Oak Functions trusted runtime to
+periodically refresh the data in the storage, by re-downloading the entirety of
+the data from the provided URL or local file path.
 
 The storage is implemented as an in-memory key-value store (in practice a
 hashmap), of which there is one instance per Oak Functions trusted runtime
-instance, which is shared across invocations of the Wasm logic. The property
-that this offers is that queries are not observable (and not logged) by the
-trusted runtime, since they happen within the same process, which eventually is
-going to be contained in a single TEE instance. Oak Functions provides a
+instance, which is shared across invocations of the Wasm module. The property
+that this offers is that queries are not observable (e.g. not logged) outside of
+the Oak Functions trusted runtime, since they happen within the same process,
+which is contained within a single TEE instance.
+
+Oak Functions provides a
 [lookup API](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#storage_get_item)
-that the Wasm modules can use to fetch data from the storage.
+that the Wasm module can use to look up data from the in-memory storage.
 
 ### Policies
 
