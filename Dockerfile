@@ -149,8 +149,8 @@ RUN npm install --global \
 
 # Install hadolint.
 # https://github.com/hadolint/hadolint
-ARG hadolint_version=1.18.1
-ARG hadolint_sha256=cf713ca0a79b2a8e66b7aa5900f3af8b1f0be6ad5e359cf6954728a1548d1488
+ARG hadolint_version=2.7.0
+ARG hadolint_sha256=cdd5ca6f07f72053e8f2d18a9390a7b7fc6e819b6a251835971411f300dab8e6
 ARG hadolint_dir=/usr/local/hadolint/bin
 ARG hadolint_bin=${hadolint_dir}/hadolint
 ENV PATH "${hadolint_dir}:${PATH}"
