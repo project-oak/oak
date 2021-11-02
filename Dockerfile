@@ -217,12 +217,14 @@ RUN rustup component add \
   rustfmt
 
 # No binary available on Github, have to use cargo install.
-ARG deadlinks_version=0.5.0
+# https://github.com/deadlinks/cargo-deadlinks
+ARG deadlinks_version=0.8.0
 RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 
 # Install cargo-fuzz.
 # To allow local testing of the fuzzing functionality.
-ARG cargo_fuzz_version=0.10.1
+# https://github.com/rust-fuzz/cargo-fuzz
+ARG cargo_fuzz_version=0.10.2
 RUN cargo install --version=${cargo_fuzz_version} cargo-fuzz
 
 # Where to install rust tooling
@@ -244,14 +246,14 @@ RUN chmod +x ${install_dir}/cargo-crev
 
 # Install cargo-deny
 # https://github.com/EmbarkStudios/cargo-deny
-ARG deny_version=0.8.9
+ARG deny_version=0.9.1
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny
 
 # Install cargo-udeps
 # https://github.com/est31/cargo-udeps
-ARG udeps_version=v0.1.20
+ARG udeps_version=v0.1.23
 ARG udeps_dir=cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu
 ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/${udeps_version}/cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu.tar.gz
 RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
