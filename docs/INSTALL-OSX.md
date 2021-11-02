@@ -31,16 +31,16 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # the appropriate set of components.
 ARG rust_version=nightly-2021-08-17
 RUN rustup toolchain install ${rust_version} \
-  && rustup default ${rust_version}
+  && rustup default ${rust_version} \
 
 # Install WebAssembly target for Rust.
-RUN rustup target add wasm32-unknown-unknown
+  && rustup target add wasm32-unknown-unknown \
 
 # Install musl target for Rust (for statically linked binaries).
-RUN rustup target add x86_64-unknown-linux-musl
+  && rustup target add x86_64-unknown-linux-musl \
 
 # Install rustfmt and clippy.
-RUN rustup component add \
+  && rustup component add \
   clippy \
   rust-src \
   rustfmt
