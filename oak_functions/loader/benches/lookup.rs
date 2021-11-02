@@ -14,16 +14,14 @@
 // limitations under the License.
 //
 
-#![feature(test)]
-
-extern crate test;
-
 pub mod proto {
     tonic::include_proto!("oak.functions.benchmark");
 }
 
+use criterion::{
+    criterion_group, criterion_main, AxisScale, BenchmarkId, Criterion, PlotConfiguration,
+};
 use lookup_data_generator::data::generate_and_serialize_random_entries;
-use maplit::hashmap;
 use oak_functions_abi::proto::{Request, StatusCode};
 use oak_functions_loader::{
     logger::Logger,
@@ -33,125 +31,201 @@ use oak_functions_loader::{
 use prost::Message;
 use proto::{benchmark_request::Action, BenchmarkRequest, LookupTest};
 use rand::SeedableRng;
-use std::{collections::HashMap, sync::Arc, time::Duration};
-use test::Bencher;
+use std::{collections::HashMap, sync::Arc};
+use tokio::runtime::Runtime;
 
 const MANIFEST_PATH: &str = "examples/benchmark/module/Cargo.toml";
+const SINGLE_REQUEST_ITERATIONS: u32 = 1;
+const MULTI_REQUEST_ITERATIONS: u32 = 101;
 
-#[bench]
-fn small_fixed_data_single_lookup(bencher: &mut Bencher) {
-    let entries = hashmap! {
-        b"key_0".to_vec() => br#"value_0"#.to_vec(),
-        b"key_1".to_vec() => br#"value_1"#.to_vec(),
-        b"key_2".to_vec() => br#"value_2"#.to_vec(),
-    };
-
-    let test_data = TestData {
-        test_key: br#"key_1"#.to_vec(),
-        expected_value: br#"value_1"#.to_vec(),
-        entries,
-    };
-
-    run_lookup_bench(bencher, test_data, 1, Duration::from_millis(5));
-}
-
-#[bench]
-fn small_fixed_data_multi_lookup(bencher: &mut Bencher) {
-    let entries = hashmap! {
-        b"key_0".to_vec() => br#"value_0"#.to_vec(),
-        b"key_1".to_vec() => br#"value_1"#.to_vec(),
-        b"key_2".to_vec() => br#"value_2"#.to_vec(),
-    };
-
-    let test_data = TestData {
-        test_key: br#"key_1"#.to_vec(),
-        expected_value: br#"value_1"#.to_vec(),
-        entries,
-    };
-
-    run_lookup_bench(bencher, test_data, 101, Duration::from_millis(10));
-}
-
-#[bench]
-fn small_random_data_single_lookup(bencher: &mut Bencher) {
-    let test_data = generate_random_test_data_for_bench(16, 16, 20);
-
-    run_lookup_bench(bencher, test_data, 1, Duration::from_millis(5));
-}
-
-#[bench]
-fn small_random_data_multi_lookup(bencher: &mut Bencher) {
-    let test_data = generate_random_test_data_for_bench(16, 16, 20);
-
-    run_lookup_bench(bencher, test_data, 101, Duration::from_millis(10));
-}
-
-#[bench]
-fn medium_random_data_single_lookup(bencher: &mut Bencher) {
-    let test_data = generate_random_test_data_for_bench(128, 256, 200_000);
-
-    run_lookup_bench(bencher, test_data, 1, Duration::from_millis(5));
-}
-
-#[bench]
-fn medium_random_data_multi_lookup(bencher: &mut Bencher) {
-    let test_data = generate_random_test_data_for_bench(128, 256, 200_000);
-
-    run_lookup_bench(bencher, test_data, 101, Duration::from_millis(10));
-}
-
-#[bench]
-fn large_random_data_single_lookup(bencher: &mut Bencher) {
-    let test_data = generate_random_test_data_for_bench(1_024, 10_240, 1_000);
-
-    run_lookup_bench(bencher, test_data, 1, Duration::from_millis(5));
-}
-
-#[bench]
-fn large_random_data_multi_lookup(bencher: &mut Bencher) {
-    let test_data = generate_random_test_data_for_bench(1_024, 10_240, 1_000);
-
-    run_lookup_bench(bencher, test_data, 101, Duration::from_millis(25));
-}
-
-fn run_lookup_bench(bencher: &mut Bencher, test_data: TestData, iterations: u32, cutoff: Duration) {
+fn key_size(c: &mut Criterion) {
+    let rt = Runtime::new().unwrap();
     let wasm_module_bytes = bulid_wasm_module(MANIFEST_PATH);
-    let lookup_data = Arc::new(LookupData::for_test(test_data.entries));
-    let benchmark_request = BenchmarkRequest {
-        iterations,
-        action: Some(Action::Lookup(LookupTest {
-            key: test_data.test_key,
-        })),
-    };
-    let expected_value = test_data.expected_value;
-    let logger = Logger::for_test();
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
-        .expect("Couldn't create the server");
-    let rt = tokio::runtime::Runtime::new().unwrap();
 
-    let summary = bencher.bench(|bencher| {
-        bencher.iter(|| {
-            let request = Request {
-                body: benchmark_request.encode_to_vec(),
-            };
-            let resp = rt
-                .block_on(wasm_handler.clone().handle_invoke(request))
-                .unwrap();
-            assert_eq!(resp.status, StatusCode::Success as i32);
-            assert_eq!(resp.body, expected_value);
+    let mut group = c.benchmark_group("key_size");
+    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+    group.plot_config(plot_config);
+    for size in [16usize, 128usize, 1_024usize].iter() {
+        let TestData {
+            test_key,
+            expected_value,
+            entries,
+        } = generate_random_test_data_for_bench(size.clone(), 256, 1_000);
+        let lookup_data = Arc::new(LookupData::for_test(entries.clone()));
+        let logger = Logger::for_test();
+        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
+            .expect("Couldn't create the server");
+
+        let single_benchmark_request = BenchmarkRequest {
+            iterations: SINGLE_REQUEST_ITERATIONS,
+            action: Some(Action::Lookup(LookupTest {
+                key: test_key.clone(),
+            })),
+        }
+        .encode_to_vec();
+        let multi_benchmark_request = BenchmarkRequest {
+            iterations: MULTI_REQUEST_ITERATIONS,
+            action: Some(Action::Lookup(LookupTest {
+                key: test_key.clone(),
+            })),
+        }
+        .encode_to_vec();
+
+        group.bench_with_input(BenchmarkId::new("single", size), size, |b, _size| {
+            b.iter(|| {
+                run_lookup_iteration(
+                    &rt,
+                    &wasm_handler,
+                    &single_benchmark_request,
+                    &expected_value,
+                )
+            })
         });
-    });
-
-    // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
-    // in that case. So, here we first check that `summary` is not empty.
-    if let Some(summary) = summary {
-        // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
-        // https://doc.rust-lang.org/test/stats/struct.Summary.html.
-        let elapsed = Duration::from_nanos(summary.mean as u64);
-        // We expect the `mean` time for loading the test Wasm module and running its main function
-        // to be less than a fixed threshold.
-        assert!(elapsed <= cutoff, "elapsed time: {:.0?}", elapsed);
+        group.bench_with_input(BenchmarkId::new("multi", size), size, |b, _size| {
+            b.iter(|| {
+                run_lookup_iteration(
+                    &rt,
+                    &wasm_handler,
+                    &multi_benchmark_request,
+                    &expected_value,
+                )
+            })
+        });
     }
+    group.finish();
+}
+
+fn value_size(c: &mut Criterion) {
+    let rt = Runtime::new().unwrap();
+    let wasm_module_bytes = bulid_wasm_module(MANIFEST_PATH);
+
+    let mut group = c.benchmark_group("value_size");
+    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+    group.plot_config(plot_config);
+    for size in [16usize, 128usize, 1_024usize, 8_192usize].iter() {
+        let TestData {
+            test_key,
+            expected_value,
+            entries,
+        } = generate_random_test_data_for_bench(32, size.clone(), 1_000);
+        let lookup_data = Arc::new(LookupData::for_test(entries.clone()));
+        let logger = Logger::for_test();
+        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
+            .expect("Couldn't create the server");
+
+        let single_benchmark_request = BenchmarkRequest {
+            iterations: SINGLE_REQUEST_ITERATIONS,
+            action: Some(Action::Lookup(LookupTest {
+                key: test_key.clone(),
+            })),
+        }
+        .encode_to_vec();
+        let multi_benchmark_request = BenchmarkRequest {
+            iterations: MULTI_REQUEST_ITERATIONS,
+            action: Some(Action::Lookup(LookupTest {
+                key: test_key.clone(),
+            })),
+        }
+        .encode_to_vec();
+
+        group.bench_with_input(BenchmarkId::new("single", size), size, |b, _size| {
+            b.iter(|| {
+                run_lookup_iteration(
+                    &rt,
+                    &wasm_handler,
+                    &single_benchmark_request,
+                    &expected_value,
+                )
+            })
+        });
+        group.bench_with_input(BenchmarkId::new("multi", size), size, |b, _size| {
+            b.iter(|| {
+                run_lookup_iteration(
+                    &rt,
+                    &wasm_handler,
+                    &multi_benchmark_request,
+                    &expected_value,
+                )
+            })
+        });
+    }
+    group.finish();
+}
+
+fn entry_count(c: &mut Criterion) {
+    let rt = Runtime::new().unwrap();
+    let wasm_module_bytes = bulid_wasm_module(MANIFEST_PATH);
+
+    let mut group = c.benchmark_group("entry_count");
+    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+    group.plot_config(plot_config);
+    for count in [100usize, 10_000usize, 1_000_000usize].iter() {
+        let TestData {
+            test_key,
+            expected_value,
+            entries,
+        } = generate_random_test_data_for_bench(64, 256, count.clone());
+        let lookup_data = Arc::new(LookupData::for_test(entries.clone()));
+        let logger = Logger::for_test();
+        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
+            .expect("Couldn't create the server");
+
+        let single_benchmark_request = BenchmarkRequest {
+            iterations: SINGLE_REQUEST_ITERATIONS,
+            action: Some(Action::Lookup(LookupTest {
+                key: test_key.clone(),
+            })),
+        }
+        .encode_to_vec();
+        let multi_benchmark_request = BenchmarkRequest {
+            iterations: MULTI_REQUEST_ITERATIONS,
+            action: Some(Action::Lookup(LookupTest {
+                key: test_key.clone(),
+            })),
+        }
+        .encode_to_vec();
+
+        group.bench_with_input(BenchmarkId::new("single", count), count, |b, _size| {
+            b.iter(|| {
+                run_lookup_iteration(
+                    &rt,
+                    &wasm_handler,
+                    &single_benchmark_request,
+                    &expected_value,
+                )
+            })
+        });
+        group.bench_with_input(BenchmarkId::new("multi", count), count, |b, _size| {
+            b.iter(|| {
+                run_lookup_iteration(
+                    &rt,
+                    &wasm_handler,
+                    &multi_benchmark_request,
+                    &expected_value,
+                )
+            })
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(benches, key_size, value_size, entry_count);
+criterion_main!(benches);
+
+fn run_lookup_iteration(
+    rt: &Runtime,
+    wasm_handler: &WasmHandler,
+    benchmark_request: &Vec<u8>,
+    expected_value: &Vec<u8>,
+) {
+    let request = Request {
+        body: benchmark_request.clone(),
+    };
+    let resp = rt
+        .block_on(wasm_handler.clone().handle_invoke(request))
+        .unwrap();
+    assert_eq!(resp.status, StatusCode::Success as i32);
+    assert_eq!(&resp.body, expected_value);
 }
 
 /// The test data used for benchmarking.

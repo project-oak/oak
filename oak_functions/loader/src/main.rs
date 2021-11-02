@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-// Required for enabling benchmark tests.
-#![feature(test)]
 #![feature(async_closure)]
 
 use anyhow::Context;

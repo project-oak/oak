@@ -55,6 +55,7 @@ wasmi = { version = "*", default-features = false, features = ["core"] }
 signal-hook = "*"
 
 [dev-dependencies]
+criterion = "*"
 lookup_data_generator = { path = "../lookup_data_generator" }
 maplit = "*"
 tempfile = "*"
@@ -65,3 +66,4 @@ oak_utils = { path = "../../oak_utils" }
 
 [[bench]]
 name = "lookup"
+harness = false
