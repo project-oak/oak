@@ -50,7 +50,7 @@ fn key_size(c: &mut Criterion) {
             test_key,
             expected_value,
             entries,
-        } = generate_random_test_data_for_bench(size.clone(), 256, 1_000);
+        } = generate_random_test_data_for_bench(*size, 256, 1_000);
         let lookup_data = Arc::new(LookupData::for_test(entries.clone()));
         let logger = Logger::for_test();
         let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
@@ -107,7 +107,7 @@ fn value_size(c: &mut Criterion) {
             test_key,
             expected_value,
             entries,
-        } = generate_random_test_data_for_bench(32, size.clone(), 1_000);
+        } = generate_random_test_data_for_bench(32, *size, 1_000);
         let lookup_data = Arc::new(LookupData::for_test(entries.clone()));
         let logger = Logger::for_test();
         let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
@@ -164,7 +164,7 @@ fn entry_count(c: &mut Criterion) {
             test_key,
             expected_value,
             entries,
-        } = generate_random_test_data_for_bench(64, 256, count.clone());
+        } = generate_random_test_data_for_bench(64, 256, *count);
         let lookup_data = Arc::new(LookupData::for_test(entries.clone()));
         let logger = Logger::for_test();
         let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
@@ -215,15 +215,13 @@ criterion_main!(benches);
 fn run_lookup_iteration(
     rt: &Runtime,
     wasm_handler: &WasmHandler,
-    benchmark_request: &Vec<u8>,
-    expected_value: &Vec<u8>,
+    benchmark_request: &[u8],
+    expected_value: &[u8],
 ) {
     let request = Request {
-        body: benchmark_request.clone(),
+        body: benchmark_request.to_owned(),
     };
-    let resp = rt
-        .block_on(wasm_handler.clone().handle_invoke(request))
-        .unwrap();
+    let resp = rt.block_on(wasm_handler.handle_invoke(request)).unwrap();
     assert_eq!(resp.status, StatusCode::Success as i32);
     assert_eq!(&resp.body, expected_value);
 }
