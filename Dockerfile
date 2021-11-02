@@ -105,8 +105,8 @@ RUN chmod --recursive go+wx "${emscripten_dir}"
 RUN mkdir -p "/.npm" && chmod a+rwx "/.npm" & mkdir -p "/.config" && chmod a+rwx "/.config"
 
 # Install Go.
-ARG golang_version=1.15.3
-ARG golang_sha256=010a88df924a81ec21b293b5da8f9b11c176d27c0ee3962dc1738d2352d3c02d
+ARG golang_version=1.17.1
+ARG golang_sha256=dab7d9c34361dc21ec237d584590d72500652e7c909bf082758fb63064fca0ef
 ARG golang_temp=/tmp/golang.tar.gz
 ENV GOROOT /usr/local/go
 ENV GOPATH ${HOME}/go
