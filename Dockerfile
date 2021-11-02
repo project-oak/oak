@@ -174,8 +174,8 @@ RUN mkdir --parents ${buildifier_dir} \
   && buildifier --version
 
 # Install Protobuf compiler.
-ARG protobuf_version=3.13.0
-ARG protobuf_sha256=4a3b26d1ebb9c1d23e933694a6669295f6a39ddc64c3db2adf671f0a6026f82e
+ARG protobuf_version=3.18.0
+ARG protobuf_sha256=8b6b0c82f730212801d9cce4653abb1a1f4204555a92e8e2b5f625d61e66f1b4
 ARG protobuf_dir=/usr/local/protobuf
 ARG protobuf_temp=/tmp/protobuf.zip
 ENV PATH "${protobuf_dir}/bin:${PATH}"
