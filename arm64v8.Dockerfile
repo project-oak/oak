@@ -22,13 +22,13 @@ RUN apt-get --yes update \
   zlib1g-dev \
   # Cleanup
   && apt-get clean \
-  && rm --recursive --force /var/lib/apt/lists/* \
-  && git clone https://github.com/richfelker/musl-cross-make.git
+  && rm --recursive --force /var/lib/apt/lists/*
+RUN git clone https://github.com/richfelker/musl-cross-make.git
 WORKDIR /musl/musl-cross-make
 # Set the target
-RUN echo "TARGET=aarch64-linux-musl" > config.mak \
+RUN echo "TARGET=aarch64-linux-musl" > config.mak
 # Build the target - output ends up in 'output'
-  && make install
+RUN make install
 
 # Bootstrap Bazel Stage
 FROM debian:${debian_snapshot} AS bazel-bootstrap
@@ -48,9 +48,9 @@ RUN apt-get --yes update \
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/*
 ARG bazel_version
-RUN curl --location -k https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/bazel-${bazel_version}-dist.zip  -o bazel-${bazel_version}-dist.zip \
-  && unzip bazel-${bazel_version}-dist.zip \
-  && BUILD_DATE="$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)" EXTRA_BAZEL_ARGS="--host_javabase=@local_jdk//:jdk" bash ./compile.sh 
+RUN curl --location -k https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/bazel-${bazel_version}-dist.zip  -o bazel-${bazel_version}-dist.zip
+RUN  unzip bazel-${bazel_version}-dist.zip
+RUN  BUILD_DATE="$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)" EXTRA_BAZEL_ARGS="--host_javabase=@local_jdk//:jdk" bash ./compile.sh 
 
 # Rebuild Bazel using bootstrap stage
 FROM bazel-bootstrap AS bazel-build
@@ -112,16 +112,18 @@ RUN apt-get --yes update \
   && rm --recursive --force /var/lib/apt/lists/* \
   # Print version of various installed tools.
   && git --version \
-  && shellcheck --version \
+  && shellcheck --version
+
 # Install a version of docker CLI.
-  && curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add - \
-  && echo "deb https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \
+RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
+RUN echo "deb https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \
   && apt-get --yes update \
   && apt-get install --no-install-recommends --yes docker-ce-cli \
   && apt-get clean \
-  && rm --recursive --force /var/lib/apt/lists/* \
+  && rm --recursive --force /var/lib/apt/lists/*
+
 # Use a later version of clang-format from buster-backports.
-  && echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list \
+RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list \
   && apt-get --yes update \
   && apt-get install --no-install-recommends --yes clang-format-8 \
   && apt-get clean \
@@ -186,16 +188,16 @@ RUN mkdir --parents ${GOROOT} \
   && sha256sum --binary ${golang_temp} && echo "${golang_sha256} *${golang_temp}" | sha256sum --check \
   && tar --extract --gzip --file=${golang_temp} --directory=${GOROOT} --strip-components=1 \
   && rm ${golang_temp} \
-  && go version \
+  && go version
 
 # Install embedmd (Markdown snippet embedder) (via Go).
 # https://github.com/campoy/embedmd
-  && go get github.com/campoy/embedmd@97c13d6 \
-  && embedmd -v \
+RUN go get github.com/campoy/embedmd@97c13d6 \
+  && embedmd -v
 
 # Install liche (Markdown link checker) (via Go).
 # https://github.com/raviqqe/liche
-  && go get github.com/raviqqe/liche@f57a5d1 \
+RUN go get github.com/raviqqe/liche@f57a5d1 \
   && liche --version
 
 # Install prettier and markdownlint (via Node.js).
@@ -259,16 +261,16 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # the appropriate set of components.
 ARG rust_version=nightly-2020-06-10
 RUN rustup toolchain install ${rust_version} \
-  && rustup default ${rust_version} \
+  && rustup default ${rust_version}
 
 # Install WebAssembly target for Rust.
-  && rustup target add wasm32-unknown-unknown \
+RUN rustup target add wasm32-unknown-unknown
 
 # Install musl target for Rust (for statically linked binaries).
-  && rustup target add aarch64-unknown-linux-musl \
+RUN rustup target add aarch64-unknown-linux-musl
 
 # Install rustfmt and clippy.
-  && rustup component add \
+RUN rustup component add \
   clippy \
   rust-src \
   rustfmt
@@ -284,19 +286,19 @@ ARG install_dir=${rustup_dir}/bin
 # https://github.com/mozilla/grcov
 ARG grcov_version=v0.5.15
 ARG grcov_location=https://github.com/mozilla/grcov/releases/download/${grcov_version}/grcov-linux-x86_64.tar.bz2
-RUN curl --location ${grcov_location} | tar --extract --bzip2 --directory=${install_dir} \
-  && chmod +x ${install_dir}/grcov
+RUN curl --location ${grcov_location} | tar --extract --bzip2 --directory=${install_dir}
+RUN chmod +x ${install_dir}/grcov
 
 # Install cargo-crev.
 # https://github.com/crev-dev/cargo-crev
 ARG crev_version=v0.16.1
 ARG crev_location=https://github.com/crev-dev/cargo-crev/releases/download/${crev_version}/cargo-crev-${crev_version}-x86_64-unknown-linux-musl.tar.gz
-RUN curl --location ${crev_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1 \
-  && chmod +x ${install_dir}/cargo-crev
+RUN curl --location ${crev_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
+RUN chmod +x ${install_dir}/cargo-crev
 
 # Install cargo-deny
 # https://github.com/EmbarkStudios/cargo-deny
 ARG deny_version=0.7.0
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
-RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1 \
-  && chmod +x ${install_dir}/cargo-deny
+RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
+RUN chmod +x ${install_dir}/cargo-deny

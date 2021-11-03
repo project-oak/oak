@@ -47,16 +47,18 @@ RUN apt-get --yes update \
   && rm --recursive --force /var/lib/apt/lists/* \
   # Print version of various installed tools.
   && git --version \
-  && shellcheck --version \
-  # Install a version of docker CLI.
-  && curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add - \
-  && echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \
+  && shellcheck --version
+
+# Install a version of docker CLI.
+RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
+RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \
   && apt-get --yes update \
   && apt-get install --no-install-recommends --yes docker-ce-cli \
   && apt-get clean \
-  && rm --recursive --force /var/lib/apt/lists/* \
+  && rm --recursive --force /var/lib/apt/lists/*
+
 # Use a later version of clang-format from buster-backports.
-  && echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list \
+RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list \
   && apt-get --yes update \
   && apt-get install --no-install-recommends --yes clang-format-8 \
   && apt-get clean \
@@ -99,10 +101,10 @@ ENV EM_CONFIG "${emscripten_dir}/.emscripten"
 ENV EM_CACHE "${emscripten_dir}/.emscripten_cache"
 ENV PATH "${emscripten_dir}:${emscripten_dir}/node/${emscripten_node_version_directory}/bin:${PATH}"
 # We need to allow a non-root Docker container to write into the directory
-RUN chmod --recursive go+wx "${emscripten_dir}" \
+RUN chmod --recursive go+wx "${emscripten_dir}"
 # Emscripten brings Node with it, we need to allow non-root access to temp and
 # config folders
- && mkdir -p "/.npm" && chmod a+rwx "/.npm" & mkdir -p "/.config" && chmod a+rwx "/.config"
+RUN mkdir -p "/.npm" && chmod a+rwx "/.npm" & mkdir -p "/.config" && chmod a+rwx "/.config"
 
 # Install Go.
 ARG golang_version=1.17.1
@@ -121,14 +123,16 @@ RUN mkdir --parents ${GOROOT} \
   && sha256sum --binary ${golang_temp} && echo "${golang_sha256} *${golang_temp}" | sha256sum --check \
   && tar --extract --gzip --file=${golang_temp} --directory=${GOROOT} --strip-components=1 \
   && rm ${golang_temp} \
-  && go version \
+  && go version
+
 # Install embedmd (Markdown snippet embedder) (via Go).
 # https://github.com/campoy/embedmd
-  && go install github.com/campoy/embedmd@97c13d6 \
-  && embedmd -v \
+RUN go get github.com/campoy/embedmd@97c13d6 \
+  && embedmd -v
+
 # Install liche (Markdown link checker) (via Go).
 # https://github.com/raviqqe/liche
-  && go install github.com/raviqqe/liche@3ac05a3 \
+RUN go get github.com/raviqqe/liche@3ac05a3 \
   && liche --version
 
 # Install prettier and markdownlint (via Node.js).
@@ -200,13 +204,16 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # the appropriate set of components.
 ARG rust_version=nightly-2021-08-17
 RUN rustup toolchain install ${rust_version} \
-  && rustup default ${rust_version} \
+  && rustup default ${rust_version}
+
 # Install WebAssembly target for Rust.
-  && rustup target add wasm32-unknown-unknown \
+RUN rustup target add wasm32-unknown-unknown
+
 # Install musl target for Rust (for statically linked binaries).
-  && rustup target add x86_64-unknown-linux-musl \
+RUN rustup target add x86_64-unknown-linux-musl
+
 # Install rustfmt and clippy.
-  && rustup component add \
+RUN rustup component add \
   clippy \
   rust-src \
   rustfmt
@@ -229,37 +236,37 @@ ARG install_dir=${rustup_dir}/bin
 # https://github.com/mozilla/grcov
 ARG grcov_version=v0.5.15
 ARG grcov_location=https://github.com/mozilla/grcov/releases/download/${grcov_version}/grcov-linux-x86_64.tar.bz2
-RUN curl --location ${grcov_location} | tar --extract --bzip2 --directory=${install_dir} \
-  && chmod +x ${install_dir}/grcov
+RUN curl --location ${grcov_location} | tar --extract --bzip2 --directory=${install_dir}
+RUN chmod +x ${install_dir}/grcov
 
 # Install cargo-crev.
 # https://github.com/crev-dev/cargo-crev
 ARG crev_version=v0.18.0
 ARG crev_location=https://github.com/crev-dev/cargo-crev/releases/download/${crev_version}/cargo-crev-${crev_version}-x86_64-unknown-linux-musl.tar.gz
-RUN curl --location ${crev_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1 \
-  && chmod +x ${install_dir}/cargo-crev
+RUN curl --location ${crev_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
+RUN chmod +x ${install_dir}/cargo-crev
 
 # Install cargo-deny
 # https://github.com/EmbarkStudios/cargo-deny
 ARG deny_version=0.9.1
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
-RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1 \
-  && chmod +x ${install_dir}/cargo-deny
+RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
+RUN chmod +x ${install_dir}/cargo-deny
 
 # Install cargo-udeps
 # https://github.com/est31/cargo-udeps
 ARG udeps_version=v0.1.23
 ARG udeps_dir=cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu
 ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/${udeps_version}/cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu.tar.gz
-RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps \
-  && chmod +x ${install_dir}/cargo-udeps
+RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
+RUN chmod +x ${install_dir}/cargo-udeps
 
 # Install rust-analyzer
 # https://github.com/rust-analyzer/rust-analyzer
 ARG rust_analyzer_version=2021-08-16
 ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-x86_64-unknown-linux-gnu.gz
-RUN curl --location ${rust_analyzer_location} | gzip --decompress "$@" > ${install_dir}/rust-analyzer \
-  && chmod +x ${install_dir}/rust-analyzer
+RUN curl --location ${rust_analyzer_location} | gzip --decompress $@ > ${install_dir}/rust-analyzer
+RUN chmod +x ${install_dir}/rust-analyzer
 
 # Unset $CARGO_HOME so that the new user will use the default value for it, which will point it to
 # its own home folder.
@@ -267,17 +274,18 @@ ENV CARGO_HOME ""
 
 # Build a statically-linked version of OpenSSL with musl
 ENV OPENSSL_DIR /musl
-RUN mkdir ${OPENSSL_DIR} \
-  && ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm \
-  && ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic \
-  && ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
+RUN mkdir ${OPENSSL_DIR}
+
+RUN ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm
+RUN ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic
+RUN ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
 
 ARG openssl_dir=/usr/local/openssl
-RUN mkdir --parents ${openssl_dir} \
-  && curl --location https://github.com/openssl/openssl/archive/OpenSSL_1_1_1f.tar.gz | tar --extract --gzip --directory=${openssl_dir}/
+RUN mkdir --parents ${openssl_dir}
+RUN curl --location https://github.com/openssl/openssl/archive/OpenSSL_1_1_1f.tar.gz | tar --extract --gzip --directory=${openssl_dir}/
 WORKDIR ${openssl_dir}/openssl-OpenSSL_1_1_1f
-RUN CC="musl-gcc -fPIE -pie" ./Configure no-shared no-async --prefix=/musl --openssldir="${OPENSSL_DIR}/ssl" linux-x86_64 \
-  && make depend && make -j"$(nproc)"&& make install_sw install_ssldirs
+RUN CC="musl-gcc -fPIE -pie" ./Configure no-shared no-async --prefix=/musl --openssldir="${OPENSSL_DIR}/ssl" linux-x86_64
+RUN make depend && make -j"$(nproc)"&& make install_sw install_ssldirs
 
 # Allow the build to find statically built OpenSSL.
 ENV PKG_CONFIG_ALLOW_CROSS 1
