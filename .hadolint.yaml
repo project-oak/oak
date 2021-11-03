@@ -6,7 +6,3 @@ ignored:
   # This does not seem to work well with android.Dockerfile.
   # See https://github.com/hadolint/hadolint/wiki/DL4006.
   - DL4006
-  # Ignore if the WORKDIR is not set properly
-  # https://github.com/hadolint/hadolint/wiki/DL30
-  # Happens only in legacy files.
-  - DL3045

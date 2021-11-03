@@ -47,16 +47,14 @@ RUN apt-get --yes update \
   && rm --recursive --force /var/lib/apt/lists/* \
   # Print version of various installed tools.
   && git --version \
-  && shellcheck --version
-
-# Install a version of docker CLI.
-RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add - \
+  && shellcheck --version \
+  # Install a version of docker CLI.
+  && curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add - \
   && echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"  > /etc/apt/sources.list.d/backports.list \
   && apt-get --yes update \
   && apt-get install --no-install-recommends --yes docker-ce-cli \
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/* \
-
 # Use a later version of clang-format from buster-backports.
   && echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list \
   && apt-get --yes update \
@@ -82,7 +80,9 @@ RUN curl --location "${bazel_url}" > bazel.deb \
 
 # Install Emscripten.
 ARG emscripten_version=2.0.29
-ARG emscripten_node_version=14.15.5_64bit
+# Pick compatible Node version by grepping "node" in the emscripten.zip
+# Node is needed to expose npm needed for installing Prettier.
+ARG emscripten_node_version_directory=14.15.5_64bit 
 ARG emscripten_sha256=a0b76182dcd7ac387ce1167d939fc5ba79a2fa9c4730ac7e2c21ab95962b2911
 
 ARG emscripten_dir=/usr/local/emsdk
@@ -97,7 +97,7 @@ RUN mkdir --parents ${emscripten_dir} \
 ENV EMSDK "${emscripten_dir}"
 ENV EM_CONFIG "${emscripten_dir}/.emscripten"
 ENV EM_CACHE "${emscripten_dir}/.emscripten_cache"
-ENV PATH "${emscripten_dir}:${emscripten_dir}/node/${emscripten_node_version}/bin:${PATH}"
+ENV PATH "${emscripten_dir}:${emscripten_dir}/node/${emscripten_node_version_directory}/bin:${PATH}"
 # We need to allow a non-root Docker container to write into the directory
 RUN chmod --recursive go+wx "${emscripten_dir}" \
 # Emscripten brings Node with it, we need to allow non-root access to temp and
@@ -122,12 +122,10 @@ RUN mkdir --parents ${GOROOT} \
   && tar --extract --gzip --file=${golang_temp} --directory=${GOROOT} --strip-components=1 \
   && rm ${golang_temp} \
   && go version \
-
 # Install embedmd (Markdown snippet embedder) (via Go).
 # https://github.com/campoy/embedmd
   && go get github.com/campoy/embedmd@97c13d6 \
   && embedmd -v \
-
 # Install liche (Markdown link checker) (via Go).
 # https://github.com/raviqqe/liche
   && go get github.com/raviqqe/liche@3ac05a3 \
@@ -203,13 +201,10 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 ARG rust_version=nightly-2021-08-17
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version} \
-
 # Install WebAssembly target for Rust.
   && rustup target add wasm32-unknown-unknown \
-
 # Install musl target for Rust (for statically linked binaries).
   && rustup target add x86_64-unknown-linux-musl \
-
 # Install rustfmt and clippy.
   && rustup component add \
   clippy \
