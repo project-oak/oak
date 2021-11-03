@@ -19,7 +19,8 @@ pub mod proto {
 }
 
 use criterion::{
-    criterion_group, criterion_main, AxisScale, BenchmarkId, Criterion, PlotConfiguration,
+    criterion_group, criterion_main, measurement::Measurement, AxisScale, BenchmarkGroup,
+    BenchmarkId, Criterion, PlotConfiguration,
 };
 use lookup_data_generator::data::generate_and_serialize_random_entries;
 use oak_functions_abi::proto::{Request, StatusCode};
@@ -40,177 +41,123 @@ const MULTI_REQUEST_ITERATIONS: u32 = 101;
 
 fn key_size(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    let wasm_module_bytes = bulid_wasm_module(MANIFEST_PATH);
+    let wasm_module_bytes = build_wasm_module(MANIFEST_PATH);
 
     let mut group = c.benchmark_group("key_size");
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
     group.plot_config(plot_config);
-    for size in [16usize, 128usize, 1_024usize].iter() {
+    for size in [16usize, 128usize, 1_024usize] {
         let TestData {
             test_key,
             expected_value,
             entries,
-        } = generate_random_test_data_for_bench(*size, 256, 1_000);
-        let lookup_data = Arc::new(LookupData::for_test(entries.clone()));
-        let logger = Logger::for_test();
-        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
-            .expect("Couldn't create the server");
-
-        let single_benchmark_request = BenchmarkRequest {
-            iterations: SINGLE_REQUEST_ITERATIONS,
-            action: Some(Action::Lookup(LookupTest {
-                key: test_key.clone(),
-            })),
-        }
-        .encode_to_vec();
-        let multi_benchmark_request = BenchmarkRequest {
-            iterations: MULTI_REQUEST_ITERATIONS,
-            action: Some(Action::Lookup(LookupTest {
-                key: test_key.clone(),
-            })),
-        }
-        .encode_to_vec();
-
-        group.bench_with_input(BenchmarkId::new("single", size), size, |b, _size| {
-            b.iter(|| {
-                run_lookup_iteration(
-                    &rt,
-                    &wasm_handler,
-                    &single_benchmark_request,
-                    &expected_value,
-                )
-            })
-        });
-        group.bench_with_input(BenchmarkId::new("multi", size), size, |b, _size| {
-            b.iter(|| {
-                run_lookup_iteration(
-                    &rt,
-                    &wasm_handler,
-                    &multi_benchmark_request,
-                    &expected_value,
-                )
-            })
-        });
+        } = generate_random_test_data_for_bench(size, 256, 1_000);
+        run_benchmarks_with_input(
+            &rt,
+            &mut group,
+            &wasm_module_bytes,
+            entries,
+            &test_key,
+            &expected_value,
+            size,
+        );
     }
     group.finish();
 }
 
 fn value_size(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    let wasm_module_bytes = bulid_wasm_module(MANIFEST_PATH);
+    let wasm_module_bytes = build_wasm_module(MANIFEST_PATH);
 
     let mut group = c.benchmark_group("value_size");
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
     group.plot_config(plot_config);
-    for size in [16usize, 128usize, 1_024usize, 8_192usize].iter() {
+    for size in [16usize, 128usize, 1_024usize, 8_192usize] {
         let TestData {
             test_key,
             expected_value,
             entries,
-        } = generate_random_test_data_for_bench(32, *size, 1_000);
-        let lookup_data = Arc::new(LookupData::for_test(entries.clone()));
-        let logger = Logger::for_test();
-        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
-            .expect("Couldn't create the server");
-
-        let single_benchmark_request = BenchmarkRequest {
-            iterations: SINGLE_REQUEST_ITERATIONS,
-            action: Some(Action::Lookup(LookupTest {
-                key: test_key.clone(),
-            })),
-        }
-        .encode_to_vec();
-        let multi_benchmark_request = BenchmarkRequest {
-            iterations: MULTI_REQUEST_ITERATIONS,
-            action: Some(Action::Lookup(LookupTest {
-                key: test_key.clone(),
-            })),
-        }
-        .encode_to_vec();
-
-        group.bench_with_input(BenchmarkId::new("single", size), size, |b, _size| {
-            b.iter(|| {
-                run_lookup_iteration(
-                    &rt,
-                    &wasm_handler,
-                    &single_benchmark_request,
-                    &expected_value,
-                )
-            })
-        });
-        group.bench_with_input(BenchmarkId::new("multi", size), size, |b, _size| {
-            b.iter(|| {
-                run_lookup_iteration(
-                    &rt,
-                    &wasm_handler,
-                    &multi_benchmark_request,
-                    &expected_value,
-                )
-            })
-        });
+        } = generate_random_test_data_for_bench(32, size, 1_000);
+        run_benchmarks_with_input(
+            &rt,
+            &mut group,
+            &wasm_module_bytes,
+            entries,
+            &test_key,
+            &expected_value,
+            size,
+        );
     }
     group.finish();
 }
 
 fn entry_count(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    let wasm_module_bytes = bulid_wasm_module(MANIFEST_PATH);
+    let wasm_module_bytes = build_wasm_module(MANIFEST_PATH);
 
     let mut group = c.benchmark_group("entry_count");
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
     group.plot_config(plot_config);
-    for count in [100usize, 10_000usize, 1_000_000usize].iter() {
+    for count in [100usize, 10_000usize, 1_000_000usize] {
         let TestData {
             test_key,
             expected_value,
             entries,
-        } = generate_random_test_data_for_bench(64, 256, *count);
-        let lookup_data = Arc::new(LookupData::for_test(entries.clone()));
-        let logger = Logger::for_test();
-        let wasm_handler = WasmHandler::create(&wasm_module_bytes, lookup_data, vec![], logger)
-            .expect("Couldn't create the server");
-
-        let single_benchmark_request = BenchmarkRequest {
-            iterations: SINGLE_REQUEST_ITERATIONS,
-            action: Some(Action::Lookup(LookupTest {
-                key: test_key.clone(),
-            })),
-        }
-        .encode_to_vec();
-        let multi_benchmark_request = BenchmarkRequest {
-            iterations: MULTI_REQUEST_ITERATIONS,
-            action: Some(Action::Lookup(LookupTest {
-                key: test_key.clone(),
-            })),
-        }
-        .encode_to_vec();
-
-        group.bench_with_input(BenchmarkId::new("single", count), count, |b, _size| {
-            b.iter(|| {
-                run_lookup_iteration(
-                    &rt,
-                    &wasm_handler,
-                    &single_benchmark_request,
-                    &expected_value,
-                )
-            })
-        });
-        group.bench_with_input(BenchmarkId::new("multi", count), count, |b, _size| {
-            b.iter(|| {
-                run_lookup_iteration(
-                    &rt,
-                    &wasm_handler,
-                    &multi_benchmark_request,
-                    &expected_value,
-                )
-            })
-        });
+        } = generate_random_test_data_for_bench(64, 256, count);
+        run_benchmarks_with_input(
+            &rt,
+            &mut group,
+            &wasm_module_bytes,
+            entries,
+            &test_key,
+            &expected_value,
+            count,
+        );
     }
     group.finish();
 }
 
 criterion_group!(benches, key_size, value_size, entry_count);
 criterion_main!(benches);
+
+fn run_benchmarks_with_input<M: Measurement>(
+    rt: &Runtime,
+    group: &mut BenchmarkGroup<M>,
+    wasm_module_bytes: &[u8],
+    lookup_entries: HashMap<Vec<u8>, Vec<u8>>,
+    test_key: &[u8],
+    expected_value: &[u8],
+    size: usize,
+) {
+    let lookup_data = Arc::new(LookupData::for_test(lookup_entries));
+    let logger = Logger::for_test();
+    let wasm_handler = WasmHandler::create(wasm_module_bytes, lookup_data, vec![], logger)
+        .expect("Couldn't create the server");
+
+    let single_benchmark_request = BenchmarkRequest {
+        iterations: SINGLE_REQUEST_ITERATIONS,
+        action: Some(Action::Lookup(LookupTest {
+            key: test_key.to_owned(),
+        })),
+    }
+    .encode_to_vec();
+    let multi_benchmark_request = BenchmarkRequest {
+        iterations: MULTI_REQUEST_ITERATIONS,
+        action: Some(Action::Lookup(LookupTest {
+            key: test_key.to_owned(),
+        })),
+    }
+    .encode_to_vec();
+
+    group.bench_with_input(BenchmarkId::new("single", size), &size, |b, _size| {
+        b.iter(|| {
+            run_lookup_iteration(rt, &wasm_handler, &single_benchmark_request, expected_value)
+        })
+    });
+    group.bench_with_input(BenchmarkId::new("multi", size), &size, |b, _size| {
+        b.iter(|| run_lookup_iteration(rt, &wasm_handler, &multi_benchmark_request, expected_value))
+    });
+}
 
 fn run_lookup_iteration(
     rt: &Runtime,
@@ -259,7 +206,7 @@ fn generate_random_test_data_for_bench(
     }
 }
 
-fn bulid_wasm_module(relative_path: &str) -> Vec<u8> {
+fn build_wasm_module(relative_path: &str) -> Vec<u8> {
     let mut manifest_path = std::env::current_dir().unwrap();
     manifest_path.pop();
     manifest_path.push(relative_path);
