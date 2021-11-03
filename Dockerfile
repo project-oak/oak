@@ -113,7 +113,7 @@ ENV GOPATH ${HOME}/go
 ENV PATH "${GOROOT}/bin:${PATH}"
 ENV PATH "${GOPATH}/bin:${PATH}"
 # Enable Go module behaviour even in the presence of GOPATH; this way we can specify precise
-# versions via `go get`.
+# versions via `go install`.
 # See https://dev.to/maelvls/why-is-go111module-everywhere-and-everything-about-go-modules-24k
 ENV GO111MODULE on
 RUN mkdir --parents ${GOROOT} \
@@ -124,11 +124,11 @@ RUN mkdir --parents ${GOROOT} \
   && go version \
 # Install embedmd (Markdown snippet embedder) (via Go).
 # https://github.com/campoy/embedmd
-  && go get github.com/campoy/embedmd@97c13d6 \
+  && go install github.com/campoy/embedmd@97c13d6 \
   && embedmd -v \
 # Install liche (Markdown link checker) (via Go).
 # https://github.com/raviqqe/liche
-  && go get github.com/raviqqe/liche@3ac05a3 \
+  && go install github.com/raviqqe/liche@3ac05a3 \
   && liche --version
 
 # Install prettier and markdownlint (via Node.js).
