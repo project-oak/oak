@@ -81,11 +81,11 @@ RUN curl --location "${bazel_url}" > bazel.deb \
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#leverage-build-cache.
 
 # Install Emscripten.
-ARG emscripten_version=2.0.29
+ARG emscripten_version=1.39.17
 # Pick compatible Node version by grepping "node" in the emscripten.zip
 # Node is needed to expose npm needed for installing Prettier.
-ARG emscripten_node_version_directory=14.15.5_64bit 
-ARG emscripten_sha256=a0b76182dcd7ac387ce1167d939fc5ba79a2fa9c4730ac7e2c21ab95962b2911
+ARG emscripten_node_version_directory=12.9.1_64bit
+ARG emscripten_sha256=925dd5ca7dd783d0b367386e81847eaf680d54ae86017c4b5846dea951e17dc9
 
 ARG emscripten_dir=/usr/local/emsdk
 ARG emscripten_temp=/tmp/emscripten.zip
