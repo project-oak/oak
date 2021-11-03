@@ -6,3 +6,6 @@ ignored:
   # This does not seem to work well with android.Dockerfile.
   # See https://github.com/hadolint/hadolint/wiki/DL4006.
   - DL4006
+  # Ignore merging of multiple RUNs.
+  # We want to define the layout of our Dockerfiles.
+  - DL3059
