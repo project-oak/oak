@@ -27,6 +27,10 @@
 <span id="27">27</span>
 <span id="28">28</span>
 <span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -45,6 +49,10 @@
 <span class="comment">//</span>
 
 <span class="doccomment">//! Oak Functions key / value lookup example.</span>
+
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">try_blocks</span>)]</span>
+<span class="comment">// Required for enabling benchmark tests.</span>
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">test</span>)]</span>
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
