@@ -16,6 +16,10 @@
 
 //! Oak Functions key / value lookup example.
 
+#![feature(try_blocks)]
+// Required for enabling benchmark tests.
+#![feature(test)]
+
 #[cfg(test)]
 mod tests;
 
