@@ -1,6 +1,6 @@
 # Use fixed snapshot of Debian to create a deterministic environment.
 # Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags
-ARG debian_snapshot=buster-20201012
+ARG debian_snapshot=buster-20210927
 FROM debian/snapshot:${debian_snapshot}
 
 # Set the SHELL option -o pipefail before RUN with a pipe in.
