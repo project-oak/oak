@@ -1,43 +1,18 @@
 #!/usr/bin/env bash
-
-DOCKER_IMAGE_VERSION=":latest"
-DOCKER_IMAGE_TAG=":latest"
-while getopts "d:h" opt; do
-  case "${opt}" in
-    h)
-      echo -e "Usage: ${0} [-h] -d DIGEST
-
-Build Oak dev Docker image.
-
-Options:
-  -d    Docker image digest
-        If digest is not specified - the 'latest' tag is used instead
-  -h    Print Help (this message) and exit"
-      exit 0;;
-    d)
-      DOCKER_IMAGE_VERSION="@${OPTARG}"
-      DOCKER_IMAGE_TAG="";;
-    *)
-      echo "Invalid argument: ${OPTARG}"
-      exit 1;;
-  esac
-done
-
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "${SCRIPTS_DIR}/common"
 
-# The default user for a Docker container has uid 0 (root). To avoid creating
-# root-owned files in the build directory we tell Docker to use the current user
-# ID, if known.
-# See
-# https://github.com/googleapis/google-cloud-cpp/blob/a186208b79d900b4ec71c6f9df3acf7638f01dc6/ci/kokoro/docker/build.sh#L147-L152
-readonly DOCKER_UID="${UID:-0}"
-readonly DOCKER_GID="$(id -g)"
-
 docker build \
-  --cache-from="${DOCKER_IMAGE_NAME}${DOCKER_IMAGE_VERSION}" \
-  --tag="${DOCKER_IMAGE_NAME}${DOCKER_IMAGE_TAG}" \
-  --build-arg=USER_UID="${DOCKER_UID}" \
-  --build-arg=USER_GID="${DOCKER_GID}" \
+  --cache-from="${DOCKER_IMAGE_NAME}" \
+  --tag="${DOCKER_IMAGE_NAME}" \
   . 1>&2
+
+readonly NEW_DOCKER_IMAGE_ID="$(docker images --format='{{.ID}}' --no-trunc "${DOCKER_IMAGE_NAME}")"
+
+# Store the id (which corresponds to the SHA256 hash) of the image in the repository, so that it is
+# pinned for all other operations.
+#
+# See https://blog.aquasec.com/docker-image-tags.
+sed --in-place "s|readonly DOCKER_IMAGE_ID=.*|readonly DOCKER_IMAGE_ID='${NEW_DOCKER_IMAGE_ID}'|" "${SCRIPTS_DIR}/common"
+sed --in-place "s|\"image\": .*|\"image\": \"${NEW_DOCKER_IMAGE_ID}\",|" ./.devcontainer.json

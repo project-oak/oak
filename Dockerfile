@@ -317,20 +317,8 @@ ENV CARGO_INCREMENTAL false
 
 # We use the `docker` user in order to maintain library paths on different
 # machines and to make Wasm modules reproducible.
-ARG USERNAME=docker
-
-# Placeholder args that are expected to be passed in at image build time.
-# See https://code.visualstudio.com/docs/remote/containers-advanced#_creating-a-nonroot-user
-ARG USER_UID=1000
-ARG USER_GID=${USER_UID}
-
-# Create the specified user and group.
 #
-# Ignore errors if the user or group already exist (it should only happen if the image is being
-# built as root, which happens on GCB).
-RUN (groupadd --gid=${USER_GID} ${USERNAME} || true) \
-  && (useradd --shell=/bin/bash --uid=${USER_UID} --gid=${USER_GID} --create-home ${USERNAME} || true)
-
-# Set the default user as the newly created one, so that any operations performed from within the
-# Docker container will appear as if performed by the outside user, instead of root.
-USER ${USER_UID}
+# We do not set this as the default user in the Docker image, because we expect its uid not to match
+# uid of the host, therefore we need to first fix the uid before actually using the user. This is
+# done by /scripts/fix_docker_user_and_run .
+RUN useradd --shell=/bin/bash --create-home --user-group docker

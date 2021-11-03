@@ -16,15 +16,16 @@
 
 package com.google.oak.remote_attestation;
 
+import static org.junit.Assert.assertThrows;
+
 import com.google.oak.remote_attestation.ClientHandshaker;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import org.junit.Assert;
-import static org.junit.Assert.assertThrows;
 import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.junit.Test;
 
 @RunWith(JUnit4.class)
 public class ClientHandshakerTest {

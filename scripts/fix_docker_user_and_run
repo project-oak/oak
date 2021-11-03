@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# This script is meant to be invoked **inside** the Docker container.
+#
+# It assumes that a user named `docker` exists in the container, modifies it to have the same uid
+# and gid as the host user (obtained via the corresponding env variables), then switches to that
+# user to run the provided command.
+
+set -o errexit
+set -o nounset
+set -o xtrace
+set -o pipefail
+
+groupmod --gid="${HOST_GID}" docker
+usermod --uid="${HOST_UID}" --gid="${HOST_GID}" docker
+chown "${HOST_UID}":"${HOST_GID}" "/home/docker" "/home/docker/.cache"
+su docker --session-command="$*"

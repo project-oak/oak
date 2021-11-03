@@ -42,12 +42,11 @@ jobs:
           docker rmi $(docker image ls --all --quiet)
           df --human-readable
 
-      # Build Docker image, caching from the latest version from the remote repository.
-      - name: Docker build
-        timeout-minutes: 30
+      - name: Docker pull
+        timeout-minutes: 10
         run: |
-          docker pull gcr.io/oak-ci/oak:latest
-          docker build --pull --cache-from=gcr.io/oak-ci/oak:latest --tag=gcr.io/oak-ci/oak:latest .
+          ./scripts/docker_pull
+          df --human-readable
 
       # Build artifacts that are supposed to be reproducible.
       - name: Build Rust server
