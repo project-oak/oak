@@ -31,21 +31,21 @@ use std::{error, fmt};
 pub struct Claims {
     /// The intended audience for the token (will be a client id).
     #[serde(rename = "aud")]
-    audience: String,
+    _audience: String,
     /// The expiration time for the token in Unix time (seconds).
     #[serde(rename = "exp")]
-    expiry: usize,
+    _expiry: usize,
     /// The time that the token was issued in Unix time (seconds).
     #[serde(rename = "iat")]
-    issued_at: usize,
+    _issued_at: usize,
     /// The issuer identifier (https://accounts.google.com or accounts.google.com).
     #[serde(rename = "iss")]
-    issuer: String,
+    _issuer: String,
     /// The unique identifier for the account.
     #[serde(rename = "sub")]
-    subject: String,
+    _subject: String,
     /// The email address used for logging into the account.
-    email: String,
+    _email: String,
     // TODO(#922): Add nonce
 }
 
@@ -70,7 +70,7 @@ struct TokenRequest {
 /// https://developers.google.com/identity/protocols/oauth2/openid-connect#exchangecode
 #[derive(Deserialize, Debug)]
 struct TokenResponse {
-    expires_in: usize,
+    _expires_in: usize,
     id_token: String,
 }
 

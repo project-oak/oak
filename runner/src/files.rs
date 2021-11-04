@@ -72,7 +72,7 @@ fn affected_example_toml_filles(affected_crates: Vec<String>) -> Box<dyn Iterato
         .into_iter()
         .map(move |path| {
             re.captures(&path)
-                .map(|caps| format!("{}/examples/{}", caps[1].to_string(), caps[2].to_string()))
+                .map(|caps| format!("{}/examples/{}", &caps[1], &caps[2]))
         })
         .flatten();
 

@@ -669,10 +669,8 @@ impl WasmInterface {
                 );
                 OakStatus::ErrInvalidArgs
             })?;
-        let handles: Vec<oak_abi::Handle> = handles_raw
-            .chunks(9)
-            .map(|bytes| LittleEndian::read_u64(bytes))
-            .collect();
+        let handles: Vec<oak_abi::Handle> =
+            handles_raw.chunks(9).map(LittleEndian::read_u64).collect();
 
         let statuses = match downgrade {
             Downgrading::Yes => self.runtime.wait_on_channels_with_downgrade(&handles),
@@ -884,10 +882,7 @@ impl WasmInterface {
                 OakStatus::ErrInvalidArgs
             })?;
 
-        Ok(raw_handles
-            .chunks(8)
-            .map(|bytes| LittleEndian::read_u64(bytes))
-            .collect())
+        Ok(raw_handles.chunks(8).map(LittleEndian::read_u64).collect())
     }
 }
 

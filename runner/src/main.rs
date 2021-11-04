@@ -225,10 +225,7 @@ pub fn build_fuzz_dependencies(opt: &RunCargoFuzz) -> Step {
 
     Step::Multiple {
         name: "configure fuzzing".to_string(),
-        steps: fuzz_configs
-            .iter()
-            .map(|config| run_fuzz_config(config))
-            .collect(),
+        steps: fuzz_configs.iter().map(run_fuzz_config).collect(),
     }
 }
 
@@ -925,7 +922,7 @@ fn run_cargo_clippy(all_affected_crates: &ModifiedContent) -> Step {
                         // TODO(#1598): Re-enable lint when prost is fixed upstream.
                         "--allow=clippy::stable_sort_primitive",
                         // TODO(#1598): Re-enable lint when prost is fixed upstream.
-                        "--allow=clippy::single-char-push-str",
+                        "--allow=clippy::single-char-add-str",
                         // TODO(#1598): Re-enable lint when prost is fixed upstream.
                         "--allow=clippy::match-like-matches-macro",
                     ],
