@@ -1,6 +1,6 @@
 # Use fixed snapshot of Debian to create a deterministic environment.
 # Snapshot tags can be found at https://hub.docker.com/r/debian/snapshot/tags
-ARG debian_snapshot=buster-20201012
+ARG debian_snapshot=buster-20210927
 FROM debian/snapshot:${debian_snapshot}
 
 # Set the SHELL option -o pipefail before RUN with a pipe in.
@@ -66,8 +66,8 @@ RUN echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sou
   && ln --symbolic --force clang-format-8 /usr/bin/clang-format
 
 # Use a fixed version of Bazel.
-ARG bazel_version=3.6.0
-ARG bazel_sha256=cc07d953cb94785b203017dcca728e52b7c08a80d1a863b9aed14e504726e81a
+ARG bazel_version=4.2.0
+ARG bazel_sha256=89b14fa0d9ce5637f4e0b66df56a531e1e3c50d88614311334d192531cf1e0fa
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
 RUN curl --location "${bazel_url}" > bazel.deb \
   && sha256sum --binary bazel.deb && echo "${bazel_sha256} *bazel.deb" | sha256sum --check \
@@ -82,7 +82,9 @@ RUN curl --location "${bazel_url}" > bazel.deb \
 
 # Install Emscripten.
 ARG emscripten_version=1.39.17
-ARG emscripten_node_version=12.9.1_64bit
+# Pick compatible Node version by grepping "node" in the emscripten.zip
+# Node is needed to expose npm needed for installing Prettier.
+ARG emscripten_node_version_directory=12.9.1_64bit
 ARG emscripten_sha256=925dd5ca7dd783d0b367386e81847eaf680d54ae86017c4b5846dea951e17dc9
 
 ARG emscripten_dir=/usr/local/emsdk
@@ -97,7 +99,7 @@ RUN mkdir --parents ${emscripten_dir} \
 ENV EMSDK "${emscripten_dir}"
 ENV EM_CONFIG "${emscripten_dir}/.emscripten"
 ENV EM_CACHE "${emscripten_dir}/.emscripten_cache"
-ENV PATH "${emscripten_dir}:${emscripten_dir}/node/${emscripten_node_version}/bin:${PATH}"
+ENV PATH "${emscripten_dir}:${emscripten_dir}/node/${emscripten_node_version_directory}/bin:${PATH}"
 # We need to allow a non-root Docker container to write into the directory
 RUN chmod --recursive go+wx "${emscripten_dir}"
 # Emscripten brings Node with it, we need to allow non-root access to temp and
@@ -105,15 +107,15 @@ RUN chmod --recursive go+wx "${emscripten_dir}"
 RUN mkdir -p "/.npm" && chmod a+rwx "/.npm" & mkdir -p "/.config" && chmod a+rwx "/.config"
 
 # Install Go.
-ARG golang_version=1.15.3
-ARG golang_sha256=010a88df924a81ec21b293b5da8f9b11c176d27c0ee3962dc1738d2352d3c02d
+ARG golang_version=1.17.1
+ARG golang_sha256=dab7d9c34361dc21ec237d584590d72500652e7c909bf082758fb63064fca0ef
 ARG golang_temp=/tmp/golang.tar.gz
 ENV GOROOT /usr/local/go
 ENV GOPATH ${HOME}/go
 ENV PATH "${GOROOT}/bin:${PATH}"
 ENV PATH "${GOPATH}/bin:${PATH}"
 # Enable Go module behaviour even in the presence of GOPATH; this way we can specify precise
-# versions via `go get`.
+# versions via `go install`.
 # See https://dev.to/maelvls/why-is-go111module-everywhere-and-everything-about-go-modules-24k
 ENV GO111MODULE on
 RUN mkdir --parents ${GOROOT} \
@@ -137,7 +139,7 @@ RUN go get github.com/raviqqe/liche@3ac05a3 \
 # This will use the Node version installed by emscripten.
 # https://prettier.io/
 # https://github.com/igorshubovych/markdownlint-cli
-ARG prettier_version=2.1.2
+ARG prettier_version=2.4.1
 ARG prettier_plugin_toml_version=0.3.1
 ARG markdownlint_version=0.24.0
 RUN npm install --global \
@@ -149,8 +151,8 @@ RUN npm install --global \
 
 # Install hadolint.
 # https://github.com/hadolint/hadolint
-ARG hadolint_version=1.18.1
-ARG hadolint_sha256=cf713ca0a79b2a8e66b7aa5900f3af8b1f0be6ad5e359cf6954728a1548d1488
+ARG hadolint_version=2.7.0
+ARG hadolint_sha256=cdd5ca6f07f72053e8f2d18a9390a7b7fc6e819b6a251835971411f300dab8e6
 ARG hadolint_dir=/usr/local/hadolint/bin
 ARG hadolint_bin=${hadolint_dir}/hadolint
 ENV PATH "${hadolint_dir}:${PATH}"
@@ -162,8 +164,8 @@ RUN mkdir --parents ${hadolint_dir} \
 
 # Install buildifier.
 # https://github.com/bazelbuild/buildtools/tree/master/buildifier
-ARG bazel_tools_version=3.5.0
-ARG buildifier_sha256=f9a9c082b8190b9260fce2986aeba02a25d41c00178855a1425e1ce6f1169843
+ARG bazel_tools_version=4.2.2
+ARG buildifier_sha256=3f0e450cd852dbfd89aa2761d85f9fbeb6f0faccfc5d4fbe48952cfe0712922a
 ARG buildifier_dir=/usr/local/buildifier/bin
 ARG buildifier_bin=${buildifier_dir}/buildifier
 ENV PATH "${buildifier_dir}:${PATH}"
@@ -174,8 +176,8 @@ RUN mkdir --parents ${buildifier_dir} \
   && buildifier --version
 
 # Install Protobuf compiler.
-ARG protobuf_version=3.13.0
-ARG protobuf_sha256=4a3b26d1ebb9c1d23e933694a6669295f6a39ddc64c3db2adf671f0a6026f82e
+ARG protobuf_version=3.18.0
+ARG protobuf_sha256=8b6b0c82f730212801d9cce4653abb1a1f4204555a92e8e2b5f625d61e66f1b4
 ARG protobuf_dir=/usr/local/protobuf
 ARG protobuf_temp=/tmp/protobuf.zip
 ENV PATH "${protobuf_dir}/bin:${PATH}"
@@ -201,6 +203,10 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
 ARG rust_version=nightly-2021-08-17
+# when updating to rust_version=nightly-2021-11-02
+# change cargo-fuzz to the following to avoid a recent failure
+# cf. https://github.com/rust-fuzz/cargo-fuzz/pull/277
+# RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf183c93cd49ad655eb2f3faecf543d0012
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 
@@ -217,11 +223,13 @@ RUN rustup component add \
   rustfmt
 
 # No binary available on Github, have to use cargo install.
-ARG deadlinks_version=0.5.0
+# https://github.com/deadlinks/cargo-deadlinks
+ARG deadlinks_version=0.8.0
 RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 
 # Install cargo-fuzz.
 # To allow local testing of the fuzzing functionality.
+# https://github.com/rust-fuzz/cargo-fuzz
 ARG cargo_fuzz_version=0.10.1
 RUN cargo install --version=${cargo_fuzz_version} cargo-fuzz
 
@@ -244,14 +252,14 @@ RUN chmod +x ${install_dir}/cargo-crev
 
 # Install cargo-deny
 # https://github.com/EmbarkStudios/cargo-deny
-ARG deny_version=0.8.9
+ARG deny_version=0.9.1
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny
 
 # Install cargo-udeps
 # https://github.com/est31/cargo-udeps
-ARG udeps_version=v0.1.20
+ARG udeps_version=v0.1.23
 ARG udeps_dir=cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu
 ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/${udeps_version}/cargo-udeps-${udeps_version}-x86_64-unknown-linux-gnu.tar.gz
 RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
@@ -259,9 +267,9 @@ RUN chmod +x ${install_dir}/cargo-udeps
 
 # Install rust-analyzer
 # https://github.com/rust-analyzer/rust-analyzer
-ARG rust_analyzer_version=2020-10-26
-ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-linux
-RUN curl --location ${rust_analyzer_location} > ${install_dir}/rust-analyzer
+ARG rust_analyzer_version=2021-08-16
+ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-x86_64-unknown-linux-gnu.gz
+RUN curl --location ${rust_analyzer_location} | gzip --decompress "$@" > ${install_dir}/rust-analyzer
 RUN chmod +x ${install_dir}/rust-analyzer
 
 # Unset $CARGO_HOME so that the new user will use the default value for it, which will point it to

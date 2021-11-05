@@ -6,4 +6,4 @@ ARG application_file_name
 
 # This runs in the context of each example, e.g. the 'current folder'
 # is examples/{current_example}, so we just need the compiled application file from the bin folder
-COPY bin/${application_file_name} .
+COPY bin/${application_file_name} /

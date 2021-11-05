@@ -113,9 +113,7 @@ fuzz_target!(|instruction_list: Vec<ArbitraryInstruction>| {
     .expect("Could instantiate WasmHandler");
 
     let result = RUNTIME.block_on(wasm_handler.handle_invoke(request));
-    if result.is_err() {
-        panic!("Error: {:?}", result);
-    }
+    assert!(!result.is_err(), "Error: {:?}", result);
     // Cannot check the exact response value, since the wasm function may panic at any point.
 });
 

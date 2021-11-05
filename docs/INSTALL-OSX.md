@@ -30,6 +30,10 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
 ARG rust_version=nightly-2021-08-17
+# when updating to rust_version=nightly-2021-11-02
+# change cargo-fuzz to the following to avoid a recent failure
+# cf. https://github.com/rust-fuzz/cargo-fuzz/pull/277
+# RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf183c93cd49ad655eb2f3faecf543d0012
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 

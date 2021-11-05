@@ -241,22 +241,23 @@ trait OakExample {
 }
 pub struct ClassicExample<'a> {
     example: &'a Example,
-    applications: Box<HashMap<String, &'a ApplicationClassic>>,
+    applications: HashMap<String, &'a ApplicationClassic>,
     options: RunExamples,
 }
 
 impl<'a> ClassicExample<'a> {
     fn new(example: &'a Example, options: RunExamples) -> Self {
-        let applications = Box::new(example.applications.iter().fold(
-            hashmap! {},
-            |mut apps, app| match app {
-                (name, Application::Classic(ref app)) => {
-                    apps.insert(name.clone(), app);
-                    apps
-                }
-                (_name, Application::Functions(_app)) => apps,
-            },
-        ));
+        let applications =
+            example
+                .applications
+                .iter()
+                .fold(hashmap! {}, |mut apps, app| match app {
+                    (name, Application::Classic(ref app)) => {
+                        apps.insert(name.clone(), app);
+                        apps
+                    }
+                    (_name, Application::Functions(_app)) => apps,
+                });
 
         ClassicExample {
             example,
@@ -294,22 +295,23 @@ impl OakExample for ClassicExample<'_> {
 
 pub struct FunctionsExample<'a> {
     example: &'a Example,
-    applications: Box<HashMap<String, &'a ApplicationFunctions>>,
+    applications: HashMap<String, &'a ApplicationFunctions>,
     options: RunFunctionsExamples,
 }
 
 impl<'a> FunctionsExample<'a> {
     fn new(example: &'a Example, options: RunFunctionsExamples) -> Self {
-        let applications = Box::new(example.applications.iter().fold(
-            hashmap! {},
-            |mut apps, app| match app {
-                (_name, Application::Classic(_app)) => apps,
-                (name, Application::Functions(ref app)) => {
-                    apps.insert(name.clone(), app);
-                    apps
-                }
-            },
-        ));
+        let applications =
+            example
+                .applications
+                .iter()
+                .fold(hashmap! {}, |mut apps, app| match app {
+                    (_name, Application::Classic(_app)) => apps,
+                    (name, Application::Functions(ref app)) => {
+                        apps.insert(name.clone(), app);
+                        apps
+                    }
+                });
 
         FunctionsExample {
             example,
@@ -646,7 +648,7 @@ pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Ste
                 .exec()
                 .unwrap();
             Step::Single {
-                name: format!("wasm:{}:{}", name, cargo_manifest.to_string()),
+                name: format!("wasm:{}:{}", name, cargo_manifest),
                 command: Cmd::new(
                     "cargo",
                     // Keep this in sync with `/oak_functions/sdk/test/utils/src/lib.rs`.
@@ -680,7 +682,7 @@ pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Ste
             name: "wasm".to_string(),
             steps: vec![
                 Step::Single {
-                    name: format!("wasm:{}:{}", name, bazel_target.to_string()),
+                    name: format!("wasm:{}:{}", name, bazel_target),
                     command: Cmd::new(
                         "bazel",
                         vec![

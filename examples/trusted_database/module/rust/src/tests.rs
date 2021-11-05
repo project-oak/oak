@@ -103,9 +103,12 @@ fn get_distance(first: (f32, f32), second: (f32, f32)) -> f32 {
 }
 
 fn assert_approx_eq(left: f32, right: f32) {
-    if (left - right).abs() > 0.000001 {
-        panic!("{} is not equal to {}", left, right);
-    }
+    assert!(
+        (left - right).abs() <= 0.000001,
+        "{} is not equal to {}",
+        left,
+        right
+    );
 }
 
 #[test]
