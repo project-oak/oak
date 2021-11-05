@@ -217,11 +217,10 @@ impl<T: ServerNode> crate::CommandHandler for T {
         // Since we are expecting a single message, close the channel immediately.
         // This will change when we implement client streaming (#97).
         request_receiver.close()?;
-        // TODO(#97): Implement client streaming.
-        assert!(
-            req.last,
-            "Support for streaming requests not yet implemented"
-        );
+        if !req.last {
+            // TODO(#97): Implement client streaming.
+            panic!("Support for streaming requests not yet implemented");
+        }
         self.invoke(&req.method_name, req.req_msg.as_slice(), response_writer);
         Ok(())
     }
