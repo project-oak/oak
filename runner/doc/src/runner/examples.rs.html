@@ -1020,6 +1020,8 @@
 <span id="1020">1020</span>
 <span id="1021">1021</span>
 <span id="1022">1022</span>
+<span id="1023">1023</span>
+<span id="1024">1024</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2021 The Project Oak Authors</span>
@@ -1264,22 +1266,23 @@
 }
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClassicExample</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Example</span>,
-    <span class="ident">applications</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">ApplicationClassic</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">applications</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">ApplicationClassic</span><span class="op">&gt;</span>,
     <span class="ident">options</span>: <span class="ident">RunExamples</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ClassicExample</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Example</span>, <span class="ident">options</span>: <span class="ident">RunExamples</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">applications</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">example</span>.<span class="ident">applications</span>.<span class="ident">iter</span>().<span class="ident">fold</span>(
-            <span class="macro">hashmap!</span> {},
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">apps</span>, <span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
-                (<span class="ident">name</span>, <span class="ident">Application::Classic</span>(<span class="kw-2">ref</span> <span class="ident">app</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">apps</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">app</span>);
-                    <span class="ident">apps</span>
-                }
-                (<span class="ident">_name</span>, <span class="ident">Application::Functions</span>(<span class="ident">_app</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">apps</span>,
-            },
-        ));
+        <span class="kw">let</span> <span class="ident">applications</span> <span class="op">=</span>
+            <span class="ident">example</span>
+                .<span class="ident">applications</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">fold</span>(<span class="macro">hashmap!</span> {}, <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">apps</span>, <span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
+                    (<span class="ident">name</span>, <span class="ident">Application::Classic</span>(<span class="kw-2">ref</span> <span class="ident">app</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="ident">apps</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">app</span>);
+                        <span class="ident">apps</span>
+                    }
+                    (<span class="ident">_name</span>, <span class="ident">Application::Functions</span>(<span class="ident">_app</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">apps</span>,
+                });
 
         <span class="ident">ClassicExample</span> {
             <span class="ident">example</span>,
@@ -1317,22 +1320,23 @@
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FunctionsExample</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Example</span>,
-    <span class="ident">applications</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">ApplicationFunctions</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">applications</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">ApplicationFunctions</span><span class="op">&gt;</span>,
     <span class="ident">options</span>: <span class="ident">RunFunctionsExamples</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">FunctionsExample</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">example</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Example</span>, <span class="ident">options</span>: <span class="ident">RunFunctionsExamples</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">applications</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">example</span>.<span class="ident">applications</span>.<span class="ident">iter</span>().<span class="ident">fold</span>(
-            <span class="macro">hashmap!</span> {},
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">apps</span>, <span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
-                (<span class="ident">_name</span>, <span class="ident">Application::Classic</span>(<span class="ident">_app</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">apps</span>,
-                (<span class="ident">name</span>, <span class="ident">Application::Functions</span>(<span class="kw-2">ref</span> <span class="ident">app</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">apps</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">app</span>);
-                    <span class="ident">apps</span>
-                }
-            },
-        ));
+        <span class="kw">let</span> <span class="ident">applications</span> <span class="op">=</span>
+            <span class="ident">example</span>
+                .<span class="ident">applications</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">fold</span>(<span class="macro">hashmap!</span> {}, <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">apps</span>, <span class="ident">app</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">app</span> {
+                    (<span class="ident">_name</span>, <span class="ident">Application::Classic</span>(<span class="ident">_app</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">apps</span>,
+                    (<span class="ident">name</span>, <span class="ident">Application::Functions</span>(<span class="kw-2">ref</span> <span class="ident">app</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="ident">apps</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">app</span>);
+                        <span class="ident">apps</span>
+                    }
+                });
 
         <span class="ident">FunctionsExample</span> {
             <span class="ident">example</span>,
@@ -1669,7 +1673,7 @@
                 .<span class="ident">exec</span>()
                 .<span class="ident">unwrap</span>();
             <span class="ident">Step::Single</span> {
-                <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;wasm:{}:{}&quot;</span>, <span class="ident">name</span>, <span class="ident">cargo_manifest</span>.<span class="ident">to_string</span>()),
+                <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;wasm:{}:{}&quot;</span>, <span class="ident">name</span>, <span class="ident">cargo_manifest</span>),
                 <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
                     <span class="string">&quot;cargo&quot;</span>,
                     <span class="comment">// Keep this in sync with `/oak_functions/sdk/test/utils/src/lib.rs`.</span>
@@ -1703,7 +1707,7 @@
             <span class="ident">name</span>: <span class="string">&quot;wasm&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">steps</span>: <span class="macro">vec!</span>[
                 <span class="ident">Step::Single</span> {
-                    <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;wasm:{}:{}&quot;</span>, <span class="ident">name</span>, <span class="ident">bazel_target</span>.<span class="ident">to_string</span>()),
+                    <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;wasm:{}:{}&quot;</span>, <span class="ident">name</span>, <span class="ident">bazel_target</span>),
                     <span class="ident">command</span>: <span class="ident">Cmd::new</span>(
                         <span class="string">&quot;bazel&quot;</span>,
                         <span class="macro">vec!</span>[

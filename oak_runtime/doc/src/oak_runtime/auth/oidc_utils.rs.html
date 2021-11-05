@@ -247,21 +247,21 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Claims</span> {
     <span class="doccomment">/// The intended audience for the token (will be a client id).</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;aud&quot;</span>)]</span>
-    <span class="ident">audience</span>: <span class="ident">String</span>,
+    <span class="ident">_audience</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The expiration time for the token in Unix time (seconds).</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;exp&quot;</span>)]</span>
-    <span class="ident">expiry</span>: <span class="ident">usize</span>,
+    <span class="ident">_expiry</span>: <span class="ident">usize</span>,
     <span class="doccomment">/// The time that the token was issued in Unix time (seconds).</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;iat&quot;</span>)]</span>
-    <span class="ident">issued_at</span>: <span class="ident">usize</span>,
+    <span class="ident">_issued_at</span>: <span class="ident">usize</span>,
     <span class="doccomment">/// The issuer identifier (https://accounts.google.com or accounts.google.com).</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;iss&quot;</span>)]</span>
-    <span class="ident">issuer</span>: <span class="ident">String</span>,
+    <span class="ident">_issuer</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The unique identifier for the account.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;sub&quot;</span>)]</span>
-    <span class="ident">subject</span>: <span class="ident">String</span>,
+    <span class="ident">_subject</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The email address used for logging into the account.</span>
-    <span class="ident">email</span>: <span class="ident">String</span>,
+    <span class="ident">_email</span>: <span class="ident">String</span>,
     <span class="comment">// TODO(#922): Add nonce</span>
 }
 
@@ -286,7 +286,7 @@
 <span class="doccomment">/// https://developers.google.com/identity/protocols/oauth2/openid-connect#exchangecode</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">TokenResponse</span> {
-    <span class="ident">expires_in</span>: <span class="ident">usize</span>,
+    <span class="ident">_expires_in</span>: <span class="ident">usize</span>,
     <span class="ident">id_token</span>: <span class="ident">String</span>,
 }
 

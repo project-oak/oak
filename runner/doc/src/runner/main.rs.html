@@ -990,9 +990,6 @@
 <span id="990">990</span>
 <span id="991">991</span>
 <span id="992">992</span>
-<span id="993">993</span>
-<span id="994">994</span>
-<span id="995">995</span>
 </pre><pre class="rust">
 <span class="comment">//</span>
 <span class="comment">// Copyright 2020 The Project Oak Authors</span>
@@ -1221,10 +1218,7 @@
 
     <span class="ident">Step::Multiple</span> {
         <span class="ident">name</span>: <span class="string">&quot;configure fuzzing&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="ident">steps</span>: <span class="ident">fuzz_configs</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">config</span><span class="op">|</span> <span class="ident">run_fuzz_config</span>(<span class="ident">config</span>))
-            .<span class="ident">collect</span>(),
+        <span class="ident">steps</span>: <span class="ident">fuzz_configs</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="ident">run_fuzz_config</span>).<span class="ident">collect</span>(),
     }
 }
 
@@ -1921,7 +1915,7 @@
                         <span class="comment">// TODO(#1598): Re-enable lint when prost is fixed upstream.</span>
                         <span class="string">&quot;--allow=clippy::stable_sort_primitive&quot;</span>,
                         <span class="comment">// TODO(#1598): Re-enable lint when prost is fixed upstream.</span>
-                        <span class="string">&quot;--allow=clippy::single-char-push-str&quot;</span>,
+                        <span class="string">&quot;--allow=clippy::single-char-add-str&quot;</span>,
                         <span class="comment">// TODO(#1598): Re-enable lint when prost is fixed upstream.</span>
                         <span class="string">&quot;--allow=clippy::match-like-matches-macro&quot;</span>,
                     ],
