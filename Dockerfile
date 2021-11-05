@@ -203,6 +203,10 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
 ARG rust_version=nightly-2021-08-17
+# when updating to rust_version=nightly-2021-11-02
+# change cargo-fuzz to the following to avoid a recent failure
+# cf. https://github.com/rust-fuzz/cargo-fuzz/pull/277
+# RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf183c93cd49ad655eb2f3faecf543d0012
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 
@@ -226,10 +230,8 @@ RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 # Install cargo-fuzz.
 # To allow local testing of the fuzzing functionality.
 # https://github.com/rust-fuzz/cargo-fuzz
-# No recent version released, but we need bug fix from this commit
-# when updating to rust_version=nightly-2021-11-02
-# cf. https://github.com/rust-fuzz/cargo-fuzz/pull/277
-RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf183c93cd49ad655eb2f3faecf543d0012
+ARG cargo_fuzz_version=0.10.1
+RUN cargo install --version=${cargo_fuzz_version} cargo-fuzz
 
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
