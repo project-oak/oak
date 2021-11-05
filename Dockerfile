@@ -226,8 +226,9 @@ RUN cargo install --version=${deadlinks_version} cargo-deadlinks
 # Install cargo-fuzz.
 # To allow local testing of the fuzzing functionality.
 # https://github.com/rust-fuzz/cargo-fuzz
-ARG cargo_fuzz_version=0.10.2
-RUN cargo install --version=${cargo_fuzz_version} cargo-fuzz
+# No recent version released, but we need bug fix from this commit:
+# cf. https://github.com/rust-fuzz/cargo-fuzz/pull/277
+RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf183c93cd49ad655eb2f3faecf543d0012
 
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
