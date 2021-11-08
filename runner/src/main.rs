@@ -779,7 +779,6 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
                     "cargo",
                     spread![
                         "fmt",
-                        "--all",
                         format!("--manifest-path={}", &entry).as_ref(),
                         ...match mode {
                             FormatMode::Check => vec!["--", "--check"],
