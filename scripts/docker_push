@@ -14,4 +14,11 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-docker push "$DOCKER_IMAGE_NAME:latest"
+# We need to push the image to a registry in order to be able to retrieve its digest.
+# See https://github.com/moby/moby/issues/16482.
+docker push "${DOCKER_IMAGE_NAME}"
+
+# Store the full name (including repo and digest) of the image in the repository, so that it can be
+# pulled easily.
+readonly NEW_DOCKER_IMAGE_REPO_DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${DOCKER_IMAGE_NAME}")"
+sed --in-place "s|readonly DOCKER_IMAGE_REPO_DIGEST=.*|readonly DOCKER_IMAGE_REPO_DIGEST='${NEW_DOCKER_IMAGE_REPO_DIGEST}'|" "${SCRIPTS_DIR}/common"

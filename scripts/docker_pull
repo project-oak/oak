@@ -2,10 +2,19 @@
 
 # This script can be used by anyone, including CI, to pull a version of the image from Google
 # Container Registry, which should allow download public downloads.
+#
 # See https://pantheon.corp.google.com/gcr/settings?project=oak-ci&folder&organizationId=433637338589
+#
+# The exact version of the images to pull are specified in /scripts/common .
+#
+# Here we pull both the exact image pinned in this repository, plus the "latest" image, in case they
+# are different, for convenience, though only the pinned one is actually used by the other scripts.
+# The "latest" image may still be useful for local editor integration or other local development
+# tasks.
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-docker pull "$DOCKER_IMAGE_NAME:latest"
+docker pull "$DOCKER_IMAGE_NAME"
+docker pull "$DOCKER_IMAGE_REPO_DIGEST"

@@ -1,6 +1,10 @@
-// See https://code.visualstudio.com/docs/remote/containers for details.
+// See
+//
+// - https://code.visualstudio.com/docs/remote/containers
+// - https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 {
-  "image": "gcr.io/oak-ci/oak:latest",
+  // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
+  "image": "sha256:f71ebe2c5827ea559e4c5fd9bb668c7a23ed8d828a4344d8c3fec0714622188d",
   "extensions": [
     "bazelbuild.vscode-bazel",
     "bodil.prettier-toml",
@@ -19,4 +23,5 @@
   // See https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount.
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
+  "containerUser": "docker"
 }
