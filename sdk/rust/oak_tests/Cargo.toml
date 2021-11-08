@@ -11,11 +11,11 @@ byteorder = "*"
 cargo_metadata = "*"
 lazy_static = "*"
 log = { version = "*", features = ["std"] }
-oak = "=0.1.0"
-oak_abi = "=0.1.0"
+oak = { path = "../oak" }
+oak_abi = { path = "../../../oak_abi" }
 oak_client = { path = "../../../oak_client" }
-oak_runtime = "=0.1.0"
-oak_sign = "=0.1.0"
+oak_runtime = { path = "../../../oak_runtime" }
+oak_sign = { path = "../../../oak_sign" }
 prost = "*"
 rand = { version = "*" }
 rustls = "*"

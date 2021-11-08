@@ -1,8 +1,8 @@
 name = "abitest"
 
 [modules]
-frontend_module = { path = "examples/bin/abitest_0_frontend.wasm" }
-backend_module = { path = "examples/bin/abitest_1_backend.wasm" }
+frontend_module = { path = "examples/abitest/module_0/rust/bin/abitest_0_frontend.wasm" }
+backend_module = { path = "examples/abitest/module_1/rust/bin/abitest_1_backend.wasm" }
 linear_handles_module = { path = "examples/bin/abitest_linear_handles.wasm" }
 
 [initial_node_configuration]
