@@ -86,16 +86,14 @@ public class AttestationClient {
       interceptors.add(new Interceptor(apiKey));
     }
     if (parsedUrl.getProtocol().equals("https")) {
-      channel =
-          ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
-              .intercept(interceptors)
-              .build();
+      channel = ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
+                    .intercept(interceptors)
+                    .build();
     } else {
-      channel =
-          ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
-              .usePlaintext()
-              .intercept(interceptors)
-              .build();
+      channel = ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
+                    .usePlaintext()
+                    .intercept(interceptors)
+                    .build();
     }
     attest(channel, verifier);
   }
@@ -249,16 +247,15 @@ public class AttestationClient {
         MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
       ClientCall<ReqT, RespT> call = next.newCall(method, callOptions);
 
-      call =
-          new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(call) {
-            @Override
-            public void start(Listener<RespT> responseListener, Metadata headers) {
-              if (apiKey != null && !apiKey.isEmpty()) {
-                headers.put(API_KEY_HEADER, apiKey);
-              }
-              super.start(responseListener, headers);
-            }
-          };
+      call = new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(call) {
+        @Override
+        public void start(Listener<RespT> responseListener, Metadata headers) {
+          if (apiKey != null && !apiKey.isEmpty()) {
+            headers.put(API_KEY_HEADER, apiKey);
+          }
+          super.start(responseListener, headers);
+        }
+      };
       return call;
     }
   }
