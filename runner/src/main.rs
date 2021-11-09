@@ -99,6 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Command::Completion => panic!("should have been handled above"),
             Command::RunCargoDeny => run_cargo_deny(),
             Command::RunCargoUdeps => run_cargo_udeps(),
+            Command::RunCargoClean => run_cargo_clean(),
         };
         // TODO(#396): Add support for running individual commands via command line flags.
         let remaining_steps = steps.len();
@@ -962,6 +963,24 @@ fn run_cargo_udeps() -> Step {
                         "--all-targets",
                     ],
                 ),
+            })
+            .collect(),
+    }
+}
+
+fn run_cargo_clean() -> Step {
+    Step::Multiple {
+        name: "cargo clean".to_string(),
+        steps: crate_manifest_files()
+            .map(|manifest_path| {
+                let manifest_path = manifest_path.to_str().unwrap();
+                Step::Single {
+                    name: manifest_path.to_string(),
+                    command: Cmd::new(
+                        "cargo",
+                        &["clean", &format!("--manifest-path={}", manifest_path)],
+                    ),
+                }
             })
             .collect(),
     }
