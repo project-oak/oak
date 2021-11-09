@@ -950,7 +950,7 @@ fn run_cargo_deny() -> Step {
 fn run_cargo_udeps() -> Step {
     Step::Multiple {
         name: "cargo udeps".to_string(),
-        steps: crate_manifest_files()
+        steps: workspace_manifest_files()
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
@@ -960,6 +960,7 @@ fn run_cargo_udeps() -> Step {
                         "udeps",
                         &format!("--manifest-path={}", &entry),
                         "--all-targets",
+                        "--workspace",
                     ],
                 ),
             })

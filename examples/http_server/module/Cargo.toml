@@ -12,12 +12,12 @@ crate-type = ["cdylib", "rlib"]
 anyhow = "*"
 http = "*"
 log = "*"
-oak = "=0.1.0"
-oak_abi = "=0.1.0"
-oak_io = "=0.1.0"
-oak_services = "=0.1.0"
+oak = { path = "../../../sdk/rust/oak" }
+oak_abi = { path = "../../../oak_abi" }
+oak_io = { path = "../../../oak_io" }
+oak_services = { path = "../../../oak_services" }
 prost = "*"
 serde_json = "*"
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../oak_utils" }

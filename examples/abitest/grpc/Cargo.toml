@@ -10,4 +10,4 @@ prost = "*"
 tonic = { version = "*", features = ["tls"] }
 
 [build-dependencies]
-oak_utils = "*"
+oak_utils = { path = "../../../oak_utils" }

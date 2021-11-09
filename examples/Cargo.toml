@@ -2,9 +2,9 @@
 members = [
   "abitest/abitest_common",
   "abitest/grpc",
-  "abitest/module_0/rust",
-  "abitest/module_1/rust",
   "abitest/module_linear_handles/rust",
+  # "abitest/module_0" and "abitest/module_1" are excluded and have their own workspaces as they
+  # must be built without the "linear-handles" feature.
   "aggregator/backend",
   "aggregator/grpc",
   "aggregator/common",
