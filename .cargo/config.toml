@@ -20,3 +20,9 @@ rustflags = ["-C", "link-args=-Xlinker --build-id=none"]
 # Related issue: https://github.com/rust-lang/compiler-builtins/issues/201
 [target.aarch64-unknown-linux-musl]
 rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=-lgcc"]
+
+# Workaround to resolve spurious network errors when downloading a large number of crates.
+# Related issue: https://github.com/rust-lang/cargo/issues/6513#issuecomment-920920238
+# See also https://doc.rust-lang.org/cargo/reference/config.html#httpmultiplexing
+[http]
+multiplexing = false
