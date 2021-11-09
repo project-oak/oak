@@ -22,14 +22,21 @@ import com.google.oak.remote_attestation.AeadEncryptor;
 import com.google.oak.remote_attestation.ClientHandshaker;
 import com.google.oak.remote_attestation.Message;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import io.grpc.CallOptions;
+import io.grpc.Channel;
+import io.grpc.ClientCall;
+import io.grpc.ClientInterceptor;
+import io.grpc.ForwardingClientCall;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Metadata;
+import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Predicate;
@@ -70,16 +77,25 @@ public class AttestationClient {
    *
    * @param url must contain a protocol used for the connection ("https://" or "http://")
    */
-  public void attest(String url, Predicate<ConfigurationInfo> verifier)
+  public void attest(String url, String apiKey, Predicate<ConfigurationInfo> verifier)
       throws GeneralSecurityException, IOException, InterruptedException, VerificationException {
     // Create gRPC channel.
     URL parsedUrl = new URL(url);
+    ArrayList<ClientInterceptor> interceptors = new ArrayList<>();
+    if (!apiKey.isEmpty()) {
+      interceptors.add(new Interceptor(apiKey));
+    }
     if (parsedUrl.getProtocol().equals("https")) {
-      channel = ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort()).build();
+      channel =
+          ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
+              .intercept(interceptors)
+              .build();
     } else {
-      channel = ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
-                    .usePlaintext()
-                    .build();
+      channel =
+          ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort())
+              .usePlaintext()
+              .intercept(interceptors)
+              .build();
     }
     attest(channel, verifier);
   }
@@ -178,13 +194,13 @@ public class AttestationClient {
     if (!verifier.verify()) {
       logger.log(Level.WARNING, "Verification of the ServerIdentity failed.");
       return false;
-    };
+    }
 
     return true;
   }
 
   @Override
-  protected void finalize() throws Throwable {
+  public void finalize() {
     requestObserver.onCompleted();
     channel.shutdownNow();
   }
@@ -197,8 +213,7 @@ public class AttestationClient {
    */
   @SuppressWarnings("ProtoParseWithRegistry")
   public Response send(Request request)
-      throws GeneralSecurityException, IOException, InterruptedException,
-             InvalidProtocolBufferException {
+      throws GeneralSecurityException, IOException, InterruptedException {
     if (channel == null || requestObserver == null || encryptor == null) {
       throw new IllegalStateException("Session is not available");
     }
@@ -213,5 +228,38 @@ public class AttestationClient {
     byte[] responsePayload = streamingResponse.getBody().toByteArray();
     byte[] decryptedResponse = encryptor.decrypt(responsePayload);
     return Response.parseFrom(decryptedResponse);
+  }
+
+  /**
+   * Intercepts gRPC requests and adds Metadata with an API key.
+   * https://cloud.google.com/endpoints/docs/grpc/restricting-api-access-with-api-keys#java
+   */
+  private static final class Interceptor implements ClientInterceptor {
+    private final String apiKey;
+
+    private static final Metadata.Key<String> API_KEY_HEADER =
+        Metadata.Key.of("x-goog-api-key", Metadata.ASCII_STRING_MARSHALLER);
+
+    public Interceptor(String apiKey) {
+      this.apiKey = apiKey;
+    }
+
+    @Override
+    public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
+        MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
+      ClientCall<ReqT, RespT> call = next.newCall(method, callOptions);
+
+      call =
+          new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(call) {
+            @Override
+            public void start(Listener<RespT> responseListener, Metadata headers) {
+              if (apiKey != null && !apiKey.isEmpty()) {
+                headers.put(API_KEY_HEADER, apiKey);
+              }
+              super.start(responseListener, headers);
+            }
+          };
+      return call;
+    }
   }
 }

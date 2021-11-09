@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
     // Set default URI of the Oak Functions application.
     // https://pantheon.corp.google.com/run/detail/europe-west2/weather-lookup-endpoint/general?project=oak-ci
     EditText uriInput = findViewById(R.id.uriInput);
-    uriInput.setText("https://weather-lookup-endpoint-62sa4xcfia-nw.a.run.app");
+    uriInput.setText(R.string.service_uri);
 
     // Set default request payload.
     EditText requestInput = findViewById(R.id.requestInput);
@@ -67,7 +67,7 @@ public class MainActivity extends Activity {
     TextView resultTextView = findViewById(R.id.resultTextView);
     try {
       AttestationClient client = new AttestationClient();
-      client.attest(uri, (config) -> !config.getMlInference());
+      client.attest(uri, getString(R.string.api_key), (config) -> !config.getMlInference());
       Response response = client.send(request);
       StatusCode responseStatus = response.getStatus();
       if (responseStatus != StatusCode.SUCCESS) {
