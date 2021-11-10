@@ -110,7 +110,7 @@ async fn test_server() {
 
     {
         // Exact key_0.
-        let response = make_request(server_port, br#"{"lat":52.0,"lng":-0.01}"#)
+        let response = make_request(server_port, br#"{"lat":0.0,"lng":0.0}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -121,7 +121,7 @@ async fn test_server() {
     }
     {
         // Close to key_0.
-        let response = make_request(server_port, br#"{"lat":51.9,"lng":-0.1}"#)
+        let response = make_request(server_port, br#"{"lat":0.1,"lng":-0.1}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);
@@ -132,7 +132,7 @@ async fn test_server() {
     }
     {
         // A bit further from key_0.
-        let response = make_request(server_port, br#"{"lat":51.4,"lng":-0.6}"#)
+        let response = make_request(server_port, br#"{"lat":-0.4,"lng":-0.6}"#)
             .await
             .response;
         assert_eq!(StatusCode::Success as i32, response.status);

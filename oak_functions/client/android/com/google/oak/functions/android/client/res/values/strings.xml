@@ -4,5 +4,5 @@
   <string name="uri" description="The URI used for accessing the service. [CHAR_LIMIT=NONE]">URI</string>
   <string name="request" description="The content of the request that will be sent to the service. [CHAR_LIMIT=NONE]">Request</string>
   <string name="invoke_button" description="The label of the button that invokes the service. [CHAR_LIMIT=NONE]">Invoke</string>
-  <string name="test_request" description="Test coordinates. [CHAR_LIMIT=NONE]">{"lat":52,"lng":0}</string>
+  <string name="test_request" description="Test coordinates. [CHAR_LIMIT=NONE]">{"lat":0,"lng":0}</string>
 </resources>

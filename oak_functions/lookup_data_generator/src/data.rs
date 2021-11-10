@@ -111,19 +111,15 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
     let lat_dist = rand::distributions::Uniform::new(-1.0_f64, 1.0);
     let mut cell_map = MultiMap::new();
     for i in 0..entries {
-        // Fix the first and the second point to ensure the default example can find at least one
-        // data point within 40km.
+        // Fix the first point to ensure the default example can find at least one data point within
+        // 40km.
         let latitude_degrees = if i == 0 {
-            52.1_f64
-        } else if i == 1 {
-            0.1_f64
+            0.0_f64
         } else {
             rng.sample(lat_dist).acos().to_degrees()
         };
         let longitude_degrees = if i == 0 {
-            0.1_f64
-        } else if i == 1 {
-            0.1_f64
+            0.0_f64
         } else {
             rng.sample(lng_dist).to_degrees()
         };

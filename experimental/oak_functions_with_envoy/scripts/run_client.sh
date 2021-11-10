@@ -23,7 +23,7 @@ curl \
   --http2 \
   --http2-prior-knowledge \
   --request POST \
-  --data '{"lat":51,"lng":0}' \
+  --data '{"lat":0,"lng":0}' \
   --location \
   --verbose \
   --output - \
