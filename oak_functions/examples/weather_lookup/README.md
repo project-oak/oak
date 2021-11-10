@@ -101,7 +101,7 @@ To build and run this example manually follow these steps:
    ```shell
    cargo run --manifest-path=./oak_functions/client/rust/Cargo.toml -- \
        --uri=http://localhost:8080,
-       --request={\"lat\":52,\"lng\":0}
+       --request={\"lat\":0,\"lng\":0}
    ```
 
 Alternatively, the `runner` could be used to run this example:
