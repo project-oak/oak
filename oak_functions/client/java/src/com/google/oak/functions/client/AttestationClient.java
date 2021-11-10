@@ -91,7 +91,7 @@ public class AttestationClient {
     // Create gRPC channel.
     URL parsedUrl = new URL(url);
     ArrayList<ClientInterceptor> interceptors = new ArrayList<>();
-    if (str != null && !apiKey.trim().isEmpty()) {
+    if (apiKey != null && !apiKey.trim().isEmpty()) {
       interceptors.add(new Interceptor(apiKey));
     }
     if (parsedUrl.getProtocol().equals("https")) {
